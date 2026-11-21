@@ -34,6 +34,7 @@ import ConvertToRequestDialog from './components/ConvertToRequestDialog';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import { isCreationWriting } from '../../components/workspace/creation/CreationActions';
 import { followCreationFields, useCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import { ResizablePropertiesPanel } from '../../components/workspace/PanelResizeHandle';
 import { TASK_STATUS_OPTIONS } from './task.constants';
@@ -1105,6 +1106,8 @@ export default function TaskWorkspacePage() {
     }
   };
   const handleBack = async () => {
+    // The new task is being written: the page will open it, so the way back waits as Cancel does.
+    if (isCreationWriting(workspaceRef.current)) return;
     if (!(await confirmUnsavedLeave())) return;
     navigate(originPath);
   };

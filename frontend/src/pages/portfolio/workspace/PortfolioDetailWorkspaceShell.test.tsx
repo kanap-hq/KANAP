@@ -372,6 +372,27 @@ describe('PortfolioDetailWorkspaceShell Escape', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
+  it('waits, on the back arrow and on Escape, while the new record is being written', () => {
+    const onBack = vi.fn();
+    const view = renderShell({
+      onBack,
+      isCreate: true,
+      actions: <CreationActions onCreate={() => undefined} onCancel={() => undefined} writing />,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(onBack).not.toHaveBeenCalled();
+    view.unmount();
+    renderShell({
+      onBack,
+      isCreate: true,
+      actions: <CreationActions onCreate={() => undefined} onCancel={() => undefined} />,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(onBack).toHaveBeenCalledTimes(2);
+  });
+
   it('leaves Escape to a list, a menu or a dialog it comes from', () => {
     const onBack = vi.fn();
     renderShell({ onBack, properties: <ul role="listbox"><li role="option">Finance</li></ul> });

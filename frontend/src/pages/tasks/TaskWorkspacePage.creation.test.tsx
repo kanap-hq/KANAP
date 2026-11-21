@@ -390,6 +390,22 @@ describe('Task creation at the title', () => {
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
+  it('waits on the way back while the new task is being written, as Cancel does', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new task' }));
+    let release: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }) as never);
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Order cheese' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('link', { name: /^←/ }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/portfolio/tasks/new/overview');
+    release({ data: created });
+    await waitFor(() => expect(location()).toBe('/portfolio/tasks/T-9/overview'));
+  });
+
   it('shows the error under the empty title on Create and gives it the focus, nothing created', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new task' }));
