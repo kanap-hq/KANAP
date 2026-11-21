@@ -114,15 +114,16 @@ async function main() {
     await application.listen(0, '127.0.0.1');
     const base = `http://127.0.0.1:${(application.getHttpServer().address() as AddressInfo).port}`;
 
-    const post = async (path: string, body: unknown) => {
+    const request = async (method: string, path: string, body: unknown) => {
       const res = await fetch(`${base}${path}`, {
-        method: 'POST',
+        method,
         headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       });
       const text = await res.text();
       return { status: res.status, body: text ? JSON.parse(text) : null };
     };
+    const post = (path: string, body: unknown) => request('POST', path, body);
     const countLines = () => seed(tenantId, async (runner) => {
       const [row] = await runner.query(`SELECT count(*)::int AS n FROM spend_items WHERE tenant_id = $1`, [tenantId]);
       return row.n as number;
@@ -183,6 +184,27 @@ async function main() {
     assert.equal(line.body.account_id, accountId);
     assert.equal(typeof line.body.creation_token, 'string', 'POST /budget-lines hands a creation token');
     console.log('ok - a new line without an account is 400 by every create route; POST /budget-lines hands a token');
+
+    // An update that names the date checks it as the create does: an empty, missing or impossible
+    // date is a 400 naming the field (it used to reach PostgreSQL and answer 500), the stored date stays.
+    const storedStart = () => seed(tenantId, async (runner) => {
+      const [row] = await runner.query(
+        `SELECT effective_start::text AS effective_start FROM spend_items WHERE tenant_id = $1 AND nature = 'opex' AND id = $2`,
+        [tenantId, line.body.id],
+      );
+      return row.effective_start as string;
+    });
+    for (const value of ['', null, 'soon', '2026-02-30']) {
+      const answer = await request('PATCH', `/budget-lines/${line.body.id}`, { effective_start: value, base: { effective_start: '2026-04-01' } });
+      assert.equal(answer.status, 400, `PATCH effective_start ${JSON.stringify(value)}: ${JSON.stringify(answer.body)}`);
+      assert.equal(answer.body.field, 'effective_start');
+      assert.equal(answer.body.message, `effective_start: ${EFFECTIVE_START_MESSAGE}`);
+      assert.equal(await storedStart(), '2026-04-01', `PATCH effective_start ${JSON.stringify(value)} kept the stored date`);
+    }
+    const moved = await request('PATCH', `/budget-lines/${line.body.id}`, { effective_start: '2026-05-01', base: { effective_start: '2026-04-01' } });
+    assert.equal(moved.status, 200, JSON.stringify(moved.body));
+    assert.equal(await storedStart(), '2026-05-01');
+    console.log('ok - an update with an empty or invalid start date is 400, a valid one is saved');
     console.log(`ok - create without a start date on ${current}`);
   } finally {
     if (app) await app.close();

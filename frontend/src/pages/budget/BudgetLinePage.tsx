@@ -571,6 +571,10 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     const held = next.id ? patchBuffer.held(next.id) : undefined;
     setForm(held ? mergePatch(next, held) : next);
   }, [patchBuffer]);
+  // The line just opened (the draft just written, another line): the form follows the detail in
+  // this very render. Shown one render with the empty form, the account (disabled without a company)
+  // lost the focus and the placement of the cursor took the start date, empty for that render.
+  if (!isCreate && data?.id && form.id !== data.id) syncForm(data);
   // Resync the form on every refetch, before the browser paints: the line never shows with an empty form first.
   React.useLayoutEffect(() => {
     if (!data || isCreate) return;
@@ -1440,7 +1444,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
               : (axisId, v) => void patchNow({ analytics_values: { [axisId]: v } })}
             onCostCenterChange={isCreate ? pickDraftCostCenter : (v) => void patchNow({ cost_center_id: v })}
             onRunBuildChange={isCreate ? ignoreDraftChange : (v) => void patchNow({ run_build: v })}
-            onEffectiveStartChange={isCreate ? (v) => editDraft({ effective_start: v }) : (v) => void patchNow({ effective_start: v })}
+            // A line has a start date: an emptied field sends nothing and shows the date again.
+            onEffectiveStartChange={isCreate ? (v) => editDraft({ effective_start: v }) : (v) => { if (v) void patchNow({ effective_start: v }); }}
             onDisabledAtChange={isCreate ? ignoreDraftChange : handleDisabledAtChange}
             // Disable now: the status alone, the server sets the end of validity from its own clock.
             onDisableNow={isCreate ? ignoreDraftChange : () => void patchNow({ status: STATUS_DISABLED })}

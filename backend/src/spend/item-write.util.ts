@@ -235,9 +235,10 @@ export async function resolveItemWrite(
   if (fields === 'api' && scope === 'capex' && input.company_id != null && input.paying_company_id == null) {
     values.paying_company_id = input.company_id;
   }
-  // Create only. An update that omits the date keeps the stored one. Checked before the
-  // company lookup so a missing date is a 400 on every create path (API, budget lines, file, AI).
-  if (!existing) assertEffectiveStart(values.effective_start);
+  // Required on a create; an update that omits the date keeps the stored one, one that names it
+  // gives a real date (an empty one used to reach PostgreSQL and answer 500). Checked before the
+  // company lookup so a missing date is a 400 on every path (API, budget lines, file, AI).
+  if (!existing || 'effective_start' in values) assertEffectiveStart(values.effective_start);
   const lifecycle: ItemWrite['lifecycle'] = {};
   for (const key of LIFECYCLE_INPUTS) {
     if (supplied(key)) (lifecycle as any)[key] = input[key];

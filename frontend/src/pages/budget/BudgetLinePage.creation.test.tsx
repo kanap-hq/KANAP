@@ -678,6 +678,57 @@ describe('Budget line born complete', () => {
     expect(lineWrites()).toHaveLength(1);
   });
 
+  it('keeps the cursor on the account given last, and the line shows its start date', async () => {
+    const input = await startNewLine();
+    fireEvent.change(input, { target: { value: 'Monitoring' } });
+    fireEvent.keyDown(input, { key: 'Tab' });
+    await waitFor(() => expect(field('opex.fields.payingCompany')).toHaveFocus());
+    pick('opex.fields.payingCompany', 'company-1');
+    fireEvent.keyDown(field('opex.fields.payingCompany'), { key: 'Tab' });
+    await waitFor(() => expect(field('opex.fields.account')).toHaveFocus());
+    // A browser takes the focus off a field that gets disabled: the line must never show, even for
+    // one render, without the company its account needs (jsdom keeps the focus, so it is watched here).
+    const accountDisabled: string[] = [];
+    const watch = new MutationObserver((records) => {
+      for (const record of records) {
+        const target = record.target as HTMLElement;
+        // No attribute before: it was set, even if a later commit removed it.
+        if (target.getAttribute('aria-label') === 'opex.fields.account' && record.oldValue === null) {
+          accountDisabled.push(location() ?? '');
+        }
+      }
+    });
+    watch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['disabled'], attributeOldValue: true });
+    pick('opex.fields.account', 'account-1');
+    await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
+    await screen.findByRole('button', { name: TITLE });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    watch.disconnect();
+    expect(accountDisabled).toEqual([]);
+    const start = within(fieldRow('opex.fields.effectiveStart')).getByRole('textbox');
+    expect(field('opex.fields.account')).toHaveFocus();
+    expect(start).not.toHaveFocus();
+    expect(start).toHaveValue(formatShortDate(YEAR_START, 'en', { year: 'always' }));
+    // Through the date and out of it: nothing is sent.
+    fireEvent.focus(start);
+    fireEvent.blur(start);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(start).toHaveValue(formatShortDate(YEAR_START, 'en', { year: 'always' }));
+  });
+
+  it('sends no empty start date for a line that has one: the date shows again', async () => {
+    renderPage(['/ops/budget/BL-12/overview']);
+    const start = await waitFor(() => within(fieldRow('opex.fields.effectiveStart')).getByRole('textbox'));
+    await waitFor(() => expect(start).toHaveValue(formatShortDate(YEAR_START, 'en', { year: 'always' })));
+    fireEvent.focus(start);
+    fireEvent.change(start, { target: { value: '' } });
+    fireEvent.blur(start);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(start).toHaveValue(formatShortDate(YEAR_START, 'en', { year: 'always' }));
+  });
+
   it('keeps the red labels of a line stored without company, editable, and leaves it without asking', async () => {
     renderPage(['/ops/budget/BL-12/overview'], { line: { paying_company_id: null, account_id: null } });
     await waitFor(() => expect(fieldLabel('opex.fields.payingCompany')).toHaveAttribute('data-missing'));
