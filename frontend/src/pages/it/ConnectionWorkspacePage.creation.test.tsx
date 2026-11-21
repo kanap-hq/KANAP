@@ -12,9 +12,10 @@ import api from '../../api';
 import ConnectionWorkspacePage from './ConnectionWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
 
-// Creation at the title (lot 3): the name committed in the header creates the connection (server to
-// server, no protocol nor end), the page moves to it; Create names what it still lacks and focuses
-// the first field, or closes it; Cancel deletes it.
+// A connection is born complete (lot L3c): the new page is a draft whose topology, ends and
+// protocols are open beside the title; nothing is written until the name, the ends and a protocol
+// are given, then one POST /connections writes it all and the page becomes the connection, with
+// Done and Cancel. Create on an incomplete draft marks what it lacks; leaving writes nothing.
 
 const translation = {
   t: (key: string, opts?: Record<string, unknown>) => {
@@ -29,7 +30,7 @@ vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => tru
 vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({ default: () => ({ data: undefined }) }));
 vi.mock('../../hooks/useItOpsEnumOptions', () => {
   const value = {
-    settings: { connectionTypes: [{ code: 'https', label: 'HTTPS' }], entities: [] },
+    settings: { connectionTypes: [{ code: 'https', label: 'HTTPS' }, { code: 'ssh', label: 'SSH' }], entities: [] },
     byField: { lifecycleStatus: [{ code: 'active', label: 'Active' }], dataClass: [] },
     labelFor: (_field: string, code: string) => code,
   };
@@ -43,9 +44,41 @@ vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => nul
 vi.mock('../../components/MarkdownEditor', () => ({ default: () => <div data-testid="description-editor" /> }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
 vi.mock('./workspace/ConnectionLinkInterfacesDialog', () => ({ default: () => null }));
-vi.mock('./workspace/ConnectionEndpointPicker', () => ({ default: ({ label, missing }: { label: string; missing?: boolean }) => <input aria-label={label} data-label-missing={String(!!missing)} /> }));
-vi.mock('./workspace/ConnectionServersPicker', () => ({ default: () => <input aria-label="servers" /> }));
-vi.mock('./workspace/ConnectionProtocolsTable', () => ({ default: () => null }));
+// An end is picked as in the picker: an asset (with its summary) or an entity.
+vi.mock('./workspace/ConnectionEndpointPicker', () => ({
+  default: ({ label, missing, onChange }: { label: string; missing?: boolean; onChange: (next: { asset_id: string | null; entity_code: string | null }, asset?: unknown) => void }) => (
+    <>
+      <span data-missing={missing ? '' : undefined}>{label}</span>
+      <input aria-label={label} data-label-missing={String(!!missing)} />
+      <button type="button" onClick={() => onChange({ asset_id: 'web', entity_code: null }, { id: 'web', name: 'web-1' })}>{`${label} web`}</button>
+      <button type="button" onClick={() => onChange({ asset_id: 'node-1', entity_code: null }, { id: 'node-1', name: 'node-1' })}>{`${label} node`}</button>
+      <button type="button" onClick={() => onChange({ asset_id: null, entity_code: 'internet' })}>{`${label} internet`}</button>
+    </>
+  ),
+}));
+vi.mock('./workspace/ConnectionServersPicker', () => ({
+  default: ({ onChange }: { onChange: (next: unknown[]) => void }) => (
+    <>
+      <input aria-label="servers" />
+      <button type="button" onClick={() => onChange([{ id: 'a', name: 'a' }, { id: 'b', name: 'b' }])}>two servers</button>
+    </>
+  ),
+}));
+// The table itself (its ports wait 900 ms before they are given), with buttons that give protocols at once.
+vi.mock('./workspace/ConnectionProtocolsTable', async (importOriginal) => {
+  const Actual = ((await importOriginal()) as { default: React.ComponentType<any> }).default;
+  return { default: (props: { onProtocolsChange: (next: Array<{ code: string; port_override: string | null }>) => void }) => {
+  const { onProtocolsChange } = props;
+  return (
+    <>
+      <Actual {...props} />
+      <button type="button" onClick={() => onProtocolsChange([{ code: 'https', port_override: null }])}>add bare https</button>
+      <button type="button" onClick={() => onProtocolsChange([{ code: 'https', port_override: '8443' }])}>add https</button>
+      <button type="button" onClick={() => onProtocolsChange([{ code: 'https', port_override: '8443' }, { code: 'ssh', port_override: null }])}>add ssh</button>
+    </>
+  );
+  } };
+});
 
 const mocked = vi.mocked(api);
 const TITLE = 'common:buttons.editTitle';
@@ -54,21 +87,23 @@ const created = {
   connection_reference: 'CONN-7',
   name: 'Web to db',
   topology: 'server_to_server',
-  source_asset_id: null,
+  source_asset_id: 'web',
   source_entity_code: null,
   destination_asset_id: null,
-  destination_entity_code: null,
-  protocol_codes: [],
+  destination_entity_code: 'internet',
+  absorbed: [],
   creation_token: 'token-1',
 };
 const detail = {
   ...created,
+  absorbed: undefined,
   creation_token: undefined,
   description: null,
-  source_server: null,
+  source_server: { id: 'web', name: 'web-1' },
   destination_server: null,
   servers: [],
-  protocols: [],
+  protocol_codes: ['https'],
+  protocols: [{ code: 'https', port_override: '8443' }],
   lifecycle: 'active',
   criticality: '',
   data_class: '',
@@ -79,8 +114,8 @@ const detail = {
   effective_contains_pii: false,
   derived_interface_count: 0,
   legs: [],
-  created_at: '2026-11-03T08:00:00.000Z',
-  updated_at: '2026-11-03T08:00:00.000Z',
+  created_at: '2026-11-21T08:00:00.000Z',
+  updated_at: '2026-11-21T08:00:00.000Z',
 };
 
 function Location() {
@@ -93,18 +128,19 @@ function StartPage() {
   return <button type="button" onClick={() => navigate('/it/connections/new/overview')}>new connection</button>;
 }
 
-/** What the server holds on the connection beyond its name (a complete one: its ends and a protocol). */
-let held: Record<string, unknown> = {};
-const COMPLETE = { source_entity_code: 'web', destination_entity_code: 'db', protocol_codes: ['https'] };
-
-function renderPage(entries: string[], changes: { fields: number; children: Record<string, number> } = { fields: 0, children: {} }) {
+function renderPage(entries: string[] = ['/start']) {
   mocked.get.mockImplementation(async (url: string) => {
-    if (url === '/connections/CONN-7' || url === '/connections/conn-new') return { data: { ...detail, ...held } } as never;
-    if (url === '/connections/conn-new/creation') return { data: { changes } } as never;
+    if (url === '/connections/CONN-7' || url === '/connections/conn-new') return { data: detail } as never;
+    if (url === '/connections/conn-new/creation') return { data: { changes: { fields: 0, children: {} } } } as never;
+    // node-1 belongs to a cluster of two: choosing it asks whether to connect the cluster.
+    if (url === '/assets/node-1/clusters') return { data: { items: [{ id: 'clu', name: 'Cluster A' }] } } as never;
+    if (url === '/assets/clu/members') return { data: { items: [{ id: 'node-1', name: 'node-1' }, { id: 'node-2', name: 'node-2' }] } } as never;
+    if (url === '/assets/clu') return { data: { id: 'clu', name: 'Cluster A', is_cluster: true } } as never;
+    if (/^\/assets\/[^/]+\/clusters$/.test(url)) return { data: { items: [] } } as never;
     return { data: { items: [], total: 0 } } as never;
   });
   mocked.post.mockImplementation(async (url: string) => {
-    if (url === '/connections/creation') return { data: created } as never;
+    if (url === '/connections') return { data: { ...created } } as never;
     return { data: { ok: true } } as never;
   });
   mocked.delete.mockResolvedValue({ data: undefined } as never);
@@ -131,135 +167,314 @@ function location() {
   return screen.getByTestId('location').textContent;
 }
 
-async function createConnection() {
-  renderPage(['/start']);
+async function openNew() {
+  renderPage();
   fireEvent.click(await screen.findByRole('button', { name: 'new connection' }));
-  const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
-  fireEvent.change(input, { target: { value: 'Web to db' } });
-  fireEvent.keyDown(input, { key: 'Enter' });
-  await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
-  await screen.findByRole('button', { name: TITLE });
+  return screen.findByRole('textbox', { name: TITLE_FIELD });
 }
 
-describe('Connection creation at the title', () => {
+async function typeName(name = 'Web to db') {
+  const input = await openNew();
+  fireEvent.change(input, { target: { value: name } });
+  fireEvent.keyDown(input, { key: 'Enter' });
+  return input;
+}
+
+const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
+const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+const connectionPosts = () => mocked.post.mock.calls.filter(([url]) => url === '/connections');
+
+describe('Connection born complete', () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
     resetCreationStore();
     resetNavigationTracker();
-    held = {};
   });
 
-  it('opens with the title to type and the connection to come dimmed, nothing read or written', async () => {
+  it('opens with the title, the topology, the ends and the protocols active, the rest dimmed, nothing read or written', async () => {
     renderPage(['/it/connections/new/overview']);
     const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(input).toHaveFocus();
     expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
     const previews = screen.getAllByTestId('creation-preview');
-    expect(previews.length).toBeGreaterThan(0);
-    for (const preview of previews) {
-      expect(preview).toHaveAttribute('inert');
-      expect(within(preview).queryAllByRole('textbox')).toHaveLength(0);
+    const inPreview = (el: Element) => previews.some((preview) => preview.contains(el));
+    for (const active of [
+      screen.getByRole('textbox', { name: 'workspace.connection.layers.source' }),
+      screen.getByRole('textbox', { name: 'workspace.connection.layers.destination' }),
+      screen.getByPlaceholderText('workspace.connection.overview.addProtocol'),
+      screen.getByRole('button', { name: /enums\.topology\.serverToServer/ }),
+    ]) {
+      expect(inPreview(active)).toBe(false);
     }
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(mocked.get.mock.calls.map(([url]) => String(url)).filter((url) => /\/connections\/(new\b|$)/.test(url))).toEqual([]);
+    for (const preview of previews) expect(preview).toHaveAttribute('inert');
+    expect(inPreview(screen.getByTestId('description-editor'))).toBe(true);
+    await settle();
+    expect(mocked.get.mock.calls.map(([url]) => String(url)).filter((url) => url.startsWith('/connections'))).toEqual([]);
     expect(mocked.post).not.toHaveBeenCalled();
     expect(mocked.patch).not.toHaveBeenCalled();
   });
 
-  it('creates the connection from its name alone and opens it', async () => {
-    await createConnection();
-    expect(mocked.post).toHaveBeenCalledTimes(1);
-    expect(mocked.post).toHaveBeenCalledWith('/connections/creation', { name: 'Web to db' });
-    expect(screen.queryByTestId('creation-preview')).toBeNull();
-    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+  it('writes nothing for a name alone', async () => {
+    await typeName();
+    await settle();
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(location()).toBe('/it/connections/new/overview');
   });
 
-  it('creates the connection on Create clicked just after the title, and opens it with Done, nothing marked', async () => {
-    renderPage(['/start']);
-    fireEvent.click(await screen.findByRole('button', { name: 'new connection' }));
-    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
-    fireEvent.change(input, { target: { value: 'Web to db' } });
-    // In a browser the press takes the focus from the title, which writes nothing; Create writes the name typed.
-    fireEvent.blur(input);
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+  it('writes the connection once, with everything, when its name, ends and protocol are given, then opens it with Done and Cancel', async () => {
+    await typeName();
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination internet');
+    await settle();
+    expect(mocked.post).not.toHaveBeenCalled();
+    click('add https');
     await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    expect(connectionPosts()).toHaveLength(1);
+    expect(connectionPosts()[0][1]).toMatchObject({
+      name: 'Web to db',
+      topology: 'server_to_server',
+      source_asset_id: 'web',
+      source_entity_code: null,
+      destination_asset_id: null,
+      destination_entity_code: 'internet',
+      protocols: [{ code: 'https', port_override: '8443' }],
+    });
     expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(screen.getByRole('textbox', { name: 'workspace.connection.layers.source' })).not.toHaveAttribute('data-label-missing', 'true');
-    expect(mocked.post).toHaveBeenCalledTimes(1);
-    expect(mocked.post).toHaveBeenCalledWith('/connections/creation', { name: 'Web to db' });
-    expect(location()).toBe('/it/connections/CONN-7/overview');
+    expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
+    await screen.findByRole('button', { name: TITLE });
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(connectionPosts()).toHaveLength(1);
   });
 
-  it('marks what the connection lacks on Done, focuses the first field on screen and stays, without asking the server', async () => {
-    await createConnection();
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
+  it('writes a multi-server connection with its two servers', async () => {
+    await typeName('Cluster sync');
+    fireEvent.click(screen.getByRole('button', { name: /enums\.topology\.serverToServer/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'it:enums.topology.multiServer' }));
+    click('two servers');
+    click('add https');
+    await waitFor(() => expect(connectionPosts()).toHaveLength(1));
+    expect(connectionPosts()[0][1]).toMatchObject({ name: 'Cluster sync', topology: 'multi_server', servers: ['a', 'b'] });
+    expect(connectionPosts()[0][1]).not.toHaveProperty('source_asset_id', 'web');
+  });
+
+  it('asks whether to connect the cluster when a member is chosen on the draft, and writes the answer', async () => {
+    await typeName();
+    click('workspace.connection.layers.source node');
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'components.clusterConnection.connectToCluster' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    click('workspace.connection.layers.destination internet');
+    click('add https');
+    await waitFor(() => expect(connectionPosts()).toHaveLength(1));
+    expect(connectionPosts()[0][1]).toMatchObject({ source_asset_id: 'clu', destination_entity_code: 'internet' });
+  });
+
+  it('marks what the draft lacks on Create, focuses the first field on screen and writes nothing', async () => {
+    const input = await openNew();
+    fireEvent.change(input, { target: { value: 'Web to db' } });
+    click('common:buttons.create');
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'workspace.connection.layers.source' })).toHaveFocus());
-    const protocols = screen.getByPlaceholderText('workspace.connection.overview.addProtocol');
-    expect(mocked.post).not.toHaveBeenCalledWith('/connections/conn-new/creation/complete', expect.anything());
-    expect(location()).toBe('/it/connections/CONN-7/overview');
-    // One signal: the labels in red and the fields invalid, no banner.
-    expect(protocols).toHaveAttribute('aria-invalid', 'true');
     for (const side of ['source', 'destination']) {
       const field = screen.getByRole('textbox', { name: `workspace.connection.layers.${side}` });
       expect(field).toHaveAttribute('data-label-missing', 'true');
       expect(field).toHaveAttribute('aria-invalid', 'true');
     }
+    expect(screen.getByPlaceholderText('workspace.connection.overview.addProtocol')).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByRole('heading', { name: /workspace\.connection\.overview\.protocols/ })).toHaveStyle({ color: createAppTheme('light').palette.kanap.danger });
-    expect(screen.queryByText(/creation\.missing(?!Mark|Fields)/)).toBeNull();
+    await settle();
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(location()).toBe('/it/connections/new/overview');
   });
 
-  it('marks what only the server sees missing on Done, the first field on screen first', async () => {
-    held = COMPLETE;
-    await createConnection();
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/connections/CONN-7', expect.anything()));
-    // The server names the fields in its own order; the focus follows the screen: Source first.
+  it('says a refusal of the server on its field, keeps the draft and does not send it again until it changes', async () => {
+    await typeName();
     mocked.post.mockRejectedValueOnce({
-      response: { status: 400, data: { code: 'CREATION_INCOMPLETE', params: { fields: ['protocols', 'source'] } } },
+      response: { status: 400, data: { code: 'connection_same_endpoint', message: 'The source and the destination are the same asset.' } },
     });
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
-    await waitFor(() => expect(screen.getByRole('textbox', { name: 'workspace.connection.layers.source' })).toHaveFocus());
-    expect(mocked.post).toHaveBeenLastCalledWith('/connections/conn-new/creation/complete', { token: 'token-1' });
-    expect(location()).toBe('/it/connections/CONN-7/overview');
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination web');
+    click('add https');
+    const destination = screen.getByRole('textbox', { name: 'workspace.connection.layers.destination' }).closest('[data-creation-field]') as HTMLElement;
+    await waitFor(() => expect(within(destination).getByRole('alert').textContent).toMatch(/connection_same_endpoint|same asset/));
+    await settle();
+    expect(connectionPosts()).toHaveLength(1);
+    expect(location()).toBe('/it/connections/new/overview');
+    // Enter in the title again sends nothing new: the draft did not change.
+    fireEvent.keyDown(screen.getByRole('textbox', { name: TITLE_FIELD }), { key: 'Enter' });
+    await settle();
+    expect(connectionPosts()).toHaveLength(1);
+    click('workspace.connection.layers.destination internet');
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    expect(connectionPosts()).toHaveLength(2);
   });
 
-  it('closes a complete connection on Done, back where the creation started', async () => {
-    held = COMPLETE;
-    await createConnection();
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/connections/CONN-7', expect.anything()));
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
-    await waitFor(() => expect(location()).toBe('/start'));
-    expect(mocked.post).toHaveBeenLastCalledWith('/connections/conn-new/creation/complete', { token: 'token-1' });
-    expect(mocked.delete).not.toHaveBeenCalled();
-  });
-
-  it('deletes the connection on Cancel and goes back where it started', async () => {
-    await createConnection();
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
-    await waitFor(() => expect(location()).toBe('/start'));
-    expect(mocked.delete).toHaveBeenCalledWith('/connections/conn-new/creation', { data: { token: 'token-1' } });
-  });
-
-  it('asks before leaving a connection being created that lacks a field, and deletes it on Delete before going to the list', async () => {
-    await createConnection();
+  it('writes nothing when the person leaves a draft, after asking', async () => {
+    await typeName();
+    click('workspace.connection.layers.source web');
+    // The cluster question reads the asset's clusters first: the end enters the draft after.
+    await settle();
     fireEvent.click(screen.getByRole('button', { name: 'pages.connections.title' }));
     const dialog = await screen.findByRole('dialog');
-    // The question names the missing fields in screen order: Source, Destination, then Protocols.
-    expect(within(dialog).getByText(/workspace\.connection\.creation\.missing/).textContent).toMatch(
-      /workspace\.connection\.layers\.source.*workspace\.connection\.layers\.destination.*workspace\.connection\.overview\.protocols/,
-    );
-    fireEvent.click(within(dialog).getByRole('button', { name: 'it:workspace.connection.creation.leaveComplete' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(location()).toBe('/it/connections/CONN-7/overview');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.discard' }));
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(mocked.patch).not.toHaveBeenCalled();
+  });
 
-    fireEvent.click(screen.getByRole('button', { name: 'pages.connections.title' }));
-    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'it:workspace.connection.creation.leaveDelete' }));
-    await waitFor(() => expect(location()).toBe('/it/connections'));
+  it('deletes the connection on Cancel just after its writing, without a question, and goes back where it started', async () => {
+    await typeName();
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination internet');
+    click('add https');
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.cancel' }));
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(screen.queryByRole('dialog')).toBeNull();
     expect(mocked.delete).toHaveBeenCalledWith('/connections/conn-new/creation', { data: { token: 'token-1' } });
+  });
+
+  it('saves on the connection what was given while it was being written, and shows it', async () => {
+    await typeName();
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }) as never);
+    const both = [{ code: 'https', port_override: '8443' }, { code: 'ssh', port_override: null }];
+    const patched = { ...detail, protocol_codes: ['https', 'ssh'], protocols: both };
+    mocked.patch.mockResolvedValue({ data: { ...patched, absorbed: [] } } as never);
+    // Read again under its reference, the connection holds what the PATCH saved.
+    const read = mocked.get.getMockImplementation()!;
+    mocked.get.mockImplementation(async (url: string) => (url === '/connections/CONN-7' && mocked.patch.mock.calls.length > 0 ? { data: patched } as never : read(url)));
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination internet');
+    click('add https');
+    await waitFor(() => expect(connectionPosts()).toHaveLength(1));
+    // A second protocol, checked while the connection is written.
+    click('add ssh');
+    await settle();
+    expect(mocked.patch).not.toHaveBeenCalled();
+    answer({ data: { ...created } });
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    expect(mocked.patch).toHaveBeenCalledWith('/connections/conn-new', { protocols: both });
+    expect(connectionPosts()).toHaveLength(1);
+    expect(connectionPosts()[0][1]).toMatchObject({ protocols: [{ code: 'https', port_override: '8443' }] });
+    // The connection shown carries both, before and after it is read again.
+    await settle();
+    expect(screen.getByRole('button', { name: /workspace\.connection\.overview\.protocols/ }).textContent).toMatch(/ssh/i);
+  });
+
+  it('writes a port typed just before the last field is given', async () => {
+    await typeName();
+    click('workspace.connection.layers.source web');
+    click('add bare https');
+    await settle();
+    fireEvent.change(screen.getByPlaceholderText('it:workspace.connection.protocolsTable.portPlaceholder'), { target: { value: '8443' } });
+    // The destination comes well within the port's delay.
+    click('workspace.connection.layers.destination internet');
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    await settle();
+    const sent = [connectionPosts()[0][1], ...mocked.patch.mock.calls.map(([, body]) => body)] as Array<{ protocols?: unknown }>;
+    expect(sent.some((body) => JSON.stringify(body.protocols) === JSON.stringify([{ code: 'https', port_override: '8443' }]))).toBe(true);
+  });
+
+  it('saves on the connection an answer to the cluster question that comes after it was written', async () => {
+    await typeName();
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }) as never);
+    mocked.patch.mockResolvedValue({ data: { ...detail, source_asset_id: 'clu', source_server: { id: 'clu', name: 'Cluster A', is_cluster: true }, absorbed: [] } } as never);
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination internet');
+    click('add https');
+    await waitFor(() => expect(connectionPosts()).toHaveLength(1));
+    click('workspace.connection.layers.source node');
+    const dialog = await screen.findByRole('dialog');
+    answer({ data: { ...created } });
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'components.clusterConnection.connectToCluster' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/connections/conn-new', { source_asset_id: 'clu', source_entity_code: null }));
+  });
+
+  it('keeps on the opened connection the refusal of what was given while it was written', async () => {
+    await typeName();
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }) as never);
+    mocked.patch.mockRejectedValue({
+      response: { status: 400, data: { code: 'connection_same_endpoint', message: 'The source and the destination are the same asset.' } },
+    });
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination internet');
+    click('add https');
+    await waitFor(() => expect(connectionPosts()).toHaveLength(1));
+    click('workspace.connection.layers.destination web');
+    await settle();
+    answer({ data: { ...created } });
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/connections/CONN-7', expect.anything()));
+    await settle();
+    const destination = screen.getByRole('textbox', { name: 'workspace.connection.layers.destination' }).closest('[data-creation-field]') as HTMLElement;
+    expect(within(destination).getByRole('alert').textContent).toMatch(/connection_same_endpoint|same asset/);
+  });
+
+  it('keeps above the opened connection a refusal that names no field', async () => {
+    await typeName();
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }) as never);
+    mocked.patch.mockRejectedValue({ response: { status: 409, data: { message: 'Someone else changed this connection.' } } });
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination internet');
+    click('add https');
+    await waitFor(() => expect(connectionPosts()).toHaveLength(1));
+    click('workspace.connection.layers.source internet');
+    await settle();
+    answer({ data: { ...created } });
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/connections/CONN-7', expect.anything()));
+    await settle();
+    expect(screen.getAllByRole('alert').some((alert) => /Someone else changed/.test(alert.textContent || ''))).toBe(true);
+  });
+
+  it('asks before a topology change drops the ends of the draft, then the draft follows the new topology', async () => {
+    await typeName('Cluster sync');
+    click('workspace.connection.layers.source web');
+    await settle();
+    fireEvent.click(screen.getByRole('button', { name: /enums\.topology\.serverToServer/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'it:enums.topology.multiServer' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('workspace.connection.topologyDialog.toMultiServer')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.continue' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByRole('textbox', { name: 'workspace.connection.layers.source' })).toBeNull();
+    click('two servers');
+    click('add https');
+    await waitFor(() => expect(connectionPosts()).toHaveLength(1));
+    expect(connectionPosts()[0][1]).toMatchObject({ topology: 'multi_server', servers: ['a', 'b'] });
+    expect(connectionPosts()[0][1]).not.toHaveProperty('source_asset_id');
+  });
+
+  it('says under the servers that fewer than two are left once the cluster members are absorbed', async () => {
+    await typeName('Cluster sync');
+    mocked.post.mockRejectedValueOnce({
+      response: { status: 400, data: { code: 'connection_min_servers', message: 'Select at least two assets for a multi-server connection' } },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /enums\.topology\.serverToServer/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'it:enums.topology.multiServer' }));
+    click('two servers');
+    click('add https');
+    const servers = screen.getByRole('textbox', { name: 'servers' }).closest('[data-creation-field]') as HTMLElement;
+    await waitFor(() => expect(within(servers).getByRole('alert').textContent).toMatch(/connection_min_servers|two assets/));
+    expect(location()).toBe('/it/connections/new/overview');
+  });
+
+  it('closes the connection on Done, back where the creation started', async () => {
+    await typeName();
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination internet');
+    click('add https');
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    await screen.findByRole('button', { name: TITLE });
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.done' }));
+    await waitFor(() => expect(location()).toBe('/start'));
+    expect(mocked.delete).not.toHaveBeenCalled();
   });
 });

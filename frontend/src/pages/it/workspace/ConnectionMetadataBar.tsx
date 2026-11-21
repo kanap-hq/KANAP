@@ -5,6 +5,7 @@ import { PortfolioMetadataItem } from '../../portfolio/workspace/PortfolioMetada
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerMenuItemSx } from '../../../theme/formSx';
 import { StatusDot } from '../../../components/design';
+import { CreationPreview } from '../../../components/workspace/creation';
 import { classificationText } from '../../../utils/applicationClassification';
 import { useTranslation } from 'react-i18next';
 
@@ -20,6 +21,8 @@ type Props = {
   protocolLabels: string[] | undefined;
   topologyDisabled?: boolean;
   disabled?: boolean;
+  /** A new connection's draft: only its topology is open, the other items are dimmed and out of reach. */
+  creating?: boolean;
   endpointsLabel: string;
   onEndpointsClick?: (anchor: HTMLElement) => void;
   onLifecycleChange: (next: string) => void;
@@ -41,6 +44,7 @@ export default function ConnectionMetadataBar({
   protocolLabels,
   topologyDisabled = false,
   disabled = false,
+  creating = false,
   endpointsLabel,
   onLifecycleChange,
   onTopologyChange,
@@ -96,16 +100,20 @@ export default function ConnectionMetadataBar({
     }
   })();
 
+  const later = (node: React.ReactNode) => (creating
+    ? <CreationPreview sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2.75 }}>{node}</CreationPreview>
+    : node);
+
   return (
     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2.75, alignItems: 'center' }}>
-      <PortfolioMetadataItem
+      {later(<PortfolioMetadataItem
         onClick={(e) => !disabled && setLifecycleAnchor(e.currentTarget as HTMLElement)}
         disabled={disabled}
       >
         <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', mr: 0.5 }}>{t('it:common.lifecycle')}</Typography>
         <StatusDot size={8} color={lifecycleColor} sx={{ mr: 0.75 }} />
         <Typography component="span" sx={{ fontSize: 12 }}>{lifecycleLabel}</Typography>
-      </PortfolioMetadataItem>
+      </PortfolioMetadataItem>)}
 
       <PortfolioMetadataItem
         onClick={(e) => !topologyDisabled && !disabled && setTopologyAnchor(e.currentTarget as HTMLElement)}
@@ -115,6 +123,7 @@ export default function ConnectionMetadataBar({
         <Typography component="span" sx={{ fontSize: 12 }}>{topologyLabel}</Typography>
       </PortfolioMetadataItem>
 
+      {later(<>
       <PortfolioMetadataItem
         onClick={(e) => riskMode === 'manual' && !disabled && setCriticalityAnchor(e.currentTarget as HTMLElement)}
         disabled={disabled || riskMode === 'derived'}
@@ -146,6 +155,7 @@ export default function ConnectionMetadataBar({
         <Typography component="span" sx={{ fontSize: 11, color: 'kanap.text.tertiary', mr: 0.5 }}>{t('it:workspace.connection.overview.protocols')}</Typography>
         <Typography component="span" sx={{ fontSize: 12 }}>{protocolsSummary}</Typography>
       </PortfolioMetadataItem>
+      </>)}
 
       <Popover
         open={Boolean(lifecycleAnchor)}

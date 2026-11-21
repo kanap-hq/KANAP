@@ -68,6 +68,11 @@ export default function ConnectionPropertiesDrawer({
   const dataClassOptions = classificationCatalog?.dataClasses || [];
 
   const isDerived = riskMode === 'derived';
+  // The settings and the catalog arrive after the first render (a new connection shows its draft at
+  // once): a select takes its value once the option for it is there.
+  const shownValue = (value: string | null, options: ReadonlyArray<{ code: string }>) => (
+    value && options.some((option) => option.code === value) ? value : ''
+  );
 
   return (
     <>
@@ -75,7 +80,7 @@ export default function ConnectionPropertiesDrawer({
         <PropertyRow label={t('it:common.lifecycle')}>
           <TextField
             select
-            value={lifecycle || ''}
+            value={shownValue(lifecycle, lifecycleOptions)}
             onChange={(e) => onLifecycleChange(e.target.value)}
             variant="standard"
             sx={drawerSelectSx}
@@ -150,7 +155,7 @@ export default function ConnectionPropertiesDrawer({
           ) : (
             <TextField
               select
-              value={criticality || ''}
+              value={shownValue(criticality, CRITICALITIES)}
               onChange={(e) => onCriticalityChange(e.target.value)}
               variant="standard"
               sx={drawerSelectSx}
@@ -170,7 +175,7 @@ export default function ConnectionPropertiesDrawer({
           ) : (
             <TextField
               select
-              value={dataClass || ''}
+              value={shownValue(dataClass, dataClassOptions)}
               onChange={(e) => onDataClassChange(e.target.value)}
               variant="standard"
               sx={drawerSelectSx}
