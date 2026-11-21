@@ -452,6 +452,24 @@ describe('BudgetTab columns and cards', () => {
     expect(screen.queryByTestId('cell-forecast-1')).toBeNull();
   });
 
+  it("opens on the tenant's default column when it is not frozen", async () => {
+    columnsSetting.current = { ...ALL_SHOWN, default_column: 'forecast' };
+    setupApi({ frozen: ['revision'] });
+    renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(freezeLoads()).toBeGreaterThanOrEqual(1));
+    expect(activeColumn()).toBe('forecast');
+    expect(editor()).toHaveTextContent('Forecast 2026');
+  });
+
+  it('opens on the first column that is not frozen when the default column is frozen', async () => {
+    columnsSetting.current = { ...ALL_SHOWN, default_column: 'forecast' };
+    setupApi({ frozen: ['budget', 'forecast'] });
+    renderTab();
+    await waitForAmounts();
+    await waitFor(() => expect(activeColumn()).toBe('committed'));
+  });
+
   it('opens on the first column that is not frozen, whatever its name or rank, and focuses nothing', async () => {
     setupApi({ frozen: ['budget', 'revision'] });
     renderTab();

@@ -106,6 +106,7 @@ La liste (dans **Gestion budgétaire > Lignes budgétaires**) contient les ligne
 - **Société payeuse** : Quelle société paie cette ligne
 - **Compte** : Le numéro et le nom du compte comptable
 - **Budget A** et **Atterrissage prévu A** : Les montants de l'année en cours de la colonne par défaut et de la dernière colonne affichée (ouvre l'onglet **Budget** pour cette année). Avec les réglages standard, ce sont Budget et Atterrissage prévu. Quand la colonne par défaut est aussi la dernière affichée, une seule colonne de montant apparaît. Voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)
+- Quand un administrateur budgétaire change la colonne par défaut, la liste suit. Si vous n'avez jamais choisi de colonnes de montants, elle affiche la nouvelle colonne par défaut et la dernière colonne affichée. Si vous avez choisi les vôtres, elles restent et la nouvelle colonne par défaut de l'année en cours s'ajoute à côté. Vous pouvez la masquer à nouveau dans le sélecteur de colonnes
 - **Dimensions obligatoires** : Une colonne par dimension activée obligatoire pour l'un ou l'autre type, à son nom. Un nouvel espace de travail n'en a aucune
 
 **Colonnes supplémentaires** (masquées par défaut, activez-les via le sélecteur de colonnes) :
@@ -333,7 +334,7 @@ L'onglet Budget porte les montants de la ligne, année par année et colonne par
     - **Atterrissage prévu** : Votre meilleure estimation du chiffre de fin d'année
 - Un administrateur budgétaire peut renommer les colonnes, en masquer certaines et choisir la colonne par défaut dans **Gestion budgétaire > Administration > Colonnes budgétaires** (voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)). Une colonne masquée garde ses montants
 - Chaque colonne affichée a une carte sous les onglets d'année : son nom, son total pour l'année, l'origine de ses montants et sa période, par exemple « Répartition linéaire » et « 9 mois, avril à décembre ». Une colonne vide affiche son zéro seul. Survolez une carte pour voir ses lignes de quantité et prix
-- Cliquez sur une carte pour travailler sur cette colonne. L'onglet s'ouvre sur la première colonne affichée qui n'est pas gelée
+- Cliquez sur une carte pour travailler sur cette colonne. L'onglet s'ouvre sur la [colonne par défaut](budget-operations.md#colonnes-budgetaires), ou sur la première colonne affichée qui n'est pas gelée quand la colonne par défaut est gelée
 - Avec une seule colonne affichée, il n'y a pas de cartes : l'éditeur montre directement la colonne
 
 **Période d'une colonne** :
