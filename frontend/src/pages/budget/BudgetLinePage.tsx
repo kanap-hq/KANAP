@@ -896,6 +896,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
 
   // The title stays open like the draft's fields; Enter, Tab or a move to a field gives it.
   const attemptRef = React.useRef<() => void>(() => undefined);
+  // The draft's POST is under way: what changes meanwhile is saved on the line, the type waits.
+  const writingDraftRef = React.useRef(false);
   const title = useCreationTitle({
     requiredMessage: t('common:creation.titleRequired'),
     onCancel: () => navigate(creationReturn),
@@ -919,48 +921,57 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     missing: () => missingOf(isCreate ? currentDraft() : formRef.current),
     valueOf: (key) => creationFieldValue(isCreate ? currentDraft() : formRef.current, key),
     post: async () => {
-      setSaveError(null);
-      const sent = titledDraft();
-      const body = draftBody(sent);
-      let created: Record<string, any>;
+      writingDraftRef.current = true;
       try {
-        created = (await api.post('/budget-lines', body)).data ?? {};
-      } catch (e) {
-        refusedDraftRef.current = JSON.stringify(body);
-        const message = getApiErrorMessage(e, t, t(config.createFailed));
-        const field = lineRefusalField(e, sent, analyticsAxes.axes);
-        if (field) setFieldErrors({ [field]: message });
-        else setSaveError(message);
-        return null;
+        return await writeDraft();
+      } finally {
+        writingDraftRef.current = false;
       }
-      refusedDraftRef.current = null;
-      setFieldErrors({});
-      const { creation_token: token, ...line } = created;
-      const lineReference = (line.reference || formatItemRef('budget', line.item_number)) as string;
-      // The page keeps its header while it moves to the line: no wait on the resolve and the detail.
-      queryClient.setQueryData(['budget-line-resolve', lineReference], { id: line.id, nature: line.nature ?? nature, reference: lineReference });
-      const detailKey = budgetLineDetailQuery(lineReference).queryKey;
-      queryClient.setQueryData(detailKey, line);
-      invalidateBudgetLists(queryClient);
-      try {
-        await saveEditsSince({
-          sent,
-          now: titledDraft,
-          fields: DRAFT_FIELDS,
-          save: async (edits) => {
-            const res = await api.patch(`/budget-lines/${line.id}`, normalizePatch(edits));
-            if (res?.data) queryClient.setQueryData(detailKey, res.data);
-          },
-        });
-      } catch (e) {
-        setSaveError(getApiErrorMessage(e, t, t('opex.editor.failedToSave')));
-      }
-      const sp = buildListContextParams();
-      sp.delete('nature');
-      return { id: line.id as string, token: token as string, path: `/ops/budget/${lineReference}/overview?${sp.toString()}`, reference: lineReference };
     },
     onError: setSaveError,
   });
+  // The POST of the draft, then what changed in it meanwhile, on the line.
+  async function writeDraft() {
+    setSaveError(null);
+    const sent = titledDraft();
+    const body = draftBody(sent);
+    let created: Record<string, any>;
+    try {
+      created = (await api.post('/budget-lines', body)).data ?? {};
+    } catch (e) {
+      refusedDraftRef.current = JSON.stringify(body);
+      const message = getApiErrorMessage(e, t, t(config.createFailed));
+      const field = lineRefusalField(e, sent, analyticsAxes.axes);
+      if (field) setFieldErrors({ [field]: message });
+      else setSaveError(message);
+      return null;
+    }
+    refusedDraftRef.current = null;
+    setFieldErrors({});
+    const { creation_token: token, ...line } = created;
+    const lineReference = (line.reference || formatItemRef('budget', line.item_number)) as string;
+    // The page keeps its header while it moves to the line: no wait on the resolve and the detail.
+    queryClient.setQueryData(['budget-line-resolve', lineReference], { id: line.id, nature: line.nature ?? nature, reference: lineReference });
+    const detailKey = budgetLineDetailQuery(lineReference).queryKey;
+    queryClient.setQueryData(detailKey, line);
+    invalidateBudgetLists(queryClient);
+    try {
+      await saveEditsSince({
+        sent,
+        now: titledDraft,
+        fields: DRAFT_FIELDS,
+        save: async (edits) => {
+          const res = await api.patch(`/budget-lines/${line.id}`, normalizePatch(edits));
+          if (res?.data) queryClient.setQueryData(detailKey, res.data);
+        },
+      });
+    } catch (e) {
+      setSaveError(getApiErrorMessage(e, t, t('opex.editor.failedToSave')));
+    }
+    const sp = buildListContextParams();
+    sp.delete('nature');
+    return { id: line.id as string, token: token as string, path: `/ops/budget/${lineReference}/overview?${sp.toString()}`, reference: lineReference };
+  }
   // Each change of the draft may complete it; a draft the server refused is not sent again as it is.
   attemptRef.current = () => {
     if (refusedDraftRef.current && refusedDraftRef.current === JSON.stringify(draftBody(titledDraft()))) return;
@@ -973,6 +984,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // The type of the draft: its address (`?nature=`), the dimensions it requires, the accounts it
   // offers. An account kept for the other type is emptied (Create then asks for one).
   const chooseNewLineType = React.useCallback(async (next: LineType) => {
+    // The draft being written keeps the type it was sent with: a menu opened before waits too.
+    if (writingDraftRef.current) return;
     setSearchParams((prev) => {
       const sp = new URLSearchParams(prev);
       sp.set('nature', next);
@@ -1358,6 +1371,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
           <BudgetPropertiesDrawer
             nature={nature}
             onNatureChange={isCreate ? (next) => { void chooseNewLineType(next); } : undefined}
+            natureHeld={creation.writing}
             onChangeType={canChangeType ? () => { void openChangeType(); } : undefined}
             mode="edit"
             draft={isCreate}

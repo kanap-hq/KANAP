@@ -146,6 +146,13 @@ type Options = {
 /** The line as the server holds it: the creation writes it, each PATCH changes it. */
 const server: { line: Record<string, unknown> } = { line: {} };
 
+/** The dimensions of a body (`{ axisId: categoryId }`) as the detail lists them. */
+function valueList(values: unknown): Array<{ axis_id: string; category_id: string | null }> {
+  return Object.entries((values ?? {}) as Record<string, string | null>)
+    .filter(([, id]) => !!id)
+    .map(([axisId, id]) => ({ axis_id: axisId, category_id: id }));
+}
+
 function renderPage(entries: string[], options: Options = {}) {
   const changes = options.changes ?? { fields: 0, children: {} };
   const refusals = [...(options.refusals ?? [])];
@@ -165,15 +172,20 @@ function renderPage(entries: string[], options: Options = {}) {
     if (url === '/budget-lines') {
       const refusal = refusals.shift();
       if (refusal) throw { response: refusal };
-      const { analytics_values: _values, ...fields } = body as Record<string, unknown>;
-      server.line = { ...server.line, ...fields };
+      const { analytics_values: values, ...fields } = body as Record<string, unknown>;
+      server.line = { ...server.line, ...fields, analytics_values: valueList(values) };
       return { data: { ...server.line, creation_token: 'token-1' } } as never;
     }
     return { data: {} } as never;
   });
   mocked.patch.mockImplementation(async (_url: string, body?: unknown) => {
-    const { base: _base, ...fields } = body as Record<string, unknown>;
+    const { base: _base, analytics_values: values, ...fields } = body as Record<string, unknown>;
     server.line = { ...server.line, ...fields };
+    if (values) {
+      const kept = (server.line.analytics_values as Array<{ axis_id: string }> | undefined ?? [])
+        .filter((entry) => !(entry.axis_id in (values as object)));
+      server.line.analytics_values = [...kept, ...valueList(values)];
+    }
     return { data: server.line } as never;
   });
   mocked.delete.mockResolvedValue({ data: undefined } as never);
@@ -435,6 +447,55 @@ describe('Budget line born complete', () => {
     await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { cost_center_id: 'cc-company-1' }));
     expect(field('opex.fields.costCenter')).toHaveValue('cc-company-1');
+  });
+
+  it('saves on the line a dimension changed while the line is written', async () => {
+    await startNewLine({ axes: [SITE_AXIS] });
+    let answer: () => void = () => undefined;
+    mocked.post.mockImplementationOnce(async (_url: string, body?: unknown) => new Promise((resolve) => {
+      answer = () => {
+        const { analytics_values: values, ...fields } = body as Record<string, unknown>;
+        server.line = { ...server.line, ...fields, analytics_values: valueList(values) };
+        resolve({ data: { ...server.line, creation_token: 'token-1' } });
+      };
+    }) as never);
+    await giveTitle();
+    pick('opex.fields.payingCompany', 'company-1');
+    pick('opex.fields.account', 'account-1');
+    pick('Site', 'site-1');
+    await waitFor(() => expect(lineWrites()).toHaveLength(1));
+    expect(lineWrites()[0][1]).toMatchObject({ analytics_values: { 'axis-site': 'site-1' } });
+    pick('Site', 'site-2');
+    await act(async () => { answer(); });
+    await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { analytics_values: { 'axis-site': 'site-2' } }));
+    expect(lineWrites()).toHaveLength(1);
+    await waitFor(() => expect(field('Site')).toHaveValue('site-2'));
+  });
+
+  it('holds the type while the line is written: the line keeps the type it was sent with', async () => {
+    await startNewLine();
+    let answer: () => void = () => undefined;
+    mocked.post.mockImplementationOnce(async (_url: string, body?: unknown) => new Promise((resolve) => {
+      answer = () => resolve({ data: { ...server.line, ...(body as object), creation_token: 'token-1' } });
+    }) as never);
+    await giveTitle();
+    pick('opex.fields.payingCompany', 'company-1');
+    // The menu of types is open when the last field is given.
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'budget.type' }));
+    const capex = await screen.findByRole('option', { name: 'budget.typeCapex' });
+    // The open menu hides the page from the accessibility tree.
+    fireEvent.change(screen.getByRole('textbox', { name: 'opex.fields.account', hidden: true }), { target: { value: 'account-1' } });
+    await waitFor(() => expect(lineWrites()).toHaveLength(1));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'budget.type', hidden: true })).toHaveAttribute('aria-disabled', 'true'));
+    fireEvent.click(capex);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/ops/budget/new/overview?nature=opex');
+    await act(async () => { answer(); });
+    await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
+    expect(lineWrites()[0][1]).toMatchObject({ nature: 'opex' });
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(mocked.get).not.toHaveBeenCalledWith('/accounts/account-1');
   });
 
   it('gives a cost center its company when the company is empty', async () => {

@@ -38,6 +38,8 @@ type Props = {
    * badge, with `onChangeType` ("Change type…") when the line may change it.
    */
   onNatureChange?: (next: LineType) => void;
+  /** The draft is being written: its type menu waits (once written, the type changes by "Change type…"). */
+  natureHeld?: boolean;
   onChangeType?: () => void;
   mode?: 'create' | 'edit';
   /** The line shown (edit): a value added to an open dimension's picker goes on it. */
@@ -103,6 +105,7 @@ const hideInnerLabelSx = {
 export default function BudgetPropertiesDrawer({
   nature,
   onNatureChange,
+  natureHeld = false,
   onChangeType,
   mode = 'edit',
   lineId = null,
@@ -225,7 +228,7 @@ export default function BudgetPropertiesDrawer({
           onChange={(event) => onNatureChange(event.target.value as LineType)}
           SelectDisplayProps={{ 'aria-label': t('budget.type') }}
           sx={drawerSelectSx}
-          disabled={disabled}
+          disabled={disabled || natureHeld}
         >
           {Object.entries(BUDGET_NATURE_CONFIG).map(([value, option]) => (
             <MenuItem key={value} value={value} sx={drawerMenuItemSx}>{t(option.typeLabel)}</MenuItem>
