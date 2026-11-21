@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -12,10 +12,11 @@ import api from '../../api';
 import AssetWorkspacePage from './AssetWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
 
-// An asset is born complete (lot L3b of 26.11.9): its title and its site are open on the new page,
-// the rest is dimmed; nothing is written until both are given, then one POST /assets writes it with
-// its site (the server gives the site's provider) and the page is the asset, with Done and Cancel.
-// Create without a site marks it and puts the cursor there, without a call. Leaving writes nothing.
+// An asset is born complete (lot L3b of 26.11.9): its title, its type and its site are open on the
+// new page, the rest is dimmed; nothing is written until the three are given, in any order, then one
+// POST /assets writes it (the server gives the site's provider) and the page is the asset, with Done
+// and Cancel. Create marks the type and the site still missing and puts the cursor in the first,
+// without a call. Leaving writes nothing.
 
 const translation = {
   t: (key: string, opts?: Record<string, unknown>) => {
@@ -64,19 +65,6 @@ vi.mock('../../hooks/useItOpsEnumOptions', async () => {
   const { useSyncExternalStore } = await import('react');
   return { default: () => useSyncExternalStore(settingsStore.subscribe, settingsStore.get) ?? enumOptions };
 });
-// The provider catalog of a workspace created in 26.11: no `on_prem`.
-const cloudCatalog = {
-  ...enumOptions,
-  byField: {
-    ...enumOptions.byField,
-    serverProvider: ['aws', 'azure', 'gcp', 'other'].map((code) => ({ code, label: code })),
-  },
-};
-const loadingSettings = {
-  settings: null,
-  byField: {},
-  labelFor: (_field: string, code: string) => code,
-};
 vi.mock('../../hooks/useAssetNav', () => ({
   useAssetNav: () => ({ total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
@@ -192,16 +180,26 @@ function pickSite() {
   fireEvent.click(screen.getByRole('button', { name: 'pick-location' }));
 }
 
+/** The type field of the properties panel. */
+const typeField = () => screen.getByPlaceholderText<HTMLInputElement>('workspace.asset.overview.searchAssetTypes');
+
+/** Chooses a type in the list of the type field. */
+async function pickType(label = 'Virtual machine') {
+  fireEvent.keyDown(typeField(), { key: 'ArrowDown' });
+  fireEvent.click(await screen.findByRole('option', { name: label }));
+}
+
 async function startNewAsset() {
   renderPage(['/start']);
   fireEvent.click(await screen.findByRole('button', { name: 'new asset' }));
   await screen.findByRole('textbox', { name: TITLE_FIELD });
 }
 
-/** A new asset given its name and its site: written, and open with Done. */
+/** A new asset given its name, its type and its site: written, and open with Done. */
 async function createAsset() {
   await startNewAsset();
   await typeTitle('Web 1');
+  await pickType();
   pickSite();
   await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
   await screen.findByRole('button', { name: 'common:buttons.done' });
@@ -214,6 +212,7 @@ function rowLabel(key: string): HTMLElement {
   return label;
 }
 const siteLabel = () => rowLabel('workspace.asset.overview.location');
+const typeLabel = () => rowLabel('workspace.asset.overview.assetType');
 const dimmed = (el: Element) => !!el.closest('[data-testid="creation-preview"]');
 const assetPosts = () => mocked.post.mock.calls.filter(([url]) => url === '/assets');
 
@@ -226,7 +225,7 @@ describe('An asset born complete', () => {
     settingsStore.set(null);
   });
 
-  it('opens with its title and its site to give, every other row dimmed and out of reach, nothing written', async () => {
+  it('opens with its title, its type and its site to give, every other row dimmed and out of reach, nothing written', async () => {
     renderPage(['/it/assets/new/overview']);
     const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(input).toHaveFocus();
@@ -239,12 +238,19 @@ describe('An asset born complete', () => {
     const siteMenu = screen.getByTitle('workspace.asset.meta.editLocation');
     expect(dimmed(siteMenu)).toBe(false);
     expect(siteMenu.tagName).toBe('BUTTON');
+    // The type: its row, empty with no type chosen for the person, and its item in the metadata bar.
+    expect(dimmed(typeField())).toBe(false);
+    expect(typeField().value).toBe('');
+    expect(dimmed(typeLabel())).toBe(false);
+    expect(typeLabel().closest('[data-required-field]')).toBeTruthy();
+    const typeMenu = screen.getByTitle('workspace.asset.meta.editAssetType');
+    expect(dimmed(typeMenu)).toBe(false);
+    expect(typeMenu.tagName).toBe('BUTTON');
     // The rest, row by row.
-    for (const key of ['workspace.asset.overview.assetType', 'workspace.asset.meta.cluster', 'workspace.asset.technical.environment', 'workspace.asset.overview.lifecycle', 'workspace.asset.overview.goLiveDate']) {
+    for (const key of ['workspace.asset.meta.cluster', 'workspace.asset.technical.environment', 'workspace.asset.overview.lifecycle', 'workspace.asset.overview.goLiveDate']) {
       expect(dimmed(rowLabel(key))).toBe(true);
     }
     expect(dimmed(screen.getByTestId('description-editor'))).toBe(true);
-    expect(dimmed(screen.getByTitle('workspace.asset.meta.editAssetType'))).toBe(true);
     const previews = screen.getAllByTestId('creation-preview');
     expect(previews.length).toBeGreaterThan(3);
     for (const preview of previews) {
@@ -272,6 +278,60 @@ describe('An asset born complete', () => {
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
+  it('writes nothing for a name and a site without a type', async () => {
+    await startNewAsset();
+    await typeTitle('Web 1');
+    pickSite();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(location()).toBe('/it/assets/new/overview');
+  });
+
+  it('writes nothing for a name and a type without a site', async () => {
+    await startNewAsset();
+    await typeTitle('Web 1');
+    await pickType();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    expect(location()).toBe('/it/assets/new/overview');
+  });
+
+  it('writes the asset with the type chosen, whatever the order the three are given in', async () => {
+    await startNewAsset();
+    pickSite();
+    await pickType('Physical server');
+    expect(mocked.post).not.toHaveBeenCalled();
+    await typeTitle('Web 1');
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    expect(assetPosts()).toHaveLength(1);
+    expect(assetPosts()[0][1]).toMatchObject({ name: 'Web 1', kind: 'physical_server', location_id: 'loc-1' });
+  });
+
+  it('writes the asset when its type is chosen last, in the metadata bar', async () => {
+    await startNewAsset();
+    await typeTitle('Web 1');
+    pickSite();
+    const typeMenu = screen.getByTitle('workspace.asset.meta.editAssetType');
+    fireEvent.focusOut(screen.getByRole('textbox', { name: TITLE_FIELD }), { relatedTarget: typeMenu });
+    fireEvent.click(typeMenu);
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Physical server' }));
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    expect(assetPosts()).toHaveLength(1);
+    expect(assetPosts()[0][1]).toMatchObject({ kind: 'physical_server' });
+  });
+
+  it('marks nothing when a choice in the metadata bar leaves the draft incomplete', async () => {
+    await startNewAsset();
+    await typeTitle('Web 1');
+    const siteMenu = screen.getByTitle('workspace.asset.meta.editLocation');
+    fireEvent.focusOut(screen.getByRole('textbox', { name: TITLE_FIELD }), { relatedTarget: siteMenu });
+    fireEvent.click(siteMenu);
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Paris/ }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(typeLabel()).not.toHaveAttribute('data-missing');
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
   it('writes the asset once with its name and its site, then shows it with Done and Cancel', async () => {
     await createAsset();
     expect(assetPosts()).toHaveLength(1);
@@ -296,6 +356,7 @@ describe('An asset born complete', () => {
   it('writes the asset when its site is chosen in the metadata bar', async () => {
     await startNewAsset();
     await typeTitle('Web 1');
+    await pickType();
     const siteMenu = screen.getByTitle('workspace.asset.meta.editLocation');
     // A press on the bar takes the focus from the title: a leave of the title, which gives nothing.
     fireEvent.focusOut(screen.getByRole('textbox', { name: TITLE_FIELD }), { relatedTarget: siteMenu });
@@ -308,16 +369,27 @@ describe('An asset born complete', () => {
 
   it('writes the asset when the site is given before the name', async () => {
     await startNewAsset();
+    await pickType();
     pickSite();
     await typeTitle('Web 1');
     await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
     expect(assetPosts()).toHaveLength(1);
   });
 
-  it('marks the site on Create without one and puts the cursor there, without a call', async () => {
+  it('marks the type and the site on Create without them and puts the cursor in the type, without a call', async () => {
     await startNewAsset();
     const input = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Web 1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(typeField()).toHaveFocus());
+    expect(typeLabel()).toHaveAttribute('data-missing');
+    expect(typeField()).toHaveAttribute('aria-invalid', 'true');
+    expect(siteLabel()).toHaveAttribute('data-missing');
+    expect(mocked.post).not.toHaveBeenCalled();
+    // The type given: its mark goes; Create again goes to the site.
+    await pickType();
+    await waitFor(() => expect(typeLabel()).not.toHaveAttribute('data-missing'));
+    expect(mocked.post).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(screen.getByRole('textbox', { name: 'site' })).toHaveFocus());
     expect(siteLabel()).toHaveAttribute('data-missing');
@@ -331,29 +403,37 @@ describe('An asset born complete', () => {
     expect(assetPosts()).toHaveLength(1);
   });
 
-  it('writes a cluster when the list asked for one', async () => {
+  it('writes a cluster when the list asked for one, once its type is given too', async () => {
     renderPage(['/it/assets/new/overview?cluster=1']);
     await typeTitle('Web 1');
     pickSite();
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets', expect.objectContaining({ is_cluster: true, location_id: 'loc-1' })));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    await pickType();
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets', expect.objectContaining({ is_cluster: true, kind: 'virtual_machine', location_id: 'loc-1' })));
   });
 
-  it('waits for the settings when the name and the site are given before they load', async () => {
-    settingsStore.set(loadingSettings);
-    renderPage(['/it/assets/new/overview']);
+  it('shows a refusal of the type under the type, and does not send the same draft again', async () => {
+    await startNewAsset();
+    mocked.post.mockRejectedValueOnce({ response: { status: 400, data: { message: 'Invalid kind "virtual_machine"' } } });
     await typeTitle('Web 1');
+    await pickType();
     pickSite();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(mocked.post).not.toHaveBeenCalled();
-    act(() => settingsStore.set(cloudCatalog));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets', expect.objectContaining({ kind: 'virtual_machine', location_id: 'loc-1' })));
+    await waitFor(() => expect(typeLabel().closest('[data-required-field]')?.textContent).toMatch(/Invalid kind/));
+    expect(screen.queryByRole('alert')).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 20));
     expect(assetPosts()).toHaveLength(1);
+    // Another type is a new draft: written.
+    await pickType('Physical server');
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    expect(assetPosts()[1][1]).toMatchObject({ kind: 'physical_server' });
   });
 
   it('shows a refusal of the name under the title, keeps the draft and does not send it again', async () => {
     await startNewAsset();
     mocked.post.mockRejectedValueOnce({ response: { status: 409, data: { code: 'asset_name_taken', message: 'An asset already has this name: AST-2', params: { ref: 'AST-2' } } } });
     await typeTitle('Web 1');
+    await pickType();
     pickSite();
     expect(await screen.findByRole('alert')).toHaveTextContent(/asset_name_taken/);
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -370,6 +450,7 @@ describe('An asset born complete', () => {
     await startNewAsset();
     mocked.post.mockRejectedValueOnce({ response: { status: 400, data: { message: 'Invalid location_id' } } });
     await typeTitle('Web 1');
+    await pickType();
     pickSite();
     await waitFor(() => expect(siteLabel().closest('[data-required-field]')?.textContent).toMatch(/Invalid location_id/));
     expect(screen.queryByRole('alert')).toBeNull();

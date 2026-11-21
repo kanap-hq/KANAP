@@ -875,14 +875,6 @@ function AssetWorkspaceRoute() {
     [byField.ipAddressType],
   );
 
-  // A new asset starts as a virtual machine, or the first type of the list: the title creates it so.
-  React.useEffect(() => {
-    if (!isCreate || kind) return;
-    const kinds = (settings?.serverKinds || []).filter((option) => !option.deprecated);
-    const next = kinds.find((option) => option.code === 'virtual_machine')?.code || kinds[0]?.code || '';
-    if (next) setKind(next);
-  }, [isCreate, kind, settings?.serverKinds]);
-
   React.useEffect(() => {
     if (!data) return;
     setName(data.name);
@@ -1553,10 +1545,10 @@ function AssetWorkspaceRoute() {
     await patchAsset({ notes: pending.value || null }).catch(() => undefined);
   };
 
-  // A new asset is a draft until it has its name and its site: nothing is written before, and
-  // leaving writes nothing. The two given, one POST writes it with the type, environment, lifecycle
-  // and cluster switch shown (the server gives the site's provider), and the page is the asset, with
-  // Done (kept, back where the creation started) and Cancel (deleted).
+  // A new asset is a draft until it has its name, its type and its site: nothing is written before,
+  // and leaving writes nothing. The three given, in any order, one POST writes it with the
+  // environment, lifecycle and cluster switch shown (the server gives the site's provider), and the
+  // page is the asset, with Done (kept, back where the creation started) and Cancel (deleted).
   const handleClose = () => navigate(listPath);
   const leave = useCreationLeave(handleClose);
   const title = useCreationTitle({
@@ -1566,12 +1558,16 @@ function AssetWorkspaceRoute() {
     onChange: setName,
     onCommit: () => creation.attempt(),
   });
-  // The site a write refused, said on the site until another is chosen.
+  // The type or the site a write refused, said on its field until another is chosen.
+  const [kindError, setKindError] = React.useState<string | null>(null);
   const [siteError, setSiteError] = React.useState<string | null>(null);
   // The draft as it stands now: a site just chosen is in it before the page renders again.
   const draftRef = React.useRef({ kind, environment, status, isCluster, locationId });
   draftRef.current = { kind, environment, status, isCluster, locationId };
   const siteOf = () => (isCreate ? draftRef.current.locationId : (dataRef.current?.location_id ?? draftRef.current.locationId));
+  const kindOf = () => (isCreate ? draftRef.current.kind : (dataRef.current?.kind || draftRef.current.kind));
+  // A name, a type and a site: the draft may be written.
+  const draftReady = () => !!title.current().trim() && !!draftRef.current.kind && !!draftRef.current.locationId;
   const creation = useDraftCreation({
     isCreate,
     family: 'assets',
@@ -1580,12 +1576,13 @@ function AssetWorkspaceRoute() {
     listPath,
     recordLabel: t('workspace.asset.creation.record'),
     queryKeyPrefixes: ['assets'],
-    // A name, a site, and the type the settings give.
-    ready: () => !!title.current().trim() && !!draftRef.current.locationId && !!draftRef.current.kind,
-    missing: () => (siteOf() ? [] : ['location']),
-    valueOf: (key) => (key === 'location' ? siteOf() ?? null : null),
+    ready: draftReady,
+    // In screen order: the type, then the site.
+    missing: () => [...(kindOf() ? [] : ['kind']), ...(siteOf() ? [] : ['location'])],
+    valueOf: (key) => (key === 'location' ? siteOf() ?? null : key === 'kind' ? kindOf() || null : null),
     post: async () => {
       setError(null);
+      setKindError(null);
       setSiteError(null);
       const assetName = title.current().trim().slice(0, ASSET_NAME_MAX);
       const draft = draftRef.current;
@@ -1620,6 +1617,7 @@ function AssetWorkspaceRoute() {
         const answer = (e as { response?: { data?: { code?: unknown; message?: unknown } } })?.response?.data;
         const code = String(answer?.code ?? '');
         if (code === 'asset_location_required' || /location/i.test(String(answer?.message ?? ''))) setSiteError(message);
+        else if (/\bkind\b/i.test(String(answer?.message ?? ''))) setKindError(message);
         else if (code === 'asset_name_taken' || code === 'asset_fqdn_taken' || /name/i.test(String(answer?.message ?? ''))) title.refuse(message);
         else setError(message);
         return null;
@@ -1627,12 +1625,12 @@ function AssetWorkspaceRoute() {
     },
     onError: setError,
   });
-  // A field given (the site, or the type the settings bring) writes a complete draft; a refused
-  // draft is sent again only once one of its fields changes.
+  // A field given (the type or the site) writes a complete draft; a refused draft is sent again
+  // only once one of its fields changes.
   React.useEffect(() => { creation.attempt(); }, [creation.attempt, kind, locationId]);
 
-  // Create on the new page: an empty title says so, a missing site is marked and gets the cursor,
-  // with no call; a complete draft is written. Done on the asset written: the description still
+  // Create on the new page: an empty title says so, a missing type or site is marked and the first
+  // in screen order gets the cursor, with no call; a complete draft is written. Done on the asset written: the description still
   // typed is saved, then the asset is kept and the page goes back where the creation started.
   const createAction = async () => {
     if (!isCreate) await flushNotes();
@@ -1687,8 +1685,15 @@ function AssetWorkspaceRoute() {
   };
 
   const updateAssetType = (nextValue: string) => {
+    setKindError(null);
+    draftRef.current = { ...draftRef.current, kind: nextValue };
     setKind(nextValue);
     if (!isCreate && nextValue) savePatch({ kind: nextValue });
+  };
+  // A choice in a list of the metadata bar gives its field. The press that opened the list left the
+  // title, which the draft takes for a leave: a draft the choice completes is written as by Create.
+  const giveFromMetadataMenu = () => {
+    if (isCreate && draftReady()) creation.create();
   };
 
   const updateLocation = (nextValue: string | null) => {
@@ -1818,8 +1823,7 @@ function AssetWorkspaceRoute() {
   const properties = (
     <>
       <PropertyGroup>
-        {previewOnCreate(
-        <PropertyRow label={t('workspace.asset.overview.assetType')} required>
+        <PropertyRow label={t('workspace.asset.overview.assetType')} required missing={creation.marked.has('kind')}>
           <Autocomplete
             options={kindOptions.filter((opt) => !opt.deprecated || opt.value === kind)}
             value={kind ? kindOptions.find((opt) => opt.value === kind) || { value: kind, label: kind, deprecated: false } : null}
@@ -1832,6 +1836,8 @@ function AssetWorkspaceRoute() {
                 {...params}
                 variant="standard"
                 placeholder={t('workspace.asset.overview.searchAssetTypes')}
+                error={!!kindError}
+                helperText={kindError ?? undefined}
                 sx={drawerFieldValueSx}
               />
             )}
@@ -1839,7 +1845,6 @@ function AssetWorkspaceRoute() {
             fullWidth
           />
         </PropertyRow>
-        )}
         {previewOnCreate(
         <PropertyRow label={t('workspace.asset.meta.cluster')}>
           {/* A span carries the tooltip: it also shows on a disabled switch. */}
@@ -2202,6 +2207,7 @@ function AssetWorkspaceRoute() {
               }}
               disabled={!canManage}
             />
+            </>, METADATA_PREVIEW_SX)}
             <PortfolioMetadataItem
               onClick={(event) => setAssetTypeAnchorEl(event.currentTarget)}
               disabled={!canEditNetboxField('kind') || saving}
@@ -2221,6 +2227,7 @@ function AssetWorkspaceRoute() {
                   onClick={() => {
                     updateAssetType(option.value);
                     setAssetTypeAnchorEl(null);
+                    giveFromMetadataMenu();
                   }}
                   sx={drawerMenuItemSx}
                 >
@@ -2228,8 +2235,7 @@ function AssetWorkspaceRoute() {
                 </MenuItem>
               ))}
             </Menu>
-            {isCluster && <PortfolioMetadataItem>{t('workspace.asset.meta.cluster')}</PortfolioMetadataItem>}
-            </>, METADATA_PREVIEW_SX)}
+            {isCluster && previewOnCreate(<PortfolioMetadataItem>{t('workspace.asset.meta.cluster')}</PortfolioMetadataItem>, METADATA_PREVIEW_SX)}
             <PortfolioMetadataItem
               label={t('workspace.asset.overview.location')}
               onClick={(event) => setLocationAnchorEl(event.currentTarget)}
@@ -2250,9 +2256,7 @@ function AssetWorkspaceRoute() {
                   onClick={() => {
                     updateLocation(option.id);
                     setLocationAnchorEl(null);
-                    // A choice in this list gives the site. The press that opened it left the title,
-                    // which the draft takes for a leave: the draft, complete, is written as by Create.
-                    if (isCreate) creation.create();
+                    giveFromMetadataMenu();
                   }}
                   sx={drawerMenuItemSx}
                 >

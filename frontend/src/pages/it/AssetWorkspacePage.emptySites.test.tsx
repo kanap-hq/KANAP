@@ -12,8 +12,8 @@ import api from '../../api';
 import AssetWorkspacePage from './AssetWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
 
-// An asset born complete in a workspace without any site (lot L3b of 26.11.9): name, Tab, the cursor
-// is in the site, its list offers to create one; the site created from the picker is chosen and
+// An asset born complete in a workspace without any site (lot L3b of 26.11.9): name, Tab, type, Tab,
+// the cursor is in the site, its list offers to create one; the site created from the picker is chosen and
 // completes the asset, written once with it.
 
 const translation = {
@@ -170,7 +170,18 @@ describe('An asset born complete in a workspace without sites', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'new asset' }));
     const title = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Web 1' } });
+    // Name, Tab: the cursor goes to the type, the first field to give in screen order.
     fireEvent.keyDown(title, { key: 'Tab' });
+    const typeField = screen.getByPlaceholderText<HTMLInputElement>('workspace.asset.overview.searchAssetTypes');
+    await waitFor(() => expect(typeField).toHaveFocus());
+    // A type chosen from the keyboard: the cursor stays in the type, Tab goes on to the site.
+    fireEvent.keyDown(typeField, { key: 'ArrowDown' });
+    await screen.findByRole('option', { name: 'Physical server' });
+    fireEvent.keyDown(typeField, { key: 'ArrowDown' });
+    fireEvent.keyDown(typeField, { key: 'Enter' });
+    await waitFor(() => expect(typeField.value).toBe('Physical server'));
+    expect(typeField).toHaveFocus();
+    fireEvent.keyDown(typeField, { key: 'Tab' });
     const siteField = document.querySelector<HTMLInputElement>('[data-creation-field="location"] input');
     await waitFor(() => expect(siteField).toHaveFocus());
     expect(mocked.post).not.toHaveBeenCalled();
@@ -186,7 +197,7 @@ describe('An asset born complete in a workspace without sites', () => {
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/it/assets/AST-7/overview'));
     const assetPosts = mocked.post.mock.calls.filter(([url]) => url === '/assets');
     expect(assetPosts).toHaveLength(1);
-    expect(assetPosts[0][1]).toMatchObject({ name: 'Web 1', location_id: 'loc-new' });
+    expect(assetPosts[0][1]).toMatchObject({ name: 'Web 1', kind: 'physical_server', location_id: 'loc-new' });
     expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
   });
 });
