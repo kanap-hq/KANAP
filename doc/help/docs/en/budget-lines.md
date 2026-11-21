@@ -106,6 +106,7 @@ The list (at **Budget management > Budget lines**) holds the OPEX and CAPEX line
 - **Paying company**: Which company pays for this line
 - **Account**: The GL account number and name
 - **Budget Y** and **Expected landing Y**: The current-year amounts of the default column and of the last shown column (links to the **Budget** tab for this year). With the standard settings these are Budget and Expected landing. When the default column is also the last shown one, a single amount column appears. See [Budget columns](budget-operations.md#budget-columns)
+- When a budget administrator changes the default column, the list follows. If you never chose amount columns, it shows the new default column and the last shown one. If you chose your own, they stay and the new default column of the current year is added next to them. You can hide it again in the column chooser
 - **Required dimensions**: One column per enabled dimension that is required for either type, named after it. A new workspace has none
 
 **Additional columns** (hidden by default, toggle via the column chooser):

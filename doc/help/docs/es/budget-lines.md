@@ -106,6 +106,7 @@ La lista (en **Gestión presupuestaria > Líneas presupuestarias**) reúne las l
 - **Empresa pagadora**: Qué empresa paga esta línea
 - **Cuenta**: El número y nombre de cuenta contable
 - **Presupuesto A** y **Aterrizaje previsto A**: Los importes del año actual de la columna por defecto y de la última columna visible (enlazan a la pestaña **Presupuesto** de este año). Con la configuración estándar son Presupuesto y Aterrizaje previsto. Cuando la columna por defecto es también la última visible, aparece una sola columna de importe. Consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)
+- Cuando un administrador de presupuesto cambia la columna por defecto, la lista la sigue. Si nunca eligió columnas de importes, muestra la nueva columna por defecto y la última columna visible. Si eligió las suyas, se mantienen y la nueva columna por defecto del año actual se añade junto a ellas. Puede volver a ocultarla en el selector de columnas
 - **Dimensiones obligatorias**: Una columna por dimensión activada que es obligatoria para alguno de los dos tipos, con el nombre de la dimensión. Un espacio de trabajo nuevo no tiene ninguna
 
 **Columnas adicionales** (ocultas por defecto, habilítelas mediante el selector de columnas):

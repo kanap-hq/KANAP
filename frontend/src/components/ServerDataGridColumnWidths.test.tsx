@@ -24,7 +24,7 @@ vi.mock('../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'tes
 vi.mock('../config/ThemeContext', () => ({ useThemeMode: () => ({ resolvedMode: 'light' }) }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 
-import ServerDataGrid, { type EnhancedColDef } from './ServerDataGrid';
+import ServerDataGrid, { type ColumnLayoutStamp, type EnhancedColDef } from './ServerDataGrid';
 
 type Row = { id: string; name: string; code: string; notes: string; created_at?: string };
 
@@ -225,5 +225,93 @@ describe('ServerDataGrid layout version', () => {
     const api = await renderVersioned();
     expect(stateOf(api, 'created_at').width).toBe(180);
     expect(stateOf(api, 'name').width).toBe(220);
+  });
+});
+
+describe('ServerDataGrid layout stamp', () => {
+  let view: ReturnType<typeof render> | null = null;
+  const KEY = 'grid-columns:test:u-1:stamped';
+
+  beforeEach(() => {
+    vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
+    const stored = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => { stored.set(key, value); },
+      removeItem: (key: string) => { stored.delete(key); },
+    });
+  });
+  afterEach(async () => {
+    view?.unmount();
+    view = null;
+    await flushAgGridTimers();
+    vi.unstubAllGlobals();
+  });
+
+  const columns = (): EnhancedColDef<Row>[] => [
+    { field: 'name', headerName: 'Name', width: 180 },
+    { field: 'code', headerName: 'Code', width: 120 },
+    { field: 'notes', headerName: 'Notes', width: 140, defaultHidden: true },
+  ];
+  /** A migration that shows `notes`, and records the stamp each layout was saved under. */
+  const stampOf = (value: string, seen: Array<string | null>): ColumnLayoutStamp => ({
+    value,
+    migrate: (saved, savedStamp) => {
+      seen.push(savedStamp);
+      return saved.map((col) => (col.colId === 'notes' ? { ...col, hide: false } : col));
+    },
+  });
+  const grid = (stamp: ColumnLayoutStamp, onApi: (api: any) => void) => (
+    <MemoryRouter>
+      <ServerDataGrid<Row> columns={columns()} endpoint="/things" queryKey="things" columnPreferencesKey="stamped" columnLayoutStamp={stamp} onGridApiReady={onApi} />
+    </MemoryRouter>
+  );
+  const savedLayout = () => JSON.stringify([
+    { colId: 'name', width: 180, hide: false },
+    { colId: 'code', width: 120, hide: false },
+    { colId: 'notes', width: 140, hide: true },
+  ]);
+
+  it('migrates a layout saved without a stamp, then saves it under the current one', async () => {
+    localStorage.setItem(KEY, savedLayout());
+    const seen: Array<string | null> = [];
+    let api: any = null;
+    view = render(grid(stampOf('b', seen), (a) => { api = a; }));
+    await waitFor(() => expect(api).not.toBeNull());
+    expect(seen.every((stamp) => stamp === null)).toBe(true);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(stateOf(api, 'notes').hide).toBe(false);
+
+    // The person hides it again: the layout is saved under the stamp it was loaded with.
+    act(() => { api.setColumnsVisible(['notes'], false); });
+    await waitFor(() => expect(localStorage.getItem(`${KEY}:stamp`)).toBe('b'));
+    expect(JSON.parse(localStorage.getItem(KEY)!).find((col: { colId: string }) => col.colId === 'notes').hide).toBe(true);
+  });
+
+  it('applies a layout saved under the current stamp as it is', async () => {
+    localStorage.setItem(KEY, savedLayout());
+    localStorage.setItem(`${KEY}:stamp`, 'b');
+    const seen: Array<string | null> = [];
+    let api: any = null;
+    view = render(grid(stampOf('b', seen), (a) => { api = a; }));
+    await waitFor(() => expect(api).not.toBeNull());
+    expect(seen).toEqual([]);
+    expect(stateOf(api, 'notes').hide).toBe(true);
+  });
+
+  it('migrates the layout on screen when the stamp changes while the grid is open', async () => {
+    localStorage.setItem(KEY, savedLayout());
+    localStorage.setItem(`${KEY}:stamp`, 'a');
+    const seen: Array<string | null> = [];
+    let api: any = null;
+    const onApi = (a: any) => { api = a; };
+    view = render(grid({ value: 'a', migrate: (saved) => saved }, onApi));
+    await waitFor(() => expect(api).not.toBeNull());
+    expect(stateOf(api, 'notes').hide).toBe(true);
+
+    view.rerender(grid(stampOf('b', seen), onApi));
+    await waitFor(() => expect(stateOf(api, 'notes').hide).toBe(false));
+    expect(seen.every((stamp) => stamp === 'a')).toBe(true);
+    expect(seen.length).toBeGreaterThan(0);
   });
 });

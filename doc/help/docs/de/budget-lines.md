@@ -106,6 +106,7 @@ Die Liste (unter **Budgetverwaltung > Budgetzeilen**) enthält die OPEX- und CAP
 - **Zahlendes Unternehmen**: Welches Unternehmen diese Zeile bezahlt
 - **Konto**: Die Sachkonto-Nummer und -Bezeichnung
 - **Budget J** und **Erwarteter Endwert J**: Die Beträge des aktuellen Jahres in der Standardspalte und in der letzten angezeigten Spalte (verlinkt zum Tab **Budget** für dieses Jahr). Mit den Standardeinstellungen sind das Budget und Erwarteter Endwert. Ist die Standardspalte zugleich die letzte angezeigte Spalte, erscheint nur eine Betragsspalte. Siehe [Budgetspalten](budget-operations.md#budgetspalten)
+- Ändert ein Budgetadministrator die Standardspalte, folgt die Liste. Haben Sie nie Betragsspalten gewählt, zeigt sie die neue Standardspalte und die letzte angezeigte Spalte. Haben Sie eigene gewählt, bleiben sie erhalten, und die neue Standardspalte des aktuellen Jahres kommt neben ihnen hinzu. In der Spaltenauswahl können Sie sie wieder ausblenden
 - **Erforderliche Dimensionen**: Eine Spalte pro aktivierter Dimension, die für einen der beiden Typen erforderlich ist, nach ihr benannt. Ein neuer Arbeitsbereich hat keine
 
 **Zusätzliche Spalten** (standardmäßig ausgeblendet, über die Spaltenauswahl umschaltbar):

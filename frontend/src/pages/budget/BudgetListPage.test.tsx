@@ -131,6 +131,7 @@ type GridProps = {
   columns: Col[];
   pinnedBottomRowData: Array<{ versions?: Record<string, { totals?: Record<string, number> }> } & Record<string, unknown>>;
   defaultSort: { field: string; direction: string };
+  columnLayoutStamp: { value: string; migrate: (saved: Array<{ colId: string; hide: boolean }>, savedStamp: string | null) => Array<{ colId: string; hide: boolean }> };
   onQueryStateChange: (state: { sort: string; filterModel: Record<string, unknown>; q: string; statusScope: string }) => void;
   onGridApiReady: (api: unknown) => void;
   setFilterExcludeMode: boolean;
@@ -265,6 +266,21 @@ describe('BudgetListPage', () => {
     columnsSetting = DEFAULT_BUDGET_COLUMNS;
     await openList();
     await waitFor(() => expect(new URLSearchParams(location.search).get('sort')).toBe('yRevision:ASC'));
+  });
+
+  it('stamps the saved layout with the default amount columns, so a layout saved under Budget follows a new default column', async () => {
+    columnsSetting = { ...DEFAULT_BUDGET_COLUMNS, default_column: 'committed' };
+    await renderPage();
+    const stamp = lastProps().columnLayoutStamp;
+    expect(stamp.value).toBe('yRevision,yLanding');
+    const saved = [
+      { colId: 'product_name', hide: false },
+      { colId: 'yBudget', hide: false },
+      { colId: 'yRevision', hide: true },
+      { colId: 'yLanding', hide: false },
+    ];
+    // Saved before the stamp existed, on the product's two columns: Revision takes the place of Budget.
+    expect(stamp.migrate(saved, null).filter((col) => !col.hide).map((col) => col.colId)).toEqual(['product_name', 'yRevision', 'yLanding']);
   });
 
   it('shows one loading line until the setting arrives', async () => {

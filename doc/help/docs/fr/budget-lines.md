@@ -106,6 +106,7 @@ La liste (dans **Gestion budgétaire > Lignes budgétaires**) contient les ligne
 - **Société payeuse** : Quelle société paie cette ligne
 - **Compte** : Le numéro et le nom du compte comptable
 - **Budget A** et **Atterrissage prévu A** : Les montants de l'année en cours de la colonne par défaut et de la dernière colonne affichée (ouvre l'onglet **Budget** pour cette année). Avec les réglages standard, ce sont Budget et Atterrissage prévu. Quand la colonne par défaut est aussi la dernière affichée, une seule colonne de montant apparaît. Voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)
+- Quand un administrateur budgétaire change la colonne par défaut, la liste suit. Si vous n'avez jamais choisi de colonnes de montants, elle affiche la nouvelle colonne par défaut et la dernière colonne affichée. Si vous avez choisi les vôtres, elles restent et la nouvelle colonne par défaut de l'année en cours s'ajoute à côté. Vous pouvez la masquer à nouveau dans le sélecteur de colonnes
 - **Dimensions obligatoires** : Une colonne par dimension activée obligatoire pour l'un ou l'autre type, à son nom. Un nouvel espace de travail n'en a aucune
 
 **Colonnes supplémentaires** (masquées par défaut, activez-les via le sélecteur de colonnes) :
