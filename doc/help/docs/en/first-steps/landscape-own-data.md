@@ -42,7 +42,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **IT landscape > Assets**
 
-**What to do.** Click **Add asset**, or **Import** a file for many assets. Type its name and press Enter, choose the asset type and the location, then click **Done**. To link an asset to an application, open the application, **Deployments** tab: **Add deployment** for the environment, then **Add server**.
+**What to do.** Click **Add asset**, or **Import** a file for many assets. Type its name and choose its location: the asset is created. Choose its asset type, then click **Done**. To link an asset to an application, open the application, **Deployments** tab: **Add deployment** for the environment, then **Add server**.
 
 **What you see.** The application's deployment block lists its servers, and the asset lists the application under **Hosted applications** in its **Operations** tab. The end of support of its technologies now reaches the asset. The vulnerabilities of an operating system are not in the alerts at first, because Kadratis does not know a server's patch level. To see them, open **IT landscape > Vulnerabilities** and choose **Excluded** in the **Alerts** filter, or **Show the excluded ones** when the list is empty.
 

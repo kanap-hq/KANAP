@@ -172,13 +172,13 @@ Go to **IT Landscape → Assets** and click **Add asset**.
 
 ### Overview tab
 
-Fill in the core fields:
+Type the **Name** in the title (for example `PROD-WEB-01`), then choose the **Location** in the **Properties** panel (for example `Paris Datacenter`). Kadratis creates the asset as soon as it has both. The rest of the page stays dimmed until then.
+
+Then fill in the other core fields:
 
 | Field | What to enter | Example |
 |-------|--------------|---------|
-| **Name** | Hostname or identifier | `PROD-WEB-01` |
 | **Asset type** | The server type (dropdown) | `Virtual Machine` |
-| **Location** | Where it's hosted (required) | `Paris Datacenter` |
 | **Environment** | Which environment it serves | `Prod` |
 | **Description** | Any additional context | |
 
@@ -194,7 +194,7 @@ The **Properties** panel on the right holds the rest: the **Cluster** switch, **
 
 ### Network tab
 
-The **Network** tab is open while you create the asset. Fill in:
+The **Network** tab opens once the asset is created. Fill in:
 
 | Section | Fields | Details |
 |---------|--------|---------|
