@@ -304,6 +304,20 @@ async function testAssetNeedsItsSite() {
   console.log('  asset site required: OK');
 }
 
+async function testConnectionNeedsItsEnds() {
+  const { service, context } = createHarness();
+  const create = (fields: Record<string, unknown>) => service.prepareCreatePreview(context, { entity_type: 'connections', fields: { name: 'Web to db', protocol_codes: ['https'], ...fields } });
+  // The write refuses a connection without its ends: the preview refuses it first, naming the field.
+  await assert.rejects(() => create({}), /Source is required for connection creation/);
+  await assert.rejects(() => create({ source_entity_code: 'internet' }), /Destination is required for connection creation/);
+  await assert.rejects(() => create({ topology: 'server_to_server', destination_asset_id: 'AST-12' }), /Source is required for connection creation/);
+  await assert.rejects(() => create({ topology: 'multi_server', servers: ['AST-12'] }), /at least two servers/i);
+  await assert.rejects(() => create({ topology: 'multi_server' }), /at least two servers/i);
+  const prepared = await create({ source_entity_code: 'internet', destination_asset_id: 'AST-12' });
+  assert.equal((prepared.mutationInput.fields as Record<string, unknown>).destination_asset_id, '66666666-6666-4666-8666-666666666666');
+  console.log('  connection ends required: OK');
+}
+
 async function main() {
   await testBusinessReferencesNameTheRecord();
   await testCreateAcceptsConfiguredCategoryCode();
@@ -314,6 +328,7 @@ async function main() {
   await testEffectiveEndIsAnAliasOfTheEndOfValidity();
   await testRecordLabelNamesTheReferenceOnce();
   await testAssetNeedsItsSite();
+  await testConnectionNeedsItsEnds();
 }
 
 main().catch((error) => {
