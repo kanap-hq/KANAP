@@ -42,7 +42,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **IT-Landschaft > Assets**
 
-**Was Sie tun.** Klicken Sie auf **Asset hinzufügen**, oder **importieren** Sie eine Datei für viele Assets. Geben Sie seinen Namen ein und wählen Sie seinen Standort: Das Asset wird erstellt. Wählen Sie seinen Asset-Typ, dann klicken Sie auf **Fertig**. Um ein Asset mit einer Anwendung zu verknüpfen, öffnen Sie die Anwendung, Reiter **Bereitstellungen**: **Bereitstellung hinzufügen** für die Umgebung, dann **Server hinzufügen**.
+**Was Sie tun.** Klicken Sie auf **Asset hinzufügen**, oder **importieren** Sie eine Datei für viele Assets. Geben Sie seinen Namen ein, wählen Sie seinen Asset-Typ und seinen Standort: Das Asset wird erstellt. Klicken Sie dann auf **Fertig**. Um ein Asset mit einer Anwendung zu verknüpfen, öffnen Sie die Anwendung, Reiter **Bereitstellungen**: **Bereitstellung hinzufügen** für die Umgebung, dann **Server hinzufügen**.
 
 **Was Sie sehen.** Der Bereitstellungsblock der Anwendung listet ihre Server, und das Asset listet die Anwendung unter **Gehostete Anwendungen** in seinem Reiter **Betrieb**. Das Supportende seiner Technologien reicht nun bis zum Asset. Die Schwachstellen eines Betriebssystems stehen zunächst nicht in den Warnungen, weil Kadratis den Patchstand eines Servers nicht kennt. Um sie zu sehen, öffnen Sie **IT-Landschaft > Schwachstellen** und wählen Sie im Filter **Warnungen** den Wert **Ausgeschlossen**, oder **Ausgeschlossene anzeigen**, wenn die Liste leer ist.
 

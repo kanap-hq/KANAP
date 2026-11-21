@@ -6,24 +6,24 @@ Los activos documentan el inventario de su infraestructura: servidores físicos,
 
 Navegue a **Panorama IT > Activos** para ver su inventario de activos. Para crear un activo:
 
-1. Haga clic en **Añadir activo** y luego en **Añadir activo** o **Añadir clúster**. La página del activo se abre con un título vacío en el encabezado. Solo el título y la **Ubicación** están abiertos. El resto de la página aparece atenuado.
+1. Haga clic en **Añadir activo** y luego en **Añadir activo** o **Añadir clúster**. La página del activo se abre con un título vacío en el encabezado. Solo el título, el **Tipo de activo** y la **Ubicación** están abiertos. El resto de la página aparece atenuado.
 2. Escriba el nombre del activo, de 200 caracteres como máximo.
-3. Elija su **Ubicación**, en el panel de propiedades o en la barra bajo el título. También puede elegirla antes del nombre.
+3. Elija su **Tipo de activo** y su **Ubicación**, en el panel de propiedades o en la barra bajo el título. El orden no importa.
 
-Kadratis crea el activo en cuanto tiene ambos. Su referencia (`AST-12`) aparece y se abren todas las pestañas.
+Kadratis crea el activo en cuanto tiene los tres. Su referencia (`AST-12`) aparece y se abren todas las pestañas.
 
-El nuevo activo es una máquina virtual del entorno Prod, con el ciclo de vida Activo. Si sus tipos de activos no tienen máquina virtual, toma el primer tipo de la lista. **Añadir clúster** lo crea con el conmutador **Clúster** activado. Una vez creado el activo, puede cambiar su tipo y su entorno. Cada campo se guarda entonces por sí solo.
+El nuevo activo está en el entorno Prod, con el ciclo de vida Activo. No tiene tipo hasta que usted elige uno. **Añadir clúster** abre la misma página con el conmutador **Clúster** activado. Una vez creado el activo, puede cambiar su tipo y su entorno. Cada campo se guarda entonces por sí solo.
 
 **Campos obligatorios**:
 - **Nombre**: El nombre del activo o su nombre de host, 200 caracteres como máximo
-- **Tipo de activo**: Servidor web, Máquina virtual, Servidor físico, Contenedor, etc. (configurable en **Panorama IT > Configuración**)
+- **Tipo de activo**: Servidor web, Máquina virtual, Servidor físico, Contenedor, etc. (configurable en **Panorama IT > Configuración**). El activo se crea en cuanto tiene uno
 - **Ubicación**: Dónde se aloja el activo (determina el proveedor, el tipo de alojamiento y el país). El activo se crea en cuanto tiene una
 
 **Muy recomendados**:
 - **Ciclo de vida**: Estado actual (Activo, Obsoleto, Retirado, etc.)
 - **Entorno**: A qué entorno pertenece este activo (Prod, Pre-prod, QA, Test, Dev, Sandbox)
 
-Mientras el activo no tenga su nombre y su ubicación, no se guarda nada. Hacer clic en **Cancelar** o salir de la página no crea nada entonces y no pregunta nada. Un nombre rechazado se muestra bajo el título, una ubicación rechazada en el campo **Ubicación**.
+Mientras el activo no tenga su nombre, su tipo y su ubicación, no se guarda nada. Hacer clic en **Cancelar** o salir de la página no crea nada entonces y no pregunta nada. Un nombre rechazado se muestra bajo el título, una ubicación rechazada en el campo **Ubicación**.
 
 **Nombres únicos**: dos activos no pueden tener el mismo nombre ni el mismo FQDN. Las mayúsculas y los espacios al principio o al final no cuentan. Kadratis rechaza el duplicado e indica el activo que ya tiene el valor (`AST-12`). Los duplicados registrados antes siguen siendo editables mientras no cambie ese valor.
 
@@ -38,7 +38,7 @@ Mientras el activo no tenga su nombre y su ubicación, no se guarda nada. Hacer 
 
 Mientras el activo se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre. Permanecen hasta que salga del activo. **Ctrl+S** funciona como el botón mostrado.
 
-- **Crear** crea el activo cuando tiene su nombre y su ubicación. Sin ubicación, no se guarda nada: la etiqueta **Ubicación** se pone en rojo con un icono de alerta y el cursor va al campo. Con el título vacío, el título pide uno
+- **Crear** crea el activo cuando tiene su nombre, su tipo y su ubicación. Si falta uno, no se guarda nada: la etiqueta **Tipo de activo** o **Ubicación** que falta se pone en rojo con un icono de alerta, y el cursor va al primer campo que falta. Con el título vacío, el título pide uno
 - Una vez creado el activo, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le devuelve al punto de partida
 - **Cancelar** antes de crear el activo sale sin guardar nada. Después, elimina el activo. Si modificó el activo desde entonces, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar activos
 
@@ -164,7 +164,7 @@ Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trab
 
 Una dirección que no designa ningún activo abre una página **Activo no encontrado**, con un enlace para volver a la lista.
 
-Las pestañas son **Vista general**, **Operaciones**, **Red**, **Hardware** (solo para tipos de activos físicos), **Dependencias**, **Relaciones** e **Historial** (los cambios hechos en el activo, vea [Historial de los registros](record-history.md)). Un activo nuevo solo muestra su título y su ubicación. Todas las pestañas se abren en cuanto se crea el activo.
+Las pestañas son **Vista general**, **Operaciones**, **Red**, **Hardware** (solo para tipos de activos físicos), **Dependencias**, **Relaciones** e **Historial** (los cambios hechos en el activo, vea [Historial de los registros](record-history.md)). Un activo nuevo solo muestra su título, su tipo y su ubicación. Todas las pestañas se abren en cuanto se crea el activo.
 
 ### Encabezado
 
@@ -182,13 +182,13 @@ El encabezado muestra:
 El panel muestra la tarjeta de identidad del activo en cada pestaña. Las ediciones se guardan automáticamente. Los campos se reparten en tres grupos.
 
 **Tipo y zona**:
-- **Tipo de activo** (obligatorio)
+- **Tipo de activo** (obligatorio): un activo nuevo lo pide antes de crearse
 - **Clúster**: actívelo para marcar el activo como clúster. El cambio se guarda de inmediato y no quita nada. Se rechaza para un clúster que tiene miembros y para un miembro de un clúster. Consulte [Clústeres](#clusteres)
 - **Entorno**: Prod, Pre-prod, QA, Test, Dev, Sandbox
 - **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo, por ejemplo el Tier 0 para un controlador de dominio y el hipervisor que lo ejecuta. Elija entre las zonas configuradas en **Panorama IT > Configuración**, o **Sin zona**. El activo aparece entonces en esa zona en la página [Zonas de administración](administration-view.md)
 
 **Ubicación**:
-- **Ubicación** (obligatorio): un activo nuevo se crea en cuanto tiene su nombre y su ubicación. Un activo creado por una importación o por el asistente también la necesita. Si la ubicación aún no existe, escriba su nombre y elija **+ Crear la ubicación «…»**: indique su tipo de alojamiento y la nueva ubicación pasa al campo. En un activo nuevo, el activo se crea entonces con ella. Requiere `locations:member`
+- **Ubicación** (obligatorio): un activo nuevo se crea en cuanto tiene su nombre, su tipo y su ubicación. Un activo creado por una importación o por el asistente también la necesita. Si la ubicación aún no existe, escriba su nombre y elija **+ Crear la ubicación «…»**: indique su tipo de alojamiento y la nueva ubicación pasa al campo. En un activo nuevo, el activo se crea entonces con ella. Requiere `locations:member`
 - **Sub-ubicación** (cuando la ubicación tiene sub-ubicaciones definidas)
 - **Tipo de alojamiento**, **Empresa operadora** o **Proveedor cloud**, **País**, **Ciudad**: de solo lectura, derivados de la ubicación. Se actualizan cuando cambia la ubicación
 

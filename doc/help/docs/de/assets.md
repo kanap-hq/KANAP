@@ -6,24 +6,24 @@ Assets dokumentieren Ihr Infrastrukturinventar: physische Server, virtuelle Masc
 
 Navigieren Sie zu **IT-Landschaft > Assets**, um Ihr Asset-Inventar zu sehen. So erstellen Sie ein Asset:
 
-1. Klicken Sie auf **Asset hinzufügen**, dann auf **Asset hinzufügen** oder **Cluster hinzufügen**. Die Seite des Assets öffnet sich mit einem leeren Titel in der Kopfzeile. Nur der Titel und der **Standort** sind offen. Der Rest der Seite ist abgeblendet.
+1. Klicken Sie auf **Asset hinzufügen**, dann auf **Asset hinzufügen** oder **Cluster hinzufügen**. Die Seite des Assets öffnet sich mit einem leeren Titel in der Kopfzeile. Nur der Titel, der **Asset-Typ** und der **Standort** sind offen. Der Rest der Seite ist abgeblendet.
 2. Geben Sie den Namen des Assets ein, höchstens 200 Zeichen.
-3. Wählen Sie seinen **Standort**, im Eigenschaftenbereich oder in der Leiste unter dem Titel. Sie können ihn auch vor dem Namen wählen.
+3. Wählen Sie seinen **Asset-Typ** und seinen **Standort**, im Eigenschaftenbereich oder in der Leiste unter dem Titel. Die Reihenfolge spielt keine Rolle.
 
-Kadratis erstellt das Asset, sobald es beides hat. Seine Referenz (`AST-12`) erscheint und alle Reiter öffnen sich.
+Kadratis erstellt das Asset, sobald es alle drei hat. Seine Referenz (`AST-12`) erscheint und alle Reiter öffnen sich.
 
-Das neue Asset ist eine virtuelle Maschine in der Umgebung Prod, mit dem Lebenszyklus Aktiv. Haben Ihre Asset-Typen keine virtuelle Maschine, erhält es den ersten Typ der Liste. **Cluster hinzufügen** erstellt es mit eingeschaltetem Schalter **Cluster**. Sobald das Asset erstellt ist, können Sie seinen Typ und seine Umgebung ändern. Jedes Feld speichert dann für sich.
+Das neue Asset ist in der Umgebung Prod, mit dem Lebenszyklus Aktiv. Es hat keinen Typ, bis Sie einen wählen. **Cluster hinzufügen** öffnet dieselbe Seite mit eingeschaltetem Schalter **Cluster**. Sobald das Asset erstellt ist, können Sie seinen Typ und seine Umgebung ändern. Jedes Feld speichert dann für sich.
 
 **Pflichtfelder**:
 - **Name**: Der Asset-Name oder Hostname, höchstens 200 Zeichen
-- **Asset-Typ**: Webserver, virtuelle Maschine, physischer Server, Container usw. (konfigurierbar in **IT-Landschaft > Einstellungen**)
+- **Asset-Typ**: Webserver, virtuelle Maschine, physischer Server, Container usw. (konfigurierbar in **IT-Landschaft > Einstellungen**). Das Asset wird erstellt, sobald es einen hat
 - **Standort**: Wo das Asset gehostet wird (bestimmt Anbieter, Hosting-Typ und Land). Das Asset wird erstellt, sobald es einen hat
 
 **Dringend empfohlen**:
 - **Lebenszyklus**: Aktueller Status (Aktiv, Veraltet, Außer Betrieb usw.)
 - **Umgebung**: Zu welcher Umgebung dieses Asset gehört (Prod, Pre-prod, QA, Test, Dev, Sandbox)
 
-Solange das Asset nicht Namen und Standort hat, wird nichts gespeichert. Ein Klick auf **Abbrechen** oder das Verlassen der Seite erstellt dann nichts und fragt nichts. Ein abgelehnter Name erscheint unter dem Titel, ein abgelehnter Standort am Feld **Standort**.
+Solange das Asset nicht Namen, Typ und Standort hat, wird nichts gespeichert. Ein Klick auf **Abbrechen** oder das Verlassen der Seite erstellt dann nichts und fragt nichts. Ein abgelehnter Name erscheint unter dem Titel, ein abgelehnter Standort am Feld **Standort**.
 
 **Eindeutige Namen**: Zwei Assets können weder denselben Namen noch denselben FQDN haben. Groß- und Kleinschreibung sowie Leerzeichen am Anfang oder Ende zählen nicht. Kadratis lehnt das Duplikat ab und nennt das Asset, das den Wert bereits hat (`AST-12`). Früher erfasste Duplikate bleiben bearbeitbar, solange Sie diesen Wert nicht ändern.
 
@@ -38,7 +38,7 @@ Solange das Asset nicht Namen und Standort hat, wird nichts gespeichert. Ein Kli
 
 Solange das Asset erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen** anstelle der Schaltfläche zum Schließen. Beide bleiben, bis Sie das Asset verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche.
 
-- **Erstellen** erstellt das Asset, wenn es Namen und Standort hat. Ohne Standort wird nichts gespeichert: Die Beschriftung **Standort** wird rot mit einem Warnsymbol, und der Cursor springt in das Feld. Bei leerem Titel verlangt der Titel einen
+- **Erstellen** erstellt das Asset, wenn es Namen, Typ und Standort hat. Fehlt eines davon, wird nichts gespeichert: Die Beschriftung **Asset-Typ** oder **Standort**, die fehlt, wird rot mit einem Warnsymbol, und der Cursor springt in das erste fehlende Feld. Bei leerem Titel verlangt der Titel einen
 - Sobald das Asset erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben
 - **Abbrechen** vor dem Erstellen des Assets verlässt die Seite, ohne etwas zu speichern. Danach löscht es das Asset. Haben Sie das Asset seitdem geändert, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Assets abbrechen
 
@@ -164,7 +164,7 @@ Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich
 
 Eine Adresse, die kein Asset bezeichnet, öffnet eine Seite **Asset nicht gefunden** mit einem Link zurück zur Liste.
 
-Die Reiter sind **Übersicht**, **Betrieb**, **Netzwerk**, **Hardware** (nur physische Asset-Typen), **Abhängigkeiten**, **Beziehungen** und **Verlauf** (die Änderungen am Asset, siehe [Verlauf der Datensätze](record-history.md)). Ein neues Asset zeigt nur seinen Titel und seinen Standort. Alle Reiter öffnen sich, sobald das Asset erstellt ist.
+Die Reiter sind **Übersicht**, **Betrieb**, **Netzwerk**, **Hardware** (nur physische Asset-Typen), **Abhängigkeiten**, **Beziehungen** und **Verlauf** (die Änderungen am Asset, siehe [Verlauf der Datensätze](record-history.md)). Ein neues Asset zeigt nur seinen Titel, seinen Typ und seinen Standort. Alle Reiter öffnen sich, sobald das Asset erstellt ist.
 
 ### Kopfzeile
 
@@ -182,13 +182,13 @@ Die Kopfzeile zeigt:
 Der Bereich zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen werden automatisch gespeichert. Die Felder bilden drei Gruppen.
 
 **Typ und Zone**:
-- **Asset-Typ** (erforderlich)
+- **Asset-Typ** (erforderlich): Ein neues Asset verlangt ihn, bevor es erstellt wird
 - **Cluster**: Schalten Sie ihn ein, um das Asset als Cluster zu markieren. Die Änderung wird sofort gespeichert und entfernt nichts. Sie wird für einen Cluster mit Mitgliedern und für ein Mitglied eines Clusters abgelehnt. Siehe [Cluster](#cluster)
 - **Umgebung**: Prod, Pre-prod, QA, Test, Dev, Sandbox
 - **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört, zum Beispiel Tier 0 für einen Domänencontroller und den Hypervisor, auf dem er läuft. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Zonen oder **Keine Zone**. Das Asset erscheint dann in dieser Zone auf der Seite [Administrationszonen](administration-view.md)
 
 **Standort**:
-- **Standort** (erforderlich): Ein neues Asset wird erstellt, sobald es Namen und Standort hat. Ein Asset, das ein Import oder der Assistent anlegt, braucht ihn ebenfalls. Gibt es den Standort noch nicht, geben Sie seinen Namen ein und wählen Sie **+ Standort „…“ anlegen**: Geben Sie die Hosting-Art an, und der neue Standort wird ins Feld übernommen. Bei einem neuen Asset wird das Asset dann mit ihm erstellt. Dafür ist `locations:member` nötig
+- **Standort** (erforderlich): Ein neues Asset wird erstellt, sobald es Namen, Typ und Standort hat. Ein Asset, das ein Import oder der Assistent anlegt, braucht ihn ebenfalls. Gibt es den Standort noch nicht, geben Sie seinen Namen ein und wählen Sie **+ Standort „…“ anlegen**: Geben Sie die Hosting-Art an, und der neue Standort wird ins Feld übernommen. Bei einem neuen Asset wird das Asset dann mit ihm erstellt. Dafür ist `locations:member` nötig
 - **Unterstandort** (wenn der Standort definierte Unterstandorte hat)
 - **Hosting-Typ**, **Betreiberunternehmen** oder **Cloud-Anbieter**, **Land**, **Stadt**: schreibgeschützt, vom Standort abgeleitet. Sie folgen, wenn Sie den Standort ändern
 

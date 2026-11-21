@@ -172,13 +172,12 @@ Vaya a **Panorama IT > Activos** y haga clic en **Añadir activo**.
 
 ### Pestaña Vista general
 
-Escriba el **Nombre** en el título (por ejemplo `PROD-WEB-01`) y luego elija la **Ubicación** en el panel de propiedades (por ejemplo `Centro de datos París`). Kadratis crea el activo en cuanto tiene ambos. Hasta entonces, el resto de la página sigue atenuado.
+Escriba el **Nombre** en el título (por ejemplo `PROD-WEB-01`) y luego elija el **Tipo de activo** (por ejemplo `Máquina virtual`) y la **Ubicación** (por ejemplo `Centro de datos París`) en el panel de propiedades. Kadratis crea el activo en cuanto tiene los tres. Hasta entonces, el resto de la página sigue atenuado.
 
 Complete después los demás campos principales:
 
 | Campo | Qué introducir | Ejemplo |
 |-------|--------------|---------|
-| **Tipo de activo** | El tipo de servidor (desplegable) | `Máquina virtual` |
 | **Entorno** | A qué entorno sirve | `Prod` |
 | **Descripción** | Cualquier contexto adicional |  |
 

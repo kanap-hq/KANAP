@@ -172,13 +172,12 @@ Allez dans **Cartographie SI > Actifs** et cliquez sur **Ajouter un actif**.
 
 ### Onglet Vue d'ensemble
 
-Saisissez le **Nom** dans le titre (par exemple `PROD-WEB-01`), puis choisissez le **Site** dans le panneau **Propriétés** (par exemple `Datacenter Paris`). Kadratis crée l'actif dès qu'il a les deux. Le reste de la page reste grisé jusque-là.
+Saisissez le **Nom** dans le titre (par exemple `PROD-WEB-01`), puis choisissez le **Type d'actif** (par exemple `Machine virtuelle`) et le **Site** (par exemple `Datacenter Paris`) dans le panneau **Propriétés**. Kadratis crée l'actif dès qu'il a les trois. Le reste de la page reste grisé jusque-là.
 
 Remplissez ensuite les autres champs principaux :
 
 | Champ | Quoi saisir | Exemple |
 |-------|--------------|---------|
-| **Type d'actif** | Le type de serveur (liste déroulante) | `Machine virtuelle` |
 | **Environnement** | L'environnement qu'il sert | `Prod` |
 | **Description** | Tout contexte supplémentaire |  |
 
