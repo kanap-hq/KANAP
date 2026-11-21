@@ -4,16 +4,19 @@ import {
   Box,
   Button,
   MenuItem,
-  Stack,
-  TextField,
+  MenuList,
+  Popover,
+  Typography,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
-import ContactSelect from '../fields/ContactSelect';
-import { drawerFieldValueSx, drawerSelectSx, drawerMenuItemSx, inlineControlSx } from '../../theme/formSx';
+import { useAuth } from '../../auth/AuthContext';
+import CreateContactDialog, { type CreateContactRequest } from '../fields/CreateContactDialog';
+import { contactName, isContactReference, isSameContactName } from '../fields/contactNames';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { itemAddress } from '../../utils/item-ref';
+import { formatItemRef, itemAddress } from '../../utils/item-ref';
+import RelationAddPicker, { pickerItemSx, type RelationOption } from '../workspace/RelationAddPicker';
 import { RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../workspace/RelationsTable';
 
 type SupplierContactRole = 'commercial' | 'technical' | 'support' | 'other';
@@ -48,6 +51,33 @@ type Props = {
 
 const ROLES = ['commercial', 'technical', 'support', 'other'] as const;
 
+/** A contact as the contacts search returns it (`GET /contacts`). */
+type ContactSearchRow = {
+  id: string;
+  item_number?: number | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  supplier_name?: string | null;
+};
+
+/** The picker's cache key: the contacts search does not depend on the item. */
+const CONTACT_SEARCH_KEY = 'item-contacts';
+
+/** The contacts that match the text (a name, or a CTCT-n), as picker rows: reference, name, supplier. */
+async function searchContacts(q: string, signal?: AbortSignal): Promise<RelationOption[]> {
+  const res = await api.get<{ items: ContactSearchRow[] }>('/contacts', { params: { limit: 20, q }, signal });
+  return (res.data?.items ?? []).map((contact) => ({
+    id: contact.id,
+    label: contactName(contact),
+    ref: contact.item_number ? formatItemRef('contact', contact.item_number) : null,
+    hint: contact.supplier_name ?? null,
+  }));
+}
+
+/** The contact whose role is asked: its reference and name head the list of roles. */
+type PickedContact = { id: string; name: string; ref: string | null };
+
 function roleLabelKey(role: SupplierContactRole): string {
   return `contacts.role${role.charAt(0).toUpperCase()}${role.slice(1)}`;
 }
@@ -56,11 +86,16 @@ const textButtonSx = { fontSize: 12, minWidth: 0, px: 1 } as const;
 
 /**
  * Contacts of a contract or a budget line, as a Relations section: it shares the width of the
- * sibling sections. Add opens the contact picker, then the role; choosing the role saves.
+ * sibling sections. Add opens the list of contacts anchored to the button, as the other Relations
+ * sections do; the list ends with "create a contact" for a person who may. The contact chosen (or
+ * created), the same place lists the roles: choosing one links the contact with it.
  */
 export default function ItemContactsSection({ itemType, itemId, canManage, syncFromSupplier = false, onChanged }: Props) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation(['common', 'master-data']);
   const qc = useQueryClient();
+  const { hasLevel } = useAuth();
+  // The same check as the contact picker and the page that creates a contact.
+  const mayCreateContact = hasLevel('contacts', 'member');
   // A refused add or removal (a line read only in the person's access) says why; nothing changed.
   const [error, setError] = React.useState<string | null>(null);
   const run = React.useCallback(async (write: () => Promise<unknown>) => {
@@ -90,16 +125,28 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
     },
   });
 
-  // Add opens the picker. A contact, then its role: choosing the role saves and the picker stays for the next one.
-  const [adding, setAdding] = React.useState(false);
-  const [selectedContact, setSelectedContact] = React.useState<string | null>(null);
+  // Add opens the list of contacts under the button; a contact chosen or created, its roles take the
+  // same place. The anchor stays while the create dialog is open, so the roles open where the list was.
+  const [anchor, setAnchor] = React.useState<HTMLElement | null>(null);
+  const [step, setStep] = React.useState<'contact' | PickedContact | null>(null);
+  const [request, setRequest] = React.useState<CreateContactRequest | null>(null);
+  const requestKey = React.useRef(0);
+  // Once the add ends (Escape, a role chosen, the creation cancelled), the focus goes back to Add.
+  // The pickers' own restore aims at the field they focused first, which is gone by then.
+  const addButton = React.useRef<HTMLElement | null>(null);
+  const [refocus, setRefocus] = React.useState(false);
+  React.useEffect(() => {
+    if (!refocus || step !== null || request !== null) return;
+    setRefocus(false);
+    addButton.current?.focus();
+  }, [refocus, step, request]);
+  const closeAdd = () => { setStep(null); setAnchor(null); setRefocus(true); };
 
-  const { mutateAsync: attach, isPending: attaching } = useMutation({
+  const { mutateAsync: attach } = useMutation({
     mutationFn: async ({ contactId, role }: { contactId: string; role: SupplierContactRole }) => {
       await api.post(`/${itemType}/${itemId}/contacts`, { contactId, role });
     },
     onSuccess: async () => {
-      setSelectedContact(null);
       await qc.invalidateQueries({ queryKey: ['item-contacts', itemType, itemId] });
       onChanged?.();
     },
@@ -165,17 +212,46 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
     },
   ], [t]);
 
-  const toggleAdd = () => {
-    setAdding((open) => !open);
-    setSelectedContact(null);
+  // The server links a contact once per role and takes any role a contact does not have yet on the
+  // item, so no contact is left out of the list.
+  const noneExcluded = React.useMemo(() => new Set<string>(), []);
+
+  // The list ends with "create": "new contact" while nothing is typed, the typed name when no contact
+  // shown has exactly that name, never for a typed reference (CTCT-n).
+  const createAction = React.useMemo(() => (mayCreateContact ? {
+    label: (text: string, options: RelationOption[]) => {
+      if (!text) return t('master-data:contacts.newContactOption');
+      if (isContactReference(text)) return null;
+      if (options.some((option) => isSameContactName(option.label, text))) return null;
+      return t('master-data:contacts.createOption', { name: text });
+    },
+    onChoose: (text: string) => {
+      setStep(null);
+      requestKey.current += 1;
+      setRequest({ key: requestKey.current, typed: text });
+    },
+  } : undefined), [mayCreateContact, t]);
+
+  const finishCreate = (contact: { id?: string; item_number?: number | null; first_name?: string | null; last_name?: string | null; email: string } | null) => {
+    setRequest(null);
+    if (!contact?.id) { setAnchor(null); setRefocus(true); return; }
+    void qc.invalidateQueries({ queryKey: ['relation-add', CONTACT_SEARCH_KEY] });
+    setStep({ id: contact.id, name: contactName(contact), ref: contact.item_number ? formatItemRef('contact', contact.item_number) : null });
   };
+
+  const pickRole = (contact: PickedContact, role: SupplierContactRole) => {
+    closeAdd();
+    void run(() => attach({ contactId: contact.id, role }));
+  };
+
+  const picked = step !== null && step !== 'contact' ? step : null;
 
   return (
     <RelationsSection
       title={t('contacts.title')}
       count={isLoading ? undefined : contacts.length}
-      onAdd={canManage ? toggleAdd : undefined}
-      adding={adding}
+      onAdd={canManage ? (button) => { addButton.current = button; setAnchor(button); setStep('contact'); } : undefined}
+      adding={step !== null || request !== null}
       addLabel={t('buttons.add')}
       actions={canManage && syncFromSupplier ? (
         <Button
@@ -206,46 +282,46 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
           removeLabel={() => t('contacts.removeContact')}
         />
       )}
-      {canManage && adding && (
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 1 }}>
-          <Box sx={{ width: '100%', maxWidth: 420 }}>
-            <ContactSelect
-              hideLabel
-              label={t('contacts.selectContact')}
-              placeholder={t('contacts.selectContact')}
-              value={selectedContact}
-              onChange={setSelectedContact}
-              disabled={attaching}
-              textFieldSx={drawerFieldValueSx}
-            />
-          </Box>
-          {selectedContact && (
-            <TextField
-              select
-              variant="standard"
-              value=""
-              onChange={(e) => {
-                const role = e.target.value as SupplierContactRole;
-                if (role) void run(() => attach({ contactId: selectedContact, role }));
-              }}
-              disabled={attaching}
-              SelectProps={{
-                displayEmpty: true,
-                renderValue: () => (
-                  <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('labels.role')}…</Box>
-                ),
-              }}
-              sx={[drawerSelectSx, inlineControlSx, { width: 'auto', minWidth: 140 }]}
-            >
-              {ROLES.map((value) => (
-                <MenuItem key={value} value={value} sx={drawerMenuItemSx}>
-                  {t(roleLabelKey(value))}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-        </Stack>
+      {canManage && anchor && step === 'contact' && (
+        <RelationAddPicker
+          anchorEl={anchor}
+          searchKey={CONTACT_SEARCH_KEY}
+          search={searchContacts}
+          excludeIds={noneExcluded}
+          placeholder={t('contacts.selectContact')}
+          ariaLabel={t('contacts.selectContact')}
+          onPick={(option) => setStep({ id: option.id, name: option.label, ref: option.ref ?? null })}
+          onClose={closeAdd}
+          action={createAction}
+        />
       )}
+      {canManage && anchor && picked && (
+        <Popover
+          open
+          anchorEl={anchor}
+          onClose={closeAdd}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          slotProps={{ paper: { sx: { p: 1, width: 380, mt: 0.5 } } }}
+        >
+          <Typography
+            component="div"
+            title={picked.name}
+            sx={{ display: 'flex', alignItems: 'baseline', gap: 1, px: 1, pt: 0.25, pb: 0.75, fontSize: 13, fontWeight: 500, color: 'kanap.text.primary' }}
+          >
+            {picked.ref && <Box component="span" sx={{ fontSize: 12, fontWeight: 400, color: 'kanap.text.tertiary', flexShrink: 0 }}>{picked.ref}</Box>}
+            <Box component="span" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{picked.name}</Box>
+          </Typography>
+          <MenuList autoFocus aria-label={t('labels.role')} dense disablePadding sx={{ py: 0.25 }}>
+            {ROLES.map((role) => (
+              <MenuItem key={role} onClick={() => pickRole(picked, role)} sx={pickerItemSx}>
+                {t(roleLabelKey(role))}
+              </MenuItem>
+            ))}
+          </MenuList>
+        </Popover>
+      )}
+      <CreateContactDialog request={request} onResolve={finishCreate} />
     </RelationsSection>
   );
 }

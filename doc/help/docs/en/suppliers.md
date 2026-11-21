@@ -88,7 +88,7 @@ The **Contacts** tab lists the contacts linked to this supplier by contact type:
 
 **How it works**:
 - Each section lists its contacts by name. Click a name to open the contact page.
-- **Add existing**: Search for a contact by name or by reference (`CTCT-4`) and pick it. The link saves at once.
+- **Add existing**: Search for a contact by name or by reference (`CTCT-4`) and pick it. The link saves at once. A contact that does not exist yet can be created from the list: it belongs to this supplier, with the contact type of the section. See [Contacts](contacts.md#creating-a-contact-from-a-contact-field).
 - **New contact**: Opens the contact form with the supplier and the contact type already filled in. Kadratis brings you back to this tab once the contact is created.
 - The bin button removes the link. The contact itself stays in your contacts. A message confirms it, with an **Undo** action that links the contact again.
 

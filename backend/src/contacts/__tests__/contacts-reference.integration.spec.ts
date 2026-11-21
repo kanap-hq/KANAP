@@ -17,7 +17,7 @@ import { AuditLog } from '../../audit/audit.entity';
 //
 //  - the list's reference column filters on the number, with or without the prefix; `CTCT-013` is
 //    text, which no reference is written as; the column sorts by number;
-//  - the quick search finds `CTCT-3` exactly, besides the text search;
+//  - the quick search finds `CTCT-3` exactly, besides the text search, and a contact by its full name;
 //  - the assistant filters and sorts on `reference`;
 //  - the file: a `reference` column first; filled, it names the contact a row updates, its e-mail
 //    included; an unknown one refuses the row; a file without it still imports.
@@ -121,6 +121,23 @@ async function testQuickSearch() {
       assert.deepEqual(await read(ctx, { q: 'c07@' }), [7], `${read.name}: the text search stays`);
     }
     assert.deepEqual(await listNumbers(ctx, { q: 'CTCT-3', filters: textFilter('equals', '4') }), []);
+  });
+}
+
+/** The quick search finds a contact by "first last" and by "last first" (the contact picker types the full name). */
+async function testFullNameSearch() {
+  await withTenant('fullname', async (ctx) => {
+    await ctx.runner.query(
+      `INSERT INTO contacts (tenant_id, email, first_name, last_name, active) VALUES ($1, 'ap@example.test', 'Anita', 'Patel', true)`,
+      [ctx.tenantId],
+    );
+    for (const read of [listNumbers, idNumbers]) {
+      for (const q of ['Anita Patel', 'patel anita', 'Anita', 'ita pat']) {
+        assert.deepEqual(await read(ctx, { q }), [14], `${read.name}: ${q}`);
+      }
+      assert.deepEqual(await read(ctx, { q: 'Anita Smith' }), [], `${read.name}: another name`);
+      assert.deepEqual(await read(ctx, { q: 'First 03 Last 03' }), [3], `${read.name}: First 03 Last 03`);
+    }
   });
 }
 
@@ -324,6 +341,7 @@ async function main() {
   const tests: Array<[string, () => Promise<void>]> = [
     ['testReferenceColumnFilter', testReferenceColumnFilter],
     ['testQuickSearch', testQuickSearch],
+    ['testFullNameSearch', testFullNameSearch],
     ['testAssistantReference', testAssistantReference],
     ['testImportByReference', testImportByReference],
     ['testImportRefusesSecondRowOfAContact', testImportRefusesSecondRowOfAContact],

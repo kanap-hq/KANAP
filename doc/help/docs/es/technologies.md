@@ -252,7 +252,7 @@ Una aplicación aparece de dos maneras:
 
 A quién llamar y cómo obtener ayuda:
 
-- **Soporte**: los contactos de soporte, con su **Correo electrónico**, su **Teléfono** y su **Rol**. **Agregar contacto** abre un formulario corto: elija el **Contacto** (obligatorio) e indique un **Rol** opcional. Un contacto figura una sola vez; añadirlo de nuevo conserva su rol. Quite un contacto con la cruz al final de su fila.
+- **Soporte**: los contactos de soporte, con su **Correo electrónico**, su **Teléfono** y su **Rol**. **Agregar contacto** abre un formulario corto: elija el **Contacto** (obligatorio) e indique un **Rol** opcional. Un contacto que aún no existe se puede crear desde la lista (consulte [Contactos](contacts.md#crear-un-contacto-desde-un-campo-de-contacto)). Un contacto figura una sola vez; añadirlo de nuevo conserva su rol. Quite un contacto con la cruz al final de su fila.
 - **Notas de soporte**: texto libre, como el número del contrato de soporte, el horario de la línea de ayuda o la vía de escalado. Se guardan al salir del campo.
 
 La tecnología aparece entonces en la sección **Usado en** de la página de cada contacto.

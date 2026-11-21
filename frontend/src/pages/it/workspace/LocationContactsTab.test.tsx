@@ -12,11 +12,16 @@ vi.mock('../../../components/workspace/MetadataUserPicker', () => ({
     <button type="button" onClick={() => onChange('u1')}>pick user</button>
   ),
 }));
-vi.mock('../../../components/fields/ContactSelect', () => ({
-  default: ({ onChange }: { onChange: (id: string | null) => void }) => (
-    <button type="button" onClick={() => onChange('c1')}>pick contact</button>
-  ),
-}));
+vi.mock('../../../components/fields/ContactSelect', async () => {
+  const { forwardRef } = await import('react');
+  return {
+    default: forwardRef<HTMLButtonElement, { onChange: (id: string | null) => void; openOnFocus?: boolean }>(
+      ({ onChange, openOnFocus }, ref) => (
+        <button ref={ref} type="button" data-open-on-focus={openOnFocus ? 'yes' : 'no'} onClick={() => onChange('c1')}>pick contact</button>
+      ),
+    ),
+  };
+});
 
 import api from '../../../api';
 import LocationContactsTab, { ExternalRow, InternalRow, LinkRowComponent } from './LocationContactsTab';
@@ -167,6 +172,16 @@ describe('LocationContactsTab new rows', () => {
       role: 'Site manager',
     }));
     expect(screen.getByDisplayValue('Site manager')).toBeInTheDocument();
+  });
+
+  it('gives the focus to the contact field opened by "Add", with its list open at once', async () => {
+    mocked.get.mockResolvedValue({ data: [] });
+    const user = userEvent.setup();
+    renderTab();
+    await user.click(await screen.findByText(tr('it:workspace.location.contacts.addExternal')));
+    const field = screen.getByText('pick contact');
+    expect(field).toHaveFocus();
+    expect(field).toHaveAttribute('data-open-on-focus', 'yes');
   });
 
   it('saves the first role typed on an external contact just added', async () => {
