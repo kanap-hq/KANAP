@@ -175,7 +175,8 @@ export default function BudgetPropertiesDrawer({
   // A limited data access offers only the companies and cost centers the line may be placed on. A
   // paying company that follows the cost center is not a choice yet: every placeable cost center.
   const placement = useLinePlacementFilter(companyFollowsCostCenter ? null : payingCompanyId || null);
-  const costCenterRequired = placement?.costCenterRequired === true;
+  // A person who only reads the line has nothing to fill: no required mark.
+  const costCenterRequired = !disabled && placement?.costCenterRequired === true;
   // An open dimension's picker adds a typed value for this line, or for the place of the line to come.
   const newValueFor = mode === 'create' || draft
     ? { payingCompanyId: payingCompanyId || null, costCenterId: costCenterId || null }

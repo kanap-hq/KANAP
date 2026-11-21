@@ -612,6 +612,17 @@ describe('BudgetPropertiesDrawer limited data access', () => {
     expect(picker).toHaveAttribute('data-clearable', 'false');
   });
 
+  // The requirement is about what this person may save: a line she only reads shows no mark.
+  it('does not mark the cost center required on a line the person only reads', () => {
+    placement.filter = {
+      companyIds: new Set(['company-2']),
+      isCostCenterAllowed: (node) => node.id === 'cc-2',
+      costCenterRequired: true,
+    };
+    renderDrawer({ payingCompanyId: 'company-2', mode: 'edit', disabled: true });
+    expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-required', 'false');
+  });
+
   it('asks the filter for no paying company while the company follows the cost center', () => {
     placement.filter = {
       companyIds: new Set(['company-2']),

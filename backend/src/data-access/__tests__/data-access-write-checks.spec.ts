@@ -91,19 +91,29 @@ async function testLineGate(runner: QueryRunner, s: Seed) {
     await resolveItemWrite(m, 'opex', body(s.fr, s.infFr), null);
     await refusedWith(() => resolveItemWrite(m, 'opex', body(s.fr, s.infEs), null), DATA_ACCESS_PLACEMENT_MESSAGE);
     await refusedWith(() => resolveItemWrite(m, 'opex', body(s.es, s.infFr), null), DATA_ACCESS_PLACEMENT_MESSAGE);
-    // L1 is hers: an edit passes, a move to Spain does not; L3 (paid by ES on INF-FR) is read only.
+    // L1 is hers: an edit passes, a move to Spain does not.
     const l1 = await lineRow(m, s.lines.L1);
     await resolveItemWrite(m, 'opex', { notes: 'x' }, l1);
     await refusedWith(() => resolveItemWrite(m, 'opex', { paying_company_id: s.es }, l1), DATA_ACCESS_PLACEMENT_MESSAGE);
+    // L3 (paid by ES on INF-FR) is modified through its centre (amendment of 2026-11-21): an edit
+    // passes; a move passes only to a place she may place a line in (FR on INF-FR).
     const l3 = await lineRow(m, s.lines.L3);
-    await refusedWith(() => resolveItemWrite(m, 'opex', { notes: 'x' }, l3), DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
+    await resolveItemWrite(m, 'opex', { notes: 'x' }, l3);
+    await refusedWith(() => resolveItemWrite(m, 'opex', { cost_center_id: s.infEs }, l3), DATA_ACCESS_PLACEMENT_MESSAGE);
+    await refusedWith(() => resolveItemWrite(m, 'opex', { cost_center_id: null }, l3), DATA_ACCESS_PLACEMENT_MESSAGE);
+    await resolveItemWrite(m, 'opex', { paying_company_id: s.fr }, l3);
+    assert.equal(await lockBudgetLine(m, 'opex', s.tenantId, s.lines.L3), true, 'L3: locked through its centre');
+    await assertLinesEditable(m, [s.lines.L3]);
+    // L2 (FR on INF-ES), read through her group in read, is read only.
+    const l2 = await lineRow(m, s.lines.L2);
+    await refusedWith(() => resolveItemWrite(m, 'opex', { notes: 'x' }, l2), DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
     // The lock of a read-only line and of its version: 403, never "gone"; a hidden line stays gone.
-    await refusedWith(() => lockBudgetLine(m, 'opex', s.tenantId, s.lines.L3), DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
-    await refusedWith(() => lockBudgetVersions(m, 'opex', s.tenantId, [s.versions.L3]), DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
+    await refusedWith(() => lockBudgetLine(m, 'opex', s.tenantId, s.lines.L2), DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
+    await refusedWith(() => lockBudgetVersions(m, 'opex', s.tenantId, [s.versions.L2]), DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
     assert.equal(await lockBudgetLine(m, 'opex', s.tenantId, s.lines.L5), false, 'L5 is out of read access: gone');
     assert.equal(await lockBudgetLine(m, 'opex', s.tenantId, s.lines.L1), true);
     // A child write by id: the checks before a delete or an insert.
-    await refusedWith(() => assertLinesEditable(m, [s.lines.L3]), DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
+    await refusedWith(() => assertLinesEditable(m, [s.lines.L2]), DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
     await assertLinesEditable(m, [s.lines.L1, s.lines.L5]);
     await refusedWith(() => assertDataAccessWritten(m, 0), DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
   });
@@ -177,9 +187,11 @@ async function testTasks(runner: QueryRunner, s: Seed) {
      VALUES (app_current_tenant(), 'DA 3B task', $1, 'spend_item', $2, $3, '[]'::jsonb, $4::jsonb) RETURNING id`,
     [number++, line, assignee, JSON.stringify(viewers)],
   ))[0].id as string;
-  // L5 is out of Rita's read access; she is assigned. L3 she reads only; she observes its task.
+  // L5 is out of Rita's read access; she is assigned. L2 she reads only; she observes its task.
+  // L3 she modifies through its centre; she observes its task too.
   const handed = await task(s.lines.L5, p.rita, []);
-  const observed = await task(s.lines.L3, null, [p.rita]);
+  const observed = await task(s.lines.L2, null, [p.rita]);
+  const throughCentre = await task(s.lines.L3, null, [p.rita]);
   await as(runner, p.rita, async (m) => {
     const repo = m.getRepository(Task);
     const existing = (await repo.findOne({ where: { id: handed } }))!;
@@ -193,6 +205,10 @@ async function testTasks(runner: QueryRunner, s: Seed) {
     await refusedWith(() => prepareTaskWrite(m, watched, { title: 'Changed' }), DATA_ACCESS_READ_ONLY_TASK_MESSAGE);
     // Without the pre-check, the UPDATE touches no row: the clear 403, never the task read back.
     await refusedWith(() => writeTaskColumns(repo, watched, { title: 'Changed' }), DATA_ACCESS_READ_ONLY_TASK_MESSAGE);
+    // A task of L3: modifiable through the line's centre.
+    const centreTask = (await repo.findOne({ where: { id: throughCentre } }))!;
+    const centreWrite = await prepareTaskWrite(m, centreTask, { title: 'Changed through the centre' });
+    assert.equal((await writeTaskColumns(repo, centreTask, centreWrite.changes)).title, 'Changed through the centre');
   });
   await as(runner, p.marta, async (m) => {
     // L4 is Marta's: a handover there needs no observer (she reads the line).

@@ -100,15 +100,21 @@ export type ContractPlacementFilter = {
   companyIds: ReadonlySet<string>;
   /** The groups and centres offered for the chosen company. */
   isCostCenterAllowed: (node: CostCenterNode) => boolean;
+  /** The chosen company is not an edit company: the contract holds only through its place, which cannot be cleared. */
+  placeRequired: boolean;
 };
 
 /**
  * The contracting company and place pickers of a contract (spec §2.3, §7.7): the contract rule
- * differs from the line's. A company in the edit companies is offered with any place; a company of
- * the edit nodes is offered only through one of those nodes. The nodes come unfolded from the
- * endpoint (`editNodes`), as `data_access_apply` wrote them, so a group covers its sub-groups and
- * centres. A place outside the edit nodes therefore leaves only the edit companies. Null for an
- * unscoped person, for Edit on everything, and while the answer loads; the server refuses the rest.
+ * differs from the line's. Once a company is chosen, three cases: an edit company is offered with
+ * any place; a company of the edit nodes only with one of those nodes; any other company (a
+ * contract the person edits through its place alone) with no other place, so the stored place
+ * stays and cannot move. In the last two cases the place is required (`placeRequired`): the server
+ * refuses the contract without it. Before a company is chosen, every place either rule could use.
+ * The nodes come unfolded from the endpoint (`editNodes`), as `data_access_apply` wrote them, so a
+ * group covers its sub-groups and centres. A place outside the edit nodes therefore leaves only the
+ * edit companies. Null for an unscoped person, for Edit on everything, and while the answer loads;
+ * the server refuses the rest.
  */
 export function useContractPlacementFilter(
   companyId: string | null | undefined,
@@ -142,15 +148,20 @@ export function useContractPlacementFilter(
   }, [companies, nodeCompanies, placeId, placeInEditNodes]);
   const isCostCenterAllowed = React.useCallback(
     (node: CostCenterNode) => {
-      if (!!company && companies.has(company)) return true;
-      if (company && nodeCompanies.has(company)) return editNodes.has(node.id);
+      if (company) {
+        if (companies.has(company)) return true;
+        if (nodeCompanies.has(company)) return editNodes.has(node.id);
+        // A company outside the access: the contract may keep its place, not move to another.
+        return false;
+      }
       // Before the company is chosen, a place either rule could use.
       return editNodes.has(node.id) || (!!node.company_id && companies.has(node.company_id));
     },
     [companies, company, editNodes, nodeCompanies],
   );
+  const placeRequired = !!company && !companies.has(company);
   return React.useMemo(
-    () => (options ? { companyIds, isCostCenterAllowed } : null),
-    [companyIds, isCostCenterAllowed, options],
+    () => (options ? { companyIds, isCostCenterAllowed, placeRequired } : null),
+    [companyIds, isCostCenterAllowed, options, placeRequired],
   );
 }

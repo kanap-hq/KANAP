@@ -37,7 +37,9 @@ import { Label, nextItemNumber, Seed, seed } from './data-access-line-seed';
  * the list engine of the export, on the reference example of lot 2 (`data-access-line-seed.ts`), in
  * one rolled-back transaction, each person in a savepoint after `applyDataAccess`.
  *
- * Marta (company ES, edit) reads L2-L5 and modifies L3-L5; Rita (INF-FR edit, INF read) modifies L1;
+ * Marta (company ES, edit) reads and modifies L2-L5 (L2, paid by FR, through INF-ES, the centre her
+ * company node unfolds); Rita (INF-FR edit, INF read) modifies L1 and L3 (paid by ES, through its
+ * centre INF-FR), reads L2 and L4 only (amendment of 2026-11-21);
  * Nina (no node) owns L6 and L7; Ulla has access to all data. Dimension a2 has open values, a1 a
  * closed list.
  *
@@ -195,34 +197,67 @@ async function testNumbers(runner: QueryRunner, f: Fixture) {
 }
 
 async function testReadOnly(runner: QueryRunner, f: Fixture) {
-  await as(runner, f.persons.marta, async (m) => {
-    // L2 (FR on INF-ES): Marta reads it through the centre of her company, and may not modify it.
+  await as(runner, f.persons.rita, async (m) => {
+    // L2 (FR on INF-ES): Rita reads it through her group INF in read, and may not modify it.
     const same = csv(['item_number', 'notes'], [{ item_number: f.ref.L2, notes: '' }]);
-    const unchanged = await preflight(m, f, f.persons.marta, same);
+    const unchanged = await preflight(m, f, f.persons.rita, same);
     assert.equal(unchanged.ok, true, JSON.stringify(unchanged.errors));
     assert.equal(unchanged.changes.unchanged, 1);
     assert.equal(unchanged.snapshot.lines[0].editable, false);
-    const loaded = await load(m, f, f.persons.marta, same, unchanged.snapshot);
+    const loaded = await load(m, f, f.persons.rita, same, unchanged.snapshot);
     assert.deepEqual([loaded.ok, (loaded as any).inserted, (loaded as any).updated], [true, 0, 0], 'loaded, nothing written');
-    const changed = await preflight(m, f, f.persons.marta, csv(['item_number', 'notes'], [{ item_number: f.ref.L2, notes: 'Changed' }]));
+    const changed = await preflight(m, f, f.persons.rita, csv(['item_number', 'notes'], [{ item_number: f.ref.L2, notes: 'Changed' }]));
     assert.deepEqual(errorsOf(changed), [`item_number: ${readOnlyLineMessage(f.ref.L2)}`]);
     assert.equal(await notesOf(m, f.lines.L2), null);
   });
   console.log('  read-only line: unchanged passes (nothing written), changed refused: OK');
 }
 
+/**
+ * Amendment of 2026-11-21 (spec §2.3, §4.2): an edit node on the cost center is enough to modify a
+ * line paid by another company, by the file too; a new row on that place stays refused.
+ */
+async function testEditByCentre(runner: QueryRunner, f: Fixture) {
+  const columns = ['item_number', 'name', 'company_name', 'cost_center_code', 'account_number', 'currency', 'notes'];
+  await as(runner, f.persons.rita, async (m) => {
+    // L3 (ES on INF-FR): Rita's only edit node is the centre INF-FR.
+    const file = csv(['item_number', 'notes'], [{ item_number: f.ref.L3, notes: 'Through the centre' }]);
+    const report = await preflight(m, f, f.persons.rita, file);
+    assert.equal(report.ok, true, JSON.stringify(report.errors));
+    assert.equal(report.snapshot.lines[0].editable, true, 'L3 editable for Rita');
+    const written = await load(m, f, f.persons.rita, file, report.snapshot);
+    assert.deepEqual([written.ok, (written as any).updated], [true, 1], 'L3 updated by the file');
+    assert.equal(await notesOf(m, f.lines.L3), 'Through the centre');
+    // A new row on the same place (ES, INF-FR): placing needs the centre's own company.
+    const created = await preflight(m, f, f.persons.rita, csv(columns, [
+      { name: 'DA 3C ES on INF-FR', company_name: f.esName, cost_center_code: 'INF-FR', account_number: '6000', currency: 'EUR' },
+    ]));
+    assert.equal(created.ok, false);
+    assert.deepEqual(errorsOf(created), [`cost_center_code: ${DATA_ACCESS_PLACEMENT_MESSAGE}`], 'a new line (ES, INF-FR) refused as before');
+  });
+  await as(runner, f.persons.marta, async (m) => {
+    // L2 (FR on INF-ES): her company node ES unfolds to INF-ES, which is enough to modify it.
+    const file = csv(['item_number', 'notes'], [{ item_number: f.ref.L2, notes: 'Through her centre' }]);
+    const report = await preflight(m, f, f.persons.marta, file);
+    assert.equal(report.ok, true, JSON.stringify(report.errors));
+    const written = await load(m, f, f.persons.marta, file, report.snapshot);
+    assert.deepEqual([written.ok, (written as any).updated], [true, 1], 'L2 updated by the file');
+  });
+  console.log('  edit through the centre: a line paid by another company updated by the file, a new row there refused: OK');
+}
+
 /** The same files in xlsx: the same refusals, word for word (Excel export, lot 4). */
 async function testXlsx(runner: QueryRunner, f: Fixture) {
   const xlsx = (columns: string[], rows: Array<Record<string, string>>): Buffer =>
     writeXlsx({ language: 'en', sheets: [{ name: 'OPEX', headers: columns, rows: rows.map((row) => columns.map((column) => row[column] ?? null)) }] });
-  await as(runner, f.persons.marta, async (m) => {
+  await as(runner, f.persons.rita, async (m) => {
     const cases: Array<[string[], Array<Record<string, string>>, string[]]> = [
       [['item_number', 'notes'], [{ item_number: f.ref.L2, notes: 'Changed' }], [`item_number: ${readOnlyLineMessage(f.ref.L2)}`]],
-      [['item_number', 'notes', 'kanap_token'], [{ item_number: f.ref.L1, notes: 'x', kanap_token: 'v1' }], [`item_number: ${noLongerAvailableMessage(f.ref.L1)}`]],
+      [['item_number', 'notes', 'kanap_token'], [{ item_number: f.ref.L5, notes: 'x', kanap_token: 'v1' }], [`item_number: ${noLongerAvailableMessage(f.ref.L5)}`]],
     ];
     for (const [columns, rows, expected] of cases) {
-      const fromCsv = await preflight(m, f, f.persons.marta, csv(columns, rows));
-      const fromXlsx = await preflight(m, f, f.persons.marta, xlsx(columns, rows));
+      const fromCsv = await preflight(m, f, f.persons.rita, csv(columns, rows));
+      const fromXlsx = await preflight(m, f, f.persons.rita, xlsx(columns, rows));
       assert.deepEqual(errorsOf(fromXlsx), expected);
       assert.deepEqual(errorsOf(fromXlsx), errorsOf(fromCsv), 'the CSV file says the same');
       assert.equal(fromXlsx.ok, false);
@@ -290,9 +325,11 @@ async function testLookalikes(runner: QueryRunner, f: Fixture) {
     assert.ok(namesL1(report), 'the same check names L1 for a person who reads it');
   });
   // By the amounts: every line holds 100 budget and 100 revision for 2026 (T-I2f: two equal amounts
-  // without the same supplier); the French company's lines are L1, which Marta does
-  // not read, and L2, which she reads and may not modify. The comparison reads no line out of her
-  // access, and does not offer to update a line she only reads (a choice to do so falls back).
+  // without the same supplier); the French company's lines are L1, which Marta does not read, and
+  // L2, which she reads. With her company in Edit she modifies L2 through INF-ES (amendment of
+  // 2026-11-21) and the update is offered; with her company in Read she may not modify it. The
+  // comparison reads no line out of her access, and does not offer to update a line she only reads
+  // (a choice to do so falls back).
   await runner.query('SAVEPOINT lookalike_accounts');
   try {
     await runner.query(
@@ -303,6 +340,13 @@ async function testLookalikes(runner: QueryRunner, f: Fixture) {
     const translated = csv([...columns, 'budget_2026', 'revision_2026'], [
       { name: 'Une ligne traduite', company_name: f.frName, account_number: '6000', currency: 'EUR', budget_2026: '100', revision_2026: '100' },
     ]);
+    await as(runner, f.persons.marta, async (m) => {
+      const report = await preflight(m, f, f.persons.marta, translated);
+      assert.deepEqual(looks(report), [[2, f.ref.L2, 'amounts', true]], 'L2, modifiable through INF-ES: update offered');
+      assert.ok(!namesL1(report), 'L1 is not named');
+    });
+    // The same with her company in Read: L2 read only.
+    await runner.query(`UPDATE user_data_access_nodes SET access = 'read' WHERE tenant_id = $1 AND user_id = $2`, [f.tenantId, f.persons.marta]);
     await as(runner, f.persons.marta, async (m) => {
       const report = await preflight(m, f, f.persons.marta, translated);
       assert.deepEqual(looks(report), [[2, f.ref.L2, 'amounts', false]], 'L2, read only: no update offered');
@@ -408,13 +452,17 @@ async function testPicker(runner: QueryRunner, f: Fixture) {
     // A new line placed in her company: allowed; in France: refused.
     assert.equal((await call(m, f.persons.marta, { axis_id: f.axis2, name: 'New line value', paying_company_id: f.es })).created, true);
     await assert.rejects(call(m, f.persons.marta, { axis_id: f.axis2, name: 'Elsewhere', paying_company_id: f.fr }), forbidden('DATA_ACCESS_LIMITED'));
-    // A read-only line, a hidden line, a closed list.
-    await assert.rejects(call(m, f.persons.marta, { axis_id: f.axis2, name: 'On L2', line_id: f.lines.L2 }), forbidden('DATA_ACCESS_LIMITED'));
+    // L2, paid by FR, modified through INF-ES (amendment of 2026-11-21); a hidden line, a closed list.
+    assert.equal((await call(m, f.persons.marta, { axis_id: f.axis2, name: 'On L2', line_id: f.lines.L2 })).created, true);
     await assert.rejects(call(m, f.persons.marta, { axis_id: f.axis2, name: 'On L1', line_id: f.lines.L1 }), (err: any) => err?.getStatus?.() === 404);
     await assert.rejects(call(m, f.persons.marta, { axis_id: f.axis1, name: 'Closed', line_id: f.lines.L4 }), forbidden('DATA_ACCESS_LIMITED'));
     // An existing value of a closed list is still found.
     const [existing] = await m.query(`SELECT name FROM analytics_categories WHERE axis_id = $1 LIMIT 1`, [f.axis1]);
     assert.equal((await call(m, f.persons.marta, { axis_id: f.axis1, name: existing.name, line_id: f.lines.L4 })).created, false);
+  });
+  await as(runner, f.persons.rita, async (m) => {
+    // A read-only line: L2, read through her group in read.
+    await assert.rejects(call(m, f.persons.rita, { axis_id: f.axis2, name: 'On L2', line_id: f.lines.L2 }), forbidden('DATA_ACCESS_LIMITED'));
   });
   await as(runner, f.persons.ulla, async (m) => {
     await assert.rejects(call(m, f.persons.ulla, { axis_id: f.axis1, name: 'Closed', line_id: f.lines.L1 }), (err: any) => err?.getStatus?.() === 400);
@@ -531,6 +579,7 @@ async function run() {
       await testExport(runner, f);
       await testNumbers(runner, f);
       await testReadOnly(runner, f);
+      await testEditByCentre(runner, f);
       await testXlsx(runner, f);
       await testCreatePlacement(runner, f);
       await testLookalikes(runner, f);
