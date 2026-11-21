@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { KanapDialog, PropertyRow } from '../design';
 import AccountSelect from '../fields/AccountSelect';
+import { isAccountRefusal } from './lineFieldRefusal';
 import AnalyticsCategorySelect from '../fields/AnalyticsCategorySelect';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { accountDisplayText } from '../../utils/accountDisplay';
@@ -57,18 +58,6 @@ type Props = {
 
 const textSx = { fontSize: 13, color: 'kanap.text.secondary', lineHeight: 1.5 } as const;
 
-/**
- * A refusal of the server about the account (`item-write.util.ts`, and the in-place change's own):
- * said under the account field rather than at the foot of the dialog.
- */
-const ACCOUNT_REFUSALS = [
-  /^Account is required\.$/,
-  /^Account not found\.$/,
-  /^Selected account does not belong to the paying company's Chart of Accounts/,
-  /^This account is for (OPEX|CAPEX) lines only\./,
-  /^Choose an account, or leave the field as it is\.$/,
-];
-const isAccountRefusal = (message: string) => ACCOUNT_REFUSALS.some((pattern) => pattern.test(message));
 const placeholderSx = { color: 'kanap.text.tertiary' } as const;
 
 /**
