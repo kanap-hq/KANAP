@@ -190,6 +190,7 @@ A person limited to part of the budget uses the file within their access, when t
 - The export holds the lines they see.
 - A row that names a line they do not see is treated like a line that does not exist. In a file from an export, the message is "BL-12 is no longer available since the export.", the same as for a line deleted since then.
 - A line they see in Read passes when its row is unchanged. A change is refused with "BL-12 is read only in your access."
+- A line one of their Edit nodes covers, through its paying company or its cost center, can be updated, whatever company pays it.
 - A new line, or a new company or cost center on a line, must fit one of their Edit nodes. Otherwise the row is refused with "This company or cost center is not part of your access."
 - An unknown value is created only on a dimension with open values. On the other dimensions, it is a row error.
 - A row like an existing line offers **Update BL-12** only when they may edit that line.

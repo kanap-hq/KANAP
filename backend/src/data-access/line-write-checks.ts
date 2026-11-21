@@ -77,7 +77,12 @@ export class DataAccessLimitedException extends ForbiddenException {
   }
 }
 
-/** modifiable_ligne (spec §6.4) on the line aliased `p` (with its dot), by the SQL function of lot 3. */
+/**
+ * modifiable_ligne (spec §6.4, amended 2026-11-21) on the line aliased `p` (with its dot), by the
+ * SQL function of lot 3: an edit node on its paying company or on its cost center, whatever the
+ * company that pays, or a person responsible for it. Wider than placing a line there
+ * (`assertLinePlacement`).
+ */
 export function lineEditableSql(p: string): string {
   return `data_access_line_editable(${p}paying_company_id, ${p}cost_center_id, ${p}owner_it_id, ${p}owner_business_id)`;
 }

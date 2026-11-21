@@ -31,9 +31,11 @@ import { SpendTasksController } from '../../spend/spend-tasks.controller';
 import { SpendTasksService } from '../../spend/spend-tasks.service';
 import { BudgetLinesController } from '../../spend/budget-lines.controller';
 import { BudgetLinesService } from '../../spend/budget-lines.service';
+import { SpendItemsService } from '../../spend/spend-items.service';
+import { SpendItem } from '../../spend/spend-item.entity';
 import { DATA_ACCESS_READ_ONLY_LINE_MESSAGE } from '../line-write-checks';
 import { LIMITED_ROLE, PgClient, APP_URL, connect, roleExists } from './data-access-test-helpers';
-import { Seed, seed } from './data-access-line-seed';
+import { Seed, nextItemNumber, seed } from './data-access-line-seed';
 
 /**
  * Data-scoped access, lot 3 (planning/data-scoped-access/spec.md §4.4, §6.7, §6.8): the task routes
@@ -41,8 +43,9 @@ import { Seed, seed } from './data-access-line-seed';
  * request), exception filter, controllers and task service, on the reference example of lot 2
  * (`data-access-line-seed.ts`), committed for the requests and purged after.
  *
- * Rita (INF-FR edit, INF read) modifies L1, reads L3 only, does not read L5. Paul (INF read)
- * modifies nothing. Marta (ES edit) reads L2 only, modifies L4, does not read L1. Ulla has access
+ * Rita (INF-FR edit, INF read) modifies L1 and L3 (paid by ES, through its centre INF-FR since the
+ * amendment of 2026-11-21), reads L2 only, does not read L5. Paul (INF read) modifies nothing.
+ * Marta (ES edit) modifies L2 to L5 (L2 through INF-ES), does not read L1. Ulla has access
  * to all data.
  *
  * - `PATCH /tasks/:id` of a task that keeps its line: the line is neither looked up nor locked (the
@@ -53,6 +56,11 @@ import { Seed, seed } from './data-access-line-seed';
  * - A move of a task to a read-only line: 403; to a hidden line: 404, as a missing one.
  * - `POST /spend-items/:id/tasks`: read-only line 403, editable line 201, hidden line 404.
  * - Ulla is served as before.
+ * - The line itself (`PATCH /budget-lines/:id`, `POST /budget-lines`, `DELETE /budget-lines/bulk`):
+ *   Rita modifies L3 through its centre (200), but moving it (another centre, a company that is not
+ *   its centre's) is a placement (403); setting its company to its centre's places it (200). She
+ *   creates a line on INF-FR paid by FR, not paid by ES (403 placement). L2 is read only (403). The
+ *   delete of lines is reserved to people with access to all data (403 reserved).
  * - The Relations tab of a line (`/budget-lines/:id/relations/:kind`): an application, a technology
  *   or a project added to or removed from a read-only line 403, an editable line 201 / 200, a hidden
  *   line 404 as a missing one (the owner lock passes the UPDATE policy, `owned-link.ts`).
@@ -72,6 +80,7 @@ type Tasks = {
   ritaAssigneeL5: string;
   ritaOwnerL5: string;
   paulAssigneeL1: string;
+  ritaObserverL2: string;
   ritaObserverL3: string;
   ritaAssigneeL1: string;
   ullaL5: string;
@@ -130,11 +139,25 @@ function testModule(): any {
     stub() as any,
     stub() as any,
   );
+  const opexItems = new SpendItemsService(
+    dataSource.getRepository(SpendItem),
+    stub() as any,
+    stub() as any,
+    audit,
+    stub() as any,
+    stub() as any,
+    stub() as any,
+    stub() as any,
+    stub() as any,
+    stub() as any,
+    new ItemNumberService(),
+  );
   const real = new Map<unknown, unknown>([
     [TasksUnifiedService, unified],
     [SpendTasksService, new SpendTasksService(unified)],
-    // The Relations tab needs the audit only (`setRelation`).
-    [BudgetLinesService, new BudgetLinesService(null as any, null as any, null as any, null as any, null as any, null as any, audit)],
+    // The Relations tab needs the audit only (`setRelation`); the update and the creation of a line,
+    // the service of the OPEX nature (no supplier or status change here: no contacts, no email).
+    [BudgetLinesService, new BudgetLinesService(null as any, null as any, null as any, null as any, opexItems, null as any, audit)],
     [DataSource, dataSource],
   ]);
   const enhancers = new Set<any>();
@@ -236,6 +259,7 @@ async function seedTasks(): Promise<Tasks> {
       ritaAssigneeL5: await task(lines.L5, { assignee: persons.rita }),
       ritaOwnerL5: await task(lines.L5, { owners: [persons.rita] }),
       paulAssigneeL1: await task(lines.L1, { assignee: persons.paul }),
+      ritaObserverL2: await task(lines.L2, { viewers: [persons.rita] }),
       ritaObserverL3: await task(lines.L3, { viewers: [persons.rita] }),
       ritaAssigneeL1: await task(lines.L1, { assignee: persons.rita }),
       ullaL5: await task(lines.L5, {}),
@@ -304,14 +328,20 @@ async function testTaskUpdates(app: INestApplication) {
   assert.equal(row.title, 'Renamed by Paul');
   console.log('  assignee of a task of a read-only line: status and title 200: OK');
 
-  // Rita observes a task of L3 (read only for her): refused.
-  const observer = await call(app, 'PATCH', `tasks/${tasks.ritaObserverL3}`, persons.rita, { title: 'Renamed by Rita' });
+  // Rita observes a task of L2 (read only for her): refused.
+  const observer = await call(app, 'PATCH', `tasks/${tasks.ritaObserverL2}`, persons.rita, { title: 'Renamed by Rita' });
   expectLimited(observer, DATA_ACCESS_READ_ONLY_TASK_MESSAGE, 'Rita, observer on a read-only line');
-  assert.equal((await taskRow(tasks.ritaObserverL3)).title, 'DA HTTP task');
+  assert.equal((await taskRow(tasks.ritaObserverL2)).title, 'DA HTTP task');
   console.log('  observer of a task of a read-only line: 403 DATA_ACCESS_LIMITED: OK');
 
-  // Moves of Rita's task of L1 (editable): to L3 (read only) 403, to L5 (hidden) 404 as a random id.
-  const toReadOnly = await call(app, 'PATCH', `tasks/${tasks.ritaAssigneeL1}`, persons.rita, { related_object_type: 'spend_item', related_object_id: lines.L3 });
+  // A task of L3 (paid by ES, charged to INF-FR): modified through the centre.
+  const throughCentre = await call(app, 'PATCH', `tasks/${tasks.ritaObserverL3}`, persons.rita, { title: 'Renamed through the centre' });
+  assert.equal(throughCentre.status, 200, `Rita, task of a line modified through its centre: ${throughCentre.text}`);
+  assert.equal((await taskRow(tasks.ritaObserverL3)).title, 'Renamed through the centre');
+  console.log('  task of a line paid by another company, through the centre: 200: OK');
+
+  // Moves of Rita's task of L1 (editable): to L2 (read only) 403, to L5 (hidden) 404 as a random id.
+  const toReadOnly = await call(app, 'PATCH', `tasks/${tasks.ritaAssigneeL1}`, persons.rita, { related_object_type: 'spend_item', related_object_id: lines.L2 });
   expectLimited(toReadOnly, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Rita moves her task to a read-only line');
   const toHidden = await call(app, 'PATCH', `tasks/${tasks.ritaAssigneeL1}`, persons.rita, { related_object_type: 'spend_item', related_object_id: lines.L5 });
   const toMissing = await call(app, 'PATCH', `tasks/${tasks.ritaAssigneeL1}`, persons.rita, { related_object_type: 'spend_item', related_object_id: randomUUID() });
@@ -320,6 +350,11 @@ async function testTaskUpdates(app: INestApplication) {
   assert.equal(toHidden.body?.message, toMissing.body?.message, 'a hidden line answers as a missing one');
   assert.equal((await taskRow(tasks.ritaAssigneeL1)).related_object_id, lines.L1);
   console.log('  move to a read-only line 403, to a hidden line 404 as a missing one: OK');
+  // To L3, modified through its centre INF-FR: moved.
+  const toCentre = await call(app, 'PATCH', `tasks/${tasks.ritaAssigneeL1}`, persons.rita, { related_object_type: 'spend_item', related_object_id: lines.L3 });
+  assert.equal(toCentre.status, 200, `Rita moves her task to a line modified through its centre: ${toCentre.text}`);
+  assert.equal((await taskRow(tasks.ritaAssigneeL1)).related_object_id, lines.L3);
+  console.log('  move to a line paid by another company, through the centre: 200: OK');
 
   // Ulla (access to all data): served as before.
   const ulla = await call(app, 'PATCH', `tasks/${tasks.ullaL5}`, persons.ulla, { title: 'Renamed by Ulla', status: 'in_progress' });
@@ -333,8 +368,10 @@ async function testTaskUpdates(app: INestApplication) {
 
 async function testTaskCreation(app: INestApplication) {
   const { persons, lines } = s;
-  const readOnly = await call(app, 'POST', `spend-items/${lines.L3}/tasks`, persons.rita, { title: 'New on L3' });
+  const readOnly = await call(app, 'POST', `spend-items/${lines.L2}/tasks`, persons.rita, { title: 'New on L2' });
   expectLimited(readOnly, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Rita creates a task on a read-only line');
+  const throughCentre = await call(app, 'POST', `spend-items/${lines.L3}/tasks`, persons.rita, { title: 'New on L3' });
+  assert.equal(throughCentre.status, 201, `Rita creates a task on a line modified through its centre: ${throughCentre.text}`);
   const editable = await call(app, 'POST', `spend-items/${lines.L1}/tasks`, persons.rita, { title: 'New on L1' });
   assert.equal(editable.status, 201, `Rita creates a task on an editable line: ${editable.text}`);
   assert.equal(editable.body.related_object_id, lines.L1);
@@ -357,15 +394,23 @@ const LINKS: Record<keyof Targets, [string, string]> = {
 async function testRelations(app: INestApplication) {
   const { persons, lines } = s;
   const marta = persons.marta;
+  const rita = persons.rita;
   for (const kind of Object.keys(LINKS) as Array<keyof Targets>) {
     const [table, ownerColumn] = LINKS[kind];
     const target = targets[kind];
-    // L2: read only for Marta.
-    const add = await call(app, 'POST', `budget-lines/${lines.L2}/relations/${kind}`, marta, { id: target });
-    expectLimited(add, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, `Marta adds ${kind} to a read-only line`);
-    const remove = await call(app, 'DELETE', `budget-lines/${lines.L2}/relations/${kind}/${target}`, marta);
-    expectLimited(remove, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, `Marta removes ${kind} from a read-only line`);
+    // L2: read only for Rita (her group INF in read).
+    const add = await call(app, 'POST', `budget-lines/${lines.L2}/relations/${kind}`, rita, { id: target });
+    expectLimited(add, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, `Rita adds ${kind} to a read-only line`);
+    const remove = await call(app, 'DELETE', `budget-lines/${lines.L2}/relations/${kind}/${target}`, rita);
+    expectLimited(remove, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, `Rita removes ${kind} from a read-only line`);
     assert.equal(await linkCount(table, ownerColumn, lines.L2), 1, `${kind}: the link of L2 is kept`);
+    // L3 (paid by ES): Rita modifies it through its centre INF-FR.
+    const addedL3 = await call(app, 'POST', `budget-lines/${lines.L3}/relations/${kind}`, rita, { id: target });
+    assert.equal(addedL3.status, 201, `Rita adds ${kind} to a line modified through its centre: ${addedL3.text}`);
+    assert.equal(await linkCount(table, ownerColumn, lines.L3), 1);
+    const removedL3 = await call(app, 'DELETE', `budget-lines/${lines.L3}/relations/${kind}/${target}`, rita);
+    assert.equal(removedL3.status, 200, `Rita removes ${kind} from a line modified through its centre: ${removedL3.text}`);
+    assert.equal(await linkCount(table, ownerColumn, lines.L3), 0);
     // L4: editable.
     const added = await call(app, 'POST', `budget-lines/${lines.L4}/relations/${kind}`, marta, { id: target });
     assert.equal(added.status, 201, `Marta adds ${kind} to an editable line: ${added.text}`);
@@ -390,6 +435,108 @@ async function testRelations(app: INestApplication) {
     assert.equal(res.status, 200, res.text);
   }
   console.log('  Relations tab (applications, technologies, projects): read-only line 403, editable 201 / 200, hidden 404 as a missing one: OK');
+}
+
+type LineRow = { description: string | null; paying_company_id: string | null; cost_center_id: string | null };
+
+async function lineRow(id: string): Promise<LineRow | undefined> {
+  return inTenant(async () => (await client.query(
+    `SELECT description, paying_company_id, cost_center_id FROM spend_items WHERE id = $1`, [id],
+  )).rows[0]);
+}
+
+async function linesNamed(name: string): Promise<LineRow[]> {
+  return inTenant(async () => (await client.query(
+    `SELECT description, paying_company_id, cost_center_id FROM spend_items WHERE product_name = $1`, [name],
+  )).rows);
+}
+
+function expectRefused(res: Answer, reason: string, what: string): void {
+  assert.equal(res.status, 403, `${what}: ${res.text}`);
+  assert.equal(res.body?.code, 'DATA_ACCESS_LIMITED', `${what}: ${res.text}`);
+  assert.equal(res.body?.reason, reason, `${what}: ${res.text}`);
+}
+
+/** Run last: L3 ends paid by FR (its centre's company), which the other scenarios do not expect. */
+async function testLineRoutes(app: INestApplication) {
+  const { persons, lines, fr, es, infFr, infEs } = s;
+  const rita = persons.rita;
+  const other = await inTenant(async () => (await client.query(
+    `INSERT INTO companies (tenant_id, name, country_iso, city, status) VALUES (app_current_tenant(), 'Alpha Italia HTTP', 'IT', 'Milano', 'enabled') RETURNING id`,
+  )).rows[0].id as string);
+  const seeded: LineRow = { description: null, paying_company_id: es, cost_center_id: infFr };
+  assert.deepEqual(await lineRow(lines.L3), seeded, 'L3 as seeded: paid by ES on INF-FR');
+
+  // 1. L3 (paid by ES, charged to INF-FR): Rita modifies it through its centre.
+  const described = await call(app, 'PATCH', `budget-lines/${lines.L3}`, rita, { description: 'Changed through the centre' });
+  assert.equal(described.status, 200, `Rita modifies a line through its centre: ${described.text}`);
+  const changed: LineRow = { ...seeded, description: 'Changed through the centre' };
+  assert.deepEqual(await lineRow(lines.L3), changed);
+
+  // 2. Moving it to a centre outside her edit nodes is a placement.
+  const toInfEs = await call(app, 'PATCH', `budget-lines/${lines.L3}`, rita, { cost_center_id: infEs });
+  expectRefused(toInfEs, 'placement', 'Rita moves the line to INF-ES');
+  assert.deepEqual(await lineRow(lines.L3), changed, 'L3 unchanged');
+
+  // 3. So is a paying company that is not the company of INF-FR.
+  const toOther = await call(app, 'PATCH', `budget-lines/${lines.L3}`, rita, { paying_company_id: other });
+  expectRefused(toOther, 'placement', 'Rita gives the line a third paying company');
+  assert.deepEqual(await lineRow(lines.L3), changed, 'L3 unchanged');
+
+  // 6. L2 (paid by FR on INF-ES): read only for Rita.
+  const l2Before = await lineRow(lines.L2);
+  const readOnly = await call(app, 'PATCH', `budget-lines/${lines.L2}`, rita, { description: 'Changed by Rita' });
+  expectRefused(readOnly, 'readOnlyLine', 'Rita modifies a read-only line');
+  assert.deepEqual(await lineRow(lines.L2), l2Before, 'L2 unchanged');
+
+  // 7. The delete of lines (the bulk route, the only one outside a creation's Cancel) is reserved.
+  const deleted = await call(app, 'DELETE', 'budget-lines/bulk', rita, { ids: [lines.L3] });
+  expectRefused(deleted, 'reserved', 'Rita deletes a line she modifies through its centre');
+  assert.ok(await lineRow(lines.L3), 'L3 kept');
+
+  // 5. A new line on INF-FR: paid by ES refused, paid by FR created.
+  const create = (name: string, company: string) => call(app, 'POST', 'budget-lines', rita, {
+    nature: 'opex', product_name: name, currency: 'EUR', effective_start: '2026-01-01', paying_company_id: company, cost_center_id: infFr,
+  });
+  const paidByEs = await create('DA HTTP line paid by ES', es);
+  expectRefused(paidByEs, 'placement', 'Rita creates a line on INF-FR paid by ES');
+  assert.deepEqual(await linesNamed('DA HTTP line paid by ES'), [], 'no line created');
+  const paidByFr = await create('DA HTTP line paid by FR', fr);
+  assert.equal(paidByFr.status, 201, `Rita creates a line on INF-FR paid by FR: ${paidByFr.text}`);
+  assert.deepEqual(await linesNamed('DA HTTP line paid by FR'), [{ description: null, paying_company_id: fr, cost_center_id: infFr }]);
+
+  // 4. Last: the paying company of INF-FR places the line there.
+  const toFr = await call(app, 'PATCH', `budget-lines/${lines.L3}`, rita, { paying_company_id: fr });
+  assert.equal(toFr.status, 200, `Rita gives the line the company of its centre: ${toFr.text}`);
+  assert.deepEqual(await lineRow(lines.L3), { ...changed, paying_company_id: fr });
+
+  // 8. A line without a paying company (spec §5.1) follows its cost center: Rita, INF-FR in Edit,
+  // modifies it, and the save gives it the company of INF-FR. Paul, INF in Read, only reads it.
+  const withoutCompany = (name: string, centre: string | null, ownerIt: string | null) => inTenant(async () => (await client.query(
+    `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number, paying_company_id, cost_center_id, owner_it_id)
+     VALUES (app_current_tenant(), $1, 'EUR', '2026-01-01', $2, NULL, $3, $4) RETURNING id`,
+    [name, nextItemNumber(), centre, ownerIt],
+  )).rows[0].id as string);
+  const onCentre = await withoutCompany('DA HTTP no company on INF-FR', infFr, null);
+  const byPaul = await call(app, 'PATCH', `budget-lines/${onCentre}`, persons.paul, { description: 'Changed by Paul' });
+  expectRefused(byPaul, 'readOnlyLine', 'Paul modifies a line without a company on a centre he reads');
+  const byRita = await call(app, 'PATCH', `budget-lines/${onCentre}`, rita, { description: 'Changed by Rita' });
+  assert.equal(byRita.status, 200, `Rita modifies a line without a company through its centre: ${byRita.text}`);
+  assert.deepEqual(await lineRow(onCentre), { description: 'Changed by Rita', paying_company_id: fr, cost_center_id: infFr },
+    'the save gives the line the company of its centre');
+
+  // 9. A person named on such a line and with no node on its centre reads it; her save would give
+  // it the company of the centre, which a participation never places.
+  const namedOnCentre = await withoutCompany('DA HTTP no company on INF-FR, Nina owner', infFr, persons.nina);
+  const byNina = await call(app, 'PATCH', `budget-lines/${namedOnCentre}`, persons.nina, { description: 'Changed by Nina' });
+  expectRefused(byNina, 'placement', 'Nina saves a line without a company on a centre outside her access');
+  assert.deepEqual(await lineRow(namedOnCentre), { description: null, paying_company_id: null, cost_center_id: infFr }, 'the line is unchanged');
+
+  // 10. With no cost center either, the named person modifies the line and it stays without a company.
+  const byOwner = await call(app, 'PATCH', `budget-lines/${lines.L6}`, persons.nina, { description: 'Changed by its owner' });
+  assert.equal(byOwner.status, 200, `Nina modifies L6, which names her: ${byOwner.text}`);
+  assert.deepEqual(await lineRow(lines.L6), { description: 'Changed by its owner', paying_company_id: null, cost_center_id: null });
+  console.log('  line routes: through the centre 200, move 403 placement, read-only 403, delete 403 reserved, creation 403 / 201, company of the centre 200, without a company 200 / 403: OK');
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -430,6 +577,7 @@ async function run() {
     await testTaskUpdates(app);
     await testTaskCreation(app);
     await testRelations(app);
+    await testLineRoutes(app);
     console.log('data access line routes over HTTP: all scenarios passed');
   } finally {
     if (app) await app.close();

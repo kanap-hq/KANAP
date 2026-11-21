@@ -125,7 +125,7 @@ El encabezado muestra la referencia del contrato (`CTR-5`, haga clic en ella par
 
 El panel de propiedades, a la derecha, contiene todos los campos del contrato: las partes, **Inicio**, **Duración (meses)**, **Preaviso (meses)**, **Renovación tácita**, **Importe anual**, **Moneda**, **Facturación**, luego **Ciclo de vida** (**Estado** y **Fin de validez**), **Creado** y **Actualizado**. Ábralo o ciérrelo con su botón; Kadratis recuerda su elección.
 
-**Centro de coste o grupo** es opcional. Sitúa el contrato bajo un centro de coste o un grupo para el [acceso a los datos](data-access.md): las personas limitadas a ese nodo, o a un grupo superior, ven el contrato, igual que las limitadas a su empresa.
+**Centro de coste o grupo** es opcional. Sitúa el contrato bajo un centro de coste o un grupo para el [acceso a los datos](data-access.md): las personas limitadas a ese nodo, o a un grupo superior, ven el contrato, igual que las limitadas a su empresa. Con ese nodo en Edición, modifican el contrato, sea cual sea su empresa.
 
 Cada cambio se guarda solo: listas y fechas al instante, valores escritos y notas tras una breve pausa, el nombre al salir del campo. «Guardando...» y después «Guardado» aparece en el encabezado. Dos personas que editan el mismo contrato no reciben aviso: prevalece el último cambio.
 

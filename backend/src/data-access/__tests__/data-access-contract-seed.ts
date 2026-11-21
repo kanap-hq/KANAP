@@ -7,7 +7,8 @@ import { Seed, nextItemNumber, seed as seedLines } from './data-access-line-seed
  *   CL  Alpha France / no place, read through line L1 only (contract_spend_items)
  *   CN  Alpha France / no place, Nina owner
  *   CH  Alpha France / no place, hidden from every limited person of the fixture
- *   CX  Alpha France / INF-ES (read by Marta and Paul through the node, not modifiable by Marta)
+ *   CX  Alpha France / INF-ES (read by Marta and Paul through the node; Marta modifies it through
+ *       that place, whatever its company, since the amendment of 2026-11-21)
  *
  * CE is linked to L1 (contract_spend_items), L5 and L6 (contract_spend_items) and L7
  * (spend_items.contract_id): the hidden-line counts of the two forms. CL carries the documents

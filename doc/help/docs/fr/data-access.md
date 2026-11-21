@@ -34,7 +34,7 @@ Une ligne est visible quand une société de la liste la paie, ou quand elle est
 
 Un exemple. L'espace de travail a deux sociétés, Alpha France et Alpha Spain, et un groupe Infrastructure qui contient INF-FR (France) et INF-ES (Espagne).
 
-- Marta, limitée à **Alpha Spain (Saisie)**, voit et modifie les lignes payées par Alpha Spain.
+- Marta, limitée à **Alpha Spain (Saisie)**, voit et modifie les lignes payées par Alpha Spain et les lignes imputées à ses centres de coûts, comme INF-ES, quelle que soit la société qui les paie.
 - Paul, limité à **Infrastructure (Lecture)**, lit les lignes imputées à INF-FR et INF-ES. Une ligne espagnole sans centre de coûts lui reste cachée.
 - Claire, en **Toutes les données**, voit tout.
 
@@ -42,20 +42,31 @@ Un exemple. L'espace de travail a deux sociétés, Alpha France et Alpha Spain, 
 
 Les nœuds s'additionnent. Quand deux nœuds couvrent la même ligne, l'accès le plus large l'emporte : avec Réseaux en Lecture et RES-01 en Saisie, les lignes de RES-01 sont modifiables et le reste de Réseaux est en lecture seule. Un nœud ne peut pas exclure l'un de ses sous-nœuds.
 
-### Créer et déplacer une ligne ou un contrat
+### Modifier, créer et déplacer une ligne ou un contrat
+
+Pour modifier une ligne, il faut qu'un nœud en Saisie la couvre, par sa société qui paie ou par son centre de coûts, quelle que soit la société qui la paie. Un centre de coûts en Saisie, ou un groupe au-dessus, ouvre donc toutes les lignes imputées à ce centre : montants, versions, ventilations, description, pièces jointes et tâches. Un contrat se modifie de la même façon, par sa société ou par son **Centre de coûts ou groupe**, quelle que soit la société du contrat.
 
 Pour créer une ligne, ou changer sa société ou son centre de coûts, la société doit correspondre à un nœud en Saisie :
 
 - la société qui paie est une société en Saisie, ou
 - le centre de coûts de la ligne est couvert en Saisie et la ligne est payée par la société de ce centre.
 
-Un nœud centre de coûts permet donc de créer les lignes de ce centre, payées par sa société. Il ne permet pas de faire payer une autre société. Une ligne payée par une autre société que celle de son centre de coûts se lit par le centre de coûts et ne se modifie que par sa société qui paie.
+Un nœud centre de coûts permet donc de créer les lignes de ce centre, payées par sa société. Il ne permet pas de faire payer une autre société.
 
-Les contrats suivent la même règle avec leur société et leur **Centre de coûts ou groupe**. Les sélecteurs de société et de centre de coûts ne proposent que les valeurs que la personne peut utiliser. Une autre valeur est refusée avec « Cette société ou ce centre de coûts ne fait pas partie de votre accès. »
+Par exemple, une ligne est payée par Alpha France et imputée à INF-ES. Une personne limitée à **INF-ES (Saisie)** la modifie. Elle ne peut pas créer une telle ligne, et elle ne peut changer sa société qui paie que pour Alpha Spain.
+
+Les contrats suivent la même règle avec leur société et leur **Centre de coûts ou groupe** quand ils sont créés ou déplacés. Les sélecteurs de société et de centre de coûts ne proposent que les valeurs que la personne peut utiliser. Une autre valeur est refusée avec « Cette société ou ce centre de coûts ne fait pas partie de votre accès. »
+
+Supprimer une ligne ou un contrat est réservé aux personnes qui ont toutes les données (voir plus bas).
 
 ### Lignes sans société
 
-D'anciennes lignes peuvent n'avoir aucune société. Elles ne sont visibles que des personnes qui ont toutes les données, des personnes qui ont un nœud **Tout** et des personnes nommées dessus. **Administration > Accès aux données** les compte, avec un lien vers la liste.
+Une ligne budgétaire peut n'avoir aucune société qui paie : une ancienne ligne, ou une nouvelle ligne dont la société qui paie n'est pas encore choisie.
+
+- Imputée à un centre de coûts, elle suit ce centre de coûts : les personnes dont un nœud couvre le centre de coûts la lisent, et un nœud en Saisie leur permet de la modifier. L'enregistrer lui donne la société de son centre de coûts.
+- Sans centre de coûts, elle n'est visible que des personnes qui ont toutes les données, des personnes qui ont un nœud **Tout** et des personnes nommées dessus.
+
+**Administration > Accès aux données** compte les lignes sans société, avec un lien vers la liste.
 
 ## Le rôle dit quoi, les nœuds disent où
 
@@ -78,7 +89,7 @@ Une personne limitée voit toujours ce sur quoi elle est nommée, même hors de 
 | Assignée ou responsable d'une tâche | Saisie |
 | Personne qui suit une tâche | Lecture |
 
-Créer une tâche ne compte pas. Être nommé ouvre l'élément. Cela ne permet pas de le placer sur une société ou un centre de coûts hors des nœuds en Saisie de la personne, ni de le supprimer. Un changement qui sortirait une ligne de l'accès de la personne est refusé avec « Ce changement sortirait la ligne de votre accès. Restez l'un de ses responsables, ou demandez à une personne qui a accès à sa société. »
+Créer une tâche ne compte pas. Être nommé ouvre l'élément. Cela ne permet pas de le placer sur une société ou un centre de coûts que la règle ci-dessus refuse, ni de le supprimer. Un changement qui sortirait une ligne de l'accès de la personne est refusé avec « Ce changement sortirait la ligne de votre accès. Restez l'un de ses responsables, ou demandez à une personne qui a accès à sa société. »
 
 Une personne limitée sans nœud ne voit que ce sur quoi elle est nommée. Une liste vide ne redevient jamais toutes les données.
 
@@ -99,10 +110,10 @@ L'onglet **Accès aux données** de la fenêtre de l'utilisateur contient :
 - **Ajouter**, qui ouvre un sélecteur en trois sections : **Sociétés**, **Centres de coûts** (groupes et centres, en arbre) et **Tout**. Sans centres de coûts dans l'espace de travail, le sélecteur propose les sociétés et **Tout**.
 - **Ajouter ses centres (3)**, quand la personne est responsable budgétaire de centres de coûts. Ce bouton ajoute ces centres en Saisie.
 - Deux rappels : « Cette personne voit aussi, toujours, ce sur quoi elle est nommée. » et « S'applique au budget et aux contrats. »
-- L'aperçu, par exemple « Avec cet accès : 312 lignes budgétaires, dont 280 en saisie ; 45 contrats. »
+- L'aperçu, par exemple « Avec cet accès : 312 lignes budgétaires, dont 280 modifiables ; 45 contrats. »
 - Qui a modifié l'accès en dernier, et quand.
 
-L'aperçu suit chaque changement, avant l'enregistrement. Il mesure les nœuds, pas les rôles : **en saisie** compte les lignes ouvertes en Saisie, même quand les rôles de la personne ne lui permettent pas de les modifier.
+L'aperçu suit chaque changement, avant l'enregistrement. Il mesure les nœuds, pas les rôles : **modifiables** compte les lignes qu'un nœud en Saisie couvre, par leur société qui paie ou par leur centre de coûts, même quand les rôles de la personne ne lui permettent pas de les modifier.
 
 Revenir à **Toutes les données** demande une confirmation, par exemple « Marta Ruiz verra toutes les données du budget et des contrats. »
 
