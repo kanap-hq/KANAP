@@ -52,6 +52,8 @@ type Row = Contact | CreateRow;
 const isCreateRow = (row: Row): row is CreateRow => lookupCreateText(row) !== null;
 /** The group of the create row: it closes the list under no supplier heading. */
 const CREATE_GROUP = '\u0000create';
+/** A typed reference (`CTCT-12`) names a contact to find, never one to create. */
+const CONTACT_REFERENCE = new RegExp(`^${formatItemRef('contact', 0).replace(/0$/, '')}\\d+$`, 'i');
 
 /** A contact is named, never shown by email: the email only stands in for a contact with no name. */
 function contactName(c: Contact): string {
@@ -136,7 +138,7 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
   const typed = input.trim();
   const settled = !isFetching && !isPlaceholderData;
   const createRow = React.useMemo<CreateRow | null>(() => {
-    if (!canCreate || !settled || !typed) return null;
+    if (!canCreate || !settled || !typed || CONTACT_REFERENCE.test(typed)) return null;
     const needle = foldText(typed);
     if (mergedOptions.some((c) => foldText(contactName(c)) === needle || foldText(formatLabel(c)) === needle)) return null;
     return { id: LOOKUP_CREATE_ID, lookupCreateText: typed, lookupCreateLabel: t('master-data:contacts.createOption', { name: typed }) };

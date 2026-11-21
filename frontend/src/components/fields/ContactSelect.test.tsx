@@ -126,6 +126,14 @@ describe('ContactSelect', () => {
       await waitFor(() => expect(optionTexts()).toEqual(['Anna Berg', 'desk@acme.test']));
     });
 
+    it('does not offer it for a typed reference, which names a contact and never one to create', async () => {
+      renderSelect();
+      typeInto('ctct-99');
+      await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/contacts', { params: { limit: 20, q: 'ctct-99' } }));
+      await waitFor(() => expect(screen.queryByRole('progressbar')).toBeNull());
+      expect(screen.queryByRole('option', { name: 'master-data:contacts.createOption:ctct-99' })).toBeNull();
+    });
+
     it('offers no creation without the right, and says whom to ask on an empty list', async () => {
       hasLevel.mockReturnValue(false);
       renderSelect();
