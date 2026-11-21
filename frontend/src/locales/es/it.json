@@ -2389,13 +2389,7 @@
         "placementLinked": "Vínculo colocado en {{cluster}}."
       },
       "creation": {
-        "record": "El activo",
-        "missing": "Falta: {{fields}}",
-        "leaveTitle": "Este activo está incompleto",
-        "leaveComplete": "Completarlo",
-        "leaveDelete": "Eliminarlo",
-        "leaveAnyway": "Salir de todos modos",
-        "completeFailed": "No se pudo comprobar el activo."
+        "record": "El activo"
       }
     },
     "technology": {

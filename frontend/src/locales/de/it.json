@@ -2389,13 +2389,7 @@
         "placementLinked": "Verknüpfung auf {{cluster}} gelegt."
       },
       "creation": {
-        "record": "Das Asset",
-        "missing": "Fehlt: {{fields}}",
-        "leaveTitle": "Dieses Asset ist unvollständig",
-        "leaveComplete": "Vervollständigen",
-        "leaveDelete": "Löschen",
-        "leaveAnyway": "Trotzdem verlassen",
-        "completeFailed": "Das Asset konnte nicht geprüft werden."
+        "record": "Das Asset"
       }
     },
     "technology": {

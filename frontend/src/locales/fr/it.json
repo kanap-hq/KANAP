@@ -2389,13 +2389,7 @@
         "placementLinked": "Lien posé sur {{cluster}}."
       },
       "creation": {
-        "record": "L’actif",
-        "missing": "Manquant : {{fields}}",
-        "leaveTitle": "Cet actif est incomplet",
-        "leaveComplete": "Le compléter",
-        "leaveDelete": "Le supprimer",
-        "leaveAnyway": "Quitter quand même",
-        "completeFailed": "L’actif n’a pas pu être vérifié."
+        "record": "L’actif"
       }
     },
     "technology": {
