@@ -1,4 +1,4 @@
-import type { BadRequestException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { applicationBadRequest } from '../applications/application-rules';
 import { inheritingMembersOf } from '../app-asset-assignments/cluster-assignment-rules';
@@ -9,6 +9,20 @@ export type AbsorbedServer = { asset_id: string; name: string; cluster_id: strin
 /** A 400 refusal coded `connection_same_endpoint` (the message is English for the API; the screen translates `errors:<code>`). */
 export function connectionSameEndpointRefusal(): BadRequestException {
   return applicationBadRequest('connection_same_endpoint', 'The source and the destination are the same asset.');
+}
+
+/**
+ * The refusal of one end of a server-to-server connection that names both an asset and an entity,
+ * or neither; null when the end names exactly one. The write and Kad's preview apply it alike.
+ */
+export function connectionSideRefusal(
+  label: 'source' | 'destination',
+  assetId: string | null,
+  entityCode: string | null,
+): BadRequestException | null {
+  if (assetId && entityCode) return new BadRequestException(`${label}: choose either asset or entity, not both`);
+  if (!assetId && !entityCode) return new BadRequestException(`${label}: select an asset or an entity`);
+  return null;
 }
 
 /** A 400 refusal coded `connection_min_servers`: a multi-server list keeps at least two assets once absorption is done. */

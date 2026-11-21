@@ -22,6 +22,7 @@ import {
   AbsorbedServer,
   absorbClusterMembers,
   connectionSameEndpointRefusal,
+  connectionSideRefusal,
   connectionServersMinRefusal,
 } from '../connection-cluster-rules';
 
@@ -178,8 +179,8 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         const aid = this.normalizeNullable(assetId);
         const eidRaw = this.normalizeNullable(entityCode);
         const eid = eidRaw ? eidRaw.toLowerCase() : null;
-        if (aid && eid) throw new BadRequestException(`${label}: choose either asset or entity, not both`);
-        if (!aid && !eid) throw new BadRequestException(`${label}: select an asset or an entity`);
+        const refused = connectionSideRefusal(label, aid, eid);
+        if (refused) throw refused;
         if (aid) {
           await this.ensureAsset(aid, tenant, mg);
           return { asset: aid, entity: null };
@@ -372,11 +373,9 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         const hasEntity = entityCode !== undefined;
         const candidateAsset = hasAsset ? this.normalizeNullable(assetId) : fallbackAsset;
         const candidateEntity = hasEntity ? this.normalizeNullable(entityCode)?.toLowerCase() ?? null : fallbackEntity;
-        if (candidateAsset && candidateEntity) throw new BadRequestException(`${label}: choose either asset or entity, not both`);
-        if (!candidateAsset && !candidateEntity) {
-          if (wasIncomplete) return { asset: null, entity: null };
-          throw new BadRequestException(`${label}: select an asset or an entity`);
-        }
+        if (!candidateAsset && !candidateEntity && wasIncomplete) return { asset: null, entity: null };
+        const refused = connectionSideRefusal(label, candidateAsset, candidateEntity);
+        if (refused) throw refused;
         if (candidateAsset) {
           await this.ensureAsset(candidateAsset, tenant, mg);
           return { asset: candidateAsset, entity: null };

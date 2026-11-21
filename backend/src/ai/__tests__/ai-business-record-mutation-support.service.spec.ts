@@ -313,6 +313,20 @@ async function testConnectionNeedsItsEnds() {
   await assert.rejects(() => create({ topology: 'server_to_server', destination_asset_id: 'AST-12' }), /Source is required for connection creation/);
   await assert.rejects(() => create({ topology: 'multi_server', servers: ['AST-12'] }), /at least two servers/i);
   await assert.rejects(() => create({ topology: 'multi_server' }), /at least two servers/i);
+  // The rules of the write on each end, named by the preview: one asset or one entity per side,
+  // never the same asset on both sides.
+  await assert.rejects(
+    () => create({ source_asset_id: 'AST-12', source_entity_code: 'internet', destination_entity_code: 'internet' }),
+    /source: choose either asset or entity, not both/,
+  );
+  await assert.rejects(
+    () => create({ source_entity_code: 'internet', destination_asset_id: 'AST-12', destination_entity_code: 'internet' }),
+    /destination: choose either asset or entity, not both/,
+  );
+  await assert.rejects(
+    () => create({ source_asset_id: 'AST-12', destination_asset_id: 'AST-12' }),
+    (error: any) => error?.getResponse?.()?.code === 'connection_same_endpoint' && /same asset/.test(error.message),
+  );
   const prepared = await create({ source_entity_code: 'internet', destination_asset_id: 'AST-12' });
   assert.equal((prepared.mutationInput.fields as Record<string, unknown>).destination_asset_id, '66666666-6666-4666-8666-666666666666');
   console.log('  connection ends required: OK');
