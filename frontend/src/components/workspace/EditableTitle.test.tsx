@@ -163,25 +163,49 @@ describe('EditableTitle', () => {
     expect(next).toHaveFocus();
   });
 
-  it('sends a name still to give on a blur, and leaves the focus where the person went when the value arrives', () => {
+  it('keeps a name still to give in the field on a blur, wherever the focus goes, and sends nothing', () => {
     const onSave = vi.fn();
-    const titleIn = (value: string) => (
+    render(
       <ThemeProvider theme={createAppTheme('light')}>
-        <EditableTitle value={value} fallback="New incident" canEdit autoEdit={!value} onSave={onSave} />
+        <EditableTitle value="" fallback="New incident" canEdit autoEdit onSave={onSave} />
         <input aria-label="next field" />
-      </ThemeProvider>
+        <a href="#elsewhere">menu</a>
+      </ThemeProvider>,
     );
-    const { rerender } = render(titleIn(''));
     const input = screen.getByRole('textbox', { name: LABEL });
     fireEvent.change(input, { target: { value: 'Billing' } });
-    const next = screen.getByRole('textbox', { name: 'next field' });
-    next.focus();
+    // Another field, a link, nowhere (another window).
+    screen.getByRole('textbox', { name: 'next field' }).focus();
+    input.focus();
+    screen.getByRole('link', { name: 'menu' }).focus();
+    input.focus();
     fireEvent.blur(input);
-    expect(onSave).toHaveBeenCalledWith('Billing');
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox', { name: LABEL })).toHaveValue('Billing');
+  });
 
-    rerender(titleIn('Billing'));
-    expect(screen.getByRole('button', { name: LABEL })).toHaveTextContent('Billing');
-    expect(next).toHaveFocus();
+  it('hands a name still to give to onBlurDraft on a blur, so the draft it belongs to decides', () => {
+    const onSave = vi.fn();
+    const onBlurDraft = vi.fn();
+    renderTitle({ value: '', autoEdit: true, onSave, onBlurDraft });
+    const input = screen.getByRole('textbox');
+    fireEvent.blur(input);
+    expect(onBlurDraft).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: '  Billing ' } });
+    fireEvent.blur(input);
+    expect(onBlurDraft).toHaveBeenCalledWith('Billing');
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox')).toHaveValue('  Billing ');
+  });
+
+  it('saves a renamed title on a blur, as before', () => {
+    const { onSave } = renderTitle();
+    fireEvent.click(screen.getByRole('button', { name: LABEL }));
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'Payroll run' } });
+    fireEvent.blur(input);
+    expect(onSave).toHaveBeenCalledWith('Payroll run');
+    expect(screen.getByRole('button', { name: LABEL })).toHaveTextContent('Payroll');
   });
 
   it('commits on Tab and hands the focus on with onTab', () => {

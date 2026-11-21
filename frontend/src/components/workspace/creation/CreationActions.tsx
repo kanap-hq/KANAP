@@ -6,9 +6,9 @@ import { armCreationFieldFocus } from './creationFieldFocus';
 
 type Props = {
   /**
-   * Create on the new page (the title's commit writes the record, the page opens it); Done on the
-   * created record: the page saves what is still being typed, checks the fields the record needs,
-   * then closes it, kept.
+   * Create on the new page (the page writes the record from what is typed, and opens it); Done on
+   * the created record: the page saves what is still being typed, checks the fields the record
+   * needs, then closes it, kept.
    */
   onCreate: () => void;
   /** Closes without keeping: leaves a new page, deletes a record being created. */
@@ -37,12 +37,14 @@ export function isCreationWriting(from: Element | null): boolean {
  * The two actions of a record being created, in its header in place of the close button: the
  * primary pill and Cancel. Shown on the new page, where the pill says Create, and on the created
  * record while the person stays on it (`useRecordCreation`), where it says Done. Ctrl+S (Cmd+S) is
- * the pill.
+ * the pill. Its press takes the focus (Safari gives none to a button), which leaves the field being
+ * typed: the field commits into the draft, the leave alone writes nothing (`useDraftCreation`), and
+ * the click writes what is typed. Cancel leaves, nothing written.
  *
  * Done is never reached from Create: a pointer click counts as Done only when its press began on
- * Done, and only as the first click of a series. The press on Create blurs the title, whose commit
- * writes the record; it may come back, and the pill turn to Done, before the click lands, or
- * between the two clicks of a double-click. A click from the keyboard (detail 0) counts.
+ * Done, and only as the first click of a series. The click on Create writes the record; it may
+ * come back, and the pill turn to Done, between the two clicks of a double-click. A click from the
+ * keyboard (detail 0) counts.
  */
 export default function CreationActions({ onCreate, onCancel, busy = false, writing = false, done = false }: Props) {
   const { t } = useTranslation('common');
@@ -69,8 +71,7 @@ export default function CreationActions({ onCreate, onCancel, busy = false, writ
       // A key held down repeats: its first press is the one meant.
       if (event.repeat) return;
       // As from the keyboard: the field being typed commits as the focus leaves it, and the pill runs
-      // on the page rendered with it (a title that writes its record is then under way). A busy
-      // pill takes neither.
+      // on the page rendered with it. A busy pill takes neither.
       if (!doneRef.current && !create.disabled) armCreationFieldFocus();
       flushSync(() => create.focus());
       create.click();
@@ -91,10 +92,12 @@ export default function CreationActions({ onCreate, onCancel, busy = false, writ
         variant="action-primary"
         size="small"
         disabled={busy}
-        onPointerDown={() => {
+        onPointerDown={(event) => {
           pressedOnDone.current = done;
-          // The record the title creates under this press puts the cursor in its first field to fill.
+          // The record this press creates puts the cursor in its first field to fill.
           if (!done) armCreationFieldFocus();
+          // Safari gives a pressed button no focus: the field being typed would not commit.
+          event.currentTarget.focus();
         }}
         onClick={(event) => {
           if (done && event.detail > 0 && (!pressedOnDone.current || event.detail > 1)) return;

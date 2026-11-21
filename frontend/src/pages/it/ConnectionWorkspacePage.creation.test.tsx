@@ -181,7 +181,7 @@ describe('Connection creation at the title', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'new connection' }));
     const input = await screen.findByRole('textbox', { name: TITLE });
     fireEvent.change(input, { target: { value: 'Web to db' } });
-    // In a browser the click's press blurs the title first, which commits it.
+    // In a browser the press takes the focus from the title, which writes nothing; Create writes the name typed.
     fireEvent.blur(input);
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
