@@ -56,6 +56,19 @@ type Props = {
 };
 
 const textSx = { fontSize: 13, color: 'kanap.text.secondary', lineHeight: 1.5 } as const;
+
+/**
+ * A refusal of the server about the account (`item-write.util.ts`, and the in-place change's own):
+ * said under the account field rather than at the foot of the dialog.
+ */
+const ACCOUNT_REFUSALS = [
+  /^Account is required\.$/,
+  /^Account not found\.$/,
+  /^Selected account does not belong to the paying company's Chart of Accounts/,
+  /^This account is for (OPEX|CAPEX) lines only\./,
+  /^Choose an account, or leave the field as it is\.$/,
+];
+const isAccountRefusal = (message: string) => ACCOUNT_REFUSALS.some((pattern) => pattern.test(message));
 const placeholderSx = { color: 'kanap.text.tertiary' } as const;
 
 /**
@@ -74,6 +87,7 @@ export default function ChangeTypeDialog({ open, nature, lineId, lineReference, 
   const [reason, setReason] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [accountError, setAccountError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!open) return;
@@ -82,6 +96,7 @@ export default function ChangeTypeDialog({ open, nature, lineId, lineReference, 
     setValues({});
     setReason('');
     setError(null);
+    setAccountError(null);
   }, [open, lineId]);
 
   const check = useQuery({
@@ -108,7 +123,11 @@ export default function ChangeTypeDialog({ open, nature, lineId, lineReference, 
 
   const dated = data?.mode === 'dated';
   const typeLabel = (type: LineType) => type.toUpperCase();
-  const missingRequired = !!data && data.dimensions.some((dimension) => dimension.required && !values[dimension.axis_id]);
+  // The new line of a dated change is a creation: it needs an account, as any new line.
+  const missingRequired = !!data && (
+    data.dimensions.some((dimension) => dimension.required && !values[dimension.axis_id])
+    || (dated && !accountId)
+  );
   const blocked = !!data && data.blockers.length > 0;
   const canSave = !!data && !check.isFetching && !blocked && !missingRequired && !submitting;
 
@@ -119,6 +138,7 @@ export default function ChangeTypeDialog({ open, nature, lineId, lineReference, 
     if (!data || !canSave) return;
     setSubmitting(true);
     setError(null);
+    setAccountError(null);
     try {
       const body: Record<string, unknown> = {
         row_version: data.row_version,
@@ -137,7 +157,9 @@ export default function ChangeTypeDialog({ open, nature, lineId, lineReference, 
         setError(t('ops:shared.changeType.changedMeanwhile'));
         void check.refetch();
       } else {
-        setError(getApiErrorMessage(e, t, t('ops:shared.changeType.failed')));
+        const message = getApiErrorMessage(e, t, t('ops:shared.changeType.failed'));
+        if (isAccountRefusal(message)) setAccountError(message);
+        else setError(message);
       }
     } finally {
       setSubmitting(false);
@@ -178,6 +200,7 @@ export default function ChangeTypeDialog({ open, nature, lineId, lineReference, 
                     const year = Number(event.target.value);
                     setFromYear(year === data.first_year ? null : year);
                     setError(null);
+                    setAccountError(null);
                   }}
                   sx={drawerSelectSx}
                   SelectDisplayProps={{ 'aria-label': t('ops:shared.changeType.fromLabel') } as React.HTMLAttributes<HTMLDivElement>}
@@ -236,19 +259,24 @@ export default function ChangeTypeDialog({ open, nature, lineId, lineReference, 
 
             <PropertyRow
               label={t('ops:shared.changeType.accountLabel')}
-              helperText={data.account && !(dated ? data.account.carried : data.account.fits)
+              required={dated}
+              missing={!!accountError}
+              helperText={accountError ?? (data.account && !(dated ? data.account.carried : data.account.fits)
                 ? t(dated ? 'ops:shared.changeType.accountNotCopied' : 'ops:shared.changeType.accountUnfit', {
                   account: accountDisplayText(data.account.account_number, data.account.account_name),
                   type: typeLabel(nature),
                   target: typeLabel(target),
                 })
-                : undefined}
+                : undefined)}
             >
               <AccountSelect
                 hideLabel
                 label={t('ops:shared.changeType.accountLabel')}
                 value={accountId || null}
-                onChange={(next) => setAccountId(next || '')}
+                onChange={(next) => {
+                  setAccountId(next || '');
+                  setAccountError(null);
+                }}
                 companyId={companyId}
                 nature={target}
                 selectedOption={data.account && accountId === data.account.id ? data.account : null}
