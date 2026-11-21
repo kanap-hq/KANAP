@@ -27,6 +27,7 @@ import EntityKnowledgePanel from '../../../components/EntityKnowledgePanel';
 const MarkdownEditor = React.lazy(() => import('../../../components/MarkdownEditor'));
 import ConnectionEndpointPicker from './ConnectionEndpointPicker';
 import { FieldLabel, MissingFieldBox, MissingIcon } from '../../../components/design';
+import { CreationPreview } from '../../../components/workspace/creation';
 import ConnectionLinkInterfacesDialog from './ConnectionLinkInterfacesDialog';
 import ConnectionProtocolsTable, { type ConnectionProtocol } from './ConnectionProtocolsTable';
 import ConnectionServersPicker from './ConnectionServersPicker';
@@ -65,6 +66,11 @@ type LinkedInterfaceRow = {
 
 type Props = {
   connectionId: string;
+  /**
+   * A new connection's draft: its ends and protocols are open, the rest (description, interfaces,
+   * knowledge) is dimmed and out of reach until the connection is written.
+   */
+  creating?: boolean;
   topology: 'server_to_server' | 'multi_server';
   initialDescription: string;
   canManage: boolean;
@@ -80,6 +86,8 @@ type Props = {
   derivedInterfaceCount: number;
   /** Fields Create found missing (`protocols`, `source`, `destination`, `servers`): their labels turn red. */
   missingFields?: ReadonlySet<string>;
+  /** A refusal of the server about a field (`source`, `destination`, `servers`, `protocols`), said under it. */
+  refusals?: Partial<Record<string, string>>;
   /** The text just saved, with the connection it was saved on (it may no longer be the one shown). */
   onDescriptionSaved?: (next: string, connectionId: string) => void;
   /** Set to a function that saves a description still waiting for its debounce ("Create", "Cancel"). */
@@ -93,6 +101,16 @@ type Props = {
   onProtocolsChange: (next: ConnectionProtocol[]) => void;
   onLinkedInterfacesChanged: () => void;
 };
+
+/** What the server said about a field it refused, under the field. */
+function FieldRefusal({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <Typography role="alert" sx={(theme) => ({ mt: 0.5, fontSize: 12, lineHeight: 1.35, color: theme.palette.kanap.danger })}>
+      {message}
+    </Typography>
+  );
+}
 
 function SectionHeader({ children, action, missing = false }: { children: React.ReactNode; action?: React.ReactNode; missing?: boolean }) {
   return (
@@ -118,6 +136,7 @@ function SectionHeader({ children, action, missing = false }: { children: React.
 
 export default function ConnectionOverviewTab({
   connectionId,
+  creating = false,
   topology,
   initialDescription,
   canManage,
@@ -132,6 +151,7 @@ export default function ConnectionOverviewTab({
   linkedInterfacesError,
   derivedInterfaceCount,
   missingFields,
+  refusals,
   onDescriptionSaved,
   descriptionFlushRef,
   onEndpointChange,
@@ -140,6 +160,8 @@ export default function ConnectionOverviewTab({
   onLinkedInterfacesChanged,
 }: Props) {
   const missing = (field: string) => !!missingFields?.has(field);
+  // Out of reach on a draft: the parts that need the connection written.
+  const later = (node: React.ReactNode) => (creating ? <CreationPreview>{node}</CreationPreview> : node);
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
   const CRITICALITIES = [{ code: '', label: classificationText('Not set') }, ...(classificationCatalog?.businessCriticalityLevels || [])];
   const { t } = useTranslation(['it', 'common']);
@@ -300,7 +322,7 @@ export default function ConnectionOverviewTab({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Box data-creation-description="">
+      {later(<Box data-creation-description="">
         <SectionHeader
           action={
             status === 'saving' ? (
@@ -338,7 +360,7 @@ export default function ConnectionOverviewTab({
             surface
           />
         </React.Suspense>
-      </Box>
+      </Box>)}
 
       <Box>
         <SectionHeader>{t('workspace.connection.create.endpoints')}</SectionHeader>
@@ -353,6 +375,7 @@ export default function ConnectionOverviewTab({
               initialAsset={source.asset_id ? assetMap[source.asset_id] : null}
               onChange={(next, asset) => onEndpointChange('source', next, asset)}
             />
+            <FieldRefusal message={refusals?.source} />
             </MissingFieldBox>
             <MissingFieldBox missing={missing('destination')} data-creation-field="destination">
             <ConnectionEndpointPicker
@@ -363,6 +386,7 @@ export default function ConnectionOverviewTab({
               initialAsset={destination.asset_id ? assetMap[destination.asset_id] : null}
               onChange={(next, asset) => onEndpointChange('destination', next, asset)}
             />
+            <FieldRefusal message={refusals?.destination} />
             </MissingFieldBox>
           </Box>
         ) : (
@@ -374,7 +398,7 @@ export default function ConnectionOverviewTab({
               disabled={!canManage}
               placeholder={t('workspace.connection.overview.addServer')}
             />
-            {multiServerIds.length < 2 && (
+            {refusals?.servers ? <FieldRefusal message={refusals.servers} /> : multiServerIds.length < 2 && (
               <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.5 }}>
                 {t('workspace.connection.overview.needTwoServers')}
               </Typography>
@@ -383,9 +407,9 @@ export default function ConnectionOverviewTab({
         )}
       </Box>
 
-      <Box>
+      <Box data-creation-field="protocols">
         <SectionHeader missing={missing('protocols')}>{t('workspace.connection.overview.protocols')}</SectionHeader>
-        <Box sx={{ maxWidth: 760 }} data-creation-field="protocols">
+        <Box sx={{ maxWidth: 760 }}>
           <MissingFieldBox missing={missing('protocols')}>
             <Autocomplete
               size="small"
@@ -412,6 +436,7 @@ export default function ConnectionOverviewTab({
               )}
             />
           </MissingFieldBox>
+          <FieldRefusal message={refusals?.protocols} />
           <Box sx={{ mt: 1.5 }}>
             <ConnectionProtocolsTable
               protocols={protocols}
@@ -466,7 +491,7 @@ export default function ConnectionOverviewTab({
         </Box>
       )}
 
-      <Box>
+      {later(<Box>
         <SectionHeader
           action={
             canManage ? (
@@ -585,11 +610,11 @@ export default function ConnectionOverviewTab({
             </TableBody>
           </Table>
         )}
-      </Box>
+      </Box>)}
 
-      <Box>
+      {later(<Box>
         <EntityKnowledgePanel entityType="connections" entityId={connectionId} canCreate={canManage} />
-      </Box>
+      </Box>)}
 
       <ConnectionLinkInterfacesDialog
         open={linkDialogOpen}

@@ -10,6 +10,7 @@ import PortfolioDetailWorkspaceShell, {
   type PortfolioDetailWorkspaceTab,
 } from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import KanapDialog from '../../components/design/KanapDialog';
+import { useKanapDialogs } from '../../components/design';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import ConnectionMetadataBar from './workspace/ConnectionMetadataBar';
 import ConnectionPropertiesDrawer from './workspace/ConnectionPropertiesDrawer';
@@ -27,8 +28,7 @@ import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { connectionDeleteMessage } from './connectionDeleteMessage';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useMissingMarks, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
-import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
+import { CreationActions, CreationPreview, useCreationReturn, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 
 type TabKey = 'overview' | 'path' | typeof RECORD_HISTORY_TAB_KEY;
@@ -88,8 +88,7 @@ type ConnectionDetail = {
   updated_at: string;
 };
 
-
-/** The value of a field `POST :id/creation/complete` may name, to tell when it changed. */
+/** The value of a required field, to tell when it changed (its mark goes, `useMissingMarks`). */
 function creationFieldValue(connection: ConnectionDetail | null, key: string): unknown {
   if (!connection) return null;
   if (key === 'protocols') return connection.protocol_codes || [];
@@ -99,7 +98,11 @@ function creationFieldValue(connection: ConnectionDetail | null, key: string): u
   return null;
 }
 
-/** What a connection needs before its creation ends (`connection-creation.ts` on the server), in screen order. */
+/**
+ * What a connection needs before it is written (`POST /connections`), in screen order: both ends
+ * (an asset or an entity each) of a server-to-server connection, or two servers of a multi-server
+ * one, then a protocol.
+ */
 function missingOf(connection: ConnectionDetail | null): string[] {
   if (!connection) return [];
   const fields: string[] = [];
@@ -113,15 +116,8 @@ function missingOf(connection: ConnectionDetail | null): string[] {
   return fields;
 }
 
-/** The ends, then the protocols: the order of the fields on the overview tab. */
-const SCREEN_ORDER = ['source', 'destination', 'servers', 'protocols'];
-const screenRank = (key: string) => {
-  const rank = SCREEN_ORDER.indexOf(key);
-  return rank === -1 ? SCREEN_ORDER.length : rank;
-};
-
-/** The connection a new page shows dimmed under its title: the one the title will create. */
-const DRAFT_CONNECTION: ConnectionDetail = {
+/** A new connection's draft: server to server, nothing given yet. */
+const EMPTY_CONNECTION: ConnectionDetail = {
   id: '',
   connection_reference: '',
   name: '',
@@ -149,7 +145,37 @@ const DRAFT_CONNECTION: ConnectionDetail = {
   updated_at: '',
 };
 
-const ignoreDraft = () => undefined;
+const protocolsOf = (connection: ConnectionDetail) =>
+  connection.protocols ?? (connection.protocol_codes || []).map((code) => ({ code, port_override: null }));
+
+/** The draft as `POST /connections` takes it: the name, the topology, its ends or servers, the protocols. */
+function createPayload(draft: ConnectionDetail, name: string) {
+  const ends = draft.topology === 'multi_server'
+    ? { servers: (draft.servers || []).map((server) => server.id) }
+    : {
+      source_asset_id: draft.source_asset_id,
+      source_entity_code: draft.source_entity_code,
+      destination_asset_id: draft.destination_asset_id,
+      destination_entity_code: draft.destination_entity_code,
+    };
+  return { name, topology: draft.topology, ...ends, protocols: protocolsOf(draft) };
+}
+
+/**
+ * The field a refusal of `POST /connections` is about: the same asset on both sides (destination),
+ * fewer than two servers once cluster members are absorbed, an end or the protocols. Null for any
+ * other refusal, said above the page.
+ */
+function refusedField(error: unknown): string | null {
+  const answer = (error as { response?: { data?: { code?: unknown; message?: unknown } } })?.response?.data;
+  if (answer?.code === 'connection_same_endpoint') return 'destination';
+  if (answer?.code === 'connection_min_servers') return 'servers';
+  const message = String(answer?.message ?? '');
+  const side = /^(source|destination):/.exec(message);
+  if (side) return side[1];
+  if (/protocol/i.test(message)) return 'protocols';
+  return null;
+}
 
 export default function ConnectionWorkspacePage() {
   const { t } = useTranslation(['it', 'common']);
@@ -180,6 +206,13 @@ export default function ConnectionWorkspacePage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
   const [pendingTopology, setPendingTopology] = React.useState<'server_to_server' | 'multi_server' | null>(null);
+  // A new connection's draft: nothing is written before its name, ends and protocol are given.
+  const [draft, setDraft] = React.useState<ConnectionDetail>(EMPTY_CONNECTION);
+  const draftRef = React.useRef(draft);
+  // The draft holds more than its title: leaving it asks first.
+  const [createDirty, setCreateDirty] = React.useState(false);
+  // The server refused the draft: said on that field until the draft changes.
+  const [refusal, setRefusal] = React.useState<{ field: string; message: string } | null>(null);
 
   const descriptionFlushRef = React.useRef<(() => Promise<void>) | null>(null);
   const notify = useNotify();
@@ -276,8 +309,16 @@ export default function ConnectionWorkspacePage() {
       patch: Partial<ConnectionDetail> | Record<string, any>,
       localPatch?: Partial<ConnectionDetail> | Record<string, any>,
     ) => {
-      if (!connectionId) return;
       const local = localPatch ?? patch;
+      // One way for every field: the draft of a new connection, the connection itself otherwise.
+      if (isCreate) {
+        draftRef.current = { ...draftRef.current, ...(local as Partial<ConnectionDetail>) };
+        setDraft(draftRef.current);
+        setCreateDirty(true);
+        setRefusal(null);
+        return;
+      }
+      if (!connectionId) return;
       setSaving(true);
       setData((prev) => (prev ? { ...prev, ...(local as any) } as ConnectionDetail : prev));
       try {
@@ -295,7 +336,7 @@ export default function ConnectionWorkspacePage() {
         setSaving(false);
       }
     },
-    [connectionId, load, notifyAbsorbed, t],
+    [connectionId, isCreate, load, notifyAbsorbed, t],
   );
 
   const listContextParams = React.useMemo(() => {
@@ -312,65 +353,80 @@ export default function ConnectionWorkspacePage() {
     const qs = listContextParams.toString();
     return `/it/connections${qs ? `?${qs}` : ''}`;
   }, [listContextParams]);
-  // Where the creation started: a new connection left empty, cancelled or created goes back there.
+  // Where the creation started: a new connection left, cancelled or created goes back there.
   const creationReturn = useCreationReturn(listPath);
-  const creation = useRecordCreation({
+  const dataRef = React.useRef(data);
+  dataRef.current = data;
+  const title = useCreationTitle({
+    requiredMessage: t('messages.nameRequired'),
+    onCancel: () => { void handleClose(); },
+    onCommit: () => creation.attempt(),
+  });
+  // The draft is written once it has its name, its ends (or two servers) and a protocol, by one
+  // POST that carries it all; the page moves to the connection, every tab open, with Done and Cancel.
+  const creation = useDraftCreation({
+    isCreate,
     family: 'connections',
     apiBase: '/connections',
-    recordId: isCreate ? null : data?.id ?? null,
+    recordId: data?.id ?? null,
     listPath,
+    returnTo: creationReturn,
     recordLabel: t('workspace.connection.creation.record'),
     queryKeyPrefixes: ['connections'],
     onError: setError,
+    ready: () => !!title.current().trim() && missingOf(draftRef.current).length === 0,
+    missing: () => missingOf(isCreate ? draftRef.current : dataRef.current),
+    valueOf: (key) => creationFieldValue(isCreate ? draftRef.current : dataRef.current, key),
+    post: async () => {
+      setError(null);
+      setRefusal(null);
+      const sent = draftRef.current;
+      const name = title.current().trim();
+      try {
+        const res = await api.post<ConnectionDetail & { creation_token: string; absorbed?: AbsorbedAsset[] }>('/connections', createPayload(sent, name));
+        const { creation_token: token, absorbed, ...saved } = res.data;
+        notifyAbsorbed(absorbed);
+        setCreateDirty(false);
+        // The page keeps the connection in hand while it loads under its reference.
+        setData({ ...sent, ...saved, name });
+        setLegs([]);
+        draftRef.current = EMPTY_CONNECTION;
+        setDraft(EMPTY_CONNECTION);
+        const qs = searchParams.toString();
+        const reference = saved.connection_reference || null;
+        return { id: saved.id, token, reference, path: `/it/connections/${reference || saved.id}/overview${qs ? `?${qs}` : ''}` };
+      } catch (e) {
+        const message = getApiErrorMessage(e, t, t('messages.saveConnectionFailed'));
+        const field = refusedField(e);
+        if (field) setRefusal({ field, message });
+        else setError(message);
+        return null;
+      }
+    },
   });
+  // Each change of the draft may complete it; a refused draft is sent again once it changes.
+  React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft]);
 
-  // The fields a connection being created still lacks, named in the reader's language.
-  const fieldLabel = React.useCallback((key: string): string => {
-    if (key === 'protocols') return t('workspace.connection.overview.protocols');
-    if (key === 'source') return t('workspace.connection.layers.source');
-    if (key === 'destination') return t('workspace.connection.layers.destination');
-    if (key === 'servers') return t('pages.connections.columns.servers');
-    return key;
-  }, [t]);
-  const dataRef = React.useRef(data);
-  dataRef.current = data;
-  // The fields Create found missing, marked on their label until each one gets a value.
-  const missingMarks = useMissingMarks({
-    recordKey: isCreate ? null : data?.id,
-    missingNow: () => missingOf(data),
-    valueOf: (key) => creationFieldValue(data, key),
-  });
-  const focusField = React.useCallback((key: string) => {
-    if (validTab !== 'overview') navigate(`/it/connections/${workspaceRouteId}/overview${searchParams.toString() ? `?${searchParams.toString()}` : ''}`);
-    focusWhenMounted(() => document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input, [data-creation-field="${key}"] [role="combobox"]`));
-  }, [navigate, searchParams, validTab, workspaceRouteId]);
-  const incompleteLeave = useIncompleteLeave({
-    keys: 'it:workspace.connection.creation',
-    beingCreated: creation.beingCreated,
-    missing: () => missingOf(dataRef.current).map((key) => ({ key, label: fieldLabel(key) })),
-    focus: focusField,
-    onDelete: () => creation.cancelCreation({ leave: false }),
-    discardOnUnload: creation.discardOnUnload,
-  });
-  // Leaving a connection being created that still lacks a field asks first: complete it, or delete it.
-  const leaveAsks = React.useCallback(
-    () => creation.beingCreated && missingOf(dataRef.current).length > 0,
-    [creation.beingCreated],
-  );
-  const leaveConnection = React.useCallback(
-    () => (leaveAsks() ? incompleteLeave.confirm() : Promise.resolve(true)),
-    [incompleteLeave, leaveAsks],
-  );
-  useLeaveGuard(leaveAsks, leaveConnection);
+  // Nothing is written before the draft is complete: leaving a draft that holds more than its title asks first.
+  const dialogs = useKanapDialogs();
+  const confirmDiscard = React.useCallback(() => dialogs.confirm({
+    title: t('workspace.connection.discardDialog.title'),
+    message: t('workspace.connection.discardDialog.message'),
+    confirmLabel: t('common:buttons.discard'),
+    intent: 'danger',
+  }), [dialogs, t]);
+  useLeaveGuard(() => isCreate && createDirty, confirmDiscard);
 
   const handleClose = React.useCallback(async () => {
     if (isCreate) {
+      // The draft is being written: the page moves to the connection, where Cancel deletes it.
+      if (creation.writing) return;
+      if (createDirty && !(await confirmDiscard())) return;
       navigate(creationReturn);
       return;
     }
-    if (!(await leaveConnection())) return;
     navigate(listPath);
-  }, [creationReturn, isCreate, leaveConnection, listPath, navigate]);
+  }, [confirmDiscard, createDirty, creation.writing, creationReturn, isCreate, listPath, navigate]);
 
   const handleTabChange = React.useCallback(
     (nextTab: string) => {
@@ -382,51 +438,52 @@ export default function ConnectionWorkspacePage() {
     [navigate, searchParams, validTab, workspaceRouteId],
   );
 
-  // A plain function: the create it calls is declared further down.
   const handleTitleSave = (next: string) => {
     const trimmed = next.trim();
-    if (!trimmed) return;
-    if (isCreate) {
-      titleCreation.commit(trimmed);
-      return;
-    }
-    if (!data || trimmed === data.name) return;
+    if (!trimmed || !data || trimmed === data.name) return;
     void patchConnection({ name: trimmed });
   };
 
+  // On the draft as on the connection: a change that would drop its ends or servers asks first.
   const handleTopologyChange = React.useCallback(
     (next: 'server_to_server' | 'multi_server') => {
-      if (!data || next === data.topology) return;
+      const shownNow = isCreate ? draftRef.current : data;
+      if (!shownNow || next === shownNow.topology) return;
       const hasContent =
         legs.length > 0 ||
-        !!data.source_asset_id || !!data.source_entity_code ||
-        !!data.destination_asset_id || !!data.destination_entity_code ||
-        (data.servers || []).length > 0;
+        !!shownNow.source_asset_id || !!shownNow.source_entity_code ||
+        !!shownNow.destination_asset_id || !!shownNow.destination_entity_code ||
+        (shownNow.servers || []).length > 0;
       if (hasContent) {
         setPendingTopology(next);
         return;
       }
       void patchConnection({ topology: next });
     },
-    [data, legs.length, patchConnection],
+    [data, isCreate, legs.length, patchConnection],
   );
 
   const handleConfirmTopology = React.useCallback(() => {
     if (!pendingTopology) return;
     const next = pendingTopology;
     setPendingTopology(null);
+    const servers = (isCreate ? draftRef.current : data)?.servers ?? [];
     if (next === 'multi_server') {
-      void patchConnection({
+      const ends = {
         topology: next,
         source_asset_id: null, source_entity_code: null,
         destination_asset_id: null, destination_entity_code: null,
-        servers: (data?.servers ?? []).map((s) => s.id),
-      });
+      };
+      void patchConnection(
+        { ...ends, servers: servers.map((s) => s.id) },
+        { ...ends, source_server: null, destination_server: null, servers },
+      );
     } else {
-      void patchConnection({ topology: next });
+      void patchConnection({ topology: next }, { topology: next, servers: [] });
     }
-  }, [data, patchConnection, pendingTopology]);
+  }, [data, isCreate, patchConnection, pendingTopology]);
 
+  // The question "the cluster or this server" comes before the choice enters the draft or the connection.
   const handleEndpointChange = React.useCallback(
     async (
       side: 'source' | 'destination',
@@ -434,25 +491,19 @@ export default function ConnectionWorkspacePage() {
       asset?: ServerOption,
     ) => {
       let endpoint = { asset_id: next.asset_id, entity_code: next.entity_code };
+      let server: ServerOption | null = null;
       if (asset) {
-        const opposite = side === 'source' ? data?.destination_asset_id : data?.source_asset_id;
+        const shownNow = isCreate ? draftRef.current : data;
+        const opposite = side === 'source' ? shownNow?.destination_asset_id : shownNow?.source_asset_id;
         const target = await choose(asset, opposite ? [opposite] : []);
         if (!target) return;
         endpoint = { asset_id: target.id, entity_code: null };
+        server = target;
       }
-      if (side === 'source') {
-        void patchConnection({
-          source_asset_id: endpoint.asset_id,
-          source_entity_code: endpoint.entity_code,
-        });
-      } else {
-        void patchConnection({
-          destination_asset_id: endpoint.asset_id,
-          destination_entity_code: endpoint.entity_code,
-        });
-      }
+      const patch = { [`${side}_asset_id`]: endpoint.asset_id, [`${side}_entity_code`]: endpoint.entity_code };
+      void patchConnection(patch, { ...patch, [`${side}_server`]: server });
     },
-    [choose, data?.destination_asset_id, data?.source_asset_id, patchConnection],
+    [choose, data, isCreate, patchConnection],
   );
 
   // A cluster absorbs the member it covers: the added id becomes the cluster's, once, before the write.
@@ -479,19 +530,23 @@ export default function ConnectionWorkspacePage() {
 
   const handleMultiServerChange = React.useCallback(
     async (next: ServerOption[]) => {
-      const current = data?.servers ?? [];
+      const current = (isCreate ? draftRef.current : data)?.servers ?? [];
       const resolved = await resolveServerList(next, current);
       void patchConnection({ servers: resolved.map((server) => server.id) }, { servers: resolved });
     },
-    [data?.servers, patchConnection, resolveServerList],
+    [data, isCreate, patchConnection, resolveServerList],
   );
 
   const handleProtocolsChange = React.useCallback(
     (next: string[]) => {
       if (next.length === 0) return;
-      void patchConnection({ protocol_codes: next });
+      const ports = new Map(protocolsOf((isCreate ? draftRef.current : data) ?? EMPTY_CONNECTION).map((p) => [p.code, p.port_override]));
+      void patchConnection(
+        { protocol_codes: next },
+        { protocol_codes: next, protocols: next.map((code) => ({ code, port_override: ports.get(code) ?? null })) },
+      );
     },
-    [patchConnection],
+    [data, isCreate, patchConnection],
   );
 
   const handleProtocolsRichChange = React.useCallback(
@@ -542,59 +597,20 @@ export default function ConnectionWorkspacePage() {
     [data, patchConnection],
   );
 
-  // The name committed in the header creates the connection at once (server to server, no protocol
-  // nor end yet); the page moves to it, every tab open, with Done and Cancel.
-  const titleCreation = useTitleCreation<ConnectionDetail>({
-    isCreate,
-    // Written after the person left: the incomplete record is deleted, no page is left to ask.
-    discardApiBase: '/connections',
-    requiredMessage: t('messages.nameRequired'),
-    post: async (name) => (await api.post<ConnectionDetail & { creation_token: string }>('/connections/creation', { name })).data,
-    onCreated: (created, token) => {
-      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
-      // The page keeps its header while the full connection loads.
-      setData({ ...DRAFT_CONNECTION, ...created });
-      setLegs([]);
-      navigate(`/it/connections/${created.connection_reference || created.id}/overview`, { replace: true });
-    },
-    errorMessage: (e) => getApiErrorMessage(e, t, t('messages.saveConnectionFailed')),
-    onStart: () => setError(null),
-  });
-
-  // Create on the new page, where the title is the only field; Done on a connection being created:
-  // what is still being typed is saved, then what the connection needs is checked. Missing fields are
-  // marked on their label and the first one on screen gets the focus; otherwise the connection is
-  // kept and closed. The fields the screen sees missing are marked at once; the server checks the rest.
+  // Create on the draft, Done on the connection it created: what is still being typed is saved, the
+  // missing fields are marked and the first one on screen gets the focus (`useDraftCreation`);
+  // otherwise the draft is written, or the connection closed, kept.
   const createAction = async () => {
-    if (isCreate) {
-      titleCreation.create();
-      return;
-    }
-    if (!data?.id || !creation.token || creation.completing) return;
-    await descriptionFlushRef.current?.();
+    if (!isCreate) await descriptionFlushRef.current?.();
     setError(null);
-    const seen = missingOf(dataRef.current);
-    if (seen.length > 0) {
-      missingMarks.mark(seen);
-      focusField(seen[0]);
-      return;
-    }
-    try {
-      const fields = await creation.completeCreation();
-      missingMarks.mark(fields ?? []);
-      // The server names the fields in its own order: the focus goes to the first one on screen.
-      const first = fields ? [...fields].sort((a, b) => screenRank(a) - screenRank(b))[0] : undefined;
-      if (first) focusField(first);
-    } catch (e) {
-      setError(getApiErrorMessage(e, t, t('workspace.connection.creation.completeFailed')));
-    }
+    creation.create(title.require);
   };
 
   // Cancel on a connection being created: what is still being typed is saved first, so the
   // confirmation counts it, then the connection is deleted (`useRecordCreation`).
   const cancelAction = async () => {
     if (isCreate) {
-      navigate(creationReturn);
+      await handleClose();
       return;
     }
     await descriptionFlushRef.current?.();
@@ -629,13 +645,12 @@ export default function ConnectionWorkspacePage() {
     : navState;
 
   const goToConnection = React.useCallback(
-    async (targetId: string | null) => {
+    (targetId: string | null) => {
       if (!targetId) return;
-      if (!(await leaveConnection())) return;
       const qs = searchParams.toString();
       navigate(`/it/connections/${targetId}/${validTab}${qs ? `?${qs}` : ''}`);
     },
-    [leaveConnection, navigate, searchParams, validTab],
+    [navigate, searchParams, validTab],
   );
 
   const workspaceTabs: PortfolioDetailWorkspaceTab[] = [
@@ -644,14 +659,16 @@ export default function ConnectionWorkspacePage() {
     { key: RECORD_HISTORY_TAB_KEY, label: t('workspace.connection.tabs.history'), disabled: isCreate },
   ];
 
+  // A new page shows its draft; a created one, the connection.
+  const shown = isCreate ? draft : data;
   const assetMap = React.useMemo(() => {
     const map: Record<string, ServerOption> = {};
-    if (!data) return map;
-    if (data.source_server) map[data.source_server.id] = data.source_server;
-    if (data.destination_server) map[data.destination_server.id] = data.destination_server;
-    (data.servers || []).forEach((s) => { if (s) map[s.id] = s; });
+    if (!shown) return map;
+    if (shown.source_server) map[shown.source_server.id] = shown.source_server;
+    if (shown.destination_server) map[shown.destination_server.id] = shown.destination_server;
+    (shown.servers || []).forEach((s) => { if (s) map[s.id] = s; });
     return map;
-  }, [data]);
+  }, [shown]);
 
   const endpointsLabel = (() => {
     if (!data || isCreate) return t('workspace.connection.endpointsMissing');
@@ -669,11 +686,6 @@ export default function ConnectionWorkspacePage() {
     const count = (data.servers || []).length;
     return count > 0 ? t('workspace.connection.serverCount', { count }) : t('workspace.connection.noServers');
   })();
-
-  // A new page shows the connection its title will create, dimmed; a created one, itself.
-  const shown = isCreate ? DRAFT_CONNECTION : data;
-  const protocolsOf = (connection: ConnectionDetail) =>
-    connection.protocols ?? (connection.protocol_codes || []).map((code) => ({ code, port_override: null }));
 
   const drawerProperties = shown ? (
     <ConnectionPropertiesDrawer
@@ -715,16 +727,15 @@ export default function ConnectionWorkspacePage() {
       protocolCodes={shown.protocol_codes}
       protocolLabels={shown.protocol_codes}
       endpointsLabel={endpointsLabel}
-      disabled={isCreate || !canManage || saving}
+      creating={isCreate}
+      disabled={!canManage || saving}
       onLifecycleChange={handleLifecycleChange}
       onTopologyChange={handleTopologyChange}
       onCriticalityChange={handleCriticalityChange}
       onProtocolCodesChange={handleProtocolsChange}
     />
   ) : undefined;
-  const metadata = isCreate ? (
-    <CreationPreview sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' }}>{metadataBar}</CreationPreview>
-  ) : metadataBar;
+  const metadata = metadataBar;
 
   const actions = (
     <>
@@ -752,8 +763,8 @@ export default function ConnectionWorkspacePage() {
       {(isCreate || creation.beingCreated) && (
         <CreationActions
           done={!isCreate}
-          busy={creation.cancelling || creation.completing}
-          writing={titleCreation.writing}
+          busy={creation.cancelling}
+          writing={creation.writing}
           onCreate={() => { void createAction(); }}
           onCancel={() => { void cancelAction(); }}
         />
@@ -764,6 +775,7 @@ export default function ConnectionWorkspacePage() {
   const overview = (connection: ConnectionDetail) => (
     <ConnectionOverviewTab
       connectionId={connection.id}
+      creating={isCreate}
       topology={connection.topology}
       initialDescription={connection.description || ''}
       canManage={canManage}
@@ -777,13 +789,14 @@ export default function ConnectionWorkspacePage() {
       linkedInterfacesLoading={linkedInterfacesLoading}
       linkedInterfacesError={linkedInterfacesError}
       derivedInterfaceCount={connection.derived_interface_count || 0}
-      missingFields={missingMarks.marked}
+      missingFields={creation.marked}
+      refusals={refusal ? { [refusal.field]: refusal.message } : undefined}
       descriptionFlushRef={connection.id ? descriptionFlushRef : undefined}
       onDescriptionSaved={(next, savedId) => setData((prev) => (prev && prev.id === savedId ? { ...prev, description: next } : prev))}
-      onEndpointChange={connection.id ? handleEndpointChange : ignoreDraft}
-      onMultiServerChange={connection.id ? handleMultiServerChange : ignoreDraft}
-      onProtocolsChange={connection.id ? handleProtocolsRichChange : ignoreDraft}
-      onLinkedInterfacesChanged={connection.id ? handleLinkedInterfacesChanged : ignoreDraft}
+      onEndpointChange={handleEndpointChange}
+      onMultiServerChange={handleMultiServerChange}
+      onProtocolsChange={handleProtocolsRichChange}
+      onLinkedInterfacesChanged={handleLinkedInterfacesChanged}
     />
   );
 
@@ -835,16 +848,11 @@ export default function ConnectionWorkspacePage() {
             ? () => { void navigator.clipboard?.writeText(data.connection_reference); }
             : undefined
         }
-        title={isCreate ? '' : data?.name || ''}
+        {...(isCreate
+          ? { ...title.shellProps, canEditTitle: canManage }
+          : { title: data?.name || '', canEditTitle: canManage, onTitleSave: handleTitleSave })}
         titleFallback={isCreate ? t('workspace.connection.newTitle') : t('workspace.connection.untitled')}
-        canEditTitle={canManage}
-        onTitleSave={handleTitleSave}
-        onTitleDraftChange={isCreate ? titleCreation.onTitleDraftChange : undefined}
         titleRequiredMessage={t('messages.nameRequired')}
-        titleError={isCreate ? titleCreation.titleError : undefined}
-        titleAutoEdit={isCreate}
-        titleOnCancel={isCreate ? () => { void handleClose(); } : undefined}
-        titleFocusRequest={titleCreation.focusRequest}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
         nav={!isCreate && total > 0 ? {
@@ -862,7 +870,7 @@ export default function ConnectionWorkspacePage() {
         properties={isCreate ? <CreationPreview>{drawerProperties}</CreationPreview> : drawerProperties}
       >
         {isCreate ? (
-          <CreationPreview>{overview(DRAFT_CONNECTION)}</CreationPreview>
+          overview(draft)
         ) : !data ? null : validTab === 'path' ? (
           <ConnectionPathTab
             connectionId={data.id}
@@ -896,7 +904,6 @@ export default function ConnectionWorkspacePage() {
       </PortfolioDetailWorkspaceShell>
 
       {questionDialog}
-      {incompleteLeave.dialog}
 
       <KanapDialog
         open={deleteDialogOpen}
