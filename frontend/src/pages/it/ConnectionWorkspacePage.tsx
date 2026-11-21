@@ -226,8 +226,11 @@ export default function ConnectionWorkspacePage() {
   const draftRef = React.useRef(draft);
   // The draft holds more than its title: leaving it asks first.
   const [createDirty, setCreateDirty] = React.useState(false);
-  // The server refused the draft: said on that field until the draft changes.
-  const [refusal, setRefusal] = React.useState<{ field: string; message: string } | null>(null);
+  // The server refused the draft (no id) or what was given while it was written (the written id):
+  // said on that field, on the draft or on that connection, until the field changes.
+  const [refusal, setRefusal] = React.useState<{ field: string; message: string; id: string | null } | null>(null);
+  // A refusal no field names, kept across the load of the connection just written.
+  const carriedErrorRef = React.useRef<string | null>(null);
 
   const descriptionFlushRef = React.useRef<(() => Promise<void>) | null>(null);
   const protocolsFlushRef = React.useRef<(() => void) | null>(null);
@@ -278,6 +281,8 @@ export default function ConnectionWorkspacePage() {
       const res = await api.get<ConnectionDetail>(`/connections/${routeId}`, { params: { include: 'legs' } });
       setData(res.data);
       setLegs(res.data.legs || []);
+      if (carriedErrorRef.current) setError(carriedErrorRef.current);
+      carriedErrorRef.current = null;
     } catch (e: any) {
       const status = e?.response?.status;
       setLoadFailure(typeof status === 'number' ? status : 0);
@@ -352,6 +357,7 @@ export default function ConnectionWorkspacePage() {
         setData((prev) => (prev ? { ...prev, ...saved } : saved as ConnectionDetail));
         notifyAbsorbed(absorbedItems);
         setError(null);
+        setRefusal(null);
       } catch (e: any) {
         const message = getApiErrorMessage(e, t, t('messages.saveConnectionFailed'));
         // The reload clears the page error: say why the write was refused once it is done.
@@ -435,7 +441,11 @@ export default function ConnectionWorkspacePage() {
             },
           });
         } catch (e) {
-          setError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed')));
+          // Said on the connection the page moves to: under the field the refusal names, else above it.
+          const message = getApiErrorMessage(e, t, t('messages.saveConnectionFailed'));
+          const field = refusedField(e);
+          if (field) setRefusal({ field, message, id: saved.id });
+          else carriedErrorRef.current = message;
         }
         setCreateDirty(false);
         draftRef.current = EMPTY_CONNECTION;
@@ -446,7 +456,7 @@ export default function ConnectionWorkspacePage() {
       } catch (e) {
         const message = getApiErrorMessage(e, t, t('messages.saveConnectionFailed'));
         const field = refusedField(e);
-        if (field) setRefusal({ field, message });
+        if (field) setRefusal({ field, message, id: null });
         else setError(message);
         return null;
       }
@@ -839,7 +849,7 @@ export default function ConnectionWorkspacePage() {
       linkedInterfacesError={linkedInterfacesError}
       derivedInterfaceCount={connection.derived_interface_count || 0}
       missingFields={creation.marked}
-      refusals={refusal ? { [refusal.field]: refusal.message } : undefined}
+      refusals={refusal && refusal.id === (isCreate ? null : connection.id) ? { [refusal.field]: refusal.message } : undefined}
       descriptionFlushRef={connection.id ? descriptionFlushRef : undefined}
       protocolsFlushRef={protocolsFlushRef}
       onDescriptionSaved={(next, savedId) => setData((prev) => (prev && prev.id === savedId ? { ...prev, description: next } : prev))}

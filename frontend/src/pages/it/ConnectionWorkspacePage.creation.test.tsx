@@ -395,6 +395,45 @@ describe('Connection born complete', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/connections/conn-new', { source_asset_id: 'clu', source_entity_code: null }));
   });
 
+  it('keeps on the opened connection the refusal of what was given while it was written', async () => {
+    await typeName();
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }) as never);
+    mocked.patch.mockRejectedValue({
+      response: { status: 400, data: { code: 'connection_same_endpoint', message: 'The source and the destination are the same asset.' } },
+    });
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination internet');
+    click('add https');
+    await waitFor(() => expect(connectionPosts()).toHaveLength(1));
+    click('workspace.connection.layers.destination web');
+    await settle();
+    answer({ data: { ...created } });
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/connections/CONN-7', expect.anything()));
+    await settle();
+    const destination = screen.getByRole('textbox', { name: 'workspace.connection.layers.destination' }).closest('[data-creation-field]') as HTMLElement;
+    expect(within(destination).getByRole('alert').textContent).toMatch(/connection_same_endpoint|same asset/);
+  });
+
+  it('keeps above the opened connection a refusal that names no field', async () => {
+    await typeName();
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }) as never);
+    mocked.patch.mockRejectedValue({ response: { status: 409, data: { message: 'Someone else changed this connection.' } } });
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination internet');
+    click('add https');
+    await waitFor(() => expect(connectionPosts()).toHaveLength(1));
+    click('workspace.connection.layers.source internet');
+    await settle();
+    answer({ data: { ...created } });
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/connections/CONN-7', expect.anything()));
+    await settle();
+    expect(screen.getAllByRole('alert').some((alert) => /Someone else changed/.test(alert.textContent || ''))).toBe(true);
+  });
+
   it('asks before a topology change drops the ends of the draft, then the draft follows the new topology', async () => {
     await typeName('Cluster sync');
     click('workspace.connection.layers.source web');
