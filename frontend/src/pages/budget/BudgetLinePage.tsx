@@ -21,7 +21,7 @@ import useAutosave, { autosaveErrorMessage, useAutosaveRegistry } from '../../ho
 import { sendPatchBuffer, useSharedPatchBuffer } from '../../hooks/patchBuffer';
 import { ConflictChoice, EditConflict, conflictCompanions, useEditConflicts, useOtherConflictTargets } from '../../hooks/editConflicts';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
-import { ANALYTICS_AXIS_FIELD_ATTR, useRequiredDimensionsLeave } from '../../hooks/useRequiredDimensionsLeave';
+import { useRequiredDimensionsLeave } from '../../hooks/useRequiredDimensionsLeave';
 import { useLinePlacementDefault, useLinePlacementFilter } from '../../hooks/usePlacementOptions';
 import EditConflictBanner, { OtherConflictsNotice } from '../../components/workspace/EditConflictBanner';
 import OthersChangesNotice from '../../components/workspace/OthersChangesNotice';
@@ -44,13 +44,13 @@ import SendLinkButton from '../../components/workspace/SendLinkButton';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import ChangeTypeDialog, { type ChangeTypeResult } from '../../components/finance/ChangeTypeDialog';
 import LineLineage, { type LineageLine } from '../../components/finance/LineLineage';
-import { budgetLinePath, openLineAfterTypeChange, refreshAfterTypeChange } from '../../components/finance/changeTypeNavigation';
+import { budgetLinePath, openLineAfterTypeChange } from '../../components/finance/changeTypeNavigation';
 import { invalidateBudgetLists } from '../../components/finance/budgetFile';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import BudgetMetadataBar from './workspace/BudgetMetadataBar';
-import BudgetPropertiesDrawer, { LINE_FIELD_ATTR, RunBuild } from './workspace/BudgetPropertiesDrawer';
-import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
-import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useMissingMarks, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import BudgetPropertiesDrawer, { RunBuild } from './workspace/BudgetPropertiesDrawer';
+import { CreationActions, CreationPreview, saveEditsSince, useCreationReturn, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { lineRefusalField } from '../../components/finance/lineFieldRefusal';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
@@ -126,13 +126,6 @@ const EMPTY_FORM: BudgetLineForm = {
   notes: '', created_at: null, updated_at: null,
 };
 
-/** The rows of the properties panel, top to bottom; the dimensions come last, in their own order. */
-const SCREEN_ORDER = ['cost_center', 'paying_company', 'account'];
-const screenRank = (key: string) => {
-  const rank = SCREEN_ORDER.indexOf(key);
-  return rank === -1 ? SCREEN_ORDER.length : rank;
-};
-
 /** The year the page shows: `?year=` when the address names a positive year, the current year otherwise. */
 function pageYear(yearParam: string | null): number {
   const y = Number(yearParam);
@@ -144,7 +137,7 @@ function yearStartYmd(year: number): string {
   return `${year}-01-01`;
 }
 
-/** A new line before its title: the draft its preview shows, with the defaults the title creates it with. */
+/** A new line's draft before anything is given: the tenant's currency and 1 January of the page's year. */
 function draftBudgetLineForm(currency = 'EUR', year = new Date().getFullYear()): BudgetLineForm {
   return {
     ...EMPTY_FORM,
@@ -153,12 +146,8 @@ function draftBudgetLineForm(currency = 'EUR', year = new Date().getFullYear()):
   };
 }
 
-/** The preview of a new line is out of reach: its handlers never run. */
+/** The dimmed parts of a new line's page are out of reach: their handlers never run. */
 const ignoreDraftChange = () => undefined;
-
-function toNull(value: string): string | null {
-  return value === '' ? null : value;
-}
 
 // The form keeps '' for an empty picker or text; the API stores null for these columns, as on create.
 const NULLABLE_PATCH_FIELDS = new Set([
@@ -220,11 +209,15 @@ function toForm(data: any): BudgetLineForm {
   };
 }
 
-/** The value of a field `POST :id/creation/complete` may name (`paying_company`, `account`, `cost_center`, `dimension:<id>`). */
+/** The fields a new line's draft holds and writes, and saves once written when they change meanwhile. */
+const DRAFT_FIELDS = ['product_name', 'paying_company_id', 'account_id', 'cost_center_id', 'currency', 'effective_start', 'analytics_values'] as const;
+
+/** The value of a field a line needs, by key (`paying_company`, `account`, `cost_center`, `dimension:<id>`, `effective_start`). */
 function creationFieldValue(form: BudgetLineForm, key: string): unknown {
   if (key === 'paying_company') return form.paying_company_id;
   if (key === 'account') return form.account_id;
   if (key === 'cost_center') return form.cost_center_id;
+  if (key === 'effective_start') return form.effective_start;
   if (key.startsWith('dimension:')) return form.analytics_values[key.slice('dimension:'.length)] ?? null;
   return null;
 }
@@ -353,37 +346,101 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     [currencySettings],
   );
   const [form, setForm] = React.useState<BudgetLineForm>(EMPTY_FORM);
+  const yearParam = searchParams.get('year');
   const draftForm = React.useMemo(
-    () => draftBudgetLineForm(defaultSpendCurrency, pageYear(searchParams.get('year'))),
-    [defaultSpendCurrency, searchParams],
+    () => draftBudgetLineForm(defaultSpendCurrency, pageYear(yearParam)),
+    [defaultSpendCurrency, yearParam],
   );
   const [saveError, setSaveError] = React.useState<string | null>(null);
-  // A person with limited data access places the new line before its title: filled in when the
-  // access allows one company only, chosen on the new page otherwise (`useLinePlacementDefault`).
+  // A person with limited data access: the one company the access allows is filled in
+  // (`useLinePlacementDefault`); otherwise they choose, and the cost center is required when the
+  // company is open to them only through its cost centers.
   const placementDefault = useLinePlacementDefault();
-  const placementAsked = isCreate && placementDefault.needsChoice;
-  const [placementDraft, setPlacementDraft] = React.useState({ paying_company_id: '', cost_center_id: '', followsCostCenter: false });
-  const draftPlacementFilter = useLinePlacementFilter(placementAsked ? placementDraft.paying_company_id || null : null);
-  const placementReady = !placementAsked || !!placementDraft.cost_center_id
-    || (!!placementDraft.paying_company_id && !draftPlacementFilter?.costCenterRequired);
+  // The new line's draft (lot L3a): what the person gave, over the defaults (the tenant's currency,
+  // 1 January of the page's year, the one company of a limited access). Nothing is written until the
+  // title and every starred field are given (`useDraftCreation`, below).
+  const [draftEdits, setDraftEdits] = React.useState<Partial<BudgetLineForm>>({});
+  const draftEditsRef = React.useRef(draftEdits);
+  const draftLine = React.useMemo<BudgetLineForm>(
+    () => ({ ...draftForm, paying_company_id: placementDefault.companyId ?? '', ...draftEdits }),
+    [draftEdits, draftForm, placementDefault.companyId],
+  );
+  const draftBaseRef = React.useRef(draftForm);
+  draftBaseRef.current = { ...draftForm, paying_company_id: placementDefault.companyId ?? '' };
+  const currentDraft = React.useCallback((): BudgetLineForm => ({ ...draftBaseRef.current, ...draftEditsRef.current }), []);
+  // A paying company brought by the cost center follows it until the person picks a company; the
+  // company of the cost center picked, to drop it when another company is picked.
+  const [companyFollowsCostCenter, setCompanyFollowsCostCenter] = React.useState(false);
+  const companyFollowsRef = React.useRef(false);
+  const draftCostCenterCompanyRef = React.useRef<string | null>(null);
+  // A refusal of the server about a field of the draft, said under that field.
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+  // The draft the server refused last: it is not sent again until something changes.
+  const refusedDraftRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!isCreate) return;
-    setPlacementDraft({ paying_company_id: '', cost_center_id: '', followsCostCenter: false });
+    draftEditsRef.current = {};
+    setDraftEdits({});
+    companyFollowsRef.current = false;
+    setCompanyFollowsCostCenter(false);
+    draftCostCenterCompanyRef.current = null;
+    refusedDraftRef.current = null;
+    setFieldErrors({});
     setSaveError(null);
   }, [isCreate, idParam]);
+  const followCostCenter = React.useCallback((follow: boolean) => {
+    companyFollowsRef.current = follow;
+    setCompanyFollowsCostCenter(follow);
+  }, []);
+  // A change of the draft: its fields' messages go (a new place clears both of the place's).
+  const editDraft = React.useCallback((patch: Partial<BudgetLineForm>) => {
+    draftEditsRef.current = mergePatch(draftEditsRef.current, patch);
+    setDraftEdits(draftEditsRef.current);
+    const place = 'paying_company_id' in patch || 'cost_center_id' in patch;
+    const cleared = [
+      ...(place ? ['paying_company', 'cost_center'] : []),
+      ...('account_id' in patch ? ['account'] : []),
+      ...('effective_start' in patch ? ['effective_start'] : []),
+      ...Object.keys(patch.analytics_values ?? {}).map((axisId) => `dimension:${axisId}`),
+    ];
+    setFieldErrors((prev) => (cleared.some((key) => key in prev)
+      ? Object.fromEntries(Object.entries(prev).filter(([key]) => !cleared.includes(key)))
+      : prev));
+  }, []);
+  // The server refuses an account on another chart than the company's: a company that changes under
+  // a held account empties it when their charts differ (unknown charts: the server decides).
+  const dropDraftAccountOffChart = React.useCallback(async (companyId: string) => {
+    const accountId = draftEditsRef.current.account_id;
+    if (!accountId || !companyId) return;
+    try {
+      const [company, account] = await Promise.all([api.get(`/companies/${companyId}`), api.get(`/accounts/${accountId}`)]);
+      const companyCoa = company.data?.coa_id || null;
+      const accountCoa = account.data?.coa_id || null;
+      const current = currentDraft();
+      if (companyCoa && accountCoa && companyCoa !== accountCoa && current.account_id === accountId && current.paying_company_id === companyId) {
+        editDraft({ account_id: '' });
+      }
+    } catch {
+      // Unknown charts: the server says it on the account, if it refuses.
+    }
+  }, [currentDraft, editDraft]);
+  const pickDraftCompany = React.useCallback((companyId: string) => {
+    followCostCenter(false);
+    const elsewhere = !!companyId && !!draftCostCenterCompanyRef.current && draftCostCenterCompanyRef.current !== companyId;
+    if (elsewhere) draftCostCenterCompanyRef.current = null;
+    editDraft({ paying_company_id: companyId, ...(elsewhere ? { cost_center_id: '' } : {}) });
+    void dropDraftAccountOffChart(companyId);
+  }, [dropDraftAccountOffChart, editDraft, followCostCenter]);
   // A cost center picked while the paying company is empty brings its company; the company keeps
   // following the cost center until the person picks a company.
   const pickDraftCostCenter = React.useCallback((costCenterId: string, node: CostCenterNode | null) => {
-    setPlacementDraft((prev) => {
-      const companyId = costCenterId ? node?.company_id : null;
-      const follow = !!companyId && (!prev.paying_company_id || prev.followsCostCenter);
-      return {
-        cost_center_id: costCenterId,
-        paying_company_id: follow && companyId ? companyId : prev.paying_company_id,
-        followsCostCenter: follow,
-      };
-    });
-  }, []);
+    const companyId = costCenterId ? node?.company_id ?? null : null;
+    draftCostCenterCompanyRef.current = companyId;
+    const follow = !!companyId && (!currentDraft().paying_company_id || companyFollowsRef.current);
+    followCostCenter(follow);
+    editDraft({ cost_center_id: costCenterId, ...(follow && companyId ? { paying_company_id: companyId } : {}) });
+    if (follow && companyId) void dropDraftAccountOffChart(companyId);
+  }, [currentDraft, dropDraftAccountOffChart, editDraft, followCostCenter]);
 
   // List context for prev/next + return navigation.
   // The list's sort, '' for the default one: prev/next and the list then use the current default.
@@ -791,7 +848,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     (await flushOrAsk(options)) !== 'stay'
   ), [flushOrAsk]);
 
-  // ----- Creation at the title (lot 1c) -----
+  // ----- A new line's draft, written complete (lot L3a) -----
   const listPath = React.useMemo(() => {
     const sp = buildListContextParams();
     sp.delete('list');
@@ -799,23 +856,16 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     const qs = sp.toString();
     return `/ops/budget${qs ? `?${qs}` : ''}`;
   }, [buildListContextParams]);
-  // Where the creation started: a new line left empty, cancelled or created goes back there.
+  // Where the creation started: a new line left, cancelled or done goes back there.
   const creationReturn = useCreationReturn(listPath);
-  const creation = useRecordCreation({
-    family: 'budget-lines',
-    apiBase: '/budget-lines',
-    recordId: !isCreate ? (data?.id as string | undefined) ?? null : null,
-    listPath,
-    recordLabel: t('budget.creation.record'),
-    queryKeyPrefixes: ['budget-lines', 'spend-items', 'capex-items'],
-    onError: setSaveError,
-  });
+  // The panel opens: a field Done finds missing, a line stored incomplete.
+  const [fieldDrawerRequest, setFieldDrawerRequest] = React.useState(0);
 
-  // The fields a line needs before its creation ends, by the keys of `POST :id/creation/complete`,
-  // in screen order, as far as the screen knows them (the server also checks the account's chart).
-  const linePlacementFilter = useLinePlacementFilter(!isCreate ? form.paying_company_id || null : null);
+  // The fields a line needs, by key, in screen order: the cost center (when the person's access
+  // allows the company only through cost centers), the paying company, the account, each dimension
+  // required for the type, the effective start. The server checks the rest (the account's chart and type).
+  const linePlacementFilter = useLinePlacementFilter((isCreate ? draftLine : form).paying_company_id || null);
   const missingOf = React.useCallback((line: BudgetLineForm): string[] => {
-    // In screen order: the cost center row sits above the paying company, then the account and the dimensions.
     const fields: string[] = [];
     if (line.paying_company_id && !line.cost_center_id && linePlacementFilter?.costCenterRequired) fields.push('cost_center');
     if (!line.paying_company_id) fields.push('paying_company');
@@ -823,59 +873,134 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     for (const axis of analyticsAxes.enabled) {
       if (axisRequiredFor(axis, nature) && !line.analytics_values[axis.id]) fields.push(`dimension:${axis.id}`);
     }
+    if (!line.effective_start) fields.push('effective_start');
     return fields;
   }, [analyticsAxes.enabled, linePlacementFilter, nature]);
-  const fieldLabel = React.useCallback((key: string): string => {
-    if (key === 'paying_company') return t('opex.fields.payingCompany');
-    if (key === 'account') return t('opex.fields.account');
-    if (key === 'cost_center') return t('opex.fields.costCenter');
-    if (key.startsWith('dimension:')) {
-      const axis = analyticsAxes.axes.find((candidate) => candidate.id === key.slice('dimension:'.length));
-      return axis ? analyticsAxes.label(axis) : key;
-    }
-    return key;
-  }, [analyticsAxes, t]);
-  const missingNow = React.useCallback(() => missingOf(formRef.current), [missingOf]);
-  // A line being created asks before it is left while it lacks a field; a line left without its
-  // paying company earlier (a creation never completed) too, as long as it lacks one.
-  const incompleteAsks = React.useCallback(() => {
-    if (isCreate || !canEdit || !dataRef.current?.id || formRef.current.id !== dataRef.current.id) return false;
-    if (!creation.beingCreated && formRef.current.paying_company_id) return false;
-    return missingNow().length > 0;
-  }, [canEdit, creation.beingCreated, isCreate, missingNow]);
 
-  // The panel opens and the field of a missing value takes the focus.
-  const [fieldDrawerRequest, setFieldDrawerRequest] = React.useState(0);
-  const focusLineField = React.useCallback((key: string) => {
-    setFieldDrawerRequest((n) => n + 1);
-    const selector = key.startsWith('dimension:')
-      ? `[${ANALYTICS_AXIS_FIELD_ATTR}="${key.slice('dimension:'.length)}"] input`
-      : `[${LINE_FIELD_ATTR}="${key}"] input`;
-    focusWhenMounted(() => rootRef.current?.querySelector<HTMLElement>(selector));
-  }, []);
-  const incompleteLeave = useIncompleteLeave({
-    keys: 'ops:budget.creation',
-    beingCreated: creation.beingCreated,
-    missing: () => missingNow().map((key) => ({ key, label: fieldLabel(key) })),
-    focus: focusLineField,
-    onDelete: () => creation.cancelCreation({ leave: false }),
-    discardOnUnload: creation.discardOnUnload,
+  // The body of `POST /budget-lines`: the draft, with the values of the dimensions of its type.
+  const draftBody = React.useCallback((line: BudgetLineForm) => {
+    const values = Object.fromEntries(analyticsAxes.enabled
+      .filter((axis) => !!line.analytics_values[axis.id])
+      .map((axis) => [axis.id, line.analytics_values[axis.id]]));
+    return {
+      nature,
+      product_name: line.product_name,
+      currency: line.currency,
+      effective_start: line.effective_start,
+      paying_company_id: line.paying_company_id,
+      account_id: line.account_id,
+      ...(line.cost_center_id ? { cost_center_id: line.cost_center_id } : {}),
+      ...(Object.keys(values).length > 0 ? { analytics_values: values } : {}),
+    };
+  }, [analyticsAxes.enabled, nature]);
+
+  // The title stays open like the draft's fields; Enter, Tab or a move to a field gives it.
+  const attemptRef = React.useRef<() => void>(() => undefined);
+  const title = useCreationTitle({
+    requiredMessage: t('common:creation.titleRequired'),
+    onCancel: () => navigate(creationReturn),
+    onCommit: () => attemptRef.current(),
   });
+  const titledDraft = React.useCallback((): BudgetLineForm => ({ ...currentDraft(), product_name: title.current().trim() }), [currentDraft, title]);
 
-  // Leaving the line: what is not saved first, then a line that lacks a field it needs (being
-  // created, or left incomplete), else a required dimension left without a value. One question per
-  // move: a user who already chose to leave and drop their edits is not asked again. A tab change
-  // keeps the line and does not ask.
+  // Written once the title and every starred field are given, by one `POST /budget-lines`; the page
+  // then becomes the line, with Done and Cancel (its creation token). What was typed meanwhile is
+  // saved on it. A refusal is said on its field and the draft stays.
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'budget-lines',
+    apiBase: '/budget-lines',
+    recordId: !isCreate ? (data?.id as string | undefined) ?? null : null,
+    listPath,
+    recordLabel: t('budget.creation.record'),
+    queryKeyPrefixes: ['budget-lines', 'spend-items', 'capex-items'],
+    ready: () => !!title.current().trim() && placementDefault.ready && !currencyLoading
+      && (analyticsAxes.ready || analyticsAxes.isError) && missingOf(currentDraft()).length === 0,
+    missing: () => missingOf(isCreate ? currentDraft() : formRef.current),
+    valueOf: (key) => creationFieldValue(isCreate ? currentDraft() : formRef.current, key),
+    post: async () => {
+      setSaveError(null);
+      const sent = titledDraft();
+      const body = draftBody(sent);
+      let created: Record<string, any>;
+      try {
+        created = (await api.post('/budget-lines', body)).data ?? {};
+      } catch (e) {
+        refusedDraftRef.current = JSON.stringify(body);
+        const message = getApiErrorMessage(e, t, t(config.createFailed));
+        const field = lineRefusalField(e, sent, analyticsAxes.axes);
+        if (field) setFieldErrors({ [field]: message });
+        else setSaveError(message);
+        return null;
+      }
+      refusedDraftRef.current = null;
+      setFieldErrors({});
+      const { creation_token: token, ...line } = created;
+      const lineReference = (line.reference || formatItemRef('budget', line.item_number)) as string;
+      // The page keeps its header while it moves to the line: no wait on the resolve and the detail.
+      queryClient.setQueryData(['budget-line-resolve', lineReference], { id: line.id, nature: line.nature ?? nature, reference: lineReference });
+      const detailKey = budgetLineDetailQuery(lineReference).queryKey;
+      queryClient.setQueryData(detailKey, line);
+      invalidateBudgetLists(queryClient);
+      try {
+        await saveEditsSince({
+          sent,
+          now: titledDraft,
+          fields: DRAFT_FIELDS,
+          save: async (edits) => {
+            const res = await api.patch(`/budget-lines/${line.id}`, normalizePatch(edits));
+            if (res?.data) queryClient.setQueryData(detailKey, res.data);
+          },
+        });
+      } catch (e) {
+        setSaveError(getApiErrorMessage(e, t, t('opex.editor.failedToSave')));
+      }
+      const sp = buildListContextParams();
+      sp.delete('nature');
+      return { id: line.id as string, token: token as string, path: `/ops/budget/${lineReference}/overview?${sp.toString()}`, reference: lineReference };
+    },
+    onError: setSaveError,
+  });
+  // Each change of the draft may complete it; a draft the server refused is not sent again as it is.
+  attemptRef.current = () => {
+    if (refusedDraftRef.current && refusedDraftRef.current === JSON.stringify(draftBody(titledDraft()))) return;
+    creation.attempt();
+  };
+  React.useEffect(() => {
+    attemptRef.current();
+  }, [draftLine, missingOf, placementDefault.ready, currencyLoading, analyticsAxes.ready]);
+
+  // The type of the draft: its address (`?nature=`), the dimensions it requires, the accounts it
+  // offers. An account kept for the other type is emptied (Create then asks for one).
+  const chooseNewLineType = React.useCallback(async (next: LineType) => {
+    setSearchParams((prev) => {
+      const sp = new URLSearchParams(prev);
+      sp.set('nature', next);
+      return sp;
+    }, { replace: true });
+    const accountId = draftEditsRef.current.account_id;
+    if (!accountId) return;
+    try {
+      const account = (await api.get<{ nature?: string | null }>(`/accounts/${accountId}`)).data;
+      if (account?.nature && account.nature !== next && draftEditsRef.current.account_id === accountId) editDraft({ account_id: '' });
+    } catch {
+      // Unknown account: the server says it on the account, if it refuses.
+    }
+  }, [editDraft, setSearchParams]);
+
+  // Leaving the line: what is not saved first, then a required dimension left without a value. One
+  // question per move: a user who already chose to leave and drop their edits is not asked again. A
+  // tab change keeps the line and does not ask. A new line's draft is left without a question: nothing
+  // of it is written.
   const leaveLine = React.useCallback(async (options?: { keepChoices?: boolean }): Promise<boolean> => {
     const outcome = await flushOrAsk(options);
     if (outcome === 'stay') return false;
     if (outcome === 'dropped') return true;
-    if (incompleteAsks()) return incompleteLeave.confirm();
     return confirmRequired();
-  }, [flushOrAsk, confirmRequired, incompleteAsks, incompleteLeave]);
+  }, [flushOrAsk, confirmRequired]);
   const leaveAsks = React.useCallback(
-    () => unsavedWork() || requiredMissing() || incompleteAsks(),
-    [unsavedWork, requiredMissing, incompleteAsks],
+    () => unsavedWork() || requiredMissing(),
+    [unsavedWork, requiredMissing],
   );
 
   // A link of the app (left menu, top bar, user menu) asks the same as the close button.
@@ -932,8 +1057,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
 
   // ----- Change type (lot M): from the "…" menu; pending edits are saved first (the dialog sends the line's row_version) -----
   const [changeTypeOpen, setChangeTypeOpen] = React.useState(false);
-  // Once the line is created; while it is being created, its type is a menu (below).
-  const canChangeType = !isCreate && !stale && !!uuid && canEdit && !creation.beingCreated;
+  // Once the line is written, its type changes through the dialog; on the draft it is a menu.
+  const canChangeType = !isCreate && !stale && !!uuid && canEdit;
   const openChangeType = React.useCallback(async () => {
     if ((await flushOrAsk()) === 'stay') return;
     setChangeTypeOpen(true);
@@ -974,7 +1099,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   const shownOwnerBusinessId = shownFromDetail ? (data.owner_business_id || '') : form.owner_business_id;
   const analyticsOptions = React.useMemo(() => analyticsValueOptions(data), [data]);
   // The chosen cost center's company: a new paying company drops a cost center of another company.
-  const chosenCostCenterId = isCreate ? placementDraft.cost_center_id : shownCostCenterId;
+  const chosenCostCenterId = isCreate ? '' : shownCostCenterId;
   const chosenCostCenter = useCostCenterNode(
     chosenCostCenterId || null,
     isCreate ? null : matching(references.cost_center, chosenCostCenterId),
@@ -1011,141 +1136,28 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     });
   }, [costCenterElsewhere, form.account_id, form.paying_company_id, patchNow]);
 
-  // The fields Create found missing, marked on their label until each one gets a value.
-  const marks = useMissingMarks({
-    recordKey: uuid,
-    missingNow: () => missingOf(form),
-    valueOf: (key) => creationFieldValue(form, key),
-  });
-  const { mark } = marks;
-
-  // ----- The type of a line being created: a menu, changed in place by the type change route -----
-  // Nothing given but the line's version: the line keeps its account and values (the change checks
-  // nothing else in place). An account of the old type stays, marked: Create asks for one of the new type.
-  const typeChangingRef = React.useRef(false);
-  const [typeChanging, setTypeChanging] = React.useState(false);
-  const changeTypeWhileCreating = React.useCallback(async (next: LineType) => {
-    const lineId = uuidRef.current;
-    if (!lineId || next === nature || typeChangingRef.current) return;
-    if (!(await flushAll())) return;
-    typeChangingRef.current = true;
-    setTypeChanging(true);
-    setSaveError(null);
-    try {
-      const check = (await api.get<{ row_version: number; account: { fits: boolean } | null }>(`${config.itemsApi}/${lineId}/change-type/check`)).data;
-      await api.post(`${config.itemsApi}/${lineId}/change-type`, { row_version: check.row_version });
-      if (check.account && !check.account.fits) mark(['account'], { add: true });
-      await refreshAfterTypeChange(queryClient, lineId);
-    } catch (e) {
-      setSaveError(getApiErrorMessage(e, t, t('shared.changeType.failed')));
-    } finally {
-      typeChangingRef.current = false;
-      setTypeChanging(false);
-    }
-  }, [config.itemsApi, flushAll, mark, nature, queryClient, t]);
-  const typeMenuWhileCreating = !isCreate && !stale && !!uuid && canEdit && creation.beingCreated;
-
-  // The type picked on the new page goes in its address: the title creates the line with it. Picked
-  // while the title was writing the line, it is applied in place once the line shows.
-  const natureAfterCreationRef = React.useRef<LineType | null>(null);
-  const chooseNewLineType = React.useCallback((next: LineType) => {
-    natureAfterCreationRef.current = next;
-    setSearchParams((prev) => {
-      const sp = new URLSearchParams(prev);
-      sp.set('nature', next);
-      return sp;
-    }, { replace: true });
-  }, [setSearchParams]);
-  React.useEffect(() => {
-    const wanted = natureAfterCreationRef.current;
-    if (isCreate || !wanted || !creation.beingCreated || !data?.id || form.id !== data.id) return;
-    natureAfterCreationRef.current = null;
-    if (wanted !== nature) void changeTypeWhileCreating(wanted);
-  }, [changeTypeWhileCreating, creation.beingCreated, data?.id, form.id, isCreate, nature]);
-
-  // ----- The title creates the line; Done and Cancel (lot 1c) -----
-  // The title creates the line at once with the defaults (the tenant's currency, 1 January of the
-  // year the page shows, the type of the address) and, for a person with limited access, its place;
-  // the page moves to it, every tab open, with Done and Cancel.
-  // A title committed before the currency and the person's place were known waits for them.
-  const titleCreation = useTitleCreation<{ id: string; nature?: string; reference?: string; item_number: number }>({
-    isCreate,
-    // Written after the person left: the incomplete record is deleted, no page is left to ask.
-    discardApiBase: '/budget-lines',
-    requiredMessage: t('common:creation.titleRequired'),
-    ready: placementDefault.ready && !currencyLoading && placementReady,
-    post: async (name) => {
-      const place = placementAsked
-        ? { paying_company_id: toNull(placementDraft.paying_company_id), cost_center_id: toNull(placementDraft.cost_center_id) }
-        : placementDefault.companyId ? { paying_company_id: placementDefault.companyId } : {};
-      const res = await api.post('/budget-lines/creation', {
-        nature, product_name: name, currency: defaultSpendCurrency, effective_start: draftForm.effective_start, ...place,
-      });
-      return res.data ?? {};
-    },
-    onCreated: (created, token) => {
-      const lineReference = (created.reference || formatItemRef('budget', created.item_number)) as string;
-      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
-      // The page keeps its header while it moves to the line: no wait on the resolve and the detail.
-      queryClient.setQueryData(['budget-line-resolve', lineReference], { id: created.id, nature: created.nature ?? nature, reference: lineReference });
-      queryClient.setQueryData(budgetLineDetailQuery(lineReference).queryKey, created);
-      invalidateBudgetLists(queryClient);
-      const sp = buildListContextParams();
-      sp.delete('nature');
-      navigate(`/ops/budget/${lineReference}/overview?${sp.toString()}`, { replace: true });
-    },
-    errorMessage: (e) => getApiErrorMessage(e, t, t(config.createFailed)),
-    onStart: () => setSaveError(null),
-  });
-  const setTitleError = titleCreation.setTitleError;
-  // The place first: the title waits, and says so.
-  React.useEffect(() => {
-    if (titleCreation.pending && placementDefault.ready && !currencyLoading && !placementReady) setTitleError(t('budget.creation.placeFirst'));
-  }, [currencyLoading, placementDefault.ready, placementReady, setTitleError, t, titleCreation.pending]);
-
-  // Create on the new page; Done on a line being created: what is still being typed is saved, then
-  // the fields the line needs are checked. Missing ones are marked on their label and the first one
-  // on screen gets the focus; otherwise the line is kept and closed. The fields the screen sees
-  // missing are marked at once; the server checks the rest (the account's chart, a cost center).
+  // Create on the draft; Done on a line just written: what is still being typed is saved, then the
+  // fields the line needs are checked. Missing ones are marked on their label and the first one on
+  // screen gets the focus (the panel opens); otherwise the line is written, or kept and closed.
   const createAction = React.useCallback(async () => {
-    if (isCreate) {
-      titleCreation.create();
-      return;
+    if (!isCreate) {
+      if (!creation.beingCreated || !(await flushAll())) return;
+      if (missingOf(formRef.current).length > 0) setFieldDrawerRequest((n) => n + 1);
     }
-    if (!uuid || !creation.token || creation.completing) return;
-    if (!(await flushAll())) return;
-    setSaveError(null);
-    const seen = missingOf(formRef.current);
-    if (seen.length > 0) {
-      mark(seen);
-      focusLineField(seen[0]);
-      return;
-    }
-    try {
-      const fields = await creation.completeCreation();
-      mark(fields ?? []);
-      if (fields) {
-        // The server names the fields in its own order: the focus goes to the first one on screen.
-        focusLineField([...fields].sort((a, b) => screenRank(a) - screenRank(b))[0]);
-      } else {
-        invalidateBudgetLists(queryClient);
-      }
-    } catch (e) {
-      setSaveError(getApiErrorMessage(e, t, t('budget.creation.completeFailed')));
-    }
-  }, [creation, flushAll, focusLineField, isCreate, mark, missingOf, queryClient, t, titleCreation, uuid]);
+    creation.create(title.require);
+  }, [creation, flushAll, isCreate, missingOf, title.require]);
   // Cancel on a line being created: what is still being typed is saved first, so the confirmation
   // counts it, then the line is deleted (`useRecordCreation`).
   const cancelLine = React.useCallback(async () => {
     if (!(await flushAll())) return;
     await creation.cancelCreation();
   }, [creation, flushAll]);
-  // A line left without its paying company (a creation never completed) opens with the panel open
-  // and the labels of what it lacks in red.
+  // A line stored without its paying company (left at its title by earlier versions) opens with the
+  // panel open and the labels of what it lacks in red.
   const incompleteFields = !isCreate && !creation.beingCreated && canEdit && !!data?.id && form.id === data.id && !form.paying_company_id
     ? missingOf(form)
     : [];
-  const markedFields = incompleteFields.length > 0 ? new Set([...marks.marked, ...incompleteFields]) : marks.marked;
+  const markedFields = incompleteFields.length > 0 ? new Set([...creation.marked, ...incompleteFields]) : creation.marked;
   const incompleteLineId = incompleteFields.length > 0 ? data?.id : null;
   React.useEffect(() => {
     if (incompleteLineId) setFieldDrawerRequest((n) => n + 1);
@@ -1232,21 +1244,12 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         onBack={() => { void closeWorkspace(); }}
         itemReference={reference}
         onCopyReference={reference ? () => { void navigator.clipboard?.writeText(reference); } : undefined}
-        title={isCreate ? '' : form.product_name}
+        {...(isCreate ? title.shellProps : {
+          title: form.product_name,
+          canEditTitle: canEdit,
+          onTitleSave: (value: string) => { void patchNow({ product_name: value }); },
+        })}
         titleFallback={isCreate ? t(config.newTitle) : t('budget.line')}
-        canEditTitle={canEdit}
-        onTitleSave={(value) => {
-          if (isCreate) {
-            titleCreation.commit(value);
-          } else {
-            void patchNow({ product_name: value });
-          }
-        }}
-        onTitleDraftChange={isCreate ? titleCreation.onTitleDraftChange : undefined}
-        titleError={isCreate ? titleCreation.titleError : undefined}
-        titleAutoEdit={isCreate}
-        titleOnCancel={isCreate ? () => { void closeWorkspace(); } : undefined}
-        titleFocusRequest={titleCreation.focusRequest}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
         drawerOpenRequest={requiredLeave.drawerOpenRequest + fieldDrawerRequest}
@@ -1338,8 +1341,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             {isCreate || creation.beingCreated ? (
               <CreationActions
                 done={!isCreate}
-                busy={creation.cancelling || creation.completing}
-                writing={titleCreation.writing}
+                busy={creation.cancelling}
+                writing={creation.writing}
                 onCreate={() => { void createAction(); }}
                 onCancel={() => { if (isCreate) void closeWorkspace(); else void cancelLine(); }}
               />
@@ -1350,101 +1353,46 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             )}
           </>
         )}
-        properties={isCreate ? (
-          <>
-            {/* Live with the title: the type, and the place of a limited person's line (the title waits for it). */}
-            <BudgetPropertiesDrawer
-              nature={nature}
-              onNatureChange={chooseNewLineType}
-              mode="create"
-              section="head"
-              placeFirst={placementAsked}
-              supplierId=""
-              payingCompanyId={placementDraft.paying_company_id}
-              companyFollowsCostCenter={placementDraft.followsCostCenter}
-              accountId=""
-              currency={draftForm.currency}
-              analyticsValues={{}}
-              costCenterId={placementDraft.cost_center_id}
-              runBuild=""
-              effectiveStart={draftForm.effective_start}
-              onSupplierChange={ignoreDraftChange}
-              onPayingCompanyChange={(v) => setPlacementDraft((prev) => ({
-                paying_company_id: v,
-                cost_center_id: costCenterElsewhere(v) ? '' : prev.cost_center_id,
-                followsCostCenter: false,
-              }))}
-              onAccountChange={ignoreDraftChange}
-              onCurrencyChange={ignoreDraftChange}
-              onAnalyticsValueChange={ignoreDraftChange}
-              onCostCenterChange={pickDraftCostCenter}
-              onRunBuildChange={ignoreDraftChange}
-              onEffectiveStartChange={ignoreDraftChange}
-            />
-            <CreationPreview>
-              <BudgetPropertiesDrawer
-                nature={nature}
-                mode="edit"
-                section="rest"
-                placeFirst={placementAsked}
-                disabled
-                supplierId=""
-                payingCompanyId={placementDefault.companyId ?? ''}
-                accountId=""
-                currency={draftForm.currency}
-                analyticsValues={{}}
-                costCenterId=""
-                runBuild=""
-                effectiveStart={draftForm.effective_start}
-                status={draftForm.status}
-                disabledAt={null}
-                onSupplierChange={ignoreDraftChange}
-                onPayingCompanyChange={ignoreDraftChange}
-                onAccountChange={ignoreDraftChange}
-                onCurrencyChange={ignoreDraftChange}
-                onAnalyticsValueChange={ignoreDraftChange}
-                onCostCenterChange={ignoreDraftChange}
-                onRunBuildChange={ignoreDraftChange}
-                onEffectiveStartChange={ignoreDraftChange}
-                onDisabledAtChange={ignoreDraftChange}
-                onDisableNow={ignoreDraftChange}
-              />
-            </CreationPreview>
-          </>
-        ) : (
+        properties={(
+          // One panel from the draft to the line: what is typed while the line is written stays in place.
           <BudgetPropertiesDrawer
             nature={nature}
+            onNatureChange={isCreate ? (next) => { void chooseNewLineType(next); } : undefined}
             onChangeType={canChangeType ? () => { void openChangeType(); } : undefined}
-            onNatureChange={typeMenuWhileCreating ? (next) => { void changeTypeWhileCreating(next); } : undefined}
             mode="edit"
-            lineId={data?.id ?? null}
-            disabled={!canEdit || typeChanging}
-            references={references}
-            analyticsOptions={analyticsOptions}
-            supplierId={form.supplier_id}
-            payingCompanyId={form.paying_company_id}
-            accountId={form.account_id}
-            currency={form.currency}
-            analyticsValues={form.analytics_values}
-            costCenterId={shownCostCenterId}
-            runBuild={form.run_build}
-            effectiveStart={form.effective_start}
-            status={form.status}
-            disabledAt={form.disabled_at}
-            createdAt={form.created_at}
-            updatedAt={form.updated_at}
+            draft={isCreate}
+            lineId={isCreate ? null : data?.id ?? null}
+            disabled={!canEdit}
+            references={isCreate ? undefined : references}
+            analyticsOptions={isCreate ? undefined : analyticsOptions}
+            supplierId={isCreate ? '' : form.supplier_id}
+            payingCompanyId={isCreate ? draftLine.paying_company_id : form.paying_company_id}
+            companyFollowsCostCenter={isCreate && companyFollowsCostCenter}
+            accountId={isCreate ? draftLine.account_id : form.account_id}
+            currency={isCreate ? draftLine.currency : form.currency}
+            analyticsValues={isCreate ? draftLine.analytics_values : form.analytics_values}
+            costCenterId={isCreate ? draftLine.cost_center_id : shownCostCenterId}
+            runBuild={isCreate ? '' : form.run_build}
+            effectiveStart={isCreate ? draftLine.effective_start : form.effective_start}
+            status={isCreate ? draftLine.status : form.status}
+            disabledAt={isCreate ? null : form.disabled_at}
+            createdAt={isCreate ? null : form.created_at}
+            updatedAt={isCreate ? null : form.updated_at}
             missingFields={markedFields}
-            onSupplierChange={(v) => void patchNow({ supplier_id: v })}
-            onPayingCompanyChange={(v) => void changePayingCompany(v)}
-            onAccountChange={(v) => void patchNow({ account_id: v })}
-            onCurrencyChange={(v) => void patchNow({ currency: v.toUpperCase() })}
-            onAnalyticsValueChange={(axisId, v) => void patchNow({ analytics_values: { [axisId]: v } })}
-            onCostCenterChange={(v) => void patchNow({ cost_center_id: v })}
-            onRunBuildChange={(v) => void patchNow({ run_build: v })}
-            onEffectiveStartChange={(v) => void patchNow({ effective_start: v })}
-            onDisabledAtChange={handleDisabledAtChange}
+            fieldErrors={isCreate ? fieldErrors : undefined}
+            onSupplierChange={isCreate ? ignoreDraftChange : (v) => void patchNow({ supplier_id: v })}
+            onPayingCompanyChange={isCreate ? pickDraftCompany : (v) => void changePayingCompany(v)}
+            onAccountChange={isCreate ? (v) => editDraft({ account_id: v }) : (v) => void patchNow({ account_id: v })}
+            onCurrencyChange={isCreate ? (v) => editDraft({ currency: v.toUpperCase() }) : (v) => void patchNow({ currency: v.toUpperCase() })}
+            onAnalyticsValueChange={isCreate
+              ? (axisId, v) => editDraft({ analytics_values: { [axisId]: v } })
+              : (axisId, v) => void patchNow({ analytics_values: { [axisId]: v } })}
+            onCostCenterChange={isCreate ? pickDraftCostCenter : (v) => void patchNow({ cost_center_id: v })}
+            onRunBuildChange={isCreate ? ignoreDraftChange : (v) => void patchNow({ run_build: v })}
+            onEffectiveStartChange={isCreate ? (v) => editDraft({ effective_start: v }) : (v) => void patchNow({ effective_start: v })}
+            onDisabledAtChange={isCreate ? ignoreDraftChange : handleDisabledAtChange}
             // Disable now: the status alone, the server sets the end of validity from its own clock.
-            onDisableNow={() => void patchNow({ status: STATUS_DISABLED })}
+            onDisableNow={isCreate ? ignoreDraftChange : () => void patchNow({ status: STATUS_DISABLED })}
           />
         )}
       >
@@ -1536,7 +1484,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         />
       )}
       {requiredLeave.dialog}
-      {incompleteLeave.dialog}
     </Box>
   );
 }

@@ -1904,14 +1904,7 @@
     },
     "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff",
     "creation": {
-      "record": "Die Budgetzeile",
-      "missing": "Fehlt: {{fields}}",
-      "placeFirst": "Wählen Sie zuerst das zahlende Unternehmen oder die Kostenstelle.",
-      "leaveTitle": "Diese Zeile ist unvollständig",
-      "leaveComplete": "Vervollständigen",
-      "leaveDelete": "Löschen",
-      "leaveAnyway": "Trotzdem verlassen",
-      "completeFailed": "Die Zeile konnte nicht geprüft werden."
+      "record": "Die Budgetzeile"
     },
     "bulkEdit": {
       "chartOf": "Kontenplan von",

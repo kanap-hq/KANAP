@@ -1904,14 +1904,7 @@
     },
     "readOnlyInYourAccess": "Read only in your access",
     "creation": {
-      "record": "The budget line",
-      "missing": "Missing: {{fields}}",
-      "placeFirst": "Choose the paying company or the cost center first.",
-      "leaveTitle": "This line is incomplete",
-      "leaveComplete": "Complete it",
-      "leaveDelete": "Delete it",
-      "leaveAnyway": "Leave anyway",
-      "completeFailed": "The line could not be checked."
+      "record": "The budget line"
     },
     "bulkEdit": {
       "chartOf": "Chart of accounts of",

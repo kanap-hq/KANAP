@@ -1905,14 +1905,7 @@
     },
     "readOnlyInYourAccess": "Lecture seule dans votre accès",
     "creation": {
-      "record": "La ligne budgétaire",
-      "missing": "Manquant : {{fields}}",
-      "placeFirst": "Choisissez d’abord la société payeuse ou le centre de coûts.",
-      "leaveTitle": "Cette ligne est incomplète",
-      "leaveComplete": "La compléter",
-      "leaveDelete": "La supprimer",
-      "leaveAnyway": "Quitter quand même",
-      "completeFailed": "La ligne n’a pas pu être vérifiée."
+      "record": "La ligne budgétaire"
     },
     "bulkEdit": {
       "chartOf": "Plan comptable de",

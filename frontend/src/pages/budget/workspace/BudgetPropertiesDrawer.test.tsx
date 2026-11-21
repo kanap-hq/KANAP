@@ -531,25 +531,38 @@ describe('BudgetPropertiesDrawer analytics dimensions', () => {
     expect(onNatureChange).toHaveBeenCalledWith(otherNature());
   });
 
-  it('draws the head of a new line apart: its type, and its place when it comes first', () => {
-    const { unmount } = renderDrawer({ mode: 'create', section: 'head', onNatureChange: vi.fn() });
-    expect(screen.getByRole('combobox', { name: 'budget.type' })).toBeInTheDocument();
-    expect(screen.queryByTestId('company-select')).toBeNull();
-    expect(screen.queryByTestId('account-select')).toBeNull();
-    unmount();
-    const head = renderDrawer({ mode: 'create', section: 'head', placeFirst: true, onNatureChange: vi.fn() });
-    expect(screen.getByTestId('company-select')).toBeInTheDocument();
-    expect(screen.getByTestId('cost-center-select')).toBeInTheDocument();
-    head.unmount();
-    // The rest: no type; the place only when it is not in the head.
-    const rest = renderDrawer({ mode: 'edit', section: 'rest' });
-    expect(screen.queryByText('budget.type')).toBeNull();
-    expect(screen.getByTestId('company-select')).toBeInTheDocument();
-    expect(screen.getByTestId('account-select')).toHaveAttribute('data-nature', nature);
-    rest.unmount();
-    renderDrawer({ mode: 'edit', section: 'rest', placeFirst: true });
-    expect(screen.queryByTestId('company-select')).toBeNull();
-    expect(screen.getByTestId('account-select')).toBeInTheDocument();
+  it('draws a new line\'s draft with the rows it is written with live and the others dimmed, in their place', () => {
+    dimensions.list = [
+      dimension('menu', 'Menu', 1, { required: true }),
+      dimension('tag', 'Tag', 2),
+    ];
+    renderDrawer({ mode: 'edit', draft: true, onNatureChange: vi.fn(), onDisabledAtChange: vi.fn(), onDisableNow: vi.fn() });
+    const dimmed = (text: string) => {
+      const label = [...document.querySelectorAll('.kanap-field-label')].find((el) => el.textContent?.startsWith(text));
+      if (!label) throw new Error(`no label ${text}`);
+      return !!label.closest('[data-testid="creation-preview"]');
+    };
+    expect(screen.getByRole('combobox', { name: 'budget.type' }).closest('[data-testid="creation-preview"]')).toBeNull();
+    for (const label of ['opex.fields.costCenter', 'opex.fields.payingCompany', 'opex.fields.account', 'opex.fields.currency', 'Menu', 'opex.fields.effectiveStart']) {
+      expect(dimmed(label), label).toBe(false);
+    }
+    expect(screen.getByText('opex.fields.lifecycle').closest('[data-testid="creation-preview"]')).not.toBeNull();
+    for (const label of ['opex.fields.supplier', 'Tag', 'opex.fields.runBuild', 'opex.fields.created', 'opex.fields.updated']) {
+      expect(dimmed(label), label).toBe(true);
+    }
+    // The panel's order is kept: the supplier between the type and the cost center.
+    const labels = [...document.querySelectorAll('.kanap-field-label')].map((el) => el.textContent);
+    expect(labels.findIndex((text) => text?.startsWith('opex.fields.supplier'))).toBeLessThan(labels.findIndex((text) => text?.startsWith('opex.fields.costCenter')));
+    // A draft's company and account may still be emptied.
+    expect(screen.getByTestId('company-select')).toHaveAttribute('data-clearable', 'true');
+    expect(screen.getByTestId('account-select')).toHaveAttribute('data-clearable', 'true');
+  });
+
+  it('says a refusal under its field, with the mark', () => {
+    renderDrawer({ mode: 'edit', draft: true, payingCompanyId: 'company-1', fieldErrors: { account: 'Selected account does not belong' } });
+    const label = [...document.querySelectorAll('.kanap-field-label')].find((el) => el.textContent?.startsWith('opex.fields.account'))!;
+    expect(label).toHaveAttribute('data-missing');
+    expect(label.parentElement).toHaveTextContent('Selected account does not belong');
   });
 
   it('marks the label of a missing field and its control', () => {
