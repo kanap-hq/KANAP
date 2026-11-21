@@ -313,21 +313,26 @@ function ContactEditor({ id }: { id: string }) {
   // Back where the creation started: the supplier it came from, else the previous page, else the list.
   const leave = useCreationLeave(() => navigate(withContext(LIST_PATH)));
   const leaveCreation = () => (returnTo ? navigate(returnTo) : leave());
-  // What the draft still lacks: an email (the contact's key), valid phones, the type of a supplier contact.
-  const missingFields = (): FieldErrors => {
+  // The required fields a contact still lacks: an email (the contact's key), the type of a supplier
+  // contact. Create marks them on their label.
+  const missingOf = (values: Contact | undefined): FieldKey[] => (values ? ([
+    !values.email.trim() && 'email' as const,
+    !!values.supplier_id && !values.supplier_role && 'supplier_role' as const,
+  ] as Array<FieldKey | false>).filter((key): key is FieldKey => !!key) : []);
+  // What the draft holds but is not valid: said under each field.
+  const invalidFields = (): FieldErrors => {
     const values = draftRef.current;
-    const missing: FieldErrors = {};
-    const invalidEmail = emailError(values.email, t);
-    if (invalidEmail) missing.email = invalidEmail;
+    const invalid: FieldErrors = {};
+    const invalidEmail = values.email.trim() ? emailError(values.email, t) : undefined;
+    if (invalidEmail) invalid.email = invalidEmail;
     const invalidPhone = phoneError(values.phone, t);
-    if (invalidPhone) missing.phone = invalidPhone;
+    if (invalidPhone) invalid.phone = invalidPhone;
     const invalidMobile = phoneError(values.mobile, t);
-    if (invalidMobile) missing.mobile = invalidMobile;
-    if (values.supplier_id && !values.supplier_role) missing.supplier_role = t('contacts.messages.typeRequired');
-    return missing;
+    if (invalidMobile) invalid.mobile = invalidMobile;
+    return invalid;
   };
   // The draft is created once it has a valid email (and the names typed are left); the contact then
-  // opens with Create (kept, back where the creation started) and Cancel (deleted).
+  // opens with Done (kept, back where the creation started) and Cancel (deleted).
   const creation = useDraftCreation({
     isCreate,
     family: 'contacts',
@@ -337,7 +342,9 @@ function ContactEditor({ id }: { id: string }) {
     returnTo,
     recordLabel: t('contacts.creationRecord'),
     queryKeyPrefixes: ['contacts', 'supplier-contacts'],
-    ready: () => Object.keys(missingFields()).length === 0,
+    ready: () => missingOf(draftRef.current).length === 0 && Object.keys(invalidFields()).length === 0,
+    missing: () => missingOf(isCreate ? draftRef.current : stored),
+    valueOf: (key) => (isCreate ? draftRef.current : stored)?.[key as 'email' | 'supplier_role'],
     post: async () => {
       await autosave.flush();
       const sent = asSent(draftRef.current);
@@ -404,15 +411,12 @@ function ContactEditor({ id }: { id: string }) {
   ]);
   const handleCreate = async () => {
     await autosave.flush();
-    if (creation.beingCreated) {
-      creation.finishCreation();
-      return;
+    if (!canEdit && !creation.beingCreated) return;
+    if (isCreate) {
+      const invalid = invalidFields();
+      if (Object.keys(invalid).length > 0) setErrors((prev) => ({ ...prev, ...invalid }));
     }
-    if (!canEdit) return;
-    const missing = missingFields();
-    setErrors((prev) => ({ ...prev, ...missing }));
-    if (Object.keys(missing).length > 0) return;
-    void creation.createAndLeave();
+    creation.create();
   };
 
   const [drawerOpenRequest, setDrawerOpenRequest] = React.useState(0);
@@ -421,7 +425,8 @@ function ContactEditor({ id }: { id: string }) {
   const disabled = !canEdit || !data;
   const name = data ? contactName(data) : null;
   // A supplier without a type (an import, an older record): the page says so until one is chosen.
-  const roleMissing = !!data?.supplier_id && !data.supplier_role;
+  // A contact being created marks it on Create instead.
+  const roleMissing = !isCreate && !creation.beingCreated && !!data?.supplier_id && !data.supplier_role;
   const roleError = errors.supplier_role ?? (roleMissing ? t('contacts.messages.typeRequired') : undefined);
   const activeColor = getDotColor('success', theme.palette.mode);
   const inactiveColor = getDotColor('default', theme.palette.mode);
@@ -520,7 +525,7 @@ function ContactEditor({ id }: { id: string }) {
             placeholder={t('contacts.placeholders.supplier')}
           />
         </PropertyRow>
-        <PropertyRow label={t('contacts.fields.contactType')} required={!!data.supplier_id}>
+        <PropertyRow label={t('contacts.fields.contactType')} required={!!data.supplier_id} missing={creation.marked.has('supplier_role')}>
           <ContactRoleSelect
             value={data.supplier_role}
             hasSupplier={!!data.supplier_id}
@@ -535,6 +540,7 @@ function ContactEditor({ id }: { id: string }) {
           label={t('contacts.fields.email')}
           placeholder={t('contacts.placeholders.email')}
           required
+          missing={creation.marked.has('email')}
           value={data.email}
           disabled={disabled}
           error={errors.email}
@@ -656,6 +662,7 @@ function ContactEditor({ id }: { id: string }) {
             onCancel={isCreate ? leaveCreation : () => { void creation.cancelCreation(); }}
             busy={!canEdit || creation.cancelling}
             writing={creation.writing}
+            done={!isCreate}
           />
         ) : (
           <>
@@ -705,6 +712,7 @@ function ContactTextRow({
   label,
   placeholder,
   required,
+  missing,
   value,
   disabled,
   error,
@@ -714,6 +722,7 @@ function ContactTextRow({
   label: string;
   placeholder: string;
   required?: boolean;
+  missing?: boolean;
   value: string;
   disabled: boolean;
   error?: string;
@@ -722,7 +731,7 @@ function ContactTextRow({
 }) {
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   return (
-    <PropertyRow label={label} required={required}>
+    <PropertyRow label={label} required={required} missing={missing}>
       <TextField
         value={draft}
         onChange={(event) => setDraft(event.target.value)}

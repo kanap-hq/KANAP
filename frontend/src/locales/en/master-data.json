@@ -158,8 +158,6 @@
       "deleteFailed": "Failed to delete the company.",
       "nameRequired": "Enter a name.",
       "nameTaken": "Another company already has this name.",
-      "countryRequired": "Choose a country.",
-      "currencyRequired": "Choose a base currency.",
       "cityRequired": "Enter a city.",
       "headcountInvalid": "Enter a whole number, 0 or more.",
       "itUsersInvalid": "Enter a whole number, 0 or more, or leave it empty.",
@@ -213,7 +211,6 @@
       "createFailed": "Failed to create the department.",
       "nameRequired": "Enter a name.",
       "nameTaken": "Another department of this company already has this name.",
-      "companyRequired": "Choose a company.",
       "headcountInvalid": "Enter a whole number, 0 or more.",
       "deleteFailed": "Failed to delete the department."
     },
@@ -288,9 +285,7 @@
       "saveFailed": "Failed to save the cost center.",
       "createFailed": "Failed to create the cost center.",
       "deleteFailed": "Failed to delete the cost center.",
-      "codeRequired": "Enter a code.",
       "nameRequired": "Enter a name.",
-      "companyRequired": "Choose a company.",
       "chooseCompany": "Choose the company to make this group a cost center."
     },
     "delete": {
@@ -391,7 +386,6 @@
       "saveFailed": "Failed to save the calendar.",
       "createFailed": "Failed to create the calendar.",
       "deleteFailed": "Failed to delete the calendar.",
-      "codeRequired": "Enter a code.",
       "nameRequired": "Enter a name."
     },
     "delete": {
@@ -737,7 +731,6 @@
     "messages": {
       "saveFailed": "Failed to save the account.",
       "createFailed": "Failed to create the account.",
-      "chartRequired": "Choose a chart of accounts.",
       "numberInvalid": "Enter a whole number greater than zero, with at most {{max}} digits.",
       "nameRequired": "Enter a name."
     },
@@ -900,9 +893,7 @@
       "dimensionCreateFailed": "Failed to create the dimension.",
       "dimensionDeleteFailed": "Failed to delete the dimension.",
       "nameRequired": "Enter a name.",
-      "codeRequired": "Enter a code.",
       "codeInvalid": "Use lowercase letters, digits, - or _ (40 at most).",
-      "dimensionRequired": "Choose a dimension.",
       "valueAddFailed": "The value could not be added."
     },
     "recommended": {

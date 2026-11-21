@@ -475,11 +475,6 @@
       "saveFailed": "The change could not be saved.",
       "createFailed": "The contract could not be created.",
       "nameRequired": "Enter a name.",
-      "supplierRequired": "Choose a supplier.",
-      "companyRequired": "Choose a company.",
-      "startRequired": "Enter the start date.",
-      "durationRequired": "Enter a duration of at least one month.",
-      "currencyRequired": "Choose a currency.",
       "invalidMonths": "Enter a whole number of months.",
       "invalidAmount": "Enter an amount with at most two decimals."
     },

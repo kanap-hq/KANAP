@@ -31,7 +31,7 @@ import ContractRenewalDecision from './workspace/ContractRenewalDecision';
 import { confirmedRenewalOf, renewalQueryKey, useContractRenewal } from './contractRenewal';
 import ContractStopRenewalDialog from './workspace/ContractStopRenewalDialog';
 import ContractResumeRenewalDialog from './workspace/ContractResumeRenewalDialog';
-import ContractPropertiesDrawer, { type ContractFieldErrors, type ContractFormValues } from './workspace/ContractPropertiesDrawer';
+import ContractPropertiesDrawer, { type ContractFormValues, type ContractRequiredField } from './workspace/ContractPropertiesDrawer';
 import ContractBudgetTab from './workspace/ContractBudgetTab';
 import ContractRelationsTab from './workspace/ContractRelationsTab';
 import ContractComplianceTab, { useContractCompliance } from './workspace/ContractComplianceTab';
@@ -237,7 +237,6 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const patchBuffer = usePatchBuffer<ContractPatch>();
   const [form, setForm] = React.useState<ContractForm | null>(isCreate ? NEW_CONTRACT : null);
   // A new contract: the required fields Create found empty.
-  const [errors, setErrors] = React.useState<ContractFieldErrors>({});
   const defaultCurrency = useDefaultContractCurrency();
   React.useEffect(() => {
     if (isCreate && defaultCurrency) setForm((prev) => (prev && !prev.currency ? { ...prev, currency: defaultCurrency } : prev));
@@ -281,11 +280,6 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const [draftCommits, setDraftCommits] = React.useState(0);
   const patchDraft = React.useCallback((patch: ContractPatch) => {
     setForm((prev) => (prev ? mergePatch(prev, patch) : prev));
-    setErrors((prev) => {
-      const next = { ...prev };
-      for (const key of Object.keys(patch)) delete next[key as keyof ContractFieldErrors];
-      return next;
-    });
   }, []);
 
   const patchNow = React.useCallback(async (patch: ContractPatch) => {
@@ -400,7 +394,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   ];
 
   // ----- A new contract: created once it has its name and its required fields; it then opens, every
-  // tab available, with Create (kept, back where the creation started) and Cancel (deleted) -----
+  // tab available, with Done (kept, back where the creation started) and Cancel (deleted) -----
   const leave = useCreationLeave(close);
   const creationTitle = useCreationTitle({
     requiredMessage: t('contracts.messages.nameRequired'),
@@ -409,15 +403,14 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   });
   const formRef = React.useRef(form);
   formRef.current = form;
-  const missingFields = (draft: ContractForm): ContractFieldErrors => {
-    const next: ContractFieldErrors = {};
-    if (!draft.supplier_id) next.supplier_id = t('contracts.messages.supplierRequired');
-    if (!draft.company_id) next.company_id = t('contracts.messages.companyRequired');
-    if (!draft.start_date) next.start_date = t('contracts.messages.startRequired');
-    if (!draft.duration_months || draft.duration_months < 1) next.duration_months = t('contracts.messages.durationRequired');
-    if (!draft.currency) next.currency = t('contracts.messages.currencyRequired');
-    return next;
-  };
+  // The required fields the contract still lacks, the draft's or the record's as shown: Create marks them.
+  const missingOf = (values: ContractForm | null): ContractRequiredField[] => (values ? ([
+    !values.supplier_id && 'supplier_id' as const,
+    !values.company_id && 'company_id' as const,
+    !values.start_date && 'start_date' as const,
+    (!values.duration_months || values.duration_months < 1) && 'duration_months' as const,
+    !values.currency && 'currency' as const,
+  ] as Array<ContractRequiredField | false>).filter((key): key is ContractRequiredField => !!key) : []);
   const creation = useDraftCreation({
     isCreate,
     family: 'contracts',
@@ -428,8 +421,10 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
     queryKeyPrefixes: ['contracts', 'contracts-ids'],
     ready: () => {
       const draft = formRef.current;
-      return canEdit && !!draft && !!creationTitle.current().trim() && Object.keys(missingFields(draft)).length === 0;
+      return canEdit && !!draft && !!creationTitle.current().trim() && missingOf(draft).length === 0;
     },
+    missing: () => missingOf(formRef.current),
+    valueOf: (key) => formRef.current?.[key as ContractRequiredField],
     post: async () => {
       const draft = formRef.current;
       if (!draft) return null;
@@ -477,16 +472,8 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   React.useEffect(() => { creation.attempt(); }, [creation.attempt, draftCommits]);
   const handleCreate = async () => {
     await autosave.flush();
-    if (creation.beingCreated) {
-      creation.finishCreation();
-      return;
-    }
-    if (!form || !canEdit) return;
-    const name = creationTitle.require();
-    const next = missingFields(form);
-    setErrors(next);
-    if (!name || Object.keys(next).length > 0) return;
-    void creation.createAndLeave();
+    if (!form || (!canEdit && !creation.beingCreated)) return;
+    creation.create(creationTitle.require);
   };
 
   const savingHint = autosave.status === 'saving' || autosave.status === 'pending'
@@ -603,6 +590,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
             busy={!canEdit || creation.cancelling}
             writing={creation.writing}
+            done={!isCreate}
           />
         ) : (
           <>
@@ -636,7 +624,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
           <ContractPropertiesDrawer
             values={form}
             isCreate={isCreate}
-            errors={errors}
+            missing={creation.marked}
             names={names}
             supplierOption={shownData?.supplier_option ?? null}
             disabled={!editable}

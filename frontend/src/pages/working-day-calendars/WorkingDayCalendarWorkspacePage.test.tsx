@@ -49,6 +49,7 @@ vi.mock('../../components/history/RecordHistory', () => ({
   default: ({ table, recordId }: { table: string; recordId: string }) => <div>{`${table}:${recordId}`}</div>,
 }));
 
+import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/workingDayProfiles';
 import WorkingDayCalendarWorkspacePage from './WorkingDayCalendarWorkspacePage';
 
@@ -230,11 +231,22 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     expect(screen.queryByRole('combobox', { name: 'workingDayCalendars.fields.region' })).toBeNull();
   });
 
-  it('asks for the code and the name before creating', async () => {
+  it('asks for the name under the title and marks the code before creating, with no sentence under the code', async () => {
     renderAt('/master-data/working-day-calendars/new/overview');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('workingDayCalendars.messages.codeRequired')).toBeInTheDocument();
-    expect(screen.getByText('workingDayCalendars.messages.nameRequired')).toBeInTheDocument();
+    expect(await screen.findByText('workingDayCalendars.messages.nameRequired')).toBeInTheDocument();
+    expect(markedLabels()).toEqual(['workingDayCalendars.fields.code']);
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['workingDayCalendars.messages.nameRequired']);
+    expect(mocked.createWorkingDayProfile).not.toHaveBeenCalled();
+  });
+
+  it('puts the cursor in the empty code on Create once the calendar has its name', async () => {
+    renderAt('/master-data/working-day-calendars/new/overview');
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Paris staff' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(markedLabels()).toEqual(['workingDayCalendars.fields.code']);
+    await waitFor(() => expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveFocus());
     expect(mocked.createWorkingDayProfile).not.toHaveBeenCalled();
   });
 

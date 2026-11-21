@@ -158,8 +158,6 @@
       "deleteFailed": "Échec de la suppression de la société.",
       "nameRequired": "Saisissez un nom.",
       "nameTaken": "Une autre société porte déjà ce nom.",
-      "countryRequired": "Choisissez un pays.",
-      "currencyRequired": "Choisissez une devise de base.",
       "cityRequired": "Saisissez une ville.",
       "headcountInvalid": "Saisissez un nombre entier, 0 ou plus.",
       "itUsersInvalid": "Saisissez un nombre entier, 0 ou plus, ou laissez le champ vide.",
@@ -213,7 +211,6 @@
       "createFailed": "Échec de la création du département.",
       "nameRequired": "Saisissez un nom.",
       "nameTaken": "Un autre département de cette société porte déjà ce nom.",
-      "companyRequired": "Choisissez une société.",
       "headcountInvalid": "Saisissez un nombre entier, 0 ou plus.",
       "deleteFailed": "Échec de la suppression du département."
     },
@@ -288,9 +285,7 @@
       "saveFailed": "Échec de l'enregistrement du centre de coûts.",
       "createFailed": "Échec de la création du centre de coûts.",
       "deleteFailed": "Échec de la suppression du centre de coûts.",
-      "codeRequired": "Saisissez un code.",
       "nameRequired": "Saisissez un nom.",
-      "companyRequired": "Choisissez une société.",
       "chooseCompany": "Choisissez la société pour faire de ce groupe un centre de coûts."
     },
     "delete": {
@@ -391,7 +386,6 @@
       "saveFailed": "Échec de l'enregistrement du calendrier.",
       "createFailed": "Échec de la création du calendrier.",
       "deleteFailed": "Échec de la suppression du calendrier.",
-      "codeRequired": "Saisissez un code.",
       "nameRequired": "Saisissez un nom."
     },
     "delete": {
@@ -737,7 +731,6 @@
     "messages": {
       "saveFailed": "Échec de l'enregistrement du compte.",
       "createFailed": "Échec de la création du compte.",
-      "chartRequired": "Choisissez un plan comptable.",
       "numberInvalid": "Saisissez un nombre entier supérieur à zéro, de {{max}} chiffres au plus.",
       "nameRequired": "Saisissez un nom."
     },
@@ -900,9 +893,7 @@
       "dimensionCreateFailed": "Échec de la création de la dimension.",
       "dimensionDeleteFailed": "Échec de la suppression de la dimension.",
       "nameRequired": "Saisissez un nom.",
-      "codeRequired": "Saisissez un code.",
       "codeInvalid": "Utilisez des lettres minuscules, des chiffres, - ou _ (40 au maximum).",
-      "dimensionRequired": "Choisissez une dimension.",
       "valueAddFailed": "La valeur n'a pas pu être ajoutée."
     },
     "recommended": {

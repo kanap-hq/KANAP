@@ -12,6 +12,8 @@ type Props = {
   calendar: WorkingDayProfileDetail;
   disabled: boolean;
   errors: Partial<Record<WorkingDayCalendarField, string>>;
+  /** The required fields Create found missing: their label turns red. */
+  missing?: ReadonlySet<string>;
   onCodeCommit: (code: string) => void;
   onDisabledAtChange: (disabledAt: string | null) => void;
   /** Switched off: disable now, on the server's clock (the status alone). */
@@ -24,6 +26,7 @@ export default function WorkingDayCalendarPropertiesDrawer({
   calendar,
   disabled,
   errors,
+  missing,
   onCodeCommit,
   onDisabledAtChange,
   onDisableNow,
@@ -49,7 +52,7 @@ export default function WorkingDayCalendarPropertiesDrawer({
   return (
     <>
       <PropertyGroup>
-        <PropertyRow label={t('workingDayCalendars.fields.code')} required hint={t('workingDayCalendars.hints.code')}>
+        <PropertyRow label={t('workingDayCalendars.fields.code')} required missing={!!missing?.has('code')} hint={t('workingDayCalendars.hints.code')}>
           <TextField
             value={code}
             onChange={(event) => setCode(event.target.value)}

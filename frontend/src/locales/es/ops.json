@@ -475,11 +475,6 @@
       "saveFailed": "No se pudo guardar el cambio.",
       "createFailed": "No se pudo crear el contrato.",
       "nameRequired": "Introduzca un nombre.",
-      "supplierRequired": "Elija un proveedor.",
-      "companyRequired": "Elija una empresa.",
-      "startRequired": "Introduzca la fecha de inicio.",
-      "durationRequired": "Introduzca una duración de al menos un mes.",
-      "currencyRequired": "Elija una moneda.",
       "invalidMonths": "Introduzca un número entero de meses.",
       "invalidAmount": "Introduzca un importe con dos decimales como máximo."
     },

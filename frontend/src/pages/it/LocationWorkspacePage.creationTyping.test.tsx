@@ -189,13 +189,13 @@ describe('LocationWorkspacePage typing while the site is created', () => {
     await until(() => { if (patchesWith('additional_info', 'Rack 4, row B').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); }, 3000);
   });
 
-  it('saves the notes typed in the last second when Create is clicked, once', async () => {
+  it('saves the notes typed in the last second when Done is clicked, once', async () => {
     const { finish } = await startWrite();
     await finish();
     const notes = screen.getByLabelText('markdown-editor');
     fireEvent.change(notes, { target: { value: 'Rack 4' } });
     expect(patchesWith('additional_info', 'Rack 4')).toHaveLength(0);
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
     await until(() => { if (patchesWith('additional_info', 'Rack 4').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1100)); });
     expect(patchesWith('additional_info', 'Rack 4')).toHaveLength(1);

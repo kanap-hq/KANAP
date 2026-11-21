@@ -454,17 +454,36 @@ describe('SupplierWorkspacePage', () => {
     clearCreation(creationKey('suppliers', 's-new'));
   });
 
-  it('creates the supplier on Create while the name is still typed, then goes back where it started', async () => {
+  it('creates the supplier on Create while the name is still typed, then opens it', async () => {
     mocked.post.mockResolvedValueOnce({ data: { ...SUPPLIER, id: 's-new', creation_token: 'token-1' } });
     renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Initech' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC', { replace: true }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers/s-new/overview?sort=name%3AASC', { replace: true }));
     expect(mocked.post).toHaveBeenCalledTimes(1);
-    expect(getCreation(creationKey('suppliers', 's-new'))).toBeUndefined();
+    expect(navigateMock).not.toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC', expect.anything());
+    expect(getCreation(creationKey('suppliers', 's-new'))).toEqual({ token: 'token-1', returnTo: '/master-data/suppliers?sort=name%3AASC' });
+    clearCreation(creationKey('suppliers', 's-new'));
   });
 
-  it('shows Create and Cancel on a supplier being created: Create keeps it, Cancel deletes it', async () => {
+  it('waits on Escape while the committed name writes the supplier, then opens it', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }));
+    renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
+    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    fireEvent.change(title, { target: { value: 'Initech' } });
+    fireEvent.keyDown(title, { key: 'Enter' });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    // The supplier is being written: Escape leaves nothing, as Cancel waits.
+    fireEvent.keyDown(title, { key: 'Escape' });
+    expect(navigateMock).not.toHaveBeenCalled();
+    answer({ data: { ...SUPPLIER, id: 's-new', creation_token: 'token-1' } });
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers/s-new/overview?sort=name%3AASC', { replace: true }));
+    expect(navigateMock).toHaveBeenCalledTimes(1);
+    clearCreation(creationKey('suppliers', 's-new'));
+  });
+
+  it('shows Done and Cancel on a supplier being created: Done keeps it, Cancel deletes it', async () => {
     setCreation(creationKey('suppliers', 's-1'), { token: 'token-1', returnTo: '/home' });
     mocked.delete.mockResolvedValue({ data: undefined });
     renderAt('/master-data/suppliers/s-1/overview');
@@ -480,19 +499,19 @@ describe('SupplierWorkspacePage', () => {
 
     navigateMock.mockClear();
     setCreation(creationKey('suppliers', 's-1'), { token: 'token-2', returnTo: '/home' });
-    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/home'));
     expect(mocked.delete).toHaveBeenCalledTimes(1);
   });
 
-  it('lets a person whose data access is limited fill in the supplier they are creating, then Create or Cancel it', async () => {
+  it('lets a person whose data access is limited fill in the supplier they are creating, then close or Cancel it', async () => {
     auth.limited = true;
     setCreation(creationKey('suppliers', 's-1'), { token: 'token-1', returnTo: '/home' });
     try {
       renderAt('/master-data/suppliers/s-1/overview');
       expect(await screen.findByLabelText('suppliers.fields.erpSupplierId')).toBeEnabled();
       expect(screen.getByLabelText('suppliers.fields.notes')).toBeEnabled();
-      expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'common:buttons.done' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeEnabled();
     } finally {
       auth.limited = false;
@@ -507,6 +526,9 @@ describe('SupplierWorkspacePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('suppliers.messages.nameRequired')).toBeInTheDocument();
     expect(title).toHaveFocus();
+    // The name is all a supplier needs: nothing else is marked, no sentence under a field.
+    expect(document.querySelectorAll('[data-missing]')).toHaveLength(0);
+    expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['suppliers.messages.nameRequired']);
     expect(mocked.post).not.toHaveBeenCalled();
 
     mocked.post.mockRejectedValueOnce(duplicate);

@@ -39,6 +39,7 @@ vi.mock('../../hooks/useAccountNav', () => ({
   },
 }));
 
+import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import AccountWorkspacePage from './AccountWorkspacePage';
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
@@ -512,7 +513,7 @@ describe('AccountWorkspacePage', () => {
     expect(navigateMock).toHaveBeenCalledWith('/master-data/accounts/acc-2/overview?selected=coa-fr&consolidation=unmapped');
   });
 
-  it('names what is missing on Create, then creates the account once complete, the chart preselected from the list', async () => {
+  it('marks what is missing on Create, then creates the account once complete, the chart preselected from the list', async () => {
     mocked.post.mockResolvedValue({ data: { ...ACCOUNT, id: 'acc-new' } });
     renderAt('/master-data/accounts/new/overview?selected=coa-fr&coaId=coa-fr&consolidation=unmapped');
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
@@ -521,13 +522,18 @@ describe('AccountWorkspacePage', () => {
     expect(screen.getByRole('complementary')).toContainElement(chart);
     await waitFor(() => expect(chart).toHaveTextContent('PCG · French chart'));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('accounts.messages.numberInvalid')).toBeInTheDocument();
-    expect(screen.getByText('accounts.messages.nameRequired')).toBeInTheDocument();
+    expect(await screen.findByText('accounts.messages.nameRequired')).toBeInTheDocument();
+    expect(markedLabels()).toEqual(['accounts.fields.accountNumber']);
+    // The empty title keeps the cursor: it comes first.
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.queryByText('accounts.messages.numberInvalid')).toBeNull();
+    expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['accounts.messages.nameRequired']);
     expect(mocked.post).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: ' 606300 ' } });
 
     fireEvent.blur(screen.getByLabelText('accounts.fields.accountNumber'));
+    expect(markedLabels()).toEqual([]);
     fireEvent.change(screen.getByLabelText('accounts.fields.nativeName'), { target: { value: 'Télécoms' } });
     fireEvent.blur(screen.getByLabelText('accounts.fields.nativeName'));
     const listbox = await openConsolidation();
@@ -582,13 +588,26 @@ describe('AccountWorkspacePage', () => {
     })));
   });
 
-  it('asks for a chart when the list gave none', async () => {
+  it('marks the chart when the list gave none, and puts the cursor in it', async () => {
     renderAt('/master-data/accounts/new/overview');
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '1' } });
     fireEvent.blur(screen.getByLabelText('accounts.fields.accountNumber'));
     fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Cash' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
-    expect(await screen.findByText('accounts.messages.chartRequired')).toBeInTheDocument();
+    expect(markedLabels()).toEqual(['accounts.fields.chartOfAccounts']);
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'accounts.fields.chartOfAccounts' })).toHaveFocus());
+    expect(screen.queryAllByText(/Required$/)).toHaveLength(0);
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('says under the number that a typed number is not valid, on Create', async () => {
+    renderAt('/master-data/accounts/new/overview?selected=coa-fr');
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'accounts.fields.chartOfAccounts' })).toHaveTextContent('PCG · French chart'));
+    fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '12ab' } });
+    fireEvent.blur(screen.getByLabelText('accounts.fields.accountNumber'));
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Cash' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('accounts.messages.numberInvalid')).toBeInTheDocument();
     expect(mocked.post).not.toHaveBeenCalled();
   });
 });

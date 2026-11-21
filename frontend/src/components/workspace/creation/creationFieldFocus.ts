@@ -1,4 +1,5 @@
 import React from 'react';
+import focusWhenMounted from './focusWhenMounted';
 
 /**
  * What a person types or chooses in. Buttons (a hint, the properties handle, Create or Done and
@@ -102,6 +103,18 @@ function findFirstCreationField(root: ParentNode): HTMLElement | null {
   const stops = creationStops(root);
   const stop = nextStop(stops, stops.findIndex((s) => s.kind === 'title'));
   return stop ? fieldsOf(stop.el)[0] ?? null : null;
+}
+
+/**
+ * Puts the cursor in the first field a check marked missing (its label's `data-missing`,
+ * `FieldLabel`), in screen order as Tab follows it, once the marks are on screen.
+ */
+export function focusFirstMissingField(): void {
+  focusWhenMounted(() => {
+    const label = document.querySelector<HTMLElement>('[data-missing]');
+    const row = label?.closest<HTMLElement>(REQUIRED_STOPS) ?? label?.parentElement;
+    return row ? fieldsOf(row)[0] : null;
+  });
 }
 
 // Armed by a Tab along the creation, or by the press of Create (`CreationActions`). When the page

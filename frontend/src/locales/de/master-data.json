@@ -158,8 +158,6 @@
       "deleteFailed": "Das Unternehmen konnte nicht gelöscht werden.",
       "nameRequired": "Geben Sie einen Namen ein.",
       "nameTaken": "Ein anderes Unternehmen hat bereits diesen Namen.",
-      "countryRequired": "Wählen Sie ein Land.",
-      "currencyRequired": "Wählen Sie eine Basiswährung.",
       "cityRequired": "Geben Sie eine Stadt ein.",
       "headcountInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr.",
       "itUsersInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr, oder lassen Sie das Feld leer.",
@@ -213,7 +211,6 @@
       "createFailed": "Die Abteilung konnte nicht erstellt werden.",
       "nameRequired": "Geben Sie einen Namen ein.",
       "nameTaken": "Eine andere Abteilung dieses Unternehmens hat bereits diesen Namen.",
-      "companyRequired": "Wählen Sie ein Unternehmen.",
       "headcountInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr.",
       "deleteFailed": "Die Abteilung konnte nicht gelöscht werden."
     },
@@ -288,9 +285,7 @@
       "saveFailed": "Die Kostenstelle konnte nicht gespeichert werden.",
       "createFailed": "Die Kostenstelle konnte nicht erstellt werden.",
       "deleteFailed": "Die Kostenstelle konnte nicht gelöscht werden.",
-      "codeRequired": "Geben Sie einen Code ein.",
       "nameRequired": "Geben Sie einen Namen ein.",
-      "companyRequired": "Wählen Sie ein Unternehmen.",
       "chooseCompany": "Wählen Sie das Unternehmen, um diese Gruppe in eine Kostenstelle umzuwandeln."
     },
     "delete": {
@@ -391,7 +386,6 @@
       "saveFailed": "Der Kalender konnte nicht gespeichert werden.",
       "createFailed": "Der Kalender konnte nicht erstellt werden.",
       "deleteFailed": "Der Kalender konnte nicht gelöscht werden.",
-      "codeRequired": "Geben Sie einen Code ein.",
       "nameRequired": "Geben Sie einen Namen ein."
     },
     "delete": {
@@ -737,7 +731,6 @@
     "messages": {
       "saveFailed": "Das Konto konnte nicht gespeichert werden.",
       "createFailed": "Das Konto konnte nicht erstellt werden.",
-      "chartRequired": "Wählen Sie einen Kontenplan.",
       "numberInvalid": "Geben Sie eine ganze Zahl größer als null mit höchstens {{max}} Ziffern ein.",
       "nameRequired": "Geben Sie einen Namen ein."
     },
@@ -900,9 +893,7 @@
       "dimensionCreateFailed": "Die Dimension konnte nicht erstellt werden.",
       "dimensionDeleteFailed": "Die Dimension konnte nicht gelöscht werden.",
       "nameRequired": "Geben Sie einen Namen ein.",
-      "codeRequired": "Geben Sie einen Code ein.",
       "codeInvalid": "Verwenden Sie Kleinbuchstaben, Ziffern, - oder _ (höchstens 40).",
-      "dimensionRequired": "Wählen Sie eine Dimension.",
       "valueAddFailed": "Der Wert konnte nicht hinzugefügt werden."
     },
     "recommended": {

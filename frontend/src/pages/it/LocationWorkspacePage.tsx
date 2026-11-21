@@ -280,7 +280,7 @@ function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) 
     navigate(`/it/locations${qs ? `?${qs}` : ''}`);
   }, [listContextParams, navigate]);
   // A new site: its name is typed in the header. The draft is created once it has its name and
-  // hosting type; the site then opens, every tab available, with Create (kept, back where the
+  // hosting type; the site then opens, every tab available, with Done (kept, back where the
   // creation started) and Cancel (deleted).
   const leaveCreation = useCreationLeave(handleClose);
   const creationTitle = useCreationTitle({
@@ -297,6 +297,10 @@ function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) 
     recordLabel: t('workspace.location.creationRecord'),
     queryKeyPrefixes: ['locations'],
     ready: () => canManage && !!creationTitle.current().trim() && !!data?.hosting_type,
+    // The hosting type is the one field a site requires (the first choice is preselected): Create
+    // marks it while none is chosen.
+    missing: () => (data && !data.hosting_type ? ['hosting_type'] : []),
+    valueOf: () => data?.hosting_type,
     post: async () => {
       if (!data) return null;
       setCreateError(null);
@@ -452,18 +456,8 @@ function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) 
   }, []);
 
   const handleCreate = () => {
-    if (creation.beingCreated) {
-      creation.finishCreation();
-      return;
-    }
-    if (!canManage || !data) return;
-    const name = creationTitle.require();
-    if (!name) return;
-    if (!data.hosting_type) {
-      setCreateError(t('messages.hostingTypeRequired'));
-      return;
-    }
-    void creation.createAndLeave();
+    if (!data || (!canManage && !creation.beingCreated)) return;
+    creation.create(creationTitle.require);
   };
 
   const handleDelete = async () => {
@@ -572,6 +566,7 @@ function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) 
       }}
       category={category}
       disabled={!canManage}
+      missing={creation.marked}
       onHostingTypeChange={handleHostingTypeChange}
       onOperatingCompanyChange={handleOperatingCompanyChange}
       onProviderChange={handleProviderChange}
@@ -613,6 +608,7 @@ function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) 
           onCancel={isCreate ? leaveCreation : () => { void cancelCreatedSite(); }}
           busy={creation.cancelling || !canManage}
           writing={creation.writing}
+          done={!isCreate}
         />
       )}
       {!isCreate && data && (

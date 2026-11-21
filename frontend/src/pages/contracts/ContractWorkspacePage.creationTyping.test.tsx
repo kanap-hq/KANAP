@@ -44,6 +44,7 @@ vi.mock('../../components/fields/DateEUField', () => ({
   ),
 }));
 
+import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import ContractWorkspacePage from './ContractWorkspacePage';
 
@@ -200,4 +201,45 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
     fireEvent.blur(shown);
     await until(() => { if (!mocked.patch.mock.calls.some(([url, body]) => url === '/contracts/c-new' && body?.yearly_amount_at_signature === 12000)) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
   });
+
+  it('creates a complete contract on Create and stays on it with Done, which goes back where the creation started', async () => {
+    mocked.post.mockResolvedValue({ data: { ...STORED, creation_token: 'tok' } });
+    renderNew();
+    const drawer = screen.getByRole('complementary');
+    fireEvent.change(within(drawer).getByLabelText('contracts.fields.supplier'), { target: { value: 'sup-1' } });
+    fireEvent.change(within(drawer).getByLabelText('contracts.fields.company'), { target: { value: 'co-1' } });
+    fireEvent.change(within(drawer).getByLabelText('start-date'), { target: { value: '2026-01-01' } });
+    await waitFor(() => expect(within(drawer).getByRole('combobox', { name: 'contracts.fields.currency' })).toHaveValue('EUR · Euro'));
+    const duration = within(drawer).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
+    fireEvent.change(duration, { target: { value: '24' } });
+    fireEvent.blur(duration);
+    // The name is typed, not yet committed: Create writes the contract.
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Oracle support' } });
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/contracts/CTR-7/overview'));
+    const done = await screen.findByRole('button', { name: 'common:buttons.done' });
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+
+    // A duration emptied on the contract being created comes back: nothing is missing.
+    const shown = within(screen.getByRole('complementary')).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
+    await until(() => { if ((shown as HTMLInputElement).value !== '24') throw new Error(`duration shows "${(shown as HTMLInputElement).value}"`); });
+    fireEvent.change(shown, { target: { value: '' } });
+    fireEvent.blur(shown);
+    expect((shown as HTMLInputElement).value).toBe('24');
+    fireEvent.click(done);
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/ops\/contracts$/));
+  });
+
+  it('marks what a named contract lacks on Create and puts the cursor in the first field, with no sentence under them', async () => {
+    renderNew();
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Oracle support' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(markedLabels()).toEqual(['contracts.fields.supplier', 'contracts.fields.company', 'contracts.fields.startDate', 'contracts.fields.durationMonths']));
+    const drawer = screen.getByRole('complementary');
+    await waitFor(() => expect(within(drawer).getByLabelText('contracts.fields.supplier')).toHaveFocus());
+    expect(screen.queryAllByText(/Required$/)).toHaveLength(0);
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
 });
+

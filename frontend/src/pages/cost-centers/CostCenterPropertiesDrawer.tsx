@@ -17,6 +17,8 @@ type Props = {
   kind: CostCenterKind;
   disabled: boolean;
   errors: Partial<Record<CostCenterField, string>>;
+  /** The required fields Create found missing: their label turns red. */
+  missing?: ReadonlySet<string>;
   /** The node and its subtree, which cannot become its parent. */
   excludeParentIds: ReadonlySet<string>;
   /** Types the node cannot take (a group that contains nodes cannot become a cost center). */
@@ -30,6 +32,8 @@ type Props = {
   /** Switched off: disable now, on the server's clock (the status alone). */
   onDisableNow: () => void;
 };
+
+const NONE_MISSING: ReadonlySet<string> = new Set();
 
 function ErrorLine({ message }: { message?: string }) {
   if (!message) return null;
@@ -45,6 +49,7 @@ export default function CostCenterPropertiesDrawer({
   kind,
   disabled,
   errors,
+  missing = NONE_MISSING,
   excludeParentIds,
   unavailableKinds = [],
   onCodeCommit,
@@ -73,7 +78,7 @@ export default function CostCenterPropertiesDrawer({
   return (
     <>
       <PropertyGroup>
-        <PropertyRow label={t('costCenters.fields.code')} required>
+        <PropertyRow label={t('costCenters.fields.code')} required missing={missing.has('code')}>
           <TextField
             value={code}
             onChange={(event) => setCode(event.target.value)}
@@ -126,7 +131,7 @@ export default function CostCenterPropertiesDrawer({
           />
         </PropertyRow>
         {kind === 'cost_center' && (
-          <PropertyRow label={t('costCenters.fields.company')} required hint={t('costCenters.hints.company')}>
+          <PropertyRow label={t('costCenters.fields.company')} required missing={missing.has('company_id')} hint={t('costCenters.hints.company')}>
             <CompanySelect
               hideLabel
               label={t('costCenters.fields.company')}

@@ -225,7 +225,7 @@ describe('InterfaceWorkspacePage (draft)', () => {
     expect(post).not.toHaveBeenCalled();
   });
 
-  it('creates the interface once its required fields are filled, and opens it with Create and Cancel', async () => {
+  it('creates the interface once its required fields are filled, and opens it with Done and Cancel', async () => {
     renderNew();
     await fillDraft();
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/INT-9/flow'));
@@ -239,13 +239,13 @@ describe('InterfaceWorkspacePage (draft)', () => {
     expect(await screen.findByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
 
-    // Create ends the creation: back where it started, the interface kept.
-    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    // Done ends the creation: back where it started, the interface kept.
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
     expect(del).not.toHaveBeenCalled();
   });
 
-  it('creates the interface on Create while its title is committed, and goes back where the creation started', async () => {
+  it('creates a complete interface on Create and stays on it with Done, which goes back where the creation started', async () => {
     renderNew();
     fireEvent.click(await screen.findByRole('button', { name: 'pick source' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick target' }));
@@ -255,6 +255,10 @@ describe('InterfaceWorkspacePage (draft)', () => {
     // In a browser the click's mousedown blurs the title first, which commits it.
     fireEvent.blur(title);
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/INT-9/flow'));
+    const done = await screen.findByRole('button', { name: 'Done' });
+    expect(post).toHaveBeenCalledTimes(1);
+    fireEvent.click(done);
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
     expect(post).toHaveBeenCalledTimes(1);
   });

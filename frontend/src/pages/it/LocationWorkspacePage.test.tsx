@@ -34,6 +34,7 @@ vi.mock('./workspace/LocationOverviewTab', () => ({ default: () => null }));
 vi.mock('./workspace/LocationContactsTab', () => ({ default: () => null }));
 vi.mock('./workspace/LocationRelationsTab', () => ({ default: () => null }));
 
+import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import { KanapDialogProvider } from '../../components/design';
 import LocationWorkspacePage from './LocationWorkspacePage';
@@ -134,6 +135,9 @@ describe('LocationWorkspacePage name refusals', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('messages.nameRequired')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    // The hosting type is preselected: nothing else is marked, no sentence under a field.
+    expect(markedLabels()).toEqual([]);
+    expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['messages.nameRequired']);
     expect(mocked.post).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
     expect(navigateMock).toHaveBeenCalledWith('/it/locations');

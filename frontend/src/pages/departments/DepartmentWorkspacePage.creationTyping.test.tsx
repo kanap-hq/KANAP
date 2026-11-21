@@ -25,11 +25,16 @@ vi.mock('../workspace/hooks/useRecentlyViewed', () => ({
 }));
 // The company picker searches the API: a button stands in.
 vi.mock('../../components/fields/CompanySelect', () => ({
+  // One field, as the real picker; the button only drives the tests.
   default: (props: { onChange: (v: string | null) => void }) => (
-    <button type="button" onClick={() => props.onChange('company-2')}>pick company</button>
+    <span>
+      <input aria-label="company" readOnly />
+      <button type="button" tabIndex={-1} onClick={() => props.onChange('company-2')}>pick company</button>
+    </span>
   ),
 }));
 
+import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import DepartmentWorkspacePage from './DepartmentWorkspacePage';
 
@@ -141,4 +146,16 @@ describe('DepartmentWorkspacePage typing while the department is created', () =>
     fireEvent.blur(shown);
     await until(() => { if (patchesWith('description', 'Accounting').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
   });
+
+  it('marks the company on Create and puts the cursor in it, with no sentence under it', async () => {
+    renderNew();
+    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Finance' } });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(markedLabels()).toEqual(['departments.fields.company']);
+    await waitFor(() => expect(screen.getByLabelText('company')).toHaveFocus());
+    expect(screen.queryAllByText(/Required$/)).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    expect(markedLabels()).toEqual([]);
+  });
 });
+

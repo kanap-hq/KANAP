@@ -216,7 +216,7 @@ export default function AnalyticsWorkspacePage() {
   };
 
   // The draft is created once it has its name and its dimension; the value then opens, every tab
-  // available, with Create (kept, back where the creation started) and Cancel (deleted).
+  // available, with Done (kept, back where the creation started) and Cancel (deleted).
   const leave = useCreationLeave(handleClose);
   const title = useCreationTitle({
     requiredMessage: t('analytics.messages.nameRequired'),
@@ -242,6 +242,9 @@ export default function AnalyticsWorkspacePage() {
     recordLabel: t('analytics.valueCreationRecord'),
     queryKeyPrefixes: ['analytics'],
     ready: () => axes.ready && !!title.current().trim() && !dimensionMissing,
+    // The dimension is chosen once, on the draft: Create marks it while none is chosen.
+    missing: () => (isCreate && dimensionMissing ? ['axis_id'] : []),
+    valueOf: () => newAxisId,
     post: async () => {
       const sent = draftAsSent();
       const { name, description, applies_to, status, disabled_at } = sent;
@@ -290,15 +293,8 @@ export default function AnalyticsWorkspacePage() {
   });
   React.useEffect(() => { creation.attempt(); }, [creation.attempt, draft, newAxisId, axes.ready]);
   const handleCreate = () => {
-    if (creation.beingCreated) {
-      creation.finishCreation();
-      return;
-    }
-    if (!canEdit || !axes.ready) return;
-    const name = title.require();
-    if (dimensionMissing) setErrors((prev) => ({ ...prev, axis_id: t('analytics.messages.dimensionRequired') }));
-    if (!name || dimensionMissing) return;
-    void creation.createAndLeave();
+    if (!creation.beingCreated && (!canEdit || !axes.ready)) return;
+    creation.create(title.require);
   };
 
   const axis = data ? axes.byId.get(data.axis_id) : undefined;
@@ -314,6 +310,7 @@ export default function AnalyticsWorkspacePage() {
       onCancel={isCreate ? leave : () => { void creation.cancelCreation(); }}
       busy={!canEdit || creation.cancelling || !axes.ready}
       writing={creation.writing}
+      done={!isCreate}
     />
   ) : canDelete && data ? (
     <DeleteIconButton onClick={() => setConfirmOpen(true)} disabled={deleting} />
@@ -360,7 +357,7 @@ export default function AnalyticsWorkspacePage() {
           <PropertyGroup>
             {isCreate ? (
               // The dimension is chosen once, at creation.
-              <PropertyRow label={t('analytics.fields.dimension')} required>
+              <PropertyRow label={t('analytics.fields.dimension')} required missing={creation.marked.has('axis_id')}>
                 <TextField
                   select
                   value={newAxisId ?? ''}
