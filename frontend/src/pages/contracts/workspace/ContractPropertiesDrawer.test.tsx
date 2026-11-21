@@ -145,4 +145,11 @@ describe('ContractPropertiesDrawer place', () => {
     expect(field).toHaveAttribute('data-clearable', 'false');
     expect(field).toHaveAttribute('data-required', 'true');
   });
+
+  // The requirement is about what this person may save: a contract she only reads shows no mark.
+  it('does not mark the place required on a contract the person only reads', () => {
+    placement.current = { companyIds: new Set(['company-1']), isCostCenterAllowed: () => false, placeRequired: true };
+    renderDrawer({ disabled: true });
+    expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-required', 'false');
+  });
 });

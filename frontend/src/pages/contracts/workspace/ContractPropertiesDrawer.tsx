@@ -74,8 +74,9 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, mis
   const locale = useLocale();
   const placement = useContractPlacementFilter(values.company_id || null, values.cost_center_id || null);
   // A company outside the edit companies holds the contract only through its place: as on a line
-  // whose cost center is required, the place is marked required and cannot be cleared.
-  const placeRequired = placement?.placeRequired === true;
+  // whose cost center is required, the place is marked required and cannot be cleared. A person who
+  // only reads the contract has nothing to fill: no required mark.
+  const placeRequired = !disabled && placement?.placeRequired === true;
   // A place in another company than the contract's is kept; the hint only says so, as on a line.
   const costCenter = useCostCenterNode(values.cost_center_id || null);
   const costCenterHint = costCenter?.company_id && values.company_id && costCenter.company_id !== values.company_id
