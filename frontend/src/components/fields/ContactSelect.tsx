@@ -1,5 +1,5 @@
 import React from 'react';
-import { Autocomplete, Box, ListSubheader, TextField, CircularProgress } from '@mui/material';
+import { Autocomplete, Box, TextField, CircularProgress } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -8,13 +8,13 @@ import { useAuth } from '../../auth/AuthContext';
 import { LOOKUP_CREATE_ID, lookupCreateText } from '../../hooks/useLookupPicker';
 import { foldText } from '../../utils/foldText';
 import { FieldLabel } from '../design';
-import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { formatItemRef } from '../../utils/item-ref';
 import OptionWithHint from './OptionWithHint';
 import type { Contact as ContactRecord } from '../../pages/contacts/contactModel';
 import CreateContactDialog, { type CreateContactRequest, type CreateContactSupplier } from './CreateContactDialog';
 import { contactName, isContactReference } from './contactNames';
+import { pickerItemSx } from '../workspace/RelationAddPicker';
 
 type Contact = {
   id: string;
@@ -53,6 +53,24 @@ type Row = Contact | CreateRow;
 const isCreateRow = (row: Row): row is CreateRow => lookupCreateText(row) !== null;
 /** The group of the create row: it closes the list under no supplier heading. */
 const CREATE_GROUP = '\u0000create';
+
+/**
+ * The list takes the density of the Relations "Add" picker: 32 px rows, the create row aligned on
+ * them, and compact supplier headings (12 px, tertiary) that stay on top while the list scrolls.
+ */
+const listboxSx = { '& .MuiAutocomplete-option': pickerItemSx } as const;
+const groupHeadingSx = {
+  position: 'sticky',
+  top: -8,
+  zIndex: 1,
+  bgcolor: 'background.paper',
+  px: 2,
+  pt: 1,
+  pb: 0.25,
+  fontSize: 12,
+  lineHeight: 1.5,
+  color: 'kanap.text.tertiary',
+} as const;
 
 /** "Name (supplier)", the one line a contact takes in the field and in the list. */
 function formatLabel(c: Contact): string {
@@ -185,16 +203,12 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
         : undefined}
       renderGroup={groupByCompany ? (params) => (
         <li key={params.key}>
-          {/* The create row sits under no supplier heading; the others keep MUI's own group look. */}
-          {params.group === CREATE_GROUP ? null : (
-            <ListSubheader component="div" sx={{ top: -8, bgcolor: 'background.paper' }}>{params.group}</ListSubheader>
-          )}
-          <Box component="ul" sx={{ p: 0, ...(params.group === CREATE_GROUP ? {} : { '& .MuiAutocomplete-option': { pl: 3 } }) }}>
-            {params.children}
-          </Box>
+          {/* The create row sits under no supplier heading. */}
+          {params.group === CREATE_GROUP ? null : <Box sx={groupHeadingSx}>{params.group}</Box>}
+          <Box component="ul" sx={{ p: 0 }}>{params.children}</Box>
         </li>
       ) : undefined}
-      ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
+      ListboxProps={{ sx: listboxSx }}
       renderOption={(props, option) => {
         if (isCreateRow(option as Row)) {
           return <OptionWithHint key={LOOKUP_CREATE_ID} optionProps={props} label={(option as CreateRow).lookupCreateLabel} />;

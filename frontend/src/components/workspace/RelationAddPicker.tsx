@@ -39,7 +39,9 @@ type Props = {
   multiple?: { label: (count: number) => string; onConfirm: (options: RelationOption[]) => Promise<string | null> };
 };
 
-const itemSx = { minHeight: 32, py: 0.75, fontSize: 13, color: 'kanap.text.primary' } as const;
+/** One row of a dense picker list (32 px): this picker's, and the contact picker's list. */
+export const pickerItemSx = { minHeight: 32, py: 0.75, fontSize: 13, color: 'kanap.text.primary' } as const;
+const itemSx = pickerItemSx;
 
 /**
  * The "Add" picker of a Relations section, anchored to the button that opens it (the pattern of

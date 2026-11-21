@@ -87,6 +87,21 @@ describe('ContactSelect', () => {
     await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('Anna Berg (Acme)'));
   });
 
+  // Lot A1 of 26.11.9: the list takes the density of the Relations "Add" picker.
+  it('draws 32 px rows and compact 12 px group headings', async () => {
+    renderSelect();
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    const option = await screen.findByRole('option', { name: 'Anna Berg' });
+    expect(getComputedStyle(option).minHeight).toBe('32px');
+    expect(getComputedStyle(option).fontSize).toBe('13px');
+    const create = screen.getByRole('option', { name: 'master-data:contacts.newContactOption' });
+    expect(getComputedStyle(create).minHeight).toBe('32px');
+    expect(getComputedStyle(create).paddingLeft).toBe(getComputedStyle(option).paddingLeft);
+    const heading = screen.getByText('Acme');
+    expect(getComputedStyle(heading).fontSize).toBe('12px');
+    expect(heading.className).not.toMatch(/MuiListSubheader/);
+  });
+
   describe('creating a contact from the list', () => {
     const NEW_CONTACT = { id: 'c-9', item_number: 9, first_name: 'Zed', last_name: null, job_title: null, email: 'zed@acme.test', active: true, supplier_id: null, supplier_name: null };
 
