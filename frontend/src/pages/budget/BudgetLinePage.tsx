@@ -392,6 +392,23 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     companyFollowsRef.current = follow;
     setCompanyFollowsCostCenter(follow);
   }, []);
+  // Tries to write the draft (below): each change of the draft may complete it.
+  const attemptRef = React.useRef<() => void>(() => undefined);
+  // Checks under way of what the draft holds against a change (an account or a dimension value
+  // against a new type, an account against a new company's chart): nothing is written before they
+  // answer, then the draft is tried again.
+  const draftChecksRef = React.useRef(0);
+  const checkDraft = React.useCallback(async (check: () => Promise<void>) => {
+    draftChecksRef.current += 1;
+    try {
+      await check();
+    } catch {
+      // Not known: the server decides, and says it on the field if it refuses.
+    } finally {
+      draftChecksRef.current -= 1;
+      if (draftChecksRef.current === 0) attemptRef.current();
+    }
+  }, []);
   // A change of the draft: its fields' messages go (a new place clears both of the place's).
   const editDraft = React.useCallback((patch: Partial<BudgetLineForm>) => {
     draftEditsRef.current = mergePatch(draftEditsRef.current, patch);
@@ -412,7 +429,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   const dropDraftAccountOffChart = React.useCallback(async (companyId: string) => {
     const accountId = draftEditsRef.current.account_id;
     if (!accountId || !companyId) return;
-    try {
+    await checkDraft(async () => {
       const [company, account] = await Promise.all([api.get(`/companies/${companyId}`), api.get(`/accounts/${accountId}`)]);
       const companyCoa = company.data?.coa_id || null;
       const accountCoa = account.data?.coa_id || null;
@@ -420,10 +437,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       if (companyCoa && accountCoa && companyCoa !== accountCoa && current.account_id === accountId && current.paying_company_id === companyId) {
         editDraft({ account_id: '' });
       }
-    } catch {
-      // Unknown charts: the server says it on the account, if it refuses.
-    }
-  }, [currentDraft, editDraft]);
+    });
+  }, [checkDraft, currentDraft, editDraft]);
   const pickDraftCompany = React.useCallback((companyId: string) => {
     followCostCenter(false);
     const elsewhere = !!companyId && !!draftCostCenterCompanyRef.current && draftCostCenterCompanyRef.current !== companyId;
@@ -895,7 +910,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   }, [analyticsAxes.enabled, nature]);
 
   // The title stays open like the draft's fields; Enter, Tab or a move to a field gives it.
-  const attemptRef = React.useRef<() => void>(() => undefined);
   // The draft's POST is under way: what changes meanwhile is saved on the line, the type waits.
   const writingDraftRef = React.useRef(false);
   const title = useCreationTitle({
@@ -916,7 +930,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     listPath,
     recordLabel: t('budget.creation.record'),
     queryKeyPrefixes: ['budget-lines', 'spend-items', 'capex-items'],
-    ready: () => !!title.current().trim() && placementDefault.ready && !currencyLoading
+    ready: () => !!title.current().trim() && placementDefault.ready && !currencyLoading && draftChecksRef.current === 0
       && (analyticsAxes.ready || analyticsAxes.isError) && missingOf(currentDraft()).length === 0,
     missing: () => missingOf(isCreate ? currentDraft() : formRef.current),
     valueOf: (key) => creationFieldValue(isCreate ? currentDraft() : formRef.current, key),
@@ -982,24 +996,29 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   }, [draftLine, missingOf, placementDefault.ready, currencyLoading, analyticsAxes.ready]);
 
   // The type of the draft: its address (`?nature=`), the dimensions it requires, the accounts it
-  // offers. An account kept for the other type is emptied (Create then asks for one).
+  // offers. An account kept for the other type is emptied (Create then asks for one), and nothing
+  // is written before that is known.
+  const chosenNatureRef = React.useRef<LineType | null>(null);
   const chooseNewLineType = React.useCallback(async (next: LineType) => {
     // The draft being written keeps the type it was sent with: a menu opened before waits too.
     if (writingDraftRef.current) return;
+    chosenNatureRef.current = next;
+    const accountId = currentDraft().account_id;
+    const checked = accountId
+      ? checkDraft(async () => {
+        const account = (await api.get<{ nature?: string | null }>(`/accounts/${accountId}`)).data;
+        // Another type chosen meanwhile checks the draft itself.
+        if (chosenNatureRef.current !== next) return;
+        if (account?.nature && account.nature !== next && currentDraft().account_id === accountId) editDraft({ account_id: '' });
+      })
+      : null;
     setSearchParams((prev) => {
       const sp = new URLSearchParams(prev);
       sp.set('nature', next);
       return sp;
     }, { replace: true });
-    const accountId = draftEditsRef.current.account_id;
-    if (!accountId) return;
-    try {
-      const account = (await api.get<{ nature?: string | null }>(`/accounts/${accountId}`)).data;
-      if (account?.nature && account.nature !== next && draftEditsRef.current.account_id === accountId) editDraft({ account_id: '' });
-    } catch {
-      // Unknown account: the server says it on the account, if it refuses.
-    }
-  }, [editDraft, setSearchParams]);
+    await checked;
+  }, [checkDraft, currentDraft, editDraft, setSearchParams]);
 
   // Leaving the line: what is not saved first, then a required dimension left without a value. One
   // question per move: a user who already chose to leave and drop their edits is not asked again. A

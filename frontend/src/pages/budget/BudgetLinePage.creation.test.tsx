@@ -413,6 +413,43 @@ describe('Budget line born complete', () => {
     expect(lineWrites()[0][1]).toMatchObject({ nature: 'capex', account_id: 'account-any', analytics_values: { 'axis-site': 'site-1' } });
   });
 
+  it('writes nothing with an account of the other type when a change of type completes the draft', async () => {
+    await startNewLine({ axes: [MENU_AXIS] });
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'budget.type' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'budget.typeCapex' }));
+    await waitFor(() => expect(location()).toBe('/ops/budget/new/overview?nature=capex'));
+    await giveTitle('Server');
+    pick('opex.fields.payingCompany', 'company-1');
+    pick('opex.fields.account', 'account-capex');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    // OPEX: Menu is not asked for any more, and the account kept for CAPEX lines goes before anything is written.
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'budget.type' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'budget.typeOpex' }));
+    await waitFor(() => expect(field('opex.fields.account')).toHaveValue(''));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(lineWrites()).toEqual([]);
+    expect(within(fieldRow('opex.fields.account')).queryByText(/lines only/)).toBeNull();
+    // An account for OPEX lines: the line is written.
+    pick('opex.fields.account', 'account-opex');
+    await waitFor(() => expect(lineWrites()).toHaveLength(1));
+    expect(lineWrites()[0][1]).toMatchObject({ nature: 'opex', account_id: 'account-opex' });
+  });
+
+  it('writes nothing with an account of another chart when the company of a refused draft changes', async () => {
+    await startNewLine({ refusals: [{ status: 400, data: { statusCode: 400, message: 'Something went wrong.' } }] });
+    await giveTitle();
+    pick('opex.fields.payingCompany', 'company-1');
+    pick('opex.fields.account', 'account-1');
+    await waitFor(() => expect(lineWrites()).toHaveLength(1));
+    await screen.findByText('Something went wrong.');
+    // company-2 is on another chart than account-1: the account goes before anything is written.
+    pick('opex.fields.payingCompany', 'company-2');
+    await waitFor(() => expect(field('opex.fields.account')).toHaveValue(''));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(lineWrites()).toHaveLength(1);
+  });
+
   it('says a refusal of the account on its field, keeps the draft and does not try it again', async () => {
     await startNewLine({ refusals: [{ status: 400, data: { statusCode: 400, message: ACCOUNT_CHART_REFUSAL } }] });
     await giveTitle();
