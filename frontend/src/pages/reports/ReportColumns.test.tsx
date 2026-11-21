@@ -482,6 +482,7 @@ describe.each([
   ['Increases and decreases', OpexDeltaReport, ['Forecast']],
   ['Comparison', ComparisonReport, ['Forecast', 'Landing']],
   ['Consolidation', ConsolidationReport, ['Forecast']],
+  ['Analytics', AnalyticsCategoryReport, ['Forecast']],
 ] as const)('%s waits for the column setting', (_name, Report, suffixes) => {
   it('sends one set of aggregates, on the tenant default', async () => {
     const tenant = { labels: TENANT_NAMES, enabled: ALL_SHOWN, default_column: 'forecast' as const };

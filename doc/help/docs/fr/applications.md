@@ -40,7 +40,7 @@ Rendez-vous dans **Cartographie SI > Applications** pour voir votre liste. Pour 
 
 1. Cliquez sur **Nouvelle application**. La page de l'application s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez le nom de l'application ou du service, de 200 caractères au plus. Voir [Noms uniques](#unique-names).
-3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée l'application aussitôt. Sa référence (`APP-12`) s'affiche et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis crée l'application aussitôt. Sa référence (`APP-12`) s'affiche et tous les onglets s'ouvrent.
 
 La nouvelle application est **Active**, dans la catégorie par défaut. Modifiez-les dans l'en-tête et le tiroir des propriétés, puis complétez le reste :
 
@@ -54,7 +54,7 @@ La nouvelle application est **Active**, dans la catégorie par défaut. Modifiez
 - **Licences** et **Notes** : conditions de licence et notes internes libres
 - **Peut avoir des apps enfants** : utiliser cette application comme une « suite » regroupant d'autres applications
 
-Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi. Un nom déjà utilisé par une autre application est refusé, avec un message sous le titre.
+Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi. Un nom déjà utilisé par une autre application est refusé, avec un message sous le titre.
 
 ### Créer ou annuler { #cancelling-a-creation }
 

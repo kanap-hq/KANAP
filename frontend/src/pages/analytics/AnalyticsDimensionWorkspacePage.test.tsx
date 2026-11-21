@@ -64,6 +64,7 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
 import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/analytics';
 import AnalyticsDimensionWorkspacePage from './AnalyticsDimensionWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = service as unknown as {
   getAnalyticsAxis: ReturnType<typeof vi.fn>;
@@ -169,7 +170,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     // The name is the header title: no name field in the panel.
     expect(screen.queryByLabelText('analytics.fields.name')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.editTitle' }));
-    const name = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const name = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(name, { target: { value: ' Kind of cost ' } });
     fireEvent.blur(name);
     await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { name: 'Kind of cost' }));
@@ -201,7 +202,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     renderAt('/master-data/analytics/dimensions/ax-nature/overview');
     await screen.findByLabelText('analytics.fields.code');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.editTitle' }));
-    const name = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const name = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(name, { target: { value: '  ' } });
     fireEvent.blur(name);
     expect(await screen.findByRole('button', { name: 'common:buttons.editTitle' })).toHaveTextContent('Nature');
@@ -411,11 +412,12 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     renderAt('/master-data/analytics/dimensions/new/overview');
     // The dimension's own page: the code sits in its Properties drawer.
     expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('analytics.fields.code'));
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Nature de coût' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Nature de coût' } });
     expect(screen.getByLabelText('analytics.fields.code')).toHaveValue('nature-de-cout');
     expect(screen.queryByLabelText('analytics.fields.order')).toBeNull();
     expect(mocked.createAnalyticsAxis).not.toHaveBeenCalled();
-    fireEvent.blur(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }));
+    // The name gives way to another field of the page.
+    fireEvent.blur(screen.getByRole('textbox', { name: TITLE_FIELD }), { relatedTarget: screen.getByLabelText('analytics.fields.code') });
     await waitFor(() => expect(mocked.createAnalyticsAxis).toHaveBeenCalledWith({
       code: 'nature-de-cout',
       name: 'Nature de coût',
@@ -436,7 +438,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     await pickUsage('master-data:shared.lineTypeUsage.capex');
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Investment type' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Investment type' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsAxis).toHaveBeenCalledWith(expect.objectContaining({
       code: 'investment-type',
@@ -606,7 +608,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
   it('creates a required dimension', async () => {
     mocked.createAnalyticsAxis.mockResolvedValue({ ...NATURE, id: 'ax-new', required: true });
     renderAt('/master-data/analytics/dimensions/new/overview');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Investment type' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Investment type' } });
     expect(requiredSwitch()).not.toBeChecked();
     fireEvent.click(requiredSwitch());
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
@@ -625,7 +627,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     fireEvent.focus(code);
     fireEvent.change(code, { target: { value: 'nature' } });
     fireEvent.blur(code);
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Cost nature' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Cost nature' } });
     expect(code).toHaveValue('nature');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     const message = await screen.findByText('A dimension with code nature already exists.');
@@ -638,7 +640,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(await screen.findByText('analytics.messages.nameRequired')).toBeInTheDocument();
     expect(markedLabels()).toEqual(['analytics.fields.code']);
     expect(screen.getByLabelText('analytics.fields.code')).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus();
     expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['analytics.messages.nameRequired']);
     expect(mocked.createAnalyticsAxis).not.toHaveBeenCalled();
   });
@@ -646,7 +648,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
   it('puts the cursor in the empty code on Create when the name proposes none', async () => {
     renderAt('/master-data/analytics/dimensions/new/overview');
     const code = screen.getByLabelText('analytics.fields.code');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: '***' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: '***' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(markedLabels()).toEqual(['analytics.fields.code']);
     await waitFor(() => expect(code).toHaveFocus());

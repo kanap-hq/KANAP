@@ -190,6 +190,7 @@ Una persona limitada a una parte del presupuesto usa el archivo dentro de su acc
 - La exportación contiene las líneas que ve.
 - Una fila que nombra una línea que no ve se trata como una línea que no existe. En un archivo procedente de una exportación, el mensaje es «BL-12 ya no está disponible desde la exportación.», el mismo que para una línea eliminada desde entonces.
 - Una línea que ve en Lectura se acepta cuando su fila no cambia. Un cambio se rechaza con «BL-12 es de solo lectura en su acceso.»
+- Una línea que cubre uno de sus nodos en Edición, por su empresa pagadora o por su centro de coste, se puede actualizar, sea cual sea la empresa que la paga.
 - Una línea nueva, o una nueva empresa o un nuevo centro de coste en una línea, debe corresponder a uno de sus nodos en Edición. Si no, la fila se rechaza con «Esta empresa o este centro de coste no forma parte de su acceso.»
 - Un valor desconocido solo se crea en una dimensión con valores abiertos. En las demás dimensiones, es un error de fila.
 - Una fila que se parece a una línea existente solo ofrece **Actualizar BL-12** cuando la persona puede modificar esa línea.

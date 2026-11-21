@@ -94,7 +94,7 @@ describe('CreationActions', () => {
     const view = render(<CreationActions onCreate={onCreate} onCancel={vi.fn()} />);
     const button = screen.getByRole('button', { name: 'common:buttons.create' });
     fireEvent.pointerDown(button);
-    // The press blurs the title, which writes the record; it comes back before the click.
+    // A record already on its way (Enter just before) comes back before the click.
     view.rerender(<CreationActions onCreate={onCreate} onCancel={vi.fn()} done />);
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }), { detail: 1 });
     expect(onCreate).not.toHaveBeenCalled();

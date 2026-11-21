@@ -56,9 +56,9 @@ La liste affiche tous les processus métier de votre tenant.
 
 1. Cliquez sur **Nouveau** dans la liste. La page du processus s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez le nom du processus, idéalement avec son code court (par ex. « Order-to-Cash (O2C) »).
-3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée le processus aussitôt, activé, et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis crée le processus aussitôt, activé, et tous les onglets s'ouvrent.
 
-Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi. Deux processus ne peuvent pas porter le même nom, quelle que soit la casse : un nom déjà utilisé est refusé, avec un message sous le titre.
+Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi. Deux processus ne peuvent pas porter le même nom, quelle que soit la casse : un nom déjà utilisé est refusé, avec un message sous le titre.
 
 Tant que le processus est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez le processus. **Ctrl+S** agit comme le bouton affiché.
 

@@ -11,18 +11,18 @@ Ambos tipos están en una sola lista y se abren en el mismo espacio de trabajo, 
 
 Navegue a **Gestión presupuestaria > Líneas presupuestarias** para ver la lista. Haga clic en **Nueva línea** para crear una línea.
 
-El espacio de trabajo se abre en una línea nueva, con el título **Nueva línea OPEX** o **Nueva línea CAPEX**. Su **Tipo** aparece primero en el panel de propiedades, junto al título: el tipo por el que está filtrada la lista en su columna **Tipo** y, si no, **OPEX**. Elija allí el otro tipo, antes o después del título. Escriba el nombre de la línea en el título de arriba y pulse Intro. La línea existe de inmediato, con la moneda de su espacio de trabajo y el 1 de enero del año que está viendo como inicio de vigencia, y todas las pestañas se abren, **Presupuesto** incluida. Complete el panel de propiedades: cada cambio se guarda al instante. Mientras la línea se está creando, **Tipo** sigue siendo un menú: la línea cambia de tipo en el sitio y conserva lo que introdujo. Una cuenta que no corresponde al nuevo tipo se queda en la línea, con su etiqueta en rojo, hasta que elija otra.
+El espacio de trabajo se abre en una línea nueva, con el título **Nueva línea OPEX** o **Nueva línea CAPEX**. Su **Tipo** aparece primero en el panel de propiedades, junto al título: el tipo por el que está filtrada la lista en su columna **Tipo** y, si no, **OPEX**. Elija allí el otro tipo, antes o después del título. Escriba el nombre de la línea en el título de arriba y pulse Intro. La línea existe de inmediato, con la moneda de su espacio de trabajo y el 1 de enero del año que está viendo como inicio de vigencia, y todas las pestañas se abren, **Presupuesto** incluida. Complete el panel de propiedades: cada cambio se guarda al instante. Mientras la línea se está creando, **Tipo** sigue siendo un menú: la línea cambia de tipo en el sitio y conserva lo que introdujo. Una cuenta que no corresponde al nuevo tipo se queda en la línea, con su etiqueta en rojo con un icono de alerta, hasta que elija otra.
 
 Si su acceso a los datos se limita a una empresa, la empresa pagadora se completa con ella. Si debe elegir, elija la empresa pagadora o el centro de coste antes de escribir el título.
 
 Mientras la línea se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre:
 
 - **Crear** funciona como Intro: crea la línea y la deja abierta, con su referencia. El cursor va al primer campo obligatorio aún vacío. Con el título vacío, el título pide uno
-- Una vez creada la línea, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y comprueba los campos obligatorios indicados abajo. Si falta alguno, su etiqueta se pone en rojo en el panel de propiedades y el cursor va al primero. Una etiqueta vuelve a la normalidad en cuanto su campo tiene un valor. Si no, vuelve al punto de partida: la pantalla anterior o, si no, la lista
+- Una vez creada la línea, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y comprueba los campos obligatorios indicados abajo. Si falta alguno, su etiqueta se pone en rojo con un icono de alerta en el panel de propiedades y el cursor va al primero. Una etiqueta vuelve a la normalidad en cuanto su campo tiene un valor. Si no, vuelve al punto de partida: la pantalla anterior o, si no, la lista
 - **Ctrl+S** funciona como el botón mostrado
 - **Cancelar** elimina la línea y todo lo que se introdujo en ella, importes incluidos. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar líneas. Una línea con importes en una columna congelada no se puede cancelar
 
-Si sale de la línea de otra forma mientras falta un campo obligatorio, se le pregunta si desea completarla o eliminarla. Si recarga la página o cierra la pestaña mientras a la línea nueva todavía le falta un campo obligatorio, su navegador pide confirmación y la línea se elimina si sale de todos modos. Una línea que se dejó sin empresa pagadora se abre con el panel de propiedades abierto y las etiquetas de sus campos que faltan en rojo, y vuelve a preguntar cada vez que sale de ella. Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre.
+Si sale de la línea de otra forma mientras falta un campo obligatorio, se le pregunta si desea completarla o eliminarla. Si recarga la página o cierra la pestaña mientras a la línea nueva todavía le falta un campo obligatorio, su navegador pide confirmación y la línea se elimina si sale de todos modos. Una línea que se dejó sin empresa pagadora se abre con el panel de propiedades abierto y las etiquetas de sus campos que faltan en rojo con un icono de alerta, y vuelve a preguntar cada vez que sale de ella. Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre.
 
 **Campos obligatorios**:
 
@@ -106,6 +106,7 @@ La lista (en **Gestión presupuestaria > Líneas presupuestarias**) reúne las l
 - **Empresa pagadora**: Qué empresa paga esta línea
 - **Cuenta**: El número y nombre de cuenta contable
 - **Presupuesto A** y **Aterrizaje previsto A**: Los importes del año actual de la columna por defecto y de la última columna visible (enlazan a la pestaña **Presupuesto** de este año). Con la configuración estándar son Presupuesto y Aterrizaje previsto. Cuando la columna por defecto es también la última visible, aparece una sola columna de importe. Consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)
+- Cuando un administrador de presupuesto cambia la columna por defecto, la lista la sigue. Si nunca eligió columnas de importes, muestra la nueva columna por defecto y la última columna visible. Si eligió las suyas, se mantienen y la nueva columna por defecto del año actual se añade junto a ellas. Puede volver a ocultarla en el selector de columnas
 - **Dimensiones obligatorias**: Una columna por dimensión activada que es obligatoria para alguno de los dos tipos, con el nombre de la dimensión. Un espacio de trabajo nuevo no tiene ninguna
 
 **Columnas adicionales** (ocultas por defecto, habilítelas mediante el selector de columnas):
@@ -333,7 +334,7 @@ La pestaña Presupuesto contiene los importes de la línea, año por año y colu
     - **Aterrizaje previsto**: Su mejor estimación de la cifra de fin de año
 - Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y elegir la columna por defecto en **Gestión presupuestaria > Administración > Columnas presupuestarias** (consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)). Una columna oculta conserva sus importes
 - Cada columna visible tiene una tarjeta bajo las pestañas de año: su nombre, su total del año, el origen de sus importes y su periodo, por ejemplo «Reparto uniforme» y «9 meses, abril a diciembre». Una columna vacía muestra solo su cero. Pase el cursor sobre una tarjeta para ver sus líneas de cantidad y precio
-- Haga clic en una tarjeta para trabajar en esa columna. La pestaña se abre en la primera columna visible que no está congelada
+- Haga clic en una tarjeta para trabajar en esa columna. La pestaña se abre en la [columna por defecto](budget-operations.md#columnas-presupuestarias), o en la primera columna visible que no está congelada cuando la columna por defecto está congelada
 - Con una sola columna visible no hay tarjetas: el editor muestra la columna directamente
 
 **Periodo de una columna**:

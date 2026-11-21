@@ -8,7 +8,7 @@ Navigieren Sie zu **IT-Landschaft > Assets**, um Ihr Asset-Inventar zu sehen. So
 
 1. Klicken Sie auf **Asset hinzufügen**, dann auf **Asset hinzufügen** oder **Cluster hinzufügen**. Die Seite des Assets öffnet sich mit einem leeren Titel in der Kopfzeile. Der Rest der Seite ist abgeblendet.
 2. Geben Sie den Namen des Assets ein, höchstens 200 Zeichen.
-3. Drücken Sie die Eingabetaste oder klicken Sie außerhalb des Titels. Kadratis erstellt das Asset sofort. Seine Referenz (`AST-12`) erscheint und alle Reiter öffnen sich.
+3. Drücken Sie die Eingabe- oder Tabulatortaste, oder klicken Sie auf **Erstellen**. Kadratis erstellt das Asset sofort. Seine Referenz (`AST-12`) erscheint und alle Reiter öffnen sich.
 
 Das neue Asset ist eine virtuelle Maschine in der Umgebung Prod, mit dem Lebenszyklus Aktiv. Haben Ihre Asset-Typen keine virtuelle Maschine, erhält es den ersten Typ der Liste. **Cluster hinzufügen** erstellt es mit eingeschaltetem Schalter **Cluster**. Danach speichert jedes Feld für sich, sodass Sie Typ oder Umgebung sofort ändern können.
 
@@ -21,7 +21,7 @@ Das neue Asset ist eine virtuelle Maschine in der Umgebung Prod, mit dem Lebensz
 - **Lebenszyklus**: Aktueller Status (Aktiv, Veraltet, Außer Betrieb usw.)
 - **Umgebung**: Zu welcher Umgebung dieses Asset gehört (Prod, Pre-prod, QA, Test, Dev, Sandbox)
 
-Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen, auch wenn Sie schon einen Namen eingegeben haben. Ein abgelehnter Name erscheint unter dem Titel.
+Escape im Titel, ein Klick auf **Abbrechen** oder das Verlassen der Seite erstellt nichts, auch wenn Sie schon einen Namen eingegeben haben. Ein abgelehnter Name erscheint unter dem Titel.
 
 **Eindeutige Namen**: Zwei Assets können weder denselben Namen noch denselben FQDN haben. Groß- und Kleinschreibung sowie Leerzeichen am Anfang oder Ende zählen nicht. Kadratis lehnt das Duplikat ab und nennt das Asset, das den Wert bereits hat (`AST-12`). Früher erfasste Duplikate bleiben bearbeitbar, solange Sie diesen Wert nicht ändern.
 
@@ -37,7 +37,7 @@ Drücken Sie Escape im Titel, um die Seite zu verlassen, ohne etwas zu erstellen
 Solange das Asset erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbrechen** anstelle der Schaltfläche zum Schließen. Beide bleiben, bis Sie das Asset verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche.
 
 - **Erstellen** wirkt wie die Eingabetaste: Es erstellt das Asset und lässt es geöffnet, mit seiner Referenz. Ist **Standort** leer, springt der Cursor dorthin. Bei leerem Titel verlangt der Titel einen
-- Sobald das Asset erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und prüft, ob das Asset einen Standort hat. Ohne Standort wird die Beschriftung **Standort** im Eigenschaftenbereich rot, und das Feld erhält den Fokus. Das Asset bleibt geöffnet. Mit Standort kehren Sie dorthin zurück, wo Sie begonnen haben
+- Sobald das Asset erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und prüft, ob das Asset einen Standort hat. Ohne Standort wird die Beschriftung **Standort** im Eigenschaftenbereich rot mit einem Warnsymbol, und das Feld erhält den Fokus. Das Asset bleibt geöffnet. Mit Standort kehren Sie dorthin zurück, wo Sie begonnen haben
 - **Abbrechen** löscht das Asset. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Assets abbrechen
 
 Verlassen Sie das Asset auf andere Weise (Zurück-Pfeil, Menü, ein anderes Asset), solange es keinen Standort hat, fragt Kadratis nach. **Vervollständigen** lässt Sie auf dem Asset, im Feld **Standort**. **Löschen** löscht das Asset. Wenn Sie die Seite neu laden oder den Tab schließen, solange das neue Asset keinen Standort hat, bittet Ihr Browser um Bestätigung. Verlassen Sie die Seite trotzdem, wird das Asset gelöscht.

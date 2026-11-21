@@ -23,12 +23,17 @@ vi.mock('../../../components/fields/SupplierSelect', () => ({
   default: (props: { selectedOption?: unknown }) => { supplierProps.current = props; return null; },
 }));
 vi.mock('../../../components/fields/CompanySelect', () => ({ default: () => null }));
-vi.mock('../../../components/fields/CostCenterSelect', () => ({ default: () => null }));
+vi.mock('../../../components/fields/CostCenterSelect', () => ({
+  default: (p: { required?: boolean; disableClearable?: boolean }) => (
+    <div data-testid="cost-center-select" data-required={String(!!p.required)} data-clearable={String(!p.disableClearable)} />
+  ),
+}));
 vi.mock('../../../components/fields/DateEUField', () => ({ default: () => null }));
 vi.mock('../../../components/fields/StatusLifecycleField', () => ({ default: () => null }));
 vi.mock('./ContractFields', () => ({ BillingField: () => null, CurrencyField: () => null, NumberField: () => null, RenewalField: () => null }));
 vi.mock('../../../hooks/useCostCenterTree', () => ({ useCostCenterNode: () => null }));
-vi.mock('../../../hooks/usePlacementOptions', () => ({ useContractPlacementFilter: () => null }));
+const placement = vi.hoisted(() => ({ current: null as null | { companyIds: ReadonlySet<string>; isCostCenterAllowed: () => boolean; placeRequired: boolean } }));
+vi.mock('../../../hooks/usePlacementOptions', () => ({ useContractPlacementFilter: () => placement.current }));
 
 import ContractPropertiesDrawer, { type ContractFormValues } from './ContractPropertiesDrawer';
 
@@ -115,5 +120,36 @@ describe('ContractPropertiesDrawer supplier', () => {
   it('gives no label for a supplier the detail does not describe (a pick not saved yet)', () => {
     renderDrawer({ supplierOption: { ...SALESFORCE, id: 'supplier-9' } });
     expect(supplierProps.current?.selectedOption).toBeNull();
+  });
+});
+
+describe('ContractPropertiesDrawer place', () => {
+  beforeEach(() => {
+    placement.current = null;
+    apiGet.mockReset();
+    apiGet.mockResolvedValue({ data: { items: [] } });
+  });
+
+  it('lets an unscoped person clear the place', () => {
+    renderDrawer();
+    const field = screen.getByTestId('cost-center-select');
+    expect(field).toHaveAttribute('data-clearable', 'true');
+    expect(field).toHaveAttribute('data-required', 'false');
+  });
+
+  // A contract held only through its place: the server refuses it without one.
+  it('marks the place required and not clearable when the access needs it', () => {
+    placement.current = { companyIds: new Set(['company-1']), isCostCenterAllowed: () => false, placeRequired: true };
+    renderDrawer();
+    const field = screen.getByTestId('cost-center-select');
+    expect(field).toHaveAttribute('data-clearable', 'false');
+    expect(field).toHaveAttribute('data-required', 'true');
+  });
+
+  // The requirement is about what this person may save: a contract she only reads shows no mark.
+  it('does not mark the place required on a contract the person only reads', () => {
+    placement.current = { companyIds: new Set(['company-1']), isCostCenterAllowed: () => false, placeRequired: true };
+    renderDrawer({ disabled: true });
+    expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-required', 'false');
   });
 });

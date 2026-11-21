@@ -12,7 +12,7 @@ Al hacer clic en **Nuevo**, la página de la tarea se abre con un título vacío
 
 1. **Escriba el título** (obligatorio) en el encabezado.
 
-2. **Pulse Intro**, o salga del campo. Kadratis crea la tarea al instante, con estos valores predeterminados:
+2. **Pulse Intro** o Tab, o haga clic en **Crear**. Kadratis crea la tarea al instante, con estos valores predeterminados:
    - **Estado**: **Abierto**
    - **Prioridad**: **Normal**
    - **Asignado** y **Solicitante**: usted
@@ -31,7 +31,7 @@ Al hacer clic en **Nuevo**, la página de la tarea se abre con un título vacío
 
 4. Haga clic en **Listo** cuando haya terminado. Vuelve al lugar donde empezó: una tarea empezada desde la pestaña **Tareas** de un proyecto vuelve a esa pestaña. Haga clic en **Cancelar** para eliminar la tarea en su lugar. Kadratis pide confirmación primero cuando ha introducido más que el título.
 
-Pulsar **Escape** en el título de una tarea nueva sale sin crear nada, aunque ya haya escrito un título. Salir de la tarea de cualquier otra forma la conserva.
+Pulsar **Escape** en el título de una tarea nueva, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un título. Una vez creada la tarea, salir de ella de otra forma que con **Cancelar** la conserva.
 
 **Consejo**: Puede pegar imágenes directamente en la descripción. Se suben automáticamente.
 

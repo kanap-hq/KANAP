@@ -34,7 +34,7 @@ Una línea es visible cuando la paga una empresa de la lista, o cuando está imp
 
 Un ejemplo. El espacio de trabajo tiene dos empresas, Alpha France y Alpha Spain, y un grupo Infraestructura que contiene INF-FR (Francia) e INF-ES (España).
 
-- Marta, limitada a **Alpha Spain (Edición)**, ve y modifica las líneas que paga Alpha Spain.
+- Marta, limitada a **Alpha Spain (Edición)**, ve y modifica las líneas que paga Alpha Spain y las líneas imputadas a sus centros de coste, como INF-ES, sea cual sea la empresa que las paga.
 - Paul, limitado a **Infraestructura (Lectura)**, lee las líneas imputadas a INF-FR e INF-ES. Una línea española sin centro de coste le queda oculta.
 - Claire, con **Todos los datos**, lo ve todo.
 
@@ -42,20 +42,31 @@ Un ejemplo. El espacio de trabajo tiene dos empresas, Alpha France y Alpha Spain
 
 Los nodos se suman. Cuando dos nodos cubren la misma línea, prevalece el acceso más amplio: con Redes en Lectura y RED-01 en Edición, las líneas de RED-01 son editables y el resto de Redes es de solo lectura. Un nodo no puede excluir uno de sus subnodos.
 
-### Crear y mover una línea o un contrato
+### Modificar, crear y mover una línea o un contrato
+
+Para modificar una línea, debe cubrirla un nodo en Edición, por su empresa pagadora o por su centro de coste, sea cual sea la empresa que la paga. Un centro de coste en Edición, o un grupo superior, abre por tanto todas las líneas imputadas a ese centro: importes, versiones, asignaciones, descripción, adjuntos y tareas. Un contrato se modifica del mismo modo, por su empresa o por su **Centro de coste o grupo**, sea cual sea la empresa del contrato.
 
 Para crear una línea, o cambiar su empresa o su centro de coste, la empresa debe corresponder a un nodo en Edición:
 
 - la empresa que paga es una empresa en Edición, o
 - el centro de coste de la línea está cubierto en Edición y la línea la paga la empresa de ese centro.
 
-Un nodo de centro de coste permite, por tanto, crear las líneas de ese centro pagadas por su empresa. No permite hacer pagar a otra empresa. Una línea pagada por una empresa distinta de la de su centro de coste se lee por el centro de coste y solo se modifica por su empresa pagadora.
+Un nodo de centro de coste permite, por tanto, crear las líneas de ese centro pagadas por su empresa. No permite hacer pagar a otra empresa.
 
-Los contratos siguen la misma regla con su empresa y su **Centro de coste o grupo**. Los selectores de empresa y de centro de coste solo ofrecen los valores que la persona puede usar. Otro valor se rechaza con «Esta empresa o este centro de coste no forma parte de su acceso.»
+Por ejemplo, una línea la paga Alpha France y está imputada a INF-ES. Una persona limitada a **INF-ES (Edición)** la modifica. No puede crear una línea así, y solo puede cambiar su empresa pagadora a Alpha Spain.
+
+Los contratos siguen la misma regla con su empresa y su **Centro de coste o grupo** cuando se crean o se mueven. Los selectores de empresa y de centro de coste solo ofrecen los valores que la persona puede usar. Otro valor se rechaza con «Esta empresa o este centro de coste no forma parte de su acceso.»
+
+Eliminar una línea o un contrato está reservado a las personas con todos los datos (ver más abajo).
 
 ### Líneas sin empresa
 
-Las líneas antiguas pueden no tener empresa. Solo las ven las personas con todos los datos, las personas con un nodo **Todo** y las personas nombradas en ellas. **Administración > Acceso a los datos** las cuenta, con un enlace a la lista.
+Una línea presupuestaria puede no tener empresa pagadora: una línea antigua, o una línea nueva cuya empresa pagadora aún no se ha elegido.
+
+- Imputada a un centro de coste, sigue a ese centro de coste: las personas cuyos nodos cubren el centro de coste la leen, y un nodo en Edición les permite modificarla. Al guardarla, recibe la empresa de su centro de coste.
+- Sin centro de coste, solo la ven las personas con todos los datos, las personas con un nodo **Todo** y las personas nombradas en ella.
+
+**Administración > Acceso a los datos** cuenta las líneas sin empresa, con un enlace a la lista.
 
 ## El rol dice qué, los nodos dicen dónde
 
@@ -78,7 +89,7 @@ Una persona limitada ve siempre aquello en lo que está nombrada, incluso fuera 
 | Persona asignada o responsable de una tarea | Edición |
 | Persona que sigue una tarea | Lectura |
 
-Crear una tarea no cuenta. Estar nombrada abre el elemento. No permite situarlo en una empresa o un centro de coste fuera de sus nodos en Edición, ni eliminarlo. Un cambio que sacaría una línea del acceso de la persona se rechaza con «Este cambio sacaría la línea de su acceso. Siga siendo uno de sus responsables, o pídaselo a alguien con acceso a su empresa.»
+Crear una tarea no cuenta. Estar nombrada abre el elemento. No permite situarlo en una empresa o un centro de coste que la regla anterior rechace, ni eliminarlo. Un cambio que sacaría una línea del acceso de la persona se rechaza con «Este cambio sacaría la línea de su acceso. Siga siendo uno de sus responsables, o pídaselo a alguien con acceso a su empresa.»
 
 Una persona limitada sin nodos solo ve aquello en lo que está nombrada. Una lista vacía nunca vuelve a ser todos los datos.
 
@@ -99,10 +110,10 @@ La pestaña **Acceso a los datos** de la ventana del usuario contiene:
 - **Añadir**, que abre un selector en tres secciones: **Empresas**, **Centros de coste** (grupos y centros, en árbol) y **Todo**. Sin centros de coste en el espacio de trabajo, el selector ofrece las empresas y **Todo**.
 - **Añadir sus centros (3)**, cuando la persona es responsable del presupuesto de centros de coste. Añade esos centros en Edición.
 - Dos recordatorios: «Esta persona también ve siempre aquello en lo que está nombrada.» y «Se aplica al presupuesto y a los contratos.»
-- La vista previa, por ejemplo «Con este acceso: 312 líneas presupuestarias, 280 en edición; 45 contratos.»
+- La vista previa, por ejemplo «Con este acceso: 312 líneas presupuestarias, 280 editables; 45 contratos.»
 - Quién cambió el acceso por última vez, y cuándo.
 
-La vista previa sigue cada cambio, antes de guardar. Mide los nodos, no los roles: **en edición** cuenta las líneas abiertas en Edición, aunque los roles de la persona no le permitan modificarlas.
+La vista previa sigue cada cambio, antes de guardar. Mide los nodos, no los roles: **editables** cuenta las líneas que cubre un nodo en Edición, por su empresa pagadora o por su centro de coste, aunque los roles de la persona no le permitan modificarlas.
 
 Volver a **Todos los datos** pide una confirmación, por ejemplo «Marta Ruiz verá todos los datos del presupuesto y de los contratos.»
 

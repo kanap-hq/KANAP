@@ -9,6 +9,7 @@ import { KanapDialogProvider } from '../../components/design';
 import api from '../../api';
 import ApplicationWorkspacePage, { OperationsTab, OverviewTab } from './ApplicationWorkspacePage';
 import type { ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const features = vi.hoisted(() => ({ vulnerabilityFeed: true }));
 
@@ -448,7 +449,7 @@ describe('Application workspace vulnerabilities', () => {
 
   it('keeps the History tab disabled while creating an application', async () => {
     renderPage('/it/applications/new/overview');
-    await screen.findByRole('textbox', { name: 'common:buttons.editTitle' });
+    await screen.findByRole('textbox', { name: TITLE_FIELD });
     const history = screen.getByRole('tab', { name: /workspace\.application\.tabs\.history/ });
     expect(history).toBeDisabled();
     expect(screen.queryByTestId('record-history')).toBeNull();
@@ -456,7 +457,7 @@ describe('Application workspace vulnerabilities', () => {
 
   it('reads nothing while creating an application', async () => {
     renderPage('/it/applications/new/overview');
-    await screen.findByRole('textbox', { name: 'common:buttons.editTitle' });
+    await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(vulnerabilityCalls()).toHaveLength(0);
     expect(screen.queryByTestId('vulnerability-severe-badge')).toBeNull();
   });

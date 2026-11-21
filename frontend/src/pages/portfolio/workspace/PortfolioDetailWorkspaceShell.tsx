@@ -74,9 +74,12 @@ type PortfolioDetailWorkspaceShellProps = {
   titleMaxLength?: number;
   /**
    * A new record: the title opens for typing, light blue while empty (`EditableTitle` `autoEdit`
-   * and `emphasizeEmpty`), and a committed name goes to `onTitleSave`, which creates the record.
+   * and `emphasizeEmpty`), and a name given by Enter or Tab goes to `onTitleSave`, which creates the
+   * record. Its blur sends nothing (`onTitleBlurDraft` aside).
    */
   titleAutoEdit?: boolean;
+  /** The blur of a new record's title, on a draft with other fields to give (`EditableTitle` `onBlurDraft`). */
+  onTitleBlurDraft?: (name: string) => void;
   /** Escape in the empty title of `titleAutoEdit`: leave without creating anything. */
   titleOnCancel?: () => void;
   /** Each new value moves the focus to the title (Create on an empty title). */
@@ -229,6 +232,7 @@ export default function PortfolioDetailWorkspaceShell({
   onTabChange,
   onTitleSave,
   onTitleDraftChange,
+  onTitleBlurDraft,
   titleOnTab,
   titleAutoEdit = false,
   titleMaxLength,
@@ -473,6 +477,7 @@ export default function PortfolioDetailWorkspaceShell({
                         maxLength={titleMaxLength}
                         onSave={onTitleSave}
                         onDraftChange={onTitleDraftChange}
+                        onBlurDraft={onTitleBlurDraft}
                         requiredMessage={titleRequiredMessage}
                         error={titleError}
                         autoEdit={titleAutoEdit}

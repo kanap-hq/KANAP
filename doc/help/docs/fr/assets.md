@@ -8,7 +8,7 @@ Rendez-vous dans **Cartographie SI > Actifs** pour voir votre inventaire d'actif
 
 1. Cliquez sur **Ajouter un actif**, puis sur **Ajouter un actif** ou **Ajouter un cluster**. La page de l'actif s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez le nom de l'actif, de 200 caractères au plus.
-3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée l'actif aussitôt. Sa référence (`AST-12`) s'affiche et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis crée l'actif aussitôt. Sa référence (`AST-12`) s'affiche et tous les onglets s'ouvrent.
 
 Le nouvel actif est une machine virtuelle de l'environnement Prod, au cycle de vie Actif. Si vos types d'actifs ne comptent pas de machine virtuelle, il prend le premier type de la liste. **Ajouter un cluster** le crée avec l'interrupteur **Cluster** activé. Chaque champ s'enregistre ensuite de lui-même : vous pouvez changer le type ou l'environnement tout de suite.
 
@@ -21,7 +21,7 @@ Le nouvel actif est une machine virtuelle de l'environnement Prod, au cycle de v
 - **Cycle de vie** : Statut actuel (Actif, Obsolète, Retiré, etc.)
 - **Environnement** : À quel environnement cet actif appartient (Prod, Pré-prod, QA, Test, Dev, Sandbox)
 
-Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi. Un nom refusé s'affiche sous le titre.
+Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi. Un nom refusé s'affiche sous le titre.
 
 **Noms uniques** : deux actifs ne peuvent pas avoir le même nom ni le même FQDN. La casse et les espaces en début ou en fin ne comptent pas. Kadratis refuse le doublon et nomme l'actif qui porte déjà la valeur (`AST-12`). Les doublons enregistrés auparavant restent modifiables tant que vous ne changez pas cette valeur.
 
@@ -37,7 +37,7 @@ Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom
 Tant que l'actif est en cours de création, son en-tête affiche **Créer** et **Annuler** à la place du bouton de fermeture. Ils restent jusqu'à ce que vous quittiez l'actif. **Ctrl+S** agit comme le bouton affiché.
 
 - **Créer** fait comme Entrée : il crée l'actif et le laisse ouvert, avec sa référence. Le curseur va au champ **Site** s'il est vide. Avec un titre vide, le titre en demande un
-- Une fois l'actif créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vérifie que l'actif a un site. Sans site, le libellé **Site** passe en rouge dans le tiroir des propriétés et le champ prend le focus. L'actif reste ouvert. Avec un site, vous revenez à votre point de départ
+- Une fois l'actif créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vérifie que l'actif a un site. Sans site, le libellé **Site** passe en rouge avec une icône d'alerte dans le tiroir des propriétés et le champ prend le focus. L'actif reste ouvert. Avec un site, vous revenez à votre point de départ
 - **Annuler** supprime l'actif. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des actifs
 
 Si vous quittez l'actif autrement (la flèche de retour, le menu, un autre actif) alors qu'il n'a pas de site, Kadratis vous demande quoi faire. **Le compléter** vous garde sur l'actif, sur le champ **Site**. **Le supprimer** supprime l'actif. Recharger la page ou fermer l'onglet alors que le nouvel actif n'a pas de site fait demander une confirmation par votre navigateur. Si vous partez quand même, l'actif est supprimé.

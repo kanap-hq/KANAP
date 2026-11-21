@@ -94,9 +94,9 @@ L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quit
 
 1. Cliquez sur **Nouvelle demande**. La page de la demande s'ouvre sur **Synthèse** avec un titre vide dans l'en-tête. Le reste de la page est grisé.
 2. Saisissez le nom de la demande.
-3. Appuyez sur Entrée, ou cliquez hors du titre. Kadratis crée la demande aussitôt, au statut **En attente de revue** et avec vous comme demandeur. Sa référence (`REQ-42`) apparaît et tous les onglets s'ouvrent.
+3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis crée la demande aussitôt, au statut **En attente de revue** et avec vous comme demandeur. Sa référence (`REQ-42`) apparaît et tous les onglets s'ouvrent.
 
-Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi.
+Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi.
 
 ### Créer ou annuler { #cancelling-a-creation }
 

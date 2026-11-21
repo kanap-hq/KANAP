@@ -91,9 +91,12 @@ async function testTaskElements(runner: QueryRunner, s: Seed) {
      VALUES (app_current_tenant(), 'DA 3B2 task', $1, 'spend_item', $2, $3, '[]'::jsonb, $4::jsonb) RETURNING id`,
     [number++, line, assignee, JSON.stringify(viewers)],
   ))[0].id as string;
-  // L3 is read only for Rita: she observes one task of it and is assigned another.
-  const observed = await task(s.lines.L3, null, [p.rita]);
-  const assigned = await task(s.lines.L3, p.rita, []);
+  // L2 is read only for Rita (read through the group INF): she observes one task of it and is
+  // assigned another. L3 is modified through her centre INF-FR (amendment of 2026-11-21): she
+  // observes a task of it too.
+  const observed = await task(s.lines.L2, null, [p.rita]);
+  const assigned = await task(s.lines.L2, p.rita, []);
+  const observedOnCentre = await task(s.lines.L3, null, [p.rita]);
   const entry = (await q(
     `INSERT INTO task_time_entries (tenant_id, task_id, user_id, hours, category, logged_by_id, logged_at)
      VALUES (app_current_tenant(), $1, $2, 1, 'it', $2, now()) RETURNING id`, [observed, p.rita],
@@ -116,6 +119,8 @@ async function testTaskElements(runner: QueryRunner, s: Seed) {
     await refusedWith(() => entries.delete(entry, p.rita, { manager: m }), DATA_ACCESS_READ_ONLY_TASK_MESSAGE);
     // The assignee is responsible: the task is modifiable, a time entry passes.
     await entries.create(assigned, { hours: 1, logged_at: new Date() }, p.rita, false, { manager: m });
+    // A task observed on a line modified through its centre: a time entry passes.
+    await entries.create(observedOnCentre, { hours: 1, logged_at: new Date() }, p.rita, false, { manager: m });
 
     const files = new TaskAttachmentsService(m.getRepository(TaskAttachment), storage as any, audit, {} as any, {} as any);
     const file = { originalname: 'b.txt', mimetype: 'text/plain', buffer: Buffer.from('x'), size: 1 } as any;
@@ -130,7 +135,7 @@ async function testTaskElements(runner: QueryRunner, s: Seed) {
     assert.equal(kept.n, 1, 'the history of a task not deleted stays');
   });
   await as(runner, p.marta, async (m) => {
-    // L3 is Marta's to modify: she deletes the task.
+    // L2 is Marta's to modify (its centre INF-ES, unfolded from her company ES): she deletes the task.
     const deletes = new TasksDeleteService(m.getRepository(Task), audit, aggregates);
     await deletes.delete(assigned, { manager: m, userId: p.marta });
     assert.equal((await m.query(`SELECT 1 FROM tasks WHERE id = $1`, [assigned])).length, 0);
@@ -141,10 +146,11 @@ async function testTaskElements(runner: QueryRunner, s: Seed) {
 async function testLineLinksAndSuccessor(runner: QueryRunner, s: Seed) {
   const { persons: p } = s;
   const deps = { manager: runner.manager, audit };
-  const line = (label: 'L1' | 'L3' | 'L5') => ({ id: s.lines[label], tenant_id: s.tenantId }) as any;
+  const line = (label: 'L1' | 'L2' | 'L3' | 'L5') => ({ id: s.lines[label], tenant_id: s.tenantId }) as any;
   await as(runner, p.rita, async () => {
     await replaceItemApplications(deps, 'opex', line('L1'), [], p.rita);
-    await refusedWith(() => replaceItemApplications(deps, 'opex', line('L3'), [], p.rita), DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
+    await replaceItemApplications(deps, 'opex', line('L3'), [], p.rita);
+    await refusedWith(() => replaceItemApplications(deps, 'opex', line('L2'), [], p.rita), DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
     await assert.rejects(() => replaceItemApplications(deps, 'opex', line('L5'), [], p.rita), (err: any) => err?.getStatus?.() === 404);
   });
   // L5 (out of Rita's access) continues L1: Rita does not see the successor, the key refuses a second.
@@ -176,14 +182,15 @@ async function testList(runner: QueryRunner, s: Seed) {
     const editable = new Map(page.items.filter((row) => ours.has(row.id)).map((row) => [row.id, row.editable]));
     assert.deepEqual(
       Object.fromEntries((['L1', 'L2', 'L3', 'L4'] as const).map((label) => [label, editable.get(s.lines[label])])),
-      { L1: true, L2: false, L3: false, L4: false },
+      { L1: true, L2: false, L3: true, L4: false },
       'editable per row, by the policies\' function',
     );
     assert.equal(editable.has(s.lines.L5), false, 'L5 is out of read access');
     const totals = await budgetList.budgetListTotals(scope, deps, query, m);
     assert.equal((totals as any).dataAccessLimited, true);
     assert.deepEqual(await lineEditableField(m, s.lines.L1), { editable: true });
-    assert.deepEqual(await lineEditableField(m, s.lines.L3), { editable: false });
+    assert.deepEqual(await lineEditableField(m, s.lines.L3), { editable: true });
+    assert.deepEqual(await lineEditableField(m, s.lines.L2), { editable: false });
   });
   await as(runner, p.ulla, async (m) => {
     let page: Awaited<ReturnType<typeof budgetList.budgetListSummary>> | null = null;

@@ -8,7 +8,7 @@ Navegue a **Panorama IT > Activos** para ver su inventario de activos. Para crea
 
 1. Haga clic en **Añadir activo** y luego en **Añadir activo** o **Añadir clúster**. La página del activo se abre con un título vacío en el encabezado. El resto de la página aparece atenuado.
 2. Escriba el nombre del activo, de 200 caracteres como máximo.
-3. Pulse Intro o haga clic fuera del título. Kadratis crea el activo de inmediato. Su referencia (`AST-12`) aparece y se abren todas las pestañas.
+3. Pulse Intro o Tab, o haga clic en **Crear**. Kadratis crea el activo de inmediato. Su referencia (`AST-12`) aparece y se abren todas las pestañas.
 
 El nuevo activo es una máquina virtual del entorno Prod, con el ciclo de vida Activo. Si sus tipos de activos no tienen máquina virtual, toma el primer tipo de la lista. **Añadir clúster** lo crea con el conmutador **Clúster** activado. Después, cada campo se guarda por sí solo, así que puede cambiar el tipo o el entorno enseguida.
 
@@ -21,7 +21,7 @@ El nuevo activo es una máquina virtual del entorno Prod, con el ciclo de vida A
 - **Ciclo de vida**: Estado actual (Activo, Obsoleto, Retirado, etc.)
 - **Entorno**: A qué entorno pertenece este activo (Prod, Pre-prod, QA, Test, Dev, Sandbox)
 
-Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre. Un nombre rechazado se muestra bajo el título.
+Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un nombre. Un nombre rechazado se muestra bajo el título.
 
 **Nombres únicos**: dos activos no pueden tener el mismo nombre ni el mismo FQDN. Las mayúsculas y los espacios al principio o al final no cuentan. Kadratis rechaza el duplicado e indica el activo que ya tiene el valor (`AST-12`). Los duplicados registrados antes siguen siendo editables mientras no cambie ese valor.
 
@@ -37,7 +37,7 @@ Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un 
 Mientras el activo se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre. Permanecen hasta que salga del activo. **Ctrl+S** funciona como el botón mostrado.
 
 - **Crear** funciona como Intro: crea el activo y lo deja abierto, con su referencia. El cursor va a **Ubicación** si está vacía. Con el título vacío, el título pide uno
-- Una vez creado el activo, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y comprueba que el activo tenga una ubicación. Sin ella, la etiqueta **Ubicación** se pone en rojo en el panel de propiedades y el campo recibe el foco. El activo sigue abierto. Con una ubicación, vuelve al punto de partida
+- Una vez creado el activo, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y comprueba que el activo tenga una ubicación. Sin ella, la etiqueta **Ubicación** se pone en rojo con un icono de alerta en el panel de propiedades y el campo recibe el foco. El activo sigue abierto. Con una ubicación, vuelve al punto de partida
 - **Cancelar** elimina el activo. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar activos
 
 Si sale del activo de otra forma (la flecha de retroceso, el menú, otro activo) mientras no tiene ubicación, Kadratis le pregunta qué hacer. **Completarlo** le deja en el activo, en el campo **Ubicación**. **Eliminarlo** elimina el activo. Si recarga la página o cierra la pestaña mientras el activo nuevo no tiene ubicación, su navegador pide confirmación. Si sale de todos modos, el activo se elimina.

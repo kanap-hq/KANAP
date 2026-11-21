@@ -34,7 +34,7 @@ A line is visible when a listed company pays it, or when it is charged to a cost
 
 An example. The workspace has two companies, Alpha France and Alpha Spain, and a group Infrastructure that holds INF-FR (France) and INF-ES (Spain).
 
-- Marta, limited to **Alpha Spain (Edit)**, sees and edits the lines paid by Alpha Spain.
+- Marta, limited to **Alpha Spain (Edit)**, sees and edits the lines paid by Alpha Spain and the lines charged to its cost centers, such as INF-ES, whatever company pays them.
 - Paul, limited to **Infrastructure (Read)**, reads the lines charged to INF-FR and INF-ES. A Spanish line with no cost center stays hidden from him.
 - Claire, in **All data**, sees everything.
 
@@ -42,20 +42,31 @@ An example. The workspace has two companies, Alpha France and Alpha Spain, and a
 
 Nodes add up. When two nodes cover the same line, the wider access wins: with Networks in Read and NET-01 in Edit, the lines of NET-01 can be edited and the rest of Networks is read only. A node cannot exclude one of its sub-nodes.
 
-### Creating and moving a line or a contract
+### Editing, creating and moving a line or a contract
+
+To edit a line, an Edit node must cover it, through its paying company or through its cost center, whatever company pays it. A cost center in Edit, or a group above it, therefore opens every line charged to that center: amounts, versions, allocations, description, attachments and tasks. A contract is edited the same way, through its company or its **Cost center or group**, whatever the contract's company.
 
 To create a line, or to change its company or cost center, the company must fit an Edit node:
 
 - the paying company is a company in Edit, or
 - the line's cost center is covered in Edit and the line is paid by that cost center's company.
 
-A cost center node therefore lets a person create the lines of that center, paid by its company. It does not let them make another company pay. A line paid by another company than the company of its cost center is read through the cost center and edited only through its paying company.
+A cost center node therefore lets a person create the lines of that center, paid by its company. It does not let them make another company pay.
 
-Contracts follow the same rule with their company and their **Cost center or group**. The company and cost center pickers offer only the values the person may use. A value outside them is refused with "This company or cost center is not part of your access."
+For example, a line is paid by Alpha France and charged to INF-ES. A person limited to **INF-ES (Edit)** edits it. They cannot create such a line, and they can change its paying company only to Alpha Spain.
+
+Contracts follow the same rule with their company and their **Cost center or group** when they are created or moved. The company and cost center pickers offer only the values the person may use. A value outside them is refused with "This company or cost center is not part of your access."
+
+Deleting a line or a contract is reserved to people with all data (see below).
 
 ### Lines without a company
 
-Older lines can have no company. They are visible only to people with all data, to people with an **Everything** node, and to the people named on them. **Admin > Data access** counts them, with a link to the list.
+A budget line can have no paying company: an older line, or a new line whose paying company is not chosen yet.
+
+- Charged to a cost center, it follows that cost center: the people whose nodes cover the cost center read it, and an Edit node lets them edit it. Saving it gives it the company of its cost center.
+- With no cost center, it is visible only to people with all data, to people with an **Everything** node, and to the people named on it.
+
+**Admin > Data access** counts the lines without a company, with a link to the list.
 
 ## The role says what, the nodes say where
 
@@ -78,7 +89,7 @@ A limited person always sees what they are named on, even outside their nodes:
 | Assignee or owner of a task | Edit |
 | Viewer of a task | Read |
 
-Creating a task does not count. Being named opens the item. It does not let the person move it to a company or cost center outside their Edit nodes, nor delete it. A change that would take a line out of the person's access is refused with "This change would take the line out of your access. Keep yourself as an owner, or ask someone with access to its company."
+Creating a task does not count. Being named opens the item. It does not let the person move it to a company or cost center the rule above refuses, nor delete it. A change that would take a line out of the person's access is refused with "This change would take the line out of your access. Keep yourself as an owner, or ask someone with access to its company."
 
 A limited person with no node sees only what they are named on. An empty list never turns back into all data.
 
@@ -102,7 +113,7 @@ The **Data access** tab of the user window holds:
 - The preview, for example "With this access: 312 budget lines, 280 editable; 45 contracts."
 - Who changed the access last, and when.
 
-The preview follows every change, before you save. It measures the nodes, not the roles: **editable** counts the lines opened in Edit, even when the person's roles do not let them edit.
+The preview follows every change, before you save. It measures the nodes, not the roles: **editable** counts the lines an Edit node covers, through their paying company or their cost center, even when the person's roles do not let them edit.
 
 Switching back to **All data** asks for a confirmation, for example "Marta Ruiz will see all budget and contract data."
 

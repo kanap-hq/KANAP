@@ -171,12 +171,15 @@ async function readCostCenter(manager: EntityManager, tenantId: string, id: stri
 /**
  * Data-scoped access (spec §2.3, §4.1, §6.7, §6.8), in a limited transaction only (an unscoped
  * person costs no query), with the SQL functions of the database, in one statement:
- * - an update needs the line modifiable (`data_access_line_editable` on the stored values; the
- *   update path already locked it, which refuses a read-only line the same way);
+ * - an update needs the line modifiable (`data_access_line_editable` on the stored values: an edit
+ *   node on its paying company or on its cost center, whatever the company that pays, or a person
+ *   responsible for it; the update path already locked it, which refuses a read-only line the same
+ *   way);
  * - a create, or a change of company or cost center, needs the new place allowed
- *   (`data_access_placable_line`); a participation never places (the placement trigger);
+ *   (`data_access_placable_line`, narrower than modifying: a cost center of the access takes only
+ *   its own company); a participation never places (the placement trigger);
  * - the line must stay modifiable after the write: an owner who hands the line over without an edit
- *   node on its place would make the row fail the policy (42501, spec §6.8);
+ *   node on its company or its cost center would make the row fail the policy (42501, spec §6.8);
  * - a contract named anew must be readable (`data_access_contract_visible`), with the answer of a
  *   missing contract (spec §5.4).
  */

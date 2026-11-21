@@ -10,6 +10,7 @@ import { resetCreationStore } from '../../components/workspace/creation/creation
 import { clearCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import api from '../../api';
 import KnowledgeWorkspacePage from './KnowledgeWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 // Creation at the title (lot V4): the title committed on the new page creates the document with
 // what the former Save sent, takes its lock and moves to it in edit mode; "Cancel" deletes it
@@ -121,7 +122,7 @@ function location() {
 }
 
 async function commitTitle() {
-  const input = await screen.findByRole('textbox', { name: TITLE });
+  const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
   fireEvent.change(input, { target: { value: 'Cheese cellar runbook' } });
   fireEvent.keyDown(input, { key: 'Enter' });
 }
@@ -145,7 +146,7 @@ describe('Document creation at the title', () => {
 
   it('opens with the title to type and the document to come dimmed', async () => {
     renderPage(['/knowledge/new?library=runbooks']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(input).toHaveFocus();
     expect(input).toHaveAttribute('placeholder', 'workspace.fields.titlePlaceholder');
     expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
@@ -263,9 +264,9 @@ describe('Document creation at the title', () => {
   it('creates the document on Create clicked just after the title, and keeps it open with Done', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new document' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Cheese cellar runbook' } });
-    // In a browser the click's press blurs the title first, which commits it.
+    // In a browser the press takes the focus from the title, which writes nothing; Create writes the name typed.
     fireEvent.blur(input);
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(location()).toBe('/knowledge/DOC-9?library=runbooks&allLibraries=0'));
@@ -303,7 +304,7 @@ describe('Document creation at the title', () => {
 
   it('puts the cursor in the text of the document Create created, as Tab from the title does', async () => {
     renderPage(['/knowledge/new?library=runbooks']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Cheese cellar runbook' } });
     const create = screen.getByRole('button', { name: 'common:buttons.create' });
     fireEvent.pointerDown(create);
@@ -315,7 +316,7 @@ describe('Document creation at the title', () => {
 
   it('puts the cursor in the text of the document Tab from the title created', async () => {
     renderPage(['/knowledge/new?library=runbooks']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Cheese cellar runbook' } });
     fireEvent.keyDown(input, { key: 'Tab' });
     await waitFor(() => expect(location()).toBe('/knowledge/DOC-9?library=runbooks&allLibraries=0'));
@@ -331,17 +332,17 @@ describe('Document creation at the title', () => {
 
   it('shows the error under the empty title on Create, nothing created', async () => {
     renderPage(['/knowledge/new?library=runbooks']);
-    await screen.findByRole('textbox', { name: TITLE });
+    await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
-    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus());
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
   it('leaves an empty new document on Escape, to the previous address', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new document' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.keyDown(input, { key: 'Escape' });
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.post).not.toHaveBeenCalled();

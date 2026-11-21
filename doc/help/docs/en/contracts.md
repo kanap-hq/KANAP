@@ -8,7 +8,7 @@ Navigate to **Budget management > Contracts** to see the list. Click **New** to 
 
 The page of the new contract opens, its properties panel open. Type the contract name in the title at the top of the page and fill in the required fields below. The contract is created as soon as they are all given, and every tab becomes available. Press Escape in the title to leave without creating anything, even with a name typed.
 
-While the contract is being created, the header shows **Create** and **Cancel** until you leave it. **Ctrl+S** works like the button shown. **Create** writes the contract when its required fields are given and leaves it open. If one is still missing, its label turns red and the cursor goes to it. Once the contract is created, **Create** becomes **Done**: it saves what you are still typing and takes you back to where you started, the list or the previous screen. **Cancel** leaves without keeping anything, and deletes the contract if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete contracts. Leaving the contract any other way keeps it.
+While the contract is being created, the header shows **Create** and **Cancel** until you leave it. **Ctrl+S** works like the button shown. **Create** writes the contract when its required fields are given and leaves it open. If one is still missing, its label turns red with an alert icon and the cursor goes to it. Once the contract is created, **Create** becomes **Done**: it saves what you are still typing and takes you back to where you started, the list or the previous screen. **Cancel** leaves without keeping anything, and deletes the contract if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete contracts. Leaving the contract any other way keeps it.
 
 **Required fields**:
 
@@ -125,7 +125,7 @@ The header shows the contract reference (`CTR-5`, click it to copy it) and the c
 
 The **Properties** panel on the right holds every field of the contract: the parties, **Start**, **Duration (months)**, **Notice (months)**, **Tacit renewal**, **Yearly amount**, **Currency**, **Billing**, then **Lifecycle** (**Status** and **End of validity**), **Created** and **Updated**. Open or close it with its button; Kadratis remembers your choice.
 
-**Cost center or group** is optional. It places the contract under a cost center or a group for [data access](data-access.md): the people limited to that node, or to a group above it, see the contract as well as those limited to its company.
+**Cost center or group** is optional. It places the contract under a cost center or a group for [data access](data-access.md): the people limited to that node, or to a group above it, see the contract as well as those limited to its company. With that node in Edit, they edit the contract, whatever its company.
 
 Every change saves itself: lists and dates at once, typed values and notes after a short pause, the name when you leave the field. "Saving…" then "Saved" appears in the header. Two people editing the same contract are not warned: the last change wins.
 

@@ -190,6 +190,7 @@ Eine Person, die auf einen Teil des Budgets begrenzt ist, verwendet die Datei in
 - Der Export enthält die Zeilen, die sie sieht.
 - Eine Dateizeile, die eine Budgetzeile nennt, die sie nicht sieht, wird wie eine nicht vorhandene Zeile behandelt. In einer Datei aus einem Export lautet die Meldung „BL-12 ist seit dem Export nicht mehr verfügbar.“, wie bei einer seitdem gelöschten Zeile.
 - Eine Zeile, die sie mit Lesen sieht, wird akzeptiert, wenn ihre Dateizeile unverändert ist. Eine Änderung wird mit „BL-12 ist in Ihrem Zugriff schreibgeschützt.“ abgelehnt.
+- Eine Zeile, die einer ihrer Knoten mit Bearbeiten abdeckt, über ihr zahlendes Unternehmen oder ihre Kostenstelle, kann aktualisiert werden, unabhängig davon, welches Unternehmen sie bezahlt.
 - Eine neue Zeile, oder ein neues Unternehmen oder eine neue Kostenstelle auf einer Zeile, muss zu einem ihrer Knoten mit Bearbeiten passen. Sonst wird die Dateizeile mit „Dieses Unternehmen oder diese Kostenstelle gehört nicht zu Ihrem Zugriff.“ abgelehnt.
 - Ein unbekannter Wert wird nur bei einer Dimension mit offenen Werten angelegt. Bei den anderen Dimensionen ist er ein Zeilenfehler.
 - Eine Zeile, die einer bestehenden Budgetzeile ähnelt, bietet **BL-12 aktualisieren** nur an, wenn die Person diese Budgetzeile bearbeiten darf.

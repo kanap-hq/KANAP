@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ColDef } from 'ag-grid-community';
+import { ColDef, type ColumnState } from 'ag-grid-community';
 import ServerDataGrid, { DATE_COLUMN_FILTER, DATE_COLUMN_FILTER_TWO_CONDITIONS, EnhancedColDef, StatusScope, gridSortModel } from '../../components/ServerDataGrid';
 import PageHeader from '../../components/PageHeader';
 import { Box, Button, Chip, Stack, Typography } from '@mui/material';
@@ -24,10 +24,12 @@ import { formatItemRef } from '../../utils/item-ref';
 import { budgetTypeChipSx } from './budgetTypeChipSx';
 import {
   amountColumnYear,
+  amountLayoutStamp,
   buildAmountColumnDefs,
   buildFteColumnDefs,
   cellFxMissing,
   explicitSort,
+  followDefaultAmountColumns,
   fteTotalsToRow,
   pendingAmountsField,
   totalsToVersions,
@@ -250,6 +252,11 @@ function BudgetListPageView() {
     (sort?: string | null) => explicitSort(sort, budgetColumnsRef.current.shown, budgetColumnsRef.current.defaultSort, isListFieldRef.current),
     [],
   );
+  // A saved layout follows a change of the default column (`followDefaultAmountColumns`).
+  const layoutStamp = useMemo(() => ({
+    value: amountLayoutStamp(budgetColumns),
+    migrate: (saved: ColumnState[], savedStamp: string | null) => followDefaultAmountColumns(saved, savedStamp, budgetColumns),
+  }), [budgetColumns]);
   const gridDefaultSort = useMemo(
     () => ({ field: budgetColumns.defaultSort.split(':')[0], direction: 'DESC' as const }),
     [budgetColumns.defaultSort],
@@ -1057,6 +1064,7 @@ function BudgetListPageView() {
         filteredColumnsAfter="product_name"
         statusScopeConfig={{ defaultScope: 'enabled' }}
         columnPreferencesKey="budget-summary"
+        columnLayoutStamp={layoutStamp}
         initialState={initialGridState}
         refreshKey={refreshKey}
         onGridApiReady={(gridApi) => {

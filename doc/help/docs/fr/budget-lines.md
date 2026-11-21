@@ -11,18 +11,18 @@ Les deux types se trouvent dans une seule liste et s'ouvrent dans le même espac
 
 Rendez-vous dans **Gestion budgétaire > Lignes budgétaires** pour voir la liste. Cliquez sur **Nouvelle ligne** pour créer une ligne.
 
-L'espace de travail s'ouvre sur une nouvelle ligne, intitulée **Nouvelle ligne OPEX** ou **Nouvelle ligne CAPEX**. Son **Type** vient en premier dans le panneau **Propriétés**, à côté du titre : le type sur lequel la liste est filtrée dans sa colonne **Type**, sinon **OPEX**. Choisissez-y l'autre type, avant ou après le titre. Saisissez le nom de la ligne dans le titre en haut et appuyez sur Entrée. La ligne existe aussitôt, avec la devise de votre espace de travail et le 1er janvier de l'année affichée comme début d'effet, et tous les onglets s'ouvrent, **Budget** compris. Remplissez le panneau **Propriétés** : chaque modification est enregistrée aussitôt. Tant que la ligne est en cours de création, **Type** reste un menu : la ligne change de type sur place et garde ce que vous avez saisi. Un compte qui ne convient pas au nouveau type reste sur la ligne, son libellé en rouge, jusqu'à ce que vous en choisissiez un autre.
+L'espace de travail s'ouvre sur une nouvelle ligne, intitulée **Nouvelle ligne OPEX** ou **Nouvelle ligne CAPEX**. Son **Type** vient en premier dans le panneau **Propriétés**, à côté du titre : le type sur lequel la liste est filtrée dans sa colonne **Type**, sinon **OPEX**. Choisissez-y l'autre type, avant ou après le titre. Saisissez le nom de la ligne dans le titre en haut et appuyez sur Entrée. La ligne existe aussitôt, avec la devise de votre espace de travail et le 1er janvier de l'année affichée comme début d'effet, et tous les onglets s'ouvrent, **Budget** compris. Remplissez le panneau **Propriétés** : chaque modification est enregistrée aussitôt. Tant que la ligne est en cours de création, **Type** reste un menu : la ligne change de type sur place et garde ce que vous avez saisi. Un compte qui ne convient pas au nouveau type reste sur la ligne, son libellé en rouge avec une icône d'alerte, jusqu'à ce que vous en choisissiez un autre.
 
 Si votre accès aux données est limité à une société, la société payeuse est remplie avec elle. Si vous devez choisir, choisissez la société payeuse ou le centre de coûts avant de saisir le titre.
 
 Tant que la ligne est en cours de création, son en-tête affiche **Créer** et **Annuler** à la place du bouton de fermeture :
 
 - **Créer** fait comme Entrée : il crée la ligne et la laisse ouverte, avec sa référence. Le curseur va au premier champ obligatoire encore vide. Avec un titre vide, le titre en demande un
-- Une fois la ligne créée, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vérifie les champs obligatoires ci-dessous. S'il en manque un, son libellé passe en rouge dans le panneau **Propriétés** et le curseur va au premier. Un libellé redevient normal dès que son champ a une valeur. Sinon, vous revenez à votre point de départ : l'écran précédent, sinon la liste
+- Une fois la ligne créée, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vérifie les champs obligatoires ci-dessous. S'il en manque un, son libellé passe en rouge avec une icône d'alerte dans le panneau **Propriétés** et le curseur va au premier. Un libellé redevient normal dès que son champ a une valeur. Sinon, vous revenez à votre point de départ : l'écran précédent, sinon la liste
 - **Ctrl+S** agit comme le bouton affiché
 - **Annuler** supprime la ligne et tout ce qui y a été saisi, montants compris. Si vous avez saisi plus que le titre, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des lignes. Une ligne qui a des montants dans une colonne gelée ne peut pas être annulée
 
-Quitter la ligne autrement alors qu'un champ obligatoire manque vous demande de la compléter ou de la supprimer. Recharger la page ou fermer l'onglet alors qu'il manque encore un champ obligatoire à la nouvelle ligne fait demander une confirmation par votre navigateur, et la ligne est supprimée si vous partez quand même. Une ligne laissée sans société payeuse s'ouvre avec le panneau **Propriétés** ouvert et les libellés de ses champs manquants en rouge, et repose la question chaque fois que vous la quittez. Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi.
+Quitter la ligne autrement alors qu'un champ obligatoire manque vous demande de la compléter ou de la supprimer. Recharger la page ou fermer l'onglet alors qu'il manque encore un champ obligatoire à la nouvelle ligne fait demander une confirmation par votre navigateur, et la ligne est supprimée si vous partez quand même. Une ligne laissée sans société payeuse s'ouvre avec le panneau **Propriétés** ouvert et les libellés de ses champs manquants en rouge avec une icône d'alerte, et repose la question chaque fois que vous la quittez. Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi.
 
 **Champs obligatoires** :
 
@@ -106,6 +106,7 @@ La liste (dans **Gestion budgétaire > Lignes budgétaires**) contient les ligne
 - **Société payeuse** : Quelle société paie cette ligne
 - **Compte** : Le numéro et le nom du compte comptable
 - **Budget A** et **Atterrissage prévu A** : Les montants de l'année en cours de la colonne par défaut et de la dernière colonne affichée (ouvre l'onglet **Budget** pour cette année). Avec les réglages standard, ce sont Budget et Atterrissage prévu. Quand la colonne par défaut est aussi la dernière affichée, une seule colonne de montant apparaît. Voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)
+- Quand un administrateur budgétaire change la colonne par défaut, la liste suit. Si vous n'avez jamais choisi de colonnes de montants, elle affiche la nouvelle colonne par défaut et la dernière colonne affichée. Si vous avez choisi les vôtres, elles restent et la nouvelle colonne par défaut de l'année en cours s'ajoute à côté. Vous pouvez la masquer à nouveau dans le sélecteur de colonnes
 - **Dimensions obligatoires** : Une colonne par dimension activée obligatoire pour l'un ou l'autre type, à son nom. Un nouvel espace de travail n'en a aucune
 
 **Colonnes supplémentaires** (masquées par défaut, activez-les via le sélecteur de colonnes) :
@@ -333,7 +334,7 @@ L'onglet Budget porte les montants de la ligne, année par année et colonne par
     - **Atterrissage prévu** : Votre meilleure estimation du chiffre de fin d'année
 - Un administrateur budgétaire peut renommer les colonnes, en masquer certaines et choisir la colonne par défaut dans **Gestion budgétaire > Administration > Colonnes budgétaires** (voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)). Une colonne masquée garde ses montants
 - Chaque colonne affichée a une carte sous les onglets d'année : son nom, son total pour l'année, l'origine de ses montants et sa période, par exemple « Répartition linéaire » et « 9 mois, avril à décembre ». Une colonne vide affiche son zéro seul. Survolez une carte pour voir ses lignes de quantité et prix
-- Cliquez sur une carte pour travailler sur cette colonne. L'onglet s'ouvre sur la première colonne affichée qui n'est pas gelée
+- Cliquez sur une carte pour travailler sur cette colonne. L'onglet s'ouvre sur la [colonne par défaut](budget-operations.md#colonnes-budgetaires), ou sur la première colonne affichée qui n'est pas gelée quand la colonne par défaut est gelée
 - Avec une seule colonne affichée, il n'y a pas de cartes : l'éditeur montre directement la colonne
 
 **Période d'une colonne** :

@@ -79,6 +79,19 @@ describe('EditableTitle', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  it('shows the message under the title in the readable red of each mode', () => {
+    for (const mode of ['light', 'dark'] as const) {
+      const theme = createAppTheme(mode);
+      const view = render(
+        <ThemeProvider theme={theme}>
+          <EditableTitle value="Payroll" fallback="New incident" canEdit error="Name taken" />
+        </ThemeProvider>,
+      );
+      expect(screen.getByRole('alert')).toHaveStyle({ color: theme.palette.kanap.danger });
+      view.unmount();
+    }
+  });
+
   it('shows a dashed underline and a pencil on an empty title', () => {
     const { container } = renderTitle({ value: '' });
     const text = screen.getByText('New incident');
@@ -110,7 +123,7 @@ describe('EditableTitle', () => {
 
   it('opens in typing state with autoEdit, shows the fallback as placeholder and keeps an empty field open', () => {
     const { onSave } = renderTitle({ value: '', autoEdit: true });
-    const input = screen.getByRole('textbox', { name: LABEL });
+    const input = screen.getByRole('textbox', { name: 'New incident' });
     expect(input).toHaveFocus();
     expect(input).toHaveAttribute('placeholder', 'New incident');
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -150,7 +163,7 @@ describe('EditableTitle', () => {
       </ThemeProvider>
     );
     const { rerender } = render(titleIn(''));
-    const input = screen.getByRole('textbox', { name: LABEL });
+    const input = screen.getByRole('textbox', { name: 'New incident' });
     fireEvent.change(input, { target: { value: 'Billing' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(onSave).toHaveBeenCalledWith('Billing');
@@ -163,25 +176,49 @@ describe('EditableTitle', () => {
     expect(next).toHaveFocus();
   });
 
-  it('sends a name still to give on a blur, and leaves the focus where the person went when the value arrives', () => {
+  it('keeps a name still to give in the field on a blur, wherever the focus goes, and sends nothing', () => {
     const onSave = vi.fn();
-    const titleIn = (value: string) => (
+    render(
       <ThemeProvider theme={createAppTheme('light')}>
-        <EditableTitle value={value} fallback="New incident" canEdit autoEdit={!value} onSave={onSave} />
+        <EditableTitle value="" fallback="New incident" canEdit autoEdit onSave={onSave} />
         <input aria-label="next field" />
-      </ThemeProvider>
+        <a href="#elsewhere">menu</a>
+      </ThemeProvider>,
     );
-    const { rerender } = render(titleIn(''));
-    const input = screen.getByRole('textbox', { name: LABEL });
+    const input = screen.getByRole('textbox', { name: 'New incident' });
     fireEvent.change(input, { target: { value: 'Billing' } });
-    const next = screen.getByRole('textbox', { name: 'next field' });
-    next.focus();
+    // Another field, a link, nowhere (another window).
+    screen.getByRole('textbox', { name: 'next field' }).focus();
+    input.focus();
+    screen.getByRole('link', { name: 'menu' }).focus();
+    input.focus();
     fireEvent.blur(input);
-    expect(onSave).toHaveBeenCalledWith('Billing');
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox', { name: 'New incident' })).toHaveValue('Billing');
+  });
 
-    rerender(titleIn('Billing'));
-    expect(screen.getByRole('button', { name: LABEL })).toHaveTextContent('Billing');
-    expect(next).toHaveFocus();
+  it('hands a name still to give to onBlurDraft on a blur, so the draft it belongs to decides', () => {
+    const onSave = vi.fn();
+    const onBlurDraft = vi.fn();
+    renderTitle({ value: '', autoEdit: true, onSave, onBlurDraft });
+    const input = screen.getByRole('textbox');
+    fireEvent.blur(input);
+    expect(onBlurDraft).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: '  Billing ' } });
+    fireEvent.blur(input);
+    expect(onBlurDraft).toHaveBeenCalledWith('Billing');
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox')).toHaveValue('  Billing ');
+  });
+
+  it('saves a renamed title on a blur, as before', () => {
+    const { onSave } = renderTitle();
+    fireEvent.click(screen.getByRole('button', { name: LABEL }));
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'Payroll run' } });
+    fireEvent.blur(input);
+    expect(onSave).toHaveBeenCalledWith('Payroll run');
+    expect(screen.getByRole('button', { name: LABEL })).toHaveTextContent('Payroll');
   });
 
   it('commits on Tab and hands the focus on with onTab', () => {
@@ -317,5 +354,48 @@ describe('EditableTitle', () => {
     expect(cue(container)).toBeNull();
     expect(screen.getByText('New incident')).not.toHaveStyle({ borderBottomStyle: 'dashed' });
     expect(screen.getByText('New incident')).toBeInTheDocument();
+  });
+
+  it('names the title still to give by its prompt, requires it, and keeps Edit title for a rename', () => {
+    renderTitle({ value: '', autoEdit: true });
+    const input = screen.getByRole('textbox', { name: 'New incident' });
+    expect(input).toHaveAttribute('aria-required', 'true');
+    expect(screen.queryByRole('textbox', { name: LABEL })).toBeNull();
+  });
+
+  it('keeps Edit title and no aria-required on the title of an existing record', () => {
+    renderTitle();
+    fireEvent.click(screen.getByRole('button', { name: LABEL }));
+    const input = screen.getByRole('textbox', { name: LABEL });
+    expect(input).not.toHaveAttribute('aria-required');
+  });
+
+  it('announces a refusal under the title and ties it to the field while it shows', () => {
+    const { rerender } = renderTitle({ value: '', autoEdit: true, error: 'An application already has this name: APP-32.' });
+    const input = screen.getByRole('textbox');
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('An application already has this name: APP-32.');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input.getAttribute('aria-describedby')).toBe(alert.id);
+    expect(alert.id).not.toBe('');
+    rerender(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <EditableTitle value="" fallback="New incident" canEdit autoEdit onSave={vi.fn()} />
+      </ThemeProvider>,
+    );
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('textbox')).not.toHaveAttribute('aria-invalid');
+    expect(screen.getByRole('textbox')).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('ties the empty-title message of a required title to the field too', () => {
+    renderTitle({ requiredMessage: 'The name is required' });
+    fireEvent.click(screen.getByRole('button', { name: LABEL }));
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: ' ' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    const alert = screen.getByRole('alert');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input.getAttribute('aria-describedby')).toBe(alert.id);
   });
 });

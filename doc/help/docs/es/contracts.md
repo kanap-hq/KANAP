@@ -8,7 +8,7 @@ Vaya a **Gestión presupuestaria > Contratos** para ver la lista. Haga clic en *
 
 Se abre la página del contrato nuevo, con su panel de propiedades abierto. Escriba el nombre del contrato en el título de la parte superior de la página y rellene los campos obligatorios de abajo. El contrato se crea en cuanto están todos indicados, y todas sus pestañas quedan disponibles. Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre.
 
-Mientras el contrato se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Ctrl+S** funciona como el botón mostrado. **Crear** guarda el contrato cuando sus campos obligatorios están indicados y lo deja abierto. Si falta alguno, su etiqueta se pone en rojo y el cursor va a él. Una vez creado el contrato, **Crear** pasa a ser **Listo**: guarda lo que está escribiendo y le lleva de vuelta al punto de partida, la lista o la pantalla anterior. **Cancelar** sale sin conservar nada. En un contrato ya creado, lo elimina. Si introdujo algo más que lo necesario para crearlo, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar contratos. Si sale de la página de otra forma, el contrato se conserva.
+Mientras el contrato se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Ctrl+S** funciona como el botón mostrado. **Crear** guarda el contrato cuando sus campos obligatorios están indicados y lo deja abierto. Si falta alguno, su etiqueta se pone en rojo con un icono de alerta y el cursor va a él. Una vez creado el contrato, **Crear** pasa a ser **Listo**: guarda lo que está escribiendo y le lleva de vuelta al punto de partida, la lista o la pantalla anterior. **Cancelar** sale sin conservar nada. En un contrato ya creado, lo elimina. Si introdujo algo más que lo necesario para crearlo, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar contratos. Si sale de la página de otra forma, el contrato se conserva.
 
 **Campos obligatorios**:
 
@@ -125,7 +125,7 @@ El encabezado muestra la referencia del contrato (`CTR-5`, haga clic en ella par
 
 El panel de propiedades, a la derecha, contiene todos los campos del contrato: las partes, **Inicio**, **Duración (meses)**, **Preaviso (meses)**, **Renovación tácita**, **Importe anual**, **Moneda**, **Facturación**, luego **Ciclo de vida** (**Estado** y **Fin de validez**), **Creado** y **Actualizado**. Ábralo o ciérrelo con su botón; Kadratis recuerda su elección.
 
-**Centro de coste o grupo** es opcional. Sitúa el contrato bajo un centro de coste o un grupo para el [acceso a los datos](data-access.md): las personas limitadas a ese nodo, o a un grupo superior, ven el contrato, igual que las limitadas a su empresa.
+**Centro de coste o grupo** es opcional. Sitúa el contrato bajo un centro de coste o un grupo para el [acceso a los datos](data-access.md): las personas limitadas a ese nodo, o a un grupo superior, ven el contrato, igual que las limitadas a su empresa. Con ese nodo en Edición, modifican el contrato, sea cual sea su empresa.
 
 Cada cambio se guarda solo: listas y fechas al instante, valores escritos y notas tras una breve pausa, el nombre al salir del campo. «Guardando...» y después «Guardado» aparece en el encabezado. Dos personas que editan el mismo contrato no reciben aviso: prevalece el último cambio.
 
