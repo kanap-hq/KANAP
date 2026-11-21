@@ -132,7 +132,16 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
   const [step, setStep] = React.useState<'contact' | PickedContact | null>(null);
   const [request, setRequest] = React.useState<CreateContactRequest | null>(null);
   const requestKey = React.useRef(0);
-  const closeAdd = () => { setStep(null); setAnchor(null); };
+  // Once the add ends (Escape, a role chosen, the creation cancelled), the focus goes back to Add.
+  // The pickers' own restore aims at the field they focused first, which is gone by then.
+  const addButton = React.useRef<HTMLElement | null>(null);
+  const [refocus, setRefocus] = React.useState(false);
+  React.useEffect(() => {
+    if (!refocus || step !== null || request !== null) return;
+    setRefocus(false);
+    addButton.current?.focus();
+  }, [refocus, step, request]);
+  const closeAdd = () => { setStep(null); setAnchor(null); setRefocus(true); };
 
   const { mutateAsync: attach } = useMutation({
     mutationFn: async ({ contactId, role }: { contactId: string; role: SupplierContactRole }) => {
@@ -227,7 +236,7 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
 
   const finishCreate = (contact: { id?: string; item_number?: number | null; first_name?: string | null; last_name?: string | null; email: string } | null) => {
     setRequest(null);
-    if (!contact?.id) { setAnchor(null); return; }
+    if (!contact?.id) { setAnchor(null); setRefocus(true); return; }
     void qc.invalidateQueries({ queryKey: ['relation-add', CONTACT_SEARCH_KEY] });
     setStep({ id: contact.id, name: contactName(contact), ref: contact.item_number ? formatItemRef('contact', contact.item_number) : null });
   };
@@ -243,7 +252,7 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
     <RelationsSection
       title={t('contacts.title')}
       count={isLoading ? undefined : contacts.length}
-      onAdd={canManage ? (button) => { setAnchor(button); setStep('contact'); } : undefined}
+      onAdd={canManage ? (button) => { addButton.current = button; setAnchor(button); setStep('contact'); } : undefined}
       adding={step !== null || request !== null}
       addLabel={t('buttons.add')}
       actions={canManage && syncFromSupplier ? (

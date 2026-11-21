@@ -135,6 +135,49 @@ describe.each([
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(`/${itemType}/${itemId}/contacts`, { contactId: 'c-1', role: 'commercial' }));
   });
 
+  // A browser focuses the button it clicks; fireEvent does not, so the test focuses it first.
+  const openAdd = async () => {
+    const add = await screen.findByRole('button', { name: 'Add' });
+    add.focus();
+    fireEvent.click(add);
+    return add;
+  };
+
+  it('gives the focus back to Add after Escape in the list of contacts', async () => {
+    renderSection(itemType, itemId);
+    const add = await openAdd();
+    const field = screen.getByRole('combobox', { name: 'Select contact' });
+    await waitFor(() => expect(field).toHaveFocus());
+    fireEvent.keyDown(field, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('combobox', { name: 'Select contact' })).toBeNull());
+    await waitFor(() => expect(add).toHaveFocus());
+  });
+
+  it('gives the focus back to Add after Escape in the list of roles, and after a role chosen', async () => {
+    renderSection(itemType, itemId);
+    const add = await openAdd();
+    fireEvent.click(await screen.findByRole('option', { name: /Anna Berg/ }));
+    fireEvent.keyDown(await screen.findByRole('menu', { name: 'Role' }), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    await waitFor(() => expect(add).toHaveFocus());
+
+    fireEvent.click(add);
+    fireEvent.click(await screen.findByRole('option', { name: /Anna Berg/ }));
+    fireEvent.click(within(await screen.findByRole('menu', { name: 'Role' })).getByRole('menuitem', { name: 'Support' }));
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    await waitFor(() => expect(add).toHaveFocus());
+  });
+
+  it('gives the focus back to Add when the creation dialog is cancelled', async () => {
+    renderSection(itemType, itemId);
+    const add = await openAdd();
+    fireEvent.click(await screen.findByRole('option', { name: '+ New contact' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(add).toHaveFocus());
+  });
+
   it('offers no creation to a person who may not create contacts', async () => {
     hasLevel.mockReturnValue(false);
     renderSection(itemType, itemId);
