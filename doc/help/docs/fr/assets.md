@@ -6,22 +6,24 @@ Les Actifs documentent votre inventaire d'infrastructure : serveurs physiques, m
 
 Rendez-vous dans **Cartographie SI > Actifs** pour voir votre inventaire d'actifs. Pour créer un actif :
 
-1. Cliquez sur **Ajouter un actif**, puis sur **Ajouter un actif** ou **Ajouter un cluster**. La page de l'actif s'ouvre avec un titre vide dans l'en-tête. Le reste de la page est grisé.
+1. Cliquez sur **Ajouter un actif**, puis sur **Ajouter un actif** ou **Ajouter un cluster**. La page de l'actif s'ouvre avec un titre vide dans l'en-tête. Seuls le titre et le **Site** sont ouverts. Le reste de la page est grisé.
 2. Saisissez le nom de l'actif, de 200 caractères au plus.
-3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis crée l'actif aussitôt. Sa référence (`AST-12`) s'affiche et tous les onglets s'ouvrent.
+3. Choisissez son **Site**, dans le tiroir des propriétés ou dans la barre sous le titre. Vous pouvez aussi le choisir avant le nom.
 
-Le nouvel actif est une machine virtuelle de l'environnement Prod, au cycle de vie Actif. Si vos types d'actifs ne comptent pas de machine virtuelle, il prend le premier type de la liste. **Ajouter un cluster** le crée avec l'interrupteur **Cluster** activé. Chaque champ s'enregistre ensuite de lui-même : vous pouvez changer le type ou l'environnement tout de suite.
+Kadratis crée l'actif dès qu'il a les deux. Sa référence (`AST-12`) s'affiche et tous les onglets s'ouvrent.
+
+Le nouvel actif est une machine virtuelle de l'environnement Prod, au cycle de vie Actif. Si vos types d'actifs ne comptent pas de machine virtuelle, il prend le premier type de la liste. **Ajouter un cluster** le crée avec l'interrupteur **Cluster** activé. Une fois l'actif créé, vous pouvez changer son type et son environnement. Chaque champ s'enregistre alors de lui-même.
 
 **Champs obligatoires** :
 - **Nom** : Le nom de l'actif ou son nom d'hôte, 200 caractères au plus
 - **Type d'actif** : Serveur web, Machine virtuelle, Serveur physique, Conteneur, etc. (configurable dans **Cartographie SI > Paramètres**)
-- **Site** : Où l'actif est hébergé (détermine le fournisseur, le type d'hébergement et le pays). **Terminé** le demande
+- **Site** : Où l'actif est hébergé (détermine le fournisseur, le type d'hébergement et le pays). L'actif est créé dès qu'il en a un
 
 **Fortement recommandé** :
 - **Cycle de vie** : Statut actuel (Actif, Obsolète, Retiré, etc.)
 - **Environnement** : À quel environnement cet actif appartient (Prod, Pré-prod, QA, Test, Dev, Sandbox)
 
-Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi. Un nom refusé s'affiche sous le titre.
+Tant que l'actif n'a pas son nom et son site, rien n'est enregistré. Cliquer sur **Annuler** ou quitter la page ne crée alors rien et ne pose aucune question. Un nom refusé s'affiche sous le titre, un site refusé sur le champ **Site**.
 
 **Noms uniques** : deux actifs ne peuvent pas avoir le même nom ni le même FQDN. La casse et les espaces en début ou en fin ne comptent pas. Kadratis refuse le doublon et nomme l'actif qui porte déjà la valeur (`AST-12`). Les doublons enregistrés auparavant restent modifiables tant que vous ne changez pas cette valeur.
 
@@ -36,11 +38,11 @@ Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne 
 
 Tant que l'actif est en cours de création, son en-tête affiche **Créer** et **Annuler** à la place du bouton de fermeture. Ils restent jusqu'à ce que vous quittiez l'actif. **Ctrl+S** agit comme le bouton affiché.
 
-- **Créer** fait comme Entrée : il crée l'actif et le laisse ouvert, avec sa référence. Le curseur va au champ **Site** s'il est vide. Avec un titre vide, le titre en demande un
-- Une fois l'actif créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vérifie que l'actif a un site. Sans site, le libellé **Site** passe en rouge avec une icône d'alerte dans le tiroir des propriétés et le champ prend le focus. L'actif reste ouvert. Avec un site, vous revenez à votre point de départ
-- **Annuler** supprime l'actif. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des actifs
+- **Créer** crée l'actif quand il a son nom et son site. Sans site, rien n'est enregistré : le libellé **Site** passe en rouge avec une icône d'alerte et le curseur va au champ. Avec un titre vide, le titre en demande un
+- Une fois l'actif créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ
+- **Annuler** avant la création de l'actif part sans rien enregistrer. Ensuite, il supprime l'actif. Si vous avez modifié l'actif depuis, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des actifs
 
-Si vous quittez l'actif autrement (la flèche de retour, le menu, un autre actif) alors qu'il n'a pas de site, Kadratis vous demande quoi faire. **Le compléter** vous garde sur l'actif, sur le champ **Site**. **Le supprimer** supprime l'actif. Recharger la page ou fermer l'onglet alors que le nouvel actif n'a pas de site fait demander une confirmation par votre navigateur. Si vous partez quand même, l'actif est supprimé.
+Un actif enregistré sans site par une version antérieure s'ouvre normalement, avec son libellé **Site** marqué comme manquant. Choisissez un site pour l'enregistrer.
 
 ---
 
@@ -99,7 +101,7 @@ Le tri sur **Vulnérabilités à traiter** classe les actifs par leurs vulnérab
 **Conseil** : Combinez les filtres entre colonnes pour affiner les résultats. Par exemple, filtrez par Environnement = « Prod » et Cycle de vie = « Actif » pour voir uniquement les actifs de production actifs.
 
 **Actions** :
-- **Ajouter un actif** : ouvre un menu (`infrastructure:member`). **Ajouter un actif** crée un actif ; **Ajouter un cluster** en crée un avec l'interrupteur **Cluster** déjà activé
+- **Ajouter un actif** : ouvre un menu (`infrastructure:member`). **Ajouter un actif** ouvre un nouvel actif ; **Ajouter un cluster** en ouvre un avec l'interrupteur **Cluster** déjà activé (voir [Premiers pas](#premiers-pas))
 - **Importer** / **Exporter** : Opérations en masse en CSV ou Excel (`infrastructure:admin`). L'export contient les actifs que la liste affiche. Voir [Options d'export](#export-options)
 - **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé. Le refus nomme les applications, et jusqu'à cinq connexions par leur référence et leur nom. Retirez d'abord l'actif de ces liens. Une affectation que l'actif hérite seulement de son cluster ne bloque pas. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison, et ce que les autres emportent avec eux (voir [Supprimer un cluster ou un membre](#deleting-a-cluster-or-a-member))
 
@@ -162,7 +164,7 @@ Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de 
 
 Une adresse qui ne désigne aucun actif ouvre une page **Actif introuvable**, avec un lien de retour à la liste.
 
-Les onglets sont **Vue d'ensemble**, **Exploitation**, **Réseau**, **Matériel** (types d'actifs physiques uniquement), **Dépendances**, **Relations** et **Historique** (les modifications apportées à l'actif, voir [Historique des fiches](record-history.md)). Un nouvel actif n'affiche que son titre. Tous les onglets s'ouvrent dès que le titre crée l'actif.
+Les onglets sont **Vue d'ensemble**, **Exploitation**, **Réseau**, **Matériel** (types d'actifs physiques uniquement), **Dépendances**, **Relations** et **Historique** (les modifications apportées à l'actif, voir [Historique des fiches](record-history.md)). Un nouvel actif n'affiche que son titre et son site. Tous les onglets s'ouvrent dès que l'actif est créé.
 
 ### En-tête
 
@@ -186,7 +188,7 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 - **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**, ou **Sans zone**. L'actif apparaît alors dans cette zone sur la page [Zones d'administration](administration-view.md)
 
 **Site** :
-- **Site** (obligatoire) : **Terminé** le demande sur un nouvel actif. Un actif créé par un import ou par l'assistant en a besoin dès sa création. Quand le site n'existe pas encore, tapez son nom et choisissez **+ Créer le site « … »** : indiquez son type d'hébergement, et le nouveau site se place dans le champ. Il faut `locations:member`
+- **Site** (obligatoire) : un nouvel actif est créé dès qu'il a son nom et son site. Un actif créé par un import ou par l'assistant en a besoin aussi. Quand le site n'existe pas encore, tapez son nom et choisissez **+ Créer le site « … »** : indiquez son type d'hébergement, et le nouveau site se place dans le champ. Sur un nouvel actif, l'actif est alors créé avec lui. Il faut `locations:member`
 - **Sous-site** (lorsque le site a des sous-sites définis)
 - **Type d'hébergement**, **Société exploitante** ou **Fournisseur cloud**, **Pays**, **Ville** : en lecture seule, dérivés du site. Ils suivent quand vous changez de site
 

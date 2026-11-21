@@ -172,13 +172,13 @@ Gehen Sie zu **IT-Landschaft > Assets** und klicken Sie auf **Asset hinzufügen*
 
 ### Übersichts-Tab
 
-Füllen Sie die Kernfelder aus:
+Geben Sie den **Namen** im Titel ein (zum Beispiel `PROD-WEB-01`) und wählen Sie dann den **Standort** im Bereich **Eigenschaften** (zum Beispiel `Rechenzentrum Paris`). Kadratis erstellt das Asset, sobald es beides hat. Bis dahin bleibt der Rest der Seite abgeblendet.
+
+Füllen Sie dann die übrigen Kernfelder aus:
 
 | Feld | Was eingeben | Beispiel |
 |-------|--------------|---------|
-| **Name** | Hostname oder Kennung | `PROD-WEB-01` |
 | **Asset-Typ** | Der Servertyp (Auswahlliste) | `Virtuelle Maschine` |
-| **Standort** | Wo er gehostet wird (Pflichtfeld) | `Rechenzentrum Paris` |
 | **Umgebung** | Welche Umgebung er bedient | `Prod` |
 | **Beschreibung** | Zusätzlicher Kontext |  |
 
@@ -194,7 +194,7 @@ Der Bereich **Eigenschaften** rechts enthält den Rest: den Schalter **Cluster**
 
 ### Netzwerk-Tab
 
-Der Tab **Netzwerk** ist geöffnet, während Sie das Asset erstellen. Füllen Sie aus:
+Der Tab **Netzwerk** öffnet sich, sobald das Asset erstellt ist. Füllen Sie aus:
 
 | Abschnitt | Felder | Details |
 |---------|--------|---------|
