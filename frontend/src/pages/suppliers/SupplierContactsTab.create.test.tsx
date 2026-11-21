@@ -33,6 +33,36 @@ describe('SupplierContactsTab creating a contact from the picker', () => {
     });
   });
 
+  const renderTab = () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <NotifyProvider>
+          <QueryClientProvider client={client}>
+            <MemoryRouter>
+              <SupplierContactsTab supplierId="s-1" canManage />
+            </MemoryRouter>
+          </QueryClientProvider>
+        </NotifyProvider>
+      </ThemeProvider>,
+    );
+  };
+
+  it('shows the list of contacts as soon as "Add existing" is clicked', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/contacts') {
+        return { data: { items: [{ id: 'c-1', item_number: 1, first_name: 'Anna', last_name: 'Berg', job_title: null, email: 'anna@acme.test', active: true, supplier_id: null, supplier_name: null }] } };
+      }
+      if (url === '/suppliers/s-1/contacts') return { data: [] };
+      throw new Error(`unexpected ${url}`);
+    });
+    renderTab();
+    const technical = await screen.findByRole('region', { name: 'Technical' });
+    fireEvent.click(within(technical).getByRole('button', { name: 'Add existing' }));
+    await waitFor(() => expect(within(technical).getByRole('combobox')).toHaveFocus());
+    expect(await screen.findByRole('option', { name: /Anna Berg/ })).toBeInTheDocument();
+  });
+
   it('creates the contact on the supplier with the section type, then links it there', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(

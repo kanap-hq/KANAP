@@ -45,6 +45,8 @@ type ContactSelectProps = {
   textFieldSx?: SxProps<Theme>;
   /** A supplier's contact field: the contact created from the list belongs to that supplier, with this type. */
   createSupplier?: CreateContactSupplier;
+  /** Opens the list when the field takes the focus: for a field shown and focused by an "add" button. */
+  openOnFocus?: boolean;
 };
 
 /** The option that offers to create a contact (the typed one, or a new one while nothing is typed): not a row, it is never the field's value. */
@@ -94,6 +96,7 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
     placeholder,
     textFieldSx,
     createSupplier,
+    openOnFocus = false,
   },
   ref,
 ) {
@@ -253,6 +256,7 @@ const ContactSelect = React.forwardRef<HTMLInputElement, ContactSelectProps>(fun
       disabled={disabled}
       loading={isFetching || isLoadingSelected}
       filterOptions={(x) => x}
+      openOnFocus={openOnFocus}
       noOptionsText={isFetching
         ? t('selects.loadingEllipsis')
         : !mayCreate && settled
