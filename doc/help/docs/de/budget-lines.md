@@ -106,6 +106,7 @@ Die Liste (unter **Budgetverwaltung > Budgetzeilen**) enthält die OPEX- und CAP
 - **Zahlendes Unternehmen**: Welches Unternehmen diese Zeile bezahlt
 - **Konto**: Die Sachkonto-Nummer und -Bezeichnung
 - **Budget J** und **Erwarteter Endwert J**: Die Beträge des aktuellen Jahres in der Standardspalte und in der letzten angezeigten Spalte (verlinkt zum Tab **Budget** für dieses Jahr). Mit den Standardeinstellungen sind das Budget und Erwarteter Endwert. Ist die Standardspalte zugleich die letzte angezeigte Spalte, erscheint nur eine Betragsspalte. Siehe [Budgetspalten](budget-operations.md#budgetspalten)
+- Ändert ein Budgetadministrator die Standardspalte, folgt die Liste. Haben Sie nie Betragsspalten gewählt, zeigt sie die neue Standardspalte und die letzte angezeigte Spalte. Haben Sie eigene gewählt, bleiben sie erhalten, und die neue Standardspalte des aktuellen Jahres kommt neben ihnen hinzu. In der Spaltenauswahl können Sie sie wieder ausblenden
 - **Erforderliche Dimensionen**: Eine Spalte pro aktivierter Dimension, die für einen der beiden Typen erforderlich ist, nach ihr benannt. Ein neuer Arbeitsbereich hat keine
 
 **Zusätzliche Spalten** (standardmäßig ausgeblendet, über die Spaltenauswahl umschaltbar):
@@ -333,7 +334,7 @@ Der Budget-Tab enthält die Beträge der Zeile, Jahr für Jahr und Spalte für S
     - **Erwarteter Endwert**: Ihre beste Schätzung des Werts zum Jahresende
 - Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die Standardspalte unter **Budgetverwaltung > Administration > Budgetspalten** wählen (siehe [Budgetspalten](budget-operations.md#budgetspalten)). Eine ausgeblendete Spalte behält ihre Beträge
 - Jede angezeigte Spalte hat unter den Jahres-Tabs eine Karte: ihren Namen, ihre Summe für das Jahr, die Herkunft ihrer Beträge und ihren Zeitraum, zum Beispiel „Gleichmäßig verteilt“ und „9 Monate, April bis Dezember“. Eine leere Spalte zeigt nur ihre Null. Bewegen Sie den Mauszeiger über eine Karte, um ihre Zeilen unter Menge und Preis zu sehen
-- Klicken Sie auf eine Karte, um an dieser Spalte zu arbeiten. Der Tab öffnet sich auf der ersten angezeigten Spalte, die nicht eingefroren ist
+- Klicken Sie auf eine Karte, um an dieser Spalte zu arbeiten. Der Tab öffnet sich auf der [Standardspalte](budget-operations.md#budgetspalten) oder, wenn die Standardspalte eingefroren ist, auf der ersten angezeigten Spalte, die nicht eingefroren ist
 - Bei nur einer angezeigten Spalte gibt es keine Karten: Der Editor zeigt die Spalte direkt
 
 **Zeitraum einer Spalte**:

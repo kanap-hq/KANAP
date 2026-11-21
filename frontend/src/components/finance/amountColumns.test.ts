@@ -7,6 +7,7 @@ import {
   amountFieldKey,
   explicitSort,
   amountColumnYear,
+  amountLayoutStamp,
   buildAmountColumnDefs,
   buildFteColumnDefs,
   cellFxMissing,
@@ -14,6 +15,7 @@ import {
   fteFieldKey,
   fteTotalsToRow,
   filtersOnShownColumns,
+  followDefaultAmountColumns,
   filtersStringOnShownColumns,
   settleListSearch,
   slotAmount,
@@ -91,6 +93,74 @@ describe('buildAmountColumnDefs', () => {
     expect(getter({ data: { versions: { yPlus2: { totals: { budget: 100 }, reporting: { budget: 92 } } } } })).toBe(92);
     expect(getter({ data: { versions: { yPlus2: { totals: { budget: 100 } } } } })).toBe(100);
     expect(getter({ data: {} })).toBe(0);
+  });
+});
+
+describe('a saved list layout after the default column changes', () => {
+  // A layout as the grid stores it: every column, amount columns in the list's order.
+  const layout = (visible: string[], order?: string[]) => {
+    const ids = order ?? ['item_number', 'product_name', ...build().map((d) => d.colId as string)];
+    return ids.map((colId) => ({ colId, width: 120, hide: !visible.includes(colId) && colId.startsWith('y') }));
+  };
+  const shownAmounts = (state: Array<{ colId: string; hide: boolean }>) => state.filter((c) => c.colId.startsWith('y') && !c.hide).map((c) => c.colId);
+  const revision = columnsOf({ default_column: 'committed' });
+
+  it('stamps a layout with the amount columns the list shows by default', () => {
+    expect(amountLayoutStamp(columnsOf())).toBe('yBudget,yLanding');
+    expect(amountLayoutStamp(revision)).toBe('yRevision,yLanding');
+    expect(amountLayoutStamp(columnsOf({ default_column: 'expected_landing' }))).toBe('yLanding');
+  });
+
+  it('leaves a layout saved under the same default columns as it is', () => {
+    const saved = layout(['yBudget', 'yPlus1Budget']);
+    expect(followDefaultAmountColumns(saved, 'yRevision,yLanding', revision)).toBe(saved);
+  });
+
+  it('follows the setting when the person never chose amount columns: the new default column takes the place of the former one', () => {
+    const next = followDefaultAmountColumns(layout(['yBudget', 'yLanding']), 'yBudget,yLanding', revision);
+    expect(shownAmounts(next)).toEqual(['yRevision', 'yLanding']);
+    expect(next.find((c) => c.colId === 'yBudget')?.hide).toBe(true);
+    // The other columns, their order and their widths are untouched.
+    expect(next.map((c) => c.colId).slice(0, 2)).toEqual(['item_number', 'product_name']);
+    expect(next.every((c) => c.width === 120)).toBe(true);
+  });
+
+  it('reads a layout saved before the stamp existed as made under Budget and Expected landing', () => {
+    expect(shownAmounts(followDefaultAmountColumns(layout(['yBudget', 'yLanding']), null, revision))).toEqual(['yRevision', 'yLanding']);
+    // Already on the new default column (a first visit after the change): nothing moves.
+    expect(shownAmounts(followDefaultAmountColumns(layout(['yRevision', 'yLanding']), null, revision))).toEqual(['yRevision', 'yLanding']);
+  });
+
+  it('shows a single amount column when the default column becomes the last shown one', () => {
+    const next = followDefaultAmountColumns(layout(['yBudget', 'yLanding']), 'yBudget,yLanding', columnsOf({ default_column: 'expected_landing' }));
+    expect(shownAmounts(next)).toEqual(['yLanding']);
+  });
+
+  it('keeps the amount columns a person chose and adds the new default column after the former one', () => {
+    const chosen = ['yMinus1Budget', 'yBudget', 'yPlus1Budget'];
+    const next = followDefaultAmountColumns(layout(chosen), 'yBudget,yLanding', revision);
+    expect(shownAmounts(next)).toEqual(['yMinus1Budget', 'yBudget', 'yRevision', 'yPlus1Budget']);
+  });
+
+  it('adds the new default column after the last amount column on screen when the former default is hidden', () => {
+    // Moved by hand: Landing first, then Actuals, among other columns.
+    const order = ['item_number', 'yLanding', 'yFollowUp', 'product_name', 'yBudget', 'yRevision'];
+    const next = followDefaultAmountColumns(layout(['yLanding', 'yFollowUp'], order), 'yBudget,yLanding', revision);
+    expect(next.map((c) => c.colId)).toEqual(['item_number', 'yLanding', 'yFollowUp', 'yRevision', 'product_name', 'yBudget']);
+    expect(shownAmounts(next)).toEqual(['yLanding', 'yFollowUp', 'yRevision']);
+  });
+
+  it('leaves chosen amount columns alone when only the last shown column changed', () => {
+    const saved = layout(['yBudget', 'yPlus1Budget']);
+    const withoutLanding = columnsOf({ enabled: { ...DEFAULT_BUDGET_COLUMNS.enabled, expected_landing: false } });
+    expect(amountLayoutStamp(withoutLanding)).toBe('yBudget,yFollowUp');
+    expect(followDefaultAmountColumns(saved, 'yBudget,yLanding', withoutLanding)).toBe(saved);
+  });
+
+  it('keeps the new default column hidden once the person hid it: the layout is then saved under the new stamp', () => {
+    const added = followDefaultAmountColumns(layout(['yMinus1Budget', 'yBudget']), 'yBudget,yLanding', revision);
+    const hiddenAgain = added.map((c) => (c.colId === 'yRevision' ? { ...c, hide: true } : c));
+    expect(followDefaultAmountColumns(hiddenAgain, amountLayoutStamp(revision), revision)).toBe(hiddenAgain);
   });
 });
 

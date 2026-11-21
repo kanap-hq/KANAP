@@ -139,6 +139,12 @@ export type ServerDataGridProps<T> = {
    * version, is dropped once and the default layout returns. Grids that omit it keep the bare list.
    */
   columnLayoutVersion?: number;
+  /**
+   * What this grid's saved layout was made under (a setting its default columns come from),
+   * stored next to the layout. A layout saved under another value goes through `migrate` when it
+   * is loaded, with the value it was saved under (null: saved before the grid had a stamp).
+   */
+  columnLayoutStamp?: ColumnLayoutStamp;
   onColumnStateChange?: (columnState: ColumnState[]) => void; // callback for external state management
   onCellClicked?: (event: any) => void; // optional cell click handler
   onGridApiReady?: (gridApi: any) => void; // callback to provide grid API reference to parent
@@ -401,6 +407,11 @@ export const DATE_COLUMN_FILTER_TWO_CONDITIONS = {
   filterParams: { ...DATE_FILTER_PARAMS, suppressAndOrCondition: false, maxNumConditions: 2 },
 } as const;
 
+export type ColumnLayoutStamp = {
+  value: string;
+  migrate: (saved: ColumnState[], savedStamp: string | null) => ColumnState[];
+};
+
 /**
  * The saved layout a grid should apply. Without a version, the bare list every grid stored.
  * With one, only `{ v, columns }` of that version: a bare list or an older version is dropped.
@@ -422,6 +433,7 @@ function useColumnState(
   tenantSlug?: string,
   userId?: string,
   layoutVersion?: number,
+  stamp?: ColumnLayoutStamp,
 ) {
   const legacyKey = key ? `grid-columns-${key}` : null;
   const scopedKey = key && tenantSlug && userId
@@ -439,6 +451,9 @@ function useColumnState(
   }
 
   const getStorageKey = () => scopedKey ?? legacyKey;
+  // The stamp the layout in the grid was loaded under: a save writes that one, so a stamp that
+  // changes while the grid is open still finds a layout to migrate.
+  const loadedStampRef = useRef<string | null>(stamp?.value ?? null);
 
   const getDefaultColumnState = useCallback((): ColumnState[] => {
     return columns.map(col => {
@@ -461,6 +476,8 @@ function useColumnState(
   const loadColumnState = useCallback((): ColumnState[] => {
     const storageKey = getStorageKey();
     if (!storageKey) return getDefaultColumnState();
+    // Every caller applies what this returns to the grid: the layout there is under this stamp.
+    if (stamp) loadedStampRef.current = stamp.value;
 
     try {
       const saved = localStorage.getItem(storageKey);
@@ -473,6 +490,11 @@ function useColumnState(
         return getDefaultColumnState();
       }
       const defaultState = getDefaultColumnState();
+      let layout = savedState;
+      if (stamp) {
+        const savedStamp = localStorage.getItem(`${storageKey}:stamp`);
+        if (savedStamp !== stamp.value) layout = stamp.migrate(savedState, savedStamp);
+      }
 
       // Helper to compute hide respecting required columns
       const applyRequired = (col: ColumnState): ColumnState => {
@@ -490,12 +512,12 @@ function useColumnState(
         const min = columnMinWidth(column);
         if (id && min != null) minWidthById.set(id, min);
       }
-      return floorSavedColumnWidths(mergeSavedColumnState(savedState, defaultState).map(applyRequired), minWidthById);
+      return floorSavedColumnWidths(mergeSavedColumnState(layout, defaultState).map(applyRequired), minWidthById);
     } catch (e) {
       console.warn('Failed to load column state from localStorage:', e);
       return getDefaultColumnState();
     }
-  }, [getStorageKey, getDefaultColumnState, columns, requiredColumns, layoutVersion]);
+  }, [getStorageKey, getDefaultColumnState, columns, requiredColumns, layoutVersion, stamp]);
 
   const saveColumnState = useCallback((state: ColumnState[]) => {
     const storageKey = getStorageKey();
@@ -504,6 +526,7 @@ function useColumnState(
     try {
       const payload = layoutVersion == null ? state : { v: layoutVersion, columns: state };
       localStorage.setItem(storageKey, JSON.stringify(payload));
+      if (loadedStampRef.current != null) localStorage.setItem(`${storageKey}:stamp`, loadedStampRef.current);
     } catch (e) {
       console.warn('Failed to save column state to localStorage:', e);
     }
@@ -551,6 +574,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   filteredColumnsAfter,
   columnPreferencesKey,
   columnLayoutVersion,
+  columnLayoutStamp,
   onColumnStateChange,
   onCellClicked,
   onGridApiReady,
@@ -774,7 +798,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const pageParamsChangedRef = useRef<() => void>(() => undefined);
 
   // Column state management
-  const columnStateManager = useColumnState(columnPreferencesKey, columns, requiredColumns, defaultHiddenColumns, tenantSlug ?? undefined, profile?.id, columnLayoutVersion);
+  const columnStateManager = useColumnState(columnPreferencesKey, columns, requiredColumns, defaultHiddenColumns, tenantSlug ?? undefined, profile?.id, columnLayoutVersion, columnLayoutStamp);
   const [currentColumnState, setCurrentColumnState] = useState<ColumnState[]>(() => columnStateManager.loadColumnState());
   // Columns shown for this visit only, because a link's filter narrows them (`showFilteredColumns`):
   // the saved layout keeps them hidden until the user shows one in the chooser.
@@ -788,7 +812,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   }, [columnPreferencesKey, columnStateManager]);
   const initializedRef = useRef<boolean>(false);
 
-  // Re-apply column state when tenant/user changes (scoped key changes)
+  // Re-apply column state when tenant/user changes (scoped key changes), or the layout's stamp
   const scopedColumnKey = columnPreferencesKey && tenantSlug && profile?.id
     ? `grid-columns:${tenantSlug}:${profile.id}:${columnPreferencesKey}`
     : null;
@@ -799,7 +823,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       setCurrentColumnState(newState);
       appliedInitialColumnStateRef.current = false;
     }
-  }, [scopedColumnKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scopedColumnKey, columnLayoutStamp?.value]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Column state change handler
   const onColumnStateChanged = useCallback((e: any) => {

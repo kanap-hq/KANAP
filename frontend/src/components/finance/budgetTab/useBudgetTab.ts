@@ -309,10 +309,12 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   const isFrozen = (col: AmountCol) => frozen[FREEZE_KEY[col]];
   const anyFrozen = shown.some((c) => frozen[c.freezeKey]);
 
-  // The active column: the one the user picked, else the first shown column that is not frozen
-  // (the first one when all are). Nothing depends on a column's name.
+  // The active column: the one the user picked, else the default column, else, when that one is
+  // frozen, the first shown column that is not (the first one when all are). Nothing depends on a
+  // column's name.
   const [pickedCol, setPickedCol] = React.useState<AmountCol | null>(null);
-  const firstOpen = (shown.find((c) => !frozen[c.freezeKey]) ?? shown[0]).measure;
+  const defaultCol = budgetColumns.defaultColumn;
+  const firstOpen = (frozen[defaultCol.freezeKey] ? shown.find((c) => !frozen[c.freezeKey]) ?? shown[0] : defaultCol).measure;
   const activeCol: AmountCol = pickedCol && shown.some((c) => c.measure === pickedCol) ? pickedCol : firstOpen;
   const activeColRef = React.useRef(activeCol); activeColRef.current = activeCol;
   // Once the user works on the active column, it stays active (a freeze state arriving late does not move it).
