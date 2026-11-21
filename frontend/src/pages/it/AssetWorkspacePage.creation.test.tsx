@@ -246,6 +246,8 @@ describe('An asset born complete', () => {
     const typeMenu = screen.getByTitle('workspace.asset.meta.editAssetType');
     expect(dimmed(typeMenu)).toBe(false);
     expect(typeMenu.tagName).toBe('BUTTON');
+    // With no type, the item says what it is: "not set" alone names nothing.
+    expect(typeMenu.textContent).toContain('workspace.asset.overview.assetType');
     // The rest, row by row.
     for (const key of ['workspace.asset.meta.cluster', 'workspace.asset.technical.environment', 'workspace.asset.overview.lifecycle', 'workspace.asset.overview.goLiveDate']) {
       expect(dimmed(rowLabel(key))).toBe(true);

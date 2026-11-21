@@ -2209,6 +2209,7 @@ function AssetWorkspaceRoute() {
             />
             </>, METADATA_PREVIEW_SX)}
             <PortfolioMetadataItem
+              label={kind ? undefined : t('workspace.asset.overview.assetType')}
               onClick={(event) => setAssetTypeAnchorEl(event.currentTarget)}
               disabled={!canEditNetboxField('kind') || saving}
               title={t('workspace.asset.meta.editAssetType')}
