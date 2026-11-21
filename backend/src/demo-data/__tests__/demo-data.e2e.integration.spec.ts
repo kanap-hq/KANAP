@@ -25,6 +25,7 @@ import {
 } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
 import { ensureCapexDimensions } from '../../analytics/capex-dimensions.seed';
 import { RECOMMENDED_DIMENSIONS } from '../../analytics/recommended-dimensions.seed';
+import { BUDGET_NATURES, naturesAnd } from '../../spend/budget-nature';
 import { backendPath } from '../../common/__tests__/backend-root';
 import { TENANT_RESETTING_CODE } from '../../common/tenancy/request-tenancy.middleware';
 import { StorageService } from '../../common/storage/storage.service';
@@ -165,10 +166,13 @@ async function checkDimensions(tenantId: string) {
   const total = Object.fromEntries(lines.map((row: any) => [row.nature, row.n])) as Record<'opex' | 'capex', number>;
   assert.deepEqual(total, { opex: fixtureRows(files.opex).length, capex: fixtureRows(files.capex).length }, 'every budget line of the files');
   // A new line has a paying company and an account, whatever the door (lot L3a): the sample data too.
-  const [incomplete] = await inTenant(tenantId, (m) => m.query(
-    `SELECT count(*) FILTER (WHERE paying_company_id IS NULL)::int AS no_company, count(*) FILTER (WHERE account_id IS NULL)::int AS no_account
-       FROM spend_items WHERE tenant_id = $1`, [tenantId]));
-  assert.deepEqual(incomplete, { no_company: 0, no_account: 0 }, 'every sample line has its company and its account');
+  const incomplete = await inTenant(tenantId, (m) => m.query(
+    `SELECT nature, count(*) FILTER (WHERE paying_company_id IS NULL)::int AS no_company, count(*) FILTER (WHERE account_id IS NULL)::int AS no_account
+       FROM spend_items WHERE tenant_id = $1${naturesAnd(null, BUDGET_NATURES)} GROUP BY nature ORDER BY nature`, [tenantId]));
+  assert.deepEqual(incomplete, [
+    { nature: 'capex', no_company: 0, no_account: 0 },
+    { nature: 'opex', no_company: 0, no_account: 0 },
+  ], 'every sample line, of each type, has its company and its account');
 
   const axes: Array<{ code: string; name: string; values: string[] }> = await inTenant(tenantId, (m) => m.query(
     `SELECT a.code, a.name, coalesce(array_agg(c.name ORDER BY c.sort_order, c.name) FILTER (WHERE c.id IS NOT NULL), '{}') AS values
