@@ -245,7 +245,7 @@ Une application ou un actif désactivé ou retiré reste affiché, son nom gris�
 
 La section est absente quand il n'y a rien à suggérer.
 
-**Contacts** : les personnes liées à ce contrat, chacune avec un rôle (Commercial, Technique, Support ou Autre). **Reprendre les contacts du fournisseur** copie les contacts du fournisseur en un clic.
+**Contacts** : les personnes liées à ce contrat, chacune avec un rôle (Commercial, Technique, Support ou Autre). **Reprendre les contacts du fournisseur** copie les contacts du fournisseur en un clic. Un contact qui n'existe pas encore peut être créé depuis la liste, puis recevoir son rôle. Voir [Contacts](contacts.md#creer-un-contact-depuis-un-champ-contact).
 
 **Liens et fichiers** : les liens web du contrat (le PDF signé en ligne, le portail du fournisseur) et ses fichiers, une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et sa date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec `contracts:member` :
 

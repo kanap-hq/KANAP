@@ -245,7 +245,7 @@ Eine deaktivierte oder ausgemusterte Anwendung oder ein solches Asset bleibt mit
 
 Der Abschnitt fehlt, wenn es nichts vorzuschlagen gibt.
 
-**Kontakte**: Personen zu diesem Vertrag, jede mit einer Rolle (Vertrieb, Technik, Support oder Sonstige). **Kontakte des Lieferanten übernehmen** übernimmt die Kontakte des Lieferanten mit einem Klick.
+**Kontakte**: Personen zu diesem Vertrag, jede mit einer Rolle (Vertrieb, Technik, Support oder Sonstige). **Kontakte des Lieferanten übernehmen** übernimmt die Kontakte des Lieferanten mit einem Klick. Ein Kontakt, den es noch nicht gibt, lässt sich aus der Liste heraus erstellen und erhält dann seine Rolle. Siehe [Kontakte](contacts.md#einen-kontakt-aus-einem-kontaktfeld-erstellen).
 
 **Links und Dateien**: die Weblinks des Vertrags (das unterschriebene PDF online, das Lieferantenportal) und seine Dateien, je eine Zeile mit Name, der Domain des Links oder der Größe der Datei und dem Datum, an dem sie hinzugefügt wurden. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen, oder auf eine Datei, um sie herunterzuladen. Mit `contracts:member`:
 

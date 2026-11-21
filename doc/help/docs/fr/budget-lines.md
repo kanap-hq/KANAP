@@ -627,7 +627,7 @@ Une date de fin en orange signale un contrat dont la décision de renouvellement
 
 La section est absente quand la ligne n'a pas de fournisseur ou qu'il n'y a rien à suggérer.
 
-**Contacts** : les personnes liées à cette ligne, chacune avec un rôle (**Commercial**, **Technique**, **Support** ou **Autre**). Choisissez un contact, puis son rôle : le choix du rôle ajoute le contact. Le tableau montre le rôle, le prénom, le nom, la fonction, l'e-mail et le mobile. Survolez le rôle pour voir si le contact vient du fournisseur ou a été ajouté manuellement. Retirez un contact avec l'icône de retrait.
+**Contacts** : les personnes liées à cette ligne, chacune avec un rôle (**Commercial**, **Technique**, **Support** ou **Autre**). Choisissez un contact, puis son rôle : le choix du rôle ajoute le contact. Un contact qui n'existe pas encore peut être créé depuis la liste, puis recevoir son rôle (voir [Contacts](contacts.md#creer-un-contact-depuis-un-champ-contact)). Le tableau montre le rôle, le prénom, le nom, la fonction, l'e-mail et le mobile. Survolez le rôle pour voir si le contact vient du fournisseur ou a été ajouté manuellement. Retirez un contact avec l'icône de retrait.
 
 **Liens et fichiers** : les liens web de la ligne (portails fournisseurs, documentation, consoles d'administration) et ses fichiers (devis, factures, notes d'approbation), une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et sa date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec `budget:member` :
 

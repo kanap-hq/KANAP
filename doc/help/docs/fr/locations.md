@@ -93,7 +93,7 @@ Cet onglet organise les personnes et références associées à un site en trois
 
 **Contacts internes** : Membres de l'équipe de votre organisation liés à ce site. Chaque ligne a un sélecteur **Utilisateur** et un champ **Rôle** en texte libre (par ex., « Resp. Ops », « Responsable sécurité »).
 
-**Contacts externes** : Contacts tiers tirés de vos données de référence Contacts. Chaque ligne a un sélecteur **Contact** et un champ **Rôle** (par ex., « Gestionnaire de compte », « Contact NOC »).
+**Contacts externes** : Contacts tiers tirés de vos données de référence Contacts. Chaque ligne a un sélecteur **Contact** et un champ **Rôle** (par ex., « Gestionnaire de compte », « Contact NOC »). Un contact qui n'existe pas encore peut être créé depuis le sélecteur. Voir [Contacts](contacts.md#creer-un-contact-depuis-un-champ-contact).
 
 **Sites web pertinents** : Liens utiles comme les portails fournisseur, la documentation des installations ou les pages de statut. Chaque ligne a une **Description** et une **URL**.
 

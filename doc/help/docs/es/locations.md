@@ -93,7 +93,7 @@ Esta pestaña organiza las personas y referencias asociadas a una ubicación en 
 
 **Contactos internos**: Miembros del equipo de su organización vinculados a esta ubicación. Cada fila tiene un selector de **Usuario** y un campo de texto libre de **Rol** (p. ej., "Responsable de operaciones", "Oficial de seguridad").
 
-**Contactos externos**: Contactos de terceros extraídos de sus datos maestros de Contactos. Cada fila tiene un selector de **Contacto** y un campo de **Rol** (p. ej., "Gestor de cuenta", "Contacto NOC").
+**Contactos externos**: Contactos de terceros extraídos de sus datos maestros de Contactos. Cada fila tiene un selector de **Contacto** y un campo de **Rol** (p. ej., "Gestor de cuenta", "Contacto NOC"). Un contacto que aún no existe se puede crear desde el selector. Consulte [Contactos](contacts.md#crear-un-contacto-desde-un-campo-de-contacto).
 
 **Sitios web relevantes**: Enlaces útiles como portales de proveedores, documentación de instalaciones o páginas de estado. Cada fila tiene una **Descripción** y una **URL**.
 

@@ -227,7 +227,7 @@ La pestaña Visión general es la narrativa de la aplicación. Contiene:
 
 **Soporte**:
 - Una tabla de contactos de soporte extraída de sus datos maestros de Contactos. Cada fila muestra el nombre del contacto, correo, teléfono y un rol de texto libre (p. ej., Gestor de cuenta, Soporte N1).
-- **Añadir contacto** abre un diálogo para elegir un contacto y definir un rol.
+- **Añadir contacto** abre un diálogo para elegir un contacto y definir un rol. Un contacto que aún no existe se puede crear desde la lista. Consulte [Contactos](contacts.md#crear-un-contacto-desde-un-campo-de-contacto).
 - **Notas de soporte**: texto libre para los acuerdos de soporte (SLA, vías de escalado, información de guardias).
 
 ---

@@ -98,6 +98,12 @@ Cliquez sur **Nouveau** dans la liste. La page du nouveau contact s'ouvre. Saisi
 
 Tant que le contact est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Ctrl+S** agit comme le bouton affiché. **Créer** enregistre le contact quand ses champs obligatoires sont renseignés et le laisse ouvert. S'il en manque un, son libellé passe en rouge et le curseur y va. Une fois le contact créé, **Créer** devient **Terminé** : il enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ, la liste, l'écran précédent ou le fournisseur depuis lequel vous l'avez commencé. **Annuler** part sans rien conserver. Sur un contact déjà créé, il le supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des contacts. Si vous quittez la page autrement, le contact est conservé.
 
+### Créer un contact depuis un champ contact
+
+Partout où vous choisissez un contact (sur un contrat, une ligne budgétaire, une application, un actif, un site, une technologie ou un fournisseur), vous pouvez en créer un sans quitter la page. Saisissez le nom de la personne dans le champ. Si aucun contact ne porte exactement ce nom, la liste se termine par **+ Créer le contact « nom »**. Cliquez dessus pour ouvrir **Nouveau contact**. Le prénom et le nom viennent de ce que vous avez saisi : le texte est coupé au premier espace, et un seul mot va dans le nom. Saisissez l'e-mail, qui est obligatoire. **Créer** crée le contact et le choisit dans le champ. **Annuler** ou Échap ferme la boîte de dialogue sans rien créer. Un e-mail absent, non valide ou déjà utilisé par un autre contact affiche son message sous le champ, et la boîte de dialogue reste ouverte.
+
+Il faut pour cela le même droit que pour **Nouveau** dans la liste des contacts. Sans ce droit, une recherche qui ne trouve personne vous invite à demander à un administrateur de votre espace de travail de créer le contact.
+
 ---
 
 ## Où les contacts sont utilisés
@@ -112,6 +118,8 @@ Chaque fournisseur dispose d'un onglet **Contacts** affichant tous les contacts 
 2. Cliquez sur **Nouveau contact** à côté d'un type de contact.
 3. Remplissez les détails du contact : le fournisseur et le type de contact sont pré-remplis.
 4. Cliquez sur **Créer**, puis sur **Terminé** : vous revenez à l'onglet **Contacts** du fournisseur.
+
+Dans **Ajouter un existant**, un contact que vous créez depuis la liste appartient au fournisseur, avec le type de contact de cette section. Voir [Créer un contact depuis un champ contact](#creer-un-contact-depuis-un-champ-contact).
 
 ### Support applicatif
 

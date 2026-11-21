@@ -627,7 +627,7 @@ Ein orangefarbenes Enddatum kennzeichnet einen Vertrag, dessen Verlängerungsent
 
 Der Abschnitt fehlt, wenn die Zeile keinen Lieferanten hat oder es nichts vorzuschlagen gibt.
 
-**Kontakte**: Personen zu dieser Zeile, jede mit einer Rolle (**Vertrieb**, **Technik**, **Support** oder **Sonstige**). Wählen Sie einen Kontakt und dann seine Rolle: Die Wahl der Rolle fügt den Kontakt hinzu. Die Tabelle zeigt Rolle, Vorname, Nachname, Funktion, E-Mail und Mobilnummer. Fahren Sie mit der Maus über die Rolle, um zu sehen, ob der Kontakt vom Lieferanten stammt oder manuell hinzugefügt wurde. Entfernen Sie einen Kontakt mit dem Entfernen-Symbol.
+**Kontakte**: Personen zu dieser Zeile, jede mit einer Rolle (**Vertrieb**, **Technik**, **Support** oder **Sonstige**). Wählen Sie einen Kontakt und dann seine Rolle: Die Wahl der Rolle fügt den Kontakt hinzu. Ein Kontakt, den es noch nicht gibt, lässt sich aus der Liste heraus erstellen und erhält dann seine Rolle (siehe [Kontakte](contacts.md#einen-kontakt-aus-einem-kontaktfeld-erstellen)). Die Tabelle zeigt Rolle, Vorname, Nachname, Funktion, E-Mail und Mobilnummer. Fahren Sie mit der Maus über die Rolle, um zu sehen, ob der Kontakt vom Lieferanten stammt oder manuell hinzugefügt wurde. Entfernen Sie einen Kontakt mit dem Entfernen-Symbol.
 
 **Links und Dateien**: die Weblinks der Zeile (Lieferantenportale, Dokumentation, Admin-Konsolen) und ihre Dateien (Angebote, Rechnungen, Genehmigungsvermerke), je eine Zeile mit Name, der Domain des Links oder der Größe der Datei und dem Datum, an dem sie hinzugefügt wurden. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen, oder auf eine Datei, um sie herunterzuladen. Mit `budget:member`:
 

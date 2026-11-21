@@ -93,7 +93,7 @@ Dieser Reiter organisiert die Personen und Referenzen, die mit einem Standort ve
 
 **Interne Kontakte**: Teammitglieder Ihrer Organisation, die mit diesem Standort verknüpft sind. Jede Zeile hat einen **Benutzer**-Picker und ein Freitext-**Rolle**-Feld (z. B. „Ops-Leiter", „Sicherheitsbeauftragter").
 
-**Externe Kontakte**: Drittanbieter-Kontakte aus Ihren Kontakte-Stammdaten. Jede Zeile hat einen **Kontakt**-Picker und ein **Rolle**-Feld (z. B. „Account-Manager", „NOC-Kontakt").
+**Externe Kontakte**: Drittanbieter-Kontakte aus Ihren Kontakte-Stammdaten. Jede Zeile hat einen **Kontakt**-Picker und ein **Rolle**-Feld (z. B. „Account-Manager", „NOC-Kontakt"). Ein Kontakt, den es noch nicht gibt, lässt sich aus dem Picker heraus erstellen. Siehe [Kontakte](contacts.md#einen-kontakt-aus-einem-kontaktfeld-erstellen).
 
 **Relevante Websites**: Nützliche Links wie Anbieterportale, Einrichtungsdokumentation oder Statusseiten. Jede Zeile hat eine **Beschreibung** und eine **URL**.
 

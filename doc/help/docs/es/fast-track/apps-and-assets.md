@@ -124,7 +124,7 @@ Configure también:
 | **Acceso externo** | ¿Es esta app accesible desde Internet? |
 | **Integración de datos / ETL** | ¿Participa esta app en flujos de datos? |
 
-La misma pestaña contiene los contactos de **Soporte** (use **Agregar contacto** y asigne un rol a cada uno) y **Notas de soporte** de texto libre.
+La misma pestaña contiene los contactos de **Soporte** (use **Agregar contacto** y asigne un rol a cada uno) y **Notas de soporte** de texto libre. Un contacto que aún no existe se puede crear desde la lista. Consulte [Contactos](../contacts.md#crear-un-contacto-desde-un-campo-de-contacto).
 
 ---
 

@@ -627,7 +627,7 @@ Una fecha de fin en naranja señala un contrato cuya decisión de renovación ca
 
 La sección no aparece cuando la línea no tiene proveedor o no hay nada que sugerir.
 
-**Contactos**: personas de esta línea, cada una con un rol (**Comercial**, **Técnico**, **Soporte** u **Otro**). Elija un contacto y luego su rol: al elegir el rol se añade el contacto. La tabla muestra el rol, el nombre, los apellidos, el cargo, el correo electrónico y el móvil. Pase el cursor sobre el rol para ver si el contacto viene del proveedor o se añadió manualmente. Quite un contacto con el icono de quitar.
+**Contactos**: personas de esta línea, cada una con un rol (**Comercial**, **Técnico**, **Soporte** u **Otro**). Elija un contacto y luego su rol: al elegir el rol se añade el contacto. Un contacto que aún no existe se puede crear desde la lista y recibir después su rol (consulte [Contactos](contacts.md#crear-un-contacto-desde-un-campo-de-contacto)). La tabla muestra el rol, el nombre, los apellidos, el cargo, el correo electrónico y el móvil. Pase el cursor sobre el rol para ver si el contacto viene del proveedor o se añadió manualmente. Quite un contacto con el icono de quitar.
 
 **Enlaces y archivos**: los enlaces web de la línea (portales de proveedores, documentación, consolas de administración) y sus archivos (presupuestos, facturas, notas de aprobación), una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con `budget:member`:
 

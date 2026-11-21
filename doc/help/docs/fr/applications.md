@@ -227,7 +227,7 @@ L'onglet Vue d'ensemble est le récit de l'application. Il contient :
 
 **Support** :
 - Un tableau de contacts de support tirés de vos données de référence Contacts. Chaque ligne affiche le nom du contact, l'e-mail, le téléphone et un rôle en texte libre (ex. : Responsable commercial, Support N1).
-- **Ajouter un contact** ouvre une boîte de dialogue pour choisir un contact et définir un rôle.
+- **Ajouter un contact** ouvre une boîte de dialogue pour choisir un contact et définir un rôle. Un contact qui n'existe pas encore peut être créé depuis la liste. Voir [Contacts](contacts.md#creer-un-contact-depuis-un-champ-contact).
 - **Notes de support** : texte libre pour les arrangements de support (SLA, voies d'escalade, infos d'astreinte).
 
 ---
