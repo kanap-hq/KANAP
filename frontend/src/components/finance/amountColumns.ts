@@ -132,6 +132,53 @@ export type ListAmountColumns = {
   displayDefaults: ReadonlyArray<AmountColumn>;
 };
 
+/** The amount columns a list shows by default, as its saved layout records them (`yBudget,yLanding`). */
+export function amountLayoutStamp(columns: Pick<ListAmountColumns, 'displayDefaults'>): string {
+  return columns.displayDefaults.map((column) => amountFieldKey('y', column)).join(',');
+}
+
+/** What a layout saved before the stamp existed is read as: the product's default and last columns. */
+const UNSTAMPED_LAYOUT = amountLayoutStamp({ displayDefaults: [AMOUNT_COLUMNS[0], AMOUNT_COLUMNS[AMOUNT_COLUMNS.length - 1]] });
+
+/**
+ * A saved list layout after the default amount columns changed (`savedStamp`: the ones it was
+ * saved under, null before the stamp existed).
+ * - The layout showed exactly those amount columns: it follows the setting, and shows the new ones.
+ * - The person chose other amount columns: they all stay, and the new default column of the
+ *   current year is shown too when the default column changed.
+ * A column shown this way goes right after the former default column, or after the last amount
+ * column on screen when that one is hidden. Hiding it again is a choice the layout then keeps.
+ */
+export function followDefaultAmountColumns<S extends { colId?: string | null; hide?: boolean | null }>(
+  saved: S[],
+  savedStamp: string | null,
+  columns: Pick<ListAmountColumns, 'displayDefaults'>,
+): S[] {
+  const now = amountLayoutStamp(columns).split(',');
+  const before = (savedStamp ?? UNSTAMPED_LAYOUT).split(',');
+  if (now.join() === before.join()) return saved;
+  const visible = saved.filter((col) => !col.hide && parseAmountField(col.colId)).map((col) => col.colId as string);
+  const followed = visible.length === before.length && before.every((id) => visible.includes(id));
+  if (!followed && now[0] === before[0]) return saved;
+
+  const show = followed ? now : [now[0]];
+  const hide = followed ? before.filter((id) => !now.includes(id)) : [];
+  const next = saved.map((col) => {
+    if (col.colId && hide.includes(col.colId)) return { ...col, hide: true };
+    if (col.colId && show.includes(col.colId)) return { ...col, hide: false };
+    return col;
+  });
+  // The new default column, when it was not on screen, goes where the eye looks for it.
+  const entry = next.find((col) => col.colId === now[0]);
+  if (!entry || visible.includes(now[0])) return next;
+  const anchor = followed || visible.includes(before[0]) ? before[0] : visible[visible.length - 1];
+  const rest = next.filter((col) => col !== entry);
+  const at = rest.findIndex((col) => col.colId === anchor);
+  if (at < 0) return next;
+  rest.splice(at + 1, 0, entry);
+  return rest;
+}
+
 /**
  * True when a list column id names an amount column, or its FTE, whose budget column is not shown
  * (so the list does not build it).

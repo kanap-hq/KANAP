@@ -1142,7 +1142,7 @@
       "nameOf": "Nom de la colonne {{position}}",
       "shownOf": "Afficher {{column}}",
       "followsOf": "{{column}} suit la répartition et les lignes",
-      "defaultOf": "Faire de {{column}} la colonne par défaut",
+      "defaultOf": "Choisir {{column}} comme colonne par défaut",
       "inFiles": "Dans les fichiers : {{name}}",
       "helpHidden": "Les colonnes masquées gardent leurs montants et acceptent toujours les imports et les gels.",
       "helpDefault": "La colonne par défaut est présélectionnée dans les rapports et trie les listes et le tableau de bord. La geler fige les taux de change de l'année.",

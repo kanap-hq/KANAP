@@ -123,18 +123,20 @@ export default function AnalyticsCategoryReport() {
 
   // The server groups the kept lines by their value on the dimension (none: unassigned), one sum per
   // year, the first year's largest first. Until the dimensions are known, nothing is asked: the
-  // report would group on the default dimension, then again on the one in the address.
-  const request = useMemo(() => (reportFilters.queryFilters == null || !analyticsAxes.ready ? null : analyticsRequest({
+  // report would group on the default dimension, then again on the one in the address. The same
+  // holds for the budget columns: it would ask for Budget, then for the default column.
+  const settingsReady = analyticsAxes.ready && budgetColumns.ready;
+  const request = useMemo(() => (reportFilters.queryFilters == null || !settingsReady ? null : analyticsRequest({
     axisId,
     years,
     metric,
     excludedIds: excludedCategories,
     filters: reportFilters.queryFilters,
     measure,
-  })), [reportFilters.queryFilters, analyticsAxes.ready, axisId, years, metric, excludedCategories, measure]);
+  })), [reportFilters.queryFilters, settingsReady, axisId, years, metric, excludedCategories, measure]);
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
   // The lines of every value, in one aggregate: asked only when the address turns the detail on.
-  const detailRequest = useMemo(() => (detail && reportFilters.queryFilters != null && analyticsAxes.ready ? analyticsLinesRequest({
+  const detailRequest = useMemo(() => (detail && reportFilters.queryFilters != null && settingsReady ? analyticsLinesRequest({
     scope,
     axisId,
     years,
@@ -142,20 +144,20 @@ export default function AnalyticsCategoryReport() {
     excludedIds: excludedCategories,
     filters: reportFilters.queryFilters,
     measure,
-  }) : null), [detail, reportFilters.queryFilters, analyticsAxes.ready, scope, axisId, years, metric, excludedCategories, measure]);
+  }) : null), [detail, reportFilters.queryFilters, settingsReady, scope, axisId, years, metric, excludedCategories, measure]);
   const detailReport = useBudgetAggregate(scope, detailRequest, { keepPrevious: true });
   // The OPEX and CAPEX sums of every value, in one aggregate: asked only when the split is on.
-  const natureRequest = useMemo(() => (split && reportFilters.queryFilters != null && analyticsAxes.ready ? analyticsNatureRequest({
+  const natureRequest = useMemo(() => (split && reportFilters.queryFilters != null && settingsReady ? analyticsNatureRequest({
     axisId,
     years,
     metric,
     excludedIds: excludedCategories,
     filters: reportFilters.queryFilters,
     measure,
-  }) : null), [split, reportFilters.queryFilters, analyticsAxes.ready, axisId, years, metric, excludedCategories, measure]);
+  }) : null), [split, reportFilters.queryFilters, settingsReady, axisId, years, metric, excludedCategories, measure]);
   const natureReport = useBudgetAggregate(scope, natureRequest, { keepPrevious: true });
   // Loading, waiting for the filter bar or the dimensions, or the last answer kept while the new one loads.
-  const busy = reportFilters.queryFilters == null || !analyticsAxes.ready || report.isLoading || report.isPlaceholderData
+  const busy = reportFilters.queryFilters == null || !settingsReady || report.isLoading || report.isPlaceholderData
     || (detail && (detailReport.isLoading || detailReport.isPlaceholderData))
     || (split && (natureReport.isLoading || natureReport.isPlaceholderData));
   const labels = useMemo(() => ({ unassigned: t('reports.analyticsCategory.unassigned'), unnamed: t('reports.analyticsCategory.unnamed') }), [t]);
