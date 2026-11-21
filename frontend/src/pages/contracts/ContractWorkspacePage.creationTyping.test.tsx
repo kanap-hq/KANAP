@@ -47,6 +47,7 @@ vi.mock('../../components/fields/DateEUField', () => ({
 import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import ContractWorkspacePage from './ContractWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -129,7 +130,7 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
     let answer: (value: unknown) => void = () => undefined;
     mocked.post.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
     renderNew();
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Oracle support' } });
     fireEvent.blur(title);
     const drawer = screen.getByRole('complementary');
@@ -170,7 +171,7 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
     let answer: (value: unknown) => void = () => undefined;
     mocked.post.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
     renderNew();
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Oracle support' } });
     fireEvent.blur(title);
     const drawer = screen.getByRole('complementary');
@@ -214,7 +215,7 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
     fireEvent.change(duration, { target: { value: '24' } });
     fireEvent.blur(duration);
     // The name is typed, not yet committed: Create writes the contract.
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Oracle support' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Oracle support' } });
     expect(mocked.post).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/contracts/CTR-7/overview'));
@@ -233,7 +234,7 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
 
   it('marks what a named contract lacks on Create and puts the cursor in the first field, with no sentence under them', async () => {
     renderNew();
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Oracle support' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Oracle support' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(markedLabels()).toEqual(['contracts.fields.supplier', 'contracts.fields.company', 'contracts.fields.startDate', 'contracts.fields.durationMonths']));
     const drawer = screen.getByRole('complementary');

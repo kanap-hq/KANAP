@@ -35,6 +35,7 @@ vi.mock('../../hooks/useWorkingDayCalendarNav', () => ({
 
 import * as service from '../../services/workingDayProfiles';
 import WorkingDayCalendarWorkspacePage from './WorkingDayCalendarWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = service as unknown as {
   getWorkingDayProfile: ReturnType<typeof vi.fn>;
@@ -118,7 +119,7 @@ describe('WorkingDayCalendarWorkspacePage typing while the calendar is created',
     const code = screen.getByLabelText('workingDayCalendars.fields.code');
     fireEvent.change(code, { target: { value: 'CAL-02' } });
     fireEvent.blur(code);
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Contractors' } });
     fireEvent.blur(title);
     await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledTimes(1));

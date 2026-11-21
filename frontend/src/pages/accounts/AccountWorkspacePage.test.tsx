@@ -43,6 +43,7 @@ import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import AccountWorkspacePage from './AccountWorkspacePage';
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
@@ -525,7 +526,7 @@ describe('AccountWorkspacePage', () => {
     expect(await screen.findByText('accounts.messages.nameRequired')).toBeInTheDocument();
     expect(markedLabels()).toEqual(['accounts.fields.accountNumber']);
     // The empty title keeps the cursor: it comes first.
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus();
     expect(screen.queryByText('accounts.messages.numberInvalid')).toBeNull();
     expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['accounts.messages.nameRequired']);
     expect(mocked.post).not.toHaveBeenCalled();
@@ -539,7 +540,7 @@ describe('AccountWorkspacePage', () => {
     const listbox = await openConsolidation();
     fireEvent.click(within(listbox).getByRole('option', { name: '1200 · Software' }));
     expect(mocked.post).not.toHaveBeenCalled();
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Telecom' } });
     fireEvent.blur(title);
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/accounts', {
@@ -566,7 +567,7 @@ describe('AccountWorkspacePage', () => {
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'accounts.fields.chartOfAccounts' })).toHaveTextContent('PCG · French chart'));
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '606100' } });
     fireEvent.blur(screen.getByLabelText('accounts.fields.accountNumber'));
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Duplicate' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Duplicate' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText(/already exists/)).toBeInTheDocument();
     expect(screen.getByLabelText('accounts.fields.accountNumber')).toHaveAttribute('aria-invalid', 'true');
@@ -581,7 +582,7 @@ describe('AccountWorkspacePage', () => {
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '218300' } });
     fireEvent.blur(screen.getByLabelText('accounts.fields.accountNumber'));
     await pickNature('master-data:shared.lineTypeUsage.capex');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'IT hardware' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'IT hardware' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/accounts', expect.objectContaining({
       account_number: 218300, account_name: 'IT hardware', nature: 'capex',
@@ -592,7 +593,7 @@ describe('AccountWorkspacePage', () => {
     renderAt('/master-data/accounts/new/overview');
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '1' } });
     fireEvent.blur(screen.getByLabelText('accounts.fields.accountNumber'));
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Cash' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Cash' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(markedLabels()).toEqual(['accounts.fields.chartOfAccounts']);
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'accounts.fields.chartOfAccounts' })).toHaveFocus());
@@ -605,7 +606,7 @@ describe('AccountWorkspacePage', () => {
     await waitFor(() => expect(screen.getByRole('combobox', { name: 'accounts.fields.chartOfAccounts' })).toHaveTextContent('PCG · French chart'));
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '12ab' } });
     fireEvent.blur(screen.getByLabelText('accounts.fields.accountNumber'));
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Cash' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Cash' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('accounts.messages.numberInvalid')).toBeInTheDocument();
     expect(mocked.post).not.toHaveBeenCalled();

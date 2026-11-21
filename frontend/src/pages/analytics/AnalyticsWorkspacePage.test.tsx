@@ -71,6 +71,7 @@ import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/analytics';
 import AnalyticsWorkspacePage from './AnalyticsWorkspacePage';
 import AnalyticsDimensionWorkspacePage from './AnalyticsDimensionWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = service as unknown as {
   getAnalyticsValue: ReturnType<typeof vi.fn>;
@@ -375,7 +376,7 @@ describe('AnalyticsWorkspacePage', () => {
     renderAt('/master-data/analytics/new/overview?axis=ax-nature&sort=name%3AASC');
     const dimension = screen.getByLabelText('analytics.fields.dimension');
     expect(within(dimension.parentElement as HTMLElement).getByRole('combobox')).toHaveTextContent('Nature');
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: ' Hardware ' } });
     fireEvent.blur(title);
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith({
@@ -400,7 +401,7 @@ describe('AnalyticsWorkspacePage', () => {
     const options = await screen.findAllByRole('option');
     expect(options.map((o) => o.textContent)).toEqual(['Analytics dimension', 'Nature']);
     fireEvent.click(options[1]);
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Hardware' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Hardware' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith(expect.objectContaining({ axis_id: 'ax-nature' })));
   });
@@ -410,7 +411,7 @@ describe('AnalyticsWorkspacePage', () => {
     renderAt('/master-data/analytics/new/overview?axis=ax-nature');
     expect(usageSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     await pickUsage('master-data:shared.lineTypeUsage.capex');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Leasing' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Leasing' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith({
       axis_id: 'ax-nature',
@@ -443,7 +444,7 @@ describe('AnalyticsWorkspacePage', () => {
     expect(within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.capex' })).not.toHaveAttribute('aria-disabled');
     expect(within(listbox).getByRole('option', { name: 'master-data:shared.lineTypeUsage.both' })).not.toHaveAttribute('aria-disabled');
     fireEvent.keyDown(listbox, { key: 'Escape' });
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Leasing' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Leasing' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledWith(expect.objectContaining({ axis_id: 'ax-nature', applies_to: null })));
     // A refusal on the field shows under it.
@@ -458,7 +459,7 @@ describe('AnalyticsWorkspacePage', () => {
     renderAt('/master-data/analytics/new/overview?axis=ax-nature');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('analytics.messages.nameRequired')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus();
     // The dimension always has one: the page's, else the default.
     expect(markedLabels()).toEqual([]);
     expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['analytics.messages.nameRequired']);

@@ -52,6 +52,7 @@ vi.mock('../../components/history/RecordHistory', () => ({
 import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/workingDayProfiles';
 import WorkingDayCalendarWorkspacePage from './WorkingDayCalendarWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = service as unknown as {
   getWorkingDayProfile: ReturnType<typeof vi.fn>;
@@ -157,7 +158,7 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('workingDayCalendars.fields.code'));
     fireEvent.change(screen.getByLabelText('workingDayCalendars.fields.code'), { target: { value: ' CAL-02 ' } });
     fireEvent.blur(screen.getByLabelText('workingDayCalendars.fields.code'));
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Contractors' } });
     expect(mocked.createWorkingDayProfile).not.toHaveBeenCalled();
     fireEvent.blur(title);
@@ -195,7 +196,7 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     fireEvent.change(country, { target: { value: 'fra' } });
     fireEvent.click(await screen.findByRole('option', { name: 'France' }));
     expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('FR');
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('France');
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveValue('France');
     // France has regions: the calendar waits for one, or the whole country.
     expect(mocked.createWorkingDayProfile).not.toHaveBeenCalled();
 
@@ -204,7 +205,7 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     fireEvent.mouseDown(region);
     fireEvent.click(await screen.findByRole('option', { name: 'Moselle' }));
     expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('FR-57');
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('France (Moselle)');
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveValue('France (Moselle)');
     await waitFor(() => expect(mocked.createWorkingDayProfile).toHaveBeenCalledWith({
       code: 'FR-57',
       name: 'France (Moselle)',
@@ -223,11 +224,11 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     await waitFor(() => expect(mocked.listCountries).toHaveBeenCalled());
     fireEvent.change(country, { target: { value: 'Fr' } });
     fireEvent.click(await screen.findByRole('option', { name: 'France' }));
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Paris staff' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Paris staff' } });
     fireEvent.change(country, { target: { value: 'NL' } });
     fireEvent.click(await screen.findByRole('option', { name: 'Netherlands' }));
     expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveValue('NL');
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('Paris staff');
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveValue('Paris staff');
     expect(screen.queryByRole('combobox', { name: 'workingDayCalendars.fields.region' })).toBeNull();
   });
 
@@ -236,14 +237,14 @@ describe('WorkingDayCalendarWorkspacePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('workingDayCalendars.messages.nameRequired')).toBeInTheDocument();
     expect(markedLabels()).toEqual(['workingDayCalendars.fields.code']);
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus();
     expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['workingDayCalendars.messages.nameRequired']);
     expect(mocked.createWorkingDayProfile).not.toHaveBeenCalled();
   });
 
   it('puts the cursor in the empty code on Create once the calendar has its name', async () => {
     renderAt('/master-data/working-day-calendars/new/overview');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Paris staff' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Paris staff' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(markedLabels()).toEqual(['workingDayCalendars.fields.code']);
     await waitFor(() => expect(screen.getByLabelText('workingDayCalendars.fields.code')).toHaveFocus());

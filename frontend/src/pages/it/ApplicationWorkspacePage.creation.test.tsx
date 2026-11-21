@@ -12,6 +12,7 @@ import { resetCreationStore } from '../../components/workspace/creation/creation
 import { clearCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import api from '../../api';
 import ApplicationWorkspacePage from './ApplicationWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 // Creation at the title (lot 1a): the name committed in the header creates the application, the
 // page moves to it with every tab open, and "Cancel creation" deletes it while the person stays.
@@ -105,7 +106,7 @@ function location() {
 }
 
 async function createBilling() {
-  const input = await screen.findByRole('textbox', { name: TITLE });
+  const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
   fireEvent.change(input, { target: { value: 'Billing' } });
   fireEvent.keyDown(input, { key: 'Enter' });
   await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview'));
@@ -123,7 +124,7 @@ describe('Application creation at the title', () => {
 
   it('opens with the title to type, light blue while empty, and nothing else to fill', async () => {
     renderPage(['/it/applications/new/overview']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(input).toHaveFocus();
     expect(input).toHaveAttribute('placeholder', 'workspace.application.newTitle');
     expect(getComputedStyle(input).borderRadius).toBe('6px');
@@ -135,7 +136,7 @@ describe('Application creation at the title', () => {
 
   it('shows the application to come under the title, dimmed and out of reach, until the title creates it', async () => {
     renderPage(['/it/applications/new/overview']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     // The metadata, the overview and the properties panel of an empty application.
     const previews = screen.getAllByTestId('creation-preview');
     expect(previews).toHaveLength(3);
@@ -169,7 +170,7 @@ describe('Application creation at the title', () => {
   it('sends Tab from the title to the description, and Shift+Tab reaches Done', async () => {
     const user = userEvent.setup();
     renderPage(['/it/applications/new/overview']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     await user.type(input, 'Billing');
     await user.tab();
     await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview'));
@@ -197,14 +198,14 @@ describe('Application creation at the title', () => {
   it('shows a refused name under the title and keeps the field open, nothing created', async () => {
     renderPage(['/it/applications/new/overview']);
     mocked.post.mockRejectedValueOnce({ response: { status: 409, data: { message: 'An application named Billing already exists.' } } });
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Billing' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(await screen.findByText('An application named Billing already exists.')).toBeTruthy();
-    expect(screen.getByRole('textbox', { name: TITLE })).toHaveValue('Billing');
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveValue('Billing');
     expect(location()).toBe('/it/applications/new/overview');
     // Typing answers the refusal; the next commit tries again.
-    fireEvent.change(screen.getByRole('textbox', { name: TITLE }), { target: { value: 'Billing 2' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Billing 2' } });
     expect(screen.queryByText('An application named Billing already exists.')).toBeNull();
   });
 
@@ -221,8 +222,8 @@ describe('Application creation at the title', () => {
 
   it('asks before cancelling a creation that holds more than its title, and keeps it on Keep', async () => {
     renderPage(['/it/applications/new/overview?sort=name%3AASC'], { fields: 2, children: { owner: 1 } });
-    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE })).toBeTruthy());
-    const input = screen.getByRole('textbox', { name: TITLE });
+    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toBeTruthy());
+    const input = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Billing' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview?sort=name%3AASC'));
@@ -246,7 +247,7 @@ describe('Application creation at the title', () => {
 
   it('leaves an empty new application on Escape, to the address the link gave', async () => {
     renderPage([{ pathname: '/it/applications/new/overview', state: { returnTo: '/portfolio/projects' } }]);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.keyDown(input, { key: 'Escape' });
     await waitFor(() => expect(location()).toBe('/portfolio/projects'));
     expect(mocked.post).not.toHaveBeenCalled();
@@ -256,7 +257,7 @@ describe('Application creation at the title', () => {
   it('leaves an empty new application by the back arrow, to the previous address', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
-    await screen.findByRole('textbox', { name: TITLE });
+    await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.click(screen.getByRole('button', { name: 'pages.applications.title' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.post).not.toHaveBeenCalled();
@@ -291,10 +292,10 @@ describe('Application creation at the title', () => {
   it('shows the error under the empty title on Create and gives it the focus, nothing created', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('messages.nameRequired')).toBeTruthy();
-    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus());
     expect(input).toBeTruthy();
     expect(mocked.post).not.toHaveBeenCalled();
     expect(location()).not.toBe('/start');
@@ -315,7 +316,7 @@ describe('Application creation at the title', () => {
   it('creates the application on Create clicked just after the title, and keeps it open with Done', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Billing' } });
     // In a browser the click's press blurs the title first, which commits it.
     fireEvent.blur(input);
@@ -332,7 +333,7 @@ describe('Application creation at the title', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
     let answer: (value: unknown) => void = () => undefined;
     mocked.post.mockImplementationOnce(async () => new Promise((resolve) => { answer = resolve; }) as never);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Billing' } });
     const create = screen.getByRole('button', { name: 'common:buttons.create' });
     fireEvent.pointerDown(create);
@@ -351,7 +352,7 @@ describe('Application creation at the title', () => {
   it('never closes the application on a double-click of Create when the record comes back between the clicks', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Billing' } });
     fireEvent.pointerDown(screen.getByRole('button', { name: 'common:buttons.create' }));
     fireEvent.blur(input);
@@ -369,7 +370,7 @@ describe('Application creation at the title', () => {
   it('leaves the new page on one Escape with a name typed, nothing created', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Billing' } });
     fireEvent.keyDown(input, { key: 'Escape' });
     await waitFor(() => expect(location()).toBe('/start'));

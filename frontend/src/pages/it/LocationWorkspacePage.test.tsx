@@ -38,6 +38,7 @@ import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import { KanapDialogProvider } from '../../components/design';
 import LocationWorkspacePage from './LocationWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -90,7 +91,7 @@ describe('LocationWorkspacePage name refusals', () => {
     fireEvent.blur(input);
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/locations/loc-1', { name: 'lyon dc' }));
     expect(await screen.findByText('messages.locationNameTaken')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('messages.locationNameTaken');
     // The stored name comes back.
     expect(await screen.findByText('Paris DC')).toBeInTheDocument();
   });
@@ -98,12 +99,12 @@ describe('LocationWorkspacePage name refusals', () => {
   it('says another location has the name, under the header title, when a create is a duplicate', async () => {
     mocked.post.mockRejectedValueOnce(duplicate);
     renderAt('/it/locations/new/overview');
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'paris dc' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('messages.locationNameTaken')).toBeInTheDocument();
     expect(title).toHaveFocus();
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('messages.locationNameTaken');
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
@@ -111,7 +112,7 @@ describe('LocationWorkspacePage name refusals', () => {
     mocked.post.mockResolvedValueOnce({ data: { id: 'loc-new', location_reference: 'LOC-9', name: 'Lyon DC', creation_token: 'token-1' } });
     renderAt('/it/locations/new/overview');
     expect(screen.queryByPlaceholderText('workspace.location.namePlaceholder')).toBeNull();
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: ' Lyon DC ' } });
     expect(mocked.post).not.toHaveBeenCalled();
     fireEvent.blur(title);
@@ -134,7 +135,7 @@ describe('LocationWorkspacePage name refusals', () => {
     renderAt('/it/locations/new/overview');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('messages.nameRequired')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus();
     // The hosting type is preselected: nothing else is marked, no sentence under a field.
     expect(markedLabels()).toEqual([]);
     expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['messages.nameRequired']);

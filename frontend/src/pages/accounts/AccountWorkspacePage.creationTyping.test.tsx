@@ -23,6 +23,7 @@ vi.mock('../../hooks/useAccountNav', () => ({
 
 import api from '../../api';
 import AccountWorkspacePage from './AccountWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -95,7 +96,7 @@ describe('AccountWorkspacePage typing while the account is created', () => {
     const number = await screen.findByLabelText('accounts.fields.accountNumber');
     fireEvent.change(number, { target: { value: '606300' } });
     fireEvent.blur(number);
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Hosting' } });
     fireEvent.blur(title);
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));

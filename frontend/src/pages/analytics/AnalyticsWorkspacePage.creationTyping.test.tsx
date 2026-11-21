@@ -36,6 +36,7 @@ vi.mock('../../hooks/useAnalyticsNav', () => ({
 
 import * as service from '../../services/analytics';
 import AnalyticsWorkspacePage from './AnalyticsWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = service as unknown as {
   getAnalyticsValue: ReturnType<typeof vi.fn>;
@@ -103,7 +104,7 @@ describe('AnalyticsWorkspacePage typing while the value is created', () => {
     let answer: (value: unknown) => void = () => undefined;
     mocked.createAnalyticsValue.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
     renderNew();
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Hardware' } });
     fireEvent.blur(title);
     await waitFor(() => expect(mocked.createAnalyticsValue).toHaveBeenCalledTimes(1));
