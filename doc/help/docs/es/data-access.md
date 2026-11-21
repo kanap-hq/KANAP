@@ -105,10 +105,10 @@ La pestaña **Acceso a los datos** de la ventana del usuario contiene:
 - **Añadir**, que abre un selector en tres secciones: **Empresas**, **Centros de coste** (grupos y centros, en árbol) y **Todo**. Sin centros de coste en el espacio de trabajo, el selector ofrece las empresas y **Todo**.
 - **Añadir sus centros (3)**, cuando la persona es responsable del presupuesto de centros de coste. Añade esos centros en Edición.
 - Dos recordatorios: «Esta persona también ve siempre aquello en lo que está nombrada.» y «Se aplica al presupuesto y a los contratos.»
-- La vista previa, por ejemplo «Con este acceso: 312 líneas presupuestarias, 280 en edición; 45 contratos.»
+- La vista previa, por ejemplo «Con este acceso: 312 líneas presupuestarias, 280 editables; 45 contratos.»
 - Quién cambió el acceso por última vez, y cuándo.
 
-La vista previa sigue cada cambio, antes de guardar. Mide los nodos, no los roles: **en edición** cuenta las líneas que cubre un nodo en Edición, por su empresa pagadora o por su centro de coste, aunque los roles de la persona no le permitan modificarlas.
+La vista previa sigue cada cambio, antes de guardar. Mide los nodos, no los roles: **editables** cuenta las líneas que cubre un nodo en Edición, por su empresa pagadora o por su centro de coste, aunque los roles de la persona no le permitan modificarlas.
 
 Volver a **Todos los datos** pide una confirmación, por ejemplo «Marta Ruiz verá todos los datos del presupuesto y de los contratos.»
 

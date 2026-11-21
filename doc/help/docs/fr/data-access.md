@@ -105,10 +105,10 @@ L'onglet **Accès aux données** de la fenêtre de l'utilisateur contient :
 - **Ajouter**, qui ouvre un sélecteur en trois sections : **Sociétés**, **Centres de coûts** (groupes et centres, en arbre) et **Tout**. Sans centres de coûts dans l'espace de travail, le sélecteur propose les sociétés et **Tout**.
 - **Ajouter ses centres (3)**, quand la personne est responsable budgétaire de centres de coûts. Ce bouton ajoute ces centres en Saisie.
 - Deux rappels : « Cette personne voit aussi, toujours, ce sur quoi elle est nommée. » et « S'applique au budget et aux contrats. »
-- L'aperçu, par exemple « Avec cet accès : 312 lignes budgétaires, dont 280 en saisie ; 45 contrats. »
+- L'aperçu, par exemple « Avec cet accès : 312 lignes budgétaires, dont 280 modifiables ; 45 contrats. »
 - Qui a modifié l'accès en dernier, et quand.
 
-L'aperçu suit chaque changement, avant l'enregistrement. Il mesure les nœuds, pas les rôles : **en saisie** compte les lignes qu'un nœud en Saisie couvre, par leur société qui paie ou par leur centre de coûts, même quand les rôles de la personne ne lui permettent pas de les modifier.
+L'aperçu suit chaque changement, avant l'enregistrement. Il mesure les nœuds, pas les rôles : **modifiables** compte les lignes qu'un nœud en Saisie couvre, par leur société qui paie ou par leur centre de coûts, même quand les rôles de la personne ne lui permettent pas de les modifier.
 
 Revenir à **Toutes les données** demande une confirmation, par exemple « Marta Ruiz verra toutes les données du budget et des contrats. »
 
