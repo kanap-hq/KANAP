@@ -15,13 +15,13 @@ Le nouvel actif est une machine virtuelle de l'environnement Prod, au cycle de v
 **Champs obligatoires** :
 - **Nom** : Le nom de l'actif ou son nom d'hôte, 200 caractères au plus
 - **Type d'actif** : Serveur web, Machine virtuelle, Serveur physique, Conteneur, etc. (configurable dans **Cartographie SI > Paramètres**)
-- **Site** : Où l'actif est hébergé (détermine le fournisseur, le type d'hébergement et le pays). **Créer** le demande
+- **Site** : Où l'actif est hébergé (détermine le fournisseur, le type d'hébergement et le pays). **Terminé** le demande
 
 **Fortement recommandé** :
 - **Cycle de vie** : Statut actuel (Actif, Obsolète, Retiré, etc.)
 - **Environnement** : À quel environnement cet actif appartient (Prod, Pré-prod, QA, Test, Dev, Sandbox)
 
-Appuyez sur Échap dans le titre vide pour partir sans rien créer. Un nom refusé s'affiche sous le titre.
+Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi. Un nom refusé s'affiche sous le titre.
 
 **Noms uniques** : deux actifs ne peuvent pas avoir le même nom ni le même FQDN. La casse et les espaces en début ou en fin ne comptent pas. Kadratis refuse le doublon et nomme l'actif qui porte déjà la valeur (`AST-12`). Les doublons enregistrés auparavant restent modifiables tant que vous ne changez pas cette valeur.
 
@@ -34,9 +34,10 @@ Appuyez sur Échap dans le titre vide pour partir sans rien créer. Un nom refus
 
 ### Créer ou annuler { #cancelling-a-creation }
 
-Tant que l'actif est en cours de création, son en-tête affiche **Créer** et **Annuler** à la place du bouton de fermeture. Ils restent jusqu'à ce que vous quittiez l'actif.
+Tant que l'actif est en cours de création, son en-tête affiche **Créer** et **Annuler** à la place du bouton de fermeture. Ils restent jusqu'à ce que vous quittiez l'actif. **Ctrl+S** agit comme le bouton affiché.
 
-- **Créer** vérifie que l'actif a un site. Sans site, le libellé **Site** passe en rouge dans le tiroir des propriétés et le champ prend le focus. L'actif reste ouvert. Avec un site, Kadratis conserve l'actif et le ferme. Vous revenez à votre point de départ
+- **Créer** fait comme Entrée : il crée l'actif et le laisse ouvert, avec sa référence. Le curseur va au champ **Site** s'il est vide. Avec un titre vide, le titre en demande un
+- Une fois l'actif créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vérifie que l'actif a un site. Sans site, le libellé **Site** passe en rouge dans le tiroir des propriétés et le champ prend le focus. L'actif reste ouvert. Avec un site, vous revenez à votre point de départ
 - **Annuler** supprime l'actif. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des actifs
 
 Si vous quittez l'actif autrement (la flèche de retour, le menu, un autre actif) alors qu'il n'a pas de site, Kadratis vous demande quoi faire. **Le compléter** vous garde sur l'actif, sur le champ **Site**. **Le supprimer** supprime l'actif. Recharger la page ou fermer l'onglet alors que le nouvel actif n'a pas de site fait demander une confirmation par votre navigateur. Si vous partez quand même, l'actif est supprimé.
@@ -185,7 +186,7 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 - **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**, ou **Sans zone**. L'actif apparaît alors dans cette zone sur la page [Zones d'administration](administration-view.md)
 
 **Site** :
-- **Site** (obligatoire) : **Créer** le demande sur un nouvel actif. Un actif créé par un import ou par l'assistant en a besoin dès sa création. Quand le site n'existe pas encore, tapez son nom et choisissez **+ Créer le site « … »** : indiquez son type d'hébergement, et le nouveau site se place dans le champ. Il faut `locations:member`
+- **Site** (obligatoire) : **Terminé** le demande sur un nouvel actif. Un actif créé par un import ou par l'assistant en a besoin dès sa création. Quand le site n'existe pas encore, tapez son nom et choisissez **+ Créer le site « … »** : indiquez son type d'hébergement, et le nouveau site se place dans le champ. Il faut `locations:member`
 - **Sous-site** (lorsque le site a des sous-sites définis)
 - **Type d'hébergement**, **Société exploitante** ou **Fournisseur cloud**, **Pays**, **Ville** : en lecture seule, dérivés du site. Ils suivent quand vous changez de site
 

@@ -37,13 +37,14 @@ Le nouvel incident est **Ouvert**, de gravité **Mineure**, détecté maintenant
 - **Catégorie** : infrastructure, sécurité, application, données, fournisseur, autre (configurable, voir [Catégories](#categories))
 - **Responsable** : qui prend l'incident en charge
 
-Les deux dates acceptent des valeurs passées : un incident découvert le lundi matin peut être enregistré comme ayant commencé le samedi soir. Appuyez sur Échap dans le titre vide pour partir sans rien enregistrer.
+Les deux dates acceptent des valeurs passées : un incident découvert le lundi matin peut être enregistré comme ayant commencé le samedi soir. Appuyez sur Échap dans le titre pour partir sans rien enregistrer, même avec un titre saisi.
 
 ### Créer ou annuler { #cancelling-a-creation }
 
-Tant que l'incident est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez l'incident.
+Tant que l'incident est en cours de création, son en-tête affiche **Créer** et **Annuler**. Ils restent jusqu'à ce que vous quittiez l'incident. **Ctrl+S** agit comme le bouton affiché.
 
-- **Créer** conserve l'incident et le ferme. Vous revenez à votre point de départ : la liste ou l'écran précédent. Avec un titre vide, rien ne se ferme et le titre en demande un
+- **Créer** fait comme Entrée : il crée l'incident et le laisse ouvert, avec sa référence. Avec un titre vide, le titre en demande un
+- Une fois l'incident créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ : la liste ou l'écran précédent
 - **Annuler** ferme sans rien conserver. Sur un incident déjà créé, il le supprime. Si vous avez saisi plus que le titre, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des incidents
 
 **Annuler l'incident** est masqué tant que l'incident est en cours de création. L'annulation de la création est refusée dès que l'incident est clôturé ou annulé, ou contient des données de déclaration réglementaire (voir [Supprimer un incident](#supprimer-un-incident)). Si vous quittez l'incident autrement, il reste dans le registre. La référence d'une création annulée n'est pas réutilisée.

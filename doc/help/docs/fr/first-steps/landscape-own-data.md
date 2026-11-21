@@ -26,7 +26,7 @@ Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pou
 **Le geste.** Importez la liste de vos applications, ou créez-les une à une.
 
 - **Importer un fichier.** Cliquez sur **Importer**, puis **Télécharger un exemple** : un classeur avec quelques applications et ce que prend chaque colonne. Remplissez les vôtres, puis **Importer** le fichier.
-- **Créer une application.** Cliquez sur **Nouvelle application**, tapez son nom dans le titre et appuyez sur Entrée. Remplissez le panneau des propriétés, puis cliquez sur **Créer**. **Annuler** l'abandonne.
+- **Créer une application.** Cliquez sur **Nouvelle application**, tapez son nom dans le titre et appuyez sur Entrée. Remplissez le panneau des propriétés, puis cliquez sur **Terminé**. **Annuler** l'abandonne.
 
 **Ce que vous lisez.** Une fiche par application. Complétez d'abord la criticité et les **Responsables IT** des plus importantes.
 
@@ -42,7 +42,7 @@ Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pou
 
 **Cartographie SI > Actifs**
 
-**Le geste.** Cliquez sur **Ajouter un actif**, ou **Importer** un fichier pour de nombreux actifs. Choisissez le type d'actif et le site, puis **Créer**. Pour relier un actif à une application, ouvrez l'application, onglet **Déploiements** : **Ajouter un déploiement** pour l'environnement, puis **Ajouter un serveur**.
+**Le geste.** Cliquez sur **Ajouter un actif**, ou **Importer** un fichier pour de nombreux actifs. Tapez son nom et appuyez sur Entrée, choisissez le type d'actif et le site, puis cliquez sur **Terminé**. Pour relier un actif à une application, ouvrez l'application, onglet **Déploiements** : **Ajouter un déploiement** pour l'environnement, puis **Ajouter un serveur**.
 
 **Ce que vous lisez.** Le bloc de déploiement de l'application liste ses serveurs, et l'actif liste l'application sous **Applications hébergées** dans son onglet **Exploitation**. Les fins de support de ses technologies remontent désormais jusqu'à l'actif. Les vulnérabilités d'un système d'exploitation ne figurent pas dans les alertes au départ, car Kadratis ne connaît pas le niveau de correctifs d'un serveur. Pour les voir, ouvrez **Cartographie SI > Vulnérabilités** et choisissez **Exclues** dans le filtre **Alertes**, ou **Afficher les exclues** quand la liste est vide.
 

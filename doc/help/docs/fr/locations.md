@@ -4,9 +4,9 @@ Les sites documentent l'emplacement de votre infrastructure IT : centres de donn
 
 ## Premiers pas
 
-Naviguez vers **Cartographie SI > Sites** pour ouvrir le registre des sites. Cliquez sur **Ajouter un site** pour créer une nouvelle entrée : la page du nouveau site s'ouvre, son panneau Propriétés ouvert. Saisissez le nom dans le titre en haut de la page. Le site est créé dès qu'il a son nom et son **Type d'hébergement**, qui commence sur le premier type de la liste. Tous ses onglets deviennent alors disponibles, et les autres champs s'enregistrent automatiquement. Appuyez sur Échap dans le titre vide pour partir sans rien créer.
+Naviguez vers **Cartographie SI > Sites** pour ouvrir le registre des sites. Cliquez sur **Ajouter un site** pour créer une nouvelle entrée : la page du nouveau site s'ouvre, son panneau Propriétés ouvert. Saisissez le nom dans le titre en haut de la page. Le site est créé dès qu'il a son nom et son **Type d'hébergement**, qui commence sur le premier type de la liste. Tous ses onglets deviennent alors disponibles, et les autres champs s'enregistrent automatiquement. Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi.
 
-Tant que le site est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Créer** conserve le site et vous ramène à votre point de départ : la liste ou l'écran précédent. S'il manque encore un champ obligatoire, il est signalé à la place. **Annuler** part sans rien conserver. Sur un site déjà créé, il le supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des sites. Si vous quittez la page autrement, le site est conservé.
+Tant que le site est en cours de création, l'en-tête affiche **Créer** et **Annuler** jusqu'à ce que vous quittiez la page. **Ctrl+S** agit comme le bouton affiché. **Créer** enregistre le site quand ses champs obligatoires sont renseignés et le laisse ouvert. S'il en manque un, son libellé passe en rouge et le curseur y va. Une fois le site créé, **Créer** devient **Terminé** : il enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ, la liste ou l'écran précédent. **Annuler** part sans rien conserver. Sur un site déjà créé, il le supprime. Si vous avez saisi plus que le nécessaire à la création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des sites. Si vous quittez la page autrement, le site est conservé.
 
 **Champs obligatoires** :
 - **Nom** : Un nom d'affichage descriptif
@@ -81,7 +81,7 @@ Chaque sous-site possède :
 - **Nom** : Un libellé court (par ex., « Bâtiment A, Salle 1, Baie 5 »)
 - **Description** : Détail supplémentaire optionnel
 
-Les sous-sites sont disponibles dès que le site existe (après avoir cliqué sur **Créer**). Chaque ligne s'enregistre seule lorsque vous quittez le champ, et la suppression d'un sous-site demande d'abord une confirmation.
+Les sous-sites sont disponibles dès que le site est créé. Chaque ligne s'enregistre seule lorsque vous quittez le champ, et la suppression d'un sous-site demande d'abord une confirmation.
 
 Les actifs peuvent être assignés à un sous-site spécifique au sein d'un site, ce qui vous permet de suivre exactement où se trouve le matériel. L'onglet Relations montre le sous-site de chaque actif qui en a un.
 
