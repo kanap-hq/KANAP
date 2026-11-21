@@ -37,7 +37,7 @@ Press Escape in the title to leave without creating anything, even with a name t
 While the asset is being created, its header shows **Create** and **Cancel** in place of the close button. They stay until you leave the asset. **Ctrl+S** works like the button shown.
 
 - **Create** does the same as Enter: it creates the asset and leaves it open with its reference. The cursor goes to **Location** when it is empty. With an empty title, the title asks for one
-- Once the asset is created, **Create** becomes **Done**. **Done** saves what you are still typing and checks that the asset has a location. Without one, the **Location** label turns red in the properties drawer and the field gets the focus. The asset stays open. With a location, you go back to where you started
+- Once the asset is created, **Create** becomes **Done**. **Done** saves what you are still typing and checks that the asset has a location. Without one, the **Location** label turns red with an alert icon in the properties drawer and the field gets the focus. The asset stays open. With a location, you go back to where you started
 - **Cancel** deletes the asset. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete assets
 
 Leaving the asset another way (the back arrow, the menu, another asset) while it has no location asks what to do. **Complete it** keeps you on the asset, on the **Location** field. **Delete it** deletes the asset. Reloading the page or closing the tab while the new asset has no location asks your browser to confirm. If you leave anyway, the asset is deleted.
