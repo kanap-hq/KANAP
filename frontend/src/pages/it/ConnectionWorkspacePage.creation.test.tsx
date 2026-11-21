@@ -30,7 +30,7 @@ vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => tru
 vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({ default: () => ({ data: undefined }) }));
 vi.mock('../../hooks/useItOpsEnumOptions', () => {
   const value = {
-    settings: { connectionTypes: [{ code: 'https', label: 'HTTPS' }], entities: [] },
+    settings: { connectionTypes: [{ code: 'https', label: 'HTTPS' }, { code: 'ssh', label: 'SSH' }], entities: [] },
     byField: { lifecycleStatus: [{ code: 'active', label: 'Active' }], dataClass: [] },
     labelFor: (_field: string, code: string) => code,
   };
@@ -66,7 +66,10 @@ vi.mock('./workspace/ConnectionServersPicker', () => ({
 }));
 vi.mock('./workspace/ConnectionProtocolsTable', () => ({
   default: ({ onProtocolsChange }: { onProtocolsChange: (next: Array<{ code: string; port_override: string | null }>) => void }) => (
-    <button type="button" onClick={() => onProtocolsChange([{ code: 'https', port_override: '8443' }])}>add https</button>
+    <>
+      <button type="button" onClick={() => onProtocolsChange([{ code: 'https', port_override: '8443' }])}>add https</button>
+      <button type="button" onClick={() => onProtocolsChange([{ code: 'https', port_override: '8443' }, { code: 'ssh', port_override: null }])}>add ssh</button>
+    </>
   ),
 }));
 
@@ -323,6 +326,35 @@ describe('Connection born complete', () => {
     await waitFor(() => expect(location()).toBe('/start'));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(mocked.delete).toHaveBeenCalledWith('/connections/conn-new/creation', { data: { token: 'token-1' } });
+  });
+
+  it('saves on the connection what was given while it was being written, and shows it', async () => {
+    await typeName();
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }) as never);
+    const both = [{ code: 'https', port_override: '8443' }, { code: 'ssh', port_override: null }];
+    const patched = { ...detail, protocol_codes: ['https', 'ssh'], protocols: both };
+    mocked.patch.mockResolvedValue({ data: { ...patched, absorbed: [] } } as never);
+    // Read again under its reference, the connection holds what the PATCH saved.
+    const read = mocked.get.getMockImplementation()!;
+    mocked.get.mockImplementation(async (url: string) => (url === '/connections/CONN-7' && mocked.patch.mock.calls.length > 0 ? { data: patched } as never : read(url)));
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination internet');
+    click('add https');
+    await waitFor(() => expect(connectionPosts()).toHaveLength(1));
+    // A second protocol, checked while the connection is written.
+    click('add ssh');
+    await settle();
+    expect(mocked.patch).not.toHaveBeenCalled();
+    answer({ data: { ...created } });
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    expect(mocked.patch).toHaveBeenCalledWith('/connections/conn-new', { protocols: both });
+    expect(connectionPosts()).toHaveLength(1);
+    expect(connectionPosts()[0][1]).toMatchObject({ protocols: [{ code: 'https', port_override: '8443' }] });
+    // The connection shown carries both, before and after it is read again.
+    await settle();
+    expect(screen.getByRole('button', { name: /workspace\.connection\.overview\.protocols/ }).textContent).toMatch(/ssh/i);
   });
 
   it('closes the connection on Done, back where the creation started', async () => {

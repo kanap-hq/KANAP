@@ -28,7 +28,7 @@ import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { connectionDeleteMessage } from './connectionDeleteMessage';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
-import { CreationActions, CreationPreview, useCreationReturn, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, saveEditsSince, useCreationReturn, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 
 type TabKey = 'overview' | 'path' | typeof RECORD_HISTORY_TAB_KEY;
@@ -159,6 +159,21 @@ function createPayload(draft: ConnectionDetail, name: string) {
       destination_entity_code: draft.destination_entity_code,
     };
   return { name, topology: draft.topology, ...ends, protocols: protocolsOf(draft) };
+}
+
+/** The draft's fields `POST /connections` writes: what changes in them while it is written is saved after. */
+const DRAFT_FIELDS = [
+  'name', 'topology', 'source_asset_id', 'source_entity_code', 'destination_asset_id', 'destination_entity_code',
+  'servers', 'protocols', 'protocol_codes',
+] as const;
+
+/** Edits of the draft as `PATCH /connections/:id` takes them: servers by id, protocols with their ports. */
+function patchOfEdits(edits: Partial<ConnectionDetail>, now: ConnectionDetail): Record<string, unknown> {
+  const { servers, protocols, protocol_codes: codes, ...rest } = edits;
+  const body: Record<string, unknown> = { ...rest };
+  if (servers) body.servers = servers.map((server) => server.id);
+  if (protocols || codes) body.protocols = protocolsOf(now);
+  return body;
 }
 
 /**
@@ -386,10 +401,30 @@ export default function ConnectionWorkspacePage() {
         const res = await api.post<ConnectionDetail & { creation_token: string; absorbed?: AbsorbedAsset[] }>('/connections', createPayload(sent, name));
         const { creation_token: token, absorbed, ...saved } = res.data;
         notifyAbsorbed(absorbed);
-        setCreateDirty(false);
         // The page keeps the connection in hand while it loads under its reference.
         setData({ ...sent, ...saved, name });
         setLegs([]);
+        // What the person gave while the connection was written (a second protocol, another end)
+        // is saved on it before the page moves to it.
+        try {
+          await saveEditsSince<ConnectionDetail, (typeof DRAFT_FIELDS)[number]>({
+            sent: { ...sent, name },
+            now: () => ({ ...draftRef.current, name: title.current().trim() || name }),
+            fields: DRAFT_FIELDS,
+            save: async (edits) => {
+              const patched = await api.patch<ConnectionDetail & { absorbed?: AbsorbedAsset[] }>(
+                `/connections/${saved.id}`,
+                patchOfEdits(edits, draftRef.current),
+              );
+              const { absorbed: absorbedNow, ...connection } = patched.data;
+              notifyAbsorbed(absorbedNow);
+              setData(connection);
+            },
+          });
+        } catch (e) {
+          setError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed')));
+        }
+        setCreateDirty(false);
         draftRef.current = EMPTY_CONNECTION;
         setDraft(EMPTY_CONNECTION);
         const qs = searchParams.toString();
