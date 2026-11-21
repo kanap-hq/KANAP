@@ -79,6 +79,19 @@ describe('EditableTitle', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  it('shows the message under the title in the readable red of each mode', () => {
+    for (const mode of ['light', 'dark'] as const) {
+      const theme = createAppTheme(mode);
+      const view = render(
+        <ThemeProvider theme={theme}>
+          <EditableTitle value="Payroll" fallback="New incident" canEdit error="Name taken" />
+        </ThemeProvider>,
+      );
+      expect(screen.getByRole('alert')).toHaveStyle({ color: theme.palette.kanap.danger });
+      view.unmount();
+    }
+  });
+
   it('shows a dashed underline and a pencil on an empty title', () => {
     const { container } = renderTitle({ value: '' });
     const text = screen.getByText('New incident');

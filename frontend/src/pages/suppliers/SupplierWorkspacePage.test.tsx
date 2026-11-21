@@ -105,11 +105,11 @@ function LocationProbe() {
   return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
 }
 
-function renderAt(path: string) {
+function renderAt(path: string, mode: 'light' | 'dark' = 'light') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={createAppTheme('light')}>
+      <ThemeProvider theme={createAppTheme(mode)}>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={[path]}>
             <LocationProbe />
@@ -190,6 +190,35 @@ describe('SupplierWorkspacePage', () => {
     fireEvent.keyDown(screen.getByLabelText('suppliers.fields.name'), { key: 'Escape' });
     expect(screen.getByText('Acme Software')).toBeInTheDocument();
     expect(screen.queryByText('suppliers.messages.nameRequired')).toBeNull();
+  });
+
+  it('announces an empty name, ties it to the title and shows it in the readable red of dark mode', async () => {
+    renderAt('/master-data/suppliers/s-1/overview', 'dark');
+    const { kanap } = createAppTheme('dark').palette;
+    fireEvent.click(await screen.findByText('Acme Software'));
+    const input = screen.getByLabelText('suppliers.fields.name');
+    fireEvent.change(input, { target: { value: '  ' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('suppliers.messages.nameRequired');
+    expect(alert.id).not.toBe('');
+    expect(alert).toHaveStyle({ color: kanap.danger });
+    expect(input).toHaveAttribute('aria-describedby', alert.id);
+    expect(input).not.toHaveAttribute('aria-required');
+    expect(input).toHaveStyle({ borderBottomColor: kanap.danger });
+  });
+
+  it('announces a name another supplier has and ties it to the title', async () => {
+    mocked.patch.mockRejectedValueOnce(duplicate);
+    renderAt('/master-data/suppliers/s-1/overview');
+    fireEvent.click(await screen.findByText('Acme Software'));
+    const input = screen.getByLabelText('suppliers.fields.name');
+    fireEvent.change(input, { target: { value: 'Globex' } });
+    fireEvent.blur(input);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('suppliers.messages.nameTaken');
+    await screen.findByText('Acme Software');
+    expect(screen.getByRole('button', { name: 'common:buttons.editTitle' })).toHaveAttribute('aria-describedby', alert.id);
   });
 
   it('shows a name another supplier has under the title', async () => {

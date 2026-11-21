@@ -93,11 +93,11 @@ const metrics: Record<number, Record<string, unknown> | null> = {
   [Y + 1]: null,
 };
 
-function renderAt(path: string) {
+function renderAt(path: string, mode: 'light' | 'dark' = 'light') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tree = () => (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={createAppTheme('light')}>
+      <ThemeProvider theme={createAppTheme(mode)}>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={[path]}>
             <Link to="/master-data/companies/co-2/overview">go to co-2</Link>
@@ -220,7 +220,29 @@ describe('CompanyWorkspacePage', () => {
     fireEvent.blur(input);
     expect(await screen.findByText('Name refused.')).toBeInTheDocument();
     expect(screen.getByText('Other')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).toBeNull();
+    // The message under the name is the only alert: no banner repeats it.
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+  });
+
+  it('announces a refused name, ties it to the title and shows it in the readable red of dark mode', async () => {
+    mocked.patch.mockRejectedValue({ response: { status: 409, data: { code: 'duplicate', message: 'Another company already has this name.' } } });
+    renderAt('/master-data/companies/co-1/overview', 'dark');
+    const { kanap } = createAppTheme('dark').palette;
+    fireEvent.click(await screen.findByText('Acme France'));
+    fireEvent.change(screen.getByDisplayValue('Acme France'), { target: { value: 'acme germany' } });
+    fireEvent.blur(screen.getByDisplayValue('acme germany'));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('companies.messages.nameTaken');
+    expect(alert.id).not.toBe('');
+    expect(alert).toHaveStyle({ color: kanap.danger });
+    expect(screen.getByRole('button', { name: 'common:buttons.editTitle' })).toHaveAttribute('aria-describedby', alert.id);
+
+    fireEvent.click(screen.getByText('acme germany'));
+    const input = screen.getByRole('textbox', { name: 'companies.fields.name' });
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAttribute('aria-describedby', screen.getByRole('alert').id);
+    expect(input).not.toHaveAttribute('aria-required');
+    expect(input).toHaveStyle({ borderBottomColor: kanap.danger });
   });
 
   it('keeps a duplicate name under the message until the name changes or the edit is cancelled', async () => {
