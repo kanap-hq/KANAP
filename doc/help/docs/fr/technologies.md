@@ -252,7 +252,7 @@ Une application apparaît de deux façons :
 
 Qui appeler et comment obtenir de l'aide :
 
-- **Support** : les contacts de support, avec leur **E-mail**, leur **Téléphone** et leur **Rôle**. **Ajouter un contact** ouvre un court formulaire : choisissez le **Contact** (obligatoire) et donnez un **Rôle** facultatif. Un contact n'est listé qu'une fois ; l'ajouter à nouveau garde son rôle. Retirez un contact avec la croix au bout de sa ligne.
+- **Support** : les contacts de support, avec leur **E-mail**, leur **Téléphone** et leur **Rôle**. **Ajouter un contact** ouvre un court formulaire : choisissez le **Contact** (obligatoire) et donnez un **Rôle** facultatif. Un contact qui n'existe pas encore peut être créé depuis la liste (voir [Contacts](contacts.md#creer-un-contact-depuis-un-champ-contact)). Un contact n'est listé qu'une fois ; l'ajouter à nouveau garde son rôle. Retirez un contact avec la croix au bout de sa ligne.
 - **Notes de support** : texte libre, comme le numéro du contrat de support, les horaires de la hotline ou le circuit d'escalade. Elles s'enregistrent quand vous quittez le champ.
 
 La technologie apparaît alors dans la section **Lié à** de la page de chaque contact.

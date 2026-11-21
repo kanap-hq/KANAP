@@ -98,6 +98,12 @@ Click **New** in the list. The page of the new contact opens. Type the first and
 
 While the contact is being created, the header shows **Create** and **Cancel** until you leave it. **Ctrl+S** works like the button shown. **Create** writes the contact when its required fields are given and leaves it open. If one is still missing, its label turns red with an alert icon and the cursor goes to it. Once the contact is created, **Create** becomes **Done**: it saves what you are still typing and takes you back to where you started, the list, the previous screen, or the supplier you started from. **Cancel** leaves without keeping anything, and deletes the contact if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete contacts. Leaving the contact any other way keeps it.
 
+### Creating a contact from a contact field
+
+Wherever you choose a contact (on a contract, a budget line, an application, an asset, a location, a technology or a supplier), you can create one without leaving the page. The list always ends with a creation option. With nothing typed, **+ New contact** opens an empty **New contact** dialog. When you type a name that no contact has exactly, **+ Create contact "name"** opens it with the first and last name filled in: the text is cut at the first space, and a single word goes to the last name. Enter the email, which is required, and the **Job title** if you know it. **Create** creates the contact and chooses it. **Cancel** or Escape closes the dialog without creating anything. An email that is missing, not valid or already used by another contact shows its message under the field, and the dialog stays open.
+
+This needs the same right as **New** in the contacts list. Without it, a search that finds nobody tells you to ask an administrator of your workspace to create the contact.
+
 ---
 
 ## Where contacts are used
@@ -112,6 +118,8 @@ Each supplier has a **Contacts** tab showing all contacts linked to that vendor.
 2. Click **New contact** next to a contact type.
 3. Fill in the contact details: the supplier and contact type are pre-filled.
 4. Click **Create**, then **Done**: you return to the supplier's **Contacts** tab.
+
+In **Add existing**, a contact you create from the list belongs to the supplier, with the contact type of that section. See [Creating a contact from a contact field](#creating-a-contact-from-a-contact-field).
 
 ### Application support
 

@@ -215,7 +215,7 @@ Der Reiter Übersicht ist die Startseite des Assets.
 - **Ablauf des Supports**: Ablaufdatum
 - **Notizen**
 
-**Support-Kontakte**: Eine Tabelle, in der Sie Kontakte aus dem Kontaktverzeichnis hinzufügen können, jeweils mit einer Freitext-Rollenbezeichnung. Die Tabelle zeigt automatisch die E-Mail, das Telefon und das Mobil jedes Kontakts an.
+**Support-Kontakte**: Eine Tabelle, in der Sie Kontakte aus dem Kontaktverzeichnis hinzufügen können, jeweils mit einer Freitext-Rollenbezeichnung. Die Tabelle zeigt automatisch die E-Mail, das Telefon und das Mobil jedes Kontakts an. Ein Kontakt, den es noch nicht gibt, lässt sich aus der Liste heraus erstellen. Siehe [Kontakte](contacts.md#einen-kontakt-aus-einem-kontaktfeld-erstellen).
 
 **Wissensdatenbank**: Verknüpfte Wissensartikel für dieses Asset. Mit `knowledge:member` können Sie neue Artikel direkt aus diesem Bereich erstellen. Der Bereich erscheint, sobald das Asset erstellt ist.
 

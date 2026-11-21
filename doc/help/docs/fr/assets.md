@@ -215,7 +215,7 @@ L'onglet Vue d'ensemble est la page d'accueil de l'actif.
 - **Expiration du support** : Date d'expiration
 - **Notes**
 
-**Contacts de support** : Un tableau où vous pouvez ajouter des contacts depuis l'annuaire de contacts, chacun avec un libellé de rôle en texte libre. Le tableau affiche automatiquement l'e-mail, le téléphone et le mobile de chaque contact.
+**Contacts de support** : Un tableau où vous pouvez ajouter des contacts depuis l'annuaire de contacts, chacun avec un libellé de rôle en texte libre. Le tableau affiche automatiquement l'e-mail, le téléphone et le mobile de chaque contact. Un contact qui n'existe pas encore peut être créé depuis la liste. Voir [Contacts](contacts.md#creer-un-contact-depuis-un-champ-contact).
 
 **Connaissances** : Articles de connaissances liés pour cet actif. Avec `knowledge:member`, vous pouvez créer de nouveaux articles directement depuis cette section. La section apparaît une fois l'actif créé.
 

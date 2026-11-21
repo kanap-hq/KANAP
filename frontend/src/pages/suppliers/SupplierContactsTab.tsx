@@ -180,10 +180,12 @@ export default function SupplierContactsTab({ supplierId, supplierAddress, canMa
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <ContactSelect
                     ref={addInputRef}
+                    openOnFocus
                     hideLabel
                     label={t('suppliers.contacts.selectContact', { role: role.label })}
                     placeholder={t('suppliers.contacts.searchPlaceholder')}
                     value={null}
+                    createSupplier={{ id: supplierId, role: role.value }}
                     onChange={(contactId) => { void attach(role.value, contactId); }}
                   />
                 </Box>

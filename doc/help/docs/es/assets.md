@@ -215,7 +215,7 @@ La pestaña Vista general es la página de inicio del activo.
 - **Vencimiento del soporte**: Fecha de expiración
 - **Notas**
 
-**Contactos de soporte**: Una tabla donde puede añadir contactos del directorio de contactos, cada uno con una etiqueta de rol de texto libre. La tabla muestra automáticamente el correo, teléfono y móvil de cada contacto.
+**Contactos de soporte**: Una tabla donde puede añadir contactos del directorio de contactos, cada uno con una etiqueta de rol de texto libre. La tabla muestra automáticamente el correo, teléfono y móvil de cada contacto. Un contacto que aún no existe se puede crear desde la lista. Consulte [Contactos](contacts.md#crear-un-contacto-desde-un-campo-de-contacto).
 
 **Conocimiento**: Artículos de conocimiento vinculados a este activo. Con `knowledge:member` puede crear nuevos artículos directamente desde esta sección. Aparece una vez creado el activo.
 

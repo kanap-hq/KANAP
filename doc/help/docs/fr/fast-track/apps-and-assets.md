@@ -124,7 +124,7 @@ Définissez aussi :
 | **Exposition externe** | Cette app est-elle accessible depuis Internet ? |
 | **Intégration de données / ETL** | Cette app participe-t-elle à des flux de données ? |
 
-Le même onglet contient les contacts de **Support** (utilisez **Ajouter un contact** et donnez un rôle à chacun) et des **Notes de support** en texte libre.
+Le même onglet contient les contacts de **Support** (utilisez **Ajouter un contact** et donnez un rôle à chacun) et des **Notes de support** en texte libre. Un contact qui n'existe pas encore peut être créé depuis la liste. Voir [Contacts](../contacts.md#creer-un-contact-depuis-un-champ-contact).
 
 ---
 

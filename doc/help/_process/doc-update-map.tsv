@@ -19,6 +19,8 @@ suppliers.md	frontend/src/pages/SuppliersPage.tsx
 suppliers.md	frontend/src/pages/suppliers/**/*.tsx
 contacts.md	frontend/src/pages/ContactsPage.tsx
 contacts.md	frontend/src/pages/contacts/**/*.tsx
+contacts.md	frontend/src/components/fields/ContactSelect.tsx
+contacts.md	frontend/src/components/fields/CreateContactDialog.tsx
 chart-of-accounts.md	frontend/src/pages/coa/CoaPage.tsx
 chart-of-accounts.md	frontend/src/pages/coa/**/*.tsx
 chart-of-accounts.md	frontend/src/components/ChipToggleBar.tsx

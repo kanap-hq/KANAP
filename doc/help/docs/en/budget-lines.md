@@ -628,7 +628,7 @@ An end date in orange is a contract whose renewal decision is due within your co
 
 The section is absent when the line has no supplier or there is nothing to suggest.
 
-**Contacts**: people for this line, each with a role (**Commercial**, **Technical**, **Support** or **Other**). Pick a contact, then pick its role: choosing the role adds the contact. The table shows the role, first name, last name, job title, email and mobile. Hover the role to see whether the contact comes from the supplier or was added manually. Remove a contact with the remove icon.
+**Contacts**: people for this line, each with a role (**Commercial**, **Technical**, **Support** or **Other**). **Add** opens the list of contacts under the button, with their reference, name and supplier. Search it, or create a contact from the last option of the list (see [Contacts](contacts.md#creating-a-contact-from-a-contact-field)). The roles of the chosen or created contact then show in the same place: choosing a role adds the contact. Escape closes the list without adding anything. The table shows the role, first name, last name, job title, email and mobile. Hover the role to see whether the contact comes from the supplier or was added manually. Remove a contact with the remove icon.
 
 **Links and files**: the web links of the line (vendor portals, documentation, admin consoles) and its files (quotes, invoices, approval memos), one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With `budget:member`:
 

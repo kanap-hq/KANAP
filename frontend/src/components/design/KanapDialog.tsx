@@ -85,6 +85,8 @@ export default function KanapDialog({
   const saveButtonRef = React.useRef<HTMLButtonElement>(null);
   const handleSubmit = React.useCallback((event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // A dialog opened from inside another one is its React child: its submit must not reach the outer form.
+    event.stopPropagation();
     if (!showSave || saveDisabled || saveLoading) return;
     void onSave();
   }, [onSave, saveDisabled, saveLoading, showSave]);

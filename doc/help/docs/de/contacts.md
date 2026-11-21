@@ -98,6 +98,12 @@ Klicken Sie in der Liste auf **Neu**. Die Seite des neuen Kontakts öffnet sich.
 
 Solange der Kontakt erstellt wird, zeigt die Kopfzeile **Erstellen** und **Abbrechen**, bis Sie die Seite verlassen. **Strg+S** wirkt wie die angezeigte Schaltfläche. **Erstellen** speichert den Kontakt, sobald die Pflichtfelder angegeben sind, und lässt ihn geöffnet. Fehlt noch eines, wird seine Beschriftung rot mit einem Warnsymbol, und der Cursor springt dorthin. Sobald der Kontakt erstellt ist, wird **Erstellen** zu **Fertig**: Es speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben, zur Liste, zum vorherigen Bildschirm oder zum Lieferanten, von dem aus Sie begonnen haben. **Abbrechen** verlässt die Seite, ohne etwas zu behalten. Ein bereits erstellter Kontakt wird dabei gelöscht. Wenn Sie mehr als die Angaben zur Erstellung eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Kontakten abbrechen. Verlassen Sie die Seite auf andere Weise, bleibt der Kontakt bestehen.
 
+### Einen Kontakt aus einem Kontaktfeld erstellen
+
+Überall, wo Sie einen Kontakt auswählen (bei einem Vertrag, einer Budgetzeile, einer Anwendung, einem Asset, einem Standort, einer Technologie oder einem Lieferanten), können Sie einen Kontakt erstellen, ohne die Seite zu verlassen. Die Liste endet immer mit einer Option zum Erstellen. Ohne Eingabe öffnet **+ Neuer Kontakt** einen leeren Dialog **Neuer Kontakt**. Geben Sie einen Namen ein, den kein Kontakt genau trägt, öffnet **+ Kontakt „Name“ erstellen** ihn mit ausgefülltem Vor- und Nachnamen: Der Text wird am ersten Leerzeichen geteilt, und ein einzelnes Wort wird zum Nachnamen. Geben Sie die E-Mail ein, sie ist Pflicht, und die **Funktion**, wenn Sie sie kennen. **Erstellen** legt den Kontakt an und wählt ihn aus. **Abbrechen** oder Escape schließt den Dialog, ohne etwas zu erstellen. Eine fehlende, ungültige oder bereits von einem anderen Kontakt verwendete E-Mail zeigt ihre Meldung unter dem Feld an, und der Dialog bleibt offen.
+
+Dafür ist dasselbe Recht nötig wie für **Neu** in der Kontaktliste. Ohne dieses Recht weist eine Suche, die niemanden findet, darauf hin, einen Administrator Ihres Arbeitsbereichs um die Erstellung des Kontakts zu bitten.
+
 ---
 
 ## Wo Kontakte verwendet werden
@@ -112,6 +118,8 @@ Jeder Lieferant hat einen **Kontakte**-Tab, der alle mit diesem Anbieter verknü
 2. Klicken Sie auf **Neuer Kontakt** neben einem Kontakttyp.
 3. Füllen Sie die Kontaktdetails aus: Lieferant und Kontakttyp sind vorausgefüllt.
 4. Klicken Sie auf **Erstellen**, dann auf **Fertig**: Sie kehren zum Reiter **Kontakte** des Lieferanten zurück.
+
+In **Vorhandenen hinzufügen** gehört ein Kontakt, den Sie aus der Liste heraus erstellen, zum Lieferanten, mit dem Kontakttyp dieses Abschnitts. Siehe [Einen Kontakt aus einem Kontaktfeld erstellen](#einen-kontakt-aus-einem-kontaktfeld-erstellen).
 
 ### Anwendungs-Support
 

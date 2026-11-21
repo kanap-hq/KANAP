@@ -93,7 +93,7 @@ This tab organises the people and references associated with a location into thr
 
 **Internal contacts**: Team members from your organisation linked to this location. Each row has a **User** picker and a free-text **Role** field (e.g., "Ops lead", "Security officer").
 
-**External contacts**: Third-party contacts pulled from your Contacts master data. Each row has a **Contact** picker and a **Role** field (e.g., "Account manager", "NOC contact").
+**External contacts**: Third-party contacts pulled from your Contacts master data. Each row has a **Contact** picker and a **Role** field (e.g., "Account manager", "NOC contact"). A contact that does not exist yet can be created from the picker. See [Contacts](contacts.md#creating-a-contact-from-a-contact-field).
 
 **Relevant websites**: Useful links such as provider portals, facility documentation, or status pages. Each row has a **Description** and a **URL**.
 

@@ -124,7 +124,7 @@ Legen Sie außerdem fest:
 | **Extern zugänglich** | Ist diese App aus dem Internet erreichbar? |
 | **Datenintegration / ETL** | Ist diese App an Datenpipelines beteiligt? |
 
-Derselbe Tab enthält die **Support**-Kontakte (über **Kontakt hinzufügen**, jeweils mit einer Rolle) und freie **Support-Notizen**.
+Derselbe Tab enthält die **Support**-Kontakte (über **Kontakt hinzufügen**, jeweils mit einer Rolle) und freie **Support-Notizen**. Ein Kontakt, den es noch nicht gibt, lässt sich aus der Liste heraus erstellen. Siehe [Kontakte](../contacts.md#einen-kontakt-aus-einem-kontaktfeld-erstellen).
 
 ---
 

@@ -473,6 +473,9 @@
     "entity": "Kontakt",
     "newContact": "Neuer Kontakt",
     "contactFallback": "Kontakt",
+    "createOption": "+ Kontakt „{{name}}“ erstellen",
+    "newContactOption": "+ Neuer Kontakt",
+    "noContactAskAdmin": "Kein Kontakt gefunden. Bitten Sie einen Administrator Ihres Arbeitsbereichs, ihn zu erstellen.",
     "columns": {
       "reference": "Referenz",
       "lastName": "Nachname",
@@ -528,6 +531,7 @@
     "messages": {
       "emailInvalid": "Geben Sie eine gültige E-Mail-Adresse ein.",
       "emailTaken": "Ein anderer Kontakt verwendet diese E-Mail bereits.",
+      "emailRequired": "Geben Sie die E-Mail-Adresse ein.",
       "phoneInvalid": "Geben Sie eine Vorwahl und eine Nummer mit insgesamt 7 bis 15 Ziffern ein.",
       "typeRequired": "Wählen Sie einen Kontakttyp für diesen Lieferanten.",
       "saveFailed": "Der Kontakt konnte nicht gespeichert werden.",
