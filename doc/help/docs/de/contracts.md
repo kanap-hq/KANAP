@@ -125,7 +125,7 @@ Die Kopfzeile zeigt die Referenz des Vertrags (`CTR-5`, zum Kopieren anklicken) 
 
 Der Bereich **Eigenschaften** rechts enthält alle Felder des Vertrags: die Parteien, **Beginn**, **Laufzeit (Monate)**, **Kündigungsfrist (Monate)**, **Stillschweigende Verlängerung**, **Jahresbetrag**, **Währung**, **Abrechnung**, dann **Lebenszyklus** (**Status** und **Ende der Gültigkeit**), **Erstellt** und **Aktualisiert**. Öffnen oder schließen Sie ihn mit seiner Schaltfläche; Kadratis merkt sich Ihre Wahl.
 
-**Kostenstelle oder Gruppe** ist optional. Das Feld ordnet den Vertrag für den [Datenzugriff](data-access.md) einer Kostenstelle oder Gruppe zu: Die auf diesen Knoten oder auf eine Gruppe darüber begrenzten Personen sehen den Vertrag, ebenso wie die auf sein Unternehmen begrenzten.
+**Kostenstelle oder Gruppe** ist optional. Das Feld ordnet den Vertrag für den [Datenzugriff](data-access.md) einer Kostenstelle oder Gruppe zu: Die auf diesen Knoten oder auf eine Gruppe darüber begrenzten Personen sehen den Vertrag, ebenso wie die auf sein Unternehmen begrenzten. Mit diesem Knoten auf Bearbeiten bearbeiten sie den Vertrag, unabhängig von seinem Unternehmen.
 
 Jede Änderung speichert sich selbst: Auswahllisten und Daten sofort, eingetippte Werte und Notizen nach einer kurzen Pause, der Name beim Verlassen des Felds. „Wird gespeichert...“ und dann „Gespeichert“ erscheint in der Kopfzeile. Zwei Personen, die denselben Vertrag bearbeiten, werden nicht gewarnt: Die letzte Änderung gilt.
 
