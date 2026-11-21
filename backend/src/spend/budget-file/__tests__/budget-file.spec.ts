@@ -396,6 +396,15 @@ async function testCreateRules() {
     [['company_name', 'company_name is required.', 'CSV_VALUE_REQUIRED']],
     'two companies: the file names one',
   );
+  // A new line needs its account, as by every door (the write gate checks again): blank or `-`.
+  for (const cell of ['', '-']) {
+    const noAccount = await preflight('opex', `item_number,name,company_name,account_number,currency\n,Widget,Acme,${cell},EUR\n`, [], { cat });
+    assert.deepEqual(
+      noAccount.errors.map((error) => [error.column, error.message, error.code]),
+      [['account_number', 'account_number is required.', 'CSV_VALUE_REQUIRED']],
+      `a new line without an account (${JSON.stringify(cell)}) is refused on its column`,
+    );
+  }
   // A new CAPEX line needs the values of the CAPEX dimensions (lot C1): the dimension is named, on its column.
   const capexCat = catalog({
     ...cat,

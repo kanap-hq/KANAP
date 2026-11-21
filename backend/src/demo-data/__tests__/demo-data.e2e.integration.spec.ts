@@ -164,6 +164,11 @@ async function checkDimensions(tenantId: string) {
     `SELECT nature, count(*)::int AS n FROM spend_items WHERE tenant_id = $1 GROUP BY nature`, [tenantId]));
   const total = Object.fromEntries(lines.map((row: any) => [row.nature, row.n])) as Record<'opex' | 'capex', number>;
   assert.deepEqual(total, { opex: fixtureRows(files.opex).length, capex: fixtureRows(files.capex).length }, 'every budget line of the files');
+  // A new line has a paying company and an account, whatever the door (lot L3a): the sample data too.
+  const [incomplete] = await inTenant(tenantId, (m) => m.query(
+    `SELECT count(*) FILTER (WHERE paying_company_id IS NULL)::int AS no_company, count(*) FILTER (WHERE account_id IS NULL)::int AS no_account
+       FROM spend_items WHERE tenant_id = $1`, [tenantId]));
+  assert.deepEqual(incomplete, { no_company: 0, no_account: 0 }, 'every sample line has its company and its account');
 
   const axes: Array<{ code: string; name: string; values: string[] }> = await inTenant(tenantId, (m) => m.query(
     `SELECT a.code, a.name, coalesce(array_agg(c.name ORDER BY c.sort_order, c.name) FILTER (WHERE c.id IS NOT NULL), '{}') AS values
