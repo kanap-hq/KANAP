@@ -11,18 +11,21 @@ Les deux types se trouvent dans une seule liste et s'ouvrent dans le même espac
 
 Rendez-vous dans **Gestion budgétaire > Lignes budgétaires** pour voir la liste. Cliquez sur **Nouvelle ligne** pour créer une ligne.
 
-L'espace de travail s'ouvre sur une nouvelle ligne, intitulée **Nouvelle ligne OPEX** ou **Nouvelle ligne CAPEX**. Son **Type** vient en premier dans le panneau **Propriétés**, à côté du titre : le type sur lequel la liste est filtrée dans sa colonne **Type**, sinon **OPEX**. Choisissez-y l'autre type, avant ou après le titre. Saisissez le nom de la ligne dans le titre en haut et appuyez sur Entrée. La ligne existe aussitôt, avec la devise de votre espace de travail et le 1er janvier de l'année affichée comme début d'effet, et tous les onglets s'ouvrent, **Budget** compris. Remplissez le panneau **Propriétés** : chaque modification est enregistrée aussitôt. Tant que la ligne est en cours de création, **Type** reste un menu : la ligne change de type sur place et garde ce que vous avez saisi. Un compte qui ne convient pas au nouveau type reste sur la ligne, son libellé en rouge avec une icône d'alerte, jusqu'à ce que vous en choisissiez un autre.
+L'espace de travail s'ouvre sur une nouvelle ligne, intitulée **Nouvelle ligne OPEX** ou **Nouvelle ligne CAPEX**. Son **Type** vient en premier dans le panneau **Propriétés**, à côté du titre : le type sur lequel la liste est filtrée dans sa colonne **Type**, sinon **OPEX**. Saisissez le nom de la ligne dans le titre en haut. Les rangées utiles à la création sont ouvertes dans le panneau **Propriétés** : **Type**, **Centre de coûts**, **Société payeuse**, **Compte**, **Devise**, chaque dimension obligatoire pour le type et **Début d'effet**. **Devise** part de la devise de votre espace de travail et **Début d'effet** du 1er janvier de l'année affichée. **Compte** s'ouvre une fois la société payeuse choisie. Les autres rangées restent estompées jusqu'à la création de la ligne.
 
-Si votre accès aux données est limité à une société, la société payeuse est remplie avec elle. Si vous devez choisir, choisissez la société payeuse ou le centre de coûts avant de saisir le titre.
+La ligne est créée dès que son titre et ses champs obligatoires sont renseignés, dans n'importe quel ordre. Rien n'est enregistré avant. Ses onglets s'ouvrent alors, **Budget** compris, et chaque modification est enregistrée aussitôt. Changer de **Type** avant la création change les dimensions obligatoires, et vide un compte ou une valeur de dimension réservés à l'autre type. Une fois la ligne créée, son type se change avec **Changer le type...**.
+
+Si votre accès aux données est limité à une société, la société payeuse est remplie avec elle. Quand votre accès n'ouvre une société qu'à travers certains de ses centres de coûts, **Centre de coûts** est aussi obligatoire.
 
 Tant que la ligne est en cours de création, son en-tête affiche **Créer** et **Annuler** à la place du bouton de fermeture :
 
-- **Créer** fait comme Entrée : il crée la ligne et la laisse ouverte, avec sa référence. Le curseur va au premier champ obligatoire encore vide. Avec un titre vide, le titre en demande un
-- Une fois la ligne créée, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vérifie les champs obligatoires ci-dessous. S'il en manque un, son libellé passe en rouge avec une icône d'alerte dans le panneau **Propriétés** et le curseur va au premier. Un libellé redevient normal dès que son champ a une valeur. Sinon, vous revenez à votre point de départ : l'écran précédent, sinon la liste
+- **Créer** crée la ligne quand son titre et ses champs obligatoires sont renseignés. S'il en manque un, rien n'est enregistré : son libellé passe en rouge avec une icône d'alerte dans le panneau **Propriétés** et le curseur va au premier. Un libellé redevient normal dès que son champ a une valeur. Avec un titre vide, le titre en demande un
+- Quand Kadratis refuse la ligne, par exemple pour un compte hors du plan comptable de la société payeuse, la raison s'affiche sous le champ concerné
+- Une fois la ligne créée, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ : l'écran précédent, sinon la liste. Si un champ obligatoire a été vidé entre-temps, son libellé passe en rouge et le curseur y va
 - **Ctrl+S** agit comme le bouton affiché
-- **Annuler** supprime la ligne et tout ce qui y a été saisi, montants compris. Si vous avez saisi plus que le titre, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des lignes. Une ligne qui a des montants dans une colonne gelée ne peut pas être annulée
+- **Annuler** part sans rien garder, et supprime la ligne si elle était déjà créée, avec tout ce qui y a été saisi, montants compris. Si vous avez saisi plus que ce qui l'a créée, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des lignes. Une ligne qui a des montants dans une colonne gelée ne peut pas être annulée
 
-Quitter la ligne autrement alors qu'un champ obligatoire manque vous demande de la compléter ou de la supprimer. Recharger la page ou fermer l'onglet alors qu'il manque encore un champ obligatoire à la nouvelle ligne fait demander une confirmation par votre navigateur, et la ligne est supprimée si vous partez quand même. Une ligne laissée sans société payeuse s'ouvre avec le panneau **Propriétés** ouvert et les libellés de ses champs manquants en rouge avec une icône d'alerte, et repose la question chaque fois que vous la quittez. Appuyez sur Échap dans le titre pour partir sans rien créer, même avec un nom saisi.
+Quitter une nouvelle ligne avant sa création n'enregistre rien et ne demande rien. Appuyez sur Échap dans le titre pour partir, même avec un nom saisi. Une ligne enregistrée sans société payeuse par une version antérieure s'ouvre avec le panneau **Propriétés** ouvert et les libellés de ses champs manquants en rouge avec une icône d'alerte. Elle reste modifiable.
 
 **Champs obligatoires** :
 
@@ -235,11 +238,11 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. 
 - **En-tête** : la référence de la ligne (ex. : `BL-12`) avec un bouton de copie, le titre de la ligne (cliquez dessus pour la renommer), **Préc.** / **Suiv.**, **Partager**, **Supprimer** (icône corbeille, `budget:admin`, accès à toutes les données) et le bouton de fermeture. Tant que la ligne est en cours de création, **Créer** (puis **Terminé**) et **Annuler** remplacent **Supprimer** et le bouton de fermeture
 - **Barre de métadonnées** sous le titre : **Statut**, **Responsable IT** et **Responsable métier**, modifiables sur place. Lorsque le centre de coûts de la ligne a un responsable budgétaire, **Responsable budgétaire** vient ensuite. Il est en lecture seule. Il vient du centre de coûts, et la ligne ne l'enregistre pas : survolez-le pour voir de quel centre de coûts il provient, et modifiez-le sur le centre de coûts (voir [Centres de coûts](cost-centers.md#responsable-budgetaire-sur-les-lignes-budgetaires))
 - **Cinq onglets** : **Vue d'ensemble**, **Budget**, **Ventilations**, **Relations** (l'onglet Relations indique le nombre de liens de la ligne) et **Historique**
-- **Panneau Propriétés** à droite : les champs principaux de la ligne, en commençant par **Type** (un menu tant que la ligne est en cours de création, puis **Changer le type...** à côté, voir [Changer le type](#changer-le-type)). Ouvrez-le ou fermez-le avec le bouton des propriétés ; l'espace de travail mémorise votre choix
+- **Panneau Propriétés** à droite : les champs principaux de la ligne, en commençant par **Type** (un menu jusqu'à la création de la ligne, puis **Changer le type...** à côté, voir [Changer le type](#changer-le-type)). Ouvrez-le ou fermez-le avec le bouton des propriétés ; l'espace de travail mémorise votre choix
 
 **Choix des responsables** :
 
-- Dans le panneau **Propriétés** d'une nouvelle ligne et dans la barre de métadonnées d'une ligne existante, les listes **Responsable IT** et **Responsable métier** commencent, sous **Accès au centre de coûts**, par les personnes qui ont un accès au budget et peuvent lire les lignes du centre de coûts de la ligne. Toutes les autres suivent, après un séparateur
+- Dans la barre de métadonnées, les listes **Responsable IT** et **Responsable métier** commencent, sous **Accès au centre de coûts**, par les personnes qui ont un accès au budget et peuvent lire les lignes du centre de coûts de la ligne. Toutes les autres suivent, après un séparateur
 - La saisie cherche parmi tout le monde, comme avant. Vous pouvez choisir n'importe qui
 - Sans centre de coûts, la liste reste la liste habituelle. Le groupe n'apparaît pas quand il contiendrait tout le monde, par exemple quand personne n'a d'[accès aux données](data-access.md) limité
 - Quand votre propre accès aux données est limité, le groupe apparaît pour les centres de coûts de votre accès et pour la ligne que vous modifiez
@@ -283,7 +286,7 @@ Lorsque la ligne en remplace une autre, ou a été remplacée à partir d'une an
 
 **Panneau Propriétés** :
 
-- **Type** : **OPEX** ou **CAPEX**. Tant que la ligne est en cours de création, c'est un menu et la ligne change de type sur place. Une fois la ligne créée, **Changer le type...** à côté ouvre la fenêtre décrite dans [Changer le type](#changer-le-type)
+- **Type** : **OPEX** ou **CAPEX**. Jusqu'à la création de la ligne, c'est un menu. Une fois la ligne créée, **Changer le type...** à côté ouvre la fenêtre décrite dans [Changer le type](#changer-le-type)
 - **Fournisseur**, **Centre de coûts**, **Société payeuse**, **Compte** (filtré par le plan comptable de la société payeuse et le type de la ligne), **Devise** (seulement les devises autorisées dans votre espace de travail), un champ par dimension analytique utilisée pour le type de la ligne, **Run ou build** et **Début d'effet**
 - **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
 - Dates **Créé** et **Mis à jour** (lecture seule)
@@ -307,10 +310,10 @@ Lorsque la ligne en remplace une autre, ou a été remplacée à partir d'une an
 - Chaque champ liste les valeurs activées de sa dimension. Une valeur désactivée reste sur les lignes qui l'ont déjà, et ne peut pas être choisie pour une autre ligne
 - Une valeur réservée à l'autre type n'est pas proposée, et son choix est refusé. Une ligne qui l'a déjà la garde et reste modifiable. Voir [Valeurs OPEX ou CAPEX](analytics.md#valeurs-opex-ou-capex)
 - Le champ ne peut pas créer de valeur : créez-la dans [Dimensions analytiques](analytics.md), ou laissez un import la créer
-- Une dimension obligatoire est marquée d'un astérisque. Une ligne en cours de création doit avoir une valeur sur cette dimension : **Terminé** la signale comme manquante tant que vous n'en avez pas choisi. Sur une ligne qui porte une valeur, le champ ne peut pas être vidé, seulement modifié. Une ligne sans valeur reste modifiable. Si vous modifiez une telle ligne, la quitter demande d'abord : « Nature de coût est obligatoire. Choisissez une valeur avant de quitter. » **Rester** place le curseur dans le champ manquant. **Quitter quand même** quitte la ligne. Voir [Dimensions obligatoires](analytics.md#dimensions-obligatoires)
+- Une dimension obligatoire est marquée d'un astérisque. Une nouvelle ligne n'est créée qu'avec une valeur sur cette dimension : **Créer** la signale comme manquante tant que vous n'en avez pas choisi. Sur une ligne qui porte une valeur, le champ ne peut pas être vidé, seulement modifié. Une ligne sans valeur reste modifiable. Si vous modifiez une telle ligne, la quitter demande d'abord : « Nature de coût est obligatoire. Choisissez une valeur avant de quitter. » **Rester** place le curseur dans le champ manquant. **Quitter quand même** quitte la ligne. Voir [Dimensions obligatoires](analytics.md#dimensions-obligatoires)
 - Si les dimensions ne peuvent pas être chargées, une ligne remplace ces champs : « Les dimensions n'ont pas pu être chargées. »
 
-**Conseil** : Un compte hors du plan comptable de la société payeuse est refusé lorsque vous le choisissez. Une ligne existante dont le compte est hors du plan comptable de sa société reste modifiable : le plan comptable n'est vérifié que lorsque la société ou le compte change, et lorsque vous cliquez sur **Terminé** sur une ligne en cours de création.
+**Conseil** : Un compte hors du plan comptable de la société payeuse est refusé lorsque vous le choisissez. Une ligne existante dont le compte est hors du plan comptable de sa société reste modifiable : le plan comptable n'est vérifié qu'à la création de la ligne et lorsque la société ou le compte change.
 
 ---
 
@@ -675,8 +678,7 @@ Chaque ligne a un **statut** (Activé ou Désactivé) et une **Fin de validité*
 
 **Définir le statut** :
 
-- Tant que la ligne est en cours de création, vous pouvez définir sa **Fin de validité** dans le panneau **Propriétés**
-- Ensuite, modifiez le **Statut** dans la barre de métadonnées, ou utilisez le champ **Cycle de vie** du panneau **Propriétés** (interrupteur de statut et **Fin de validité**). Passer à **Désactivé** fixe la fin de validité à maintenant : la désactivation est immédiate. Tant qu'une date future est fixée, l'interrupteur affiche **Actif jusqu'au** et cette date
+- Modifiez le **Statut** dans la barre de métadonnées, ou utilisez le champ **Cycle de vie** du panneau **Propriétés** (interrupteur de statut et **Fin de validité**). Passer à **Désactivé** fixe la fin de validité à maintenant : la désactivation est immédiate. Tant qu'une date future est fixée, l'interrupteur affiche **Actif jusqu'au** et cette date
 - Vous pouvez programmer une fin de validité future, par exemple la fin d'un contrat, une cession prévue ou la fin de la durée de vie utile d'un actif
 
 **Afficher les lignes désactivées** :

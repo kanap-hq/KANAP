@@ -61,7 +61,7 @@ Supprimer une ligne ou un contrat est réservé aux personnes qui ont toutes les
 
 ### Lignes sans société
 
-Une ligne budgétaire peut n'avoir aucune société qui paie : une ancienne ligne, ou une nouvelle ligne dont la société qui paie n'est pas encore choisie.
+Une ancienne ligne budgétaire peut n'avoir aucune société qui paie.
 
 - Imputée à un centre de coûts, elle suit ce centre de coûts : les personnes dont un nœud couvre le centre de coûts la lisent, et un nœud en Saisie leur permet de la modifier. L'enregistrer lui donne la société de son centre de coûts.
 - Sans centre de coûts, elle n'est visible que des personnes qui ont toutes les données, des personnes qui ont un nœud **Tout** et des personnes nommées dessus.
