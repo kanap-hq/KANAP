@@ -23,7 +23,7 @@ import {
   normalizeStatus,
 } from '../../constants/status';
 import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
-import { EditableTitleDisplay } from '../../components/workspace/EditableTitle';
+import { EditableTitleDisplay, titleMessageSx } from '../../components/workspace/EditableTitle';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 import { formatItemRef } from '../../utils/item-ref';
@@ -692,7 +692,11 @@ function CompanyNameTitle({
     if (pending !== null && name === pending) setPending(null);
   }, [name, pending]);
 
-  const helper = error ? <FormHelperText error sx={{ mt: 0.5 }}>{error}</FormHelperText> : null;
+  // The message is announced and tied to the title while it shows.
+  const messageId = React.useId();
+  const helper = error
+    ? <FormHelperText error id={messageId} role="alert" sx={titleMessageSx}>{error}</FormHelperText>
+    : null;
 
   if (!editing) {
     return (
@@ -700,6 +704,7 @@ function CompanyNameTitle({
         <EditableTitleDisplay
           canEdit={canEdit}
           placeholder={!shown}
+          describedBy={error ? messageId : undefined}
           onEdit={() => {
             setDraft(shown);
             openRef.current = true;
@@ -740,6 +745,7 @@ function CompanyNameTitle({
         value={draft}
         aria-label={t('companies.fields.name')}
         aria-invalid={error ? true : undefined}
+        aria-describedby={error ? messageId : undefined}
         onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
           setDraft(event.target.value);
           onClearError();
@@ -760,12 +766,12 @@ function CompanyNameTitle({
           color: 'inherit',
           bgcolor: 'transparent',
           border: 'none',
-          borderBottom: `1px solid ${error ? theme.palette.error.main : theme.palette.kanap.border.default}`,
+          borderBottom: `1px solid ${error ? theme.palette.kanap.danger : theme.palette.kanap.border.default}`,
           outline: 'none',
           p: 0,
           m: 0,
           width: '100%',
-          '&:focus': { borderBottomColor: error ? theme.palette.error.main : theme.palette.kanap.teal },
+          '&:focus': { borderBottomColor: error ? theme.palette.kanap.danger : theme.palette.kanap.teal },
         })}
       />
       {helper}
