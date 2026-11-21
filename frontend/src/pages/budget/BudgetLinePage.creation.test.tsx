@@ -40,6 +40,8 @@ const access = vi.hoisted(() => ({
   start: { ready: true, companyId: null as string | null, needsChoice: false },
   /** The companies a limited access opens only through their cost centers. */
   centreOnly: [] as string[],
+  /** The dimension values in the real picker (`AnalyticsCategorySelect`) instead of a plain field. */
+  realValuePicker: false,
 }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
@@ -88,7 +90,10 @@ vi.mock('../../components/fields/SupplierSelect', () => ({ default: pickers.pick
 vi.mock('../../components/fields/CompanySelect', () => ({ default: pickers.picker }));
 vi.mock('../../components/fields/AccountSelect', () => ({ default: pickers.picker }));
 vi.mock('../../components/fields/CostCenterSelect', () => ({ default: pickers.picker }));
-vi.mock('../../components/fields/AnalyticsCategorySelect', () => ({ default: pickers.picker }));
+vi.mock('../../components/fields/AnalyticsCategorySelect', async (importOriginal) => {
+  const real = (await importOriginal()) as { default: React.ComponentType<any> };
+  return { default: (props: any) => (access.realValuePicker ? <real.default {...props} /> : pickers.picker(props)) };
+});
 vi.mock('../../components/fields/UserSelect', () => ({ default: () => null }));
 
 const mocked = vi.mocked(api);
@@ -162,10 +167,15 @@ function renderPage(entries: string[], options: Options = {}) {
   server.line = { ...detail, ...options.line };
   mocked.get.mockImplementation(async (url: string, config?: { params?: unknown }) => {
     if (url === '/analytics-axes') return { data: { items: options.axes ?? [] } } as never;
-    const lookupIds = (config?.params as { ids?: string } | undefined)?.ids;
-    if (url === '/analytics-categories/lookup' && lookupIds) {
-      const ids = lookupIds.split(',');
+    const lookup = config?.params as { ids?: string; axis_id?: string } | undefined;
+    if (url === '/analytics-categories/lookup' && lookup?.ids) {
+      const ids = lookup.ids.split(',');
       return { data: { items: (options.values ?? []).filter((value) => ids.includes(value.id)), has_more: false } } as never;
+    }
+    if (url === '/analytics-categories/lookup') {
+      const items = (options.values ?? []).filter((value) => value.axis_id === lookup?.axis_id)
+        .map((value) => ({ description: null, sort_order: 0, status: 'enabled', disabled_at: null, ...value }));
+      return { data: { items, has_more: false } } as never;
     }
     if (url === '/budget-lines/BL-12' || url === `/budget-lines/${ITEM_ID}`) return { data: server.line } as never;
     if (url === '/budget-lines/resolve/BL-12') return { data: { id: ITEM_ID, nature: server.line.nature, reference: 'BL-12' } } as never;
@@ -264,6 +274,7 @@ describe('Budget line born complete', () => {
     access.admin = false;
     access.start = { ready: true, companyId: null, needsChoice: false };
     access.centreOnly = [];
+    access.realValuePicker = false;
   });
 
   it('opens with the title and the starred rows live, the rest dimmed, with Create and Cancel', async () => {
@@ -559,6 +570,44 @@ describe('Budget line born complete', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { analytics_values: { 'axis-site': 'site-2' } }));
     expect(lineWrites()).toHaveLength(1);
     await waitFor(() => expect(field('Site')).toHaveValue('site-2'));
+  });
+
+  it('shows on the line, in the real picker, a dimension value changed while the line is written', async () => {
+    access.realValuePicker = true;
+    await startNewLine({
+      axes: [SITE_AXIS],
+      values: [
+        { id: 'site-high', axis_id: 'axis-site', name: 'High', applies_to: null },
+        { id: 'site-low', axis_id: 'axis-site', name: 'Low', applies_to: null },
+      ],
+    });
+    let answer: () => void = () => undefined;
+    mocked.post.mockImplementationOnce(async (_url: string, body?: unknown) => new Promise((resolve) => {
+      answer = () => {
+        const { analytics_values: values, ...fields } = body as Record<string, unknown>;
+        server.line = { ...server.line, ...fields, analytics_values: valueList(values) };
+        resolve({ data: { ...server.line, creation_token: 'token-1' } });
+      };
+    }) as never);
+    // As in a browser, the picker keeps the focus once a value is chosen.
+    const choose = async (name: string) => {
+      const input = screen.getByRole('combobox', { name: 'Site' });
+      act(() => { input.focus(); });
+      fireEvent.mouseDown(input);
+      fireEvent.click(await screen.findByRole('option', { name }));
+    };
+    await giveTitle();
+    pick('opex.fields.payingCompany', 'company-1');
+    pick('opex.fields.account', 'account-1');
+    await choose('High');
+    await waitFor(() => expect(lineWrites()).toHaveLength(1));
+    await choose('Low');
+    await act(async () => { answer(); });
+    await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { analytics_values: { 'axis-site': 'site-low' } }));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(screen.getByRole('combobox', { name: 'Site' })).toHaveFocus();
+    expect(screen.getByRole('combobox', { name: 'Site' })).toHaveValue('Low');
   });
 
   it('holds the type while the line is written: the line keeps the type it was sent with', async () => {
