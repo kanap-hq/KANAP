@@ -304,7 +304,7 @@ describe('Business process creation at the title', () => {
     expect(mocked.delete).toHaveBeenCalledWith('/business-processes/bp-new/creation', { data: { token: 'token-1' } });
   });
 
-  it('keeps the process being created and closes it on Create, after the field being typed is saved', async () => {
+  it('keeps the process being created and closes it on Done, after the field being typed is saved', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new process' }));
     await createProcess();
@@ -312,10 +312,25 @@ describe('Business process creation at the title', () => {
     fireEvent.focus(description);
     fireEvent.change(description, { target: { value: 'From need to payment.' } });
     fireEvent.blur(description);
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.patch).toHaveBeenCalledWith('/business-processes/bp-new', { description: 'From need to payment.' });
     expect(mocked.delete).not.toHaveBeenCalled();
+  });
+
+  it('creates the process on Create clicked just after the title, and keeps it open with Done', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new process' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Procure-to-Pay' } });
+    // In a browser the click's press blurs the title first, which commits it.
+    fireEvent.blur(input);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(location()).toBe('/master-data/business-processes/bp-new/overview'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/master-data/business-processes/bp-new/overview');
+    expect(mocked.post).toHaveBeenCalledTimes(1);
   });
 
   it('leaves an empty new process on Escape, nothing created', async () => {

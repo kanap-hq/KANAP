@@ -240,18 +240,33 @@ describe('Document creation at the title', () => {
     expect(location()).toBe('/knowledge/DOC-9?library=runbooks&allLibraries=0');
   });
 
-  it('keeps the document on Create, releases its lock and goes back where the creation started', async () => {
+  it('keeps the document on Done, releases its lock and goes back where the creation started', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new document' }));
     await createRunbook();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.delete).toHaveBeenCalledWith('/knowledge/DOC-9/locks', { headers: { 'X-Lock-Token': 'lock-1' } });
     expect(mocked.delete).not.toHaveBeenCalledWith('/knowledge/doc-new/creation', expect.anything());
     expect(mocked.post.mock.calls.filter(([url]) => url === '/knowledge')).toHaveLength(1);
   });
 
-  it('waits for the autosave on its way before the save of Create, with the revision it answered', async () => {
+  it('creates the document on Create clicked just after the title, and keeps it open with Done', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new document' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Cheese cellar runbook' } });
+    // In a browser the click's press blurs the title first, which commits it.
+    fireEvent.blur(input);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(location()).toBe('/knowledge/DOC-9?library=runbooks&allLibraries=0'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/knowledge/DOC-9?library=runbooks&allLibraries=0');
+    expect(mocked.post.mock.calls.filter(([url]) => url === '/knowledge')).toHaveLength(1);
+  });
+
+  it('waits for the autosave on its way before the save of Done, with the revision it answered', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new document' }));
     await createRunbook();
@@ -268,7 +283,7 @@ describe('Document creation at the title', () => {
     fireEvent.change(await screen.findByLabelText('Document body'), { target: { value: 'Heat the sugar' } });
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 4000 });
     fireEvent.change(screen.getByLabelText('Document body'), { target: { value: 'Heat the sugar. Stop at the colour.' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(mocked.patch).toHaveBeenCalledTimes(1);
     release();

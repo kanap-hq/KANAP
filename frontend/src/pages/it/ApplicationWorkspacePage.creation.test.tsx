@@ -166,7 +166,7 @@ describe('Application creation at the title', () => {
     expect(screen.getByRole('button', { name: TITLE })).toHaveTextContent('Billing');
   });
 
-  it('sends Tab from the title to the description, and Shift+Tab reaches Create', async () => {
+  it('sends Tab from the title to the description, and Shift+Tab reaches Done', async () => {
     const user = userEvent.setup();
     renderPage(['/it/applications/new/overview']);
     const input = await screen.findByRole('textbox', { name: TITLE });
@@ -175,11 +175,11 @@ describe('Application creation at the title', () => {
     await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview'));
     // Nothing is required: the description takes the focus once the application is open.
     await waitFor(() => expect(screen.getByLabelText('description editor')).toHaveFocus());
-    const create = screen.getByRole('button', { name: 'common:buttons.create' });
-    for (let i = 0; i < 30 && document.activeElement !== create; i += 1) {
+    const done = screen.getByRole('button', { name: 'common:buttons.done' });
+    for (let i = 0; i < 30 && document.activeElement !== done; i += 1) {
       await user.tab({ shift: true });
     }
-    expect(create).toHaveFocus();
+    expect(done).toHaveFocus();
   });
 
   it('creates the application when the title is committed, then opens every tab with the focus on the title', async () => {
@@ -300,14 +300,80 @@ describe('Application creation at the title', () => {
     expect(location()).not.toBe('/start');
   });
 
-  it('keeps the record being created and closes it on Create, back where the creation started', async () => {
+  it('keeps the record being created and closes it on Done, back where the creation started', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
     await createBilling();
     expect(screen.queryByRole('button', { name: 'common:buttons.close' })).toBeNull();
-    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.create' }));
+    expect(screen.queryByRole('button', { name: 'common:buttons.create' })).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.delete).not.toHaveBeenCalled();
     expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates the application on Create clicked just after the title, and keeps it open with Done', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    // In a browser the click's press blurs the title first, which commits it.
+    fireEvent.blur(input);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/it/applications/APP-7/overview');
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('never closes the application on a double-click of Create while the title writes it', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
+    let answer: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementationOnce(async () => new Promise((resolve) => { answer = resolve; }) as never);
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    const create = screen.getByRole('button', { name: 'common:buttons.create' });
+    fireEvent.pointerDown(create);
+    fireEvent.blur(input);
+    fireEvent.click(create, { detail: 1 });
+    fireEvent.pointerDown(create);
+    fireEvent.click(create, { detail: 2 });
+    answer({ data: created });
+    await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview'));
+    expect(await screen.findByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/it/applications/APP-7/overview');
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('never closes the application on a double-click of Create when the record comes back between the clicks', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'common:buttons.create' }));
+    fireEvent.blur(input);
+    // The record comes back before the first click lands.
+    await waitFor(() => expect(location()).toBe('/it/applications/APP-7/overview'));
+    const done = await screen.findByRole('button', { name: 'common:buttons.done' });
+    fireEvent.click(done, { detail: 1 });
+    fireEvent.pointerDown(done);
+    fireEvent.click(done, { detail: 2 });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(location()).toBe('/it/applications/APP-7/overview');
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the new page on one Escape with a name typed, nothing created', async () => {
+    renderPage(['/start']);
+    fireEvent.click(await screen.findByRole('button', { name: 'new application' }));
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Billing' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    await waitFor(() => expect(location()).toBe('/start'));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 });

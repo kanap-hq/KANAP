@@ -1603,23 +1603,19 @@ export default function ApplicationWorkspacePage() {
     return work;
   }, [queryClient, updateApplicationCache, t]);
 
-  // The name committed in the header creates the application at once (category and lifecycle
-  // take the server defaults); the page moves to it, every tab open, with Create and Cancel (or
-  // closes it, kept, when Create was clicked meanwhile).
+  // The name committed in the header (Enter, Tab, its blur, Create) creates the application at once
+  // (category and lifecycle take the server defaults); the page moves to it, every tab open, with
+  // Done and Cancel.
   const titleCreation = useTitleCreation<Partial<ApplicationDetail> & { id: string; name: string }>({
     isCreate,
     requiredMessage: t('messages.nameRequired'),
     // The created row: no child list yet (owners, audience, deployments).
     post: async (name) => (await api.post<Partial<ApplicationDetail> & { id: string; name: string; creation_token: string }>('/applications', { name })).data,
-    onCreated: (created, token, finish) => {
+    onCreated: (created, token) => {
       void queryClient.invalidateQueries({
         predicate: (query) => ['applications', 'app-filter-values'].some((key) => String(query.queryKey[0]).startsWith(key)),
         refetchType: 'none',
       });
-      if (finish) {
-        navigate(creationReturn, { replace: true });
-        return;
-      }
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const target = created.sequential_id || created.id;
       // The page keeps its header while the full record loads: the title button takes the focus.
@@ -1633,8 +1629,8 @@ export default function ApplicationWorkspacePage() {
     onStart: () => setError(null),
   });
 
-  // Create: on the new page, the title is the only field; on an application being created, what is
-  // still being typed is saved, then the application is kept and closed.
+  // Create on the new page, where the title is the only field; Done on an application being created:
+  // what is still being typed is saved, then the application is kept and closed.
   const createAction = React.useCallback(async () => {
     if (isCreate) {
       titleCreation.create();
@@ -1845,6 +1841,7 @@ export default function ApplicationWorkspacePage() {
               <CreationActions
                 busy={creation.cancelling}
                 writing={titleCreation.writing}
+                done={!isCreate}
                 onCreate={() => { void createAction(); }}
                 onCancel={() => { if (isCreate) closeWorkspace(); else void creation.cancelCreation(); }}
               />

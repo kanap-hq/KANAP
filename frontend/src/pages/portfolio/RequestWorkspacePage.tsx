@@ -860,18 +860,14 @@ export default function RequestWorkspacePage() {
   }, [creation]);
   // The name committed in the header creates the request at once, with the classification
   // defaults the form would have sent (once they are read); the page moves to it, every tab open,
-  // with Create and Cancel (or closes it, kept, when Create was clicked meanwhile).
+  // with Done and Cancel.
   const titleCreation = useTitleCreation<{ id: string; item_number: number }>({
     isCreate,
     requiredMessage: t('common:creation.titleRequired'),
     ready: classificationReady,
     post: async (name) => (await api.post('/portfolio/requests', { ...withClassificationDefaults(form), name })).data,
-    onCreated: (created, token, finish) => {
+    onCreated: (created, token) => {
       void queryClient.invalidateQueries({ queryKey: ['portfolio-requests'], refetchType: 'none' });
-      if (finish) {
-        navigate(creationReturn, { replace: true });
-        return;
-      }
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       const reference = formatItemRef('request', created.item_number);
       // The page keeps its header while the full request loads.
@@ -901,8 +897,8 @@ export default function RequestWorkspacePage() {
     navigate(listPath);
   }, [creationReturn, dialogs, handleSave, handleReset, hasUnsavedChanges, isCreate, listPath, navigate, t]);
 
-  // Create: on the new page, the title is the only field; on a request being created, what is still
-  // being typed is saved, then the request is kept and closed.
+  // Create on the new page, where the title is the only field; Done on a request being created: what
+  // is still being typed is saved, then the request is kept and closed.
   const createAction = React.useCallback(async () => {
     if (isCreate) {
       titleCreation.create();
@@ -1144,6 +1140,7 @@ export default function RequestWorkspacePage() {
             )}
             {isCreate || creation.beingCreated ? (
               <CreationActions
+                done={!isCreate}
                 busy={creation.cancelling}
                 writing={titleCreation.writing}
                 onCreate={() => { void createAction(); }}

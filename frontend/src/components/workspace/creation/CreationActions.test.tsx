@@ -68,6 +68,53 @@ describe('CreationActions', () => {
     expect(onCreate).not.toHaveBeenCalled();
   });
 
+  it('says Create on the new page and Done once the record is created', () => {
+    const view = render(<CreationActions onCreate={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'common:buttons.done' })).toBeNull();
+    view.rerender(<CreationActions onCreate={vi.fn()} onCancel={vi.fn()} done />);
+    expect(screen.getByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'common:buttons.create' })).toBeNull();
+  });
+
+  it('takes a click, a key and Ctrl+S on Done', async () => {
+    const onCreate = vi.fn();
+    render(<div data-workspace-shell=""><CreationActions onCreate={onCreate} onCancel={vi.fn()} done /></div>);
+    const done = screen.getByRole('button', { name: 'common:buttons.done' });
+    fireEvent.pointerDown(done);
+    fireEvent.click(done, { detail: 1 });
+    // Enter or Space on the button: a click with no pointer.
+    fireEvent.click(done, { detail: 0 });
+    ctrlS(document.body);
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(3));
+  });
+
+  it('never reaches Done from a press that began on Create: the record created under the press', () => {
+    const onCreate = vi.fn();
+    const view = render(<CreationActions onCreate={onCreate} onCancel={vi.fn()} />);
+    const button = screen.getByRole('button', { name: 'common:buttons.create' });
+    fireEvent.pointerDown(button);
+    // The press blurs the title, which writes the record; it comes back before the click.
+    view.rerender(<CreationActions onCreate={onCreate} onCancel={vi.fn()} done />);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }), { detail: 1 });
+    expect(onCreate).not.toHaveBeenCalled();
+  });
+
+  it('never reaches Done from the second click of a double-click on Create', () => {
+    const onCreate = vi.fn();
+    const view = render(<CreationActions onCreate={onCreate} onCancel={vi.fn()} />);
+    const create = screen.getByRole('button', { name: 'common:buttons.create' });
+    fireEvent.pointerDown(create);
+    fireEvent.click(create, { detail: 1 });
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    // The record is created between the two clicks.
+    view.rerender(<CreationActions onCreate={onCreate} onCancel={vi.fn()} done />);
+    const done = screen.getByRole('button', { name: 'common:buttons.done' });
+    fireEvent.pointerDown(done);
+    fireEvent.click(done, { detail: 2 });
+    expect(onCreate).toHaveBeenCalledTimes(1);
+  });
+
   it('leaves Ctrl+S to a field that uses it, to a dialog over the page and to a panel beside it', async () => {
     const onCreate = vi.fn();
     render(

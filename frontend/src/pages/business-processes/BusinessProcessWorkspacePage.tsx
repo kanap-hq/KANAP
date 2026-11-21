@@ -176,18 +176,14 @@ export default function BusinessProcessWorkspacePage() {
     queryKeyPrefixes: ['business-processes'],
     onError: setSaveError,
   });
-  // The name committed in the header creates the process at once, enabled; the page moves to it,
-  // every tab open, with Create and Cancel (or closes it, kept, when Create was clicked meanwhile).
+  // The name committed in the header (Enter, Tab, its blur, Create) creates the process at once,
+  // enabled; the page moves to it, every tab open, with Done and Cancel.
   const titleCreation = useTitleCreation<BusinessProcess>({
     isCreate,
     requiredMessage: t('businessProcesses.fields.nameRequired'),
     post: async (name) => (await api.post<BusinessProcess & { creation_token: string }>('/business-processes', { name })).data,
-    onCreated: (created, token, finish) => {
+    onCreated: (created, token) => {
       void queryClient.invalidateQueries({ queryKey: ['business-processes'], refetchType: 'none' });
-      if (finish) {
-        navigate(creationReturn, { replace: true });
-        return;
-      }
       creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
       // The page keeps its header while the process loads again.
       queryClient.setQueryData<BusinessProcess>(['business-processes', created.id], { ...EMPTY_BUSINESS_PROCESS, ...created });
@@ -204,8 +200,8 @@ export default function BusinessProcessWorkspacePage() {
     if (targetId) navigate(withContext(`${LIST_PATH}/${targetId}/${nextTab}`));
   };
 
-  // Create: on the new page, the title is the only field; on a process being created, the field
-  // still being typed has left (the click took the focus) and its save is awaited, then the
+  // Create on the new page, where the title is the only field; Done on a process being created: the
+  // field still being typed has left (the click took the focus) and its save is awaited, then the
   // process is kept and closed.
   const createAction = async () => {
     if (isCreate) {
@@ -342,6 +338,7 @@ export default function BusinessProcessWorkspacePage() {
             )}
             {beingCreated ? (
               <CreationActions
+                done={!isCreate}
                 busy={creation.cancelling}
                 writing={titleCreation.writing}
                 onCreate={() => { void createAction(); }}
