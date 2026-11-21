@@ -54,13 +54,14 @@ La nueva aplicación está **Activa**, en la categoría por defecto. Cámbielas 
 - **Licencia** y **Notas**: términos de licencia y notas internas de texto libre
 - **Puede tener apps hijas**: usar esta aplicación como una "suite" que agrupa otras aplicaciones
 
-Pulse Escape en el título vacío para salir sin crear nada. Un nombre que ya usa otra aplicación se rechaza, con un mensaje bajo el título.
+Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre. Un nombre que ya usa otra aplicación se rechaza, con un mensaje bajo el título.
 
 ### Crear o cancelar { #cancelling-a-creation }
 
-Mientras la aplicación se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la aplicación.
+Mientras la aplicación se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la aplicación. **Ctrl+S** funciona como el botón mostrado.
 
-- **Crear** conserva la aplicación y la cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno
+- **Crear** funciona como Intro: crea la aplicación y la deja abierta, con su referencia. Con el título vacío, el título pide uno
+- Una vez creada la aplicación, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le lleva de vuelta al punto de partida: la lista o la pantalla anterior
 - **Cancelar** cierra sin conservar nada. En una aplicación ya creada, la elimina. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar aplicaciones
 
 Si sale de la aplicación de otra forma, esta se conserva. Elimínela como cualquier otra aplicación. La referencia de una aplicación cancelada no se reutiliza.
@@ -181,7 +182,7 @@ El encabezado muestra:
 - **Compartir**: copiar un enlace compartible a este espacio de trabajo
 - **Nueva versión**: lanzar el asistente de migración de versión (consulte [Gestión de versiones](#gestion-de-versiones))
 - **Convertir en tecnología** (`applications:admin` e `infrastructure:member`): consulte [Convertir una aplicación en tecnología](#convertir-una-aplicacion-en-tecnologia)
-- **Crear** y **Cancelar**: visibles mientras la aplicación se está creando, en lugar del botón de cierre. Consulte [Crear o cancelar](#cancelling-a-creation)
+- **Crear** (luego **Listo**) y **Cancelar**: visibles mientras la aplicación se está creando, en lugar del botón de cierre. Consulte [Crear o cancelar](#cancelling-a-creation)
 - **Eliminar**, un icono de papelera con su nombre en una información emergente (`applications:admin`): una aplicación con interfaces recibe el rechazo y el motivo, solo con Cerrar. Si no, la confirmación nombra la aplicación y cuenta los despliegues eliminados con ella, junto con sus vínculos con otros elementos
 - **Anterior / Siguiente**: recorrer la lista filtrada sin volver a la cuadrícula
 

@@ -58,11 +58,12 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 2. Escriba el nombre del proceso, idealmente con su código corto (p. ej., "Order-to-Cash (O2C)").
 3. Pulse Intro o haga clic fuera del título. Kadratis crea el proceso de inmediato, activado, y se abren todas las pestañas.
 
-Pulse Escape en el título vacío para salir sin crear nada. Dos procesos no pueden tener el mismo nombre, sin distinguir mayúsculas de minúsculas: un nombre ya usado se rechaza, con un mensaje bajo el título.
+Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre. Dos procesos no pueden tener el mismo nombre, sin distinguir mayúsculas de minúsculas: un nombre ya usado se rechaza, con un mensaje bajo el título.
 
-Mientras el proceso se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga del proceso.
+Mientras el proceso se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga del proceso. **Ctrl+S** funciona como el botón mostrado.
 
-- **Crear** conserva el proceso y lo cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno.
+- **Crear** funciona como Intro: crea el proceso y lo deja abierto. Con el título vacío, el título pide uno.
+- Una vez creado el proceso, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le lleva de vuelta al punto de partida: la lista o la pantalla anterior.
 - **Cancelar** cierra sin conservar nada. En un proceso ya creado, lo elimina, con los vínculos a aplicaciones que haya añadido. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar procesos.
 
 Si sale del proceso de otra forma, este se conserva.

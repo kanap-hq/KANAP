@@ -78,7 +78,7 @@ La creación directa de proyectos es para trabajo que debe entrar en ejecución 
 2. Escriba el nombre del proyecto.
 3. Pulse Intro o haga clic fuera del título. Kadratis crea el proyecto de inmediato, con el origen **Fast-track**. Su referencia (`PRJ-12`) aparece y se abren todas las pestañas.
 
-Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulse Escape en el título vacío para salir sin crear nada.
+Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre.
 
 Un proyecto creado así puede pasar de **Fast-track** a **Histórico** y viceversa en el panel de Propiedades. Un proyecto convertido desde una solicitud conserva el origen **Solicitud** y su vinculación de fuente.
 
@@ -86,9 +86,10 @@ Use **Fast-track** para trabajo que se introduce genuinamente directo en la entr
 
 ### Crear o cancelar { #cancelling-a-creation }
 
-Mientras el proyecto se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga del proyecto.
+Mientras el proyecto se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga del proyecto. **Ctrl+S** funciona como el botón mostrado.
 
-- **Crear** conserva el proyecto y lo cierra. Vuelve al punto de partida: la lista o la pantalla anterior. Con el título vacío, no se cierra nada y el título pide uno
+- **Crear** funciona como Intro: crea el proyecto y lo deja abierto, con su referencia. Con el título vacío, el título pide uno
+- Una vez creado el proyecto, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le lleva de vuelta al punto de partida: la lista o la pantalla anterior
 - **Cancelar** cierra sin conservar nada. En un proyecto ya creado, lo elimina. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin ningún derecho de eliminación
 
 **Cancelar** es la única forma de eliminar un proyecto. Una vez que sale del proyecto, este permanece: cambie su estado a **Cancelado** si no sigue adelante. Un proyecto vinculado a una solicitud no se puede eliminar. La referencia de un proyecto cancelado no se reutiliza.
@@ -113,7 +114,7 @@ El encabezado del espacio de trabajo es una franja de control, no decoración.
 - Una fila de metadatos compacta: **Estado**, **Puntuación**, **Progreso**, **Responsable IT**, **Fin planificado** y **Origen** (o la referencia de la solicitud de origen para proyectos de origen-solicitud)
 - **Anterior** y **Siguiente** se mueven por el conjunto de resultados de la lista actual, no por todos los proyectos del sistema
 - **Compartir** envía por correo la URL actual del proyecto con un mensaje opcional
-- **Crear** y **Cancelar**, mientras el proyecto se está creando. Consulte [Crear o cancelar](#cancelling-a-creation)
+- **Crear** (luego **Listo**) y **Cancelar**, mientras el proyecto se está creando. Consulte [Crear o cancelar](#cancelling-a-creation)
 
 Enviar un enlace no concede acceso. Solo comparte la ubicación. Los permisos permanecen exactamente como estaban antes de enviar el correo.
 

@@ -15,13 +15,13 @@ El nuevo activo es una máquina virtual del entorno Prod, con el ciclo de vida A
 **Campos obligatorios**:
 - **Nombre**: El nombre del activo o su nombre de host, 200 caracteres como máximo
 - **Tipo de activo**: Servidor web, Máquina virtual, Servidor físico, Contenedor, etc. (configurable en **Panorama IT > Configuración**)
-- **Ubicación**: Dónde se aloja el activo (determina el proveedor, el tipo de alojamiento y el país). **Crear** la pide
+- **Ubicación**: Dónde se aloja el activo (determina el proveedor, el tipo de alojamiento y el país). **Listo** la pide
 
 **Muy recomendados**:
 - **Ciclo de vida**: Estado actual (Activo, Obsoleto, Retirado, etc.)
 - **Entorno**: A qué entorno pertenece este activo (Prod, Pre-prod, QA, Test, Dev, Sandbox)
 
-Pulse Escape en el título vacío para salir sin crear nada. Un nombre rechazado se muestra bajo el título.
+Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre. Un nombre rechazado se muestra bajo el título.
 
 **Nombres únicos**: dos activos no pueden tener el mismo nombre ni el mismo FQDN. Las mayúsculas y los espacios al principio o al final no cuentan. Kadratis rechaza el duplicado e indica el activo que ya tiene el valor (`AST-12`). Los duplicados registrados antes siguen siendo editables mientras no cambie ese valor.
 
@@ -34,9 +34,10 @@ Pulse Escape en el título vacío para salir sin crear nada. Un nombre rechazado
 
 ### Crear o cancelar { #cancelling-a-creation }
 
-Mientras el activo se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre. Permanecen hasta que salga del activo.
+Mientras el activo se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre. Permanecen hasta que salga del activo. **Ctrl+S** funciona como el botón mostrado.
 
-- **Crear** comprueba que el activo tenga una ubicación. Sin ella, la etiqueta **Ubicación** se pone en rojo en el panel de propiedades y el campo recibe el foco. El activo sigue abierto. Con una ubicación, Kadratis conserva el activo y lo cierra. Vuelve al punto de partida
+- **Crear** funciona como Intro: crea el activo y lo deja abierto, con su referencia. El cursor va a **Ubicación** si está vacía. Con el título vacío, el título pide uno
+- Una vez creado el activo, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y comprueba que el activo tenga una ubicación. Sin ella, la etiqueta **Ubicación** se pone en rojo en el panel de propiedades y el campo recibe el foco. El activo sigue abierto. Con una ubicación, vuelve al punto de partida
 - **Cancelar** elimina el activo. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar activos
 
 Si sale del activo de otra forma (la flecha de retroceso, el menú, otro activo) mientras no tiene ubicación, Kadratis le pregunta qué hacer. **Completarlo** le deja en el activo, en el campo **Ubicación**. **Eliminarlo** elimina el activo. Si recarga la página o cierra la pestaña mientras el activo nuevo no tiene ubicación, su navegador pide confirmación. Si sale de todos modos, el activo se elimina.
@@ -185,7 +186,7 @@ El panel muestra la tarjeta de identidad del activo en cada pestaña. Las edicio
 - **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo, por ejemplo el Tier 0 para un controlador de dominio y el hipervisor que lo ejecuta. Elija entre las zonas configuradas en **Panorama IT > Configuración**, o **Sin zona**. El activo aparece entonces en esa zona en la página [Zonas de administración](administration-view.md)
 
 **Ubicación**:
-- **Ubicación** (obligatorio): **Crear** la pide en un activo nuevo. Un activo creado por una importación o por el asistente la necesita de inmediato. Si la ubicación aún no existe, escriba su nombre y elija **+ Crear la ubicación «…»**: indique su tipo de alojamiento y la nueva ubicación pasa al campo. Requiere `locations:member`
+- **Ubicación** (obligatorio): **Listo** la pide en un activo nuevo. Un activo creado por una importación o por el asistente la necesita de inmediato. Si la ubicación aún no existe, escriba su nombre y elija **+ Crear la ubicación «…»**: indique su tipo de alojamiento y la nueva ubicación pasa al campo. Requiere `locations:member`
 - **Sub-ubicación** (cuando la ubicación tiene sub-ubicaciones definidas)
 - **Tipo de alojamiento**, **Empresa operadora** o **Proveedor cloud**, **País**, **Ciudad**: de solo lectura, derivados de la ubicación. Se actualizan cuando cambia la ubicación
 

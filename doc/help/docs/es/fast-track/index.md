@@ -54,7 +54,7 @@ Complete después los detalles mínimos en el panel de propiedades:
 
 Luego use el documento de **Propósito** en **Resumen** para explicar la necesidad de negocio y el resultado esperado en lenguaje llano. Si ya tiene un resumen en Word, use el botón **Importar** en el editor de Propósito para incorporar el archivo `.docx` directamente, sin necesidad de copiar y pegar.
 
-Mientras esté en su página, **Crear** en el encabezado conserva la nueva solicitud y la cierra, y **Cancelar** la elimina.
+Mientras esté en su página, **Listo** en el encabezado guarda la nueva solicitud y le lleva de vuelta, y **Cancelar** la elimina.
 
 !!! tip "Consejo"
     Puede añadir análisis más profundo, conocimiento vinculado y evidencia de soporte después. El objetivo ahora es que la solicitud entre en el flujo de recepción gobernado.

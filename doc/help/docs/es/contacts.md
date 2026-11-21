@@ -94,9 +94,9 @@ Haga clic en una fila para abrir su página. Una lista muestra hasta 50 elemento
 
 ### Crear un contacto
 
-Haga clic en **Nuevo** en la lista. Se abre la página del contacto nuevo. Escriba el nombre y los apellidos uno junto al otro en el encabezado, y después el correo electrónico. El contacto se crea al salir del campo de correo con un correo válido. Los números de teléfono también deben ser válidos. Elegir un proveedor fija el tipo de contacto en **Comercial**, que puede cambiar. Un contacto con proveedor necesita un tipo. Todas sus pestañas quedan entonces disponibles, y los demás campos se guardan automáticamente. Pulse Escape mientras el nombre está vacío para salir sin crear nada.
+Haga clic en **Nuevo** en la lista. Se abre la página del contacto nuevo. Escriba el nombre y los apellidos uno junto al otro en el encabezado, y después el correo electrónico. El contacto se crea al salir del campo de correo con un correo válido. Los números de teléfono también deben ser válidos. Elegir un proveedor fija el tipo de contacto en **Comercial**, que puede cambiar. Un contacto con proveedor necesita un tipo. Todas sus pestañas quedan entonces disponibles, y los demás campos se guardan automáticamente. Pulse Escape en el nombre para salir sin crear nada, aunque ya haya escrito un nombre.
 
-Mientras el contacto se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Crear** conserva el contacto y le lleva de vuelta al punto de partida: la lista, la pantalla anterior o el proveedor desde el que empezó. Si aún falta un campo obligatorio, se marca en su lugar. **Cancelar** sale sin conservar nada. En un contacto ya creado, lo elimina. Si introdujo algo más que lo necesario para crearlo, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar contactos. Si sale de la página de otra forma, el contacto se conserva.
+Mientras el contacto se está creando, el encabezado muestra **Crear** y **Cancelar** hasta que salga de la página. **Ctrl+S** funciona como el botón mostrado. **Crear** guarda el contacto cuando sus campos obligatorios están indicados y lo deja abierto. Si falta alguno, su etiqueta se pone en rojo y el cursor va a él. Una vez creado el contacto, **Crear** pasa a ser **Listo**: guarda lo que está escribiendo y le lleva de vuelta al punto de partida, la lista, la pantalla anterior o el proveedor desde el que empezó. **Cancelar** sale sin conservar nada. En un contacto ya creado, lo elimina. Si introdujo algo más que lo necesario para crearlo, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar contactos. Si sale de la página de otra forma, el contacto se conserva.
 
 ---
 
@@ -111,7 +111,7 @@ Cada proveedor tiene una pestaña de **Contactos** que muestra todos los contact
 1. Abra el espacio de trabajo del proveedor y vaya a la pestaña **Contactos**.
 2. Haga clic en **Nuevo contacto** junto a un tipo de contacto.
 3. Complete los datos del contacto: el proveedor y el tipo de contacto están prerrellenados.
-4. Haga clic en **Crear**: vuelve a la pestaña **Contactos** del proveedor.
+4. Haga clic en **Crear** y luego en **Listo**: vuelve a la pestaña **Contactos** del proveedor.
 
 ### Soporte de aplicaciones
 
