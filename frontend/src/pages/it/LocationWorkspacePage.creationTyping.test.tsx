@@ -115,7 +115,9 @@ describe('LocationWorkspacePage typing while the site is created', () => {
     renderNew();
     const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
     fireEvent.change(title, { target: { value: 'Lyon DC' } });
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
       // The create answers with the stored site, its reference included.

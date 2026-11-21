@@ -9,8 +9,9 @@ import React from 'react';
  * the person types.
  *
  * `shellProps` go to `PortfolioDetailWorkspaceShell`; `onCancel` is Escape on the empty title;
- * `onChange` follows each keystroke (a code proposed from the name); `onCommit` follows Enter and
- * the blur of a typed name (the draft may now be created). `fill(name)` puts a name in the title as
+ * `onChange` follows each keystroke (a code proposed from the name); `onCommit` follows Enter, Tab
+ * and the blur of a typed name (the draft may now be created: `useDraftCreation` writes nothing on
+ * a blur that leaves the page). `fill(name)` puts a name in the title as
  * if typed (a calendar named after its country).
  */
 export default function useCreationTitle({ requiredMessage, onCancel, onChange, onCommit }: {
@@ -70,6 +71,7 @@ export default function useCreationTitle({ requiredMessage, onCancel, onChange, 
       titleAutoEdit: true,
       onTitleDraftChange,
       onTitleSave,
+      onTitleBlurDraft: onTitleSave,
       titleOnCancel: onCancel,
       titleError: error,
       titleFocusRequest: focusRequest,

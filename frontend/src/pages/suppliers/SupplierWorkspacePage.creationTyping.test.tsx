@@ -93,7 +93,9 @@ describe('SupplierWorkspacePage typing while the supplier is created', () => {
     renderNew();
     const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
     fireEvent.change(title, { target: { value: 'Initech' } });
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });

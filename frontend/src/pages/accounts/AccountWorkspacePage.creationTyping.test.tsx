@@ -94,10 +94,13 @@ describe('AccountWorkspacePage typing while the account is created', () => {
     renderNew();
     const number = await screen.findByLabelText('accounts.fields.accountNumber');
     fireEvent.change(number, { target: { value: '606300' } });
-    fireEvent.blur(number);
+    // The number gives way to the title.
+    fireEvent.blur(number, { relatedTarget: screen.getByRole('textbox', { name: 'common:buttons.editTitle' }) });
     const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
     fireEvent.change(title, { target: { value: 'Hosting' } });
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });

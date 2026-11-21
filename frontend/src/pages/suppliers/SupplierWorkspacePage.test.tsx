@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -436,12 +436,15 @@ describe('SupplierWorkspacePage', () => {
     renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
     const erp = screen.getByLabelText('suppliers.fields.erpSupplierId');
     fireEvent.change(erp, { target: { value: 'F10077' } });
-    fireEvent.blur(erp);
-    expect(mocked.post).not.toHaveBeenCalled();
     const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    // The ERP ID gives way to the title.
+    fireEvent.blur(erp, { relatedTarget: title });
+    expect(mocked.post).not.toHaveBeenCalled();
     fireEvent.change(title, { target: { value: ' Initech ' } });
     expect(mocked.post).not.toHaveBeenCalled();
-    fireEvent.blur(title);
+    act(() => title.focus());
+    // Enter gives the name.
+    fireEvent.keyDown(title, { key: 'Enter' });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/suppliers', {
       name: 'Initech',
       erp_supplier_id: 'F10077',

@@ -106,7 +106,8 @@ describe('CompanyWorkspacePage typing while the company is created', () => {
     fireEvent.click(await screen.findByRole('option', { name: 'Germany (DE)' }));
     const city = screen.getByLabelText('companies.fields.city');
     fireEvent.change(city, { target: { value: 'Berlin' } });
-    fireEvent.blur(city);
+    // The city gives way to another field of the page.
+    fireEvent.blur(city, { relatedTarget: title });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     const finish = async () => {
       await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });

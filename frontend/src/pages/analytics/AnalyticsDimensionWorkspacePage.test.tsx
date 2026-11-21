@@ -415,7 +415,8 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(screen.getByLabelText('analytics.fields.code')).toHaveValue('nature-de-cout');
     expect(screen.queryByLabelText('analytics.fields.order')).toBeNull();
     expect(mocked.createAnalyticsAxis).not.toHaveBeenCalled();
-    fireEvent.blur(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }));
+    // The name gives way to another field of the page.
+    fireEvent.blur(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { relatedTarget: screen.getByLabelText('analytics.fields.code') });
     await waitFor(() => expect(mocked.createAnalyticsAxis).toHaveBeenCalledWith({
       code: 'nature-de-cout',
       name: 'Nature de coût',
