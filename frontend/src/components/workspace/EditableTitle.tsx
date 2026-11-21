@@ -4,6 +4,7 @@ import { alpha, type Theme } from '@mui/material/styles';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useTranslation } from 'react-i18next';
 import { taskDetailTypography } from '../../pages/tasks/theme/taskDetailTokens';
+import { isCreationWriting } from './creation/CreationActions';
 
 /** Marks the pencil so the resting and hover rules can show or hide it. */
 const CUE_CLASS = 'editable-title-cue';
@@ -197,7 +198,8 @@ export type EditableTitleProps = {
   onDraftChange?: (draft: string) => void;
   /**
    * Escape in the field of a title still to give (`autoEdit`): the person leaves without creating
-   * anything, a name typed or not, in one press. The blur that follows sends nothing.
+   * anything, a name typed or not, in one press. The blur that follows sends nothing. While the
+   * record is being written (`CreationActions` `writing`), Escape waits as Cancel does.
    */
   onCancel?: () => void;
   onSave?: (nextTitle: string) => void;
@@ -320,6 +322,8 @@ export default function EditableTitle({
 
   const cancel = () => {
     if (pendingTitle) {
+      // The record is being written: the page will open it, Escape waits as Cancel does.
+      if (onCancel && isCreationWriting(inputRef.current)) return;
       if (onCancel) {
         closing.current = true;
         onCancel();

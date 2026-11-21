@@ -269,4 +269,21 @@ describe('Project creation at the title', () => {
     expect(location()).toBe('/portfolio/projects/PRJ-9/summary');
     expect(mocked.post).toHaveBeenCalledTimes(1);
   });
+
+  it('waits on Escape while the committed title writes the project, then opens it', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    renderPage(['/start']);
+    fireEvent.click(screen.getByRole('button', { name: 'new project' }));
+    mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }) as never);
+    const input = await screen.findByRole('textbox', { name: TITLE });
+    fireEvent.change(input, { target: { value: 'Data platform' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    // The project is being written: Escape leaves nothing, as Cancel waits.
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(location()).toBe('/portfolio/projects/new/summary');
+    answer({ data: created });
+    await waitFor(() => expect(location()).toBe('/portfolio/projects/PRJ-9/summary'));
+    expect(screen.getByRole('button', { name: 'common:buttons.done' })).toBeTruthy();
+  });
 });

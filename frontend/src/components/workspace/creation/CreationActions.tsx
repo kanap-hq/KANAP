@@ -15,11 +15,23 @@ type Props = {
   onCancel: () => void;
   /** A check or a cancel is running: both wait. */
   busy?: boolean;
-  /** The record is being written: Cancel waits (the page would move to it after the leave); Create still counts. */
+  /**
+   * The record is being written: Cancel and Escape in the title wait (the page would move to the
+   * record after the leave); Create still counts.
+   */
   writing?: boolean;
   /** The record is created: the primary pill says Done. */
   done?: boolean;
 };
+
+/**
+ * The record shown around `from` (its page, else the whole screen) is being written: a leave now
+ * would be followed by the page moving to the record, so the title's Escape waits as Cancel does.
+ */
+export function isCreationWriting(from: Element | null): boolean {
+  const scope: ParentNode = from?.closest('[data-workspace-shell]') ?? document;
+  return !!scope.querySelector('[data-creation-actions][data-creation-writing]');
+}
 
 /**
  * The two actions of a record being created, in its header in place of the close button: the
@@ -67,9 +79,10 @@ export default function CreationActions({ onCreate, onCancel, busy = false, writ
     return () => document.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // The marker tells the page's Tab it is a record being created (`followCreationFields`).
+  // The marker tells the page's Tab it is a record being created (`followCreationFields`), and its
+  // title that the record is being written (`isCreationWriting`).
   return (
-    <Box component="span" data-creation-actions="" sx={{ display: 'contents' }}>
+    <Box component="span" data-creation-actions="" data-creation-writing={writing ? '' : undefined} sx={{ display: 'contents' }}>
       <Button variant="action" size="small" onClick={onCancel} disabled={busy || writing}>
         {t('common:buttons.cancel')}
       </Button>
