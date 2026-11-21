@@ -141,7 +141,8 @@ describe('ContractWorkspacePage creation', () => {
   it('waits for the place when the company holds only through one (limited data access)', async () => {
     placement.placeRequired = true;
     renderNew();
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    // The title field of a new record: named "Edit title", or by the page's prompt.
+    const title = screen.getByRole('textbox', { name: /^(common:buttons\.editTitle|contracts\.workspace\.newContract)$/ });
     fireEvent.change(title, { target: { value: 'Oracle support' } });
     fireEvent.blur(title);
     const drawer = screen.getByRole('complementary');
