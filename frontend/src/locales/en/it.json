@@ -3442,7 +3442,6 @@
     "loadServerAssignmentsFailed": "Failed to load assignments",
     "createVersionFailed": "Failed to create version",
     "locationRequired": "Location is required.",
-    "codeRequired": "Code is required.",
     "nameRequired": "Name is required.",
     "locationNameTaken": "Another location already has this name.",
     "subLocationNameTaken": "Another sub-location of this location already has this name.",

@@ -3442,7 +3442,6 @@
     "loadServerAssignmentsFailed": "Error al cargar las asignaciones",
     "createVersionFailed": "Error al crear la versión",
     "locationRequired": "La ubicación es obligatoria.",
-    "codeRequired": "El código es obligatorio.",
     "nameRequired": "El nombre es obligatorio.",
     "locationNameTaken": "Otra ubicación ya tiene este nombre.",
     "subLocationNameTaken": "Otra sub-ubicación de esta ubicación ya tiene este nombre.",
