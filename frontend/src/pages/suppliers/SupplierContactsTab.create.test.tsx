@@ -55,7 +55,7 @@ describe('SupplierContactsTab creating a contact from the picker', () => {
     fireEvent.change(await screen.findByRole('textbox', { name: 'Email' }), { target: { value: 'zed@acme.test' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contacts', {
-      email: 'zed@acme.test', first_name: null, last_name: 'Zed', supplier_id: 's-1', supplier_role: 'technical',
+      email: 'zed@acme.test', first_name: null, last_name: 'Zed', job_title: null, supplier_id: 's-1', supplier_role: 'technical',
     }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/suppliers/s-1/contacts', { contactId: 'c-9', role: 'technical' }));
   });
