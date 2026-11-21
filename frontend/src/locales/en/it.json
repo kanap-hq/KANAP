@@ -2389,13 +2389,7 @@
         "placementLinked": "Link placed on {{cluster}}."
       },
       "creation": {
-        "record": "The asset",
-        "missing": "Missing: {{fields}}",
-        "leaveTitle": "This asset is incomplete",
-        "leaveComplete": "Complete it",
-        "leaveDelete": "Delete it",
-        "leaveAnyway": "Leave anyway",
-        "completeFailed": "The asset could not be checked."
+        "record": "The asset"
       }
     },
     "technology": {

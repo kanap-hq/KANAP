@@ -145,11 +145,10 @@ async function main() {
         { labelOf: async () => null } as any,
       );
       const created = await crud.create(
-        { name: 'After empty providers', kind: 'virtual_machine', environment: 'prod', provider: 'other', status: 'active', is_cluster: false, hostname: 'after-empty-providers' },
+        { name: 'After empty providers', kind: 'virtual_machine', environment: 'prod', provider: 'other', status: 'active', is_cluster: false, hostname: 'after-empty-providers', location_id: ids.locationA },
         tenantId,
         null,
         { manager: reader.manager, tenantId },
-        { atTitle: true },
       );
       assert.equal(created.provider, 'other');
     } finally {

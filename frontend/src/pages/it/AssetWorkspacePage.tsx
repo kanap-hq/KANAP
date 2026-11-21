@@ -24,7 +24,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link as RouterLink, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import CloseIcon from '@mui/icons-material/Close';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import api from '../../api';
@@ -69,10 +69,8 @@ import { assetDeleteCheck } from '../../utils/deleteCheck';
 import { deleteFailureReason } from '../../utils/deleteRefusal';
 import { isValidHostname, sanitizeHostname } from '../../utils/hostname';
 import { KanapDialog, PropertyGroup, PropertyRow, useKanapDialogs } from '../../components/design';
-import { useLeaveGuard } from '../../hooks/leaveGuard';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { CreationActions, CreationPreview, focusWhenMounted, useCreationReturn, useMissingMarks, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
-import useIncompleteLeave from '../../components/workspace/creation/useIncompleteLeave';
+import { CreationActions, CreationPreview, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
@@ -212,6 +210,8 @@ const legacyTabTarget = (key: string | undefined): TabKey | null => (
 const PHYSICAL_ONLY_TABS: ReadonlySet<string> = new Set<TabKey>(['hardware']);
 /** Tabs that need a saved asset: a creation falls back to the overview. */
 const CREATE_DISABLED_TABS: ReadonlySet<string> = new Set<TabKey>(['operations', 'network', 'hardware', 'dependencies', 'relations', RECORD_HISTORY_TAB_KEY]);
+/** A dimmed group of the metadata bar keeps the bar's flow. */
+const METADATA_PREVIEW_SX = { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' } as const;
 /** A name longer than this wraps the title over the tabs. The column itself is unbounded. */
 const ASSET_NAME_MAX = 200;
 
@@ -374,10 +374,18 @@ function loadAssetRecord(url: string, fresh = false): Promise<AssetLoadResult> {
 
 export default function AssetWorkspacePage() {
   const routeId = String(useParams().id || '');
+  // The asset its draft has just written keeps the page of the draft: the field the person is in stays.
+  // It keeps it while its address stays: Done and Cancel end the creation before the page leaves,
+  // and a new mount then would read the asset again (a 404 once Cancel has deleted it).
+  const createdFromDraft = useCreatedFromDraft('assets', routeId);
+  const draftAddress = React.useRef<string | null>(null);
+  if (createdFromDraft) draftAddress.current = routeId;
+  else if (draftAddress.current !== routeId) draftAddress.current = null;
+  const fromDraft = draftAddress.current === routeId;
   // A new asset in the address remounts the fiche. Timers, fields and a response
   // still in flight stay with the asset that was on screen, so they cannot paint
   // over the next one or be saved onto it.
-  return <AssetWorkspaceRoute key={routeId} />;
+  return <AssetWorkspaceRoute key={routeId === 'new' || fromDraft ? 'draft' : routeId} />;
 }
 
 function AssetWorkspaceRoute() {
@@ -394,7 +402,6 @@ function AssetWorkspaceRoute() {
   const theme = useTheme();
   const params = useParams();
   const navigate = useNavigate();
-  const routerLocation = useLocation();
   const [searchParams] = useSearchParams();
   const routeId = String(params.id || '');
   const assetReferenceRoute = /^AST-\d+$/i.test(routeId);
@@ -608,8 +615,6 @@ function AssetWorkspaceRoute() {
 
   const [name, setName] = React.useState('');
   const [kind, setKind] = React.useState('');
-  // A new asset takes the provider of the workspace catalog that the page picks once its settings load.
-  const [provider, setProvider] = React.useState('');
   const [environment, setEnvironment] = React.useState('prod');
   const [hostname, setHostname] = React.useState('');
   const [ipAddresses, setIpAddresses] = React.useState<IpAddressEntry[]>([]);
@@ -643,11 +648,6 @@ function AssetWorkspaceRoute() {
     },
     [settings?.hostingTypes],
   );
-  const fallbackProviderCode = React.useMemo(() => {
-    const providers = byField.serverProvider || [];
-    const other = providers.find((opt) => opt.code === 'other');
-    return other?.code || providers[0]?.code || '';
-  }, [byField.serverProvider]);
 
   // The cluster lists follow the loaded asset, once it is the one of the route: the local switch state
   // still holds the previous asset's value for a render after a move to another asset.
@@ -876,25 +876,9 @@ function AssetWorkspaceRoute() {
   );
 
   React.useEffect(() => {
-    if (!isCreate) return;
-    if (provider) return;
-    if (!fallbackProviderCode) return;
-    setProvider(fallbackProviderCode);
-  }, [isCreate, provider, fallbackProviderCode]);
-
-  // A new asset starts as a virtual machine, or the first type of the list: the title creates it so.
-  React.useEffect(() => {
-    if (!isCreate || kind) return;
-    const kinds = (settings?.serverKinds || []).filter((option) => !option.deprecated);
-    const next = kinds.find((option) => option.code === 'virtual_machine')?.code || kinds[0]?.code || '';
-    if (next) setKind(next);
-  }, [isCreate, kind, settings?.serverKinds]);
-
-  React.useEffect(() => {
     if (!data) return;
     setName(data.name);
     setKind(data.kind);
-    setProvider(data.provider);
     setEnvironment(data.environment);
     setHostname(data.hostname || '');
     setDomain(data.domain || '');
@@ -965,13 +949,6 @@ function AssetWorkspaceRoute() {
         } else {
           setLocationCompanyName(null);
         }
-        const category = getHostingCategory(details.hosting_type);
-        if (category === 'cloud') {
-          const nextProvider = details.provider || fallbackProviderCode;
-          if (nextProvider) setProvider(nextProvider);
-        } else if (fallbackProviderCode) {
-          setProvider(fallbackProviderCode);
-        }
       } catch (err: any) {
         if (cancelled) return;
         setLocationDetails(null);
@@ -983,7 +960,7 @@ function AssetWorkspaceRoute() {
     return () => {
       cancelled = true;
     };
-  }, [locationId, getHostingCategory, fallbackProviderCode]);
+  }, [locationId]);
 
   // Fetch sub-location options when locationId changes
   React.useEffect(() => {
@@ -1553,53 +1530,9 @@ function AssetWorkspaceRoute() {
     void api.patch(`/assets/${pending.assetId}`, { notes: pending.value || null }).catch(() => undefined);
   }, []);
 
-  // Where the creation started: a new asset left empty, cancelled or created goes back there.
   const listPath = `/it/assets${listContextParams.toString() ? `?${listContextParams.toString()}` : ''}`;
-  const creationReturn = useCreationReturn(listPath);
-  const creation = useRecordCreation({
-    family: 'assets',
-    apiBase: '/assets',
-    recordId: isCreate ? null : data?.id ?? null,
-    listPath,
-    recordLabel: t('workspace.asset.creation.record'),
-    queryKeyPrefixes: ['assets'],
-    onError: setError,
-  });
-  // The site, the one field an asset being created still needs, sits in the properties panel.
-  const [fieldDrawerRequest, setFieldDrawerRequest] = React.useState(0);
-  const focusField = React.useCallback((key: string) => {
-    setFieldDrawerRequest((n) => n + 1);
-    focusWhenMounted(() => document.querySelector<HTMLElement>(`[data-creation-field="${key}"] input`));
-  }, []);
-  const locationIdRef = React.useRef(locationId);
-  locationIdRef.current = locationId;
-  const missingNow = () => (locationIdRef.current ? [] : [{ key: 'location', label: t('workspace.asset.overview.location') }]);
-  // The site Create found missing, marked on its label until it gets a value.
-  const missingMarks = useMissingMarks({
-    recordKey: isCreate ? null : data?.id,
-    missingNow: () => (locationId ? [] : ['location']),
-    valueOf: (key) => (key === 'location' ? locationId ?? null : null),
-  });
-  const incompleteLeave = useIncompleteLeave({
-    keys: 'it:workspace.asset.creation',
-    beingCreated: creation.beingCreated,
-    missing: missingNow,
-    focus: focusField,
-    onDelete: () => creation.cancelCreation({ leave: false }),
-    discardOnUnload: creation.discardOnUnload,
-  });
-  // Leaving an asset being created without a site asks first: complete it, or delete it.
-  const leaveAsks = React.useCallback(
-    () => creation.beingCreated && !locationIdRef.current,
-    [creation.beingCreated],
-  );
-  const leaveAsset = React.useCallback(
-    () => (leaveAsks() ? incompleteLeave.confirm() : Promise.resolve(true)),
-    [incompleteLeave, leaveAsks],
-  );
-  useLeaveGuard(leaveAsks, leaveAsset);
 
-  // The description still being typed is saved before Create or Cancel counts what was written.
+  // The description still being typed is saved before Done or Cancel counts what was written.
   const flushNotes = async () => {
     if (notesSaveTimerRef.current != null) {
       window.clearTimeout(notesSaveTimerRef.current);
@@ -1612,80 +1545,113 @@ function AssetWorkspaceRoute() {
     await patchAsset({ notes: pending.value || null }).catch(() => undefined);
   };
 
-  // The name committed in the header creates the asset at once (its type, environment, provider and
-  // lifecycle as shown, no site yet), and the page moves to it with Done and Cancel.
-  const titleCreation = useTitleCreation<AssetRecord>({
-    isCreate,
-    // Written after the person left: the incomplete record is deleted, no page is left to ask.
-    discardApiBase: '/assets',
+  // A new asset is a draft until it has its name, its type and its site: nothing is written before,
+  // and leaving writes nothing. The three given, in any order, one POST writes it with the
+  // environment, lifecycle and cluster switch shown (the server gives the site's provider), and the
+  // page is the asset, with Done (kept, back where the creation started) and Cancel (deleted).
+  const handleClose = () => navigate(listPath);
+  const leave = useCreationLeave(handleClose);
+  const title = useCreationTitle({
     requiredMessage: t('messages.nameRequired'),
-    // A title committed before the settings load waits for the type and provider they give.
-    ready: !!kind && !!provider,
-    post: async (assetName) => (await api.post<AssetRecord & { creation_token: string }>('/assets/creation', {
-      name: assetName,
-      kind,
-      environment,
-      provider,
-      status,
-      is_cluster: isCluster,
-      hostname: sanitizeHostname(assetName) || null,
-    })).data,
-    onCreated: (created, token) => {
-      creation.startCreation({ recordId: created.id, token, returnTo: creationReturn });
-      navigate(`/it/assets/${created.asset_reference || created.id}/overview`, { replace: true, state: routerLocation.state });
-    },
-    errorMessage: (e) => getApiErrorMessage(e, t, t('messages.saveAssetFailed')),
-    onStart: () => setError(null),
+    onCancel: leave,
+    // The name shows as the asset's title while the asset written loads.
+    onChange: setName,
+    onCommit: () => creation.attempt(),
   });
+  // The type or the site a write refused, said on its field until another is chosen.
+  const [kindError, setKindError] = React.useState<string | null>(null);
+  const [siteError, setSiteError] = React.useState<string | null>(null);
+  // The draft as it stands now: a site just chosen is in it before the page renders again.
+  const draftRef = React.useRef({ kind, environment, status, isCluster, locationId });
+  draftRef.current = { kind, environment, status, isCluster, locationId };
+  const siteOf = () => (isCreate ? draftRef.current.locationId : (dataRef.current?.location_id ?? draftRef.current.locationId));
+  const kindOf = () => (isCreate ? draftRef.current.kind : (dataRef.current?.kind || draftRef.current.kind));
+  // A name, a type and a site: the draft may be written.
+  const draftReady = () => !!title.current().trim() && !!draftRef.current.kind && !!draftRef.current.locationId;
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'assets',
+    apiBase: '/assets',
+    recordId: data?.id ?? null,
+    listPath,
+    recordLabel: t('workspace.asset.creation.record'),
+    queryKeyPrefixes: ['assets'],
+    ready: draftReady,
+    // In screen order: the type, then the site.
+    missing: () => [...(kindOf() ? [] : ['kind']), ...(siteOf() ? [] : ['location'])],
+    valueOf: (key) => (key === 'location' ? siteOf() ?? null : key === 'kind' ? kindOf() || null : null),
+    post: async () => {
+      setError(null);
+      setKindError(null);
+      setSiteError(null);
+      const assetName = title.current().trim().slice(0, ASSET_NAME_MAX);
+      const draft = draftRef.current;
+      try {
+        const { data: written } = await api.post<AssetRecord & { creation_token: string }>('/assets', {
+          name: assetName,
+          kind: draft.kind,
+          environment: draft.environment,
+          status: draft.status,
+          is_cluster: draft.isCluster,
+          hostname: sanitizeHostname(assetName) || null,
+          location_id: draft.locationId,
+        });
+        void queryClient.invalidateQueries({ queryKey: ['assets'] });
+        // What was given while the asset was written (another name, another site) is saved on it.
+        await saveEditsSince({
+          sent: { name: assetName, location_id: draft.locationId },
+          now: () => ({ name: title.current().trim().slice(0, ASSET_NAME_MAX) || assetName, location_id: draftRef.current.locationId }),
+          fields: ['name', 'location_id'] as const,
+          save: async (edits) => {
+            await api.patch(`/assets/${written.id}`, 'location_id' in edits ? { ...edits, sub_location_id: null } : edits);
+          },
+        }).catch((e) => setError(getApiErrorMessage(e, t, t('messages.saveAssetFailed'))));
+        return {
+          id: written.id,
+          token: written.creation_token,
+          path: `/it/assets/${written.asset_reference || written.id}/overview${listContextParams.toString() ? `?${listContextParams.toString()}` : ''}`,
+          reference: written.asset_reference,
+        };
+      } catch (e) {
+        const message = getApiErrorMessage(e, t, t('messages.saveAssetFailed'));
+        const answer = (e as { response?: { data?: { code?: unknown; message?: unknown } } })?.response?.data;
+        const code = String(answer?.code ?? '');
+        if (code === 'asset_location_required' || /location/i.test(String(answer?.message ?? ''))) setSiteError(message);
+        else if (/\bkind\b/i.test(String(answer?.message ?? ''))) setKindError(message);
+        else if (code === 'asset_name_taken' || code === 'asset_fqdn_taken' || /name/i.test(String(answer?.message ?? ''))) title.refuse(message);
+        else setError(message);
+        return null;
+      }
+    },
+    onError: setError,
+  });
+  // A field given (the type or the site) writes a complete draft; a refused draft is sent again
+  // only once one of its fields changes.
+  React.useEffect(() => { creation.attempt(); }, [creation.attempt, kind, locationId]);
 
-  // Create on the new page; Done on an asset being created: without a site, the site is marked and
-  // gets the focus; otherwise the server checks the asset, which is then kept and closed.
+  // Create on the new page: an empty title says so, a missing type or site is marked and the first
+  // in screen order gets the cursor, with no call; a complete draft is written. Done on the asset written: the description still
+  // typed is saved, then the asset is kept and the page goes back where the creation started.
   const createAction = async () => {
-    if (isCreate) {
-      titleCreation.create();
-      return;
-    }
-    if (!dataRef.current?.id || !creation.token || creation.completing) return;
-    await flushNotes();
-    setError(null);
-    if (!locationIdRef.current) {
-      missingMarks.mark(['location']);
-      focusField('location');
-      return;
-    }
-    try {
-      const fields = await creation.completeCreation();
-      missingMarks.mark(fields ?? []);
-      if (fields) focusField(fields[0]);
-    } catch (e) {
-      setError(getApiErrorMessage(e, t, t('workspace.asset.creation.completeFailed')));
-    }
+    if (!isCreate) await flushNotes();
+    creation.create(isCreate ? title.require : undefined);
   };
-  // Cancel on an asset being created deletes it (`useRecordCreation`), once its description is saved.
+  // Cancel leaves the new page; on the asset written it deletes it (`useRecordCreation`), once its
+  // description is saved.
   const cancelAction = async () => {
     if (isCreate) {
-      navigate(creationReturn);
+      leave();
       return;
     }
     await flushNotes();
     await creation.cancelCreation();
   };
 
-  const confirmAndNavigate = React.useCallback(async (targetId: string | null) => {
+  const confirmAndNavigate = React.useCallback((targetId: string | null) => {
     if (!targetId) return;
-    if (!(await leaveAsset())) return;
     const qs = listContextParams.toString();
     navigate(`/it/assets/${targetId}/${tab}${qs ? `?${qs}` : ''}`);
-  }, [leaveAsset, listContextParams, navigate, tab]);
-
-  const handleClose = async () => {
-    if (isCreate) {
-      navigate(creationReturn);
-      return;
-    }
-    if (!(await leaveAsset())) return;
-    navigate(listPath);
-  };
+  }, [listContextParams, navigate, tab]);
 
   const showPhysicalTabs = isPhysicalAsset || (!settings && PHYSICAL_ONLY_TABS.has(tab));
 
@@ -1719,8 +1685,15 @@ function AssetWorkspaceRoute() {
   };
 
   const updateAssetType = (nextValue: string) => {
+    setKindError(null);
+    draftRef.current = { ...draftRef.current, kind: nextValue };
     setKind(nextValue);
     if (!isCreate && nextValue) savePatch({ kind: nextValue });
+  };
+  // A choice in a list of the metadata bar gives its field. The press that opened the list left the
+  // title, which the draft takes for a leave: a draft the choice completes is written as by Create.
+  const giveFromMetadataMenu = () => {
+    if (isCreate && draftReady()) creation.create();
   };
 
   const updateLocation = (nextValue: string | null) => {
@@ -1731,6 +1704,8 @@ function AssetWorkspaceRoute() {
     if (nextValue !== locationId) {
       setSubLocationId(null);
     }
+    setSiteError(null);
+    draftRef.current = { ...draftRef.current, locationId: nextValue };
     setLocationId(nextValue);
     if (!isCreate) savePatch({ location_id: nextValue, sub_location_id: null });
   };
@@ -1785,6 +1760,10 @@ function AssetWorkspaceRoute() {
     ? `${locationDetails.location_reference} · ${locationDetails.name}`
     : (locationId ? t('common.loading') : notSetLabel);
 
+  // The new page shows the asset to come dimmed and out of reach, row by row: only its title and
+  // its site are open.
+  const previewOnCreate = (node: React.ReactNode, sx?: SxProps<Theme>) => (isCreate ? <CreationPreview sx={sx}>{node}</CreationPreview> : node);
+
   const actions = (
     <>
       {!isCreate && !creation.beingCreated && canDelete && (
@@ -1813,7 +1792,7 @@ function AssetWorkspaceRoute() {
               setError(getApiErrorMessage(e, t, t('common:delete.failedGeneric')));
               return;
             }
-            await handleClose();
+            handleClose();
           }}
         />
       )}
@@ -1828,8 +1807,8 @@ function AssetWorkspaceRoute() {
       {isCreate || creation.beingCreated ? (
         <CreationActions
           done={!isCreate}
-          busy={creation.cancelling || creation.completing}
-          writing={titleCreation.writing}
+          busy={creation.cancelling}
+          writing={creation.writing}
           onCreate={() => { void createAction(); }}
           onCancel={() => { void cancelAction(); }}
         />
@@ -1844,7 +1823,7 @@ function AssetWorkspaceRoute() {
   const properties = (
     <>
       <PropertyGroup>
-        <PropertyRow label={t('workspace.asset.overview.assetType')} required>
+        <PropertyRow label={t('workspace.asset.overview.assetType')} required missing={creation.marked.has('kind')}>
           <Autocomplete
             options={kindOptions.filter((opt) => !opt.deprecated || opt.value === kind)}
             value={kind ? kindOptions.find((opt) => opt.value === kind) || { value: kind, label: kind, deprecated: false } : null}
@@ -1857,6 +1836,8 @@ function AssetWorkspaceRoute() {
                 {...params}
                 variant="standard"
                 placeholder={t('workspace.asset.overview.searchAssetTypes')}
+                error={!!kindError}
+                helperText={kindError ?? undefined}
                 sx={drawerFieldValueSx}
               />
             )}
@@ -1864,6 +1845,7 @@ function AssetWorkspaceRoute() {
             fullWidth
           />
         </PropertyRow>
+        {previewOnCreate(
         <PropertyRow label={t('workspace.asset.meta.cluster')}>
           {/* A span carries the tooltip: it also shows on a disabled switch. */}
           <Tooltip title={canManage ? t('workspace.asset.clusterSwitch.hint') : t('workspace.asset.readOnlyRole')}>
@@ -1902,6 +1884,8 @@ function AssetWorkspaceRoute() {
             </Box>
           </Tooltip>
         </PropertyRow>
+        )}
+        {previewOnCreate(
         <PropertyRow label={t('workspace.asset.technical.environment')}>
           <Select
             value={environment}
@@ -1917,6 +1901,8 @@ function AssetWorkspaceRoute() {
             {ENV_OPTIONS.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
           </Select>
         </PropertyRow>
+        )}
+        {previewOnCreate(
         <PropertyRow label={t('workspace.asset.technical.adminZone')}>
           <Select
             value={adminZone}
@@ -1938,16 +1924,24 @@ function AssetWorkspaceRoute() {
             {adminZoneOptions.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
           </Select>
         </PropertyRow>
+        )}
       </PropertyGroup>
 
       <PropertyGroup>
-        <PropertyRow label={t('workspace.asset.overview.location')} required missing={missingMarks.marked.has('location')}>
+        <PropertyRow
+          label={t('workspace.asset.overview.location')}
+          required
+          // Create or Done found it missing; an asset written without a site before 26.11.9 shows it too.
+          missing={creation.marked.has('location') || (!isCreate && !!data && !data.location_id && !locationId)}
+        >
           <Box sx={drawerFieldValueSx} data-creation-field="location">
             <LocationSelect
               value={locationId}
               onChange={updateLocation}
               label={t('workspace.asset.overview.location')}
               required
+              error={!!siteError}
+              helperText={siteError ?? undefined}
               size="small"
               hideLabel
               textFieldSx={drawerFieldValueSx}
@@ -1955,7 +1949,7 @@ function AssetWorkspaceRoute() {
             />
           </Box>
         </PropertyRow>
-        {subLocationOptions.length > 0 && (
+        {subLocationOptions.length > 0 && previewOnCreate(
           <PropertyRow label={t('workspace.asset.overview.subLocation')}>
             <Autocomplete
               options={subLocationOptions}
@@ -1983,9 +1977,9 @@ function AssetWorkspaceRoute() {
               isOptionEqualToValue={(option, value) => option.id === value.id}
               fullWidth
             />
-          </PropertyRow>
+          </PropertyRow>,
         )}
-        {(locationId || !isCreate) && (
+        {(locationId || !isCreate) && previewOnCreate(
           <>
             {locationInfoError && (
               <PropertyRow label={t('workspace.asset.overview.locationContext')}>
@@ -1998,11 +1992,12 @@ function AssetWorkspaceRoute() {
             <PropertyRow label={providerOrCompanyLabel}>{providerOrCompanyDisplay}</PropertyRow>
             <PropertyRow label={t('workspace.asset.overview.country')}>{countryDisplay}</PropertyRow>
             <PropertyRow label={t('workspace.asset.overview.city')}>{cityDisplay}</PropertyRow>
-          </>
+          </>,
         )}
       </PropertyGroup>
 
       <PropertyGroup>
+        {previewOnCreate(
         <PropertyRow label={t('workspace.asset.overview.lifecycle')}>
           <Select
             value={status}
@@ -2018,12 +2013,17 @@ function AssetWorkspaceRoute() {
             {lifecycleOptions.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
           </Select>
         </PropertyRow>
+        )}
+        {previewOnCreate(
         <PropertyRow label={t('workspace.asset.overview.goLiveDate')}>
           <DateEUField label="" valueYmd={goLiveDate} onChangeYmd={(val) => { setGoLiveDate(val); updateScalar('go_live_date', (val || null) as AssetRecord['go_live_date']); }} disabled={!canManage} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
         </PropertyRow>
+        )}
+        {previewOnCreate(
         <PropertyRow label={t('workspace.asset.overview.endOfLifeDate')}>
           <DateEUField label="" valueYmd={endOfLifeDate} onChangeYmd={(val) => { setEndOfLifeDate(val); updateScalar('end_of_life_date', (val || null) as AssetRecord['end_of_life_date']); }} disabled={!canManage} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
         </PropertyRow>
+        )}
       </PropertyGroup>
     </>
   );
@@ -2112,9 +2112,6 @@ function AssetWorkspaceRoute() {
     </>
   );
 
-  // The new page shows the asset to come under its title, dimmed and out of reach.
-  const previewOnCreate = (node: React.ReactNode, sx?: SxProps<Theme>) => (isCreate ? <CreationPreview sx={sx}>{node}</CreationPreview> : node);
-
   // An asset that could not be read is a screen of its own: an empty editable fiche stays hidden.
   // Only a 404 is "not found" (the English refusal stays hidden); any other failure says what
   // went wrong and offers to read the asset again.
@@ -2154,46 +2151,40 @@ function AssetWorkspaceRoute() {
         onTabChange={handleTabChange}
         drawerStorageKey="kanap.assets.drawerOpen"
         backLabel={t('pages.assets.title')}
-        onBack={handleClose}
+        onBack={isCreate ? leave : handleClose}
         itemReference={!isCreate ? data?.asset_reference || data?.id?.slice(0, 8) || null : null}
         onCopyReference={!isCreate && (data?.asset_reference || data?.id) ? () => { void navigator.clipboard?.writeText(data?.asset_reference || data?.id || ''); } : undefined}
-        title={isCreate ? '' : data?.name || name || ''}
         // While the asset loads, an empty title keeps its line: "Untitled" is for a loaded asset without a name.
         titleFallback={isCreate ? t('workspace.asset.newAsset') : assetLoading ? '\u00A0' : t('workspace.asset.untitled')}
-        canEditTitle={canEditNetboxField('name') && !assetLoading}
         titleMaxLength={ASSET_NAME_MAX}
-        onTitleSave={(value) => {
-          const next = value.trim().slice(0, ASSET_NAME_MAX);
-          if (!next) return;
-          if (isCreate) {
-            titleCreation.commit(next);
-            return;
-          }
-          setName(next);
-          savePatch({ name: next });
-        }}
-        onTitleDraftChange={isCreate ? titleCreation.onTitleDraftChange : undefined}
         titleRequiredMessage={t('messages.nameRequired')}
-        titleError={isCreate ? titleCreation.titleError : undefined}
-        titleAutoEdit={isCreate}
-        titleOnCancel={isCreate ? () => { void handleClose(); } : undefined}
-        titleFocusRequest={titleCreation.focusRequest}
+        {...(isCreate ? title.shellProps : {
+          title: data?.name || name || '',
+          canEditTitle: canEditNetboxField('name') && !assetLoading,
+          onTitleSave: (value: string) => {
+            const next = value.trim().slice(0, ASSET_NAME_MAX);
+            if (!next) return;
+            setName(next);
+            savePatch({ name: next });
+          },
+        })}
         isCreate={isCreate}
-        // The site, the field an asset being created still needs, sits in the drawer: it stays open.
+        // The site, the field a new asset needs, sits in the drawer: it stays open.
         forceDrawerOpen={isCreate || creation.beingCreated}
-        drawerOpenRequest={fieldDrawerRequest}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
           totalCount: total,
           hasPrev,
           hasNext,
-          onPrev: () => { void confirmAndNavigate(prevId); },
-          onNext: () => { void confirmAndNavigate(nextId); },
+          onPrev: () => confirmAndNavigate(prevId),
+          onNext: () => confirmAndNavigate(nextId),
           previousLabel: t('workspace.asset.previous'),
           nextLabel: t('workspace.asset.next'),
         } : undefined}
-        metadata={previewOnCreate(
+        metadata={(
           <PendingMetadata pending={metadataPending}>
+            {/* A new asset: the site is open, the rest of the bar dimmed. */}
+            {previewOnCreate(<>
             <PortfolioStatusMetadata
               value={status || 'active'}
               label={lifecyclePillLabel(labelFor('lifecycleStatus', status), status, notSetLabel)}
@@ -2216,7 +2207,9 @@ function AssetWorkspaceRoute() {
               }}
               disabled={!canManage}
             />
+            </>, METADATA_PREVIEW_SX)}
             <PortfolioMetadataItem
+              label={kind ? undefined : t('workspace.asset.overview.assetType')}
               onClick={(event) => setAssetTypeAnchorEl(event.currentTarget)}
               disabled={!canEditNetboxField('kind') || saving}
               title={t('workspace.asset.meta.editAssetType')}
@@ -2235,6 +2228,7 @@ function AssetWorkspaceRoute() {
                   onClick={() => {
                     updateAssetType(option.value);
                     setAssetTypeAnchorEl(null);
+                    giveFromMetadataMenu();
                   }}
                   sx={drawerMenuItemSx}
                 >
@@ -2242,7 +2236,7 @@ function AssetWorkspaceRoute() {
                 </MenuItem>
               ))}
             </Menu>
-            {isCluster && <PortfolioMetadataItem>{t('workspace.asset.meta.cluster')}</PortfolioMetadataItem>}
+            {isCluster && previewOnCreate(<PortfolioMetadataItem>{t('workspace.asset.meta.cluster')}</PortfolioMetadataItem>, METADATA_PREVIEW_SX)}
             <PortfolioMetadataItem
               label={t('workspace.asset.overview.location')}
               onClick={(event) => setLocationAnchorEl(event.currentTarget)}
@@ -2263,6 +2257,7 @@ function AssetWorkspaceRoute() {
                   onClick={() => {
                     updateLocation(option.id);
                     setLocationAnchorEl(null);
+                    giveFromMetadataMenu();
                   }}
                   sx={drawerMenuItemSx}
                 >
@@ -2273,6 +2268,7 @@ function AssetWorkspaceRoute() {
                 </MenuItem>
               ))}
             </Menu>
+            {previewOnCreate(<>
             <PortfolioMetadataItem
               label={t('workspace.asset.meta.goLive')}
               onClick={(event) => setGoLiveAnchorEl(event.currentTarget)}
@@ -2292,6 +2288,7 @@ function AssetWorkspaceRoute() {
               onClose={() => setGoLiveAnchorEl(null)}
               allowClear
             />
+            </>, METADATA_PREVIEW_SX)}
             {reachVulnerabilities && badgeTotals && (
               <VulnerabilitySevereBadge
                 severe={badgeTotals.severe}
@@ -2303,11 +2300,10 @@ function AssetWorkspaceRoute() {
                 to={`/it/vulnerabilities?asset=${encodeURIComponent(data?.asset_reference || id)}`}
               />
             )}
-          </PendingMetadata>,
-          { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'inherit' },
+          </PendingMetadata>
         )}
         actions={actions}
-        properties={previewOnCreate(properties)}
+        properties={properties}
       >
           {validTab === 'overview' && previewOnCreate(
             <Stack spacing={3.5} sx={tabContentSx}>
@@ -2911,7 +2907,6 @@ function AssetWorkspaceRoute() {
       </KanapDialog>
 
       {questionDialog}
-      {incompleteLeave.dialog}
 
       <KanapDialog
         open={assignDialogOpen}
