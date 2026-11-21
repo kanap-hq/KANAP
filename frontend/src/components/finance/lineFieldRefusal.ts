@@ -20,19 +20,38 @@ const PLACEMENT_REFUSAL = 'This company or cost center is not part of your acces
 
 type Refused = { response?: { data?: { message?: unknown } } };
 
+/** "Plant is for CAPEX lines only. Choose a value for OPEX lines.": a value of the other type (`notApplicableValueMessage`). */
+const VALUE_OF_OTHER_TYPE = /^(.+) is for (?:OPEX|CAPEX) lines only\. Choose a value for (?:OPEX|CAPEX) lines\.$/;
+
+const messageOf = (error: unknown): unknown => (error as Refused | null)?.response?.data?.message;
+
+/** The name of the dimension value a refusal names, or null when it names none. */
+export function refusedValueName(error: unknown): string | null {
+  const message = messageOf(error);
+  return typeof message === 'string' ? VALUE_OF_OTHER_TYPE.exec(message)?.[1] ?? null : null;
+}
+
 /**
  * The key of the field a refusal of a line write names (`account`, `paying_company`,
  * `cost_center`, `dimension:<id>`), or null when it names none. A refused place is the cost
  * center's when the line has one, else the company's. A dimension is found by its name in the
- * message (`The Menu dimension is required.`).
+ * message (`The Menu dimension is required.`), or by the name of its value the line holds
+ * (`values`, the line's values as the lookup reads them) when the message names the value.
  */
 export function lineRefusalField(
   error: unknown,
-  line: { cost_center_id: string },
+  line: { cost_center_id: string; analytics_values?: Readonly<Record<string, string | null>> },
   axes: ReadonlyArray<{ id: string; name: string | null }>,
+  values: ReadonlyArray<{ id: string; name: string }> = [],
 ): string | null {
-  const message = (error as Refused | null)?.response?.data?.message;
+  const message = messageOf(error);
   if (typeof message !== 'string') return null;
+  const valueName = refusedValueName(error);
+  if (valueName) {
+    const held = Object.entries(line.analytics_values ?? {})
+      .find(([, id]) => !!id && values.some((value) => value.id === id && value.name === valueName));
+    return held ? `dimension:${held[0]}` : null;
+  }
   if (isAccountRefusal(message)) return 'account';
   if (COMPANY_REFUSALS.some((pattern) => pattern.test(message))) return 'paying_company';
   if (COST_CENTER_REFUSALS.some((pattern) => pattern.test(message))) return 'cost_center';

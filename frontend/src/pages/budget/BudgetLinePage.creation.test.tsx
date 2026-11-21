@@ -141,6 +141,8 @@ type Options = {
   axes?: unknown[];
   /** The refusals of POST /budget-lines, one per call, before it writes. */
   refusals?: Array<{ status: number; data: Record<string, unknown> }>;
+  /** The dimension values the lookup by ids reads (`GET /analytics-categories/lookup?ids=`). */
+  values?: Array<{ id: string; axis_id: string; name: string; applies_to: 'opex' | 'capex' | null }>;
 };
 
 /** The line as the server holds it: the creation writes it, each PATCH changes it. */
@@ -158,8 +160,13 @@ function renderPage(entries: string[], options: Options = {}) {
   const refusals = [...(options.refusals ?? [])];
   const { creation_token: _token, ...detail } = created;
   server.line = { ...detail, ...options.line };
-  mocked.get.mockImplementation(async (url: string) => {
+  mocked.get.mockImplementation(async (url: string, config?: { params?: unknown }) => {
     if (url === '/analytics-axes') return { data: { items: options.axes ?? [] } } as never;
+    const lookupIds = (config?.params as { ids?: string } | undefined)?.ids;
+    if (url === '/analytics-categories/lookup' && lookupIds) {
+      const ids = lookupIds.split(',');
+      return { data: { items: (options.values ?? []).filter((value) => ids.includes(value.id)), has_more: false } } as never;
+    }
     if (url === '/budget-lines/BL-12' || url === `/budget-lines/${ITEM_ID}`) return { data: server.line } as never;
     if (url === '/budget-lines/resolve/BL-12') return { data: { id: ITEM_ID, nature: server.line.nature, reference: 'BL-12' } } as never;
     if (url === `/budget-lines/${ITEM_ID}/creation`) return { data: { changes } } as never;
@@ -448,6 +455,50 @@ describe('Budget line born complete', () => {
     await waitFor(() => expect(field('opex.fields.account')).toHaveValue(''));
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(lineWrites()).toHaveLength(1);
+  });
+
+  it('drops a dimension value of the other type when the type changes, before anything is written', async () => {
+    await startNewLine({
+      axes: [SITE_AXIS, MENU_AXIS],
+      values: [
+        { id: 'site-capex', axis_id: 'axis-site', name: 'Plant', applies_to: 'capex' },
+        { id: 'site-any', axis_id: 'axis-site', name: 'Head office', applies_to: null },
+      ],
+    });
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'budget.type' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'budget.typeCapex' }));
+    await waitFor(() => expect(location()).toBe('/ops/budget/new/overview?nature=capex'));
+    await giveTitle('Server');
+    pick('opex.fields.payingCompany', 'company-1');
+    pick('opex.fields.account', 'account-any');
+    pick('Site', 'site-capex');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    // OPEX: Menu is not asked for any more; the value kept for CAPEX lines goes, Site is asked for again.
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'budget.type' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'budget.typeOpex' }));
+    await waitFor(() => expect(field('Site')).toHaveValue(''));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(lineWrites()).toEqual([]);
+    pick('Site', 'site-any');
+    await waitFor(() => expect(lineWrites()).toHaveLength(1));
+    expect(lineWrites()[0][1]).toMatchObject({ nature: 'opex', account_id: 'account-any', analytics_values: { 'axis-site': 'site-any' } });
+  });
+
+  it('says a refused dimension value under its dimension', async () => {
+    const refusal = 'Plant is for CAPEX lines only. Choose a value for OPEX lines.';
+    await startNewLine({
+      axes: [SITE_AXIS],
+      values: [{ id: 'site-capex', axis_id: 'axis-site', name: 'Plant', applies_to: 'capex' }],
+      refusals: [{ status: 400, data: { statusCode: 400, message: refusal } }],
+    });
+    await giveTitle();
+    pick('opex.fields.payingCompany', 'company-1');
+    pick('opex.fields.account', 'account-1');
+    pick('Site', 'site-capex');
+    await waitFor(() => expect(within(fieldRow('Site')).getByText(refusal)).toBeTruthy());
+    expect(fieldLabel('Site')).toHaveAttribute('data-missing');
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('says a refusal of the account on its field, keeps the draft and does not try it again', async () => {

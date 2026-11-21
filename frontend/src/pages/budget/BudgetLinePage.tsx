@@ -50,7 +50,7 @@ import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/
 import BudgetMetadataBar from './workspace/BudgetMetadataBar';
 import BudgetPropertiesDrawer, { RunBuild } from './workspace/BudgetPropertiesDrawer';
 import { CreationActions, CreationPreview, saveEditsSince, useCreationReturn, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
-import { lineRefusalField } from '../../components/finance/lineFieldRefusal';
+import { lineRefusalField, refusedValueName } from '../../components/finance/lineFieldRefusal';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
@@ -62,7 +62,8 @@ import useCurrencySettings from '../../hooks/useCurrencySettings';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { isoToLocalDateInput } from '../../lib/datetime';
 import { analyticsValueOptions, itemReferences, matching, ownerName } from '../../components/finance/itemReferences';
-import type { ItemAnalyticsValue } from '../../services/analytics';
+import { ANALYTICS_VALUES_LOOKUP_ENDPOINT, type AnalyticsValue, type ItemAnalyticsValue } from '../../services/analytics';
+import { fetchLookupByIds } from '../../hooks/useLookupPicker';
 import type { CostCenterNode } from '../../services/costCenters';
 import { useCostCenterNode } from '../../hooks/useCostCenterTree';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
@@ -955,7 +956,12 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     } catch (e) {
       refusedDraftRef.current = JSON.stringify(body);
       const message = getApiErrorMessage(e, t, t(config.createFailed));
-      const field = lineRefusalField(e, sent, analyticsAxes.axes);
+      // A refused value names itself, not its dimension: the names of the draft's values find it.
+      const valueIds = refusedValueName(e) ? Object.values(sent.analytics_values).filter((id): id is string => !!id) : [];
+      const values = valueIds.length
+        ? await fetchLookupByIds<AnalyticsValue>(ANALYTICS_VALUES_LOOKUP_ENDPOINT, valueIds).catch(() => [])
+        : [];
+      const field = lineRefusalField(e, sent, analyticsAxes.axes, values);
       if (field) setFieldErrors({ [field]: message });
       else setSaveError(message);
       return null;
@@ -996,20 +1002,32 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   }, [draftLine, missingOf, placementDefault.ready, currencyLoading, analyticsAxes.ready]);
 
   // The type of the draft: its address (`?nature=`), the dimensions it requires, the accounts it
-  // offers. An account kept for the other type is emptied (Create then asks for one), and nothing
-  // is written before that is known.
+  // offers. An account or a dimension value kept for the other type is emptied (Create then asks
+  // for it), and nothing is written before that is known.
   const chosenNatureRef = React.useRef<LineType | null>(null);
   const chooseNewLineType = React.useCallback(async (next: LineType) => {
     // The draft being written keeps the type it was sent with: a menu opened before waits too.
     if (writingDraftRef.current) return;
     chosenNatureRef.current = next;
-    const accountId = currentDraft().account_id;
-    const checked = accountId
+    const held = currentDraft();
+    const accountId = held.account_id;
+    const valueIds = Object.values(held.analytics_values).filter((id): id is string => !!id);
+    const checked = accountId || valueIds.length > 0
       ? checkDraft(async () => {
-        const account = (await api.get<{ nature?: string | null }>(`/accounts/${accountId}`)).data;
+        const [account, values] = await Promise.all([
+          accountId ? api.get<{ nature?: string | null }>(`/accounts/${accountId}`).then((res) => res.data).catch(() => null) : null,
+          valueIds.length > 0 ? fetchLookupByIds<AnalyticsValue>(ANALYTICS_VALUES_LOOKUP_ENDPOINT, valueIds).catch(() => []) : [],
+        ]);
         // Another type chosen meanwhile checks the draft itself.
         if (chosenNatureRef.current !== next) return;
-        if (account?.nature && account.nature !== next && currentDraft().account_id === accountId) editDraft({ account_id: '' });
+        const now = currentDraft();
+        const otherType = (applies: string | null | undefined) => !!applies && applies !== next;
+        const patch: Partial<BudgetLineForm> = {};
+        if (accountId && now.account_id === accountId && otherType(account?.nature)) patch.account_id = '';
+        const dropped = Object.entries(now.analytics_values)
+          .filter(([, id]) => !!id && otherType(values.find((value) => value.id === id)?.applies_to));
+        if (dropped.length > 0) patch.analytics_values = Object.fromEntries(dropped.map(([axisId]) => [axisId, null]));
+        if (Object.keys(patch).length > 0) editDraft(patch);
       })
       : null;
     setSearchParams((prev) => {
