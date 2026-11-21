@@ -37,6 +37,13 @@ type Props = {
    * keeps the rows ticked.
    */
   multiple?: { label: (count: number) => string; onConfirm: (options: RelationOption[]) => Promise<string | null> };
+  /**
+   * A last row after the matches, for an action on the text typed (create the record looked for).
+   * `label` words it for the trimmed text and the matches shown, or returns null to leave it out.
+   * It waits for the search of that text to answer, and shows when nothing matches too. Choosing it
+   * calls `onChoose` with the trimmed text; the caller closes the picker.
+   */
+  action?: { label: (text: string, options: RelationOption[]) => string | null; onChoose: (text: string) => void };
 };
 
 /** One row of a dense picker list (32 px): this picker's, and the contact picker's list. */
@@ -50,7 +57,7 @@ const itemSx = pickerItemSx;
  * footer button links them). Arrow down moves into the list, Enter in the field takes the first
  * match, Escape closes.
  */
-export default function RelationAddPicker({ anchorEl, searchKey, search, excludeIds, placeholder, ariaLabel, onPick, onClose, multiple }: Props) {
+export default function RelationAddPicker({ anchorEl, searchKey, search, excludeIds, placeholder, ariaLabel, onPick, onClose, multiple, action }: Props) {
   const { t } = useTranslation('common');
   const [text, setText] = React.useState('');
   const [ticked, setTicked] = React.useState<Map<string, RelationOption>>(() => new Map());
@@ -83,6 +90,8 @@ export default function RelationAddPicker({ anchorEl, searchKey, search, exclude
   });
   const options = React.useMemo(() => (data ?? []).filter((option) => !excludeIds.has(option.id)), [data, excludeIds]);
   const loading = !data && isFetching;
+  const settled = !isFetching && q === text.trim();
+  const actionLabel = action && settled ? action.label(q, options) : null;
 
   const focusFirst = () => {
     const first = listRef.current?.querySelector<HTMLElement>('[role="option"]');
@@ -109,6 +118,7 @@ export default function RelationAddPicker({ anchorEl, searchKey, search, exclude
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown') { event.preventDefault(); focusFirst(); }
           if (event.key === 'Enter' && options[0]) { event.preventDefault(); choose(options[0]); }
+          else if (event.key === 'Enter' && actionLabel !== null) { event.preventDefault(); action?.onChoose(q); }
         }}
         inputProps={{ 'aria-label': ariaLabel, role: 'combobox', 'aria-expanded': true }}
         InputProps={{ endAdornment: isFetching ? <CircularProgress color="inherit" size={14} /> : null }}
@@ -124,7 +134,7 @@ export default function RelationAddPicker({ anchorEl, searchKey, search, exclude
       <Box sx={{ maxHeight: 300, overflowY: 'auto' }}>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}><CircularProgress size={18} /></Box>
-        ) : options.length === 0 ? (
+        ) : options.length === 0 && actionLabel === null ? (
           <Typography sx={{ px: 1, py: 1.25, fontSize: 13, color: 'kanap.text.secondary' }}>{t('filters.noResults')}</Typography>
         ) : (
           <MenuList ref={listRef} role="listbox" aria-label={ariaLabel} dense disablePadding sx={{ py: 0.25 }}>
@@ -145,6 +155,11 @@ export default function RelationAddPicker({ anchorEl, searchKey, search, exclude
                 </Box>
               </MenuItem>
             ))}
+            {actionLabel !== null && (
+              <MenuItem key="__action__" role="option" aria-selected={false} onClick={() => action?.onChoose(q)} sx={itemSx}>
+                {actionLabel}
+              </MenuItem>
+            )}
           </MenuList>
         )}
       </Box>
