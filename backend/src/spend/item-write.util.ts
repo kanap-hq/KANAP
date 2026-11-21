@@ -46,6 +46,9 @@ import {
  *   (`POST /budget-lines/creation`, option `creation`, set by that route only) is created without
  *   one and without its required dimensions; its updates may leave the company empty until the
  *   person completes it (`budget-line-creation.ts`).
+ * - a new line needs an account (`ACCOUNT_REQUIRED`), except a line created at its title. Updates
+ *   are not checked: a line stored without one (created before this rule, or at its title) keeps
+ *   taking edits.
  */
 
 export type ItemWriteScope = 'opex' | 'capex';
@@ -149,6 +152,9 @@ export function parseRunBuild(value: unknown): RunBuild | null | undefined {
   return (RUN_BUILD_VALUES as readonly string[]).includes(text) ? (text as RunBuild) : undefined;
 }
 
+/** The refusal of a new line without an account. */
+export const ACCOUNT_REQUIRED = 'Account is required.';
+
 /** The refusal of an account outside the chart of accounts of the line's paying company. */
 export const ACCOUNT_CHART_REFUSAL = 'Selected account does not belong to the paying company\'s Chart of Accounts';
 
@@ -207,8 +213,10 @@ async function assertLineDataAccess(
 export type ItemWriteOptions = {
   /**
    * A line created at its title on the screen (`POST /budget-lines/creation`): created without a
-   * paying company and without its required dimensions, which the person completes afterwards.
-   * The data-access placement rule still applies.
+   * paying company, an account and its required dimensions, which the person completes afterwards.
+   * The data-access placement rule still applies. Provisional: the only create that skips the
+   * account rule; pass B of lot L3a moves the screen to the draft frame and removes this option and
+   * that route.
    */
   creation?: boolean;
 };
@@ -286,6 +294,10 @@ export async function resolveItemWrite(
     contractId: 'contract_id' in values ? (values.contract_id as string | null) : undefined,
   });
   const accountId = next('account_id');
+  // A new line has an account, whatever the door (API, aliases, Kad, the budget file, a dated change
+  // of type); an update leaves a line stored without one as it is. Checked after the data-access
+  // placement, so a limited person out of place is told that first.
+  if (!existing && !accountId && !options.creation) throw new BadRequestException(ACCOUNT_REQUIRED);
   const storedOf = (column: string) => ((existing?.[column] as string | null | undefined) ?? null);
   const checkChart = !!accountId && (!existing || companyId !== storedOf('paying_company_id') || accountId !== storedOf('account_id'));
   const checkNature = !!accountId && (!existing || accountId !== storedOf('account_id'));
