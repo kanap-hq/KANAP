@@ -15,7 +15,7 @@ const i18nLanguage = vi.hoisted(() => ({ current: 'en' }));
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => ({
-    t: (key: string, params?: { currency?: string }) => (params?.currency ? `${key} ${params.currency}` : key),
+    t: (key: string, params?: { currency?: string; fields?: string }) => (params?.currency ? `${key} ${params.currency}` : params?.fields ? `${key}: ${params.fields}` : key),
     i18n: {
       get language() { return i18nLanguage.current; },
       get resolvedLanguage() { return i18nLanguage.current; },
@@ -54,6 +54,7 @@ import deMasterData from '../../locales/de/master-data.json';
 import esMasterData from '../../locales/es/master-data.json';
 import enMasterData from '../../locales/en/master-data.json';
 import CompanyWorkspacePage from './CompanyWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
@@ -363,12 +364,28 @@ describe('CompanyWorkspacePage', () => {
     expect(screen.queryByText('Address refused.')).toBeNull();
   });
 
+  it('names the title still to give by its prompt and says it is required, and ties the empty-title message to it', async () => {
+    renderAt('/master-data/companies/new/overview');
+    const title = screen.getByRole('textbox', { name: 'companies.newCompany' });
+    expect(title).toHaveAttribute('aria-required', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('companies.messages.nameRequired');
+    expect(title).toHaveAttribute('aria-invalid', 'true');
+    expect(title.getAttribute('aria-describedby')).toBe(alert.id);
+  });
+
   it('marks the missing fields on Create, without a sentence under them, and drops each mark once the field has a value', async () => {
     renderAt('/master-data/companies/new/overview');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Acme' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Acme' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(markedLabels()).toEqual(['companies.fields.city', 'companies.fields.country', 'companies.fields.baseCurrency']);
     expect(screen.getByLabelText('companies.fields.country')).toHaveAttribute('aria-invalid', 'true');
+    // A screen reader hears which fields, in screen order; each mark carries an icon named Missing.
+    await waitFor(() => expect(screen.getAllByRole('status').map((node) => node.textContent).join('')).toBe(
+      'common:creation.missingFields: companies.fields.city, companies.fields.country, companies.fields.baseCurrency',
+    ));
+    expect(screen.getAllByRole('img', { name: 'common:creation.missingMark' })).toHaveLength(3);
     // The cursor goes to the first one on the screen: the city, in the page before the panel.
     await waitFor(() => expect(screen.getByLabelText('companies.fields.city')).toHaveFocus());
     expect(screen.queryAllByText(/Required$/)).toHaveLength(0);
@@ -388,7 +405,7 @@ describe('CompanyWorkspacePage', () => {
     renderAt('/master-data/companies/new/overview');
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('companies.messages.nameRequired')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus();
     expect(markedLabels()).toEqual(['companies.fields.city', 'companies.fields.country', 'companies.fields.baseCurrency']);
     expect(screen.queryAllByText(/Required$/).map((el) => el.textContent)).toEqual(['companies.messages.nameRequired']);
   });
@@ -404,7 +421,7 @@ describe('CompanyWorkspacePage', () => {
     expect(mocked.post).not.toHaveBeenCalled();
 
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/chart-of-accounts', expect.anything()));
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Acme Germany' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Acme Germany' } });
     await pickOption('companies.fields.country', 'Germ', 'Germany (DE)');
     await waitFor(() => expect(screen.getByLabelText('companies.fields.chartOfAccounts')).toHaveValue('COA-DE · German chart'));
     await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
@@ -436,30 +453,30 @@ describe('CompanyWorkspacePage', () => {
   it('says another company has the name, under the header title, when a create is refused as a duplicate', async () => {
     mocked.post.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Another company already has this name.' } } });
     renderAt('/master-data/companies/new/overview');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'acme' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'acme' } });
     await pickOption('companies.fields.country', 'Fran', 'France (FR)');
     await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Paris' } });
     fireEvent.blur(screen.getByLabelText('companies.fields.city'));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('companies.messages.nameTaken')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus();
     expect(navigateMock).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'acme 2' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'acme 2' } });
     expect(screen.queryByText('companies.messages.nameTaken')).toBeNull();
   });
 
   it('shows a create refusal under the field the body names', async () => {
     mocked.post.mockRejectedValueOnce({ response: { data: { message: 'Name already used.', field: 'name' } } });
     renderAt('/master-data/companies/new/overview');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Acme' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Acme' } });
     await pickOption('companies.fields.country', 'Fran', 'France (FR)');
     await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
     fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Paris' } });
     fireEvent.blur(screen.getByLabelText('companies.fields.city'));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('Name already used.')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus();
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
