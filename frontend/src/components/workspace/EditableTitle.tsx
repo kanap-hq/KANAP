@@ -195,7 +195,10 @@ export type EditableTitleProps = {
   maxLength?: number;
   /** Fired on each keystroke, so the caller can drop a refusal that the draft has answered. */
   onDraftChange?: (draft: string) => void;
-  /** Escape in the empty field opened by `autoEdit`: the person leaves without naming anything. */
+  /**
+   * Escape in the field of a title still to give (`autoEdit`): the person leaves without creating
+   * anything, a name typed or not, in one press. The blur that follows sends nothing.
+   */
   onCancel?: () => void;
   onSave?: (nextTitle: string) => void;
   /**
@@ -317,9 +320,10 @@ export default function EditableTitle({
 
   const cancel = () => {
     if (pendingTitle) {
-      if (!draft.trim()) onCancel?.();
-      else {
-        // A typed name is dropped first; a second Escape leaves.
+      if (onCancel) {
+        closing.current = true;
+        onCancel();
+      } else {
         submitted.current = null;
         setDraft('');
         onDraftChange?.('');
@@ -372,6 +376,8 @@ export default function EditableTitle({
           const next = event.target.value;
           setDraft(next);
           setEmptyError(false);
+          // Typing again after an Escape that did not leave: the field counts again.
+          closing.current = false;
           submitted.current = null;
           onDraftChange?.(next);
         }}
