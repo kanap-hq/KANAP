@@ -38,6 +38,7 @@ import ContractComplianceTab, { useContractCompliance } from './workspace/Contra
 import ContractDeleteButton from './workspace/ContractDeleteButton';
 import { contractComplianceKey } from './contractCompliance';
 import { useDefaultContractCurrency } from './workspace/ContractFields';
+import { useContractPlacementFilter } from '../../hooks/usePlacementOptions';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
@@ -403,10 +404,16 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   });
   const formRef = React.useRef(form);
   formRef.current = form;
+  // A limited person whose company is not an edit company places the contract through one of their
+  // nodes: the server refuses it without a place, so Create asks for it like a required field.
+  const placeRequired = useContractPlacementFilter(form?.company_id || null, form?.cost_center_id || null)?.placeRequired === true;
+  const placeRequiredRef = React.useRef(placeRequired);
+  placeRequiredRef.current = placeRequired;
   // The required fields the contract still lacks, the draft's or the record's as shown: Create marks them.
   const missingOf = (values: ContractForm | null): ContractRequiredField[] => (values ? ([
     !values.supplier_id && 'supplier_id' as const,
     !values.company_id && 'company_id' as const,
+    placeRequiredRef.current && !values.cost_center_id && 'cost_center_id' as const,
     !values.start_date && 'start_date' as const,
     (!values.duration_months || values.duration_months < 1) && 'duration_months' as const,
     !values.currency && 'currency' as const,

@@ -37,7 +37,8 @@ export type ContractFormValues = {
 };
 
 /** The fields a contract requires: Create marks the ones it lacks. */
-export type ContractRequiredField = 'supplier_id' | 'company_id' | 'start_date' | 'duration_months' | 'currency';
+/** `cost_center_id` only for a limited person whose company holds through its place (`placeRequired`). */
+export type ContractRequiredField = 'supplier_id' | 'company_id' | 'cost_center_id' | 'start_date' | 'duration_months' | 'currency';
 
 type Props = {
   values: ContractFormValues;
@@ -112,7 +113,12 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, mis
             />
           </Box>
         </PropertyRow>
-        <PropertyRow label={t('contracts.fields.costCenter')} helperText={costCenterHint} required={placeRequired}>
+        <PropertyRow
+          label={t('contracts.fields.costCenter')}
+          helperText={costCenterHint}
+          required={placeRequired}
+          missing={placeRequired && missing.has('cost_center_id')}
+        >
           <Box sx={hideInnerLabelSx}>
             <CostCenterSelect
               hideLabel
