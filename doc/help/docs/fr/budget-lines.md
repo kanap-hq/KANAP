@@ -334,7 +334,7 @@ L'onglet Budget porte les montants de la ligne, année par année et colonne par
     - **Atterrissage prévu** : Votre meilleure estimation du chiffre de fin d'année
 - Un administrateur budgétaire peut renommer les colonnes, en masquer certaines et choisir la colonne par défaut dans **Gestion budgétaire > Administration > Colonnes budgétaires** (voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)). Une colonne masquée garde ses montants
 - Chaque colonne affichée a une carte sous les onglets d'année : son nom, son total pour l'année, l'origine de ses montants et sa période, par exemple « Répartition linéaire » et « 9 mois, avril à décembre ». Une colonne vide affiche son zéro seul. Survolez une carte pour voir ses lignes de quantité et prix
-- Cliquez sur une carte pour travailler sur cette colonne. L'onglet s'ouvre sur la première colonne affichée qui n'est pas gelée
+- Cliquez sur une carte pour travailler sur cette colonne. L'onglet s'ouvre sur la [colonne par défaut](budget-operations.md#colonnes-budgetaires), ou sur la première colonne affichée qui n'est pas gelée quand la colonne par défaut est gelée
 - Avec une seule colonne affichée, il n'y a pas de cartes : l'éditeur montre directement la colonne
 
 **Période d'une colonne** :

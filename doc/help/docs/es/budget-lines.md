@@ -334,7 +334,7 @@ La pestaña Presupuesto contiene los importes de la línea, año por año y colu
     - **Aterrizaje previsto**: Su mejor estimación de la cifra de fin de año
 - Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y elegir la columna por defecto en **Gestión presupuestaria > Administración > Columnas presupuestarias** (consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)). Una columna oculta conserva sus importes
 - Cada columna visible tiene una tarjeta bajo las pestañas de año: su nombre, su total del año, el origen de sus importes y su periodo, por ejemplo «Reparto uniforme» y «9 meses, abril a diciembre». Una columna vacía muestra solo su cero. Pase el cursor sobre una tarjeta para ver sus líneas de cantidad y precio
-- Haga clic en una tarjeta para trabajar en esa columna. La pestaña se abre en la primera columna visible que no está congelada
+- Haga clic en una tarjeta para trabajar en esa columna. La pestaña se abre en la [columna por defecto](budget-operations.md#columnas-presupuestarias), o en la primera columna visible que no está congelada cuando la columna por defecto está congelada
 - Con una sola columna visible no hay tarjetas: el editor muestra la columna directamente
 
 **Periodo de una columna**:

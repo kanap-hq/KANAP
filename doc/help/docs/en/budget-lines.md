@@ -334,7 +334,7 @@ The Budget tab holds the amounts of the line, year by year and column by column.
     - **Expected landing**: Your best estimate of the year-end figure
 - A budget administrator can rename the columns, hide some and choose the default column in **Budget management > Administration > Budget columns** (see [Budget columns](budget-operations.md#budget-columns)). A hidden column keeps its amounts
 - Each shown column has a card under the year tabs: its name, its total for the year, how its amounts were produced and its period, for example "Spread flat" and "9 months, April to December". A column with nothing in it shows its zero alone. Hover a card to see its quantity and price lines
-- Click a card to work on that column. The tab opens on the first shown column that is not frozen
+- Click a card to work on that column. The tab opens on the [default column](budget-operations.md#budget-columns), or on the first shown column that is not frozen when the default column is frozen
 - With a single shown column, there are no cards: the editor shows the column directly
 
 **Period of a column**:
