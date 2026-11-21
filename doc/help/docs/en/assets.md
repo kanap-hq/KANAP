@@ -213,7 +213,7 @@ The Overview tab is the asset's home page.
 - **Support expiry**: Expiration date
 - **Notes**
 
-**Support contacts**: A table where you can add contacts from the contact directory, each with a free-text role label. The table displays each contact's email, phone, and mobile automatically.
+**Support contacts**: A table where you can add contacts from the contact directory, each with a free-text role label. The table displays each contact's email, phone, and mobile automatically. A contact that does not exist yet can be created from the list. See [Contacts](contacts.md#creating-a-contact-from-a-contact-field).
 
 **Knowledge**: Linked knowledge articles for this asset. With `knowledge:member` you can create new articles directly from this section. It appears once the asset is created.
 

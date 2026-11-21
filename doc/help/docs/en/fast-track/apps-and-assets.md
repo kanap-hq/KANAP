@@ -124,7 +124,7 @@ Also set:
 | **External facing** | Is this app accessible from the internet? |
 | **Data integration / ETL** | Does this app participate in data pipelines? |
 
-The same tab holds the **Support** contacts (use **Add contact** and give each one a role) and free-text **Support notes**.
+The same tab holds the **Support** contacts (use **Add contact** and give each one a role) and free-text **Support notes**. A contact that does not exist yet can be created from the list. See [Contacts](../contacts.md#creating-a-contact-from-a-contact-field).
 
 ---
 

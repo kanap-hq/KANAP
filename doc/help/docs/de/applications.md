@@ -227,7 +227,7 @@ Der Reiter Übersicht ist die Erzählung der Anwendung. Er enthält:
 
 **Support**:
 - Eine Tabelle mit Supportkontakten, die aus Ihren Kontakte-Stammdaten gezogen werden. Jede Zeile zeigt den Kontaktnamen, die E-Mail, das Telefon und eine Freitext-Rolle (z. B. Account-Manager, L1-Support).
-- **Kontakt hinzufügen** öffnet einen Dialog zur Auswahl eines Kontakts und zur Festlegung einer Rolle.
+- **Kontakt hinzufügen** öffnet einen Dialog zur Auswahl eines Kontakts und zur Festlegung einer Rolle. Ein Kontakt, den es noch nicht gibt, lässt sich aus der Liste heraus erstellen. Siehe [Kontakte](contacts.md#einen-kontakt-aus-einem-kontaktfeld-erstellen).
 - **Support-Notizen**: Freitext für Supportvereinbarungen (SLA, Eskalationspfade, Bereitschaftsinformationen).
 
 ---

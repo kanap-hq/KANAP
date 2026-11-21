@@ -10,11 +10,7 @@ import api from '../../api';
 import { RelationsSection, RelationsTable, type RelationsColumn } from '../workspace/RelationsTable';
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), delete: vi.fn() } }));
-vi.mock('../fields/ContactSelect', () => ({
-  default: ({ onChange }: { onChange: (id: string | null) => void }) => (
-    <button type="button" onClick={() => onChange('contact-2')}>pick contact</button>
-  ),
-}));
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 
 import ItemContactsSection from './ItemContactsSection';
 
@@ -43,12 +39,17 @@ describe('ItemContactsSection', () => {
     mocked.get.mockReset();
     mocked.delete.mockReset();
     mocked.post.mockReset();
-    mocked.get.mockResolvedValue({
-      data: [{
-        id: 'link-1', contact_id: 'contact-1', role: 'commercial', origin: 'manual',
-        contact: { id: 'contact-1', item_number: 3, first_name: 'Ana', last_name: 'Lopez', job_title: null, email: 'ana@example.invalid', mobile: null },
-      }],
-    } as never);
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/contacts') {
+        return { data: { items: [{ id: 'contact-2', item_number: 4, first_name: 'Bo', last_name: 'Ek', job_title: null, email: 'bo@example.invalid', active: true, supplier_id: null, supplier_name: null }] } } as never;
+      }
+      return {
+        data: [{
+          id: 'link-1', contact_id: 'contact-1', role: 'commercial', origin: 'manual',
+          contact: { id: 'contact-1', item_number: 3, first_name: 'Ana', last_name: 'Lopez', job_title: null, email: 'ana@example.invalid', mobile: null },
+        }],
+      } as never;
+    });
   });
 
   it('opens the contact from the row and says why a removal was refused', async () => {
@@ -66,9 +67,9 @@ describe('ItemContactsSection', () => {
     mocked.post.mockRejectedValue(refusal);
     renderSection();
     fireEvent.click(await screen.findByRole('button', { name: 'Add' }));
-    fireEvent.click(screen.getByRole('button', { name: 'pick contact' }));
-    fireEvent.mouseDown(screen.getByRole('combobox'));
-    fireEvent.click(await screen.findByRole('option', { name: 'Commercial' }));
+    fireEvent.click(await screen.findByRole('option', { name: /Bo Ek/ }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Commercial' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/spend-items/line-1/contacts', { contactId: 'contact-2', role: 'commercial' }));
     expect(await screen.findByText('This line is read only in your access.')).toBeInTheDocument();
   });
 

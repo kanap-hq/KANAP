@@ -88,7 +88,7 @@ Der Reiter **Kontakte** listet die mit diesem Lieferanten verknüpften Kontakte 
 
 **So funktioniert es**:
 - Jeder Abschnitt listet seine Kontakte mit Namen. Klicken Sie auf einen Namen, um die Kontaktseite zu öffnen.
-- **Vorhandenen hinzufügen**: Suchen Sie einen Kontakt nach Namen oder nach Referenz (`CTCT-4`) und wählen Sie ihn aus. Die Verknüpfung wird sofort gespeichert.
+- **Vorhandenen hinzufügen**: Suchen Sie einen Kontakt nach Namen oder nach Referenz (`CTCT-4`) und wählen Sie ihn aus. Die Verknüpfung wird sofort gespeichert. Ein Kontakt, den es noch nicht gibt, lässt sich aus der Liste heraus erstellen: Er gehört zu diesem Lieferanten, mit dem Kontakttyp des Abschnitts. Siehe [Kontakte](contacts.md#einen-kontakt-aus-einem-kontaktfeld-erstellen).
 - **Neuer Kontakt**: Öffnet das Kontaktformular mit bereits ausgefülltem Lieferanten und Kontakttyp. Kadratis bringt Sie nach dem Erstellen des Kontakts zu diesem Reiter zurück.
 - Die Papierkorb-Schaltfläche entfernt die Verknüpfung. Der Kontakt selbst bleibt in Ihren Kontakten. Eine Meldung bestätigt das, mit der Aktion **Rückgängig**, die den Kontakt wieder verknüpft.
 

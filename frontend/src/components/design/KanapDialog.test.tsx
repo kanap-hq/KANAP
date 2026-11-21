@@ -145,3 +145,27 @@ describe('KanapDialog footer buttons', () => {
     expect(screen.getByRole('button', { name: 'Delete' })).toHaveClass('MuiButton-action-danger');
   });
 });
+
+// A dialog opened from inside another dialog (a picker's "create" dialog) is a React child of the
+// outer one: its form events bubble through the portal and must not submit the outer form.
+describe('KanapDialog nested in another dialog', () => {
+  it('submits and presses Enter in the inner dialog without saving the outer one', () => {
+    const outerSave = vi.fn();
+    const innerSave = vi.fn();
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialog open title="Outer" onClose={vi.fn()} onSave={outerSave} saveLabel="Outer save">
+          <KanapDialog open title="Inner" onClose={vi.fn()} onSave={innerSave} saveLabel="Inner save">
+            <TextField variant="standard" inputProps={{ 'aria-label': 'Inner field' }} />
+          </KanapDialog>
+        </KanapDialog>
+      </ThemeProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Inner save' }));
+    expect(innerSave).toHaveBeenCalledTimes(1);
+    expect(outerSave).not.toHaveBeenCalled();
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Inner field' }), { key: 'Enter' });
+    expect(innerSave).toHaveBeenCalledTimes(2);
+    expect(outerSave).not.toHaveBeenCalled();
+  });
+});

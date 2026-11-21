@@ -88,7 +88,7 @@ L'onglet **Contacts** liste les contacts liés à ce fournisseur par type de con
 
 **Fonctionnement** :
 - Chaque section liste ses contacts par nom. Cliquez sur un nom pour ouvrir la fiche du contact.
-- **Ajouter un existant** : recherchez un contact par son nom ou par sa référence (`CTCT-4`) et choisissez-le. Le lien s'enregistre aussitôt.
+- **Ajouter un existant** : recherchez un contact par son nom ou par sa référence (`CTCT-4`) et choisissez-le. Le lien s'enregistre aussitôt. Un contact qui n'existe pas encore peut être créé depuis la liste : il appartient à ce fournisseur, avec le type de contact de la section. Voir [Contacts](contacts.md#creer-un-contact-depuis-un-champ-contact).
 - **Nouveau contact** : ouvre le formulaire de contact avec le fournisseur et le type de contact déjà remplis. Kadratis vous ramène à cet onglet une fois le contact créé.
 - Le bouton corbeille retire le lien. Le contact lui-même reste dans vos contacts. Un message le confirme, avec une action **Annuler** qui rattache de nouveau le contact.
 
