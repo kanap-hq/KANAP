@@ -61,6 +61,7 @@ import api from '../../api';
 import { clearCreation, creationKey, getCreation, setCreation } from '../../components/workspace/creation/creationStore';
 import { clearCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import SupplierWorkspacePage from './SupplierWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
@@ -423,7 +424,7 @@ describe('SupplierWorkspacePage', () => {
 
   it('opens with the name to type in the header, and no name field in the form', async () => {
     renderAt('/master-data/suppliers/new/overview');
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     expect(title).toHaveFocus();
     expect(title).toHaveAttribute('placeholder', 'suppliers.newSupplier');
     expect(screen.queryByLabelText('suppliers.fields.name')).toBeNull();
@@ -436,7 +437,7 @@ describe('SupplierWorkspacePage', () => {
     renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
     const erp = screen.getByLabelText('suppliers.fields.erpSupplierId');
     fireEvent.change(erp, { target: { value: 'F10077' } });
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     // The ERP ID gives way to the title.
     fireEvent.blur(erp, { relatedTarget: title });
     expect(mocked.post).not.toHaveBeenCalled();
@@ -460,7 +461,7 @@ describe('SupplierWorkspacePage', () => {
   it('creates the supplier on Create while the name is still typed, then opens it', async () => {
     mocked.post.mockResolvedValueOnce({ data: { ...SUPPLIER, id: 's-new', creation_token: 'token-1' } });
     renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Initech' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Initech' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers/s-new/overview?sort=name%3AASC', { replace: true }));
     expect(mocked.post).toHaveBeenCalledTimes(1);
@@ -473,7 +474,7 @@ describe('SupplierWorkspacePage', () => {
     let answer: (value: unknown) => void = () => undefined;
     mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }));
     renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Initech' } });
     fireEvent.keyDown(title, { key: 'Enter' });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
@@ -524,7 +525,7 @@ describe('SupplierWorkspacePage', () => {
 
   it('shows a missing or taken name under the header title and gives it the focus', async () => {
     renderAt('/master-data/suppliers/new/overview');
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(screen.getByLabelText('suppliers.fields.erpSupplierId'), { target: { value: 'F10077' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('suppliers.messages.nameRequired')).toBeInTheDocument();
@@ -548,7 +549,7 @@ describe('SupplierWorkspacePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC'));
     navigateMock.mockClear();
-    fireEvent.keyDown(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('textbox', { name: TITLE_FIELD }), { key: 'Escape' });
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3AASC'));
     expect(mocked.post).not.toHaveBeenCalled();
   });
@@ -557,7 +558,7 @@ describe('SupplierWorkspacePage', () => {
     mocked.post.mockResolvedValueOnce({ data: { ...SUPPLIER, id: 's-new', creation_token: 'token-1' } });
     const user = userEvent.setup();
     renderAt('/master-data/suppliers/new/overview');
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     await user.type(title, 'Initech');
     expect(mocked.post).not.toHaveBeenCalled();
     await user.tab();

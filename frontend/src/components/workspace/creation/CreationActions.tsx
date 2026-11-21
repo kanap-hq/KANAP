@@ -2,7 +2,9 @@ import React from 'react';
 import { flushSync } from 'react-dom';
 import { Box, Button } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { visuallyHiddenSx } from '../../design/FieldLabel';
 import { armCreationFieldFocus } from './creationFieldFocus';
+import useMissingAnnouncement from './missingAnnouncement';
 
 type Props = {
   /**
@@ -39,7 +41,9 @@ export function isCreationWriting(from: Element | null): boolean {
  * record while the person stays on it (`useRecordCreation`), where it says Done. Ctrl+S (Cmd+S) is
  * the pill. Its press takes the focus (Safari gives none to a button), which leaves the field being
  * typed: the field commits into the draft, the leave alone writes nothing (`useDraftCreation`), and
- * the click writes what is typed. Cancel leaves, nothing written.
+ * the click writes what is typed. Cancel leaves, nothing written. The page's one announcement
+ * region sits here: when Create or Done marks fields missing, it says "Missing: …" with their
+ * labels (`useMissingAnnouncement`).
  *
  * Done is never reached from Create: a pointer click counts as Done only when its press began on
  * Done, and only as the first click of a series. The click on Create writes the record; it may
@@ -49,6 +53,7 @@ export function isCreationWriting(from: Element | null): boolean {
 export default function CreationActions({ onCreate, onCancel, busy = false, writing = false, done = false }: Props) {
   const { t } = useTranslation('common');
   const createRef = React.useRef<HTMLButtonElement>(null);
+  const announcement = useMissingAnnouncement(createRef);
   const doneRef = React.useRef(done);
   doneRef.current = done;
   // What the pill said when the pointer last pressed it.
@@ -84,6 +89,8 @@ export default function CreationActions({ onCreate, onCancel, busy = false, writ
   // title that the record is being written (`isCreationWriting`).
   return (
     <Box component="span" data-creation-actions="" data-creation-writing={writing ? '' : undefined} sx={{ display: 'contents' }}>
+      {/* The one announcement of the page: the fields a check marked missing, said once per check. */}
+      <Box component="span" role="status" aria-live="polite" sx={visuallyHiddenSx}>{announcement}</Box>
       <Button variant="action" size="small" onClick={onCancel} disabled={busy || writing}>
         {t('common:buttons.cancel')}
       </Button>

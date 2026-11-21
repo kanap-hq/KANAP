@@ -24,7 +24,7 @@ Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un 
 Mientras la conexión se está creando, su encabezado muestra **Crear** y **Cancelar**. Permanecen hasta que salga de la conexión. **Ctrl+S** funciona como el botón mostrado.
 
 - **Crear** funciona como Intro: crea la conexión y la deja abierta, con su referencia. El cursor va al primer campo obligatorio aún vacío. Con el título vacío, el título pide uno
-- Una vez creada la conexión, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y comprueba que la conexión tenga al menos un protocolo y sus dos endpoints, o dos servidores en una conexión multi-servidor. La etiqueta de cada campo que falta se pone en rojo, y el primero recibe el foco. Cuando no falta nada, vuelve al punto de partida
+- Una vez creada la conexión, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y comprueba que la conexión tenga al menos un protocolo y sus dos endpoints, o dos servidores en una conexión multi-servidor. La etiqueta de cada campo que falta se pone en rojo con un icono de alerta, y el primero recibe el foco. Cuando no falta nada, vuelve al punto de partida
 - **Cancelar** elimina la conexión. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar conexiones
 
 Si sale de la conexión de otra forma mientras falta algo, Kadratis le pregunta qué hacer. **Completarla** le deja en la conexión, en el primer campo que falta. **Eliminarla** elimina la conexión. Si recarga la página o cierra la pestaña mientras a la conexión nueva todavía le falta un campo, su navegador pide confirmación. Si sale de todos modos, la conexión se elimina.

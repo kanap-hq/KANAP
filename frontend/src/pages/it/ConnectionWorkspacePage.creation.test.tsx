@@ -10,6 +10,7 @@ import NavigationTracker, { resetNavigationTracker } from '../../components/navi
 import { resetCreationStore } from '../../components/workspace/creation/creationStore';
 import api from '../../api';
 import ConnectionWorkspacePage from './ConnectionWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 // Creation at the title (lot 3): the name committed in the header creates the connection (server to
 // server, no protocol nor end), the page moves to it; Create names what it still lacks and focuses
@@ -133,7 +134,7 @@ function location() {
 async function createConnection() {
   renderPage(['/start']);
   fireEvent.click(await screen.findByRole('button', { name: 'new connection' }));
-  const input = await screen.findByRole('textbox', { name: TITLE });
+  const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
   fireEvent.change(input, { target: { value: 'Web to db' } });
   fireEvent.keyDown(input, { key: 'Enter' });
   await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
@@ -151,7 +152,7 @@ describe('Connection creation at the title', () => {
 
   it('opens with the title to type and the connection to come dimmed, nothing read or written', async () => {
     renderPage(['/it/connections/new/overview']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(input).toHaveFocus();
     expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
@@ -179,7 +180,7 @@ describe('Connection creation at the title', () => {
   it('creates the connection on Create clicked just after the title, and opens it with Done, nothing marked', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new connection' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Web to db' } });
     // In a browser the press takes the focus from the title, which writes nothing; Create writes the name typed.
     fireEvent.blur(input);
@@ -207,8 +208,8 @@ describe('Connection creation at the title', () => {
       expect(field).toHaveAttribute('data-label-missing', 'true');
       expect(field).toHaveAttribute('aria-invalid', 'true');
     }
-    expect(screen.getByRole('heading', { name: 'workspace.connection.overview.protocols' })).toHaveStyle({ color: createAppTheme('light').palette.error.main });
-    expect(screen.queryByText(/creation\.missing/)).toBeNull();
+    expect(screen.getByRole('heading', { name: /workspace\.connection\.overview\.protocols/ })).toHaveStyle({ color: createAppTheme('light').palette.kanap.danger });
+    expect(screen.queryByText(/creation\.missing(?!Mark|Fields)/)).toBeNull();
   });
 
   it('marks what only the server sees missing on Done, the first field on screen first', async () => {

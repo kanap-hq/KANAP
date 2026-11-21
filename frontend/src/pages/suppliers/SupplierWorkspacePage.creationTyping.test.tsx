@@ -26,6 +26,7 @@ vi.mock('../../hooks/useSupplierNav', () => ({
 
 import api from '../../api';
 import SupplierWorkspacePage from './SupplierWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -91,7 +92,7 @@ describe('SupplierWorkspacePage typing while the supplier is created', () => {
     let answer: (value: unknown) => void = () => undefined;
     mocked.post.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
     renderNew();
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Initech' } });
     act(() => title.focus());
     // Enter gives the name.

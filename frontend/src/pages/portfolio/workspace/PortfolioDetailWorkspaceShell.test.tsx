@@ -629,7 +629,7 @@ describe('PortfolioDetailWorkspaceShell creation Tab', () => {
 
   async function tabFromTitle(name: string) {
     const user = userEvent.setup();
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: 'Untitled' });
     fireEvent.change(title, { target: { value: name } });
     title.focus();
     await user.tab();
@@ -678,7 +678,7 @@ describe('PortfolioDetailWorkspaceShell creation Tab', () => {
     await user.tab({ shift: true });
     expect(screen.getByLabelText('company')).toHaveFocus();
     await user.tab({ shift: true });
-    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveFocus();
+    expect(screen.getByRole('textbox', { name: 'Untitled' })).toHaveFocus();
   });
 
   it('takes the description the page marks over the first free text', async () => {
@@ -752,7 +752,7 @@ describe('PortfolioDetailWorkspaceShell creation Tab', () => {
   it('leaves an empty creation title to the browser when nothing waits, which reaches Cancel', async () => {
     const user = userEvent.setup();
     renderShell({ ...newRecord, properties: <input aria-label="category" /> });
-    screen.getByRole('textbox', { name: 'common:buttons.editTitle' }).focus();
+    screen.getByRole('textbox', { name: 'Untitled' }).focus();
     await user.tab();
     expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toHaveFocus();
   });

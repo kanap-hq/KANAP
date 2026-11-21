@@ -10,6 +10,7 @@ import NavigationTracker, { resetNavigationTracker } from '../../components/navi
 import { resetCreationStore } from '../../components/workspace/creation/creationStore';
 import api from '../../api';
 import ProjectWorkspacePage from './ProjectWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 // Creation at the title (lot 1b): the name committed in the header creates a fast-track project
 // with the classification defaults, the page moves to it with every tab open, and "Cancel
@@ -114,7 +115,7 @@ function location() {
 }
 
 async function commitTitle() {
-  const input = await screen.findByRole('textbox', { name: TITLE });
+  const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
   fireEvent.change(input, { target: { value: 'Data platform' } });
   fireEvent.keyDown(input, { key: 'Enter' });
 }
@@ -134,7 +135,7 @@ describe('Project creation at the title', () => {
 
   it('opens with the title to type and the project to come dimmed, without its name field', async () => {
     renderPage(['/portfolio/projects/new/summary']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(input).toHaveFocus();
     expect(input).toHaveAttribute('placeholder', 'portfolio:workspace.project.title.new');
     // Create and Cancel in place of the close button.
@@ -177,7 +178,7 @@ describe('Project creation at the title', () => {
 
   it('takes Ctrl+S as Create: the empty title is asked for, nothing created', async () => {
     renderPage(['/portfolio/projects/new/summary']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.keyDown(input, { key: 's', ctrlKey: true });
     expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
     expect(mocked.post).not.toHaveBeenCalled();
@@ -238,7 +239,7 @@ describe('Project creation at the title', () => {
   it('leaves an empty new project on Escape, to the previous address', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new project' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.keyDown(input, { key: 'Escape' });
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.post).not.toHaveBeenCalled();
@@ -246,10 +247,10 @@ describe('Project creation at the title', () => {
   it('shows the error under the empty title on Create and gives it the focus, nothing created', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new project' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
-    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus());
     expect(input).toBeTruthy();
     expect(mocked.post).not.toHaveBeenCalled();
     expect(location()).not.toBe('/start');
@@ -269,7 +270,7 @@ describe('Project creation at the title', () => {
   it('creates the project on Create clicked just after the title, and keeps it open with Done', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new project' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Data platform' } });
     // In a browser the press takes the focus from the title, which writes nothing; Create writes the name typed.
     fireEvent.blur(input);
@@ -286,7 +287,7 @@ describe('Project creation at the title', () => {
     renderPage(['/start']);
     fireEvent.click(screen.getByRole('button', { name: 'new project' }));
     mocked.post.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }) as never);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Data platform' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));

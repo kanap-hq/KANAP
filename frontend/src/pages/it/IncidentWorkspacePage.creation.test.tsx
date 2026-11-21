@@ -11,6 +11,7 @@ import { resetCreationStore } from '../../components/workspace/creation/creation
 import api from '../../api';
 import { incidentsApi, type Incident } from '../../api/endpoints/incidents';
 import IncidentWorkspacePage from './IncidentWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 // Creation at the title (lot 1b): the title committed in the header creates the incident with
 // severity "minor", the page moves to it with every tab open, and "Cancel creation" deletes it
@@ -119,7 +120,7 @@ function location() {
 }
 
 async function createMailOutage() {
-  const input = await screen.findByRole('textbox', { name: TITLE });
+  const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
   fireEvent.change(input, { target: { value: 'Mail outage' } });
   fireEvent.keyDown(input, { key: 'Enter' });
   await waitFor(() => expect(location()).toBe('/it/incidents/INC-4/overview'));
@@ -136,7 +137,7 @@ describe('Incident creation at the title', () => {
 
   it('opens with the title to type and the incident to come dimmed and out of reach', async () => {
     renderPage(['/it/incidents/new/overview']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(input).toHaveFocus();
     expect(input).toHaveAttribute('placeholder', 'workspace.incident.newTitle');
     // Create and Cancel in place of the close button.
@@ -175,7 +176,7 @@ describe('Incident creation at the title', () => {
 
   it('takes Ctrl+S as Create: the empty title is asked for, nothing created', async () => {
     renderPage(['/it/incidents/new/overview']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.keyDown(input, { key: 's', ctrlKey: true });
     expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
     expect(incidents.create).not.toHaveBeenCalled();
@@ -185,7 +186,7 @@ describe('Incident creation at the title', () => {
   it('takes Ctrl+S in a title still being typed as Create: the incident is created and stays open with Done', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     input.focus();
     fireEvent.change(input, { target: { value: 'Mail outage' } });
     fireEvent.keyDown(input, { key: 's', ctrlKey: true });
@@ -275,7 +276,7 @@ describe('Incident creation at the title', () => {
   it('leaves an empty new incident on Escape, to the previous address', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.keyDown(input, { key: 'Escape' });
     await waitFor(() => expect(location()).toBe('/start'));
     expect(incidents.create).not.toHaveBeenCalled();
@@ -283,10 +284,10 @@ describe('Incident creation at the title', () => {
   it('shows the error under the empty title on Create and gives it the focus, nothing created', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('common:creation.titleRequired')).toBeTruthy();
-    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus());
     expect(input).toBeTruthy();
     expect(incidents.create).not.toHaveBeenCalled();
     expect(location()).not.toBe('/start');
@@ -305,7 +306,7 @@ describe('Incident creation at the title', () => {
   it('creates the incident on Create clicked just after the title, and keeps it open with Done', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new incident' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Mail outage' } });
     // In a browser the press takes the focus from the title, which writes nothing; Create writes the name typed.
     fireEvent.blur(input);

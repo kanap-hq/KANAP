@@ -10,6 +10,7 @@ import NavigationTracker, { resetNavigationTracker } from '../../components/navi
 import { resetCreationStore } from '../../components/workspace/creation/creationStore';
 import api from '../../api';
 import BusinessProcessWorkspacePage from './BusinessProcessWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 // The business process page on the record shell (lot V7): fields saved one by one, and the
 // creation at the title (the name committed in the header creates the process, Create keeps it,
@@ -116,7 +117,7 @@ async function openRecord() {
 }
 
 async function createProcess() {
-  const input = await screen.findByRole('textbox', { name: TITLE });
+  const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
   fireEvent.change(input, { target: { value: 'Procure-to-Pay' } });
   fireEvent.keyDown(input, { key: 'Enter' });
   await waitFor(() => expect(location()).toBe('/master-data/business-processes/bp-new/overview'));
@@ -183,7 +184,7 @@ describe('Business process record', () => {
     await openRecord();
     fireEvent.click(screen.getByRole('button', { name: TITLE }));
     mocked.patch.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Another business process already has this name.' } } });
-    const input = screen.getByRole('textbox', { name: TITLE });
+    const input = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Procure-to-Pay' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/business-processes/bp-1', { name: 'Procure-to-Pay' }));
@@ -226,7 +227,7 @@ describe('Business process record', () => {
 describe('Business process creation at the title', () => {
   it('opens with the title to type and the process to come dimmed and out of reach', async () => {
     renderPage(['/master-data/business-processes/new/overview']);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(input).toHaveFocus();
     expect(input).toHaveAttribute('placeholder', 'businessProcesses.newBusinessProcess');
     expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeTruthy();
@@ -264,7 +265,7 @@ describe('Business process creation at the title', () => {
   it('shows a name another process has under the title and creates nothing', async () => {
     renderPage(['/master-data/business-processes/new/overview']);
     mocked.post.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Another business process already has this name.' } } });
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Order-to-Cash' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(await screen.findByText('businessProcesses.fields.nameTaken')).toBeTruthy();
@@ -273,7 +274,7 @@ describe('Business process creation at the title', () => {
 
   it('shows the error under the empty title on Create, nothing created', async () => {
     renderPage(['/master-data/business-processes/new/overview']);
-    await screen.findByRole('textbox', { name: TITLE });
+    await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(await screen.findByText('businessProcesses.fields.nameRequired')).toBeTruthy();
     expect(mocked.post).not.toHaveBeenCalled();
@@ -321,7 +322,7 @@ describe('Business process creation at the title', () => {
   it('creates the process on Create clicked just after the title, and keeps it open with Done', async () => {
     renderPage(['/start']);
     fireEvent.click(await screen.findByRole('button', { name: 'new process' }));
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(input, { target: { value: 'Procure-to-Pay' } });
     // In a browser the press takes the focus from the title, which writes nothing; Create writes the name typed.
     fireEvent.blur(input);
@@ -335,7 +336,7 @@ describe('Business process creation at the title', () => {
 
   it('leaves an empty new process on Escape, nothing created', async () => {
     renderPage([{ pathname: '/master-data/business-processes/new/overview', state: { returnTo: '/start' } }]);
-    const input = await screen.findByRole('textbox', { name: TITLE });
+    const input = await screen.findByRole('textbox', { name: TITLE_FIELD });
     fireEvent.keyDown(input, { key: 'Escape' });
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.post).not.toHaveBeenCalled();

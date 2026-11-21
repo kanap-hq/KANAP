@@ -37,6 +37,7 @@ vi.mock('../../components/fields/CostCenterSelect', () => ({ default: () => <div
 
 import api from '../../api';
 import CostCenterWorkspacePage from './CostCenterWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -107,9 +108,9 @@ describe('CostCenterWorkspacePage typing while the cost center is created', () =
     const code = screen.getByLabelText('costCenters.fields.code');
     fireEvent.change(code, { target: { value: 'CC-77' } });
     // The code gives way to the title.
-    fireEvent.blur(code, { relatedTarget: screen.getByRole('textbox', { name: 'common:buttons.editTitle' }) });
+    fireEvent.blur(code, { relatedTarget: screen.getByRole('textbox', { name: TITLE_FIELD }) });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     fireEvent.change(title, { target: { value: 'Paris' } });
     act(() => title.focus());
     // Enter gives the name.

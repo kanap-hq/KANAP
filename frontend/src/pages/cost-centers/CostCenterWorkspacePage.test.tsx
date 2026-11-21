@@ -62,6 +62,7 @@ vi.mock('../../components/fields/UserSelect', () => ({
 import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/costCenters';
 import CostCenterWorkspacePage from './CostCenterWorkspacePage';
+import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = service as unknown as {
   getCostCenter: ReturnType<typeof vi.fn>;
@@ -142,7 +143,7 @@ describe('CostCenterWorkspacePage', () => {
     renderAt('/master-data/cost-centers/new/overview?sort=path%3AASC');
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
     fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: ' IT-400 ' } });
-    const title = screen.getByRole('textbox', { name: 'common:buttons.editTitle' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
     // The code gives way to the title.
     fireEvent.blur(screen.getByLabelText('costCenters.fields.code'), { relatedTarget: title });
     fireEvent.change(title, { target: { value: 'Workplace' } });
@@ -170,7 +171,7 @@ describe('CostCenterWorkspacePage', () => {
     renderAt('/master-data/cost-centers/new/overview');
     // The cost center's own page: the code sits in its Properties drawer.
     expect(screen.getByRole('complementary')).toContainElement(screen.getByLabelText('costCenters.fields.code'));
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Workplace' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Workplace' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     expect(markedLabels()).toEqual(['costCenters.fields.code', 'costCenters.fields.company']);
     await waitFor(() => expect(screen.getByLabelText('costCenters.fields.code')).toHaveFocus());
@@ -338,7 +339,7 @@ describe('CostCenterWorkspacePage', () => {
     const code = screen.getByLabelText('costCenters.fields.code');
     fireEvent.change(code, { target: { value: 'IT-400' } });
     fireEvent.blur(code);
-    fireEvent.change(screen.getByRole('textbox', { name: 'common:buttons.editTitle' }), { target: { value: 'Workplace' } });
+    fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Workplace' } });
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     const message = await screen.findByText('A cost center with code IT-400 already exists.');
