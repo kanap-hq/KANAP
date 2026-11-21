@@ -245,7 +245,7 @@ A disabled or retired application or asset stays listed with its name greyed out
 
 The section is absent when there is nothing to suggest.
 
-**Contacts**: people for this contract, each with a role (Commercial, Technical, Support or Other). **Add the supplier's contacts** copies the supplier's contacts in one click. A contact that does not exist yet can be created from the list, then given its role. See [Contacts](contacts.md#creating-a-contact-from-a-contact-field).
+**Contacts**: people for this contract, each with a role (Commercial, Technical, Support or Other). **Add the supplier's contacts** copies the supplier's contacts in one click. **Add** opens the list of contacts under the button, with their reference, name and supplier. Search it, or create a contact from the last option of the list (see [Contacts](contacts.md#creating-a-contact-from-a-contact-field)). The roles of the chosen or created contact then show in the same place: choosing a role adds the contact. Escape closes the list without adding anything.
 
 **Links and files**: the web links of the contract (the signed PDF online, the vendor portal) and its files, one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With `contracts:member`:
 
