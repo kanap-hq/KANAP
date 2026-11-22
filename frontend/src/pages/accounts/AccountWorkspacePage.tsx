@@ -142,7 +142,8 @@ export default function AccountWorkspacePage() {
   // The new page is the account's own page on a draft: the fields write here, Create sends it.
   const [draft, setDraft] = React.useState<Account>(NEW_ACCOUNT);
   const draftRef = React.useRef(draft);
-  const preselectedCoaId = coaId && coas.some((coa) => coa.id === coaId) ? coaId : null;
+  // The chart the list gave, else the one chart of the workspace (lot A2); the chart picker has no empty choice.
+  const preselectedCoaId = coaId && coas.some((coa) => coa.id === coaId) ? coaId : coas.length === 1 ? coas[0].id : null;
   const newCoaId = draft.coa_id ?? preselectedCoaId;
   const data = isCreate ? { ...draft, coa_id: newCoaId } : stored;
 

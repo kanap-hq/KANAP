@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
 import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { UNSCOPED_PLACEMENT, useFillOnce, useOnlyCompany } from '../../hooks/useOnlyChoice';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { useDataAccessAdmin } from '../../auth/dataAccess';
@@ -176,6 +177,15 @@ export default function CostCenterWorkspacePage() {
   );
 
   const effectiveKind: CostCenterKind | undefined = pendingKind ?? data?.kind;
+  // A new cost center (not a group) takes the one company of the workspace (lot A2), as the person's choice.
+  const onlyCompany = useOnlyCompany(UNSCOPED_PLACEMENT, isCreate);
+  useFillOnce({
+    isNew: isCreate,
+    key: draft.kind === 'cost_center' ? 'company_id' : null,
+    empty: !draft.company_id,
+    value: onlyCompany,
+    fill: (companyId) => { void patch({ company_id: companyId }, 'company_id'); },
+  });
 
   const handleKindChange = (next: CostCenterKind) => {
     if (!data) return;

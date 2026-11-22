@@ -95,6 +95,29 @@ export function useLinePlacementDefault(): { ready: boolean; companyId: string |
   }, [data, isError, limited]);
 }
 
+/**
+ * The company a new contract of a limited person starts from (lot A2): when the companies its picker
+ * offers (`useContractPlacementFilter`, no place chosen yet) come down to one, that company; several
+ * leave the choice (`needsChoice`). `ready` is false while the answer loads. An unscoped person, or
+ * Edit on everything, needs nothing.
+ */
+export function useContractPlacementDefault(): { ready: boolean; companyId: string | null; needsChoice: boolean } {
+  const limited = useDataAccessLimited();
+  const { data, isError } = useQuery({
+    queryKey: ['data-access', 'placement-options'],
+    queryFn: async () => (await api.get<PlacementOptionsAnswer>('/data-access/placement-options')).data,
+    enabled: limited,
+    staleTime: 60_000,
+  });
+  return React.useMemo(() => {
+    if (!limited) return { ready: true, companyId: null, needsChoice: false };
+    if (!data) return isError ? { ready: true, companyId: null, needsChoice: true } : { ready: false, companyId: null, needsChoice: false };
+    if (!data.limited || data.all) return { ready: true, companyId: null, needsChoice: false };
+    const [only, ...others] = Array.from(new Set([...data.companies, ...(data.editNodeCompanies ?? [])]));
+    return only && others.length === 0 ? { ready: true, companyId: only, needsChoice: false } : { ready: true, companyId: null, needsChoice: true };
+  }, [data, isError, limited]);
+}
+
 export type ContractPlacementFilter = {
   /** The contracting companies offered. */
   companyIds: ReadonlySet<string>;

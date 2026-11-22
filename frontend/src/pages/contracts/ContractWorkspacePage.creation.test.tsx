@@ -9,7 +9,11 @@ import { KanapDialogProvider } from '../../components/design';
 const navigateMock = vi.hoisted(() => vi.fn());
 const stableT = vi.hoisted(() => (key: string) => key);
 // The placement filter of a limited person; null for everyone else, as the hook answers.
-const placement = vi.hoisted(() => ({ placeRequired: false }));
+const placement = vi.hoisted(() => ({
+  placeRequired: false,
+  /** Where a limited access starts a contract (`useContractPlacementDefault`). */
+  start: { ready: true, companyId: null as string | null, needsChoice: false },
+}));
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -53,6 +57,7 @@ vi.mock('../../hooks/usePlacementOptions', () => ({
   useContractPlacementFilter: () => (placement.placeRequired
     ? { companyIds: new Set(['co-1']), isCostCenterAllowed: () => true, placeRequired: true }
     : null),
+  useContractPlacementDefault: () => placement.start,
 }));
 vi.mock('../../components/fields/DateEUField', () => ({
   default: ({ valueYmd, onChangeYmd }: { valueYmd: string; onChangeYmd: (next: string) => void }) => (
@@ -87,6 +92,7 @@ describe('ContractWorkspacePage creation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     placement.placeRequired = false;
+    placement.start = { ready: true, companyId: null, needsChoice: false };
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/currency/settings') return { data: { reportingCurrency: 'EUR', defaultSpendCurrency: 'EUR', defaultCapexCurrency: 'EUR', allowedCurrencies: ['EUR', 'USD'] } };
       return { data: { items: [] } };
@@ -137,6 +143,38 @@ describe('ContractWorkspacePage creation', () => {
       disabled_at: null,
     }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/ops/contracts/c-new/overview', { replace: true }));
+  });
+
+  it('fills the one company of the workspace, and writes nothing before the name (lot A2)', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/currency/settings') return { data: { reportingCurrency: 'EUR', defaultSpendCurrency: 'EUR', defaultCapexCurrency: 'EUR', allowedCurrencies: ['EUR'] } };
+      if (url === '/companies/lookup') return { data: { items: [{ id: 'co-1', name: 'Fromage SA' }], has_more: false } };
+      return { data: { items: [] } };
+    });
+    renderNew();
+    const drawer = screen.getByRole('complementary');
+    await waitFor(() => expect(within(drawer).getByLabelText('contracts.fields.company')).toHaveValue('co-1'));
+    // One currency allowed: the workspace's, already there.
+    await waitFor(() => expect(within(drawer).getByRole('combobox', { name: 'contracts.fields.currency' })).toHaveValue('EUR · Euro'));
+    fireEvent.change(within(drawer).getByLabelText('contracts.fields.supplier'), { target: { value: 'sup-1' } });
+    fireEvent.change(within(drawer).getByLabelText('start-date'), { target: { value: '2026-01-01' } });
+    const duration = within(drawer).getByRole('textbox', { name: 'contracts.fields.durationMonths' });
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
+    fireEvent.change(duration, { target: { value: '24' } });
+    fireEvent.blur(duration, { relatedTarget: title });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.change(title, { target: { value: 'Oracle support' } });
+    fireEvent.keyDown(title, { key: 'Enter' });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts', expect.objectContaining({ name: 'Oracle support', company_id: 'co-1', currency: 'EUR' })));
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('fills the one company a limited access allows', async () => {
+    placement.start = { ready: true, companyId: 'co-9', needsChoice: false };
+    renderNew();
+    await waitFor(() => expect(within(screen.getByRole('complementary')).getByLabelText('contracts.fields.company')).toHaveValue('co-9'));
+    expect(mocked.get.mock.calls.filter(([url]) => url === '/companies/lookup')).toEqual([]);
   });
 
   it('waits for the place when the company holds only through one (limited data access)', async () => {

@@ -61,6 +61,7 @@ vi.mock('../../components/fields/UserSelect', () => ({
 
 import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/costCenters';
+import api from '../../api';
 import CostCenterWorkspacePage from './CostCenterWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
 
@@ -165,6 +166,29 @@ describe('CostCenterWorkspacePage', () => {
       disabled_at: null,
     });
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/cost-centers/cc-new/overview?sort=path%3AASC', { replace: true }));
+  });
+
+  it('fills the one company of the workspace for a cost center, written only once its name is given (lot A2)', async () => {
+    const apiGet = vi.mocked(api.get);
+    apiGet.mockImplementation(async (url: string) => (url === '/companies/lookup'
+      ? { data: { items: [{ id: 'company-1', name: 'Fromage SA' }], has_more: false } }
+      : { data: { items: [] } }) as never);
+    try {
+      mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new', creation_token: 'token-1' });
+      renderAt('/master-data/cost-centers/new/overview');
+      await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/companies/lookup', expect.objectContaining({ params: { limit: 2 } })));
+      const title = screen.getByRole('textbox', { name: TITLE_FIELD });
+      fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: 'IT-400' } });
+      fireEvent.blur(screen.getByLabelText('costCenters.fields.code'), { relatedTarget: title });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(mocked.createCostCenter).not.toHaveBeenCalled();
+      fireEvent.change(title, { target: { value: 'Workplace' } });
+      fireEvent.keyDown(title, { key: 'Enter' });
+      await waitFor(() => expect(mocked.createCostCenter).toHaveBeenCalledTimes(1));
+      expect(mocked.createCostCenter).toHaveBeenCalledWith(expect.objectContaining({ kind: 'cost_center', company_id: 'company-1' }));
+    } finally {
+      apiGet.mockImplementation(async () => ({ data: { items: [] } }) as never);
+    }
   });
 
   it('marks the code and the company on Create and puts the cursor in the code, with no sentence under them', async () => {
