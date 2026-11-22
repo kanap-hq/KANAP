@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 import type { CostCenterDetail } from '../../services/costCenters';
@@ -189,6 +189,66 @@ describe('CostCenterWorkspacePage', () => {
     } finally {
       apiGet.mockImplementation(async () => ({ data: { items: [] } }) as never);
     }
+  });
+
+  describe('values of the list filtered on one value (lot A2)', () => {
+    const COMPANIES = [{ id: 'company-1', name: 'Fromage SA' }, { id: 'company-2', name: 'Kaas BV' }];
+    const filtered = (model: Record<string, string[]>) => `/master-data/cost-centers/new/overview?filters=${encodeURIComponent(JSON.stringify(
+      Object.fromEntries(Object.entries(model).map(([col, values]) => [col, { filterType: 'set', values }])),
+    ))}`;
+    function serveCompanies(companies: Array<{ id: string; name: string }>) {
+      vi.mocked(api.get).mockImplementation(async (url: string, config?: { params?: any }) => {
+        if (url !== '/companies/lookup') return { data: { items: [] } } as never;
+        const q = String(config?.params?.q ?? '').toLowerCase();
+        const matches = companies.filter((company) => company.name.toLowerCase().includes(q));
+        const limit = Number(config?.params?.limit ?? 30);
+        return { data: { items: matches.slice(0, limit), has_more: matches.length > limit } } as never;
+      });
+    }
+    afterEach(() => {
+      vi.mocked(api.get).mockImplementation(async () => ({ data: { items: [] } }) as never);
+    });
+    async function giveCodeAndName() {
+      const title = screen.getByRole('textbox', { name: TITLE_FIELD });
+      fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: 'IT-400' } });
+      fireEvent.blur(screen.getByLabelText('costCenters.fields.code'), { relatedTarget: title });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(mocked.createCostCenter).not.toHaveBeenCalled();
+      fireEvent.change(title, { target: { value: 'Workplace' } });
+      fireEvent.keyDown(title, { key: 'Enter' });
+    }
+
+    it('takes the company the list was filtered on, over the one company of the workspace', async () => {
+      serveCompanies(COMPANIES);
+      mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new', creation_token: 'token-1' });
+      renderAt(filtered({ company_name: ['Kaas BV'] }));
+      await waitFor(() => expect(vi.mocked(api.get)).toHaveBeenCalledWith('/companies/lookup', expect.objectContaining({ params: expect.objectContaining({ q: 'Kaas BV' }) })));
+      await giveCodeAndName();
+      await waitFor(() => expect(mocked.createCostCenter).toHaveBeenCalledTimes(1));
+      expect(mocked.createCostCenter).toHaveBeenCalledWith(expect.objectContaining({ kind: 'cost_center', company_id: 'company-2' }));
+    });
+
+    it('takes the type the list was filtered on: a group gets no company', async () => {
+      serveCompanies([COMPANIES[0]]);
+      mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new', kind: 'group', company_id: null, creation_token: 'token-1' });
+      renderAt(filtered({ kind: ['group'], company_name: ['Fromage SA'] }));
+      await giveCodeAndName();
+      await waitFor(() => expect(mocked.createCostCenter).toHaveBeenCalledTimes(1));
+      expect(mocked.createCostCenter).toHaveBeenCalledWith(expect.objectContaining({ kind: 'group', company_id: null }));
+    });
+
+    it('takes nothing from a filter on two companies', async () => {
+      serveCompanies(COMPANIES);
+      renderAt(filtered({ company_name: ['Fromage SA', 'Kaas BV'] }));
+      const title = screen.getByRole('textbox', { name: TITLE_FIELD });
+      fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: 'IT-400' } });
+      fireEvent.blur(screen.getByLabelText('costCenters.fields.code'), { relatedTarget: title });
+      fireEvent.change(title, { target: { value: 'Workplace' } });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+      expect(markedLabels()).toEqual(['costCenters.fields.company']);
+      expect(mocked.createCostCenter).not.toHaveBeenCalled();
+    });
   });
 
   it('marks the code and the company on Create and puts the cursor in the code, with no sentence under them', async () => {
