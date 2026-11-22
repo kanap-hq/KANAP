@@ -178,6 +178,8 @@ export function useLookupSearch<T>({
     pendingText: pending ? trimmed : null,
     /** The page shown is the answer for the text typed: not a previous page, and not an error. */
     settled: !pending && query.isSuccess,
+    /** The read failed (refused, or in error): its answer will not come. */
+    failed: query.isError,
   };
 }
 

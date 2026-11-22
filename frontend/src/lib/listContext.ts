@@ -61,6 +61,18 @@ export function parseListFilters(filters: string | ListFilters | null | undefine
   return model as ListFilters;
 }
 
+/**
+ * The one value a column's checkbox filter keeps (`filterType: 'set'`, inclusive, one value that is
+ * not blank): what a new record of the list may start from. Null for any other filter (a text, an
+ * exclusion, several values, "(Blank)").
+ */
+export function singleSetFilterValue(filters: string | ListFilters | null | undefined, colId: string): string | null {
+  const filter = parseListFilters(filters)?.[colId] as { filterType?: unknown; mode?: unknown; values?: unknown } | undefined;
+  if (!filter || filter.filterType !== 'set' || filter.mode === 'exclude' || !Array.isArray(filter.values)) return null;
+  const [only, ...others] = filter.values;
+  return others.length === 0 && typeof only === 'string' && only.trim() !== '' ? only : null;
+}
+
 function filtersText(filters: string | ListFilters | null | undefined): string {
   if (!filters) return '';
   return typeof filters === 'string' ? filters : (Object.keys(filters).length ? JSON.stringify(filters) : '');
