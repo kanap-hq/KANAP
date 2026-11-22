@@ -263,25 +263,18 @@ export class BudgetLinesController {
     return resolveBudgetLine(ref, ctx.manager as EntityManager);
   }
 
-  @UseGuards(PermissionGuard)
-  @RequireLevel('budget', 'member')
-  @Post()
-  create(@Body() body: unknown, @Tenant() ctx: TenantRequest) {
-    return this.svc.create(body, ctx.userId || undefined, { manager: ctx.manager as EntityManager });
-  }
-
   /**
-   * The screen creates a line at its title (`budget-line-creation.ts`): the title, `nature`,
-   * `currency`, `effective_start` and, when given, `paying_company_id` and `cost_center_id`; no
-   * paying company or required dimension yet. Hands the creator a creation token (`common/creation`)
-   * for "Create" (`POST :id/creation/complete`) and "Cancel" (`DELETE :id/creation`), on this line
-   * and for this person only. `POST /budget-lines` keeps the full rules.
+   * A new line, complete (company, account, required dimensions: `item-write.util.ts`): the screen
+   * writes its draft here once the title and every starred field are given. Hands its creator a
+   * creation token, as the families created from a draft: the page's "Cancel"
+   * (`GET|DELETE :id/creation`) on this line and for this person only. The aliases
+   * `POST /spend-items` and `POST /capex-items` hand none.
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'member')
-  @Post('creation')
-  async createAtTitle(@Body() body: unknown, @Tenant() ctx: TenantRequest) {
-    const created = await this.svc.createAtTitle(body, ctx.userId || undefined, { manager: ctx.manager as EntityManager });
+  @Post()
+  async create(@Body() body: unknown, @Tenant() ctx: TenantRequest) {
+    const created = await this.svc.create(body, ctx.userId || undefined, { manager: ctx.manager as EntityManager });
     return withCreationToken(BUDGET_LINE_CREATION, created, ctx);
   }
 
@@ -292,16 +285,6 @@ export class BudgetLinesController {
   async creationChanges(@Param('id') id: string, @Query('token') token: string, @Tenant() ctx: TenantRequest) {
     assertCreationToken(BUDGET_LINE_CREATION, id, token, ctx);
     return this.svc.creationChanges(id, ctx.userId || '', { manager: ctx.manager as EntityManager });
-  }
-
-  /** "Create" of a line being created: 400 `CREATION_INCOMPLETE` (`params.fields`) while it lacks a field it needs. */
-  @UseGuards(PermissionGuard)
-  @RequireLevel('budget', 'member')
-  @Post(':id/creation/complete')
-  @HttpCode(200)
-  async completeCreation(@Param('id') id: string, @Body() body: { token?: string }, @Tenant() ctx: TenantRequest) {
-    assertCreationToken(BUDGET_LINE_CREATION, id, body?.token, ctx);
-    return this.svc.completeCreation(id, { manager: ctx.manager as EntityManager });
   }
 
   /**

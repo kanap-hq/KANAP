@@ -163,19 +163,22 @@ function createBody(kind: Kind, companyId: string, name: string, extra: Record<s
 }
 
 async function testApiAlias(kind: Kind) {
-  await withTenant(`${kind}-api`, async (runner, _tenantId, companyId) => {
+  await withTenant(`${kind}-api`, async (runner, tenantId, companyId) => {
     const svc = itemService(kind);
     const opts = { manager: runner.manager };
+    // A new line needs an account: the company's account 6000.
+    const [{ id: accountId }] = await runner.query(`SELECT id FROM accounts WHERE tenant_id = $1 AND account_number = 6000`, [tenantId]);
+    const body = (name: string, extra: Record<string, unknown>) => createBody(kind, companyId, name, { account_id: accountId, ...extra });
     const iso = (d: unknown) => (d ? new Date(d as any).toISOString() : null);
 
-    const onlyLegacy = await svc.create(createBody(kind, companyId, 'Api legacy', { effective_end: '2031-06-30' }), undefined, opts);
+    const onlyLegacy = await svc.create(body('Api legacy', { effective_end: '2031-06-30' }), undefined, opts);
     assert.equal(iso(onlyLegacy.disabled_at), '2031-06-30T12:00:00.000Z', `${kind} create: effective_end alone sets the end of validity at noon UTC`);
     assert.equal(onlyLegacy.status, 'enabled');
 
-    const both = await svc.create(createBody(kind, companyId, 'Api both', { effective_end: '2031-06-30', disabled_at: '2031-09-30T21:59:00.000Z' }), undefined, opts);
+    const both = await svc.create(body('Api both', { effective_end: '2031-06-30', disabled_at: '2031-09-30T21:59:00.000Z' }), undefined, opts);
     assert.equal(iso(both.disabled_at), '2031-09-30T21:59:00.000Z', `${kind} create: a given disabled_at wins`);
 
-    const plain = await svc.create(createBody(kind, companyId, 'Api plain', { disabled_at: '2031-01-31T22:59:00.000Z' }), undefined, opts);
+    const plain = await svc.create(body('Api plain', { disabled_at: '2031-01-31T22:59:00.000Z' }), undefined, opts);
     assert.equal(iso(plain.disabled_at), '2031-01-31T22:59:00.000Z', `${kind} create: disabled_at is accepted on create`);
 
     const updated = await svc.update(plain.id, { effective_end: '2032-03-31' }, undefined, opts);
@@ -187,7 +190,7 @@ async function testApiAlias(kind: Kind) {
     const untouched = await svc.update(plain.id, { effective_end: null, notes: 'n' }, undefined, opts);
     assert.equal(iso(untouched.disabled_at), '2032-12-31T12:00:00.000Z', `${kind} update: a null effective_end never clears`);
 
-    const bareDay = await svc.create(createBody(kind, companyId, 'Api bare day', { disabled_at: '2031-06-30' }), undefined, opts);
+    const bareDay = await svc.create(body('Api bare day', { disabled_at: '2031-06-30' }), undefined, opts);
     assert.equal(iso(bareDay.disabled_at), '2031-06-30T12:00:00.000Z', `${kind} create: a bare disabled_at day is noon UTC, as everywhere else`);
 
     const legacyTimestamp = await svc.update(bareDay.id, { effective_end: '2031-12-31T00:00:00Z' }, undefined, opts);

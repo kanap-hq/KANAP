@@ -459,10 +459,8 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     allowed: {
       bulkUpdate: `${LINE_WRITE}; each line through the update of one line, the lines of the filters read under the person's access, a line outside it counted not_found; Kad's bulk_update_budget_lines runs the same service in the transaction of its tool call and of its approval, under the same access`, // POST bulk-update
       cancelCreation: 'cancel of a line being created, by its creator with its creation token (that line only): the service checks the token itself, locks the line under the policies, refuses a line another person wrote on or a line continues, then a limited person\'s delete runs in withCreatorCancelAccess, for the person whose access applies only', // DELETE :id/creation
-      completeCreation: 'the check of a line being created (read), with its creation token', // POST :id/creation/complete
       contractConsistency: READ, // GET :id/contract-consistency
       create: LINE_WRITE, // POST (root)
-      createAtTitle: `${LINE_WRITE}; created at its title, the placement rule applies (a limited person gives a place)`, // POST creation
       creationChanges: 'the preflight of the cancel of a line being created (read), with its creation token', // GET :id/creation
       exportBudgetFile: BUDGET_FILE, // GET budget-file/export
       get: READ, // GET :ref

@@ -92,10 +92,10 @@ function allocationsService(kind: Kind, runner: QueryRunner, audit: AuditService
     : new CapexAllocationsService(runner.manager.getRepository(SpendAllocation), runner.manager.getRepository(SpendVersion), calculator as any, audit);
 }
 
-async function createLine(kind: Kind, runner: QueryRunner, audit: AuditService, companyId: string): Promise<string> {
+async function createLine(kind: Kind, runner: QueryRunner, audit: AuditService, companyId: string, accountId: string): Promise<string> {
   const body = kind === 'opex'
-    ? { product_name: 'History OPEX', currency: 'EUR', effective_start: `${YEAR}-01-01`, paying_company_id: companyId }
-    : { description: 'History CAPEX', currency: 'EUR', effective_start: `${YEAR}-01-01`, paying_company_id: companyId };
+    ? { product_name: 'History OPEX', currency: 'EUR', effective_start: `${YEAR}-01-01`, paying_company_id: companyId, account_id: accountId }
+    : { description: 'History CAPEX', currency: 'EUR', effective_start: `${YEAR}-01-01`, paying_company_id: companyId, account_id: accountId };
   const created = await itemsService(kind, runner, audit).create(body, undefined, { manager: runner.manager });
   return String(created.id);
 }
@@ -141,12 +141,12 @@ async function testNature(kind: Kind) {
     const tenantId = await seedTenant(runner, `audit-parent-${kind}`);
     await setTenant(runner, tenantId);
     const audit = realAudit(runner);
-    const { companyId } = await seedCompany(runner, tenantId, `Audit parent ${kind}`);
+    const { companyId, accountId } = await seedCompany(runner, tenantId, `Audit parent ${kind}`);
     const contactId = await seedContact(runner, tenantId);
     const storage = { putObject: async () => undefined, deleteObject: async () => undefined };
     const items = itemsService(kind, runner, audit, storage);
 
-    const lineId = await createLine(kind, runner, audit, companyId);
+    const lineId = await createLine(kind, runner, audit, companyId, accountId);
     const versionId = await seedVersion(runner, tenantId, lineId);
 
     // An amount (its round input rides along on some writes).
@@ -235,10 +235,10 @@ async function testLinksFromBothSides() {
     await setTenant(runner, tenantId);
     const audit = realAudit(runner);
     const manager = runner.manager;
-    const { companyId } = await seedCompany(runner, tenantId, 'Audit parent links');
-    const line = await createLine('opex', runner, audit, companyId);
-    const second = await createLine('opex', runner, audit, companyId);
-    const capexLine = await createLine('capex', runner, audit, companyId);
+    const { companyId, accountId } = await seedCompany(runner, tenantId, 'Audit parent links');
+    const line = await createLine('opex', runner, audit, companyId, accountId);
+    const second = await createLine('opex', runner, audit, companyId, accountId);
+    const capexLine = await createLine('capex', runner, audit, companyId, accountId);
     const app = await insertId(runner, `INSERT INTO applications (tenant_id, name, sequential_id, status) VALUES ($1, 'History app', 'APP-1', 'enabled')`, [tenantId]);
     const tech = await insertId(runner, `INSERT INTO technologies (tenant_id, name, item_number) VALUES ($1, 'History tech', 1)`, [tenantId]);
     const asset = await insertId(runner, `INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, 'srv-history', 'server', 'prod')`, [tenantId]);
@@ -314,10 +314,10 @@ async function testBudgetLinkFamilies() {
     await setTenant(runner, tenantId);
     const audit = realAudit(runner);
     const manager = runner.manager;
-    const { companyId } = await seedCompany(runner, tenantId, 'Audit parent budget links');
-    const line = await createLine('opex', runner, audit, companyId);
-    const second = await createLine('opex', runner, audit, companyId);
-    const capexLine = await createLine('capex', runner, audit, companyId);
+    const { companyId, accountId } = await seedCompany(runner, tenantId, 'Audit parent budget links');
+    const line = await createLine('opex', runner, audit, companyId, accountId);
+    const second = await createLine('opex', runner, audit, companyId, accountId);
+    const capexLine = await createLine('capex', runner, audit, companyId, accountId);
     const project = await insertId(
       runner,
       `INSERT INTO portfolio_projects (tenant_id, item_number, name) VALUES ($1, 41, 'History project')`,

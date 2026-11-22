@@ -55,7 +55,8 @@ import { CapexItemsService, SpendItemsService } from './spend-items.service';
  *   (`predecessor_id`, migration 1854000000000); one successor per line.
  *
  * Rules (U4): an account kept for the other type is kept in place (a soft rule: an account chosen
- * in the dialog must fit the new type); the required dimensions of the new type are asked, and
+ * in the dialog must fit the new type); the new line of a dated change needs an account, as any new
+ * line (lot L3a: the old line's when it fits, or the one the dialog gives); the required dimensions of the new type are asked, and
  * missing ones are tolerated in place as on any existing line (D2), required on the new line of a
  * dated change (the creation refuses a line without them); a frozen column of either type holding
  * an amount in the years that change refuses the change (409). The dialog sends the line's
@@ -586,7 +587,7 @@ export class BudgetLineTypeChangeService {
 type ChangeInput = {
   rowVersion: number;
   fromYear: number | null;
-  /** Undefined: not given (the line keeps its account); null is refused in place, empty on a new line. */
+  /** Undefined: not given (the line keeps its account, a new line takes the old one's when it fits); null is refused. */
   accountId: string | null | undefined;
   analyticsValues: Record<string, string | null> | undefined;
   reason: string | null;

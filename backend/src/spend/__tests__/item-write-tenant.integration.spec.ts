@@ -119,7 +119,7 @@ async function testForeignIdsRefused(kind: Kind) {
 
     for (const [field, id, message] of foreignFields(kind, a)) {
       // Every other field keeps B's company; the legacy company_id alias stands alone.
-      const createBody = lineBody(kind, `Foreign ${field}`, { paying_company_id: b.companyId, [field]: id });
+      const createBody = lineBody(kind, `Foreign ${field}`, { paying_company_id: b.companyId, account_id: b.accountId, [field]: id });
       if (field === 'company_id') delete createBody.paying_company_id;
       const onCreate = await refusal(runner, () => svc.create(createBody, undefined, opts));
       assert.equal(onCreate.message, message, `${kind} create ${field}`);
@@ -166,6 +166,7 @@ async function testTechnicalColumnsIgnored(kind: Kind) {
     const forcedId = randomUUID();
     const saved = await svc.create(lineBody(kind, 'Technical columns', {
       paying_company_id: b.companyId,
+      account_id: b.accountId,
       id: forcedId,
       tenant_id: a.tenantId,
       item_number: 987654,
@@ -200,7 +201,7 @@ async function testCostCenterAssignment(kind: Kind) {
     assert.equal(onDisabled.message, 'This cost center is disabled.');
 
     // A line on a node that is disabled afterwards keeps it through any update.
-    const line = await svc.create(lineBody(kind, 'Kept', { paying_company_id: b.companyId, cost_center_id: b.costCenterId }), undefined, opts);
+    const line = await svc.create(lineBody(kind, 'Kept', { paying_company_id: b.companyId, account_id: b.accountId, cost_center_id: b.costCenterId }), undefined, opts);
     await disableCostCenter(runner, b.costCenterId);
     await svc.update(line.id, { notes: 'edited' }, undefined, opts);
     await svc.update(line.id, { cost_center_id: b.costCenterId, notes: 'edited again' }, undefined, opts);
@@ -220,11 +221,13 @@ async function testCompanyFill(kind: Kind) {
     const svc = itemService(kind);
     const opts = { manager: runner.manager };
     const other = await seedCompany(runner, b.tenantId, 'Other company', 7000);
+    // Both companies on one chart: a new line needs an account, which must stay on the chart of the refilled company.
+    await runner.query(`UPDATE companies SET coa_id = (SELECT coa_id FROM accounts WHERE id = $2) WHERE id = $1`, [other.companyId, b.accountId]);
 
     const filled = await svc.create(lineBody(kind, 'Filled', { cost_center_id: b.costCenterId, account_id: b.accountId }), undefined, opts);
     assert.equal((await readLine(runner, kind, filled.id)).paying_company_id, b.companyId, `${kind}: the company comes from the cost center`);
 
-    const kept = await svc.create(lineBody(kind, 'Explicit', { paying_company_id: other.companyId, cost_center_id: b.costCenterId }), undefined, opts);
+    const kept = await svc.create(lineBody(kind, 'Explicit', { paying_company_id: other.companyId, account_id: b.accountId, cost_center_id: b.costCenterId }), undefined, opts);
     assert.equal((await readLine(runner, kind, kept.id)).paying_company_id, other.companyId, `${kind}: an explicit company is kept`);
 
     const none = await refusal(runner, () => svc.create(lineBody(kind, 'No company'), undefined, opts));
@@ -270,7 +273,7 @@ async function testRunBuild(kind: Kind) {
   await withTenants(async (runner, _a, b) => {
     const svc = itemService(kind);
     const opts = { manager: runner.manager };
-    const line = await svc.create(lineBody(kind, 'Run line', { paying_company_id: b.companyId, run_build: 'run' }), undefined, opts);
+    const line = await svc.create(lineBody(kind, 'Run line', { paying_company_id: b.companyId, account_id: b.accountId, run_build: 'run' }), undefined, opts);
     assert.equal((await readLine(runner, kind, line.id)).run_build, 'run');
     const invalid = await refusal(runner, () => svc.update(line.id, { run_build: 'maintain' }, undefined, opts));
     assert.equal(invalid.message, 'Run or build must be run, build or empty.');

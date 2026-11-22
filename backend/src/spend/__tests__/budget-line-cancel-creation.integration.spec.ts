@@ -3,6 +3,8 @@ import 'dotenv/config';
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import type { QueryRunner } from 'typeorm';
+import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
+import { RequestMethod } from '@nestjs/common';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import { AuditLog } from '../../audit/audit.entity';
 import { AuditService } from '../../audit/audit.service';
@@ -17,23 +19,23 @@ import { CapexItemsDeleteService, SpendItemsDeleteService } from '../spend-items
 import { SpendItem } from '../spend-item.entity';
 import { itemService, refusal, seedCompany, seedCostCenter, seedUser } from './cost-center.fixtures';
 import { deps } from './budget-lines.fixtures';
-import { typeChangeService } from './budget-line-type-change.fixtures';
 import { inRolledBackTransaction, runSpecs, seedTenant, setTenant } from './round-inputs.fixtures';
 
-// A budget line created at its title (lot 1c of the creation frame):
-// - `POST /budget-lines/creation` creates it from the title, with no paying company and no required
-//   dimension, and hands its creator a token; `POST /budget-lines` still refuses a line without company;
-// - an update leaves a company-less line without company, and may never clear the company a line holds;
-// - `POST :id/creation/complete` refuses (`CREATION_INCOMPLETE`, `params.fields`) while the line
-//   lacks its company, its account or a required dimension, then succeeds;
+// A budget line is created complete, from the screen's draft (lot L3a, decision D36):
+// - `POST /budget-lines` writes it with its company, account and required dimensions, and hands its
+//   creator a token; the routes of the creation at the title are gone (`POST /budget-lines/creation`,
+//   `POST :id/creation/complete`: no route answers them), and the item service's `creation` option
+//   exempts nothing any more;
+// - an update may leave a line stored without company without one, and may never clear the company a
+//   line holds;
 // - `GET :id/creation` counts what was written since; `DELETE :id/creation` deletes the line for its
 //   creator at the member level; another person, another line's token, none or an expired one is
 //   refused (`CREATION_CANCEL_EXPIRED`), and so is a line another person wrote on or that a line
 //   continues; the creator's own edits keep the cancel open; the service checks the token itself;
-// - a person whose data access is limited: a creation without a place is refused, with one it is
-//   allowed, and the cancel deletes the line (outside the limited role for that delete only), the
-//   limited role and mode back afterwards, the attachment files removed only then; the window
-//   refuses a person other than the one whose access the transaction runs under.
+// - a person whose data access is limited: a line placed outside the access is refused, on their
+//   company it is created with its token, and the cancel deletes the line (outside the limited role
+//   for that delete only), the limited role and mode back afterwards, the attachment files removed
+//   only then; the window refuses a person other than the one whose access the transaction runs under.
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'budget-line-creation-spec-secret';
 
@@ -72,6 +74,7 @@ type Seed = {
   companyId: string;
   accountId: string;
   otherCompanyId: string;
+  otherAccountId: string;
   axisId: string;
   categoryId: string;
 };
@@ -80,7 +83,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
   const tenantId = await seedTenant(runner, 'line-creation');
   const tag = tenantId.slice(0, 8);
   const { companyId, accountId } = await seedCompany(runner, tenantId, `${tag} company`);
-  const { companyId: otherCompanyId } = await seedCompany(runner, tenantId, `${tag} other company`, 6100);
+  const { companyId: otherCompanyId, accountId: otherAccountId } = await seedCompany(runner, tenantId, `${tag} other company`, 6100);
   await seedCostCenter(runner, tenantId, { code: `CC-${tag}`, name: 'Centre', companyId });
   const creatorId = await seedUser(runner, tenantId, `creator-${tag}@example.com`);
   const otherId = await seedUser(runner, tenantId, `other-${tag}@example.com`);
@@ -99,15 +102,37 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     `INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, 'Starter') RETURNING id`,
     [tenantId, axis.id],
   );
-  return { tenantId, creatorId, otherId, limitedId, companyId, accountId, otherCompanyId, axisId: axis.id, categoryId: category.id };
+  return { tenantId, creatorId, otherId, limitedId, companyId, accountId, otherCompanyId, otherAccountId, axisId: axis.id, categoryId: category.id };
 }
 
 function ctx(s: Seed, userId: string, runner: QueryRunner) {
   return { tenantId: s.tenantId, userId, isAdmin: false, manager: runner.manager } as any;
 }
 
-function titleBody(name: string, extra: Record<string, unknown> = {}) {
-  return { nature: 'opex', product_name: name, currency: 'EUR', effective_start: TODAY, ...extra };
+/** A complete line: its company, its account and its value on the required dimension. */
+function lineBody(s: Seed, name: string, extra: Record<string, unknown> = {}) {
+  return {
+    nature: 'opex',
+    product_name: name,
+    currency: 'EUR',
+    effective_start: TODAY,
+    paying_company_id: s.companyId,
+    account_id: s.accountId,
+    analytics_values: { [s.axisId]: s.categoryId },
+    ...extra,
+  };
+}
+
+/** The POST routes of the controller that would answer `path` (relative to `/budget-lines`). */
+function postRoutesAnswering(path: string): string[] {
+  const proto = BudgetLinesController.prototype as any;
+  return Object.getOwnPropertyNames(proto).filter((name) => {
+    if (name === 'constructor' || typeof proto[name] !== 'function') return false;
+    const route = Reflect.getMetadata(PATH_METADATA, proto[name]);
+    if (typeof route !== 'string' || Reflect.getMetadata(METHOD_METADATA, proto[name]) !== RequestMethod.POST) return false;
+    const pattern = new RegExp(`^${route.replace(/^\/+|\/+$/g, '').split('/').map((part) => (part.startsWith(':') ? '[^/]+' : part)).join('/')}$`);
+    return pattern.test(path);
+  });
 }
 
 async function lineCount(runner: QueryRunner, s: Seed, id: string): Promise<number> {
@@ -115,76 +140,61 @@ async function lineCount(runner: QueryRunner, s: Seed, id: string): Promise<numb
   return n;
 }
 
-async function incompleteFields(promise: Promise<unknown>): Promise<string[]> {
-  try {
-    await promise;
-  } catch (err: any) {
-    const body = err?.getResponse?.();
-    assert.equal(body?.code, 'CREATION_INCOMPLETE', `incomplete expected, got ${err?.message}`);
-    return body.params.fields;
-  }
-  throw new Error('expected CREATION_INCOMPLETE');
-}
-
 function testRoutesNeedTheMemberLevel() {
-  for (const method of ['createAtTitle', 'creationChanges', 'completeCreation', 'cancelCreation'] as const) {
+  for (const method of ['create', 'creationChanges', 'cancelCreation'] as const) {
     const meta = Reflect.getMetadata(REQUIRE_LEVEL_KEY, (BudgetLinesController.prototype as any)[method]);
     assert.deepEqual(meta, { resource: 'budget', level: 'member' }, `${method} needs budget:member`);
   }
 }
 
-async function testTitleCreationCompleteAndCancel() {
+// The routes of the creation at the title are gone: Nest answers 404 to a path no route matches.
+function testTitleRoutesAreGone() {
+  assert.deepEqual(postRoutesAnswering('creation'), [], 'no route answers POST /budget-lines/creation');
+  assert.deepEqual(postRoutesAnswering('3f1c2b9e-1d2a-4c3b-9e8f-0a1b2c3d4e5f/creation/complete'), [], 'no route answers POST /budget-lines/:id/creation/complete');
+  assert.deepEqual(postRoutesAnswering(''), ['create'], 'POST /budget-lines is the one create route');
+}
+
+async function testCompleteCreationAndCancel() {
   await inRolledBackTransaction(async (runner) => {
     const s = await seed(runner);
     const { svc, controller } = services(runner);
     const asCreator = ctx(s, s.creatorId, runner);
+    const { nature: _nature, ...opexFields } = lineBody(s, 'Exempted');
 
-    // The full create still needs a company.
-    const full = await refusal(runner, () => svc.create(titleBody('Full create'), s.creatorId, { manager: runner.manager }));
-    assert.match(full.message, /Paying company is required/);
+    // A line is complete from its creation, whatever the caller asks: the option of the creation at
+    // the title exempts nothing any more.
+    const items = itemService('opex');
+    const untitled = await refusal(runner, () => items.create({ ...opexFields, paying_company_id: undefined, account_id: undefined, analytics_values: undefined }, s.creatorId, { manager: runner.manager, fields: 'columns', native: true, creation: true }));
+    assert.match(untitled.message, /Paying company is required/, 'no company: refused, even with the old option');
+    const accountless = await refusal(runner, () => items.create({ ...opexFields, account_id: undefined }, s.creatorId, { manager: runner.manager, fields: 'columns', native: true, creation: true }));
+    assert.equal(accountless.message, 'Account is required.', 'no account: refused, even with the old option');
+    const valueless = await refusal(runner, () => items.create({ ...opexFields, analytics_values: undefined }, s.creatorId, { manager: runner.manager, fields: 'columns', native: true, creation: true }));
+    assert.match(valueless.message, /Menu dimension is required/, 'no value on a required dimension: refused, even with the old option');
 
-    // Title only: no company, no account, no value on the required dimension. Other body fields are dropped.
-    const created: any = await controller.createAtTitle(titleBody('Monitoring', { notes: 'dropped', account_id: s.accountId }), asCreator);
+    // The complete line: written with everything, and a token for its creator.
+    const created: any = await controller.create(lineBody(s, 'Monitoring', { notes: 'Written with the line' }), asCreator);
     assert.equal(typeof created.creation_token, 'string', 'a creation token');
     assert.ok(created.item_number > 0, 'a reference');
     const [row] = await runner.query(`SELECT * FROM spend_items WHERE id = $1`, [created.id]);
-    assert.equal(row.paying_company_id, null);
-    assert.equal(row.account_id, null);
-    assert.equal(row.notes, null, 'only the creation fields are written');
-    assert.equal(row.product_name, 'Monitoring');
-    const other: any = await controller.createAtTitle(titleBody('Another'), asCreator);
-
-    // Updates of a company-less line: another field, then the company, never cleared afterwards.
-    await svc.update(created.id, { notes: 'Typed while creating' }, s.creatorId, { manager: runner.manager });
-    const nulled: any = await svc.update(created.id, { paying_company_id: null, description: 'still none' }, s.creatorId, { manager: runner.manager });
-    assert.equal(nulled.paying_company_id ?? null, null, 'a company-less line stays without company');
     assert.deepEqual(
-      await incompleteFields(controller.completeCreation(created.id, { token: created.creation_token }, asCreator)),
-      ['paying_company', 'account', `dimension:${s.axisId}`],
+      [row.paying_company_id, row.account_id, row.notes, row.product_name],
+      [s.companyId, s.accountId, 'Written with the line', 'Monitoring'],
     );
-    await svc.update(created.id, { paying_company_id: s.companyId }, s.creatorId, { manager: runner.manager });
+    const other: any = await controller.create(lineBody(s, 'Another'), asCreator);
+
+    // A held company is never cleared.
+    await svc.update(created.id, { description: 'Typed after the creation' }, s.creatorId, { manager: runner.manager });
     const cleared = await refusal(runner, () => svc.update(created.id, { paying_company_id: null }, s.creatorId, { manager: runner.manager }));
     assert.match(cleared.message, /Paying company is required/, 'a held company cannot be cleared');
-    assert.deepEqual(
-      await incompleteFields(controller.completeCreation(created.id, { token: created.creation_token }, asCreator)),
-      ['account', `dimension:${s.axisId}`],
-    );
-    await svc.update(created.id, { account_id: s.accountId, analytics_values: { [s.axisId]: s.categoryId } }, s.creatorId, { manager: runner.manager });
-    assert.deepEqual(await controller.completeCreation(created.id, { token: created.creation_token }, asCreator), { ok: true });
-    // A company on another chart than the account: the account is no longer valid.
-    await runner.query(`UPDATE spend_items SET paying_company_id = $2 WHERE id = $1`, [created.id, s.otherCompanyId]);
-    assert.deepEqual(await incompleteFields(controller.completeCreation(created.id, { token: created.creation_token }, asCreator)), ['account']);
-    await runner.query(`UPDATE spend_items SET paying_company_id = $2 WHERE id = $1`, [created.id, s.companyId]);
 
-    // What was written since the creation: fields (notes, description, company, account, dimension).
+    // What was written since the creation.
     const changes: any = await controller.creationChanges(created.id, created.creation_token, asCreator);
-    assert.ok(changes.changes.fields >= 4, `fields changed since the creation: ${JSON.stringify(changes)}`);
+    assert.ok(changes.changes.fields >= 1, `fields changed since the creation: ${JSON.stringify(changes)}`);
     const fresh: any = await controller.creationChanges(other.id, other.creation_token, asCreator);
     assert.deepEqual(fresh, { changes: { fields: 0, children: {} } }, 'nothing written on the other line');
 
     // Refused: another person, another line's token, none, an expired one, a reference instead of the id.
     await refusedAsExpired(controller.creationChanges(created.id, created.creation_token, ctx(s, s.otherId, runner)), 'other user, preflight');
-    await refusedAsExpired(controller.completeCreation(created.id, { token: created.creation_token }, ctx(s, s.otherId, runner)), 'other user, complete');
     await refusedAsExpired(controller.cancelCreation(created.id, { token: created.creation_token }, ctx(s, s.otherId, runner)), 'other user');
     await refusedAsExpired(controller.cancelCreation(created.id, { token: other.creation_token }, asCreator), 'other line');
     await refusedAsExpired(controller.cancelCreation(created.id, {}, asCreator), 'no token');
@@ -205,8 +215,8 @@ async function testTitleCreationCompleteAndCancel() {
     await refusedAsExpired(controller.cancelCreation(other.id, { token: other.creation_token }, asCreator), 'another author');
 
     // A line that another line continues: its delete would unlink it, so the cancel is over too.
-    const continued: any = await controller.createAtTitle(titleBody('Continued'), asCreator);
-    const successor: any = await controller.createAtTitle(titleBody('Successor'), asCreator);
+    const continued: any = await controller.create(lineBody(s, 'Continued'), asCreator);
+    const successor: any = await controller.create(lineBody(s, 'Successor'), asCreator);
     await runner.query(`UPDATE spend_items SET predecessor_id = $3 WHERE tenant_id = $1 AND id = $2`, [s.tenantId, successor.id, continued.id]);
     await refusedAsExpired(controller.creationChanges(continued.id, continued.creation_token, asCreator), 'successor, preflight');
     await refusedAsExpired(controller.cancelCreation(continued.id, { token: continued.creation_token }, asCreator), 'successor');
@@ -220,64 +230,21 @@ async function testTitleCreationCompleteAndCancel() {
   });
 }
 
-// The type of a line being created (sprint 26.11.9, lot N1): the title creates a CAPEX line, and the
-// screen changes its type in place through the type change route, with no account or value given.
-async function testTypeAtTitleAndInPlaceWhileCreating() {
+// A line stored without company (left by the creation at the title of earlier versions) stays editable.
+async function testStoredLineWithoutCompanyStillUpdates() {
   await inRolledBackTransaction(async (runner) => {
     const s = await seed(runner);
-    const { svc, controller } = services(runner);
-    const typeChange = typeChangeService(runner);
-    const asCreator = ctx(s, s.creatorId, runner);
-    const opts = { manager: runner.manager, tenantId: s.tenantId };
-    const natureOf = async (id: string) => (await runner.query(
-      `SELECT nature, item_number, legacy_number FROM spend_items WHERE tenant_id = $1 AND id = $2`,
-      [s.tenantId, id],
-    ))[0];
-
-    // CAPEX at the title: no company, account or value, a CPX number as any CAPEX creation.
-    const created: any = await controller.createAtTitle(titleBody('Server', { nature: 'capex' }), asCreator);
-    const first = await natureOf(created.id);
-    assert.equal(first.nature, 'capex');
-    assert.match(String(first.legacy_number), /^CPX-\d+$/);
-    assert.deepEqual(
-      await incompleteFields(controller.completeCreation(created.id, { token: created.creation_token }, asCreator)),
-      ['paying_company', 'account', `dimension:${s.axisId}`],
+    const { svc } = services(runner);
+    const [row] = await runner.query(
+      `INSERT INTO spend_items (tenant_id, nature, product_name, currency, effective_start, status, item_number)
+       VALUES ($1, 'opex', 'Left at its title', 'EUR', $2, 'enabled', (SELECT COALESCE(MAX(item_number), 0) + 1 FROM spend_items WHERE tenant_id = $1))
+       RETURNING id`,
+      [s.tenantId, TODAY],
     );
-
-    // No year given: the change is in place, nothing blocks it, nothing is asked for in place.
-    const check = await typeChange.check('capex', created.id, {}, opts);
-    assert.equal(check.mode, 'in_place');
-    assert.equal(check.from_year, check.first_year, 'the line\'s first year, or none');
-    assert.deepEqual(check.blockers, []);
-    assert.ok(check.dimensions.every((dimension) => !dimension.required), 'nothing required in place');
-    const toOpex = await typeChange.change('capex', created.id, { row_version: check.row_version }, s.creatorId, opts);
-    assert.deepEqual({ id: toOpex.id, nature: toOpex.nature }, { id: created.id, nature: 'opex' });
-    const second = await natureOf(created.id);
-    assert.equal(second.nature, 'opex');
-    assert.equal(second.item_number, first.item_number, 'the BL number stays');
-
-    // An OPEX-only account chosen, then the type back to CAPEX: the account stays on the line, and
-    // Create names it, since it does not suit the new type.
-    const [opexAccount] = await runner.query(
-      `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name, nature)
-       SELECT tenant_id, coa_id, 6200, 'Opex only', 'opex' FROM companies WHERE tenant_id = $1 AND id = $2 RETURNING id`,
-      [s.tenantId, s.companyId],
-    );
-    await svc.update(created.id, { paying_company_id: s.companyId, account_id: opexAccount.id, analytics_values: { [s.axisId]: s.categoryId } }, s.creatorId, { manager: runner.manager });
-    assert.deepEqual(await controller.completeCreation(created.id, { token: created.creation_token }, asCreator), { ok: true });
-    const back = await typeChange.check('opex', created.id, {}, opts);
-    assert.equal(back.account?.fits, false, 'the check says the account does not suit CAPEX');
-    await typeChange.change('opex', created.id, { row_version: back.row_version }, s.creatorId, opts);
-    const third = await natureOf(created.id);
-    assert.equal(third.nature, 'capex');
-    assert.equal(third.legacy_number, first.legacy_number, 'its CPX number again');
-    const [kept] = await runner.query(`SELECT account_id FROM spend_items WHERE tenant_id = $1 AND id = $2`, [s.tenantId, created.id]);
-    assert.equal(kept.account_id, opexAccount.id, 'the account is kept');
-    assert.deepEqual(await incompleteFields(controller.completeCreation(created.id, { token: created.creation_token }, asCreator)), ['account']);
-
-    // The creator's own type changes keep the cancel open: the line goes, under its creator.
-    await controller.cancelCreation(created.id, { token: created.creation_token }, asCreator);
-    assert.equal(await lineCount(runner, s, created.id), 0, 'the line is gone');
+    const edited: any = await svc.update(row.id, { notes: 'Still editable', paying_company_id: null }, s.creatorId, { manager: runner.manager });
+    assert.deepEqual([edited.notes, edited.paying_company_id ?? null], ['Still editable', null], 'a company-less line takes edits and stays without company');
+    const placed: any = await svc.update(row.id, { paying_company_id: s.companyId, account_id: s.accountId }, s.creatorId, { manager: runner.manager });
+    assert.deepEqual([placed.paying_company_id, placed.account_id], [s.companyId, s.accountId], 'then it is completed');
   });
 }
 
@@ -289,17 +256,12 @@ async function testLimitedPerson() {
     await setTenant(runner, s.tenantId);
     assert.equal(await applyDataAccess(runner, s.limitedId), 'limited');
 
-    // No place: refused by the placement rule; on their company: created.
-    const unplaced = await refusal(runner, () => controller.createAtTitle(titleBody('Nowhere'), asLimited));
-    assert.equal((unplaced as any).getResponse?.()?.code, 'DATA_ACCESS_LIMITED', `placement refusal, got ${unplaced.message}`);
-    const elsewhere = await refusal(runner, () => controller.createAtTitle(titleBody('Elsewhere', { paying_company_id: s.otherCompanyId }), asLimited));
-    assert.equal((elsewhere as any).getResponse?.()?.code, 'DATA_ACCESS_LIMITED', 'a company outside the access is refused');
-    const created: any = await controller.createAtTitle(titleBody('Placed', { paying_company_id: s.companyId }), asLimited);
+    // A company outside the access: refused by the placement rule; on their company: created, with a token.
+    const elsewhere = await refusal(runner, () => controller.create(lineBody(s, 'Elsewhere', { paying_company_id: s.otherCompanyId, account_id: s.otherAccountId }), asLimited));
+    assert.equal((elsewhere as any).getResponse?.()?.code, 'DATA_ACCESS_LIMITED', `placement refusal, got ${elsewhere.message}`);
+    const created: any = await controller.create(lineBody(s, 'Placed'), asLimited);
     assert.equal(created.paying_company_id, s.companyId);
-    assert.deepEqual(
-      await incompleteFields(controller.completeCreation(created.id, { token: created.creation_token }, asLimited)),
-      ['account', `dimension:${s.axisId}`],
-    );
+    assert.equal(typeof created.creation_token, 'string', 'a creation token for a limited person too');
 
     // The delete itself stays refused to the limited role (DELETE policy false)...
     await runner.query('SAVEPOINT direct_delete');
@@ -308,7 +270,7 @@ async function testLimitedPerson() {
     assert.equal(deleted[0].n, 0, 'the limited role deletes no line');
 
     // ...and the creator's cancel deletes it, for that line only.
-    const kept: any = await controller.createAtTitle(titleBody('Kept', { paying_company_id: s.companyId }), asLimited);
+    const kept: any = await controller.create(lineBody(s, 'Kept'), asLimited);
     const file = `spend/${created.id}/quote.pdf`;
     await runner.query(
       `INSERT INTO spend_attachments (tenant_id, spend_item_id, original_filename, stored_filename, storage_path)
@@ -344,7 +306,8 @@ async function testLimitedPerson() {
 
 void runSpecs('budget-line-cancel-creation.integration.spec', [
   ['routes need the member level', async () => testRoutesNeedTheMemberLevel()],
-  ['title creation, updates, complete and cancel', testTitleCreationCompleteAndCancel],
-  ['type at the title, changed in place while creating', testTypeAtTitleAndInPlaceWhileCreating],
+  ['the routes of the creation at the title are gone', async () => testTitleRoutesAreGone()],
+  ['a line created complete, its token, its cancel', testCompleteCreationAndCancel],
+  ['a stored line without company still takes edits', testStoredLineWithoutCompanyStillUpdates],
   ['limited person', testLimitedPerson],
 ]);

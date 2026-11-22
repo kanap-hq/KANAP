@@ -120,9 +120,9 @@ async function setup(tenantId: string, kind: Kind): Promise<Setup> {
   return seed(tenantId, async (runner) => {
     const marie = await seedPerson(runner, tenantId, 'Marie', 'Dupont');
     const jean = await seedPerson(runner, tenantId, 'Jean', 'Martin');
-    const { companyId } = await seedCompany(runner, tenantId, `Meta company ${kind}`);
+    const { companyId, accountId } = await seedCompany(runner, tenantId, `Meta company ${kind}`);
     const line = await itemService(kind, realAudit()).create(
-      lineBody(kind, `Meta line ${kind}`, { paying_company_id: companyId, notes: 'Start' }), marie, { manager: runner.manager },
+      lineBody(kind, `Meta line ${kind}`, { paying_company_id: companyId, account_id: accountId, notes: 'Start' }), marie, { manager: runner.manager },
     );
     // Seeded without an audit row, like an old version: its creation is its last change.
     const versionId = await seedVersion(runner, kind, tenantId, line.id, YEAR);

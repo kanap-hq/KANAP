@@ -60,13 +60,14 @@ vi.mock('../../auth/AuthContext', () => ({
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchBudgetRelationsCount: vi.fn(async () => 0) }));
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ properties, actions, children, notices, onTitleSave, onBack, onTabChange, metadata, itemReference, backLabel, nav: navigation, canEditTitle }: {
+  default: ({ properties, actions, children, notices, onTitleSave, onTitleDraftChange, onBack, onTabChange, metadata, itemReference, backLabel, nav: navigation, canEditTitle }: {
     canEditTitle?: boolean; itemReference?: string | null; backLabel?: string; properties?: React.ReactNode; actions?: React.ReactNode; notices?: React.ReactNode; children?: React.ReactNode; onTitleSave: (v: string) => void;
+    onTitleDraftChange?: (v: string) => void;
     onBack?: () => void; onTabChange?: (tab: string) => void; metadata?: React.ReactNode; nav?: { onNext?: () => void };
   }) => (
     <div data-testid="workspace-shell" data-can-edit-title={String(!!canEditTitle)}>
       <span data-testid="line-reference">{itemReference}</span><span>{backLabel}</span>
-      <button type="button" onClick={() => onTitleSave('Monitoring')}>set title</button>
+      <button type="button" onClick={() => { onTitleDraftChange?.('Monitoring'); onTitleSave('Monitoring'); }}>set title</button>
       <button type="button" onClick={() => onBack?.()}>back to list</button>
       <button type="button" onClick={() => onBack?.()}>close workspace</button>
       <button type="button" onClick={() => onTabChange?.('budget')}>budget tab</button>
@@ -82,7 +83,7 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
   const { useCostCenterNode } = await import('../../hooks/useCostCenterTree');
   return { default: (props: {
     costCenterId?: string;
-    nature: string; onNatureChange?: (v: string) => void; onChangeType?: () => void; section?: string;
+    nature: string; onNatureChange?: (v: string) => void; onChangeType?: () => void; draft?: boolean;
     mode: string; payingCompanyId: string; companyFollowsCostCenter?: boolean; accountId: string; onPayingCompanyChange: (v: string) => void;
     onAccountChange: (v: string) => void; onSupplierChange: (v: string) => void; onCostCenterChange: (v: string, node: { id: string; company_id: string | null } | null) => void;
     onRunBuildChange: (v: string) => void; analyticsValues: Record<string, string | null>;
@@ -94,7 +95,7 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
     <div
       data-cost-center={props.costCenterId}
       data-disabled={String(!!props.disabled)}
-      data-mode={props.mode} data-section={props.section ?? 'all'} data-company={props.payingCompanyId} data-account={props.accountId}
+      data-mode={props.mode} data-draft={String(!!props.draft)} data-company={props.payingCompanyId} data-account={props.accountId}
       data-company-follows={String(!!props.companyFollowsCostCenter)}
       data-analytics={JSON.stringify(props.analyticsValues)}
       data-references={JSON.stringify(props.references ?? null)}
@@ -361,26 +362,29 @@ describe('BudgetLinePage create', () => {
     mocked.post.mockReset();
     mocked.patch.mockReset();
     mocked.get.mockResolvedValue({ data: {} });
-    mocked.post.mockImplementation(async (url: string) => (url === '/budget-lines/creation'
-      ? { data: { id: ITEM_ID, item_number: 12, reference: 'BL-12', nature, product_name: 'Monitoring', currency: 'EUR', effective_start: yearStart, creation_token: 'token-1' } }
+    mocked.post.mockImplementation(async (url: string, body?: unknown) => (url === '/budget-lines'
+      ? { data: { id: ITEM_ID, item_number: 12, reference: 'BL-12', currency: 'EUR', effective_start: yearStart, ...(body as object), creation_token: 'token-1' } }
       : { data: {} }));
     placement.centreOnly = false;
     placement.start = { ready: true, companyId: null, needsChoice: false };
   });
+  const draft = () => document.querySelector('[data-draft="true"]') as HTMLElement;
+  const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
 
-  it('creates the line from its title alone, with the defaults, opens it and refreshes the dashboard tiles', async () => {
+  it('writes nothing for the title alone; with the company and the account, writes the line in one POST, opens it and refreshes the dashboard tiles', async () => {
     const { queryClient } = renderAt(`/ops/budget/new/overview`);
     seedDashboard(queryClient);
-    // The page to come is dimmed: the properties in their edit layout, but the head of the line
-    // (its type), live beside the title.
-    expect(document.querySelector('[data-testid="creation-preview"] [data-mode="edit"][data-section="rest"]')).not.toBeNull();
-    const head = document.querySelector('[data-mode="create"]');
-    expect(head).toHaveAttribute('data-section', 'head');
-    expect(head!.closest('[data-testid="creation-preview"]')).toBeNull();
+    // One panel: the new line's draft, in the edit layout.
+    expect(draft()).toHaveAttribute('data-mode', 'edit');
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    fireEvent.click(within(draft()).getByRole('button', { name: 'pick company' }));
+    await settle();
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.click(within(draft()).getByRole('button', { name: 'pick account' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    expect(mocked.post).toHaveBeenCalledWith('/budget-lines/creation', {
+    expect(mocked.post).toHaveBeenCalledWith('/budget-lines', {
       nature: lineNature, product_name: 'Monitoring', currency: 'EUR', effective_start: yearStart,
+      paying_company_id: 'company-1', account_id: 'account-1',
     });
     expect(await screen.findByTestId('capex-page')).toHaveAttribute('data-path', '/ops/budget/BL-12/overview');
     await expectDashboardInvalidated(queryClient);
@@ -389,63 +393,40 @@ describe('BudgetLinePage create', () => {
   it('fills the one company a limited access allows', async () => {
     placement.start = { ready: true, companyId: 'company-1', needsChoice: false };
     renderAt(`/ops/budget/new/overview`);
+    expect(draft()).toHaveAttribute('data-company', 'company-1');
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    fireEvent.click(within(draft()).getByRole('button', { name: 'pick account' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-1' });
+    expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-1', account_id: 'account-1' });
   });
 
-  it('waits for the place a limited access must choose before the title creates the line', async () => {
-    placement.start = { ready: true, companyId: null, needsChoice: true };
-    renderAt(`/ops/budget/new/overview`);
-    // The place is live, outside the dimmed preview.
-    const live = document.querySelector('[data-mode="create"]');
-    expect(live).not.toBeNull();
-    expect(live!.closest('[data-testid="creation-preview"]')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
-    expect(mocked.post).not.toHaveBeenCalled();
-    // A cost center brings its company, and the title creates the line on that place.
-    fireEvent.click(within(live as HTMLElement).getByRole('button', { name: 'pick cost center' }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
-    expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-2', cost_center_id: 'cc-2' });
-  });
-
-  it('asks for a cost center when the chosen company is allowed only through one', async () => {
+  it('waits for a cost center when the chosen company is allowed only through one', async () => {
     placement.start = { ready: true, companyId: null, needsChoice: true };
     placement.centreOnly = true;
     renderAt(`/ops/budget/new/overview`);
-    const live = document.querySelector('[data-mode="create"]') as HTMLElement;
-    fireEvent.click(within(live).getByRole('button', { name: 'pick company' }));
+    fireEvent.click(within(draft()).getByRole('button', { name: 'pick company' }));
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    fireEvent.click(within(draft()).getByRole('button', { name: 'pick account' }));
+    await settle();
     expect(mocked.post).not.toHaveBeenCalled();
-    fireEvent.click(within(live).getByRole('button', { name: 'pick cost center' }));
+    fireEvent.click(within(draft()).getByRole('button', { name: 'pick cost center' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-1', cost_center_id: 'cc-2' });
   });
 
-  it('keeps a paying company picked first when a cost center of another company is picked, then empties that cost center', async () => {
-    placement.start = { ready: true, companyId: null, needsChoice: true };
-    const node = (id: string, company: string) => ({
-      id, code: id.toUpperCase(), name: id, kind: 'cost_center', parent_id: null, company_id: company, company_name: company,
-      owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null, sort_order: 0, depth: 0, path: id, path_ids: [id],
-    });
-    mocked.get.mockImplementation(async (url: string) => (url === '/cost-centers/tree'
-      ? { data: { items: [node('cc-2', 'company-2'), node('cc-3', 'company-3')] } }
-      : { data: {} }));
+  it('gives a cost center its company while the company is empty, keeps a company picked, then empties a cost center of another company', async () => {
     renderAt(`/ops/budget/new/overview`);
-    const live = () => document.querySelector('[data-mode="create"]') as HTMLElement;
-    fireEvent.click(within(live()).getByRole('button', { name: 'pick cost center' }));
-    expect(live()).toHaveAttribute('data-company', 'company-2');
-    expect(live()).toHaveAttribute('data-company-follows', 'true');
-    fireEvent.click(within(live()).getByRole('button', { name: 'pick third cost center' }));
-    expect(live()).toHaveAttribute('data-company', 'company-3');
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/cost-centers/tree'));
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
-    fireEvent.click(within(live()).getByRole('button', { name: 'pick company' }));
-    expect(live()).toHaveAttribute('data-company', 'company-1');
-    expect(live()).toHaveAttribute('data-company-follows', 'false');
-    expect(live()).toHaveAttribute('data-cost-center', '');
+    fireEvent.click(within(draft()).getByRole('button', { name: 'pick cost center' }));
+    expect(draft()).toHaveAttribute('data-company', 'company-2');
+    expect(draft()).toHaveAttribute('data-company-follows', 'true');
+    fireEvent.click(within(draft()).getByRole('button', { name: 'pick third cost center' }));
+    expect(draft()).toHaveAttribute('data-company', 'company-3');
+    fireEvent.click(within(draft()).getByRole('button', { name: 'pick company' }));
+    expect(draft()).toHaveAttribute('data-company', 'company-1');
+    expect(draft()).toHaveAttribute('data-company-follows', 'false');
+    expect(draft()).toHaveAttribute('data-cost-center', '');
+    await settle();
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 });
 

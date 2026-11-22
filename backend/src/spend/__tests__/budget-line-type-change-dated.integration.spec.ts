@@ -30,7 +30,8 @@ import { itemService } from './cost-center.fixtures';
 //   and names the old line (`predecessor_id`); the account of the other type and the values of the
 //   other type stay behind; each line gets an audit row and names the user in its meta; each
 //   workspace shows the other line;
-// - the new line goes through the creation of its type: a missing required dimension is refused;
+// - the new line goes through the creation of its type: a missing account (none carried, none
+//   given) or a missing required dimension is refused; the account given is the new line's;
 //   a year without a version, a line ending or starting too late, a line already continued, a
 //   frozen column in the years that move are refused; the years before do not count;
 // - a later end of validity moves to the new line; a budget file finds the new line by its BL number.
@@ -101,14 +102,24 @@ async function testFromYear() {
     }, 'two versions move; tasks, attachments and web links stay; contacts and links are copied');
     assert.equal(check.account.carried, false, 'the OPEX account is not copied');
 
-    // The new line passes the creation of its type: without the required dimension it is refused.
-    const missing = await statusOf(runner, () => opex.changeType(line.id, { row_version: check.row_version, from_year: 2026 }, ctx));
+    // The new line passes the creation of its type: without an account (the OPEX one is not copied,
+    // none given) it is refused, as any new line; without the required dimension too.
+    const noAccount = await statusOf(runner, () => opex.changeType(line.id, {
+      row_version: check.row_version, from_year: 2026, analytics_values: { [w.requiredAxis.id]: w.requiredAxis.first },
+    }, ctx));
+    assert.deepEqual([noAccount.status, noAccount.body.message], [400, 'Account is required.']);
+    const emptyAccount = await statusOf(runner, () => opex.changeType(line.id, {
+      row_version: check.row_version, from_year: 2026, account_id: null, analytics_values: { [w.requiredAxis.id]: w.requiredAxis.first },
+    }, ctx));
+    assert.deepEqual([emptyAccount.status, emptyAccount.body.message], [400, 'Account is required.']);
+    const missing = await statusOf(runner, () => opex.changeType(line.id, { row_version: check.row_version, from_year: 2026, account_id: w.accounts.capex }, ctx));
     assert.deepEqual([missing.status, missing.body.message], [400, requiredDimensionMessage({ name: 'Investment kind' })]);
-    assert.deepEqual(await lineChildren(runner, tenantId, line.id), children, 'nothing written by the refusal');
+    assert.deepEqual(await lineChildren(runner, tenantId, line.id), children, 'nothing written by the refusals');
 
     const result = await opex.changeType(line.id, {
       row_version: check.row_version,
       from_year: 2026,
+      account_id: w.accounts.capex,
       analytics_values: { [w.requiredAxis.id]: w.requiredAxis.first, [w.sharedAxis.id]: w.sharedAxis.both },
       reason: 'Capitalised from 2026',
     }, ctx);
@@ -135,7 +146,7 @@ async function testFromYear() {
       ['capex', '2026-01-01', null, line.id, `Line ${NUMBER}`, `Description of ${NUMBER}`, 'Seeded notes'],
     );
     assert.match(String(created.legacy_number), /^CPX-\d+$/, 'a CPX number');
-    assert.deepEqual([created.account_id, created.cost_center_id], [null, w.costCenterId], 'the OPEX account stays behind, the cost center is copied');
+    assert.deepEqual([created.account_id, created.cost_center_id], [w.accounts.capex, w.costCenterId], 'the OPEX account stays behind for the one given, the cost center is copied');
     const newChildren = await lineChildren(runner, tenantId, newId);
     assert.deepEqual(newChildren.versions, [line.versions[2026], line.versions[2027]].sort(), 'the same versions moved');
     const moved = new Set([line.versions[2026], line.versions[2027]]);
@@ -234,7 +245,7 @@ async function testLaterEndAndCapexSource() {
   await inRolledBackTransaction(async (runner) => {
     const { w, line, ctx, opex } = await seed(runner, { disabledAt: '2027-06-30T12:00:00Z' });
     const check = await opex.changeTypeCheck(line.id, '2027', ctx);
-    const result = await opex.changeType(line.id, { row_version: check.row_version, from_year: 2027, analytics_values: { [w.requiredAxis.id]: w.requiredAxis.second } }, ctx);
+    const result = await opex.changeType(line.id, { row_version: check.row_version, from_year: 2027, account_id: w.accounts.capex, analytics_values: { [w.requiredAxis.id]: w.requiredAxis.second } }, ctx);
     const created = (await storedLine(runner, w.tenantId, result.id))!;
     assert.deepEqual([created.effective_start, new Date(created.disabled_at!).toISOString()], ['2027-01-01', '2027-06-30T12:00:00.000Z']);
     const old = (await storedLine(runner, w.tenantId, line.id))!;

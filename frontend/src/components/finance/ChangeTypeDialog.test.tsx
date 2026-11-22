@@ -107,22 +107,53 @@ describe('ChangeTypeDialog', () => {
     });
   });
 
-  it('from a later year: the required dimension of the new line must be chosen; the account is sent for the new line', async () => {
-    const { onChanged } = renderDialog();
+  const chooseLaterYear = async () => {
     await screen.findByText('ops:shared.changeType.effects.inPlace');
     fireEvent.mouseDown(screen.getByLabelText('ops:shared.changeType.fromLabel'));
     const listbox = await screen.findByRole('listbox');
     fireEvent.click(within(listbox).getByText(/ops:shared\.changeType\.fromYear .*"year":2026/));
     expect(await screen.findByText(/ops:shared\.changeType\.effects\.dated .*"count":2/)).toBeInTheDocument();
+  };
+  const accountRow = () => screen.getByLabelText('ops:shared.changeType.accountLabel').closest('[data-required-field]');
+
+  it('from a later year: the new line needs its required dimension and an account; both are sent', async () => {
+    const { onChanged } = renderDialog();
+    await screen.findByText('ops:shared.changeType.effects.inPlace');
+    expect(accountRow()).toBeNull();
+    await chooseLaterYear();
     expect(mocked.get).toHaveBeenLastCalledWith(`/spend-items/${LINE}/change-type/check`, expect.objectContaining({ params: { from_year: 2026 } }));
+    // The account is marked required like the required dimension; the OPEX account is not copied.
+    expect(accountRow()).not.toBeNull();
+    expect(screen.getByLabelText('ops:shared.changeType.accountLabel')).toHaveValue('');
     expect(saveButton()).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Investment kind'), { target: { value: 'v-growth' } });
+    await waitFor(() => expect(screen.getByLabelText('Investment kind')).toHaveValue('v-growth'));
+    expect(saveButton()).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('ops:shared.changeType.accountLabel'), { target: { value: 'acc-capex' } });
     await waitFor(() => expect(saveButton()).toBeEnabled());
     fireEvent.click(saveButton());
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
     expect(mocked.post).toHaveBeenCalledWith(`/spend-items/${LINE}/change-type`, {
-      row_version: 4, from_year: 2026, analytics_values: { 'axis-kind': 'v-growth' }, account_id: null,
+      row_version: 4, from_year: 2026, analytics_values: { 'axis-kind': 'v-growth' }, account_id: 'acc-capex',
     });
+  });
+
+  it('from a later year: a refusal of the account is said under the field, and goes once another is chosen', async () => {
+    const message = 'This account is for OPEX lines only. Choose an account for CAPEX lines.';
+    mocked.post.mockRejectedValueOnce(Object.assign(new Error('HTTP 400'), { response: { status: 400, data: { message, statusCode: 400 } } }));
+    const { onChanged } = renderDialog();
+    await chooseLaterYear();
+    fireEvent.change(screen.getByLabelText('Investment kind'), { target: { value: 'v-growth' } });
+    fireEvent.change(screen.getByLabelText('ops:shared.changeType.accountLabel'), { target: { value: 'acc-opex-only' } });
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    fireEvent.click(saveButton());
+    const said = await screen.findByText(new RegExp(message));
+    expect(accountRow()).toContainElement(said);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByLabelText('ops:shared.changeType.accountLabel')).toHaveAttribute('aria-invalid', 'true');
+    expect(onChanged).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('ops:shared.changeType.accountLabel'), { target: { value: 'acc-capex' } });
+    await waitFor(() => expect(screen.queryByText(new RegExp(message))).toBeNull());
   });
 
   it('in place, an account chosen is sent; the one the line keeps is not', async () => {

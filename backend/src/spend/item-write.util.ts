@@ -42,10 +42,10 @@ import {
  *   write, a new contract readable; a clear 403 (or the 404 of a missing
  *   contract) before the database refuses.
  * - a line needs a paying company: a create without one is refused, and an update may never clear
- *   the company a line holds. A line created at its title on the screen
- *   (`POST /budget-lines/creation`, option `creation`, set by that route only) is created without
- *   one and without its required dimensions; its updates may leave the company empty until the
- *   person completes it (`budget-line-creation.ts`).
+ *   the company a line holds. A line stored without one (created at its title by earlier versions
+ *   of the screen) keeps taking edits that leave it empty.
+ * - a new line needs an account (`ACCOUNT_REQUIRED`), whatever the door. Updates are not checked: a
+ *   line stored without one (created before this rule) keeps taking edits.
  */
 
 export type ItemWriteScope = 'opex' | 'capex';
@@ -149,6 +149,9 @@ export function parseRunBuild(value: unknown): RunBuild | null | undefined {
   return (RUN_BUILD_VALUES as readonly string[]).includes(text) ? (text as RunBuild) : undefined;
 }
 
+/** The refusal of a new line without an account. */
+export const ACCOUNT_REQUIRED = 'Account is required.';
+
 /** The refusal of an account outside the chart of accounts of the line's paying company. */
 export const ACCOUNT_CHART_REFUSAL = 'Selected account does not belong to the paying company\'s Chart of Accounts';
 
@@ -206,16 +209,6 @@ async function assertLineDataAccess(
   if (next.contractId && next.contractId !== stored('contract_id')) await assertLineContractReadable(manager, next.contractId);
 }
 
-/** Server-side options of a write, never read from a body. */
-export type ItemWriteOptions = {
-  /**
-   * A line created at its title on the screen (`POST /budget-lines/creation`): created without a
-   * paying company and without its required dimensions, which the person completes afterwards.
-   * The data-access placement rule still applies.
-   */
-  creation?: boolean;
-};
-
 /**
  * The columns a create (`existing` null) or an update of one line writes,
  * checked as described above. Throws a 400 on the first problem.
@@ -226,7 +219,6 @@ export async function resolveItemWrite(
   body: unknown,
   existing: ExistingItem | null,
   fields: ItemWriteFields = 'api',
-  options: ItemWriteOptions = {},
 ): Promise<ItemWrite> {
   const tenantId = await currentTenantId(manager);
   // The line was read under RLS; a mismatch would mean a caller passed a row of another tenant.
@@ -243,9 +235,10 @@ export async function resolveItemWrite(
   if (fields === 'api' && scope === 'capex' && input.company_id != null && input.paying_company_id == null) {
     values.paying_company_id = input.company_id;
   }
-  // Create only. An update that omits the date keeps the stored one. Checked before the
-  // company lookup so a missing date is a 400 on every create path (API, budget lines, file, AI).
-  if (!existing) assertEffectiveStart(values.effective_start);
+  // Required on a create; an update that omits the date keeps the stored one, one that names it
+  // gives a real date (an empty one used to reach PostgreSQL and answer 500). Checked before the
+  // company lookup so a missing date is a 400 on every path (API, budget lines, file, AI).
+  if (!existing || 'effective_start' in values) assertEffectiveStart(values.effective_start);
   const lifecycle: ItemWrite['lifecycle'] = {};
   for (const key of LIFECYCLE_INPUTS) {
     if (supplied(key)) (lifecycle as any)[key] = input[key];
@@ -276,10 +269,10 @@ export async function resolveItemWrite(
     if (!next('paying_company_id') && node?.company_id) values.paying_company_id = node.company_id;
   }
   const companyId = next('paying_company_id');
-  // An update may leave a line without a company as it is (a line created at its title), never
-  // clear the company a line holds; a create needs one unless it is a creation at the title.
+  // An update may leave a line stored without a company as it is, never clear the company a line
+  // holds; a create needs one.
   const storedCompanyId = (existing?.paying_company_id as string | null | undefined) ?? null;
-  if (!companyId && (existing ? !!storedCompanyId : !options.creation)) throw new BadRequestException('Paying company is required.');
+  if (!companyId && (!existing || !!storedCompanyId)) throw new BadRequestException('Paying company is required.');
   if ('contract_id' in values) values.contract_id = idValue(values.contract_id, REFERENCES.contract_id.label);
   await assertLineDataAccess(manager, existing, {
     companyId,
@@ -327,6 +320,10 @@ export async function resolveItemWrite(
     const id = column in values ? (values[column] as string | null) : null;
     if (id && !found.has(`${ref.table}:${id}`)) throw new BadRequestException(`${ref.label} not found.`);
   }
+  // A new line has an account, whatever the door (API, aliases, Kad, the budget file, a dated change
+  // of type); an update leaves a line stored without one as it is. Checked after the data-access
+  // placement and the ids, so a limited person out of place, or an id naming nothing, is told first.
+  if (!existing && !accountId) throw new BadRequestException(ACCOUNT_REQUIRED);
 
   if (checkChart) {
     const account = found.get(`accounts:${accountId}`);
@@ -340,9 +337,7 @@ export async function resolveItemWrite(
     if (nature && nature !== scope) throw new BadRequestException(accountNatureRefusal(scope));
   }
 
-  const analytics = await resolveItemAnalyticsChanges(manager, scope, tenantId, input, (existing?.id as string | undefined) ?? null, {
-    skipRequiredOnCreate: !existing && !!options.creation,
-  });
+  const analytics = await resolveItemAnalyticsChanges(manager, scope, tenantId, input, (existing?.id as string | undefined) ?? null);
 
   return { values, lifecycle, analytics };
 }

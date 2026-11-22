@@ -82,7 +82,10 @@ runSpecs('budget-lines-native.integration.spec', [['native HTTP contract, confli
         assert.deepEqual([created.body.product_name, created.body.description, created.body.notes], [`${nature} title`, `${nature} description`, `${nature} notes`]);
         const read = await request(created.body.reference);
         assert.equal(read.status, 200);
-        assert.deepEqual(read.body, created.body);
+        // The create answers the line as GET does, plus its creator's creation token.
+        const { creation_token: token, ...line } = created.body;
+        assert.equal(typeof token, 'string', 'POST /budget-lines hands a creation token');
+        assert.deepEqual(read.body, line);
         for (const ref of [created.body.id, String(created.body.item_number), created.body.legacy_number].filter(Boolean)) {
           assert.equal((await request(ref)).body.id, created.body.id);
         }
@@ -147,7 +150,7 @@ runSpecs('budget-lines-native.integration.spec', [['native HTTP contract, confli
       // Creating CAPEX still checks its applicable required dimensions by name.
       const [axis] = await runner.query(`INSERT INTO analytics_axes (tenant_id, code, name, applies_to, required) VALUES ($1, 'native_required', 'Investment purpose', 'capex', true) RETURNING id`, [tenantId]);
       const [value] = await runner.query(`INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, 'Replacement') RETURNING id`, [tenantId, axis.id]);
-      const requiredBody = { nature: 'capex', product_name: 'Required dimension', currency: 'EUR', effective_start: '2026-01-01', paying_company_id: company.companyId };
+      const requiredBody = { nature: 'capex', product_name: 'Required dimension', currency: 'EUR', effective_start: '2026-01-01', paying_company_id: company.companyId, account_id: company.accountId };
       const refused = await request('', 'POST', requiredBody);
       assert.equal(refused.status, 400);
       assert.match(JSON.stringify(refused.body), /Investment purpose/);

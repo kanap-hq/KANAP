@@ -54,7 +54,7 @@ async function main() {
   process.env.RATE_LIMIT_ENABLED = 'false';
   let app: INestApplication | undefined;
   try {
-    const { companyId, userId } = await seed(tenantId, async (runner) => {
+    const { companyId, accountId, userId } = await seed(tenantId, async (runner) => {
       const company = await seedCompany(runner, tenantId, 'Start date company');
       const [role] = await runner.query(
         `INSERT INTO roles (tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
@@ -70,7 +70,7 @@ async function main() {
          VALUES ($1, $2, $3, 'Start', 'Date', 'enabled') RETURNING id`,
         [tenantId, role.id, `${randomUUID()}@start-date.example`],
       );
-      return { companyId: company.companyId as string, userId: user.id as string };
+      return { companyId: company.companyId as string, accountId: company.accountId as string, userId: user.id as string };
     });
     const opex = itemService('opex');
     const capex = itemService('capex');
@@ -114,15 +114,16 @@ async function main() {
     await application.listen(0, '127.0.0.1');
     const base = `http://127.0.0.1:${(application.getHttpServer().address() as AddressInfo).port}`;
 
-    const post = async (path: string, body: unknown) => {
+    const request = async (method: string, path: string, body: unknown) => {
       const res = await fetch(`${base}${path}`, {
-        method: 'POST',
+        method,
         headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       });
       const text = await res.text();
       return { status: res.status, body: text ? JSON.parse(text) : null };
     };
+    const post = (path: string, body: unknown) => request('POST', path, body);
     const countLines = () => seed(tenantId, async (runner) => {
       const [row] = await runner.query(`SELECT count(*)::int AS n FROM spend_items WHERE tenant_id = $1`, [tenantId]);
       return row.n as number;
@@ -149,6 +150,7 @@ async function main() {
       currency: 'EUR',
       effective_start: '2026-04-01',
       paying_company_id: companyId,
+      account_id: accountId,
       status: 'disabled',
     });
     assert.equal(created.status, 201, JSON.stringify(created.body));
@@ -162,6 +164,47 @@ async function main() {
     assert.equal(stored.effective_start, '2026-04-01');
     assert.equal(stored.status, 'disabled', 'a key outside the zod schema is still written');
     console.log('ok - a line with a start date is created');
+
+    // A new line needs an account by every door (lot L3a); `POST /budget-lines` hands a creation token.
+    for (const [path, body] of [
+      ['/spend-items', { product_name: 'No account', currency: 'EUR', effective_start: '2026-04-01', paying_company_id: companyId }],
+      ['/capex-items', { description: 'No account', currency: 'EUR', effective_start: '2026-04-01', paying_company_id: companyId }],
+      ['/budget-lines', { nature: 'opex', product_name: 'No account', currency: 'EUR', effective_start: '2026-04-01', paying_company_id: companyId }],
+      ['/budget-lines', { nature: 'capex', product_name: 'No account', currency: 'EUR', effective_start: '2026-04-01', paying_company_id: companyId }],
+    ] as const) {
+      const before = await countLines();
+      const answer = await post(path, body);
+      assert.deepEqual([answer.status, answer.body.message], [400, 'Account is required.'], `${path} ${JSON.stringify(answer.body)}`);
+      assert.equal(await countLines(), before, `${path} inserted a line`);
+    }
+    const line = await post('/budget-lines', {
+      nature: 'opex', product_name: 'With account', currency: 'EUR', effective_start: '2026-04-01', paying_company_id: companyId, account_id: accountId,
+    });
+    assert.equal(line.status, 201, JSON.stringify(line.body));
+    assert.equal(line.body.account_id, accountId);
+    assert.equal(typeof line.body.creation_token, 'string', 'POST /budget-lines hands a creation token');
+    console.log('ok - a new line without an account is 400 by every create route; POST /budget-lines hands a token');
+
+    // An update that names the date checks it as the create does: an empty, missing or impossible
+    // date is a 400 naming the field (it used to reach PostgreSQL and answer 500), the stored date stays.
+    const storedStart = () => seed(tenantId, async (runner) => {
+      const [row] = await runner.query(
+        `SELECT effective_start::text AS effective_start FROM spend_items WHERE tenant_id = $1 AND nature = 'opex' AND id = $2`,
+        [tenantId, line.body.id],
+      );
+      return row.effective_start as string;
+    });
+    for (const value of ['', null, 'soon', '2026-02-30']) {
+      const answer = await request('PATCH', `/budget-lines/${line.body.id}`, { effective_start: value, base: { effective_start: '2026-04-01' } });
+      assert.equal(answer.status, 400, `PATCH effective_start ${JSON.stringify(value)}: ${JSON.stringify(answer.body)}`);
+      assert.equal(answer.body.field, 'effective_start');
+      assert.equal(answer.body.message, `effective_start: ${EFFECTIVE_START_MESSAGE}`);
+      assert.equal(await storedStart(), '2026-04-01', `PATCH effective_start ${JSON.stringify(value)} kept the stored date`);
+    }
+    const moved = await request('PATCH', `/budget-lines/${line.body.id}`, { effective_start: '2026-05-01', base: { effective_start: '2026-04-01' } });
+    assert.equal(moved.status, 200, JSON.stringify(moved.body));
+    assert.equal(await storedStart(), '2026-05-01');
+    console.log('ok - an update with an empty or invalid start date is 400, a valid one is saved');
     console.log(`ok - create without a start date on ${current}`);
   } finally {
     if (app) await app.close();

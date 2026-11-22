@@ -23,6 +23,7 @@ import { axisRequiredFor, useAnalyticsAxes } from '../../../hooks/useAnalyticsAx
 import { useLinePlacementFilter } from '../../../hooks/usePlacementOptions';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import { matching, type ItemReferences } from '../../../components/finance/itemReferences';
+import CreationPreview from '../../../components/workspace/creation/CreationPreview';
 
 import type { LineType } from '../../../constants/lineTypeUsage';
 import { BUDGET_NATURE_CONFIG } from '../natureConfig';
@@ -33,10 +34,12 @@ export type RunBuild = 'run' | 'build';
 type Props = {
   nature: LineType;
   /**
-   * The type is a menu (a new line, a line being created): the type the person picks. Without it, the
-   * type is a badge, with `onChangeType` ("Change type…") when the line may change it.
+   * The type is a menu (a new line's draft): the type the person picks. Without it, the type is a
+   * badge, with `onChangeType` ("Change type…") when the line may change it.
    */
   onNatureChange?: (next: LineType) => void;
+  /** The draft is being written: its type menu waits (once written, the type changes by "Change type…"). */
+  natureHeld?: boolean;
   onChangeType?: () => void;
   mode?: 'create' | 'edit';
   /** The line shown (edit): a value added to an open dimension's picker goes on it. */
@@ -78,14 +81,15 @@ type Props = {
   /** The chosen value's label per dimension id, from the detail. */
   analyticsOptions?: Record<string, { id: string; name: string }>;
   /**
-   * The rows drawn: all of them; the head a new line fills before its title (its type, and its place
-   * with `placeFirst`); or all but that head.
+   * A new line's draft (the page of the line to come, `mode="edit"`): the rows the line is written
+   * with are live (type, cost center, paying company, account, currency, each dimension required for
+   * the type, effective start); the others are dimmed and out of reach, in their place.
    */
-  section?: 'all' | 'head' | 'rest';
-  /** The place of the line (cost center and paying company) is in the head: a person with limited access fills it before the title. */
-  placeFirst?: boolean;
-  /** Fields the line still needs, marked on their row (`paying_company`, `account`, `cost_center`, `dimension:<id>`). */
+  draft?: boolean;
+  /** Fields the line still needs, marked on their row (`paying_company`, `account`, `cost_center`, `dimension:<id>`, `effective_start`). */
   missingFields?: ReadonlySet<string>;
+  /** A refusal of the server about a field, said under it (same keys as `missingFields`). */
+  fieldErrors?: Readonly<Record<string, string>>;
 };
 
 /** Marks a field's row of the panel (paying company, account, cost center), for the focus on a missing field. */
@@ -101,6 +105,7 @@ const hideInnerLabelSx = {
 export default function BudgetPropertiesDrawer({
   nature,
   onNatureChange,
+  natureHeld = false,
   onChangeType,
   mode = 'edit',
   lineId = null,
@@ -122,9 +127,9 @@ export default function BudgetPropertiesDrawer({
   disabled = false,
   references,
   analyticsOptions,
-  section = 'all',
-  placeFirst = false,
+  draft = false,
   missingFields,
+  fieldErrors,
   onSupplierChange,
   onPayingCompanyChange,
   onAccountChange,
@@ -175,18 +180,21 @@ export default function BudgetPropertiesDrawer({
   const placement = useLinePlacementFilter(companyFollowsCostCenter ? null : payingCompanyId || null);
   // A person who only reads the line has nothing to fill: no required mark.
   const costCenterRequired = !disabled && placement?.costCenterRequired === true;
-  // An open dimension's picker adds a typed value for this line, or for the place of the line being created.
-  const newValueFor = mode === 'create'
+  // An open dimension's picker adds a typed value for this line, or for the place of the line to come.
+  const newValueFor = mode === 'create' || draft
     ? { payingCompanyId: payingCompanyId || null, costCenterId: costCenterId || null }
     : lineId ? { lineId } : null;
-  const inHead = (head: boolean) => section === 'all' || (section === 'head') === head;
-  const showType = inHead(true);
-  const showPlacement = inHead(placeFirst);
-  const missing = (field: string) => !!missingFields?.has(field);
+  const error = (field: string) => fieldErrors?.[field];
+  const missing = (field: string) => !!missingFields?.has(field) || !!error(field);
+  // A held value is replaced, never removed, once the line exists.
+  const keepsValue = mode === 'edit' && !draft;
+  // On a draft, a row the line is not written with is dimmed and out of reach.
+  const dimUnlessLive = (live: boolean, node: React.ReactNode) => (draft && !live ? <CreationPreview>{node}</CreationPreview> : node);
+  const outOfReach = disabled || draft;
 
-  const placementRows = showPlacement ? (
+  const placementRows = (
     <>
-      <PropertyRow label={t('opex.fields.costCenter')} helperText={costCenterHint} required={costCenterRequired} missing={missing('cost_center')}>
+      <PropertyRow label={t('opex.fields.costCenter')} helperText={error('cost_center') ?? costCenterHint} required={costCenterRequired} missing={missing('cost_center')}>
         <Box sx={hideInnerLabelSx} {...{ [LINE_FIELD_ATTR]: 'cost_center' }}>
           <CostCenterSelect
             hideLabel
@@ -203,15 +211,15 @@ export default function BudgetPropertiesDrawer({
           />
         </Box>
       </PropertyRow>
-      <PropertyRow label={t('opex.fields.payingCompany')} required missing={missing('paying_company')}>
+      <PropertyRow label={t('opex.fields.payingCompany')} helperText={error('paying_company')} required missing={missing('paying_company')}>
         <Box sx={hideInnerLabelSx} {...{ [LINE_FIELD_ATTR]: 'paying_company' }}>
-          <CompanySelect hideLabel label={t('opex.fields.payingCompany')} value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} allowedCompanyIds={placement?.companyIds} disabled={disabled} required disableClearable={mode === 'edit'} selectedOption={matching(references?.paying_company, payingCompanyId)} />
+          <CompanySelect hideLabel label={t('opex.fields.payingCompany')} value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} allowedCompanyIds={placement?.companyIds} disabled={disabled} required disableClearable={keepsValue} selectedOption={matching(references?.paying_company, payingCompanyId)} />
         </Box>
       </PropertyRow>
     </>
-  ) : null;
+  );
 
-  const typeRow = showType ? (
+  const typeRow = (
     <PropertyRow label={t('budget.type')}>
       {onNatureChange ? (
         <Select
@@ -220,7 +228,7 @@ export default function BudgetPropertiesDrawer({
           onChange={(event) => onNatureChange(event.target.value as LineType)}
           SelectDisplayProps={{ 'aria-label': t('budget.type') }}
           sx={drawerSelectSx}
-          disabled={disabled}
+          disabled={disabled || natureHeld}
         >
           {Object.entries(BUDGET_NATURE_CONFIG).map(([value, option]) => (
             <MenuItem key={value} value={value} sx={drawerMenuItemSx}>{t(option.typeLabel)}</MenuItem>
@@ -237,23 +245,23 @@ export default function BudgetPropertiesDrawer({
         </Box>
       )}
     </PropertyRow>
-  ) : null;
-
-  if (section === 'head') return <PropertyGroup>{typeRow}{placementRows}</PropertyGroup>;
+  );
 
   return (
     <>
       <PropertyGroup>
         {typeRow}
-        <PropertyRow label={t('opex.fields.supplier')}>
-          <Box sx={hideInnerLabelSx}>
-            <SupplierSelect hideLabel label={t('opex.fields.supplier')} value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={disabled} selectedOption={matching(references?.supplier, supplierId)} />
-          </Box>
-        </PropertyRow>
+        {dimUnlessLive(false, (
+          <PropertyRow label={t('opex.fields.supplier')}>
+            <Box sx={hideInnerLabelSx}>
+              <SupplierSelect hideLabel label={t('opex.fields.supplier')} value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={outOfReach} selectedOption={matching(references?.supplier, supplierId)} />
+            </Box>
+          </PropertyRow>
+        ))}
         {placementRows}
-        <PropertyRow label={t('opex.fields.account')} required missing={missing('account')}>
+        <PropertyRow label={t('opex.fields.account')} helperText={error('account')} required missing={missing('account')}>
           <Box sx={hideInnerLabelSx} {...{ [LINE_FIELD_ATTR]: 'account' }}>
-            <AccountSelect hideLabel label={t('opex.fields.account')} nature={nature} value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={mode === 'edit'} selectedOption={matching(references?.account, accountId)} />
+            <AccountSelect hideLabel label={t('opex.fields.account')} nature={nature} value={accountId} onChange={(v) => onAccountChange(v ?? '')} companyId={payingCompanyId || undefined} disabled={disabled || !payingCompanyId} required disableClearable={keepsValue} selectedOption={matching(references?.account, accountId)} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.currency')} required>
@@ -275,46 +283,56 @@ export default function BudgetPropertiesDrawer({
           <Typography sx={{ fontSize: 12, lineHeight: 1.35, color: 'kanap.text.tertiary', py: '5px' }}>
             {t('shared.dimensionsLoadFailed')}
           </Typography>
-        ) : analyticsAxes.enabled.map((axis) => (
-          <PropertyRow key={axis.id} label={analyticsAxes.label(axis)} required={axisRequiredFor(axis, nature)} missing={missing(`dimension:${axis.id}`)}>
-            {/* Found by the question asked before leaving a line lacking a required value. */}
-            <Box sx={hideInnerLabelSx} data-analytics-axis={axis.id}>
-              <AnalyticsCategorySelect
-                axisId={axis.id}
-                label={analyticsAxes.label(axis)}
-                hideLabel
-                lineType={nature}
-                value={analyticsValues[axis.id] ?? null}
-                onChange={(v) => onAnalyticsValueChange(axis.id, v)}
-                disabled={disabled}
-                // A held value on a required dimension can be replaced, not removed. A line without one stays editable.
-                disableClearable={mode === 'edit' && axisRequiredFor(axis, nature) && !!analyticsValues[axis.id]}
-                selectedOption={matching(analyticsOptions?.[axis.id], analyticsValues[axis.id])}
-                newValueFor={newValueFor}
-              />
-            </Box>
+        ) : analyticsAxes.enabled.map((axis) => {
+          const required = axisRequiredFor(axis, nature);
+          const key = `dimension:${axis.id}`;
+          return (
+            <React.Fragment key={axis.id}>
+              {dimUnlessLive(required, (
+                <PropertyRow label={analyticsAxes.label(axis)} helperText={error(key)} required={required} missing={missing(key)}>
+                  {/* Found by the question asked before leaving a line lacking a required value. */}
+                  <Box sx={hideInnerLabelSx} data-analytics-axis={axis.id}>
+                    <AnalyticsCategorySelect
+                      axisId={axis.id}
+                      label={analyticsAxes.label(axis)}
+                      hideLabel
+                      lineType={nature}
+                      value={analyticsValues[axis.id] ?? null}
+                      onChange={(v) => onAnalyticsValueChange(axis.id, v)}
+                      disabled={disabled || (draft && !required)}
+                      // A held value on a required dimension can be replaced, not removed. A line without one stays editable.
+                      disableClearable={keepsValue && required && !!analyticsValues[axis.id]}
+                      selectedOption={matching(analyticsOptions?.[axis.id], analyticsValues[axis.id])}
+                      newValueFor={newValueFor}
+                    />
+                  </Box>
+                </PropertyRow>
+              ))}
+            </React.Fragment>
+          );
+        })}
+        {dimUnlessLive(false, (
+          <PropertyRow label={t('opex.fields.runBuild')}>
+            <TextField
+              select
+              variant="standard"
+              value={runBuild}
+              onChange={(e) => onRunBuildChange(e.target.value as RunBuild | '')}
+              SelectProps={{ displayEmpty: true, inputProps: { 'aria-label': t('opex.fields.runBuild') } }}
+              sx={drawerSelectSx}
+              disabled={outOfReach}
+            >
+              <MenuItem value="" sx={drawerMenuItemSx}>{t('common:selects.notSet')}</MenuItem>
+              <MenuItem value="run" sx={drawerMenuItemSx}>{t('opex.runBuild.run')}</MenuItem>
+              <MenuItem value="build" sx={drawerMenuItemSx}>{t('opex.runBuild.build')}</MenuItem>
+            </TextField>
           </PropertyRow>
         ))}
-        <PropertyRow label={t('opex.fields.runBuild')}>
-          <TextField
-            select
-            variant="standard"
-            value={runBuild}
-            onChange={(e) => onRunBuildChange(e.target.value as RunBuild | '')}
-            SelectProps={{ displayEmpty: true, inputProps: { 'aria-label': t('opex.fields.runBuild') } }}
-            sx={drawerSelectSx}
-            disabled={disabled}
-          >
-            <MenuItem value="" sx={drawerMenuItemSx}>{t('common:selects.notSet')}</MenuItem>
-            <MenuItem value="run" sx={drawerMenuItemSx}>{t('opex.runBuild.run')}</MenuItem>
-            <MenuItem value="build" sx={drawerMenuItemSx}>{t('opex.runBuild.build')}</MenuItem>
-          </TextField>
-        </PropertyRow>
       </PropertyGroup>
 
       <PropertyGroup>
-        <PropertyRow label={t('opex.fields.effectiveStart')} required>
-          <Box sx={hideInnerLabelSx}>
+        <PropertyRow label={t('opex.fields.effectiveStart')} required missing={missing('effective_start')}>
+          <Box sx={hideInnerLabelSx} {...{ [LINE_FIELD_ATTR]: 'effective_start' }}>
             <DateEUField label="" valueYmd={effectiveStart || ''} onChangeYmd={onEffectiveStartChange} disabled={disabled} required />
           </Box>
         </PropertyRow>
@@ -365,6 +383,7 @@ export default function BudgetPropertiesDrawer({
 
       {mode === 'edit' && onDisabledAtChange && onDisableNow && (
         <PropertyGroup>
+          {dimUnlessLive(false, (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, py: '5px' }}>
             <Typography sx={{ fontSize: 12, lineHeight: 1.3, color: 'kanap.text.tertiary' }}>{t('opex.fields.lifecycle')}</Typography>
             <StatusLifecycleField
@@ -374,23 +393,28 @@ export default function BudgetPropertiesDrawer({
               disabledAt={disabledAt}
               onDisabledAtChange={onDisabledAtChange}
               onDisableNow={onDisableNow}
-              disabled={disabled}
+              disabled={outOfReach}
               statusLabel={t('opex.status.enabled')}
               statusOffLabel={t('opex.status.disabled')}
               disabledAtLabel={t('opex.fields.endOfValidity')}
             />
           </Box>
+          ))}
         </PropertyGroup>
       )}
 
       {mode === 'edit' && (
         <PropertyGroup>
-          <PropertyRow label={t('opex.fields.created')}>
-            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(createdAt, locale, { year: 'always', empty: '-' })}</Typography>
-          </PropertyRow>
-          <PropertyRow label={t('opex.fields.updated')}>
-            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(updatedAt, locale, { year: 'always', empty: '-' })}</Typography>
-          </PropertyRow>
+          {dimUnlessLive(false, (
+            <>
+              <PropertyRow label={t('opex.fields.created')}>
+                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(createdAt, locale, { year: 'always', empty: '-' })}</Typography>
+              </PropertyRow>
+              <PropertyRow label={t('opex.fields.updated')}>
+                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(updatedAt, locale, { year: 'always', empty: '-' })}</Typography>
+              </PropertyRow>
+            </>
+          ))}
         </PropertyGroup>
       )}
     </>

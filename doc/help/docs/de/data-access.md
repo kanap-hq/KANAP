@@ -61,7 +61,7 @@ Das Löschen einer Zeile oder eines Vertrags ist Personen mit allen Daten vorbeh
 
 ### Zeilen ohne Unternehmen
 
-Eine Budgetzeile kann ohne zahlendes Unternehmen sein: eine ältere Zeile oder eine neue Zeile, deren zahlendes Unternehmen noch nicht gewählt ist.
+Eine ältere Budgetzeile kann ohne zahlendes Unternehmen sein.
 
 - Ist sie einer Kostenstelle zugeordnet, folgt sie dieser Kostenstelle: Die Personen, deren Knoten die Kostenstelle abdecken, lesen die Zeile, und ein Knoten mit Bearbeiten erlaubt ihnen, sie zu bearbeiten. Beim Speichern erhält sie das Unternehmen ihrer Kostenstelle.
 - Ohne Kostenstelle ist sie nur für Personen mit allen Daten, für Personen mit einem Knoten **Alles** und für die darauf benannten Personen sichtbar.

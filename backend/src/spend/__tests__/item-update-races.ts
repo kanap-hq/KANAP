@@ -45,10 +45,10 @@ async function seedLine(runner: QueryRunner, kind: Kind, values: Record<string, 
 async function supplierVersusNotes(kind: Kind) {
   await withRace(`${kind}-supplier`, async (race) => {
     const { itemId, oldSupplier, newSupplier } = await race.seedWith(async (runner) => {
-      const { companyId } = await seedCompany(runner, race.tenantId, 'Race company');
+      const { companyId, accountId } = await seedCompany(runner, race.tenantId, 'Race company');
       const oldSupplier = await seedSupplier(runner, race.tenantId, 'Old supplier');
       const newSupplier = await seedSupplier(runner, race.tenantId, 'New supplier');
-      const itemId = await seedLine(runner, kind, { paying_company_id: companyId, supplier_id: oldSupplier, notes: 'Start' });
+      const itemId = await seedLine(runner, kind, { paying_company_id: companyId, account_id: accountId, supplier_id: oldSupplier, notes: 'Start' });
       return { itemId, oldSupplier, newSupplier };
     });
     const svc = itemService(kind);
@@ -87,8 +87,8 @@ async function supplierVersusNotes(kind: Kind) {
 async function endOfValidityVersusNotes(kind: Kind) {
   await withRace(`${kind}-validity`, async (race) => {
     const itemId = await race.seedWith(async (runner) => {
-      const { companyId } = await seedCompany(runner, race.tenantId, 'Race company');
-      return seedLine(runner, kind, { paying_company_id: companyId, notes: 'Start' });
+      const { companyId, accountId } = await seedCompany(runner, race.tenantId, 'Race company');
+      return seedLine(runner, kind, { paying_company_id: companyId, account_id: accountId, notes: 'Start' });
     });
     const svc = itemService(kind);
     const a = await race.open('A (end of validity)');
@@ -136,7 +136,9 @@ async function companyVersusAccount(kind: Kind) {
         [race.tenantId, oldCompany.chartId],
       );
       const newCompany = await seedCompany(runner, race.tenantId, 'Company on chart Y', 7000);
-      const itemId = await seedLine(runner, kind, { paying_company_id: oldCompany.companyId });
+      // A new line has an account; an update may clear it: the line the race starts from has none.
+      const itemId = await seedLine(runner, kind, { paying_company_id: oldCompany.companyId, account_id: oldCompany.accountId });
+      await itemService(kind).update(itemId, { account_id: null }, undefined, { manager: runner.manager });
       return { itemId, oldCompany, newCompany, oldChartAccount: oldChartAccount.id as string };
     });
     const { itemId, newCompany, oldChartAccount } = seeded;
@@ -190,10 +192,10 @@ async function fileRef(race: Race, kind: Kind, itemId: string): Promise<string> 
 async function budgetFileVersusEdit(kind: Kind) {
   await withRace(`${kind}-file-edit`, async (race) => {
     const { itemId, newSupplier } = await race.seedWith(async (runner) => {
-      const { companyId } = await seedCompany(runner, race.tenantId, 'Race company');
+      const { companyId, accountId } = await seedCompany(runner, race.tenantId, 'Race company');
       const oldSupplier = await seedSupplier(runner, race.tenantId, 'Old supplier');
       const newSupplier = await seedSupplier(runner, race.tenantId, 'New supplier');
-      const itemId = await seedLine(runner, kind, { paying_company_id: companyId, supplier_id: oldSupplier, notes: 'Start' });
+      const itemId = await seedLine(runner, kind, { paying_company_id: companyId, account_id: accountId, supplier_id: oldSupplier, notes: 'Start' });
       return { itemId, newSupplier };
     });
     const file = `item_number,name,notes\n${await fileRef(race, kind, itemId)},Race line,From the file\n`;

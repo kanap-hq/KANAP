@@ -78,9 +78,9 @@ async function main() {
     const s = await seed(tenantId, async (runner) => {
       const marie = await seedPerson(runner, tenantId, 'Marie', 'Dupont');
       const jean = await seedPerson(runner, tenantId, 'Jean', 'Martin');
-      const { companyId } = await seedCompany(runner, tenantId, 'HTTP company');
+      const { companyId, accountId } = await seedCompany(runner, tenantId, 'HTTP company');
       const line = await itemService('opex', realAudit()).create(
-        lineBody('opex', 'HTTP line', { paying_company_id: companyId, notes: 'Start' }), marie, { manager: runner.manager },
+        lineBody('opex', 'HTTP line', { paying_company_id: companyId, account_id: accountId, notes: 'Start' }), marie, { manager: runner.manager },
       );
       return { marie, jean, itemId: line.id as string };
     });

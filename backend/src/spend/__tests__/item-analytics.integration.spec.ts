@@ -44,6 +44,7 @@ const CONFLICT = 'Send the analytics category once: analytics_category_id and an
 type Setup = {
   tenantId: string;
   companyId: string;
+  accountId: string;
   main: string;
   nature: string;
   old: string;
@@ -87,12 +88,12 @@ async function setup(runner: QueryRunner, kind: Kind): Promise<Setup> {
 
   const tenantId = await seedTenant(runner, `analytics-b-${kind}`);
   await setTenant(runner, tenantId);
-  const { companyId } = await seedCompany(runner, tenantId, 'Analytics company');
+  const { companyId, accountId } = await seedCompany(runner, tenantId, 'Analytics company');
   const main = await ensureDefaultAnalyticsAxis(runner.manager, tenantId);
   const nature = await seedAxis(runner, tenantId, 'nature', 'Nature', 1);
   const old = await seedAxis(runner, tenantId, 'old', 'Old axis', 2, true);
   return {
-    tenantId, companyId, main, nature, old, foreignAxis, foreignValue,
+    tenantId, companyId, accountId, main, nature, old, foreignAxis, foreignValue,
     licences: await seedValue(runner, tenantId, main, 'Licences'),
     otherMain: await seedValue(runner, tenantId, main, 'Other'),
     // Two dimensions each holding "Other".
@@ -127,7 +128,7 @@ async function testUpsertAndOmission(kind: Kind) {
     const svc = itemService(kind);
     const opts = { manager: runner.manager };
     const created = await svc.create(lineBody(kind, 'Two dimensions', {
-      paying_company_id: s.companyId,
+      paying_company_id: s.companyId, account_id: s.accountId,
       analytics_values: { [s.main]: s.licences, [s.nature]: s.otherNature },
     }), undefined, opts);
     assert.deepEqual(await links(runner, kind, created.id), { [s.main]: s.licences, [s.nature]: s.otherNature }, `${kind}: one link per dimension`);
@@ -156,7 +157,7 @@ async function testUpsertAndOmission(kind: Kind) {
     assert.deepEqual(await links(runner, kind, created.id), { [s.main]: s.licences }, `${kind}: null clears Nature`);
 
     // A line without values reads empty.
-    const bare = await svc.create(lineBody(kind, 'No value', { paying_company_id: s.companyId }), undefined, opts);
+    const bare = await svc.create(lineBody(kind, 'No value', { paying_company_id: s.companyId, account_id: s.accountId }), undefined, opts);
     const bareDetail = await svc.get(bare.id, opts);
     assert.deepEqual(bareDetail.analytics_values, []);
     assert.equal(bareDetail.analytics_category_id, null);
@@ -169,7 +170,7 @@ async function testLegacyField(kind: Kind) {
     const s = await setup(runner, kind);
     const svc = itemService(kind);
     const opts = { manager: runner.manager };
-    const line = await svc.create(lineBody(kind, 'Legacy', { paying_company_id: s.companyId, analytics_category_id: s.licences }), undefined, opts);
+    const line = await svc.create(lineBody(kind, 'Legacy', { paying_company_id: s.companyId, account_id: s.accountId, analytics_category_id: s.licences }), undefined, opts);
     assert.deepEqual(await links(runner, kind, line.id), { [s.main]: s.licences }, `${kind}: the legacy field writes the default dimension`);
     const [column] = await runner.query(`SELECT analytics_category_id FROM ${LINE_TABLE} WHERE id = $1`, [line.id]);
     assert.equal(column.analytics_category_id, null, `${kind}: the item column is not written`);
@@ -195,7 +196,7 @@ async function testRefusals(kind: Kind) {
     const s = await setup(runner, kind);
     const svc = itemService(kind);
     const opts = { manager: runner.manager };
-    const line = await svc.create(lineBody(kind, 'Target', { paying_company_id: s.companyId, analytics_values: { [s.main]: s.licences } }), undefined, opts);
+    const line = await svc.create(lineBody(kind, 'Target', { paying_company_id: s.companyId, account_id: s.accountId, analytics_values: { [s.main]: s.licences } }), undefined, opts);
     const [stored] = await runner.query(`SELECT * FROM ${LINE_TABLE} WHERE id = $1`, [line.id]);
     const linksBefore = await linkCount(runner, kind, s.tenantId);
     const [{ n: linesBefore }] = await runner.query(`SELECT count(*)::int AS n FROM ${LINE_TABLE} WHERE tenant_id = $1 AND nature = $2`, [s.tenantId, kind]);
@@ -213,7 +214,7 @@ async function testRefusals(kind: Kind) {
       ['a disabled value', { analytics_values: { [s.nature]: s.retired } }, 'This value is disabled.'],
     ];
     for (const [label, fields, message] of cases) {
-      const onCreate = await refusal(runner, () => svc.create(lineBody(kind, `Refused: ${label}`, { paying_company_id: s.companyId, ...fields }), undefined, opts));
+      const onCreate = await refusal(runner, () => svc.create(lineBody(kind, `Refused: ${label}`, { paying_company_id: s.companyId, account_id: s.accountId, ...fields }), undefined, opts));
       assert.equal(onCreate.message, message, `${kind} create, ${label}`);
       assert.equal((onCreate as any).getStatus?.(), 400, `${kind} create, ${label}: a 400`);
       const onUpdate = await refusal(runner, () => svc.update(line.id, fields, undefined, opts));
@@ -232,14 +233,14 @@ async function testDisabledValueKeptAsCurrent(kind: Kind) {
     const s = await setup(runner, kind);
     const svc = itemService(kind);
     const opts = { manager: runner.manager };
-    const line = await svc.create(lineBody(kind, 'Holds hardware', { paying_company_id: s.companyId, analytics_values: { [s.nature]: s.hardware } }), undefined, opts);
+    const line = await svc.create(lineBody(kind, 'Holds hardware', { paying_company_id: s.companyId, account_id: s.accountId, analytics_values: { [s.nature]: s.hardware } }), undefined, opts);
     await disableValue(runner, s.hardware);
     // The current value stays through any update, repeated or not.
     await svc.update(line.id, { notes: 'edited' }, undefined, opts);
     await svc.update(line.id, { analytics_values: { [s.nature]: s.hardware }, notes: 'edited again' }, undefined, opts);
     assert.deepEqual(await links(runner, kind, line.id), { [s.nature]: s.hardware }, `${kind}: the disabled current value is kept`);
     // As a new assignment it is refused, on another line or on the default dimension's line.
-    const other = await svc.create(lineBody(kind, 'Other line', { paying_company_id: s.companyId }), undefined, opts);
+    const other = await svc.create(lineBody(kind, 'Other line', { paying_company_id: s.companyId, account_id: s.accountId }), undefined, opts);
     const refused = await refusal(runner, () => svc.update(other.id, { analytics_values: { [s.nature]: s.hardware } }, undefined, opts));
     assert.equal(refused.message, 'This value is disabled.');
     // Clearing it is allowed.
@@ -256,7 +257,7 @@ async function testDisabledDimensionNoOp(kind: Kind) {
     const message = 'The Old axis dimension is disabled. Enable it or leave it out.';
     const otherLegacy = await seedValue(runner, s.tenantId, s.old, 'Other legacy');
     // A line holding a value of the dimension from before it was disabled.
-    const holder = await svc.create(lineBody(kind, 'Holds legacy', { paying_company_id: s.companyId }), undefined, opts);
+    const holder = await svc.create(lineBody(kind, 'Holds legacy', { paying_company_id: s.companyId, account_id: s.accountId }), undefined, opts);
     await runner.query(
       `INSERT INTO ${LINK_TABLE[kind]} (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`,
       [s.tenantId, holder.id, s.old, s.legacy],
@@ -271,7 +272,7 @@ async function testDisabledDimensionNoOp(kind: Kind) {
     assert.deepEqual(await links(runner, kind, holder.id), { [s.old]: s.legacy, [s.main]: s.licences }, `${kind}: nothing written`);
 
     // A line without a value there: null is a no-op on create and update, a value is refused.
-    const bare = await svc.create(lineBody(kind, 'Bare', { paying_company_id: s.companyId, analytics_values: { [s.old]: null } }), undefined, opts);
+    const bare = await svc.create(lineBody(kind, 'Bare', { paying_company_id: s.companyId, account_id: s.accountId, analytics_values: { [s.old]: null } }), undefined, opts);
     await svc.update(bare.id, { analytics_values: { [s.old]: null, [s.nature]: s.hardware } }, undefined, opts);
     assert.deepEqual(await links(runner, kind, bare.id), { [s.nature]: s.hardware }, `${kind}: null where there is none is a no-op`);
     const onBare = await refusal(runner, () => svc.update(bare.id, { analytics_values: { [s.old]: s.legacy } }, undefined, opts));
@@ -290,7 +291,7 @@ async function testOtherTypeDimension(kind: Kind) {
     const monthly = await seedValue(runner, s.tenantId, recurrence, 'Monthly');
     const yearly = await seedValue(runner, s.tenantId, recurrence, 'Yearly');
     // A line holding a value from before the dimension was given to the other type.
-    const holder = await svc.create(lineBody(kind, 'Holds monthly', { paying_company_id: s.companyId, analytics_values: { [recurrence]: monthly } }), undefined, opts);
+    const holder = await svc.create(lineBody(kind, 'Holds monthly', { paying_company_id: s.companyId, account_id: s.accountId, analytics_values: { [recurrence]: monthly } }), undefined, opts);
     await runner.query(`UPDATE analytics_axes SET applies_to = $2 WHERE id = $1`, [recurrence, other]);
     // The same type still writes it.
     await runner.query(`UPDATE analytics_axes SET applies_to = $2 WHERE id = $1`, [s.nature, kind]);
@@ -298,7 +299,7 @@ async function testOtherTypeDimension(kind: Kind) {
 
     // Refused on create, as a value or a change; nothing written.
     const linksBefore = await linkCount(runner, kind, s.tenantId);
-    const onCreate = await refusal(runner, () => svc.create(lineBody(kind, 'Refused', { paying_company_id: s.companyId, analytics_values: { [recurrence]: monthly } }), undefined, opts));
+    const onCreate = await refusal(runner, () => svc.create(lineBody(kind, 'Refused', { paying_company_id: s.companyId, account_id: s.accountId, analytics_values: { [recurrence]: monthly } }), undefined, opts));
     assert.equal(onCreate.message, message, `${kind}: refused on create`);
     assert.equal((onCreate as any).getStatus?.(), 400);
     for (const [label, value] of [['changed', yearly], ['cleared', null]] as const) {
@@ -314,7 +315,7 @@ async function testOtherTypeDimension(kind: Kind) {
     assert.ok(detail.analytics_values.some((value: any) => value.axis_id === recurrence && value.category_id === monthly), `${kind}: the detail still returns it`);
 
     // Null without a held value passes, on create and update.
-    const bare = await svc.create(lineBody(kind, 'Bare', { paying_company_id: s.companyId, analytics_values: { [recurrence]: null } }), undefined, opts);
+    const bare = await svc.create(lineBody(kind, 'Bare', { paying_company_id: s.companyId, account_id: s.accountId, analytics_values: { [recurrence]: null } }), undefined, opts);
     await svc.update(bare.id, { analytics_values: { [recurrence]: null } }, undefined, opts);
     assert.deepEqual(await links(runner, kind, bare.id), {}, `${kind}: null where there is none is a no-op`);
     const onBare = await refusal(runner, () => svc.update(bare.id, { analytics_values: { [recurrence]: monthly } }, undefined, opts));
@@ -342,8 +343,8 @@ async function testRequiredDimensions(kind: Kind) {
     const other: Kind = kind === 'opex' ? 'capex' : 'opex';
     const natureMessage = 'The Nature dimension is required. Choose a value.';
     // Lines from before the setting: one holding a value, one lacking it.
-    const holder = await svc.create(lineBody(kind, 'Holds hardware', { paying_company_id: s.companyId, analytics_values: { [s.nature]: s.hardware } }), undefined, opts);
-    const lacking = await svc.create(lineBody(kind, 'Lacks nature', { paying_company_id: s.companyId }), undefined, opts);
+    const holder = await svc.create(lineBody(kind, 'Holds hardware', { paying_company_id: s.companyId, account_id: s.accountId, analytics_values: { [s.nature]: s.hardware } }), undefined, opts);
+    const lacking = await svc.create(lineBody(kind, 'Lacks nature', { paying_company_id: s.companyId, account_id: s.accountId }), undefined, opts);
     await runner.query(`UPDATE analytics_axes SET required = true WHERE id = $1`, [s.nature]);
     // Never checked: a disabled required dimension, and a required dimension of the other type.
     await runner.query(`UPDATE analytics_axes SET required = true WHERE id = $1`, [s.old]);
@@ -360,7 +361,7 @@ async function testRequiredDimensions(kind: Kind) {
       ['null on it', { analytics_values: { [s.nature]: null } }],
     ];
     for (const [label, fields] of cases) {
-      const refused = await refusal(runner, () => svc.create(lineBody(kind, `Refused: ${label}`, { paying_company_id: s.companyId, ...fields }), undefined, opts));
+      const refused = await refusal(runner, () => svc.create(lineBody(kind, `Refused: ${label}`, { paying_company_id: s.companyId, account_id: s.accountId, ...fields }), undefined, opts));
       assert.equal(refused.message, natureMessage, `${kind} create, ${label}`);
       assert.equal((refused as any).getStatus?.(), 400, `${kind} create, ${label}: a 400`);
     }
@@ -369,17 +370,17 @@ async function testRequiredDimensions(kind: Kind) {
     assert.equal(await linkCount(runner, kind, s.tenantId), linksBefore, `${kind}: no link written`);
 
     // With the value: created (the disabled and other-type required dimensions are not checked).
-    const created = await svc.create(lineBody(kind, 'With nature', { paying_company_id: s.companyId, analytics_values: { [s.nature]: s.hardware } }), undefined, opts);
+    const created = await svc.create(lineBody(kind, 'With nature', { paying_company_id: s.companyId, account_id: s.accountId, analytics_values: { [s.nature]: s.hardware } }), undefined, opts);
     assert.deepEqual(await links(runner, kind, created.id), { [s.nature]: s.hardware }, `${kind}: created with the value`);
 
     // The default dimension required: the legacy field satisfies it, its absence is refused.
     await runner.query(`UPDATE analytics_axes SET required = true WHERE id = $1`, [s.main]);
     const legacy = await svc.create(lineBody(kind, 'Legacy default', {
-      paying_company_id: s.companyId, analytics_category_id: s.licences, analytics_values: { [s.nature]: s.otherNature },
+      paying_company_id: s.companyId, account_id: s.accountId, analytics_category_id: s.licences, analytics_values: { [s.nature]: s.otherNature },
     }), undefined, opts);
     assert.deepEqual(await links(runner, kind, legacy.id), { [s.main]: s.licences, [s.nature]: s.otherNature }, `${kind}: the legacy field fills the default`);
     const noDefault = await refusal(runner, () => svc.create(lineBody(kind, 'No default', {
-      paying_company_id: s.companyId, analytics_values: { [s.nature]: s.hardware },
+      paying_company_id: s.companyId, account_id: s.accountId, analytics_values: { [s.nature]: s.hardware },
     }), undefined, opts));
     assert.equal(noDefault.message, 'The analytics dimension is required. Choose a value.', `${kind}: the unnamed default`);
     const clearedLegacy = await refusal(runner, () => svc.update(legacy.id, { analytics_category_id: null }, undefined, opts));
@@ -409,7 +410,7 @@ async function testRequiredDimensions(kind: Kind) {
 
     // Disabled: the setting is ignored, a held value may be cleared.
     await runner.query(`UPDATE analytics_axes SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE id = $1`, [s.nature]);
-    const bare = await svc.create(lineBody(kind, 'Nature disabled', { paying_company_id: s.companyId }), undefined, opts);
+    const bare = await svc.create(lineBody(kind, 'Nature disabled', { paying_company_id: s.companyId, account_id: s.accountId }), undefined, opts);
     assert.deepEqual(await links(runner, kind, bare.id), {}, `${kind}: a disabled required dimension is not checked`);
   });
 }
@@ -423,7 +424,7 @@ async function testOtherTypeValue(kind: Kind) {
     const message = (name: string) => `${name} is for ${other.toUpperCase()} lines only. Choose a value for ${kind.toUpperCase()} lines.`;
     // Lines holding the values from before they were given to the other type.
     const holder = await svc.create(lineBody(kind, 'Holds hardware', {
-      paying_company_id: s.companyId,
+      paying_company_id: s.companyId, account_id: s.accountId,
       analytics_values: { [s.nature]: s.hardware, [s.main]: s.licences },
     }), undefined, opts);
     await runner.query(`UPDATE analytics_categories SET applies_to = $2 WHERE id = ANY($1::uuid[])`, [[s.hardware, s.licences], other]);
@@ -432,12 +433,12 @@ async function testOtherTypeValue(kind: Kind) {
 
     // Refused on create and as a change, through analytics_values and the legacy field; nothing written.
     const linksBefore = await linkCount(runner, kind, s.tenantId);
-    const onCreate = await refusal(runner, () => svc.create(lineBody(kind, 'Refused', { paying_company_id: s.companyId, analytics_values: { [s.nature]: s.hardware } }), undefined, opts));
+    const onCreate = await refusal(runner, () => svc.create(lineBody(kind, 'Refused', { paying_company_id: s.companyId, account_id: s.accountId, analytics_values: { [s.nature]: s.hardware } }), undefined, opts));
     assert.equal(onCreate.message, message('Hardware'), `${kind}: refused on create`);
     assert.equal((onCreate as any).getStatus?.(), 400);
-    const legacyCreate = await refusal(runner, () => svc.create(lineBody(kind, 'Refused legacy', { paying_company_id: s.companyId, analytics_category_id: s.licences }), undefined, opts));
+    const legacyCreate = await refusal(runner, () => svc.create(lineBody(kind, 'Refused legacy', { paying_company_id: s.companyId, account_id: s.accountId, analytics_category_id: s.licences }), undefined, opts));
     assert.equal(legacyCreate.message, message('Licences'), `${kind}: refused on create, legacy field`);
-    const bare = await svc.create(lineBody(kind, 'Bare', { paying_company_id: s.companyId }), undefined, opts);
+    const bare = await svc.create(lineBody(kind, 'Bare', { paying_company_id: s.companyId, account_id: s.accountId }), undefined, opts);
     const onChange = await refusal(runner, () => svc.update(bare.id, { analytics_values: { [s.nature]: s.hardware } }, undefined, opts));
     assert.equal(onChange.message, message('Hardware'), `${kind}: refused as a change`);
     const legacyChange = await refusal(runner, () => svc.update(bare.id, { analytics_category_id: s.licences }, undefined, opts));
@@ -465,7 +466,7 @@ async function testChangeAloneIsAnEdit(kind: Kind) {
     const s = await setup(runner, kind);
     const svc = itemService(kind);
     const opts = { manager: runner.manager };
-    const line = await svc.create(lineBody(kind, 'Audited', { paying_company_id: s.companyId, analytics_category_id: s.licences }), undefined, opts);
+    const line = await svc.create(lineBody(kind, 'Audited', { paying_company_id: s.companyId, account_id: s.accountId, analytics_category_id: s.licences }), undefined, opts);
     const created = svc.audit.entries.find((entry: any) => entry.recordId === line.id && entry.action === 'create');
     assert.deepEqual(created.after.analytics_values, { [s.main]: s.licences }, `${kind}: the create snapshot carries the values`);
     assert.equal(created.after.analytics_category_id, s.licences);
@@ -493,7 +494,7 @@ async function testDefaultIsAnIdentity(kind: Kind) {
     await runner.query(`UPDATE analytics_axes SET name = 'Catégorie analytique', code = 'cat', sort_order = 5 WHERE id = $1`, [s.main]);
     await runner.query(`UPDATE analytics_axes SET sort_order = 0 WHERE id = $1`, [s.nature]);
     const line = await svc.create(lineBody(kind, 'Reordered', {
-      paying_company_id: s.companyId, analytics_category_id: s.licences, analytics_values: { [s.nature]: s.hardware },
+      paying_company_id: s.companyId, account_id: s.accountId, analytics_category_id: s.licences, analytics_values: { [s.nature]: s.hardware },
     }), undefined, opts);
     assert.deepEqual(await links(runner, kind, line.id), { [s.main]: s.licences, [s.nature]: s.hardware }, `${kind}: the legacy field still writes the default`);
     const detail = await svc.get(line.id, opts);
@@ -512,7 +513,7 @@ async function testLegacyListReadsTheLinks(kind: Kind) {
     const s = await setup(runner, kind);
     const svc = itemService(kind);
     const opts = { manager: runner.manager };
-    const line = await svc.create(lineBody(kind, 'Listed', { paying_company_id: s.companyId, analytics_category_id: s.licences }), undefined, opts);
+    const line = await svc.create(lineBody(kind, 'Listed', { paying_company_id: s.companyId, account_id: s.accountId, analytics_category_id: s.licences }), undefined, opts);
     // A stale item column (not written any more) is never read.
     await runner.query(`UPDATE ${LINE_TABLE} SET analytics_category_id = $2 WHERE id = $1`, [line.id, s.otherMain]);
     const listed = (await svc.list({ limit: 50 }, opts)).items.find((item: any) => item.id === line.id);

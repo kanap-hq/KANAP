@@ -84,7 +84,7 @@ async function setup(race: Race, kind: Kind, values: Record<string, unknown> = {
     const tenantId = race.tenantId;
     const marie = await seedPerson(runner, tenantId, 'Marie', 'Dupont');
     const jean = await seedPerson(runner, tenantId, 'Jean', 'Martin');
-    const { companyId } = await seedCompany(runner, tenantId, 'Conflict company');
+    const { companyId, accountId } = await seedCompany(runner, tenantId, 'Conflict company');
     const oldSupplier = await seedSupplier(runner, tenantId, 'Old supplier');
     const newSupplier = await seedSupplier(runner, tenantId, 'New supplier');
     const otherSupplier = await seedSupplier(runner, tenantId, 'Other supplier');
@@ -94,7 +94,7 @@ async function setup(race: Race, kind: Kind, values: Record<string, unknown> = {
     const services = await seedValue(runner, tenantId, nature, 'Services');
     const europe = await seedValue(runner, tenantId, region, 'Europe');
     const line = await itemService(kind, realAudit()).create(
-      lineBody(kind, 'Conflict line', { paying_company_id: companyId, supplier_id: oldSupplier, notes: 'Start', ...values }),
+      lineBody(kind, 'Conflict line', { paying_company_id: companyId, account_id: accountId, supplier_id: oldSupplier, notes: 'Start', ...values }),
       marie,
       { manager: runner.manager },
     );

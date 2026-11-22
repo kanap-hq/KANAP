@@ -100,6 +100,8 @@ function createFields(kind: Kind, company: string, extra: Record<string, unknown
     nature: kind,
     product_name: 'AI line',
     paying_company: company,
+    // A new line needs an account: the one `seedCompany` puts in the company's chart.
+    account: '6000',
     currency: 'EUR',
     effective_start: '2026-01-01',
     ...extra,

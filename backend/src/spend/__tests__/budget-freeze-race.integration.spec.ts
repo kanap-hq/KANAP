@@ -63,9 +63,9 @@ function assertOperationRunning(outcome: Outcome, who: string) {
 /** Two OPEX lines of the race company, each with its version of the year, pinned to a rate set. */
 async function seedPinnedLines(race: Race) {
   return race.seedWith(async (runner) => {
-    const { companyId } = await seedCompany(runner, race.tenantId, 'Race company', 6000);
-    const a = await itemService('opex').create(lineBody('opex', 'Line A', { paying_company_id: companyId }), undefined, { manager: runner.manager });
-    const b = await itemService('opex').create(lineBody('opex', 'Line B', { paying_company_id: companyId }), undefined, { manager: runner.manager });
+    const { companyId, accountId } = await seedCompany(runner, race.tenantId, 'Race company', 6000);
+    const a = await itemService('opex').create(lineBody('opex', 'Line A', { paying_company_id: companyId, account_id: accountId }), undefined, { manager: runner.manager });
+    const b = await itemService('opex').create(lineBody('opex', 'Line B', { paying_company_id: companyId, account_id: accountId }), undefined, { manager: runner.manager });
     const [{ id: rateSetId }] = await runner.query(
       `INSERT INTO currency_rate_sets (tenant_id, fiscal_year, base_currency, rates) VALUES ($1, $2, 'EUR', '{}'::jsonb) RETURNING id`,
       [race.tenantId, YEAR],

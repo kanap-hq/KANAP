@@ -1904,14 +1904,7 @@
     },
     "readOnlyInYourAccess": "Solo lectura en su acceso",
     "creation": {
-      "record": "La línea presupuestaria",
-      "missing": "Falta: {{fields}}",
-      "placeFirst": "Elija primero la empresa pagadora o el centro de coste.",
-      "leaveTitle": "Esta línea está incompleta",
-      "leaveComplete": "Completarla",
-      "leaveDelete": "Eliminarla",
-      "leaveAnyway": "Salir de todos modos",
-      "completeFailed": "No se pudo comprobar la línea."
+      "record": "La línea presupuestaria"
     },
     "bulkEdit": {
       "chartOf": "Plan de cuentas de",

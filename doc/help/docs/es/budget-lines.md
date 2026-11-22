@@ -11,18 +11,21 @@ Ambos tipos están en una sola lista y se abren en el mismo espacio de trabajo, 
 
 Navegue a **Gestión presupuestaria > Líneas presupuestarias** para ver la lista. Haga clic en **Nueva línea** para crear una línea.
 
-El espacio de trabajo se abre en una línea nueva, con el título **Nueva línea OPEX** o **Nueva línea CAPEX**. Su **Tipo** aparece primero en el panel de propiedades, junto al título: el tipo por el que está filtrada la lista en su columna **Tipo** y, si no, **OPEX**. Elija allí el otro tipo, antes o después del título. Escriba el nombre de la línea en el título de arriba y pulse Intro. La línea existe de inmediato, con la moneda de su espacio de trabajo y el 1 de enero del año que está viendo como inicio de vigencia, y todas las pestañas se abren, **Presupuesto** incluida. Complete el panel de propiedades: cada cambio se guarda al instante. Mientras la línea se está creando, **Tipo** sigue siendo un menú: la línea cambia de tipo en el sitio y conserva lo que introdujo. Una cuenta que no corresponde al nuevo tipo se queda en la línea, con su etiqueta en rojo con un icono de alerta, hasta que elija otra.
+El espacio de trabajo se abre en una línea nueva, con el título **Nueva línea OPEX** o **Nueva línea CAPEX**. Su **Tipo** aparece primero en el panel de propiedades, junto al título: el tipo por el que está filtrada la lista en su columna **Tipo** y, si no, **OPEX**. Escriba el nombre de la línea en el título de arriba. Las filas necesarias para crear la línea están abiertas en el panel de propiedades: **Tipo**, **Centro de coste**, **Empresa pagadora**, **Cuenta**, **Moneda**, cada dimensión obligatoria para el tipo e **Inicio de vigencia**. **Moneda** parte de la moneda de su espacio de trabajo e **Inicio de vigencia** del 1 de enero del año que está viendo. **Cuenta** se abre una vez elegida la empresa pagadora. Las demás filas quedan atenuadas hasta que se crea la línea.
 
-Si su acceso a los datos se limita a una empresa, la empresa pagadora se completa con ella. Si debe elegir, elija la empresa pagadora o el centro de coste antes de escribir el título.
+La línea se crea en cuanto su título y sus campos obligatorios están indicados, en cualquier orden. Antes no se guarda nada. Entonces se abren sus pestañas, **Presupuesto** incluida, y cada cambio se guarda al instante. Cambiar el **Tipo** antes de la creación cambia las dimensiones obligatorias y vacía una cuenta o un valor de dimensión reservados al otro tipo. Una vez creada la línea, su tipo se cambia con **Cambiar el tipo…**.
+
+Si su acceso a los datos se limita a una empresa, la empresa pagadora se completa con ella. Cuando su acceso abre una empresa solo a través de algunos de sus centros de coste, **Centro de coste** también es obligatorio.
 
 Mientras la línea se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre:
 
-- **Crear** funciona como Intro: crea la línea y la deja abierta, con su referencia. El cursor va al primer campo obligatorio aún vacío. Con el título vacío, el título pide uno
-- Una vez creada la línea, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y comprueba los campos obligatorios indicados abajo. Si falta alguno, su etiqueta se pone en rojo con un icono de alerta en el panel de propiedades y el cursor va al primero. Una etiqueta vuelve a la normalidad en cuanto su campo tiene un valor. Si no, vuelve al punto de partida: la pantalla anterior o, si no, la lista
+- **Crear** crea la línea cuando su título y sus campos obligatorios están indicados. Si falta alguno, no se guarda nada: su etiqueta se pone en rojo con un icono de alerta en el panel de propiedades y el cursor va al primero. Una etiqueta vuelve a la normalidad en cuanto su campo tiene un valor. Con el título vacío, el título pide uno
+- Cuando Kadratis rechaza la línea, por ejemplo por una cuenta fuera del plan de cuentas de la empresa pagadora, el motivo se muestra bajo el campo afectado
+- Una vez creada la línea, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le devuelve al punto de partida: la pantalla anterior o, si no, la lista. Si un campo obligatorio se vació entretanto, su etiqueta se pone en rojo y el cursor va a él
 - **Ctrl+S** funciona como el botón mostrado
-- **Cancelar** elimina la línea y todo lo que se introdujo en ella, importes incluidos. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar líneas. Una línea con importes en una columna congelada no se puede cancelar
+- **Cancelar** sale sin conservar nada, y elimina la línea si ya estaba creada, con todo lo que se introdujo en ella, importes incluidos. Si introdujo algo más que lo que la creó, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar líneas. Una línea con importes en una columna congelada no se puede cancelar
 
-Si sale de la línea de otra forma mientras falta un campo obligatorio, se le pregunta si desea completarla o eliminarla. Si recarga la página o cierra la pestaña mientras a la línea nueva todavía le falta un campo obligatorio, su navegador pide confirmación y la línea se elimina si sale de todos modos. Una línea que se dejó sin empresa pagadora se abre con el panel de propiedades abierto y las etiquetas de sus campos que faltan en rojo con un icono de alerta, y vuelve a preguntar cada vez que sale de ella. Pulse Escape en el título para salir sin crear nada, aunque ya haya escrito un nombre.
+Salir de una línea nueva antes de su creación no guarda nada y no pregunta nada. Pulse Escape en el título para salir, aunque ya haya escrito un nombre. Una línea guardada sin empresa pagadora por una versión anterior se abre con el panel de propiedades abierto y las etiquetas de sus campos que faltan en rojo con un icono de alerta. Sigue siendo editable.
 
 **Campos obligatorios**:
 
@@ -235,11 +238,11 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dir
 - **Cabecera**: la referencia de la línea (p. ej., `BL-12`) con un botón para copiarla, el título de la línea (haga clic en él para cambiar el nombre de la línea), **Ant.** / **Sig.**, **Compartir**, **Eliminar** (icono de papelera, `budget:admin`, acceso a todos los datos) y el botón de cierre. Mientras la línea se está creando, **Crear** (luego **Listo**) y **Cancelar** sustituyen a **Eliminar** y al botón de cierre
 - **Barra de metadatos** bajo el título: **Estado**, **Responsable de TI** y **Responsable de negocio**, editables en el sitio. Cuando el centro de coste de la línea tiene un responsable del presupuesto, **Responsable del presupuesto** aparece a continuación. Es de solo lectura y se deriva del centro de coste, no se almacena en la línea: pase el cursor por encima para ver de qué centro de coste procede, y cámbielo en el centro de coste (consulte [Centros de coste](cost-centers.md#responsable-del-presupuesto-en-las-lineas-de-presupuesto))
 - **Cinco pestañas**: **Vista general**, **Presupuesto**, **Asignaciones**, **Relaciones** (la pestaña Relaciones muestra cuántos vínculos tiene la línea) e **Historial**
-- **Panel de propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo** (un menú mientras la línea se está creando y, después, **Cambiar el tipo…** junto a él, consulte [Cambiar el tipo](#cambiar-el-tipo)). Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
+- **Panel de propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo** (un menú hasta que se crea la línea y, después, **Cambiar el tipo…** junto a él, consulte [Cambiar el tipo](#cambiar-el-tipo)). Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
 
 **Elección de responsables**:
 
-- En el panel de propiedades de una línea nueva y en la barra de metadatos de una línea existente, las listas **Responsable de TI** y **Responsable de negocio** empiezan, bajo **Acceso al centro de coste**, por las personas que tienen acceso al presupuesto y pueden leer las líneas del centro de coste de la línea. Las demás siguen tras un separador
+- En la barra de metadatos, las listas **Responsable de TI** y **Responsable de negocio** empiezan, bajo **Acceso al centro de coste**, por las personas que tienen acceso al presupuesto y pueden leer las líneas del centro de coste de la línea. Las demás siguen tras un separador
 - Al escribir se busca entre todas las personas, como antes. Puede elegir a cualquiera
 - Sin centro de coste, la lista es la habitual. El grupo no aparece cuando incluiría a todo el mundo, por ejemplo cuando nadie tiene un [acceso a los datos](data-access.md) limitado
 - Cuando su propio acceso a los datos está limitado, el grupo aparece para los centros de coste de su acceso y para la línea que está editando
@@ -283,7 +286,7 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 
 **Panel de propiedades**:
 
-- **Tipo**: **OPEX** o **CAPEX**. Mientras la línea se está creando, es un menú y la línea cambia de tipo en el sitio. Una vez creada la línea, **Cambiar el tipo…** junto a él abre el diálogo descrito en [Cambiar el tipo](#cambiar-el-tipo)
+- **Tipo**: **OPEX** o **CAPEX**. Hasta que se crea la línea, es un menú. Una vez creada la línea, **Cambiar el tipo…** junto a él abre el diálogo descrito en [Cambiar el tipo](#cambiar-el-tipo)
 - **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora y el tipo de la línea), **Moneda** (solo las monedas permitidas en su espacio de trabajo), un campo por dimensión analítica usada para el tipo de la línea, **Run o build** e **Inicio de vigencia**
 - **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
 - Fechas **Creado** y **Actualizado** (solo lectura)
@@ -307,10 +310,10 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 - Cada campo lista los valores activados de su dimensión. Un valor desactivado se mantiene en las líneas que ya lo tienen y no se puede elegir para otra línea
 - Un valor usado solo para el otro tipo no se ofrece, y elegirlo como valor nuevo se rechaza. Una línea que ya lo tiene lo conserva y sigue siendo editable. Consulte [Valores OPEX o CAPEX](analytics.md#valores-opex-o-capex)
 - El campo no puede crear un valor: créelo en [Dimensiones analíticas](analytics.md) o deje que lo cree una importación
-- Una dimensión obligatoria está marcada con un asterisco. Una línea que se está creando necesita un valor en ella: **Listo** la marca como faltante hasta que elija uno. En una línea que tiene un valor, el campo no se puede vaciar, solo cambiar. Una línea sin valor sigue siendo editable. Si modifica una línea así, al salir se le pregunta primero: "El campo Tipo de coste es obligatorio. Elija un valor antes de salir." **Quedarse** coloca el cursor en el campo que falta. **Salir de todos modos** sale de la línea. Consulte [Dimensiones obligatorias](analytics.md#dimensiones-obligatorias)
+- Una dimensión obligatoria está marcada con un asterisco. Una línea nueva solo se crea con un valor en ella: **Crear** la marca como faltante hasta que elija uno. En una línea que tiene un valor, el campo no se puede vaciar, solo cambiar. Una línea sin valor sigue siendo editable. Si modifica una línea así, al salir se le pregunta primero: "El campo Tipo de coste es obligatorio. Elija un valor antes de salir." **Quedarse** coloca el cursor en el campo que falta. **Salir de todos modos** sale de la línea. Consulte [Dimensiones obligatorias](analytics.md#dimensiones-obligatorias)
 - Si las dimensiones no se pueden cargar, una línea sustituye a estos campos: "No se pudieron cargar las dimensiones."
 
-**Consejo**: Una cuenta fuera del plan de cuentas de la empresa pagadora se rechaza al elegirla. Una línea existente cuya cuenta está fuera del plan de su empresa se puede seguir editando: el plan solo se comprueba cuando cambia la empresa o la cuenta, y cuando hace clic en **Listo** en una línea que se está creando.
+**Consejo**: Una cuenta fuera del plan de cuentas de la empresa pagadora se rechaza al elegirla. Una línea existente cuya cuenta está fuera del plan de su empresa se puede seguir editando: el plan solo se comprueba cuando se crea la línea y cuando cambia la empresa o la cuenta.
 
 ---
 
@@ -675,8 +678,7 @@ Cada línea tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de valid
 
 **Establecer estado**:
 
-- Mientras la línea se está creando, puede establecer su **Fin de validez** en el panel de propiedades
-- Más adelante, cambie el **Estado** en la barra de metadatos, o use el campo **Ciclo de vida** del panel de propiedades (interruptor de estado y **Fin de validez**). Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha
+- Cambie el **Estado** en la barra de metadatos, o use el campo **Ciclo de vida** del panel de propiedades (interruptor de estado y **Fin de validez**). Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha
 - Puede programar un fin de validez futuro, por ejemplo el fin de un contrato, una baja planificada o el final de la vida útil de un activo
 
 **Ver líneas deshabilitadas**:

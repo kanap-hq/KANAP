@@ -65,8 +65,8 @@ async function bumpOf(read: () => Promise<number>, write: () => Promise<unknown>
 
 /** A line created through the service, with its company (the update path needs one). */
 async function seedServiceLine(runner: QueryRunner, kind: Kind, tenantId: string, extra: Record<string, unknown> = {}) {
-  const { companyId } = await seedCompany(runner, tenantId, `Counters ${kind} company`);
-  const line = await itemService(kind).create(lineBody(kind, `Counters ${kind} line`, { paying_company_id: companyId, notes: 'Start', ...extra }), undefined, { manager: runner.manager });
+  const { companyId, accountId } = await seedCompany(runner, tenantId, `Counters ${kind} company`);
+  const line = await itemService(kind).create(lineBody(kind, `Counters ${kind} line`, { paying_company_id: companyId, account_id: accountId, notes: 'Start', ...extra }), undefined, { manager: runner.manager });
   return line.id as string;
 }
 
@@ -145,8 +145,9 @@ async function lineAnalytics(kind: Kind) {
     assert.equal(await indexed(), 1, `${kind}: any other update of the line refreshes it`);
 
     // A line created with analytics values starts at 2: their insert bumps it, like any later change.
+    const [place] = await runner.query(`SELECT paying_company_id, account_id FROM ${TABLES[kind].items} WHERE id = $1`, [itemId]);
     const created = await itemService(kind).create(
-      lineBody(kind, `Counters ${kind} line with values`, { paying_company_id: (await runner.query(`SELECT paying_company_id FROM ${TABLES[kind].items} WHERE id = $1`, [itemId]))[0].paying_company_id, analytics_values: { [axisId]: first } }),
+      lineBody(kind, `Counters ${kind} line with values`, { paying_company_id: place.paying_company_id, account_id: place.account_id, analytics_values: { [axisId]: first } }),
       undefined, { manager: runner.manager },
     );
     assert.equal(await rowVersion(runner, kind, created.id), 2, `${kind}: a line created with analytics values starts at 2`);

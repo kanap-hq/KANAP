@@ -76,8 +76,15 @@ async function lineRow(m: EntityManager, id: string) {
 
 async function testLineGate(runner: QueryRunner, s: Seed) {
   const { persons: p } = s;
+  // A new line needs an account; the seeded companies have no chart, so any account of the tenant fits.
+  const [chart] = await runner.query(
+    `INSERT INTO chart_of_accounts (tenant_id, code, name, country_iso) VALUES ($1, 'DA-GATE', 'Gate chart', 'FR') RETURNING id`, [s.tenantId],
+  );
+  const [account] = await runner.query(
+    `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name) VALUES ($1, $2, 6000, 'Gate account') RETURNING id`, [s.tenantId, chart.id],
+  );
   const body = (company: string, centre: string | null) => ({
-    product_name: 'New', currency: 'EUR', effective_start: '2026-01-01', paying_company_id: company, cost_center_id: centre,
+    product_name: 'New', currency: 'EUR', effective_start: '2026-01-01', paying_company_id: company, cost_center_id: centre, account_id: account.id,
   });
   // Rita: INF-FR edit. FR/INF-FR is hers; FR/INF-ES and ES/INF-FR are not.
   await as(runner, p.rita, async (m) => {
