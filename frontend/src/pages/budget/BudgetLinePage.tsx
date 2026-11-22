@@ -13,7 +13,7 @@ import { budgetLineDetailQuery } from '../../hooks/budgetItemDetailQuery';
 import BudgetLineUnavailable, { httpStatus } from './BudgetLineUnavailable';
 import { isReportView, useListFilters, writeListSnapshot } from '../../hooks/useListContextSearch';
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
-import { compactListSearchCached } from '../../lib/listContext';
+import { compactListSearchCached, singleSetFilterValue } from '../../lib/listContext';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { axisRequiredFor, useAnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import { explicitSort, filtersStringOnShownColumns } from '../../components/finance/amountColumns';
@@ -65,7 +65,11 @@ import { analyticsValueOptions, itemReferences, matching, ownerName } from '../.
 import { ANALYTICS_VALUES_LOOKUP_ENDPOINT, type AnalyticsValue, type ItemAnalyticsValue } from '../../services/analytics';
 import { fetchLookupByIds } from '../../hooks/useLookupPicker';
 import type { CostCenterNode } from '../../services/costCenters';
-import { useCostCenterNode } from '../../hooks/useCostCenterTree';
+import { useCostCenterNode, useCostCenterTree } from '../../hooks/useCostCenterTree';
+import { costCenterLabel } from '../../services/costCenters';
+import { firstFill, useFillOnce, useLookupLabelMatch, useOnlyCompany, useOnlyLookupValue, type FillValue } from '../../hooks/useOnlyChoice';
+import { useCurrencyOptions } from '../../i18n/currencies';
+import { accountDisplayText } from '../../utils/accountDisplay';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 import { useRecordTitle } from '../../tenant/workspaceTitle';
 
@@ -348,9 +352,25 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   );
   const [form, setForm] = React.useState<BudgetLineForm>(EMPTY_FORM);
   const yearParam = searchParams.get('year');
+  // The list a new line comes from (lot A2): a filter on one value, in its address, gives the line
+  // that value. Undefined while filters saved as a context load.
+  const creationFilters = useListFilters(searchParams, null);
+  const filterOf = (colId: string): string | null | undefined => {
+    if (!isCreate) return null;
+    return creationFilters.ready ? singleSetFilterValue(creationFilters.filters, colId) : undefined;
+  };
+  // A currency filter gives a currency the picker offers (the currency settings', else every one).
+  const allCurrencyOptions = useCurrencyOptions();
+  const currencyFilter = filterOf('currency')?.toUpperCase() ?? null;
+  const filterCurrency = React.useMemo(() => {
+    if (!currencyFilter) return null;
+    const allowed = new Set((currencySettings?.allowedCurrencies ?? []).map((code: string) => code.toUpperCase()));
+    const offered = allCurrencyOptions.filter((option) => allowed.size === 0 || allowed.has(option.code));
+    return (offered.length ? offered : allCurrencyOptions).some((option) => option.code === currencyFilter) ? currencyFilter : null;
+  }, [allCurrencyOptions, currencyFilter, currencySettings]);
   const draftForm = React.useMemo(
-    () => draftBudgetLineForm(defaultSpendCurrency, pageYear(yearParam)),
-    [defaultSpendCurrency, yearParam],
+    () => draftBudgetLineForm(filterCurrency ?? defaultSpendCurrency, pageYear(yearParam)),
+    [defaultSpendCurrency, filterCurrency, yearParam],
   );
   const [saveError, setSaveError] = React.useState<string | null>(null);
   // A person with limited data access: the one company the access allows is filled in
@@ -358,16 +378,17 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // company is open to them only through its cost centers.
   const placementDefault = useLinePlacementDefault();
   // The new line's draft (lot L3a): what the person gave, over the defaults (the tenant's currency,
-  // 1 January of the page's year, the one company of a limited access). Nothing is written until the
-  // title and every starred field are given (`useDraftCreation`, below).
+  // or the list's, and 1 January of the page's year). The obvious values (lot A2, below) are given
+  // as the person would. Nothing is written until the title and every starred field are given
+  // (`useDraftCreation`, below).
   const [draftEdits, setDraftEdits] = React.useState<Partial<BudgetLineForm>>({});
   const draftEditsRef = React.useRef(draftEdits);
   const draftLine = React.useMemo<BudgetLineForm>(
-    () => ({ ...draftForm, paying_company_id: placementDefault.companyId ?? '', ...draftEdits }),
-    [draftEdits, draftForm, placementDefault.companyId],
+    () => ({ ...draftForm, ...draftEdits }),
+    [draftEdits, draftForm],
   );
   const draftBaseRef = React.useRef(draftForm);
-  draftBaseRef.current = { ...draftForm, paying_company_id: placementDefault.companyId ?? '' };
+  draftBaseRef.current = draftForm;
   const currentDraft = React.useCallback((): BudgetLineForm => ({ ...draftBaseRef.current, ...draftEditsRef.current }), []);
   // A paying company brought by the cost center follows it until the person picks a company; the
   // company of the cost center picked, to drop it when another company is picked.
@@ -896,6 +917,64 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     if (!line.effective_start) fields.push('effective_start');
     return fields;
   }, [analyticsAxes.enabled, linePlacementFilter, nature]);
+
+  // ----- What is obvious for a new line (lot A2) -----
+  // Each field is given once, as the person would choose it: the value of a list filter on one value
+  // when the picker offers it, else the one value the picker offers. The company first, then the
+  // cost center and the account only when they go with it. A value given this way writes nothing
+  // by itself: the title is still needed.
+  const draftCompany = draftLine.paying_company_id;
+  const companyFilter = filterOf('paying_company_name');
+  const filterCompany = useLookupLabelMatch<{ id: string; name: string }>({
+    endpoint: '/companies/lookup',
+    label: companyFilter ?? null,
+    labelOf: (company) => company.name,
+    allowed: linePlacementFilter?.companyIds,
+    enabled: isCreate && placementDefault.ready,
+  });
+  const onlyCompany = useOnlyCompany(placementDefault, isCreate);
+  const companyValue = firstFill(companyFilter === undefined ? undefined : filterCompany, onlyCompany);
+  useFillOnce({ isNew: isCreate, key: 'paying_company', empty: !draftCompany, value: companyValue, fill: pickDraftCompany });
+  const costCenterFilter = filterOf('cost_center_label');
+  const costCenterTree = useCostCenterTree({ enabled: !!costCenterFilter });
+  const costCenterValue = React.useMemo((): FillValue => {
+    if (costCenterFilter === undefined) return undefined;
+    if (!costCenterFilter) return null;
+    if (!costCenterTree.ready) return undefined;
+    const matches = costCenterTree.nodes.filter((node) => node.kind === 'cost_center' && node.status === 'enabled'
+      && costCenterLabel(node) === costCenterFilter
+      && (!draftCompany || node.company_id === draftCompany)
+      && (!linePlacementFilter || linePlacementFilter.isCostCenterAllowed(node)));
+    return matches.length === 1 ? matches[0].id : null;
+  }, [costCenterFilter, costCenterTree, draftCompany, linePlacementFilter]);
+  // The cost center waits for the company: one the company does not take brings its own.
+  const companySettled = companyValue !== undefined && (companyValue === null || !!draftCompany);
+  useFillOnce({
+    isNew: isCreate,
+    key: companySettled ? `cost_center|${draftCompany}` : null,
+    empty: !draftLine.cost_center_id,
+    value: costCenterValue,
+    fill: (id) => pickDraftCostCenter(id, costCenterTree.byId.get(id) ?? null),
+  });
+  const accountFilter = filterOf('account_display');
+  const accountScope = { companyId: draftCompany || null, nature };
+  const filterAccount = useLookupLabelMatch<{ id: string; account_number: number; account_name: string }>({
+    endpoint: '/accounts/lookup',
+    scope: accountScope,
+    label: accountFilter ?? null,
+    // The list shows "number - name"; the number finds the account.
+    text: accountFilter?.split(' - ')[0],
+    labelOf: (account) => accountDisplayText(account.account_number, account.account_name),
+    enabled: isCreate && !!draftCompany,
+  });
+  const onlyAccount = useOnlyLookupValue({ endpoint: '/accounts/lookup', scope: accountScope, enabled: isCreate && !!draftCompany });
+  useFillOnce({
+    isNew: isCreate,
+    key: draftCompany ? `account|${draftCompany}|${nature}` : null,
+    empty: !draftLine.account_id,
+    value: firstFill(accountFilter === undefined ? undefined : filterAccount, onlyAccount),
+    fill: (id) => editDraft({ account_id: id }),
+  });
 
   // The body of `POST /budget-lines`: the draft, with the values of the dimensions of its type.
   const draftBody = React.useCallback((line: BudgetLineForm) => {

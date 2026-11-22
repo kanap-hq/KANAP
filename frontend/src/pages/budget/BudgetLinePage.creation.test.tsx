@@ -148,7 +148,21 @@ type Options = {
   refusals?: Array<{ status: number; data: Record<string, unknown> }>;
   /** The dimension values the lookup by ids reads (`GET /analytics-categories/lookup?ids=`). */
   values?: Array<{ id: string; axis_id: string; name: string; applies_to: 'opex' | 'capex' | null }>;
+  /** The companies the company picker offers (`GET /companies/lookup`). */
+  companies?: Array<{ id: string; name: string }>;
+  /** The accounts the account picker offers, per company and type (`GET /accounts/lookup`). */
+  accounts?: Array<{ id: string; company: string; nature: 'opex' | 'capex'; account_number: number; account_name: string }>;
+  /** The cost center tree (`GET /cost-centers/tree`). */
+  costCenters?: Array<{ id: string; code: string; name: string; company_id: string | null; kind?: string; status?: string }>;
 };
+
+/** One page of a lookup: the rows holding the typed text, `limit` of them. */
+function lookupPage<T>(rows: T[], text: (row: T) => string, params: Record<string, unknown> | undefined) {
+  const q = String(params?.q ?? '').toLowerCase();
+  const matches = rows.filter((row) => text(row).toLowerCase().includes(q));
+  const limit = Number(params?.limit ?? 30);
+  return { data: { items: matches.slice(0, limit), has_more: matches.length > limit } };
+}
 
 /** The line as the server holds it: the creation writes it, each PATCH changes it. */
 const server: { line: Record<string, unknown> } = { line: {} };
@@ -176,6 +190,15 @@ function renderPage(entries: string[], options: Options = {}) {
       const items = (options.values ?? []).filter((value) => value.axis_id === lookup?.axis_id)
         .map((value) => ({ description: null, sort_order: 0, status: 'enabled', disabled_at: null, ...value }));
       return { data: { items, has_more: false } } as never;
+    }
+    const params = config?.params as Record<string, unknown> | undefined;
+    if (url === '/companies/lookup') return lookupPage(options.companies ?? [], (row) => row.name, params) as never;
+    if (url === '/accounts/lookup') {
+      const offered = (options.accounts ?? []).filter((row) => row.company === params?.companyId && (!params?.nature || row.nature === params.nature));
+      return lookupPage(offered, (row) => `${row.account_number} ${row.account_name}`, params) as never;
+    }
+    if (url === '/cost-centers/tree') {
+      return { data: { items: (options.costCenters ?? []).map((node) => ({ kind: 'cost_center', status: 'enabled', parent_id: null, path_ids: [node.id], ...node })) } } as never;
     }
     if (url === '/budget-lines/BL-12' || url === `/budget-lines/${ITEM_ID}`) return { data: server.line } as never;
     if (url === '/budget-lines/resolve/BL-12') return { data: { id: ITEM_ID, nature: server.line.nature, reference: 'BL-12' } } as never;
@@ -860,5 +883,94 @@ describe('Budget line born complete', () => {
     fireEvent.keyDown(input, { key: 'Escape' });
     await waitFor(() => expect(location()).toBe('/start'));
     expect(mocked.post).not.toHaveBeenCalled();
+  });
+  describe('obvious values (lot A2)', () => {
+    const ONE_COMPANY = [{ id: 'company-1', name: 'Fromage SA' }];
+    const TWO_COMPANIES = [{ id: 'company-1', name: 'Fromage SA' }, { id: 'company-2', name: 'Kaas BV' }];
+    const ACCOUNTS = [
+      { id: 'account-1', company: 'company-1', nature: 'opex' as const, account_number: 6000, account_name: 'Software' },
+      { id: 'account-2', company: 'company-1', nature: 'opex' as const, account_number: 6100, account_name: 'Hardware' },
+      { id: 'account-9', company: 'company-2', nature: 'opex' as const, account_number: 7000, account_name: 'Services' },
+    ];
+    const COST_CENTERS = [
+      { id: 'cc-company-1', code: 'IT', name: 'Informatique', company_id: 'company-1' },
+      { id: 'cc-company-2', code: 'IT2', name: 'Informatique BV', company_id: 'company-2' },
+    ];
+    const filtered = (model: Record<string, string[]>) => `/ops/budget/new/overview?nature=opex&list=budget&filters=${encodeURIComponent(JSON.stringify(
+      Object.fromEntries(Object.entries(model).map(([col, values]) => [col, { filterType: 'set', values }])),
+    ))}`;
+
+    it('fills the one company and its one account at once, and writes nothing before the title', async () => {
+      await startNewLine({ companies: ONE_COMPANY, accounts: ACCOUNTS.filter((row) => row.id === 'account-1') });
+      await waitFor(() => expect(field('opex.fields.payingCompany')).toHaveValue('company-1'));
+      await waitFor(() => expect(field('opex.fields.account')).toHaveValue('account-1'));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(mocked.post).not.toHaveBeenCalled();
+      await giveTitle();
+      await waitFor(() => expect(lineWrites()).toHaveLength(1));
+      expect(lineWrites()[0][1]).toMatchObject({ product_name: 'Monitoring', paying_company_id: 'company-1', account_id: 'account-1' });
+    });
+
+    it('fills nothing in a workspace of two companies', async () => {
+      await startNewLine({ companies: TWO_COMPANIES, accounts: ACCOUNTS });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(field('opex.fields.payingCompany')).toHaveValue('');
+      expect(field('opex.fields.account')).toHaveValue('');
+    });
+
+    it('does not fill again a company the person emptied', async () => {
+      await startNewLine({ companies: ONE_COMPANY });
+      await waitFor(() => expect(field('opex.fields.payingCompany')).toHaveValue('company-1'));
+      pick('opex.fields.payingCompany', '');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(field('opex.fields.payingCompany')).toHaveValue('');
+    });
+
+    it('takes the company, the cost center and the account the list was filtered on, in that order', async () => {
+      renderPage([filtered({ paying_company_name: ['Fromage SA'], cost_center_label: ['IT · Informatique'], account_display: ['6100 - Hardware'] })], {
+        companies: TWO_COMPANIES, accounts: ACCOUNTS, costCenters: COST_CENTERS,
+      });
+      await screen.findByRole('textbox', { name: TITLE_FIELD });
+      await waitFor(() => expect(field('opex.fields.payingCompany')).toHaveValue('company-1'));
+      await waitFor(() => expect(field('opex.fields.costCenter')).toHaveValue('cc-company-1'));
+      await waitFor(() => expect(field('opex.fields.account')).toHaveValue('account-2'));
+      expect(mocked.post).not.toHaveBeenCalled();
+      await giveTitle();
+      await waitFor(() => expect(lineWrites()).toHaveLength(1));
+      expect(lineWrites()[0][1]).toMatchObject({ paying_company_id: 'company-1', cost_center_id: 'cc-company-1', account_id: 'account-2' });
+    });
+
+    it('takes neither a cost center nor an account of another company than the filtered one', async () => {
+      renderPage([filtered({ paying_company_name: ['Fromage SA'], cost_center_label: ['IT2 · Informatique BV'], account_display: ['7000 - Services'] })], {
+        companies: TWO_COMPANIES, accounts: ACCOUNTS, costCenters: COST_CENTERS,
+      });
+      await screen.findByRole('textbox', { name: TITLE_FIELD });
+      await waitFor(() => expect(field('opex.fields.payingCompany')).toHaveValue('company-1'));
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(field('opex.fields.costCenter')).toHaveValue('');
+      expect(field('opex.fields.account')).toHaveValue('');
+    });
+
+    it('takes nothing from a filter on two companies', async () => {
+      renderPage([filtered({ paying_company_name: ['Fromage SA', 'Kaas BV'] })], { companies: TWO_COMPANIES, accounts: ACCOUNTS });
+      await screen.findByRole('textbox', { name: TITLE_FIELD });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(field('opex.fields.payingCompany')).toHaveValue('');
+    });
+
+    it('takes a currency the list was filtered on', async () => {
+      renderPage([filtered({ currency: ['USD'] })]);
+      await screen.findByRole('textbox', { name: TITLE_FIELD });
+      await waitFor(() => expect((within(fieldRow('opex.fields.currency')).getByRole('combobox') as HTMLInputElement).value).toContain('USD'));
+    });
+
+    it('takes no company a limited access leaves out, and keeps its own one company', async () => {
+      access.limited = true;
+      access.start = { ready: true, companyId: 'company-1', needsChoice: false };
+      renderPage([filtered({ paying_company_name: ['Other'] })], { companies: [...TWO_COMPANIES, { id: 'company-3', name: 'Other' }] });
+      await screen.findByRole('textbox', { name: TITLE_FIELD });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(field('opex.fields.payingCompany')).toHaveValue('company-1');
+    });
   });
 });
