@@ -1,4 +1,4 @@
-&# Changelog
+# Changelog
 
 Every published version of Kadratis, newest first. Versions are numbered `YY.M.N` (year, month,
 number in the month: `26.10.1`, then `26.10.2`, then `26.11.1`), and each one has a Git tag of
@@ -7,8 +7,9 @@ published version. The same entries are on the GitHub releases page.
 
 Each entry starts with a level-two heading: the version and its date, for example
 `26.11.1 (2026-11-03)`. The heading ends with `· Action required` when an existing installation
-must do something before or after the upgrade. Below the heading, one or two lines say what the
-version brings, followed by three lists:
+must do something before or after the upgrade; a check the operator is asked to make counts
+as an action. Below the heading, one or two lines say what the version brings, followed by three
+lists:
 
 - **Changes** and **Fixes**: what users see, with the number of the pull request.
 - **On-premise**: the required actions (`Action required: ...`), the database migrations, which
@@ -16,6 +17,46 @@ version brings, followed by three lists:
 
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
+
+## 26.11.9 (2026-11-22)
+
+Imports through Kad and the screens that match existing records before creating any, business references for suppliers, companies, contacts, departments and contracts, Kad changes in bulk, a new way to create records, and an Edit node on a cost center that is enough to edit its lines and contracts.
+
+### Changes
+- Imports find what already exists: the budget file, from Budget > Import or through Kad, matches its suppliers, companies and dimension values to existing ones before it creates anything, with case and accents aside (and across languages for the sample data and the recommended dimensions). Kad proposes matches for values written differently, such as a translation or a short form (Dell for Dell Technologies). Every import finds a record by its name with case and accents aside; each match is listed at the check and can be undone, and a name that several records answer refuses the row. A budget row or an application that looks like an existing one is left out by default, with the choice to create it anyway or to update the existing record; if that record changes before the load, nothing is imported. The budget file check warns, without blocking, of an amount far from the supplier's comparable lines, dates outside the years of the amounts and a currency other than the paying company's. A Kad card that would create and update nothing says so and cannot be approved. (#1658, #1684, #1688)
+- Imports clear values the same way everywhere: in every list import, the users import and the budget file through Kad, an empty cell keeps the stored value, `-` clears it, and a column the file does not carry is left unchanged. A cell holding several values is the complete list. The import dialog no longer offers "Replace all" or a choice for empty cells, and the check and Kad's card say how many values will be cleared. Exports write every value of a multi-value field in numbered columns, and an exported file imported again unchanged changes nothing. Kad imports files that carry only some columns, and its card names each record a row updates, linked to its page. (#1695, #1716, #1727)
+- Imports leave one trace: the audit log records every import made from a screen, as it already did for Kad. The History tab of a record an import creates or changes names the person, or Kad on their behalf; imported contacts and servers now have a history. An import no longer overwrites a change made on the record page while it runs. (#1716, #1726, #1727)
+- Business references: suppliers, companies, contacts, departments and contracts have a reference (`SUP-12`, `COMP-3`, `CTCT-8`, `DEPT-2`, `CTR-5`), shown on their page, in their list (filter, sort, export), in their address and in the links to them. The global search, the pickers, the `@` mention, Kad and the MCP server find them by it, and their history names them by it. Imports accept the reference as the key of the record to update and warn, without blocking, of a record the file renames or moves. A record that does not exist, or a contract outside the person's data access, opens a "not found" page with a link back to the list. Contributors are now numbered `MEM-n`, and `CTR-n` designates a contract; an address `/portfolio/contributors/CTR-n` saved before this version still opens the contributor. (#1657, #1664, #1683, #1686)
+- Kad changes one field on many budget lines or applications under a single card, with the fields of the list's **Change the selection**. The card states the records, the new value and the counts, and each record's history shows the change as made by Kad. On applications, the category and the cyber criticality can now be changed in bulk too. Kad's cards offer **Reject all** next to **Approve all**. (#1682)
+- Creating records: a new record is created by Create, Enter or Tab, and leaving its page before that saves nothing. A budget line, an asset or a connection is created once its required fields are given, in any order; a budget line now needs an account, on the screen, through Kad, the budget file and the API. A new budget line can be OPEX or CAPEX from a Type menu. Create marks the missing fields with a red label and an alert icon, announced by screen readers, and puts the cursor in the first one; the "Missing: …" banners are gone. Done returns to the page the creation started from. A required field with a single possible value is filled in, and a record created from a filtered list takes the filters that keep one value. A contact can be created from any contact field. The properties panel widens from its left edge. (#1728, #1729, #1730, #1732, #1734, #1735, #1736, #1737, #1738, #1739, #1740)
+- Data access: an Edit node on a cost center, or on a group above it, lets a person in limited data access edit the budget lines charged to it and the contracts placed on it, whatever company pays. Creating and moving a line or a contract still need the company of the cost center, and deleting stays reserved to people with all data. A contract held only through its **Cost center or group** shows that field as required. (#1733)
+- Budget columns: the budget lines list follows a change of the default budget column. A list whose amount columns a person chose keeps them and gains the new default column, which can be hidden again. The Budget tab of a line opens on the default column, or on the first column that is not frozen. (#1731)
+- AI agents: with Status update set to Automatic, an agent also closes and solves tickets; a close that comes with a reply to the requester runs after that reply has gone out. The Activity search finds entries by the reference shown in the Target column (`T-15`, `PRJ-3`). (#1677, #1678)
+
+### Fixes
+- Projects: the API refuses actual start and end dates on project writes, since they come from the status, and a project that resumes keeps its first actual start. The roadmap generator names a refused project by its name. Deleting a phase or a milestone asks for confirmation. Importing a project or a request again no longer reports a purpose or risks change when they are the same. (#1662, #1713, #1723, #1727)
+- Contributors and teams: adding a contributor offers enabled accounts only and works without the Users reader right, and picking a colleague in a team or owners field empties the field for the next name. The contributor page opened from "me" shows its reference as soon as it exists. (#1672, #1681, #1727)
+- Incidents: the import finds a person by name in either order and lists the e-mails of a name several people share. The PDF report shows the link lines of the journal in the report's language. (#1669, #1685)
+- AI agents: the runs list and the Error entries of the Activity page show the agents' runs only, and the delete control of an agent card is a button of its own, reachable by keyboard. (#1660, #1680)
+- AI model settings: changing a field used by the connection test clears the previous result, and a refused save or a failed test shows its message in the dialog. The French consent sentence for the built-in model reads correctly whatever the provider's name. (#1665, #1674)
+- Kad: a failed approved change states its error once. When Kad imports servers of type "Cloud", it asks for the type. (#1710, #1727)
+- Knowledge: version notes written by the application show in the reader's language, and an address under the library that is not a document shows "Document not found or access restricted". (#1661, #1670)
+- Exports: the dialog closes once the file is downloaded, and the note about separators, decimal marks and dates sits under the format choice. (#1663, #1714)
+- First steps: the hints "Your technologies" and "A linked contract" name the button and tabs to use, the help button of the users page opens the guide of the path from its "A colleague" step, and the About window closes once a path is chosen. (#1667, #1673, #1712, #1727)
+- The delete confirmation on an application page uses the words of the Applications list. (#1725)
+- The Cloud providers list of the IT settings always keeps "Other", so an asset can always be created. (#1722)
+- A new task no longer shows the Assets or Applications field when the person cannot read those modules. (#1671)
+- The History tab names criticality levels and recovery waves as the record's screen does, renamed levels included. (#1668)
+- A date typed without separators keeps its month: `01012026` becomes `01/01/2026`. (#1666)
+- Status cells stay empty while list rows load. (#1659)
+- Sample data: every sample project has a stream of its own category. (#1676)
+- On-premise: the web container's proxy waits up to 300 seconds for API answers, so long imports and syncs no longer end in a 504 page. The nightly backup no longer stops on an empty file storage, and no longer reads an uploaded object back with recent `rclone` versions; the manual says that `rclone` before 1.61 adds an ACL header that a bucket denying ACL writes refuses. (#1631, #1675, #1687)
+
+### On-premise
+- Action required: none
+- Migrations: run automatically at start (1856240000000-business-references, 1856250000000-data-access-edit-by-centre). The first one gives the existing suppliers, companies, contacts, departments and contracts their reference, in creation order (records created together in ERP ID and name order). The second one lets an Edit node on a cost center cover the budget lines and contracts placed on it. Going back to the image of the previous version keeps that rule; only reverting the migration `1856250000000` removes it.
+- API for scripts: `POST /budget-lines/creation`, `POST /assets/creation`, `POST /connections/creation` and the `POST …/:id/creation/complete` routes of these three families are removed; `GET` and `DELETE …/:id/creation` remain. `POST /budget-lines` refuses a line without an account. The imports read an empty cell as "keep the stored value" and `-` as "clear it", and a call with `mode=replace` now merges.
+- Recommended: none
 
 ## 26.11.8 (2026-11-14)
 
