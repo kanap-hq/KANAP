@@ -26,7 +26,7 @@ Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pou
 **Le geste.** Importez votre fichier budget, ou créez une première ligne à la main.
 
 - **Importer un fichier.** Cliquez sur **Importer**, puis sur **Télécharger un exemple** : un classeur avec quelques lignes d'exemple et ce que prend chaque colonne. Remplissez vos lignes et importez le fichier. Sur une liste vide, **Exporter** donne la seule ligne de titres.
-- **Créer une ligne.** Cliquez sur **Nouvelle ligne**, tapez son nom dans le titre, puis choisissez sa société payeuse et son compte dans le panneau **Propriétés**. La ligne est créée dès que ses champs obligatoires sont renseignés. Saisissez les montants dans l'onglet **Budget**, puis cliquez sur **Terminé**. **Annuler** abandonne la ligne.
+- **Créer une ligne.** Cliquez sur **Nouvelle ligne**, tapez son nom dans le titre, puis vérifiez sa société payeuse (déjà choisie quand votre espace de travail n'a qu'une société) et choisissez son compte dans le panneau **Propriétés**. La ligne est créée dès que ses champs obligatoires sont renseignés. Saisissez les montants dans l'onglet **Budget**, puis cliquez sur **Terminé**. **Annuler** abandonne la ligne.
 
 **Ce que vous lisez.** Un import vérifie tout le fichier et annonce les lignes à créer, à mettre à jour et celles qui ne changent pas. Un fichier avec une erreur ne charge rien. Une ligne créée à la main apparaît dans la liste avec ses montants de l'année.
 

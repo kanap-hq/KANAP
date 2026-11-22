@@ -3,6 +3,9 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
 import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { UNSCOPED_PLACEMENT, firstFill, useFillOnce, useLookupLabelMatch, useOnlyCompany, type FillValue } from '../../hooks/useOnlyChoice';
+import { useListFilters } from '../../hooks/useListContextSearch';
+import { singleSetFilterValue } from '../../lib/listContext';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { useDataAccessAdmin } from '../../auth/dataAccess';
@@ -176,6 +179,42 @@ export default function CostCenterWorkspacePage() {
   );
 
   const effectiveKind: CostCenterKind | undefined = pendingKind ?? data?.kind;
+  // ----- What is obvious for a new node (lot A2) -----
+  // The list filtered on one type gives it; a cost center then takes the company the list is filtered
+  // on, else the one company of the workspace. Each as the person's choice, once.
+  const creationFilters = useListFilters(searchParams, null);
+  const filterOf = (colId: string): string | null | undefined => {
+    if (!isCreate) return null;
+    return creationFilters.ready ? singleSetFilterValue(creationFilters.filters, colId) : undefined;
+  };
+  const kindFilter = filterOf('kind');
+  const kindValue: FillValue = kindFilter === undefined ? undefined
+    : (kindFilter === 'cost_center' || kindFilter === 'group' ? kindFilter : null);
+  // The type holds a default on the draft (a cost center): a list filtered on groups replaces it.
+  useFillOnce({
+    isNew: isCreate,
+    key: 'kind',
+    empty: draft.kind === 'cost_center',
+    value: kindValue === 'cost_center' ? null : kindValue,
+    fill: () => { void patch({ kind: 'group', company_id: null }, 'kind'); },
+  });
+  const companyFilter = filterOf('company_name');
+  const filterCompany = useLookupLabelMatch<{ id: string; name: string }>({
+    endpoint: '/companies/lookup',
+    label: companyFilter ?? null,
+    labelOf: (company) => company.name,
+    enabled: isCreate,
+  });
+  const onlyCompany = useOnlyCompany(UNSCOPED_PLACEMENT, isCreate);
+  // The company waits for the type: a group takes none.
+  const kindSettled = kindValue !== undefined && (kindValue === null || kindValue === draft.kind);
+  useFillOnce({
+    isNew: isCreate,
+    key: kindSettled && draft.kind === 'cost_center' ? 'company_id' : null,
+    empty: !draft.company_id,
+    value: firstFill(companyFilter === undefined ? undefined : filterCompany, onlyCompany),
+    fill: (companyId) => { void patch({ company_id: companyId }, 'company_id'); },
+  });
 
   const handleKindChange = (next: CostCenterKind) => {
     if (!data) return;

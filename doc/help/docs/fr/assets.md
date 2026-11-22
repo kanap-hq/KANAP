@@ -12,7 +12,7 @@ Rendez-vous dans **Cartographie SI > Actifs** pour voir votre inventaire d'actif
 
 Kadratis crée l'actif dès qu'il a les trois. Sa référence (`AST-12`) s'affiche et tous les onglets s'ouvrent.
 
-Le nouvel actif est dans l'environnement Prod, au cycle de vie Actif. Il n'a pas de type tant que vous n'en choisissez pas. **Ajouter un cluster** ouvre la même page avec l'interrupteur **Cluster** activé. Une fois l'actif créé, vous pouvez changer son type et son environnement. Chaque champ s'enregistre alors de lui-même.
+Quand votre espace de travail n'a qu'un site, **Site** est déjà rempli. Un actif créé depuis la liste part de la valeur qu'un filtre à cases garde seule sur **Site**, **Type d'actif**, **Environnement** ou **Cycle de vie**, quand le champ l'offre. Vous pouvez changer ces valeurs. Sinon, le nouvel actif est dans l'environnement Prod, au cycle de vie Actif, et n'a pas de type tant que vous n'en choisissez pas. **Ajouter un cluster** ouvre la même page avec l'interrupteur **Cluster** activé. Une fois l'actif créé, vous pouvez changer son type et son environnement. Chaque champ s'enregistre alors de lui-même.
 
 **Champs obligatoires** :
 - **Nom** : Le nom de l'actif ou son nom d'hôte, 200 caractères au plus

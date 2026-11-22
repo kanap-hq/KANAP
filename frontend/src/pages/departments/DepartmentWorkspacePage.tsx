@@ -4,6 +4,7 @@ import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'rea
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Link as MuiLink, Stack, TextField, Typography } from '@mui/material';
 import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
+import { UNSCOPED_PLACEMENT, useFillOnce, useOnlyCompany } from '../../hooks/useOnlyChoice';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useDepartmentNav } from '../../hooks/useDepartmentNav';
@@ -197,6 +198,16 @@ export default function DepartmentWorkspacePage() {
     },
     [canEdit, data, id, isCreate, queryClient, t],
   );
+
+  // The one company of the workspace is given to a new department (lot A2), as the person's choice.
+  const onlyCompany = useOnlyCompany(UNSCOPED_PLACEMENT, isCreate);
+  useFillOnce({
+    isNew: isCreate,
+    key: 'company_id',
+    empty: !draft.company_id,
+    value: onlyCompany,
+    fill: (companyId) => { void patch({ company_id: companyId }, 'company_id'); },
+  });
 
   const setYear = (next: number) => {
     const sp = new URLSearchParams(searchParams);

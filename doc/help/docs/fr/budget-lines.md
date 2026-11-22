@@ -15,7 +15,7 @@ L'espace de travail s'ouvre sur une nouvelle ligne, intitulée **Nouvelle ligne 
 
 La ligne est créée dès que son titre et ses champs obligatoires sont renseignés, dans n'importe quel ordre. Rien n'est enregistré avant. Ses onglets s'ouvrent alors, **Budget** compris, et chaque modification est enregistrée aussitôt. Changer de **Type** avant la création change les dimensions obligatoires, et vide un compte ou une valeur de dimension réservés à l'autre type. Une fois la ligne créée, son type se change avec **Changer le type...**.
 
-Si votre accès aux données est limité à une société, la société payeuse est remplie avec elle. Quand votre accès n'ouvre une société qu'à travers certains de ses centres de coûts, **Centre de coûts** est aussi obligatoire.
+Un champ obligatoire qui ne vous offre qu'une valeur est déjà rempli. **Société payeuse** prend la seule société qui vous est ouverte, dans l'espace de travail ou dans votre accès aux données. **Compte** prend le seul compte du plan de la société qui convient au type de la ligne. Quand votre accès n'ouvre la société qu'à travers certains de ses centres de coûts, **Centre de coûts** est aussi obligatoire : il est rempli quand un seul est proposé, et vous le choisissez quand il y en a plusieurs. Une ligne créée depuis la liste part de la valeur qu'un filtre à cases garde seule sur **Société payeuse**, **Centre de coûts**, **Compte** ou **Devise**, quand le champ l'offre. Le centre de coûts et le compte ne sont repris que s'ils appartiennent à la société de la ligne. Vous pouvez changer chaque valeur remplie ainsi.
 
 Tant que la ligne est en cours de création, son en-tête affiche **Créer** et **Annuler** à la place du bouton de fermeture :
 

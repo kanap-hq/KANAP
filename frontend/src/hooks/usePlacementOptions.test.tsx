@@ -12,7 +12,7 @@ vi.mock('../auth/AuthContext', () => ({
   }),
 }));
 
-import { useContractPlacementFilter, useLinePlacementFilter } from './usePlacementOptions';
+import { useContractPlacementDefault, useContractPlacementFilter, useLinePlacementDefault, useLinePlacementFilter } from './usePlacementOptions';
 
 const node = (id: string, company_id: string | null) => ({ id, company_id }) as any;
 
@@ -178,5 +178,34 @@ describe('useContractPlacementFilter', () => {
     const { result } = renderHook(() => useContractPlacementFilter(null, null), { wrapper });
     await waitFor(() => expect(state.get).toHaveBeenCalled());
     expect(result.current).toBeNull();
+  });
+});
+
+describe('useLinePlacementDefault and useContractPlacementDefault (lot A2)', () => {
+  beforeEach(() => {
+    state.limited = true;
+    state.get.mockReset();
+  });
+  const answer = (data: Record<string, unknown>) => state.get.mockResolvedValue({ data: { limited: true, all: false, editNodes: [], editNodeCompanies: [], ...data } });
+
+  it('starts a line on the one company the picker offers, even when it opens only through its cost centers', async () => {
+    answer({ companies: [], costCenters: [{ id: 'inf-fr', companyId: 'fr' }, { id: 'fin-fr', companyId: 'fr' }] });
+    const { result } = renderHook(() => useLinePlacementDefault(), { wrapper });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current).toEqual({ ready: true, companyId: 'fr', needsChoice: false });
+  });
+
+  it('leaves the choice when the picker offers two companies', async () => {
+    answer({ companies: ['es'], costCenters: [{ id: 'inf-fr', companyId: 'fr' }] });
+    const { result } = renderHook(() => useLinePlacementDefault(), { wrapper });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current).toEqual({ ready: true, companyId: null, needsChoice: true });
+  });
+
+  it('starts a contract on the one company its picker offers, through a place only', async () => {
+    answer({ companies: [], costCenters: [], editNodes: [{ id: 'inf-fr', companyId: 'fr' }], editNodeCompanies: ['fr'] });
+    const { result } = renderHook(() => useContractPlacementDefault(), { wrapper });
+    await waitFor(() => expect(result.current.ready).toBe(true));
+    expect(result.current).toEqual({ ready: true, companyId: 'fr', needsChoice: false });
   });
 });

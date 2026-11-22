@@ -38,7 +38,8 @@ import ContractComplianceTab, { useContractCompliance } from './workspace/Contra
 import ContractDeleteButton from './workspace/ContractDeleteButton';
 import { contractComplianceKey } from './contractCompliance';
 import { useDefaultContractCurrency } from './workspace/ContractFields';
-import { useContractPlacementFilter } from '../../hooks/usePlacementOptions';
+import { useContractPlacementDefault, useContractPlacementFilter } from '../../hooks/usePlacementOptions';
+import { useFillOnce, useOnlyCompany } from '../../hooks/useOnlyChoice';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
 
@@ -295,6 +296,17 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
       await autosave.flush();
     }
   }, [autosave, data, editable, flushPending, isCreate, patchBuffer, patchDraft]);
+
+  // The one company the company picker offers (a limited access's, else the workspace's) is given to
+  // a new contract (lot A2), as the person's choice.
+  const onlyCompany = useOnlyCompany(useContractPlacementDefault(), isCreate);
+  useFillOnce({
+    isNew: isCreate,
+    key: 'company_id',
+    empty: !form?.company_id,
+    value: onlyCompany,
+    fill: (companyId) => { void patchNow({ company_id: companyId }); },
+  });
 
   const patchTyped = React.useCallback((patch: ContractPatch) => {
     if (isCreate) { patchDraft(patch); return; }

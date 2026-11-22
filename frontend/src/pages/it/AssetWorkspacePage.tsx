@@ -85,7 +85,10 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import type { AssetExternalLink } from '../../api/endpoints/assets';
 import { isNetboxAttentionStatus } from '../../api/endpoints/netbox';
 import { NETBOX_LOCKABLE_ASSET_FIELDS, NetboxLockableField, netboxFieldLock } from './netboxManagedFields';
-import { carryListFilters } from '../../lib/listContext';
+import { carryListFilters, singleSetFilterValue } from '../../lib/listContext';
+import { useListFilters } from '../../hooks/useListContextSearch';
+import { useLocationOptions } from '../../hooks/useLocationOptions';
+import { useFillOnce, type FillValue } from '../../hooks/useOnlyChoice';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import InfoHint from '../../components/workspace/InfoHint';
 import { ApplicationFeedbackProvider, type ApplicationFeedback } from './applicationFeedback';
@@ -1709,6 +1712,43 @@ function AssetWorkspaceRoute() {
     setLocationId(nextValue);
     if (!isCreate) savePatch({ location_id: nextValue, sub_location_id: null });
   };
+
+  // ----- What is obvious for a new asset (lot A2) -----
+  // A list filter on one value gives the new asset its site, type, environment or lifecycle when the
+  // field offers it; a workspace with one site gives that site. Each is given once, as the person
+  // would; the asset is still written only once its name is given too.
+  const creationFilters = useListFilters(searchParams, null);
+  const filterOf = (colId: string): string | null | undefined => {
+    if (!isCreate) return null;
+    return creationFilters.ready ? singleSetFilterValue(creationFilters.filters, colId) : undefined;
+  };
+  // The sites the site picker offers (the same read, no other request).
+  const { data: siteOptions } = useLocationOptions();
+  const siteFilter = filterOf('location_name');
+  const siteValue = React.useMemo((): FillValue => {
+    if (siteFilter === undefined || !siteOptions) return undefined;
+    const named = siteFilter ? siteOptions.filter((site) => site.name === siteFilter) : [];
+    if (named.length === 1) return named[0].id;
+    return siteOptions.length === 1 ? siteOptions[0].id : null;
+  }, [siteFilter, siteOptions]);
+  useFillOnce({ isNew: isCreate, key: 'location', empty: !locationId, value: siteValue, fill: updateLocation });
+  // Codes: taken when the field offers them (a type or a lifecycle not deprecated).
+  const offeredCode = (code: string | null | undefined, offered: Array<{ code: string; deprecated?: boolean }> | undefined): FillValue => {
+    if (code === undefined || !settings) return undefined;
+    return code && (offered ?? []).some((option) => option.code === code && !option.deprecated) ? code : null;
+  };
+  useFillOnce({ isNew: isCreate, key: 'kind', empty: !kind, value: offeredCode(filterOf('kind'), byField.serverKind), fill: updateAssetType });
+  // The environment and the lifecycle hold a default on the draft, out of reach: the list's value replaces it.
+  const environmentFilter = filterOf('environment');
+  const otherThan = (value: FillValue, fallback: string): FillValue => (value === fallback ? null : value);
+  useFillOnce({
+    isNew: isCreate,
+    key: 'environment',
+    empty: environment === 'prod',
+    value: otherThan(environmentFilter === undefined ? undefined : (ENV_OPTION_KEYS.some((option) => option.value === environmentFilter) ? environmentFilter : null), 'prod'),
+    fill: setEnvironment,
+  });
+  useFillOnce({ isNew: isCreate, key: 'status', empty: status === 'active', value: otherThan(offeredCode(filterOf('status'), byField.lifecycleStatus), 'active'), fill: setStatus });
 
   const updateScalar = <K extends keyof AssetRecord>(key: K, value: AssetRecord[K]) => {
     if (isCreate) return;

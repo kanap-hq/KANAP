@@ -220,6 +220,23 @@ describe('DepartmentWorkspacePage', () => {
     expect(mocked.patch).toHaveBeenCalledTimes(2);
   });
 
+  it('fills the one company of the workspace, and writes the department only once its name is given (lot A2)', async () => {
+    mocked.post.mockResolvedValue({ data: { ...DEPARTMENT, id: 'dep-new', creation_token: 'token-1' } });
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/companies/lookup') return { data: { items: [{ id: 'company-1', name: 'Fromage SA' }], has_more: false } };
+      return { data: { items: [] } };
+    });
+    renderAt('/master-data/departments/new/overview');
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/companies/lookup', expect.objectContaining({ params: { limit: 2 } })));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
+    fireEvent.change(title, { target: { value: 'Legal' } });
+    fireEvent.keyDown(title, { key: 'Enter' });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/departments', expect.objectContaining({ name: 'Legal', company_id: 'company-1' })));
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
   it('creates the department once it has its name and company, then opens it', async () => {
     mocked.post.mockResolvedValue({ data: { ...DEPARTMENT, id: 'dep-new', creation_token: 'token-1' } });
     renderAt('/master-data/departments/new/overview?year=2026');

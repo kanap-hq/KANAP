@@ -278,7 +278,6 @@ export default function CostCenterSelect({
         );
       }}
       disableClearable={disableClearable}
-      blurOnSelect
       disabled={disabled}
       loading={loading}
       loadingText={t('selects.loading')}

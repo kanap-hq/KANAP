@@ -591,6 +591,22 @@ describe('AccountWorkspacePage', () => {
     })));
   });
 
+  it('fills the one chart of the workspace, and writes the account only once its name is given (lot A2)', async () => {
+    serve({ coas: [COAS[0]] });
+    mocked.post.mockResolvedValue({ data: { ...ACCOUNT, id: 'acc-new' } });
+    renderAt('/master-data/accounts/new/overview');
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'accounts.fields.chartOfAccounts' })).toHaveTextContent('PCG · French chart'));
+    const title = screen.getByRole('textbox', { name: TITLE_FIELD });
+    fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '606100' } });
+    fireEvent.blur(screen.getByLabelText('accounts.fields.accountNumber'), { relatedTarget: title });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.change(title, { target: { value: 'Software' } });
+    fireEvent.keyDown(title, { key: 'Enter' });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/accounts', expect.objectContaining({ coa_id: 'coa-fr', account_number: 606100 })));
+    expect(mocked.post).toHaveBeenCalledTimes(1);
+  });
+
   it('marks the chart when the list gave none, and puts the cursor in it', async () => {
     renderAt('/master-data/accounts/new/overview');
     fireEvent.change(screen.getByLabelText('accounts.fields.accountNumber'), { target: { value: '1' } });

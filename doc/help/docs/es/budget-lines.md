@@ -15,7 +15,7 @@ El espacio de trabajo se abre en una línea nueva, con el título **Nueva línea
 
 La línea se crea en cuanto su título y sus campos obligatorios están indicados, en cualquier orden. Antes no se guarda nada. Entonces se abren sus pestañas, **Presupuesto** incluida, y cada cambio se guarda al instante. Cambiar el **Tipo** antes de la creación cambia las dimensiones obligatorias y vacía una cuenta o un valor de dimensión reservados al otro tipo. Una vez creada la línea, su tipo se cambia con **Cambiar el tipo…**.
 
-Si su acceso a los datos se limita a una empresa, la empresa pagadora se completa con ella. Cuando su acceso abre una empresa solo a través de algunos de sus centros de coste, **Centro de coste** también es obligatorio.
+Un campo obligatorio que le ofrece un solo valor ya está completado. **Empresa pagadora** toma la única empresa abierta para usted, en el espacio de trabajo o en su acceso a los datos. **Cuenta** toma la única cuenta del plan de la empresa que corresponde al tipo de la línea. Cuando su acceso abre la empresa solo a través de algunos de sus centros de coste, **Centro de coste** también es obligatorio: se completa cuando solo se ofrece uno, y usted lo elige cuando hay varios. Una línea creada desde la lista empieza con el valor que un filtro de casillas conserva como único en **Empresa pagadora**, **Centro de coste**, **Cuenta** o **Moneda**, cuando el campo lo ofrece. El centro de coste y la cuenta solo se toman si pertenecen a la empresa de la línea. Puede cambiar cada valor completado así.
 
 Mientras la línea se está creando, su encabezado muestra **Crear** y **Cancelar** en lugar del botón de cierre:
 

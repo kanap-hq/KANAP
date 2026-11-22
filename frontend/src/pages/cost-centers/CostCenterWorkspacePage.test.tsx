@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 import type { CostCenterDetail } from '../../services/costCenters';
@@ -61,6 +61,8 @@ vi.mock('../../components/fields/UserSelect', () => ({
 
 import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/costCenters';
+import api from '../../api';
+import { lookupSearchKey } from '../../hooks/useLookupPicker';
 import CostCenterWorkspacePage from './CostCenterWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
 
@@ -94,9 +96,10 @@ const NODE: CostCenterDetail = {
   capex_count: 1,
 };
 
-function renderAt(path: string) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderAt(path: string, { strict = false, queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }) } = {}) {
+  const Mode = strict ? React.StrictMode : React.Fragment;
   return render(
+    <Mode>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
@@ -108,7 +111,8 @@ function renderAt(path: string) {
         </MemoryRouter>
         </KanapDialogProvider>
       </ThemeProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
+    </Mode>,
   );
 }
 
@@ -165,6 +169,101 @@ describe('CostCenterWorkspacePage', () => {
       disabled_at: null,
     });
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/cost-centers/cc-new/overview?sort=path%3AASC', { replace: true }));
+  });
+
+  it('fills the one company of the workspace for a cost center, written only once its name is given (lot A2)', async () => {
+    const apiGet = vi.mocked(api.get);
+    apiGet.mockImplementation(async (url: string) => (url === '/companies/lookup'
+      ? { data: { items: [{ id: 'company-1', name: 'Fromage SA' }], has_more: false } }
+      : { data: { items: [] } }) as never);
+    try {
+      mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new', creation_token: 'token-1' });
+      renderAt('/master-data/cost-centers/new/overview');
+      await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/companies/lookup', expect.objectContaining({ params: { limit: 2 } })));
+      const title = screen.getByRole('textbox', { name: TITLE_FIELD });
+      fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: 'IT-400' } });
+      fireEvent.blur(screen.getByLabelText('costCenters.fields.code'), { relatedTarget: title });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(mocked.createCostCenter).not.toHaveBeenCalled();
+      fireEvent.change(title, { target: { value: 'Workplace' } });
+      fireEvent.keyDown(title, { key: 'Enter' });
+      await waitFor(() => expect(mocked.createCostCenter).toHaveBeenCalledTimes(1));
+      expect(mocked.createCostCenter).toHaveBeenCalledWith(expect.objectContaining({ kind: 'cost_center', company_id: 'company-1' }));
+    } finally {
+      apiGet.mockImplementation(async () => ({ data: { items: [] } }) as never);
+    }
+  });
+
+  describe('values of the list filtered on one value (lot A2)', () => {
+    const COMPANIES = [{ id: 'company-1', name: 'Fromage SA' }, { id: 'company-2', name: 'Kaas BV' }];
+    const filtered = (model: Record<string, string[]>) => `/master-data/cost-centers/new/overview?filters=${encodeURIComponent(JSON.stringify(
+      Object.fromEntries(Object.entries(model).map(([col, values]) => [col, { filterType: 'set', values }])),
+    ))}`;
+    function serveCompanies(companies: Array<{ id: string; name: string }>) {
+      vi.mocked(api.get).mockImplementation(async (url: string, config?: { params?: any }) => {
+        if (url !== '/companies/lookup') return { data: { items: [] } } as never;
+        const q = String(config?.params?.q ?? '').toLowerCase();
+        const matches = companies.filter((company) => company.name.toLowerCase().includes(q));
+        const limit = Number(config?.params?.limit ?? 30);
+        return { data: { items: matches.slice(0, limit), has_more: matches.length > limit } } as never;
+      });
+    }
+    afterEach(() => {
+      vi.mocked(api.get).mockImplementation(async () => ({ data: { items: [] } }) as never);
+    });
+    async function giveCodeAndName() {
+      const title = screen.getByRole('textbox', { name: TITLE_FIELD });
+      fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: 'IT-400' } });
+      fireEvent.blur(screen.getByLabelText('costCenters.fields.code'), { relatedTarget: title });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(mocked.createCostCenter).not.toHaveBeenCalled();
+      fireEvent.change(title, { target: { value: 'Workplace' } });
+      fireEvent.keyDown(title, { key: 'Enter' });
+    }
+
+    it('takes the company the list was filtered on, over the one company of the workspace', async () => {
+      serveCompanies(COMPANIES);
+      mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new', creation_token: 'token-1' });
+      renderAt(filtered({ company_name: ['Kaas BV'] }));
+      await waitFor(() => expect(vi.mocked(api.get)).toHaveBeenCalledWith('/companies/lookup', expect.objectContaining({ params: expect.objectContaining({ q: 'Kaas BV' }) })));
+      await giveCodeAndName();
+      await waitFor(() => expect(mocked.createCostCenter).toHaveBeenCalledTimes(1));
+      expect(mocked.createCostCenter).toHaveBeenCalledWith(expect.objectContaining({ kind: 'cost_center', company_id: 'company-2' }));
+    });
+
+    it('takes the type the list was filtered on: a group gets no company', async () => {
+      serveCompanies([COMPANIES[0]]);
+      mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new', kind: 'group', company_id: null, creation_token: 'token-1' });
+      renderAt(filtered({ kind: ['group'], company_name: ['Fromage SA'] }));
+      await giveCodeAndName();
+      await waitFor(() => expect(mocked.createCostCenter).toHaveBeenCalledTimes(1));
+      expect(mocked.createCostCenter).toHaveBeenCalledWith(expect.objectContaining({ kind: 'group', company_id: null }));
+    });
+
+    it('fills the one company already known at mount, under StrictMode (E1)', async () => {
+      serveCompanies([COMPANIES[0]]);
+      mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new', creation_token: 'token-1' });
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      // The answer of an earlier new node, still in the cache.
+      queryClient.setQueryData(lookupSearchKey('/companies/lookup', undefined, '', 2), { items: [COMPANIES[0]], has_more: false });
+      renderAt('/master-data/cost-centers/new/overview', { strict: true, queryClient });
+      await giveCodeAndName();
+      await waitFor(() => expect(mocked.createCostCenter).toHaveBeenCalledTimes(1));
+      expect(mocked.createCostCenter).toHaveBeenCalledWith(expect.objectContaining({ company_id: 'company-1' }));
+    });
+
+    it('takes nothing from a filter on two companies', async () => {
+      serveCompanies(COMPANIES);
+      renderAt(filtered({ company_name: ['Fromage SA', 'Kaas BV'] }));
+      const title = screen.getByRole('textbox', { name: TITLE_FIELD });
+      fireEvent.change(screen.getByLabelText('costCenters.fields.code'), { target: { value: 'IT-400' } });
+      fireEvent.blur(screen.getByLabelText('costCenters.fields.code'), { relatedTarget: title });
+      fireEvent.change(title, { target: { value: 'Workplace' } });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+      expect(markedLabels()).toEqual(['costCenters.fields.company']);
+      expect(mocked.createCostCenter).not.toHaveBeenCalled();
+    });
   });
 
   it('marks the code and the company on Create and puts the cursor in the code, with no sentence under them', async () => {

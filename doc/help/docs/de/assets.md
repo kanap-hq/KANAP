@@ -12,7 +12,7 @@ Navigieren Sie zu **IT-Landschaft > Assets**, um Ihr Asset-Inventar zu sehen. So
 
 Kadratis erstellt das Asset, sobald es alle drei hat. Seine Referenz (`AST-12`) erscheint und alle Reiter öffnen sich.
 
-Das neue Asset ist in der Umgebung Prod, mit dem Lebenszyklus Aktiv. Es hat keinen Typ, bis Sie einen wählen. **Cluster hinzufügen** öffnet dieselbe Seite mit eingeschaltetem Schalter **Cluster**. Sobald das Asset erstellt ist, können Sie seinen Typ und seine Umgebung ändern. Jedes Feld speichert dann für sich.
+Wenn Ihr Arbeitsbereich nur einen Standort hat, ist **Standort** bereits ausgefüllt. Ein aus der Liste erstelltes Asset beginnt mit dem Wert, den ein Kontrollkästchen-Filter auf **Standort**, **Asset-Typ**, **Umgebung** oder **Lebenszyklus** als einzigen behält, sofern das Feld ihn anbietet. Sie können diese Werte ändern. Andernfalls ist das neue Asset in der Umgebung Prod, mit dem Lebenszyklus Aktiv, und hat keinen Typ, bis Sie einen wählen. **Cluster hinzufügen** öffnet dieselbe Seite mit eingeschaltetem Schalter **Cluster**. Sobald das Asset erstellt ist, können Sie seinen Typ und seine Umgebung ändern. Jedes Feld speichert dann für sich.
 
 **Pflichtfelder**:
 - **Name**: Der Asset-Name oder Hostname, höchstens 200 Zeichen

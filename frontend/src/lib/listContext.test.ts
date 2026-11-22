@@ -22,6 +22,7 @@ import {
   saveListContext,
   takeLostListFilters,
   setListFiltersParam,
+  singleSetFilterValue,
   withListContext,
 } from './listContext';
 
@@ -200,5 +201,23 @@ describe('list contexts (filters too long for a URL)', () => {
     expect(takeLostListFilters('/capex-items/summary')).toBe(false);
     expect(takeLostListFilters('/spend-items/summary/totals')).toBe(true);
     expect(takeLostListFilters('/spend-items/summary')).toBe(false);
+  });
+});
+
+describe('singleSetFilterValue', () => {
+  const model = (filter: unknown) => JSON.stringify({ col: filter });
+  it('reads the one value an inclusive checkbox filter keeps', () => {
+    expect(singleSetFilterValue(model({ filterType: 'set', values: ['Fromage SA'] }), 'col')).toBe('Fromage SA');
+    expect(singleSetFilterValue({ col: { filterType: 'set', mode: 'include', values: ['prod'] } }, 'col')).toBe('prod');
+  });
+  it('reads nothing from several values, an exclusion, a blank, a text filter or another column', () => {
+    expect(singleSetFilterValue(model({ filterType: 'set', values: ['A', 'B'] }), 'col')).toBeNull();
+    expect(singleSetFilterValue(model({ filterType: 'set', mode: 'exclude', values: ['A'] }), 'col')).toBeNull();
+    expect(singleSetFilterValue(model({ filterType: 'set', values: [null] }), 'col')).toBeNull();
+    expect(singleSetFilterValue(model({ filterType: 'set', values: [] }), 'col')).toBeNull();
+    expect(singleSetFilterValue(model({ filterType: 'text', type: 'equals', filter: 'A' }), 'col')).toBeNull();
+    expect(singleSetFilterValue(model({ filterType: 'set', values: ['A'] }), 'other')).toBeNull();
+    expect(singleSetFilterValue('not json', 'col')).toBeNull();
+    expect(singleSetFilterValue('', 'col')).toBeNull();
   });
 });
