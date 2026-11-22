@@ -1,5 +1,6 @@
 import React from 'react';
-import { LOOKUP_PAGE_SIZE, useLookupSearch, type LookupOption, type LookupScope } from './useLookupPicker';
+import { useQueryClient } from '@tanstack/react-query';
+import { LOOKUP_PAGE_SIZE, lookupIdsKey, useLookupSearch, type LookupOption, type LookupScope } from './useLookupPicker';
 
 /**
  * A new record starts from what is obvious (lot A2, decision D39): a starred field whose picker
@@ -27,9 +28,22 @@ export function useOnlyLookupValue({ endpoint, scope, enabled = true }: {
   enabled?: boolean;
 }): FillValue {
   const search = useLookupSearch<LookupOption>({ endpoint, scope, open: true, text: '', enabled, limit: 2 });
+  const row = enabled && search.settled && search.items.length === 1 && !search.hasMore ? search.items[0] : null;
+  useLabelKnown(endpoint, row);
   if (!enabled || search.failed) return null;
   if (!search.settled) return undefined;
-  return search.items.length === 1 && !search.hasMore ? search.items[0].id : null;
+  return row?.id ?? null;
+}
+
+/**
+ * The row found is the label of the value filled: the picker reads it from the cache instead of
+ * asking for it again by id.
+ */
+function useLabelKnown(endpoint: string, row: LookupOption | null): void {
+  const queryClient = useQueryClient();
+  React.useEffect(() => {
+    if (row && !queryClient.getQueryData(lookupIdsKey(endpoint, [row.id]))) queryClient.setQueryData(lookupIdsKey(endpoint, [row.id]), [row]);
+  }, [endpoint, queryClient, row]);
 }
 
 /**
@@ -61,10 +75,12 @@ export function useLookupLabelMatch<T extends LookupOption>({ endpoint, scope, l
 }): FillValue {
   const open = enabled && !!label;
   const search = useLookupSearch<T>({ endpoint, scope, open, text: text ?? label ?? '', enabled: open, limit: LOOKUP_PAGE_SIZE });
+  const matches = open && search.settled ? search.items.filter((row) => labelOf(row) === label) : [];
+  const row = matches.length === 1 && (!allowed || allowed.has(matches[0].id)) ? matches[0] : null;
+  useLabelKnown(endpoint, row);
   if (!open || search.failed) return null;
   if (!search.settled) return undefined;
-  const matches = search.items.filter((row) => labelOf(row) === label);
-  return matches.length === 1 && (!allowed || allowed.has(matches[0].id)) ? matches[0].id : null;
+  return row?.id ?? null;
 }
 
 /**

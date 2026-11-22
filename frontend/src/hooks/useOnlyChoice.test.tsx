@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../api', () => ({ default: { get: vi.fn() } }));
 
 import api from '../api';
+import { lookupIdsKey } from './useLookupPicker';
 import { UNSCOPED_PLACEMENT, useFillOnce, useLookupLabelMatch, useOnlyCompany, useOnlyLookupValue, type PlacementStart } from './useOnlyChoice';
 
 const apiGet = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
@@ -44,6 +45,13 @@ describe('useOnlyLookupValue', () => {
     wrap(<Only />);
     await waitFor(() => expect(screen.getByTestId('only')).toHaveTextContent('c1'));
     expect(calls).toEqual([{ url: '/companies/lookup', params: { limit: 2 } }]);
+  });
+
+  it('keeps the row found as the label of the value, so the picker does not read it again', async () => {
+    rows = [{ id: 'c1', name: 'Fromage SA' }];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><Only /></QueryClientProvider>);
+    await waitFor(() => expect(client.getQueryData(lookupIdsKey('/companies/lookup', ['c1']))).toEqual([{ id: 'c1', name: 'Fromage SA' }]));
   });
 
   it('gives nothing when the picker offers two values or none', async () => {
