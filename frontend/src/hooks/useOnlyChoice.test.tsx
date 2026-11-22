@@ -139,3 +139,30 @@ describe('useFillOnce', () => {
     expect(screen.getByTestId('held')).toHaveTextContent('');
   });
 });
+
+describe('useFillOnce under React.StrictMode, value known at mount (lot A2, E1)', () => {
+  /** A page whose draft is emptied by an effect on mount, before or after the fill, as the budget line's is. */
+  function Draft({ resetFirst }: { resetFirst: boolean }) {
+    // The person's edits over the draft's defaults; the reset gives a new empty object, as the pages do.
+    const [edits, setEdits] = React.useState<{ company?: string }>({});
+    const held = edits.company ?? '';
+    const reset = () => setEdits({});
+    React.useEffect(() => { if (resetFirst) reset(); }, [resetFirst]);
+    useFillOnce({ isNew: true, key: 'company', empty: !held, value: 'c1', fill: (company) => setEdits((prev) => ({ ...prev, company })) });
+    React.useEffect(() => { if (!resetFirst) reset(); }, [resetFirst]);
+    return (
+      <>
+        <span data-testid="held">{held}</span>
+        <button type="button" onClick={() => setEdits((prev) => ({ ...prev, company: '' }))}>clear</button>
+      </>
+    );
+  }
+
+  it.each([true, false])('fills the field whatever the order of the effects (reset first: %s)', async (resetFirst) => {
+    render(<React.StrictMode><Draft resetFirst={resetFirst} /></React.StrictMode>);
+    await waitFor(() => expect(screen.getByTestId('held')).toHaveTextContent('c1'));
+    act(() => screen.getByRole('button', { name: 'clear' }).click());
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(screen.getByTestId('held')).toHaveTextContent('');
+  });
+});

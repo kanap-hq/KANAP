@@ -190,13 +190,13 @@ export default function CostCenterWorkspacePage() {
   const kindFilter = filterOf('kind');
   const kindValue: FillValue = kindFilter === undefined ? undefined
     : (kindFilter === 'cost_center' || kindFilter === 'group' ? kindFilter : null);
-  // The type holds a default on the draft: the list's replaces it.
+  // The type holds a default on the draft (a cost center): a list filtered on groups replaces it.
   useFillOnce({
     isNew: isCreate,
     key: 'kind',
-    empty: true,
-    value: kindValue,
-    fill: (kind) => { void patch(kind === 'group' ? { kind: 'group', company_id: null } : { kind: 'cost_center' }, 'kind'); },
+    empty: draft.kind === 'cost_center',
+    value: kindValue === 'cost_center' ? null : kindValue,
+    fill: () => { void patch({ kind: 'group', company_id: null }, 'kind'); },
   });
   const companyFilter = filterOf('company_name');
   const filterCompany = useLookupLabelMatch<{ id: string; name: string }>({

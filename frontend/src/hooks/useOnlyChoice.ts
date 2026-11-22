@@ -92,12 +92,19 @@ export function firstFill(fromFilter: FillValue, obvious: FillValue): FillValue 
   return fromFilter ?? obvious;
 }
 
+/** A fill that does not show (each one emptied again before the page renders it) is not tried forever. */
+const MAX_FILLS = 3;
+
 /**
- * Fills a field of a new record once: when the field is empty and its value is known, `fill` runs
- * with it, as the person's choice would. A field the person already holds a value in, or one
- * filled before and emptied by the person, is never filled again on the page. `key` names the
- * field and what its value depends on (an account is filled once per company and type); null while
- * the field cannot take a value yet. A record that exists is never filled.
+ * Fills a field of a new record once: while the field is empty and its value is known, `fill` runs
+ * with it, as the person's choice would. Once the page has rendered the field with a value (the one
+ * given here, the person's, or one another field brought), an empty field was emptied on purpose and
+ * is never filled again on the page. The memory is what the page showed, not the call to `fill`: an
+ * effect of the page that empties its draft on mount (twice under `React.StrictMode`) cannot leave the
+ * field empty for good. `empty` is true while the field holds nothing, or only its default (pass null
+ * as `value` when the value is that default). `key` names the field and what its value depends on
+ * (an account is filled once per company and type); null while the field cannot take a value yet.
+ * A record that exists is never filled.
  */
 export function useFillOnce({ isNew, key, empty, value, fill }: {
   isNew: boolean;
@@ -106,21 +113,24 @@ export function useFillOnce({ isNew, key, empty, value, fill }: {
   value: FillValue;
   fill: (value: string) => void;
 }): void {
-  const doneRef = React.useRef<string | null>(null);
-  const fillRef = React.useRef(fill);
-  fillRef.current = fill;
+  const stateRef = React.useRef({ key: null as string | null, shown: false, fills: 0 });
+  // After every render: the field as the page shows it now decides.
   React.useEffect(() => {
+    const state = stateRef.current;
     if (!isNew) {
-      doneRef.current = null;
+      stateRef.current = { key: null, shown: false, fills: 0 };
       return;
     }
-    if (key === null || doneRef.current === key) return;
+    if (key === null) return;
+    if (state.key !== key) stateRef.current = { key, shown: false, fills: 0 };
+    const current = stateRef.current;
+    if (current.shown) return;
     if (!empty) {
-      doneRef.current = key;
+      current.shown = true;
       return;
     }
-    if (value === undefined) return;
-    doneRef.current = key;
-    if (value) fillRef.current(value);
-  }, [empty, isNew, key, value]);
+    if (!value || current.fills >= MAX_FILLS) return;
+    current.fills += 1;
+    fill(value);
+  });
 }

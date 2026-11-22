@@ -2,7 +2,7 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
@@ -133,7 +133,7 @@ const PARIS = { id: 'loc-1', location_reference: 'LOC-1', name: 'Paris' };
 const LYON = { id: 'loc-2', location_reference: 'LOC-2', name: 'Lyon' };
 
 /** `sites`: the sites the site picker offers (two by default: none is obvious). */
-function renderPage(entries: string[], sites = [PARIS, LYON]) {
+function renderPage(entries: string[], sites = [PARIS, LYON], strict = false) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/assets/by-ref/AST-7' || url === '/assets/asset-new') return { data: detail } as never;
     if (url === '/assets/by-ref/AST-9' || url === '/assets/asset-old') return { data: siteless } as never;
@@ -151,13 +151,16 @@ function renderPage(entries: string[], sites = [PARIS, LYON]) {
     { data: { ...(url === '/assets/asset-old' ? siteless : detail), ...(body as object) } }
   ) as never);
   mocked.delete.mockResolvedValue({ data: undefined } as never);
+  const Mode = strict ? React.StrictMode : React.Fragment;
   return render(
+    <Mode>
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={entries}>
             <NavigationTracker />
             <Location />
+            <Link to="/start">menu start</Link>
             <Routes>
               <Route path="/start" element={<StartPage />} />
               <Route path="/it/assets" element={<div data-testid="asset-list" />} />
@@ -166,7 +169,8 @@ function renderPage(entries: string[], sites = [PARIS, LYON]) {
           </MemoryRouter>
         </KanapDialogProvider>
       </ThemeProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
+    </Mode>,
   );
 }
 
@@ -528,6 +532,16 @@ describe('An asset born complete', () => {
       await typeTitle('Web 1');
       await waitFor(() => expect(assetPosts()).toHaveLength(1));
       expect(assetPosts()[0][1]).toMatchObject({ name: 'Web 1', kind: 'virtual_machine', location_id: 'loc-1' });
+    });
+
+    it('fills the one site again on the second new asset of the session, under StrictMode (E1)', async () => {
+      renderPage(['/start'], [PARIS], true);
+      fireEvent.click(await screen.findByRole('button', { name: 'new asset' }));
+      await waitFor(() => expect(screen.getByRole('textbox', { name: 'site' })).toHaveValue('loc-1'));
+      fireEvent.click(screen.getByRole('link', { name: 'menu start' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'new asset' }));
+      await screen.findByRole('textbox', { name: TITLE_FIELD });
+      await waitFor(() => expect(screen.getByRole('textbox', { name: 'site' })).toHaveValue('loc-1'));
     });
 
     it('fills no site when the workspace has two', async () => {

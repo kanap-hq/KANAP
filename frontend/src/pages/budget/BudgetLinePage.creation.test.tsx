@@ -152,6 +152,8 @@ type Options = {
   companies?: Array<{ id: string; name: string }>;
   /** The accounts the account picker offers, per company and type (`GET /accounts/lookup`). */
   accounts?: Array<{ id: string; company: string; nature: 'opex' | 'capex'; account_number: number; account_name: string }>;
+  /** Rendered under `React.StrictMode`, as the dev server does. */
+  strict?: boolean;
   /** The cost center tree (`GET /cost-centers/tree`). */
   costCenters?: Array<{ id: string; code: string; name: string; company_id: string | null; kind?: string; status?: string }>;
 };
@@ -229,7 +231,9 @@ function renderPage(entries: string[], options: Options = {}) {
     return { data: server.line } as never;
   });
   mocked.delete.mockResolvedValue({ data: undefined } as never);
+  const Mode = options.strict ? React.StrictMode : React.Fragment;
   return render(
+    <Mode>
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
@@ -247,7 +251,8 @@ function renderPage(entries: string[], options: Options = {}) {
           </MemoryRouter>
         </KanapDialogProvider>
       </ThemeProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
+    </Mode>,
   );
 }
 
@@ -966,6 +971,20 @@ describe('Budget line born complete', () => {
       await giveTitle();
       await waitFor(() => expect(lineWrites()).toHaveLength(1));
       expect(lineWrites()[0][1]).toMatchObject({ product_name: 'Monitoring', paying_company_id: 'company-1', account_id: 'account-1' });
+    });
+
+    it('fills the company and the account again on the second new line of the session, under StrictMode (E1)', async () => {
+      await startNewLine({ strict: true, companies: ONE_COMPANY, accounts: ACCOUNTS.filter((row) => row.id === 'account-1') });
+      await waitFor(() => expect(field('opex.fields.account')).toHaveValue('account-1'));
+      fireEvent.click(screen.getByRole('link', { name: 'menu start' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'new line' }));
+      await screen.findByRole('textbox', { name: TITLE_FIELD });
+      await waitFor(() => expect(field('opex.fields.payingCompany')).toHaveValue('company-1'));
+      await waitFor(() => expect(field('opex.fields.account')).toHaveValue('account-1'));
+      pick('opex.fields.account', '');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(field('opex.fields.account')).toHaveValue('');
+      expect(mocked.post).not.toHaveBeenCalled();
     });
 
     it('fills nothing in a workspace of two companies', async () => {

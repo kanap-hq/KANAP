@@ -1740,14 +1740,15 @@ function AssetWorkspaceRoute() {
   useFillOnce({ isNew: isCreate, key: 'kind', empty: !kind, value: offeredCode(filterOf('kind'), byField.serverKind), fill: updateAssetType });
   // The environment and the lifecycle hold a default on the draft, out of reach: the list's value replaces it.
   const environmentFilter = filterOf('environment');
+  const otherThan = (value: FillValue, fallback: string): FillValue => (value === fallback ? null : value);
   useFillOnce({
     isNew: isCreate,
     key: 'environment',
-    empty: true,
-    value: environmentFilter === undefined ? undefined : (ENV_OPTION_KEYS.some((option) => option.value === environmentFilter) ? environmentFilter : null),
+    empty: environment === 'prod',
+    value: otherThan(environmentFilter === undefined ? undefined : (ENV_OPTION_KEYS.some((option) => option.value === environmentFilter) ? environmentFilter : null), 'prod'),
     fill: setEnvironment,
   });
-  useFillOnce({ isNew: isCreate, key: 'status', empty: true, value: offeredCode(filterOf('status'), byField.lifecycleStatus), fill: setStatus });
+  useFillOnce({ isNew: isCreate, key: 'status', empty: status === 'active', value: otherThan(offeredCode(filterOf('status'), byField.lifecycleStatus), 'active'), fill: setStatus });
 
   const updateScalar = <K extends keyof AssetRecord>(key: K, value: AssetRecord[K]) => {
     if (isCreate) return;

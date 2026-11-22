@@ -62,6 +62,7 @@ vi.mock('../../components/fields/UserSelect', () => ({
 import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/costCenters';
 import api from '../../api';
+import { lookupSearchKey } from '../../hooks/useLookupPicker';
 import CostCenterWorkspacePage from './CostCenterWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
 
@@ -95,9 +96,10 @@ const NODE: CostCenterDetail = {
   capex_count: 1,
 };
 
-function renderAt(path: string) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderAt(path: string, { strict = false, queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }) } = {}) {
+  const Mode = strict ? React.StrictMode : React.Fragment;
   return render(
+    <Mode>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
@@ -109,7 +111,8 @@ function renderAt(path: string) {
         </MemoryRouter>
         </KanapDialogProvider>
       </ThemeProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
+    </Mode>,
   );
 }
 
@@ -235,6 +238,18 @@ describe('CostCenterWorkspacePage', () => {
       await giveCodeAndName();
       await waitFor(() => expect(mocked.createCostCenter).toHaveBeenCalledTimes(1));
       expect(mocked.createCostCenter).toHaveBeenCalledWith(expect.objectContaining({ kind: 'group', company_id: null }));
+    });
+
+    it('fills the one company already known at mount, under StrictMode (E1)', async () => {
+      serveCompanies([COMPANIES[0]]);
+      mocked.createCostCenter.mockResolvedValue({ ...NODE, id: 'cc-new', creation_token: 'token-1' });
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      // The answer of an earlier new node, still in the cache.
+      queryClient.setQueryData(lookupSearchKey('/companies/lookup', undefined, '', 2), { items: [COMPANIES[0]], has_more: false });
+      renderAt('/master-data/cost-centers/new/overview', { strict: true, queryClient });
+      await giveCodeAndName();
+      await waitFor(() => expect(mocked.createCostCenter).toHaveBeenCalledTimes(1));
+      expect(mocked.createCostCenter).toHaveBeenCalledWith(expect.objectContaining({ company_id: 'company-1' }));
     });
 
     it('takes nothing from a filter on two companies', async () => {
