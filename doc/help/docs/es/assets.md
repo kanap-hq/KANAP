@@ -12,7 +12,7 @@ Navegue a **Panorama IT > Activos** para ver su inventario de activos. Para crea
 
 Kadratis crea el activo en cuanto tiene los tres. Su referencia (`AST-12`) aparece y se abren todas las pestañas.
 
-El nuevo activo está en el entorno Prod, con el ciclo de vida Activo. No tiene tipo hasta que usted elige uno. **Añadir clúster** abre la misma página con el conmutador **Clúster** activado. Una vez creado el activo, puede cambiar su tipo y su entorno. Cada campo se guarda entonces por sí solo.
+Cuando su espacio de trabajo tiene una sola ubicación, **Ubicación** ya está completada. Un activo creado desde la lista empieza con el valor que un filtro de casillas conserva como único en **Ubicación**, **Tipo de activo**, **Entorno** o **Ciclo de vida**, cuando el campo lo ofrece. Puede cambiar estos valores. Si no, el nuevo activo está en el entorno Prod, con el ciclo de vida Activo, y no tiene tipo hasta que usted elige uno. **Añadir clúster** abre la misma página con el conmutador **Clúster** activado. Una vez creado el activo, puede cambiar su tipo y su entorno. Cada campo se guarda entonces por sí solo.
 
 **Campos obligatorios**:
 - **Nombre**: El nombre del activo o su nombre de host, 200 caracteres como máximo

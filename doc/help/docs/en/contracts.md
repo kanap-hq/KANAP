@@ -6,7 +6,7 @@ Contracts document your vendor agreements: software licences, maintenance contra
 
 Navigate to **Budget management > Contracts** to see the list. Click **New** to create a contract (`contracts:member`).
 
-The page of the new contract opens, its properties panel open. Type the contract name in the title at the top of the page and fill in the required fields below. The contract is created as soon as they are all given, and every tab becomes available. Press Escape in the title to leave without creating anything, even with a name typed.
+The page of the new contract opens, its properties panel open. Type the contract name in the title at the top of the page and fill in the required fields below. When a single company is offered to you, **Contracting company** is already chosen, and you can change it. The contract is created as soon as they are all given, and every tab becomes available. Press Escape in the title to leave without creating anything, even with a name typed.
 
 While the contract is being created, the header shows **Create** and **Cancel** until you leave it. **Ctrl+S** works like the button shown. **Create** writes the contract when its required fields are given and leaves it open. If one is still missing, its label turns red with an alert icon and the cursor goes to it. Once the contract is created, **Create** becomes **Done**: it saves what you are still typing and takes you back to where you started, the list or the previous screen. **Cancel** leaves without keeping anything, and deletes the contract if it was already created. If you entered more than what created it, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete contracts. Leaving the contract any other way keeps it.
 

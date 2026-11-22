@@ -12,7 +12,7 @@ Navigate to **IT Landscape > Assets** to see your asset inventory. To create an 
 
 Kadratis creates the asset as soon as it has all three. Its reference (`AST-12`) shows and all tabs open.
 
-The new asset is in the Prod environment, with the lifecycle Active. It has no type until you choose one. **Add cluster** opens the same page with the **Cluster** switch on. Once the asset is created, you can change its type and its environment. Each field then saves on its own.
+When your workspace has a single location, **Location** is already filled in. An asset created from the list starts with the value that a checkbox filter keeps alone on **Location**, **Asset Type**, **Environment** or **Lifecycle**, when the field offers it. You can change these values. Otherwise the new asset is in the Prod environment, with the lifecycle Active, and has no type until you choose one. **Add cluster** opens the same page with the **Cluster** switch on. Once the asset is created, you can change its type and its environment. Each field then saves on its own.
 
 **Required fields**:
 - **Name**: The asset name or hostname, up to 200 characters

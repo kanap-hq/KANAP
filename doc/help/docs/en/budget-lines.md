@@ -15,7 +15,7 @@ The workspace opens on a new line, titled **New OPEX line** or **New CAPEX line*
 
 The line is created once its title and its required fields are given, in any order. Nothing is saved before. Its tabs then open, **Budget** included, and each change saves at once. Changing **Type** before that changes the required dimensions, and clears an account or a dimension value kept for the other type. Once the line is created, its type changes with **Change type...**.
 
-If your data access is limited to one company, the paying company is filled with it. When your access reaches a company only through some of its cost centers, **Cost center** is required too.
+A required field that offers you a single value is already filled in. **Paying company** takes the only company open to you, in the workspace or in your data access. **Account** takes the only account of the company's chart that suits the line's type. When your access reaches the company only through some of its cost centers, choose the **Cost center** too. A line created from the list starts with the value that a checkbox filter keeps alone on **Paying company**, **Cost center**, **Account** or **Currency**, when the field offers it. The cost center and the account are taken only if they belong to the line's company. You can change every value filled in this way.
 
 While the line is being created, its header shows **Create** and **Cancel** in place of the close button:
 
