@@ -85,6 +85,14 @@ export default function useDraftCreation({ isCreate, ready, post, missing, value
   const away = React.useRef(false);
   // A complete draft a departure kept from being written: the next field given writes it.
   const held = React.useRef(false);
+  // The page comes back to a new record without being unmounted (the same route, as Done or
+  // Cancel going back to a new address): its draft starts again, unwritten.
+  React.useEffect(() => {
+    if (!isCreate) return;
+    written.current = false;
+    away.current = false;
+    held.current = false;
+  }, [isCreate]);
 
   const write = React.useCallback(async () => {
     if (written.current || running.current) return;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
-import { Link, MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { KanapDialogProvider } from '../../design';
@@ -257,5 +257,61 @@ describe('useDraftCreation on the draft: leaving gives nothing', () => {
     expect(where()).toBe('/elsewhere');
     // Kept as any record: nothing says it is being created.
     expect(getCreation(creationKey('things', RECORD_ID))).toBeUndefined();
+  });
+});
+
+/** A record page on one route for the new record and the created one, never unmounted between them (no key). */
+function SameRoutePage({ post }: { post: () => Promise<DraftCreated | null> }) {
+  const { id } = useParams();
+  const isCreate = id === 'new';
+  const navigate = useNavigate();
+  const creation = useDraftCreation({
+    isCreate,
+    family: 'things',
+    apiBase: '/things',
+    recordId: isCreate ? null : RECORD_ID,
+    listPath: '/things',
+    recordLabel: 'The thing',
+    ready: () => true,
+    post,
+  });
+  return (
+    <div>
+      <button type="button" onClick={() => creation.create()}>create</button>
+      <button type="button" onClick={() => navigate('/things/new')}>new</button>
+    </div>
+  );
+}
+
+describe('useDraftCreation on a page that comes back to a new record', () => {
+  beforeEach(() => {
+    resetCreationStore();
+  });
+
+  it('writes the next draft once the page that wrote one comes back to its new address without unmounting', async () => {
+    const post = vi.fn(async () => THING);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={['/things/new']}>
+            <Where />
+            <Routes>
+              <Route path="/things/:id" element={<SameRoutePage post={post} />} />
+              <Route path="/things/:id/:tab" element={<SameRoutePage post={post} />} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'create' }));
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe(RECORD_PATH));
+    expect(post).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'new' }));
+    expect(screen.getByTestId('where').textContent).toBe('/things/new');
+    fireEvent.click(screen.getByRole('button', { name: 'create' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
   });
 });
