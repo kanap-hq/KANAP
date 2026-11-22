@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { Link, MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
@@ -42,6 +43,10 @@ const access = vi.hoisted(() => ({
   centreOnly: [] as string[],
   /** The dimension values in the real picker (`AnalyticsCategorySelect`) instead of a plain field. */
   realValuePicker: false,
+  /** The real company, account and cost center pickers, chosen with the mouse (lot A2, E2). */
+  realCompanyPicker: false,
+  realAccountPicker: false,
+  realCostCenterPicker: false,
 }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
@@ -87,9 +92,18 @@ const pickers = vi.hoisted(() => ({
   ),
 }));
 vi.mock('../../components/fields/SupplierSelect', () => ({ default: pickers.picker }));
-vi.mock('../../components/fields/CompanySelect', () => ({ default: pickers.picker }));
-vi.mock('../../components/fields/AccountSelect', () => ({ default: pickers.picker }));
-vi.mock('../../components/fields/CostCenterSelect', () => ({ default: pickers.picker }));
+vi.mock('../../components/fields/CompanySelect', async (importOriginal) => {
+  const real = (await importOriginal()) as { default: React.ComponentType<any> };
+  return { default: (props: any) => (access.realCompanyPicker ? <real.default {...props} /> : pickers.picker(props)) };
+});
+vi.mock('../../components/fields/AccountSelect', async (importOriginal) => {
+  const real = (await importOriginal()) as { default: React.ComponentType<any> };
+  return { default: (props: any) => (access.realAccountPicker ? <real.default {...props} /> : pickers.picker(props)) };
+});
+vi.mock('../../components/fields/CostCenterSelect', async (importOriginal) => {
+  const real = (await importOriginal()) as { default: React.ComponentType<any> };
+  return { default: (props: any) => (access.realCostCenterPicker ? <real.default {...props} /> : pickers.picker(props)) };
+});
 vi.mock('../../components/fields/AnalyticsCategorySelect', async (importOriginal) => {
   const real = (await importOriginal()) as { default: React.ComponentType<any> };
   return { default: (props: any) => (access.realValuePicker ? <real.default {...props} /> : pickers.picker(props)) };
@@ -303,6 +317,11 @@ describe('Budget line born complete', () => {
     access.start = { ready: true, companyId: null, needsChoice: false };
     access.centreOnly = [];
     access.realValuePicker = false;
+    access.realCompanyPicker = false;
+    access.realAccountPicker = false;
+    access.realCostCenterPicker = false;
+    // A page opened from a filtered list keeps the list's context for the session.
+    sessionStorage.clear();
   });
 
   it('opens with the title and the starred rows live, the rest dimmed, with Create and Cancel', async () => {
@@ -1047,6 +1066,67 @@ describe('Budget line born complete', () => {
       await screen.findByRole('textbox', { name: TITLE_FIELD });
       await new Promise((resolve) => setTimeout(resolve, 20));
       expect(field('opex.fields.payingCompany')).toHaveValue('company-1');
+    });
+  });
+
+  describe('a choice made with the mouse in a list (lot A2, E2)', () => {
+    const TWO_COMPANIES = [{ id: 'company-1', name: 'Fromage SA' }, { id: 'company-2', name: 'Kaas BV' }];
+    const TWO_ACCOUNTS = [
+      { id: 'account-1', company: 'company-1', nature: 'opex' as const, account_number: 6000, account_name: 'Software' },
+      { id: 'account-2', company: 'company-1', nature: 'opex' as const, account_number: 6100, account_name: 'Hardware' },
+    ];
+    /** Opens the picker with a click and clicks the option, as with a mouse. */
+    const choose = async (user: ReturnType<typeof userEvent.setup>, label: string, option: RegExp) => {
+      await user.click(screen.getByRole('combobox', { name: label }));
+      await user.click(await screen.findByRole('option', { name: option }));
+    };
+    const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+
+    it('writes the line when the account is chosen last with the mouse, the cursor on the account', async () => {
+      access.realAccountPicker = true;
+      const user = userEvent.setup();
+      await startNewLine({ accounts: TWO_ACCOUNTS });
+      await giveTitle();
+      pick('opex.fields.payingCompany', 'company-1');
+      await waitFor(() => expect(screen.getByRole('combobox', { name: 'opex.fields.account' })).toBeEnabled());
+      await choose(user, 'opex.fields.account', /Hardware/);
+      await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
+      expect(lineWrites()[0][1]).toMatchObject({ paying_company_id: 'company-1', account_id: 'account-2' });
+      await settle();
+      expect(screen.getByRole('combobox', { name: 'opex.fields.account' })).toHaveFocus();
+    });
+
+    it('writes the line when the cost center a limited access requires is chosen last with the mouse', async () => {
+      access.realCostCenterPicker = true;
+      access.limited = true;
+      access.start = { ready: true, companyId: 'company-2', needsChoice: false };
+      access.centreOnly = ['company-2'];
+      const user = userEvent.setup();
+      await startNewLine({
+        costCenters: [
+          { id: 'cc-achats', code: 'ACH', name: 'Achats', company_id: 'company-2' },
+          { id: 'cc-bureau', code: 'BUR', name: 'Bureau', company_id: 'company-2' },
+        ],
+      });
+      await giveTitle();
+      pick('opex.fields.account', 'account-1');
+      await choose(user, 'opex.fields.costCenter', /Bureau/);
+      await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
+      expect(lineWrites()[0][1]).toMatchObject({ paying_company_id: 'company-2', cost_center_id: 'cc-bureau', account_id: 'account-1' });
+      await settle();
+      expect(screen.getByRole('combobox', { name: 'opex.fields.costCenter' })).toHaveFocus();
+    });
+
+    it('writes the line when the company is chosen last with the mouse and its one account fills', async () => {
+      access.realCompanyPicker = true;
+      const user = userEvent.setup();
+      await startNewLine({ companies: TWO_COMPANIES, accounts: TWO_ACCOUNTS.slice(0, 1) });
+      await giveTitle();
+      await choose(user, 'opex.fields.payingCompany', /Fromage SA/);
+      await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
+      expect(lineWrites()[0][1]).toMatchObject({ paying_company_id: 'company-1', account_id: 'account-1' });
+      await settle();
+      expect(screen.getByRole('combobox', { name: 'opex.fields.payingCompany' })).toHaveFocus();
     });
   });
 });

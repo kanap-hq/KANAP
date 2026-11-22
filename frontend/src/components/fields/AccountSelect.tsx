@@ -91,7 +91,6 @@ const AccountSelect = React.forwardRef<HTMLInputElement, AccountSelectProps>(fun
       }}
       getOptionLabel={(option) => picker.label(option, accountLabel)}
       disableClearable={disableClearable}
-      blurOnSelect
       renderOption={(props, option) => (
         <li {...props} key={option.id}>
           {accountLabel(option)}
