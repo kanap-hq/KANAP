@@ -6,10 +6,11 @@ import { creationCancelExpired, issueCreationToken, verifyCreationToken } from '
 import { assertCreatorAloneSinceCreation, countChangesSinceCreation, type CreationChanges } from './creation-changes';
 
 /**
- * The creation routes of a record its page creates at its title: the token handed with the created
- * record, what Cancel would delete (`GET :id/creation`), and Cancel itself (`DELETE :id/creation`).
- * Every family uses them. `table` is the record's table in the history inventory
- * (`record-history.inventory.ts`) and the token's family.
+ * The creation routes of a record its page has just written, at its title (seven families) or
+ * from its draft (every other family), never as the person leaves: the token handed with the
+ * created record, what Cancel would delete (`GET :id/creation`), and Cancel itself
+ * (`DELETE :id/creation`). Every family uses them. `table` is the record's table in the history
+ * inventory (`record-history.inventory.ts`) and the token's family.
  *
  * `ctx` is the request's `TenantRequest`, or the same three values from a service.
  */

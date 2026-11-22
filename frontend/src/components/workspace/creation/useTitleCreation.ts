@@ -1,5 +1,4 @@
 import React from 'react';
-import api from '../../../api';
 import { clearCreationFieldFocus } from './creationFieldFocus';
 import { useCreationPresence } from './creationDeparture';
 
@@ -18,13 +17,6 @@ type Options<C> = {
    * `stillHere()` first: false once the person has left.
    */
   onCreated: (created: C, token: string, stillHere: () => boolean) => void | Promise<void>;
-  /**
-   * The API base of a record its title leaves incomplete (a budget line, an asset, a connection).
-   * Written after the person left the page, it is deleted with its creation token
-   * (`DELETE <apiBase>/:id/creation`), as Cancel does: no page is left to ask about it. Without it,
-   * the record written after a departure is kept.
-   */
-  discardApiBase?: string;
   /** The refusal of the title, shown under it. */
   errorMessage: (err: unknown) => string;
   /** Before each write: clears the page's own error. */
@@ -32,7 +24,10 @@ type Options<C> = {
 };
 
 /**
- * The new page of a record created at its title (`CreationActions`): the title is the only field.
+ * The new page of a record created at its title (`CreationActions`): applications, business
+ * processes, incidents, documents, tasks, projects and requests (every other family is written
+ * from a draft, `useDraftCreation`); leaving the page never writes the record. The title is the
+ * only field.
  * The name is given by Enter, Tab or Create, and nothing else: the record is written, once `ready`,
  * and opens. Leaving the title (a click elsewhere, Cancel, a link, the menu, another window) writes
  * nothing, and the name stays in the field. `commit(name)` goes to the shell's `onTitleSave` (Enter
@@ -42,19 +37,19 @@ type Options<C> = {
  * the focus. Done on the created record is the page's own (`useRecordCreation`).
  *
  * A write that ends after the person left the page brings nobody back: `onCreated` is not called,
- * and a record the title leaves incomplete is deleted (`discardApiBase`).
+ * and the record is kept.
  *
  * The hook holds the title's error (`titleError`, `setTitleError` for a page's own message such as
  * a place to give first) and its focus requests (`focusRequest`); `pending` is true while a
  * committed title waits for `ready`; `writing` while the record is written (`CreationActions`).
  */
-export default function useTitleCreation<C>({ isCreate, requiredMessage, ready = true, post, onCreated, discardApiBase, errorMessage, onStart }: Options<C>) {
+export default function useTitleCreation<C>({ isCreate, requiredMessage, ready = true, post, onCreated, errorMessage, onStart }: Options<C>) {
   const [titleError, setTitleError] = React.useState<string | null>(null);
   const [focusRequest, setFocusRequest] = React.useState(0);
   const [pendingName, setPendingName] = React.useState<string | null>(null);
   const [writing, setWriting] = React.useState(false);
-  const latest = React.useRef({ ready, post, onCreated, discardApiBase, errorMessage, onStart });
-  latest.current = { ready, post, onCreated, discardApiBase, errorMessage, onStart };
+  const latest = React.useRef({ ready, post, onCreated, errorMessage, onStart });
+  latest.current = { ready, post, onCreated, errorMessage, onStart };
   const stillHere = useCreationPresence(isCreate);
   // The title is committed: a write is coming, under way, or done (a click that lands as the page
   // moves to the record still finds it). A new page starts again.
@@ -76,14 +71,7 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
     latest.current.onStart?.();
     try {
       const { creation_token: token, ...created } = await latest.current.post(name);
-      if (!stillHere()) {
-        const id = (created as { id?: unknown }).id;
-        const base = latest.current.discardApiBase;
-        if (base && typeof id === 'string') {
-          await api.delete(`${base}/${id}/creation`, { data: { token } }).catch(() => undefined);
-        }
-        return;
-      }
+      if (!stillHere()) return;
       await latest.current.onCreated(created as C, token, stillHere);
     } catch (err) {
       sent.current = false;
