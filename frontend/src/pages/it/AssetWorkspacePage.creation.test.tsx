@@ -76,9 +76,9 @@ vi.mock('./workspace/AssetDependenciesTab', () => ({ default: () => null }));
 vi.mock('./components/AssetTechnologiesSection', async (importOriginal) => ({ ...(await importOriginal<any>()), default: () => null }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
 vi.mock('../../components/fields/LocationSelect', () => ({
-  default: ({ onChange, helperText }: { onChange: (value: string | null) => void; helperText?: React.ReactNode }) => (
+  default: ({ value, onChange, helperText }: { value?: string | null; onChange: (value: string | null) => void; helperText?: React.ReactNode }) => (
     <>
-      <input aria-label="site" />
+      <input aria-label="site" value={value ?? ''} readOnly />
       <button type="button" onClick={() => onChange('loc-1')}>pick-location</button>
       {helperText ? <span>{helperText}</span> : null}
     </>
@@ -129,12 +129,16 @@ function StartPage() {
   return <button type="button" onClick={() => navigate('/it/assets/new/overview')}>new asset</button>;
 }
 
-function renderPage(entries: string[]) {
+const PARIS = { id: 'loc-1', location_reference: 'LOC-1', name: 'Paris' };
+const LYON = { id: 'loc-2', location_reference: 'LOC-2', name: 'Lyon' };
+
+/** `sites`: the sites the site picker offers (two by default: none is obvious). */
+function renderPage(entries: string[], sites = [PARIS, LYON]) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/assets/by-ref/AST-7' || url === '/assets/asset-new') return { data: detail } as never;
     if (url === '/assets/by-ref/AST-9' || url === '/assets/asset-old') return { data: siteless } as never;
     if (url === '/assets/asset-new/creation') return { data: { changes: { fields: 0, children: {} } } } as never;
-    if (url === '/locations') return { data: { items: [{ id: 'loc-1', location_reference: 'LOC-1', name: 'Paris' }] } } as never;
+    if (url === '/locations') return { data: { items: sites } } as never;
     if (url === '/locations/loc-1') return { data: { id: 'loc-1', location_reference: 'LOC-1', name: 'Paris', hosting_type: 'on_prem' } } as never;
     if (url.endsWith('/sub-items')) return { data: [] } as never;
     return { data: { items: [], outgoing: [], incoming: [] } } as never;
@@ -512,5 +516,58 @@ describe('An asset born complete', () => {
     fireEvent.click(screen.getByRole('button', { name: 'pages.assets.title' }));
     await waitFor(() => expect(location()).toBe('/it/assets'));
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  describe('obvious values (lot A2)', () => {
+    it('fills the one site of the workspace, and writes nothing before the name', async () => {
+      renderPage(['/it/assets/new/overview'], [PARIS]);
+      await screen.findByRole('textbox', { name: TITLE_FIELD });
+      await waitFor(() => expect(screen.getByRole('textbox', { name: 'site' })).toHaveValue('loc-1'));
+      await pickType();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(assetPosts()).toHaveLength(0);
+      await typeTitle('Web 1');
+      await waitFor(() => expect(assetPosts()).toHaveLength(1));
+      expect(assetPosts()[0][1]).toMatchObject({ name: 'Web 1', kind: 'virtual_machine', location_id: 'loc-1' });
+    });
+
+    it('fills no site when the workspace has two', async () => {
+      renderPage(['/it/assets/new/overview']);
+      await screen.findByRole('textbox', { name: TITLE_FIELD });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(screen.getByRole('textbox', { name: 'site' })).toHaveValue('');
+    });
+
+    it('takes the site, the type and the environment the list was filtered on', async () => {
+      const filters = {
+        environment: { filterType: 'set', values: ['dev'] },
+        location_name: { filterType: 'set', values: ['Lyon'] },
+        kind: { filterType: 'set', values: ['physical_server'] },
+      };
+      renderPage([`/it/assets/new/overview?filters=${encodeURIComponent(JSON.stringify(filters))}`]);
+      await screen.findByRole('textbox', { name: TITLE_FIELD });
+      await waitFor(() => expect(screen.getByRole('textbox', { name: 'site' })).toHaveValue('loc-2'));
+      await waitFor(() => expect(typeField().value).toBe('Physical server'));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(assetPosts()).toHaveLength(0);
+      await typeTitle('Web 1');
+      await waitFor(() => expect(assetPosts()).toHaveLength(1));
+      expect(assetPosts()[0][1]).toMatchObject({ kind: 'physical_server', environment: 'dev', location_id: 'loc-2' });
+    });
+
+    it('takes nothing from an exclusive filter or a filter on two sites', async () => {
+      const filters = {
+        environment: { filterType: 'set', mode: 'exclude', values: ['dev'] },
+        location_name: { filterType: 'set', values: ['Lyon', 'Paris'] },
+      };
+      renderPage([`/it/assets/new/overview?filters=${encodeURIComponent(JSON.stringify(filters))}`]);
+      await screen.findByRole('textbox', { name: TITLE_FIELD });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(screen.getByRole('textbox', { name: 'site' })).toHaveValue('');
+      await pickType();
+      pickSite();
+      await typeTitle('Web 1');
+      await waitFor(() => expect(assetPosts()).toHaveLength(1));
+      expect(assetPosts()[0][1]).toMatchObject({ environment: 'prod', location_id: 'loc-1' });
+    });
   });
 });
