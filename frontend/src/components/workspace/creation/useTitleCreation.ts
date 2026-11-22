@@ -24,9 +24,10 @@ type Options<C> = {
 };
 
 /**
- * The new page of a record created at its title (`CreationActions`), for the families with no
- * required field beyond the name (the others are written from a draft, `useDraftCreation`); leaving
- * the page never writes the record. The title is the only field.
+ * The new page of a record created at its title (`CreationActions`): applications, business
+ * processes, incidents, documents, tasks, projects and requests (every other family is written
+ * from a draft, `useDraftCreation`); leaving the page never writes the record. The title is the
+ * only field.
  * The name is given by Enter, Tab or Create, and nothing else: the record is written, once `ready`,
  * and opens. Leaving the title (a click elsewhere, Cancel, a link, the menu, another window) writes
  * nothing, and the name stays in the field. `commit(name)` goes to the shell's `onTitleSave` (Enter

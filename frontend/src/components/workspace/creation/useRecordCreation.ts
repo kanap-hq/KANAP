@@ -79,9 +79,8 @@ export function creationChangeCount(changes: CreationChanges): number {
 }
 
 /**
- * The creation of a record just written, at its title (`useTitleCreation`, the families with no
- * required field beyond the name) or from its draft (`useDraftCreation`, the others); leaving a new
- * record's page never writes it. `startCreation` keeps the token of the create route and the
+ * The creation of a record just written, at its title (`useTitleCreation`, seven families) or from
+ * its draft (`useDraftCreation`, every other family); leaving a new record's page never writes it. `startCreation` keeps the token of the create route and the
  * starting address; `beingCreated` holds while the person stays on that record, which then shows
  * Done and Cancel (`CreationActions`). `finishCreation` (Done) ends the creation and goes back where
  * it started, the record kept; `cancelCreation` (Cancel) deletes it, after a confirmation when more
