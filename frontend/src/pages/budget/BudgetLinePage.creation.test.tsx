@@ -860,6 +860,24 @@ describe('Budget line born complete', () => {
     expect(lineWrites()[0][1]).toMatchObject({ paying_company_id: 'company-2', cost_center_id: 'cc-company-2' });
   });
 
+  it('fills a company the access opens only through its cost centers, and writes nothing without the cost center (lot A2)', async () => {
+    access.limited = true;
+    access.start = { ready: true, companyId: 'company-2', needsChoice: false };
+    access.centreOnly = ['company-2'];
+    await startNewLine();
+    await waitFor(() => expect(field('opex.fields.payingCompany')).toHaveValue('company-2'));
+    await giveTitle();
+    pick('opex.fields.account', 'account-1');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(fieldLabel('opex.fields.costCenter')).toHaveAttribute('data-missing'));
+    expect(mocked.post).not.toHaveBeenCalled();
+    pick('opex.fields.costCenter', 'cc-company-2');
+    await waitFor(() => expect(lineWrites()).toHaveLength(1));
+    expect(lineWrites()[0][1]).toMatchObject({ paying_company_id: 'company-2', cost_center_id: 'cc-company-2' });
+  });
+
   it('says a refused place on its field', async () => {
     access.limited = true;
     access.start = { ready: true, companyId: null, needsChoice: true };
