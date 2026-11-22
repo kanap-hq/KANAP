@@ -45,9 +45,10 @@ type Options = {
 };
 
 /**
- * A new record's draft created as soon as it has its title and its required fields (reference
- * data and contracts, lot V2; interfaces, lot V3): `attempt()` (after the title commits, after
- * each change of the draft) writes it once `ready()`, and the page moves to the record, every tab
+ * A new record's draft, for the families with a required field beyond the name (the others are
+ * created at their title, `useTitleCreation`), created as soon as it has its title and its required
+ * fields; leaving the page never writes it. `attempt()` (after the title commits, after each change
+ * of the draft) writes it once `ready()`, and the page moves to the record, every tab
  * open, with Done and Cancel (`useRecordCreation`).
  *
  * A field is given by a choice in a list, by Enter or Tab, by the passage to another field of the

@@ -6,7 +6,6 @@ import type { TFunction } from 'i18next';
 import api from '../../../api';
 import { useKanapDialogs } from '../../design';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { deleteKeepalive } from '../../../lib/deleteKeepalive';
 import { ONBOARDING_QUERY_KEY } from '../../onboarding/useOnboarding';
 import {
   cancelCreationClear,
@@ -80,14 +79,15 @@ export function creationChangeCount(changes: CreationChanges): number {
 }
 
 /**
- * The creation of a record created at its title (lot 1a): `startCreation` keeps the token of the
- * create route and the starting address; `beingCreated` holds while the person stays on that
- * record, which then shows Done and Cancel (`CreationActions`). `finishCreation` (Done) ends the
- * creation and goes back where it started, the record kept (`completeCreation` first asks the
- * server whether the record is complete, for the families that check it); `cancelCreation` (Cancel) deletes
- * it, after a confirmation when more than the title was given, and goes back there too, unless
- * `{ leave: false }` (a leave already on its way elsewhere). Leaving the record otherwise (another
- * record on this page, or another page) ends the creation: the record stays.
+ * The creation of a record just written, at its title (`useTitleCreation`, the families with no
+ * required field beyond the name) or from its draft (`useDraftCreation`, the others); leaving a new
+ * record's page never writes it. `startCreation` keeps the token of the create route and the
+ * starting address; `beingCreated` holds while the person stays on that record, which then shows
+ * Done and Cancel (`CreationActions`). `finishCreation` (Done) ends the creation and goes back where
+ * it started, the record kept; `cancelCreation` (Cancel) deletes it, after a confirmation when more
+ * than the title was given, and goes back there too, unless `{ leave: false }` (a leave already on
+ * its way elsewhere). Leaving the record otherwise (another record on this page, or another page)
+ * ends the creation: the record stays.
  */
 export default function useRecordCreation({
   family,
@@ -109,7 +109,6 @@ export default function useRecordCreation({
     () => undefined,
   );
   const [cancelling, setCancelling] = React.useState(false);
-  const [completing, setCompleting] = React.useState(false);
 
   // Leaving the record ends its creation: the page goes, or shows another record.
   React.useEffect(() => {
@@ -132,29 +131,6 @@ export default function useRecordCreation({
     if (key) clearCreation(key);
     navigate(current?.returnTo || listPath);
   }, [key, listPath, navigate]);
-
-  /**
-   * Done on a family the server checks (`POST <apiBase>/:id/creation/complete`): the creation ends
-   * as `finishCreation` and null comes back, or the keys of the fields still missing
-   * (`CREATION_INCOMPLETE`). Any other refusal throws.
-   */
-  const completeCreation = React.useCallback(async (): Promise<string[] | null> => {
-    const current = key ? getCreation(key) : undefined;
-    if (!recordId || !current || completing) return null;
-    setCompleting(true);
-    try {
-      await api.post(`${apiBase}/${recordId}/creation/complete`, { token: current.token });
-    } catch (err) {
-      const answer = (err as { response?: { data?: { code?: unknown; params?: { fields?: unknown } } } })?.response?.data;
-      const fields = answer?.code === 'CREATION_INCOMPLETE' && Array.isArray(answer.params?.fields) ? answer.params.fields.map(String) : [];
-      if (fields.length > 0) return fields;
-      throw err;
-    } finally {
-      setCompleting(false);
-    }
-    finishCreation();
-    return null;
-  }, [apiBase, completing, finishCreation, key, recordId]);
 
   /** True once the record is deleted; false when the person kept it, or the cancel was refused. */
   const cancelCreation = React.useCallback(async (options?: { leave?: boolean }): Promise<boolean> => {
@@ -199,17 +175,5 @@ export default function useRecordCreation({
     }
   }, [apiBase, cancelling, dialogs, key, listPath, navigate, onError, queryClient, queryKeyPrefixes, recordId, recordLabel, t]);
 
-  /**
-   * The cancel of this record, sent as a request the browser finishes after the page is gone (a
-   * reload or a closed tab left with the record incomplete, `useIncompleteLeave`): the same route
-   * and token as Cancel, so the server refuses it for any other person, record or expired creation.
-   * Nothing is sent once the creation is over.
-   */
-  const discardOnUnload = React.useCallback(() => {
-    const current = key ? getCreation(key) : undefined;
-    if (!recordId || !current) return;
-    deleteKeepalive(`${apiBase}/${recordId}/creation`, { token: current.token });
-  }, [apiBase, key, recordId]);
-
-  return { beingCreated: !!entry, token: entry?.token ?? null, cancelling, completing, startCreation, finishCreation, completeCreation, cancelCreation, discardOnUnload };
+  return { beingCreated: !!entry, token: entry?.token ?? null, cancelling, startCreation, finishCreation, cancelCreation };
 }

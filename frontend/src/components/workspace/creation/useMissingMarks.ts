@@ -13,8 +13,8 @@ type Options = {
 const snapshot = (value: unknown) => JSON.stringify(value ?? null);
 
 /**
- * The fields a check found missing (Create on a record being created, the server's
- * `CREATION_INCOMPLETE`), marked on their label until each one gets a value. A field stays marked
+ * The fields a check found missing (Create or Done on a record being created, a refusal of the
+ * server on a field), marked on their label until each one gets a value. A field stays marked
  * while the screen still sees it missing, or while it keeps the value it held when it was marked:
  * an account the server refused (another chart, another type) stays marked until it is changed.
  */
