@@ -878,6 +878,45 @@ describe('Budget line born complete', () => {
     expect(lineWrites()[0][1]).toMatchObject({ paying_company_id: 'company-2', cost_center_id: 'cc-company-2' });
   });
 
+  describe('the one cost center a limited access requires (lot A2)', () => {
+    const centre = (id: string, company_id: string) => ({ id, code: id.toUpperCase(), name: id, company_id });
+    beforeEach(() => {
+      access.limited = true;
+      access.start = { ready: true, companyId: 'company-2', needsChoice: false };
+      access.centreOnly = ['company-2'];
+    });
+
+    it('fills the one cost center offered, and writes the line once with the title and the account', async () => {
+      await startNewLine({ costCenters: [centre('cc-company-2', 'company-2'), centre('cc-company-1', 'company-1')] });
+      await waitFor(() => expect(field('opex.fields.costCenter')).toHaveValue('cc-company-2'));
+      expect(field('opex.fields.payingCompany')).toHaveValue('company-2');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(mocked.post).not.toHaveBeenCalled();
+      await giveTitle();
+      pick('opex.fields.account', 'account-1');
+      await waitFor(() => expect(lineWrites()).toHaveLength(1));
+      expect(lineWrites()[0][1]).toMatchObject({ paying_company_id: 'company-2', cost_center_id: 'cc-company-2', account_id: 'account-1' });
+    });
+
+    it('fills nothing when two cost centers are offered', async () => {
+      await startNewLine({ costCenters: [centre('cc-company-2', 'company-2'), centre('cc-company-2b', 'company-2')] });
+      await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/cost-centers/tree'));
+      await giveTitle();
+      pick('opex.fields.account', 'account-1');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(field('opex.fields.costCenter')).toHaveValue('');
+      expect(mocked.post).not.toHaveBeenCalled();
+    });
+
+    it('does not fill again a cost center the person emptied', async () => {
+      await startNewLine({ costCenters: [centre('cc-company-2', 'company-2')] });
+      await waitFor(() => expect(field('opex.fields.costCenter')).toHaveValue('cc-company-2'));
+      pick('opex.fields.costCenter', '');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(field('opex.fields.costCenter')).toHaveValue('');
+    });
+  });
+
   it('says a refused place on its field', async () => {
     access.limited = true;
     access.start = { ready: true, companyId: null, needsChoice: true };

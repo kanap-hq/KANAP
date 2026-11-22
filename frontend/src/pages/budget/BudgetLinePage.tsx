@@ -936,17 +936,22 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   const companyValue = firstFill(companyFilter === undefined ? undefined : filterCompany, onlyCompany);
   useFillOnce({ isNew: isCreate, key: 'paying_company', empty: !draftCompany, value: companyValue, fill: pickDraftCompany });
   const costCenterFilter = filterOf('cost_center_label');
-  const costCenterTree = useCostCenterTree({ enabled: !!costCenterFilter });
+  // A cost center the person's access requires for the company (`costCenterRequired`): the one the
+  // picker offers fills it. The tree is read for the filter, or in that case only.
+  const costCenterRequired = isCreate && !!draftCompany && !!linePlacementFilter?.costCenterRequired;
+  const costCenterTree = useCostCenterTree({ enabled: !!costCenterFilter || costCenterRequired });
   const costCenterValue = React.useMemo((): FillValue => {
     if (costCenterFilter === undefined) return undefined;
-    if (!costCenterFilter) return null;
+    if (!costCenterFilter && !costCenterRequired) return null;
     if (!costCenterTree.ready) return undefined;
-    const matches = costCenterTree.nodes.filter((node) => node.kind === 'cost_center' && node.status === 'enabled'
-      && costCenterLabel(node) === costCenterFilter
+    const offered = costCenterTree.nodes.filter((node) => node.kind === 'cost_center' && node.status === 'enabled'
       && (!draftCompany || node.company_id === draftCompany)
       && (!linePlacementFilter || linePlacementFilter.isCostCenterAllowed(node)));
-    return matches.length === 1 ? matches[0].id : null;
-  }, [costCenterFilter, costCenterTree, draftCompany, linePlacementFilter]);
+    // The filter's cost center first, else the one offered when the access requires one.
+    const named = costCenterFilter ? offered.filter((node) => costCenterLabel(node) === costCenterFilter) : [];
+    if (named.length === 1) return named[0].id;
+    return costCenterRequired && offered.length === 1 ? offered[0].id : null;
+  }, [costCenterFilter, costCenterRequired, costCenterTree, draftCompany, linePlacementFilter]);
   // The cost center waits for the company: one the company does not take brings its own.
   const companySettled = companyValue !== undefined && (companyValue === null || !!draftCompany);
   useFillOnce({
