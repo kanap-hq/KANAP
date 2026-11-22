@@ -596,8 +596,10 @@ export default function InterfaceWorkspacePage() {
   const handleTabChange = React.useCallback((nextTab: string) => {
     if (nextTab === routeTab) return;
     const qs = searchParams.toString();
-    navigate(`/it/interfaces/${workspaceRouteId}/${nextTab}${qs ? `?${qs}` : ''}`);
-  }, [navigate, routeTab, searchParams, workspaceRouteId]);
+    // A new interface's draft is one place: its tabs replace each other in the history, and the
+    // written interface then replaces them all (`useDraftCreation`).
+    navigate(`/it/interfaces/${workspaceRouteId}/${nextTab}${qs ? `?${qs}` : ''}`, { replace: isCreate });
+  }, [isCreate, navigate, routeTab, searchParams, workspaceRouteId]);
 
   const navigateToInterface = React.useCallback((targetId: string | null) => {
     if (!targetId) return;

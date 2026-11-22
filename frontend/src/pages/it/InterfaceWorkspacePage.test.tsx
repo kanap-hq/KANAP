@@ -2,12 +2,13 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 import { resetCreationStore } from '../../components/workspace/creation/creationStore';
+import NavigationTracker, { resetNavigationTracker } from '../../components/navigation/NavigationTracker';
 import InterfaceWorkspacePage from './InterfaceWorkspacePage';
 
 const post = vi.fn();
@@ -58,6 +59,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
   default: (props: any) => (
     <div>
       <nav>{props.tabs.map((tab: any) => <span key={tab.key}>{tab.label}</span>)}</nav>
+      <button type="button" onClick={() => props.onTabChange?.('flow')}>go to flow tab</button>
       <h1>{props.title || props.titleFallback}</h1>
       <input
         aria-label="title"
@@ -270,6 +272,56 @@ describe('InterfaceWorkspacePage (draft)', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/start'));
     expect(del).toHaveBeenCalledWith('/interfaces/int-9/creation', { data: { token: 'tok-9' } });
+  });
+
+  /** A new interface opened from the list on Overview, its draft then completed on Flow. */
+  async function createAcrossTabs() {
+    resetNavigationTracker();
+    function Back() {
+      const navigate = useNavigate();
+      return <button type="button" onClick={() => navigate(-1)}>browser back</button>;
+    }
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <KanapDialogProvider>
+            <MemoryRouter initialEntries={['/it/interfaces', '/it/interfaces/new/overview']} initialIndex={1}>
+              <NavigationTracker />
+              <Where />
+              <Back />
+              <Routes>
+                <Route path="/it/interfaces" element={<div />} />
+                <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
+              </Routes>
+            </MemoryRouter>
+          </KanapDialogProvider>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    const title = await screen.findByLabelText('title');
+    fireEvent.change(title, { target: { value: 'Orders sync' } });
+    fireEvent.blur(title);
+    fireEvent.click(screen.getByRole('button', { name: 'pick category' }));
+    fireEvent.click(screen.getByRole('button', { name: 'go to flow tab' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'pick source' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick target' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/it/interfaces/INT-9/flow'), { timeout: 2000 });
+    expect(post).toHaveBeenCalledTimes(1);
+  }
+
+  it('goes back to the list on Done, after the new page moved from one tab to another', async () => {
+    await createAcrossTabs();
+    fireEvent.click(await screen.findByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/it/interfaces'), { timeout: 2000 });
+    resetNavigationTracker();
+  });
+
+  it('keeps the draft one place in the history: the way back from the created interface is the list', async () => {
+    await createAcrossTabs();
+    fireEvent.click(screen.getByRole('button', { name: 'browser back' }));
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/it/interfaces'), { timeout: 2000 });
+    expect(post).toHaveBeenCalledTimes(1);
+    resetNavigationTracker();
   });
 
   // The shell then moves the focus to the source (PortfolioDetailWorkspaceShell.test.tsx).
