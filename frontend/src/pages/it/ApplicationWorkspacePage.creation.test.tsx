@@ -206,9 +206,10 @@ describe('Application creation at the title', () => {
     expect(await screen.findByText('An application named Billing already exists.')).toBeTruthy();
     expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveValue('Billing');
     expect(location()).toBe('/it/applications/new/overview');
-    // Typing answers the refusal; the next commit tries again.
+    // The refusal stays while the name is typed again (typing that went on after the gesture lands
+    // here too); the next commit tries again.
     fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Billing 2' } });
-    expect(screen.queryByText('An application named Billing already exists.')).toBeNull();
+    expect(screen.getByText('An application named Billing already exists.')).toBeTruthy();
   });
 
   it('cancels a creation with only its title at once, and goes back where it started', async () => {

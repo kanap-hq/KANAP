@@ -274,8 +274,9 @@ describe('IncidentWorkspacePage — new incident title', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Title is too long.');
     expect(navigateMock).not.toHaveBeenCalled();
+    // The refusal stays while the title is typed again, until it is given again.
     fireEvent.change(title, { target: { value: 'Mail' } });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('Title is too long.');
   });
 
   it('offers no header title to a reader', () => {

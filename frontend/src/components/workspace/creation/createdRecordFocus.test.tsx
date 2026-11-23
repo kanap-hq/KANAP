@@ -475,9 +475,10 @@ describe('what the person does while the record is written', () => {
     expect(title).toHaveValue('Billing');
     expect(title).toHaveFocus();
     expect(document.querySelector('[data-creation-hold]')).toBeNull();
-    // Typing again goes to the title, as before the write.
+    // Typing again goes to the title, as before the write; the refusal stays until the name is given again.
     await user.keyboard('s');
     expect(title).toHaveValue('Billings');
+    expect(screen.getByText('refused')).toBeTruthy();
   });
 
   it('puts the characters typed meanwhile in a rich text description, through the editor', async () => {
