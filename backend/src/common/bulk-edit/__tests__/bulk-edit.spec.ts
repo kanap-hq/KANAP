@@ -123,6 +123,17 @@ async function main() {
     assert.deepEqual(list.written, [rows[3].id, rows[4].id]);
     assert.ok(!statements.some((s) => s.includes('bulk_edit_dry_run')));
   }
+  // Kad's card (lot K2e of 26.12.1): the rows that change, as `reach` read them (their value before),
+  // in the write order, for the dry run and for the write; neither the unchanged nor the refused.
+  {
+    const { manager } = fakeManager();
+    const dry = await runBulkEdit(manager, fakeList(rows, refuse), parseBulkSelection({ all: true }), parseBulkConfirmation({ dry_run: true }, true), change, { changedIds: true, changedRows: true });
+    assert.deepEqual(dry.changed_ids, [rows[3].id, rows[4].id]);
+    assert.deepEqual(dry.changed_rows, [rows[3], rows[4]], 'the rows as reach read them');
+    const written = await runBulkEdit(manager, fakeList(rows, refuse), parseBulkSelection({ all: true }), parseBulkConfirmation({ as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint }, true), change, { changedIds: true });
+    assert.deepEqual(written.changed_ids, [rows[3].id, rows[4].id], 'the write names the rows it changed');
+    assert.equal(written.changed_rows, undefined, 'only what was asked');
+  }
   // More rows than counted: 409, nothing written.
   {
     const { manager } = fakeManager();
