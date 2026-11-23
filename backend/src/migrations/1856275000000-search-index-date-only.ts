@@ -21,7 +21,9 @@ const TABLES: readonly string[] = [
  *
  * The sync functions are not redefined. `search_index_stamp_source()` is SECURITY DEFINER with its
  * `search_path` pinned, like the sync functions: the limited role of data-scoped access does not
- * write `search_index`. Writes no row; rerun-safe (`CREATE OR REPLACE`).
+ * write `search_index`. It never waits: an entry another transaction holds (a link trigger
+ * refreshing it) keeps its date, as a record held elsewhere does. Writes no row; rerun-safe
+ * (`CREATE OR REPLACE`).
  */
 export class SearchIndexDateOnly1856275000000 implements MigrationInterface {
   name = 'SearchIndexDateOnly1856275000000';
@@ -34,10 +36,14 @@ export class SearchIndexDateOnly1856275000000 implements MigrationInterface {
       SET search_path = public, pg_temp
       AS $$
       BEGIN
-        -- TG_ARGV: the entity types of the table's entries.
+        -- TG_ARGV: the entity types of the table's entries. An entry another transaction holds
+        -- (a link write refreshing it) is left with its date: the dating never waits.
         UPDATE search_index SET source_updated_at = NEW.updated_at
-         WHERE tenant_id = NEW.tenant_id AND entity_type = ANY (TG_ARGV) AND entity_id = NEW.id
-           AND source_updated_at IS DISTINCT FROM NEW.updated_at;
+         WHERE (tenant_id, entity_type, entity_id) IN (
+           SELECT tenant_id, entity_type, entity_id FROM search_index
+            WHERE tenant_id = NEW.tenant_id AND entity_type = ANY (TG_ARGV) AND entity_id = NEW.id
+              AND source_updated_at IS DISTINCT FROM NEW.updated_at
+              FOR NO KEY UPDATE SKIP LOCKED);
         RETURN NULL;
       END
       $$`);

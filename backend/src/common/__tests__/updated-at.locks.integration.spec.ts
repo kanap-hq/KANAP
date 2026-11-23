@@ -96,7 +96,7 @@ async function withSeed(fn: (seed: Seed, admin: QueryRunner) => Promise<void>) {
   } finally {
     await admin.startTransaction();
     await admin.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-    for (const table of ['audit_log', 'spend_item_contacts', 'contract_contacts', 'supplier_contacts', 'spend_items', 'contacts', 'suppliers', 'users', 'roles', 'search_index']) {
+    for (const table of ['audit_log', 'contract_spend_items', 'spend_item_contacts', 'contract_contacts', 'supplier_contacts', 'spend_items', 'contracts', 'contacts', 'suppliers', 'companies', 'users', 'roles', 'search_index']) {
       await admin.query(`DELETE FROM ${table} WHERE tenant_id = $1`, [tenantId]);
     }
     await admin.query(`DELETE FROM tenants WHERE id = $1`, [tenantId]);
@@ -189,6 +189,46 @@ async function testLinePatchAgainstContactSave() {
   });
 }
 
+async function testHeldSearchEntry() {
+  await withSeed(async (s, admin) => {
+    await admin.startTransaction();
+    await admin.query(`SELECT set_config('app.current_tenant', $1, true)`, [s.tenantId]);
+    const [company] = await admin.query(`INSERT INTO companies (tenant_id, name, country_iso, city, item_number) VALUES ($1, 'Co', 'FR', 'Brest', 1) RETURNING id`, [s.tenantId]);
+    const [contract] = await admin.query(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, item_number) VALUES ($1, 'Ctr', $2, $3, '2026-01-01', 1) RETURNING id`,
+      [s.tenantId, company.id, s.S],
+    );
+    await admin.query(`UPDATE search_index SET source_updated_at = $2 WHERE entity_id = $1`, [s.L, OLD]);
+    await admin.commitTransaction();
+    // B links a contract to L: the link trigger upserts L's search entry and holds it.
+    const rA = await open(s.tenantId);
+    const rB = await open(s.tenantId);
+    await rB.query(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [s.tenantId, contract.id, s.L]);
+    // A dates L (a child of L changed), then B changes L for real.
+    const t0 = Date.now();
+    const pA = timed(t0, touchUpdatedAtMany(rA.manager, 'spend_items', [s.L]));
+    await sleep(300);
+    const t1 = Date.now();
+    const pB = timed(t1, rB.query(`UPDATE spend_items SET product_name = 'Line Z' WHERE id = $1`, [s.L]));
+    const a = await pA;
+    const seen = a.ok
+      ? (await rA.query(
+        `SELECT (SELECT updated_at = now() FROM spend_items WHERE id = $1) AS line_dated,
+                (SELECT source_updated_at FROM search_index WHERE entity_id = $1) AS entry_date`,
+        [s.L],
+      ))[0]
+      : null;
+    if (a.ok) await rA.commitTransaction(); else await rA.rollbackTransaction();
+    await rA.release();
+    const b = await pB;
+    await finish([[rB, b]]);
+    assert.ok(a.ok && b.ok, `both gestures pass: dating ${JSON.stringify(a)}, line change ${JSON.stringify(b)}`);
+    assert.ok(a.ms < 1000, `the dating does not wait for the held search entry: ${a.ms} ms`);
+    assert.equal(seen.line_dated, true, 'the line is dated');
+    assert.equal(new Date(seen.entry_date).toISOString(), OLD, 'the held search entry keeps its date');
+  });
+}
+
 async function testOwnRecordsAreDated() {
   await withSeed(async (s) => {
     const runner = await open(s.tenantId);
@@ -267,6 +307,7 @@ void runSpecs('updated-at.locks.integration.spec', [
   ['a cycle between a line page and a supplier page', testCycle],
   ['a held line does not make the supplier page wait', testHeldLineDoesNotWait],
   ['a line PATCH against a contact save', testLinePatchAgainstContactSave],
+  ['a search entry held by a link write', testHeldSearchEntry],
   ['the gesture\'s own records are dated', testOwnRecordsAreDated],
   ['under the limited role', testLimitedRole],
 ]);

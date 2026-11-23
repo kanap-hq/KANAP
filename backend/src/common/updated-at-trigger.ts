@@ -114,7 +114,8 @@ export type SearchIndexTriggerOutcome = 'placed' | 'no search index' | 'table mi
  * - `trg_search_index_<table>_update`: every other update, same function;
  * - `trg_search_index_<table>_date`: a statement that names `updated_at` and moves it, on
  *   `search_index_stamp_source(<entity types>)`, which copies the date to the entry's
- *   `source_updated_at` (read by the assistant) and does nothing else. It does not read the row
+ *   `source_updated_at` (read by the assistant) and does nothing else; an entry another
+ *   transaction holds (a link trigger refreshing it) is skipped and keeps its date. It does not read the row
  *   as a whole: when the update changed more (a backdate with an edit), the sync also runs and
  *   writes the same date.
  * The sync functions are left as they are. A migration that recreates `trg_search_index_<table>`
@@ -238,7 +239,10 @@ export async function dropUpdatedAtTriggers(executor: Executor, tables: readonly
  * date. A row whose date is already the transaction's `now()` (the trigger or an earlier call
  * dated it) is not written again.
  *
- * The dating never waits: the rows are locked `FOR NO KEY UPDATE SKIP LOCKED`, in id order. A row
+ * The dating waits for no row lock, neither on a record nor on its search entry: the rows are
+ * locked `FOR NO KEY UPDATE SKIP LOCKED`, in id order, and the date trigger copies the date to the
+ * search entry the same way (`search_index_stamp_source()`, an entry another transaction holds
+ * keeps its date). A row
  * another transaction holds at that instant is left: that transaction is writing it (its own
  * change dates it), or holds it without changing it (a lock taken before a write, a budget
  * operation holding its lines), and then the record keeps its date while its history gains the
