@@ -262,11 +262,6 @@ const SCREEN_TRACES: Readonly<Record<string, ScreenTrace>> = {
     );
     return { members: rows.map((row) => row.id) };
   }),
-  // No screen writes an asset's support contacts: the form of the application's, which the
-  // contact presenter reads the same way.
-  'assets.support_contacts': wholeSet('asset_support_contacts', stateList(
-    `SELECT contact_id::text || ':' || COALESCE(role, '') AS state FROM asset_support_contacts WHERE tenant_id = $1 AND asset_id = $2`,
-  )),
   'contracts.budget_lines': contractLines,
   // The line's Relations tab (`setBudgetLineRelation`).
   'budget_lines.applications': fromLine('application_spend_items', 'spend_item_id', 'application_id'),
@@ -358,6 +353,8 @@ export const ROW_AUDITED_RELATIONS: ReadonlySet<string> = new Set([
  * activity, `portfolio_activities`) come from the screen's code.
  * - a project's and a request's applications, assets and lines: the Relations tab's toggle
  *   (`PortfolioRelationsService.setProjectLink`, `setRequestLink`), one link at a time;
+ * - an asset's support contacts: the Support panel's replacement of the set
+ *   (`AssetsService.bulkReplaceSupportContacts`).
  */
 export const SCREEN_SERVICE_RELATIONS: ReadonlySet<string> = new Set([
   'projects.applications',
@@ -366,6 +363,7 @@ export const SCREEN_SERVICE_RELATIONS: ReadonlySet<string> = new Set([
   'requests.applications',
   'requests.assets',
   'requests.budget_lines',
+  'assets.support_contacts',
 ]);
 
 export function screenTraceOf(sourceEntity: string, relation: string): ScreenTrace | null {

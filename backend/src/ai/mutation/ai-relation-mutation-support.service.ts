@@ -25,6 +25,7 @@ import {
 } from '../../auth/business-contributor-scope';
 import { aiParticipationScopeSql } from '../query/ai-query-scope.util';
 import { SupplierContactsService } from '../../suppliers/supplier-contacts.service';
+import { AssetsService } from '../../assets/services/assets.service';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewRelationItem } from '../ai.types';
 import { AiMutationAuditOptions, buildAiMutationAudit } from './ai-mutation-audit.util';
@@ -378,6 +379,7 @@ export class AiRelationMutationSupportService {
     private readonly itOpsSettings: ItOpsSettingsService,
     @Optional() private readonly policy?: AiPolicyService,
     @Optional() private readonly portfolioRelations?: PortfolioRelationsService,
+    @Optional() private readonly assets?: AssetsService,
   ) {}
 
   /**
@@ -1432,6 +1434,19 @@ export class AiRelationMutationSupportService {
     }
     if (config.kind === 'simple') {
       await this.replaceSimpleRelation(context, config, sourceId, nextItems);
+      return;
+    }
+    // An asset's support contacts: the Support panel's replacement of the whole set, with the card's
+    // audit source (its row on the asset, `SCREEN_SERVICE_RELATIONS`).
+    if (config.sourceEntity === 'assets' && config.kind === 'contact_role') {
+      if (!this.assets) throw new Error('The assets service is not available.');
+      await this.assets.bulkReplaceSupportContacts(
+        sourceId,
+        nextItems.map((item) => ({ contact_id: String(item.payload.contact_id), role: textOrNull(item.payload.role) })),
+        context.tenantId,
+        context.userId,
+        { manager: context.manager, tenantId: context.tenantId, audit },
+      );
       return;
     }
     const rowAudit = ROW_AUDITED_RELATIONS.has(`${config.sourceEntity}.${config.relation}`) ? audit : null;

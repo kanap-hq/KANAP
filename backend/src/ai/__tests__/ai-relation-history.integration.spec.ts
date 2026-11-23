@@ -67,8 +67,6 @@ type Case = {
   hiddenWithout: string | null;
   /** Other records the screen's gesture marks, read for the added target (add and replace). */
   alsoOn?: (rec: Rec, step: { added?: Target; removed?: Target }) => Array<{ table: string; id: string; name: string }>;
-  /** No screen gesture: the assistant's trace is checked in the history only. */
-  noScreen?: true;
   /** The record's activity the screen writes too (`portfolio_activities`), by its column. */
   activities?: 'project_id' | 'request_id';
 };
@@ -472,8 +470,8 @@ const CASES: Case[] = [
     ),
   },
   {
-    // No screen writes an asset's support contacts: the assistant's trace is read in the history only.
-    name: 'assets.support_contacts', entity: 'assets', relation: 'support_contacts', table: 'assets', hiddenWithout: 'contacts', noScreen: true,
+    // The asset's Support panel replaces the whole set (`AssetsSupportService.bulkReplaceSupportContacts`).
+    name: 'assets.support_contacts', entity: 'assets', relation: 'support_contacts', table: 'assets', hiddenWithout: 'contacts',
     targets: async (env) => ({ kept: await contactTarget(env, 'Loïc', 'Support'), removed: await contactTarget(env, 'Nolwenn', 'Support'), added: await contactTarget(env, 'Tanguy', 'Vendor') }),
     record: async (env, _n, kept, removed) => {
       const rec = await asset(env);
@@ -482,7 +480,13 @@ const CASES: Case[] = [
       }
       return rec;
     },
-    screen: async () => undefined,
+    screen: (env, rec, step) => env.services.assetSupport.bulkReplaceSupportContacts(
+      rec.id,
+      [...step.stays, ...(step.added ? [step.added] : [])].map((t) => ({ contact_id: t.id, role: t.extra?.role })),
+      env.tenantId,
+      env.writer,
+      { manager: env.runner.manager, tenantId: env.tenantId },
+    ),
   },
   toggleCase('assets.links', 'assets', 'links',
     async () => {
@@ -796,6 +800,7 @@ async function run() {
   const { AssetsRelationsService } = require('../../assets/services/assets-relations.service');
   const { AssetsCrudService } = require('../../assets/services/assets-crud.service');
   const { AssetsAttachmentsService } = require('../../assets/services/assets-attachments.service');
+  const { AssetsSupportService } = require('../../assets/services/assets-support.service');
   const { SupplierContactsService } = require('../../suppliers/supplier-contacts.service');
   const { ContractContactsService } = require('../../contracts/contract-contacts.service');
   const { ContractsService } = require('../../contracts/contracts.service');
@@ -842,6 +847,7 @@ async function run() {
         assetRelations: app.get(AssetsRelationsService),
         assetCrud: app.get(AssetsCrudService),
         assetAttachments: app.get(AssetsAttachmentsService),
+        assetSupport: app.get(AssetsSupportService),
         supplierContacts: app.get(SupplierContactsService),
         contractContacts: app.get(ContractContactsService),
         contracts: app.get(ContractsService),
@@ -901,8 +907,8 @@ async function run() {
           }
 
           // The screen, on the twin.
-          const twin = c.noScreen ? null : await c.record(env, ++n, targets.kept, targets.removed);
-          if (twin) {
+          const twin = await c.record(env, ++n, targets.kept, targets.removed);
+          {
             const screenMarker = await now();
             await c.screen(env, twin, step);
             const screenRows = await auditSince(screenMarker);
@@ -953,7 +959,7 @@ async function run() {
             assert.equal(undone.status, 'executed', `${cell}: the undo runs (${undone.error_message ?? ''})`);
             const undoRows = await auditSince(undoMarker);
             assert.ok(undoRows.length > 0 && undoRows.every((row) => row.source === 'ai_chat' && row.source_ref === undo.preview_id), `${cell}: the undo is audited by its card`);
-            if (twin) {
+            {
               const screenMarker = await now();
               await c.screen(env, twin, { kept: targets.kept, stays: step.stays, removed: targets.added });
               const screenRows = await auditSince(screenMarker);
