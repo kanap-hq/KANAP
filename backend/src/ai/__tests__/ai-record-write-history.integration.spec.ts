@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
+import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-document-seed';
 
 // Lot K2a of 26.12.1: a write of Kad leaves one history line per record it writes, attributed to
 // Kad for the person (source `ai_chat`, reference = the approved card), with the values the
@@ -38,7 +39,7 @@ type Harness = {
   dataSource: DataSource;
   tools: any;
   previews: any;
-  services: { applications: any; assets: any; contracts: any; budgetLines: any };
+  services: { applications: any; assets: any; contracts: any; budgetLines: any; projects: any; requests: any; interfaces: any; connections: any };
 };
 
 type Seed = {
@@ -49,6 +50,10 @@ type Seed = {
   supplierId: string;
   accountId: string;
   locationId: string;
+  sourceAppId: string;
+  targetAppId: string;
+  sourceAssetId: string;
+  targetAssetId: string;
 };
 
 type AuditRow = {
@@ -85,9 +90,20 @@ const PERMISSIONS: Record<string, string> = {
   infrastructure: 'member',
   contracts: 'member',
   budget: 'member',
+  portfolio_projects: 'member',
+  portfolio_requests: 'member',
 };
 
 const screenOpts = (runner: QueryRunner, s: Seed) => ({ manager: runner.manager, tenantId: s.tenantId });
+const projectOpts = (runner: QueryRunner, s: Seed) => ({ manager: runner.manager, tenantId: s.tenantId, userId: s.userId });
+const interfaceFields = (s: Seed) => ({
+  name: 'History interface', business_purpose: 'Orders to billing', data_category: 'master_data',
+  source_application_id: s.sourceAppId, target_application_id: s.targetAppId,
+});
+const connectionFields = (s: Seed) => ({
+  name: 'History connection', topology: 'server_to_server', source_asset_id: s.sourceAssetId, destination_asset_id: s.targetAssetId,
+  protocol_codes: ['https'],
+});
 
 const CASES: HistoryCase[] = [
   {
@@ -165,6 +181,81 @@ const CASES: HistoryCase[] = [
     screen: async (h, runner, s, fields, id) => String((await h.services.budgetLines.update(id, fields, s.userId, { manager: runner.manager })).id),
     undo: true,
   },
+  {
+    name: 'projects: create',
+    table: 'portfolio_projects',
+    card: () => ({
+      tool: 'create_business_record',
+      input: { entity_type: 'projects', fields: { name: 'History project', origin: 'fast_track', purpose: 'Why we run it' } },
+    }),
+    screen: async (h, runner, s, fields) => String((await h.services.projects.create(fields, s.tenantId, s.userId, projectOpts(runner, s))).id),
+  },
+  {
+    name: 'projects: update',
+    table: 'portfolio_projects',
+    prepare: async (h, runner, s) => String((await h.services.projects.create(
+      { name: 'History project', origin: 'fast_track', purpose: 'Why we run it' }, s.tenantId, s.userId, projectOpts(runner, s),
+    )).id),
+    card: (_s, id) => ({
+      tool: 'update_business_record',
+      input: { entity_type: 'projects', ref: id, fields: { name: 'Renamed project', execution_progress: 20, purpose: 'Why we run it now' } },
+    }),
+    screen: async (h, runner, s, fields, id) => String((await h.services.projects.update(id, fields, s.tenantId, s.userId, projectOpts(runner, s))).id),
+    undo: true,
+  },
+  {
+    name: 'requests: create',
+    table: 'portfolio_requests',
+    card: () => ({
+      tool: 'create_business_record',
+      input: { entity_type: 'requests', fields: { name: 'History request', purpose: 'Why we ask', risks: 'Late delivery' } },
+    }),
+    screen: async (h, runner, s, fields) => String((await h.services.requests.create(fields, s.tenantId, s.userId, { manager: runner.manager })).id),
+  },
+  {
+    name: 'requests: update',
+    table: 'portfolio_requests',
+    prepare: async (h, runner, s) => String((await h.services.requests.create(
+      { name: 'History request', purpose: 'Why we ask', risks: 'Late delivery' }, s.tenantId, s.userId, { manager: runner.manager },
+    )).id),
+    card: (_s, id) => ({
+      tool: 'update_business_record',
+      input: { entity_type: 'requests', ref: id, fields: { name: 'Renamed request', expected_benefits: 'Fewer errors', risks: 'Later delivery' } },
+    }),
+    screen: async (h, runner, s, fields, id) => String((await h.services.requests.update(id, fields, s.tenantId, s.userId, { manager: runner.manager })).id),
+    undo: true,
+  },
+  {
+    name: 'interfaces: create',
+    table: 'interfaces',
+    card: (s) => ({ tool: 'create_business_record', input: { entity_type: 'interfaces', fields: interfaceFields(s) } }),
+    screen: async (h, runner, s, fields) => String((await h.services.interfaces.create(fields, s.tenantId, s.userId, { manager: runner.manager })).id),
+  },
+  {
+    name: 'interfaces: update',
+    table: 'interfaces',
+    prepare: async (h, runner, s) => String((await h.services.interfaces.create(interfaceFields(s), s.tenantId, s.userId, { manager: runner.manager })).id),
+    card: (_s, id) => ({
+      tool: 'update_business_record',
+      input: { entity_type: 'interfaces', ref: id, fields: { name: 'Renamed interface', overview_notes: 'Nightly batch' } },
+    }),
+    screen: async (h, runner, s, fields, id) => String((await h.services.interfaces.update(id, fields, s.tenantId, s.userId, { manager: runner.manager })).id),
+    undo: true,
+  },
+  {
+    name: 'connections: create',
+    table: 'connections',
+    card: (s) => ({ tool: 'create_business_record', input: { entity_type: 'connections', fields: connectionFields(s) } }),
+    screen: async (h, runner, s, fields) => String((await h.services.connections.create(fields, s.tenantId, s.userId, { manager: runner.manager })).id),
+  },
+  {
+    name: 'connections: update',
+    table: 'connections',
+    prepare: async (h, runner, s) => String((await h.services.connections.create(connectionFields(s), s.tenantId, s.userId, { manager: runner.manager })).id),
+    card: (_s, id) => ({ tool: 'update_business_record', input: { entity_type: 'connections', ref: id, fields: { description: 'Nightly sync' } } }),
+    screen: async (h, runner, s, fields, id) => String((await h.services.connections.update(id, fields, s.tenantId, s.userId, { manager: runner.manager })).id),
+    undo: true,
+  },
 ];
 
 async function one(runner: QueryRunner, sql: string, params: unknown[]): Promise<string> {
@@ -206,7 +297,20 @@ async function seed(runner: QueryRunner): Promise<Seed> {
   const supplierId = await one(runner, `INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'History supplier') RETURNING id`, [tenantId]);
   const locationId = await one(runner,
     `INSERT INTO locations (tenant_id, location_reference, name, hosting_type) VALUES ($1, 'LOC-1', 'Paris DC', 'cloud') RETURNING id`, [tenantId]);
-  return { tenantId, userId, userName: 'Member Tester', companyId, supplierId, accountId, locationId };
+  // A project's, a request's and an interface's texts are their managed documents: the tenant needs their slots.
+  await seedManagedDocsKnowledgeAssets(runner.manager as any, tenantId);
+  const sourceAppId = await one(runner,
+    `INSERT INTO applications (tenant_id, name, status) VALUES ($1, 'Orders', 'enabled') RETURNING id`, [tenantId]);
+  const targetAppId = await one(runner,
+    `INSERT INTO applications (tenant_id, name, status) VALUES ($1, 'Billing', 'enabled') RETURNING id`, [tenantId]);
+  const sourceAssetId = await one(runner,
+    `INSERT INTO assets (tenant_id, name, kind, environment, location_id) VALUES ($1, 'srv-orders', 'server', 'prod', $2) RETURNING id`, [tenantId, locationId]);
+  const targetAssetId = await one(runner,
+    `INSERT INTO assets (tenant_id, name, kind, environment, location_id) VALUES ($1, 'srv-billing', 'server', 'prod', $2) RETURNING id`, [tenantId, locationId]);
+  return {
+    tenantId, userId, userName: 'Member Tester', companyId, supplierId, accountId, locationId,
+    sourceAppId, targetAppId, sourceAssetId, targetAssetId,
+  };
 }
 
 async function createHarness(): Promise<Harness> {
@@ -218,7 +322,17 @@ async function createHarness(): Promise<Harness> {
   const { AssetsService } = require('../../assets/services/assets.service');
   const { ContractsService } = require('../../contracts/contracts.service');
   const { BudgetLinesService } = require('../../spend/budget-lines.service');
+  const { PortfolioProjectsService } = require('../../portfolio/services');
+  const { PortfolioRequestsService } = require('../../portfolio/portfolio-requests.service');
+  const { InterfacesService } = require('../../interfaces/services/interfaces.service');
+  const { ConnectionsService } = require('../../connections/services/connections.service');
+  const { NotificationsService } = require('../../notifications/notifications.service');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
+  // A project's or a request's change notifies people: nothing is sent from this spec.
+  const notifications = app.get(NotificationsService, { strict: false });
+  for (const method of ['notifyStatusChange', 'notifyTeamAdded', 'notifyItLeadOfTeamChange']) {
+    notifications[method] = async () => undefined;
+  }
   return {
     app,
     dataSource: app.get(DataSource),
@@ -229,6 +343,10 @@ async function createHarness(): Promise<Harness> {
       assets: app.get(AssetsService, { strict: false }),
       contracts: app.get(ContractsService, { strict: false }),
       budgetLines: app.get(BudgetLinesService, { strict: false }),
+      projects: app.get(PortfolioProjectsService, { strict: false }),
+      requests: app.get(PortfolioRequestsService, { strict: false }),
+      interfaces: app.get(InterfacesService, { strict: false }),
+      connections: app.get(ConnectionsService, { strict: false }),
     },
   };
 }
@@ -257,8 +375,8 @@ async function rowsWrittenBy(runner: QueryRunner, s: Seed, write: () => Promise<
   return rows.filter((row) => !known.has(row.id));
 }
 
-/** Values that differ between two plays of one gesture by nature: ids and write times. */
-const VOLATILE_KEYS = new Set(['id', 'created_at', 'updated_at']);
+/** Values that differ between two plays of one gesture by nature: ids and write times (a managed document's publication). */
+const VOLATILE_KEYS = new Set(['id', 'created_at', 'updated_at', 'published_at']);
 
 /**
  * Fields that carry who wrote a row, beside its audit source: they belong to the attribution. An

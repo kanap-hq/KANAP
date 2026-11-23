@@ -2160,7 +2160,8 @@ export class AiBusinessRecordMutationSupportService {
     const audit = buildAiMutationAudit(preview);
     // The services of these families write the record's one audit row themselves, with the
     // preview's source and reference: Kad adds none of its own (lots K1 and K2a).
-    const serviceWritesAudit = (['incidents', 'technologies', 'budget_lines', 'applications', 'assets', 'contracts'] as string[])
+    const serviceWritesAudit = (['incidents', 'technologies', 'budget_lines', 'applications', 'assets', 'contracts',
+      'projects', 'requests', 'interfaces', 'connections'] as string[])
       .includes(entityType);
     if (action === 'create') {
       const adoption = mutation.adopt && typeof mutation.adopt === 'object'
@@ -2398,13 +2399,13 @@ export class AiBusinessRecordMutationSupportService {
       case 'contracts':
         return this.contracts.create(fields as any, context.userId, { manager: context.manager, audit });
       case 'projects':
-        return this.portfolioProjects.create(fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, userId: context.userId });
+        return this.portfolioProjects.create(fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, userId: context.userId, audit });
       case 'requests':
-        return this.portfolioRequests.create(fields as any, context.tenantId, context.userId, { manager: context.manager });
+        return this.portfolioRequests.create(fields as any, context.tenantId, context.userId, { manager: context.manager, audit });
       case 'interfaces':
-        return this.interfaces.create(fields as any, context.tenantId, context.userId, { manager: context.manager });
+        return this.interfaces.create(fields as any, context.tenantId, context.userId, { manager: context.manager, audit });
       case 'connections':
-        return this.connections.create(fields as any, context.tenantId, context.userId, { manager: context.manager });
+        return this.connections.create(fields as any, context.tenantId, context.userId, { manager: context.manager, audit });
       case 'budget_lines':
         return this.budgetLines.create(fields, context.userId, { manager: context.manager, ...(audit ? { audit } : {}) });
       case 'incidents':
@@ -2434,13 +2435,13 @@ export class AiBusinessRecordMutationSupportService {
       case 'contracts':
         return this.contracts.update(id, fields as any, context.userId, { manager: context.manager, audit });
       case 'projects':
-        return this.portfolioProjects.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, userId: context.userId });
+        return this.portfolioProjects.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, userId: context.userId, audit });
       case 'requests':
-        return this.portfolioRequests.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager });
+        return this.portfolioRequests.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager, audit });
       case 'interfaces':
-        return this.interfaces.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager });
+        return this.interfaces.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager, audit });
       case 'connections':
-        return this.connections.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager });
+        return this.connections.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager, audit });
       case 'budget_lines':
         return this.budgetLines.update(id, fields, context.userId, { manager: context.manager, ...(audit ? { audit } : {}) });
       case 'incidents':
