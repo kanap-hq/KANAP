@@ -145,7 +145,7 @@ Estas reglas se aplican a los dos tipos de calendario:
 
 ### Cuando cambian los días laborables
 
-**Cambiar los días laborables nunca modifica por sí solo una línea de presupuesto.** Los importes ya guardados en una línea de presupuesto se mantienen. Cuando abre la pestaña Presupuesto de la línea, la pestaña **Cantidad y precio** lo indica, por ejemplo "Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19." Haga clic allí en **Usar de nuevo las líneas** para aplicar los nuevos días.
+**Cambiar los días laborables nunca modifica por sí solo una línea de presupuesto.** Los importes ya guardados en una línea de presupuesto se mantienen. Cuando abre la pestaña Presupuesto de la línea, la pestaña **Cantidad y precio** lo indica, por ejemplo "Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19." Haga clic allí en **Usar de nuevo las líneas** para aplicar los nuevos días. La pestaña **Historial** de la línea de presupuesto registra entonces los días laborables de antes y de después, por calendario y año, por ejemplo "Días laborables de Francia 2027: 218 → 217".
 
 ---
 

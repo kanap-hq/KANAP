@@ -467,16 +467,11 @@ export default function ApplicationsPage() {
 
   const formatYesNo = useCallback((b?: boolean) => (b ? t('enums.yesNo.yes') : t('enums.yesNo.no')), []);
 
-  if (!hasLevel('applications', 'reader')) {
-    return <ForbiddenPage resource="applications" level="reader" />;
-  }
-
   const OwnersCell = useMemo(() => {
     const Cell: React.FC<ICellRendererParams<AppRow, any>> = (params) => {
-      const arr = (params?.value as string[] | undefined) || [];
+      const arr = Array.isArray(params?.value) ? params.value as string[] : [];
       const first = arr[0] || '';
       const extra = arr.length > 1 ? ` +${arr.length - 1}` : '';
-      const title = arr.join(', ');
       return (
         <Link
           href={buildAppHref(params.data as AppRow, 'ownership')}
@@ -494,7 +489,7 @@ export default function ApplicationsPage() {
 
   const ResidencyCell = useMemo(() => {
     const Cell: React.FC<ICellRendererParams<AppRow, any>> = (params) => {
-      const arr = (params?.value as string[] | undefined) || [];
+      const arr = Array.isArray(params?.value) ? params.value as string[] : [];
       const firstTwo = arr.slice(0, 2);
       const extra = arr.length > 2 ? ` +${arr.length - 2}` : '';
       return (
@@ -1089,6 +1084,12 @@ export default function ApplicationsPage() {
     setExportScope({ params, summary });
     setExportOpen(true);
   }, [t]);
+
+  // After every hook, so the hook order never depends on the permission.
+  if (!hasLevel('applications', 'reader')) {
+    return <ForbiddenPage resource="applications" level="reader" />;
+  }
+
   const openNewApplication = () => {
     const sp = buildWorkspaceSearch();
     navigate(`/it/applications/new/overview?${sp.toString()}`);

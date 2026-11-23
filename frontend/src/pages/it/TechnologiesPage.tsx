@@ -250,7 +250,7 @@ export default function TechnologiesPage() {
       },
       cellRenderer: LinkCell,
     },
-    { headerName: t('pages.technologies.columns.nextSupportEnd'), field: 'next_support_end', width: 130, headerTooltip: t('pages.technologies.columns.nextSupportEnd'), sortable: false, filter: false, cellRenderer: SupportEndCell },
+    { headerName: t('pages.technologies.columns.nextSupportEndShort'), field: 'next_support_end', width: 130, headerTooltip: t('pages.technologies.columns.nextSupportEnd'), sortable: false, filter: false, cellRenderer: SupportEndCell },
     ...(vulnerabilityFeed
       ? [{ headerName: t('pages.technologies.columns.vulnerabilitiesShort'), field: 'vulnerabilities_to_review' as const, width: 140, headerTooltip: t('pages.technologies.columns.vulnerabilities'), sortable: false, filter: false, cellRenderer: VulnerabilitiesCell }]
       : []),

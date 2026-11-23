@@ -436,10 +436,10 @@
     "aliases": "Aliasse: {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Verarbeitetes Volumen",
-    "input": "Eingabe-Tokens",
-    "output": "Ausgabe-Tokens",
-    "lastInput": "Kontext der letzten Anfrage"
+    "total": "Verarbeitetes Volumen:",
+    "input": "Eingabe-Tokens:",
+    "output": "Ausgabe-Tokens:",
+    "lastInput": "Kontext der letzten Anfrage:"
   },
   "usageIndicator": {
     "limitReached": "Monatliches Limit erreicht. Wird am {{resetDate}} zurückgesetzt.",

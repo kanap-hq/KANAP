@@ -665,6 +665,8 @@ L'onglet Historique liste les modifications apportées à la ligne, la plus réc
 
 Les modifications des éléments de la ligne y figurent aussi : montants, dimensions, ventilations, liens, pièces jointes, contacts, applications, technologies, actifs et tâches. Toute personne qui peut ouvrir la ligne peut lire son historique. Une fiche d'un module que vous ne pouvez pas lire apparaît seulement par son type, par exemple « un contrat ».
 
+Sur une colonne construite en **Quantité et prix**, l'entrée de la saisie nomme aussi chaque propriété modifiée d'une ligne chiffrée, juste au-dessus de la modification des montants. Par exemple : « Ligne chiffrée Consultant, calendrier : France → Allemagne ».
+
 Voir [Historique des fiches](record-history.md) pour le détail.
 
 ---
