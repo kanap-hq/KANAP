@@ -542,7 +542,8 @@ export class TechnologyLinksCsvService {
 
   /**
    * The version a row's label finds (`matchVersionLabel`): Kad's proposal first, a version of the
-   * technology by its label, case aside (a match of origin model, noted; otherwise refused); then the
+   * technology by its label, case aside (a match of origin model, noted; otherwise refused), unless the
+   * label finds that very version by itself (then the server's match, lot I6b of 26.12.1); then the
    * label as written, else by a prefix rule unless the person undid that match.
    */
   private versionOfRow(
@@ -556,13 +557,17 @@ export class TechnologyLinksCsvService {
     const proposal = undone ? undefined : proposalFor(request.proposals, 'version', label);
     if (proposal !== undefined) {
       const proposed = readsInfrastructure(request.access) ? matchVersionLabel(versions, proposal, { prefix: false }) : { kind: 'none' as const };
-      if (proposed.kind !== 'none') {
+      // The server's own match first (lot I6b of 26.12.1): Kad naming the version the label finds alone
+      // is no proposal to list, taken or refused; the label follows its own rule below.
+      const own = proposed.kind !== 'none' ? matchVersionLabel(versions, label, { prefix: true }) : null;
+      const same = proposed.kind !== 'none' && !!own && own.kind !== 'none' && own.row.id === proposed.row.id;
+      if (proposed.kind !== 'none' && !same) {
         noteNameMatch(state.matches, {
           column: 'version', name: null, value: label, target: proposed.row.label, ref: null, origin: 'model', reason: 'model', undoable: true,
         }, line);
         return { ...proposed, proposed: true };
       }
-      noteRefusedProposal(state.refused, { column: 'version', name: null, value: label, target: proposal, reason: 'missing' }, line);
+      if (!same) noteRefusedProposal(state.refused, { column: 'version', name: null, value: label, target: proposal, reason: 'missing' }, line);
     }
     return matchVersionLabel(versions, label, { prefix: !undone });
   }

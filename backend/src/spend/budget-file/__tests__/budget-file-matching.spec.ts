@@ -469,6 +469,53 @@ async function testSupplierWithinThePersonsRights() {
   console.log('  the supplier: no match beyond case and no proposal without the suppliers\' list: OK');
 }
 
+// Lot I6b of 26.12.1: the server's own match comes first. Kad proposing the value the server finds
+// alone (accents aside, a recommended dimension's value in another language) is the server's match,
+// without the card's "proposed by Kad"; Kad proposing another value, or a value the server does not
+// find, stays Kad's. An English workspace, a file in French: the entry of the tracker.
+async function testServerMatchBeforeKadsProposal() {
+  const cat = emptyCatalog({
+    companies: [{ id: 'c1', name: 'Fromage & Co SA', coaId: null, disabledAt: null }],
+    accounts: [{ id: 'a1', number: '612200', coaId: null, disabledAt: null }],
+    suppliers: [
+      { id: 's1', name: 'Société Générale', erpId: null, disabledAt: null },
+      { id: 's2', name: 'Ancien prestataire Sàrl', erpId: null, disabledAt: '2020-01-01T00:00:00.000Z' },
+    ],
+    dimensions: [
+      dimension('default', 'Cost pool', [value('d1', 'Hardware'), value('d2', 'Software')]),
+      dimension('business_domain', 'Business domain', [value('b1', 'Retail'), value('b2', 'Quarterly business review')]),
+    ],
+  });
+  const proposals = {
+    supplier_name: { 'Societe Generale': 'Société Générale', SG: 'Société Générale', 'Ancien prestataire Sarl': 'Ancien prestataire Sàrl' },
+    'analytics:default': { Logiciel: 'Software', 'Matériel': 'Hardware' },
+    'analytics:business_domain': { Magasins: 'Quarterly business review' },
+  };
+  const { report } = await check([
+    ',opex,Licences,Fromage & Co SA,612200,Societe Generale,EUR,Logiciel,,,',
+    ',opex,Postes,Fromage & Co SA,612200,SG,EUR,Matériel,,,Magasins',
+    ',opex,Ancien,Fromage & Co SA,612200,Ancien prestataire Sarl,EUR,,,,',
+  ], { cat, matching: { proposals } });
+  assert.deepEqual(matchesOf(report), [
+    // The same value as the server's: the server's match.
+    ['supplier_name', 'Societe Generale', 'Société Générale', 'server', 'accents', [2]],
+    ['analytics:default', 'Logiciel', 'Software', 'server', 'translation', [2]],
+    // Nothing the server finds alone: Kad's.
+    ['supplier_name', 'SG', 'Société Générale', 'model', 'model', [3]],
+    ['analytics:default', 'Matériel', 'Hardware', 'server', 'translation', [3]],
+    // Another value than the server's ("Retail"): Kad's, as before.
+    ['analytics:business_domain', 'Magasins', 'Quarterly business review', 'model', 'model', [3]],
+    ['supplier_name', 'Ancien prestataire Sarl', 'Ancien prestataire Sàrl', 'server', 'accents', [4]],
+  ]);
+  // Kad naming the disabled supplier the server finds alone: no refused proposal; the file's value is refused.
+  assert.deepEqual(report.matching!.refusedProposals, []);
+  assert.deepEqual(report.errors.map((error) => [error.line, error.column, error.code]), [[4, 'supplier_name', 'BUDGET_FILE_DISABLED']]);
+  // The screen's check, with no proposal, makes the same matches for the values the server finds.
+  const screen = await check([',opex,Licences,Fromage & Co SA,612200,Societe Generale,EUR,Logiciel,,,'], { cat });
+  assert.deepEqual(matchesOf(screen.report), matchesOf(report).slice(0, 2));
+  console.log('  the server\'s own match before Kad\'s proposal: no "proposed by Kad" for what the server finds alone: OK');
+}
+
 async function main() {
   testRecommendedKeys();
   testCandidates();
@@ -485,6 +532,7 @@ async function main() {
   await testCandidatesOfReadableLists();
   await testCompanyMatches();
   await testSupplierWithinThePersonsRights();
+  await testServerMatchBeforeKadsProposal();
   console.log('budget-file-matching.spec: ok');
 }
 

@@ -397,7 +397,11 @@ async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportCon
       const proposal = proposalOf(name);
       if (proposal !== undefined) {
         const target = proposed?.(proposal);
-        if (target?.kind === 'one') {
+        // The server's own match first (lot I6b of 26.12.1): Kad naming the record the name finds alone
+        // is no proposal to list, taken or refused; the name follows its own rule below.
+        const own = target?.kind === 'one' ? lookup(name) : null;
+        const same = target?.kind === 'one' && own?.kind === 'one' && own.id === target.id;
+        if (target?.kind === 'one' && !same) {
           row.parsed.related_object_id = target.id;
           delete row.parsed._related_object_name;
           if (context.nameMatches) {
@@ -408,7 +412,7 @@ async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportCon
           }
           continue;
         }
-        if (context.refusedProposals) {
+        if (!same && context.refusedProposals) {
           noteRefusedProposal(context.refusedProposals, { column: 'related_object_name', name: null, value: name, target: proposal, reason: 'missing' }, row.rowNumber);
         }
       }
