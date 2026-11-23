@@ -299,12 +299,12 @@ export const en = {
     angleChosen: {
       budget: 'managing the IT budget',
       cartography: 'mapping the IT landscape',
-      portfolio: 'tracking projects and requests',
+      portfolio: 'managing the portfolio',
     },
     pathNames: {
       budget: 'the IT budget',
       cartography: 'the IT landscape map',
-      portfolio: 'projects and requests',
+      portfolio: 'the portfolio',
     },
     billingPath: 'Administration › Billing',
     installGuide: 'installation guide',
