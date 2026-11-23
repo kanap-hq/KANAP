@@ -85,7 +85,7 @@ The workspace header gives you operational context without leaving the page:
 - a copyable request reference such as `REQ-42`
 - a metadata strip with **Status**, **Score**, **Requestor**, **IT owner**, **Target Delivery Date**, and (when applicable) the **Source Task** the request was created from
 - **Share** to send a link to the request
-- **Convert to Project** when the request is **Approved** or **Converted**
+- **Convert to project** when the request is **Approved**, for a person who may create projects
 - **Create** (then **Done**) and **Cancel**, while the request is being created. See [Creating or cancelling](#cancelling-a-creation)
 - **Delete**, a trash icon, for administrators (when the request is not yet converted). A converted request stays as the origin of its project and cannot be deleted
 - previous/next navigation based on the exact list context you came from
@@ -334,7 +334,9 @@ Use managed documents for core request narrative that should always travel with 
 
 ## Converting a request to a project
 
-Once a request reaches **Approved**, the workspace offers **Convert to Project** in the header.
+Once a request reaches **Approved**, the workspace offers **Convert to project** in the header, for a person who may create projects.
+
+A request that is already **Converted** shows its projects under **Resulting projects**. The header has no **Convert to project** button. A further project for the same need is created from the portfolio and linked to the request.
 
 The conversion flow lets you:
 
