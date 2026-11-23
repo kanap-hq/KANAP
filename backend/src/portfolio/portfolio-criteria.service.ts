@@ -1230,8 +1230,8 @@ export class PortfolioCriteriaService {
     if (request.priority_override) return; // Don't override manual scores
 
     const newScore = await this.calculateScore(requestId, tenantId, { manager: mg });
+    // A recomputed score is no edit of the request: its modification date stays (migration 1856270000000).
     request.priority_score = newScore;
-    request.updated_at = new Date();
     await requestRepo.save(request);
   }
 
