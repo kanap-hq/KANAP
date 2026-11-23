@@ -5,6 +5,7 @@ import { PortfolioProject, ProjectStatus, ProjectOrigin } from '../portfolio-pro
 import { PortfolioActivity } from '../portfolio-activity.entity';
 import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 import { ParticipationAccessScope } from '../../auth/business-contributor-scope';
+import type { AuditSourceOptions } from '../../audit/audit.service';
 
 /**
  * Common options for service methods.
@@ -24,6 +25,8 @@ export interface ServiceOpts {
    * inside a Business Contributor's participation. Absent names none of them.
    */
   linked?: PortfolioLinkedReads;
+  /** The audit source of the change (the assistant's card: `ai_chat` and its preview); the person's own when absent. */
+  audit?: AuditSourceOptions;
 }
 
 /**

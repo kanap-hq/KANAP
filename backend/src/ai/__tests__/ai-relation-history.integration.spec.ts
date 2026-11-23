@@ -69,6 +69,8 @@ type Case = {
   alsoOn?: (rec: Rec, step: { added?: Target; removed?: Target }) => Array<{ table: string; id: string; name: string }>;
   /** No screen gesture: the assistant's trace is checked in the history only. */
   noScreen?: true;
+  /** The record's activity the screen writes too (`portfolio_activities`), by its column. */
+  activities?: 'project_id' | 'request_id';
 };
 
 const FULL = {
@@ -622,41 +624,41 @@ const CASES: Case[] = [
     undefined,
     // A CAPEX line: the links read `capex_links`, the line named `capex_item_id`, as its route writes them.
     (env) => lineRecord(env, 'capex')),
-  toggleCase('projects.applications', 'projects', 'applications',
+  { ...toggleCase('projects.applications', 'projects', 'applications',
     async (env) => ({ kept: await applicationTarget(env), removed: await applicationTarget(env), added: await applicationTarget(env) }),
     insertLink('application_projects', 'project_id', 'application_id'),
     (env, rec, t, add) => env.services.portfolioRelations.setProjectLink('applications', t.id, add, projectCtx(env), owner(env, rec)),
     'applications',
     // The application added or removed is the row's parent: its history shows the project.
-    (rec, step) => changed(step).map((t) => ({ table: 'applications', id: t.id, name: rec.name! }))),
-  toggleCase('projects.assets', 'projects', 'assets',
+    (rec, step) => changed(step).map((t) => ({ table: 'applications', id: t.id, name: rec.name! }))), activities: 'project_id' },
+  { ...toggleCase('projects.assets', 'projects', 'assets',
     async (env) => ({ kept: await serverTarget(env, 'srv-p-kept'), removed: await serverTarget(env, 'srv-p-gone'), added: await serverTarget(env, 'srv-p-new') }),
     insertLink('asset_projects', 'project_id', 'asset_id'),
     (env, rec, t, add) => env.services.portfolioRelations.setProjectLink('assets', t.id, add, projectCtx(env), owner(env, rec)),
     'infrastructure',
-    (rec, step) => changed(step).map((t) => ({ table: 'assets', id: t.id, name: rec.name! }))),
-  toggleCase('projects.budget_lines', 'projects', 'budget_lines',
+    (rec, step) => changed(step).map((t) => ({ table: 'assets', id: t.id, name: rec.name! }))), activities: 'project_id' },
+  { ...toggleCase('projects.budget_lines', 'projects', 'budget_lines',
     async (env) => ({ kept: await line(env, 'opex', ++lineNumber), removed: await line(env, 'opex', ++lineNumber), added: await line(env, 'capex', ++lineNumber) }),
     insertLink('portfolio_project_opex', 'project_id', 'opex_id'),
     (env, rec, t, add) => env.services.portfolioRelations.setProjectLink('budget_lines', t.id, add, projectCtx(env), owner(env, rec)),
     'budget',
-    (rec, step) => changed(step).map((t) => ({ table: 'spend_items', id: t.id, name: rec.name! }))),
-  toggleCase('requests.applications', 'requests', 'applications',
+    (rec, step) => changed(step).map((t) => ({ table: 'spend_items', id: t.id, name: rec.name! }))), activities: 'project_id' },
+  { ...toggleCase('requests.applications', 'requests', 'applications',
     async (env) => ({ kept: await applicationTarget(env), removed: await applicationTarget(env), added: await applicationTarget(env) }),
     insertLink('portfolio_request_applications', 'request_id', 'application_id'),
     (env, rec, t, add) => env.services.portfolioRelations.setRequestLink('applications', t.id, add, requestCtx(env), owner(env, rec)),
-    'applications'),
-  toggleCase('requests.assets', 'requests', 'assets',
+    'applications'), activities: 'request_id' },
+  { ...toggleCase('requests.assets', 'requests', 'assets',
     async (env) => ({ kept: await serverTarget(env, 'srv-r-kept'), removed: await serverTarget(env, 'srv-r-gone'), added: await serverTarget(env, 'srv-r-new') }),
     insertLink('portfolio_request_assets', 'request_id', 'asset_id'),
     (env, rec, t, add) => env.services.portfolioRelations.setRequestLink('assets', t.id, add, requestCtx(env), owner(env, rec)),
-    'infrastructure'),
-  toggleCase('requests.budget_lines', 'requests', 'budget_lines',
+    'infrastructure'), activities: 'request_id' },
+  { ...toggleCase('requests.budget_lines', 'requests', 'budget_lines',
     async (env) => ({ kept: await line(env, 'opex', ++lineNumber), removed: await line(env, 'opex', ++lineNumber), added: await line(env, 'capex', ++lineNumber) }),
     insertLink('portfolio_request_opex', 'request_id', 'opex_id'),
     (env, rec, t, add) => env.services.portfolioRelations.setRequestLink('budget_lines', t.id, add, requestCtx(env), owner(env, rec)),
     'budget',
-    (rec, step) => changed(step).map((t) => ({ table: 'spend_items', id: t.id, name: rec.name! }))),
+    (rec, step) => changed(step).map((t) => ({ table: 'spend_items', id: t.id, name: rec.name! }))), activities: 'request_id' },
   toggleCase('requests.business_processes', 'requests', 'business_processes',
     async (env) => ({ kept: await processTarget(env), removed: await processTarget(env), added: await processTarget(env) }),
     insertLink('portfolio_request_business_processes', 'request_id', 'business_process_id'),
@@ -760,6 +762,13 @@ function neutral(value: unknown, self: string, known: Set<string>): unknown {
   return value;
 }
 
+type ActivityRow = { type: string; context: string | null; content: string | null; decision_outcome: string | null; changed_fields: unknown; author_id: string | null };
+
+/** The activities of a record as both sides compare them: a set. */
+function activityShape(rows: ActivityRow[], self: string, known: Set<string>) {
+  return rows.map((row) => neutral(row, self, known)).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+}
+
 function shape(rows: AuditRow[], self: string, known: Set<string>) {
   return rows.map((row) => ({
     table: row.table_name,
@@ -777,6 +786,7 @@ async function run() {
   const { AppModule } = require('../../app.module');
   const { AiMutationPreviewService } = require('../ai-mutation-preview.service');
   const { AiPolicyService } = require('../ai-policy.service');
+  const { AiEntityService } = require('../ai-entity.service');
   const { RecordHistoryService } = require('../../audit/record-history.service');
   const { ApplicationsOwnersService } = require('../../applications/services/applications-owners.service');
   const { ApplicationsRelationsService } = require('../../applications/services/applications-relations.service');
@@ -853,6 +863,12 @@ async function run() {
       [tenantId, marker],
     );
     const now = async (): Promise<string> => (await runner.query(`SELECT clock_timestamp()::text AS t`))[0].t;
+    // Every activity of a record made for the cell (`created_at` is the transaction's time: unordered).
+    const activitiesOf = async (column: 'project_id' | 'request_id', id: string): Promise<ActivityRow[]> => runner.query(
+      `SELECT type, context, content, decision_outcome, changed_fields, author_id::text FROM portfolio_activities WHERE tenant_id = $1 AND ${column} = $2`,
+      [tenantId, id],
+    );
+    const entities = app.get(AiEntityService);
 
     let n = 100;
     for (const c of CASES) {
@@ -891,6 +907,17 @@ async function run() {
             await c.screen(env, twin, step);
             const screenRows = await auditSince(screenMarker);
             assert.deepEqual(shape(kadRows, mine.id, known), shape(screenRows, twin.id, known), `${cell}: the assistant's audit rows are the screen's`);
+            if (c.activities) {
+              const kadActivities = await activitiesOf(c.activities, mine.id);
+              assert.ok(kadActivities.length > 0, `${cell}: the assistant writes the record's activity`);
+              assert.deepEqual(activityShape(kadActivities, mine.id, known), activityShape(await activitiesOf(c.activities, twin.id), twin.id, known), `${cell}: the assistant's activity is the screen's`);
+            }
+          }
+          // The assistant reads its own change in the project's recent activity.
+          if (c.activities === 'project_id') {
+            const read = await entities.getEntityContext(ctx, { entity_type: 'projects', entity_id: mine.id });
+            const recent = JSON.stringify((read as any)?.metadata?.recent_activity ?? read);
+            assert.ok(/"type":"change"/.test(recent), `${cell}: the project's recent activity holds the change (${recent.slice(0, 400)})`);
           }
 
           // The History tab, said by the assistant, names the linked record.
@@ -931,6 +958,9 @@ async function run() {
               await c.screen(env, twin, { kept: targets.kept, stays: step.stays, removed: targets.added });
               const screenRows = await auditSince(screenMarker);
               assert.deepEqual(shape(undoRows, mine.id, known), shape(screenRows, twin.id, known), `${cell}: the undo's audit rows are the screen's removal`);
+              if (c.activities) {
+                assert.deepEqual(activityShape(await activitiesOf(c.activities, mine.id), mine.id, known), activityShape(await activitiesOf(c.activities, twin.id), twin.id, known), `${cell}: the undo's activity is the screen's`);
+              }
             }
           }
           passed += 1;

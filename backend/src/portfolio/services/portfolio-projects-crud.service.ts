@@ -11,7 +11,7 @@ import { PortfolioProjectContact } from '../portfolio-project-contact.entity';
 import { PortfolioProjectOpex } from '../portfolio-project-opex.entity';
 import { PortfolioProjectDependency } from '../portfolio-project-dependency.entity';
 import { TeamRole } from '../portfolio-request-team.entity';
-import { AuditService } from '../../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../../audit/audit.service';
 import { resolveRecordCreators } from '../../audit/record-creator.util';
 import { ItemNumberService } from '../../common/item-number.service';
 import { PortfolioCriteriaService } from '../portfolio-criteria.service';
@@ -997,7 +997,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         type: 'change',
         changed_fields: { capex_items: [beforeLabels, afterLabels] },
       });
-      await this.auditBudgetLines(mg, 'capex', projectId, beforeSorted, afterSorted, actorId);
+      await this.auditBudgetLines(mg, 'capex', projectId, beforeSorted, afterSorted, actorId, opts?.audit);
     }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
@@ -1052,7 +1052,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         type: 'change',
         changed_fields: { opex_items: [beforeLabels, afterLabels] },
       });
-      await this.auditBudgetLines(mg, 'opex', projectId, beforeSorted, afterSorted, actorId);
+      await this.auditBudgetLines(mg, 'opex', projectId, beforeSorted, afterSorted, actorId, opts?.audit);
     }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
@@ -1071,6 +1071,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     beforeIds: string[],
     afterIds: string[],
     userId: string,
+    source?: AuditSourceOptions,
   ): Promise<void> {
     const hidden = await hiddenLineCount(mg, 'project', projectId);
     const lineId = singleChangedId(beforeIds, afterIds);
@@ -1081,6 +1082,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       before: auditedLinkSet({ ids: beforeIds }, hidden),
       after: auditedLinkSet({ ids: afterIds }, hidden),
       userId,
+      source: source?.source,
+      sourceRef: source?.sourceRef,
       parent: lineId ? { table: 'spend_items', id: lineId } : null,
     }, { manager: mg });
   }

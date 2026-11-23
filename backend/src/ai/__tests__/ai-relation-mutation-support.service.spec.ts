@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { AiExecutionContextWithManager } from '../ai.types';
 import { AiRelationMutationSupportService } from '../mutation/ai-relation-mutation-support.service';
-import { ROW_AUDITED_RELATIONS, screenTraceOf } from '../mutation/ai-relation-screen-audit';
+import { ROW_AUDITED_RELATIONS, SCREEN_SERVICE_RELATIONS, screenTraceOf } from '../mutation/ai-relation-screen-audit';
 
 const TENANT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const USER_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -230,8 +230,8 @@ async function runRelation(input: {
 
 /**
  * Every relation of the writer leaves the screen's trace (lot K2b): a trace of the stored state
- * (`screenTraceOf`) or a writer that audits each row (`ROW_AUDITED_RELATIONS`), never both, never
- * neither.
+ * (`screenTraceOf`), a writer that audits each row (`ROW_AUDITED_RELATIONS`) or the screen's own
+ * service (`SCREEN_SERVICE_RELATIONS`): exactly one of the three.
  */
 function testEveryRelationLeavesTheScreensTrace() {
   const service = new AiRelationMutationSupportService(null as any, null as any, null as any, null as any);
@@ -242,9 +242,10 @@ function testEveryRelationLeavesTheScreensTrace() {
   assert.equal(relations.length, 36);
   for (const key of relations) {
     const [entity, relation] = key.split('.');
-    assert.notEqual(!!screenTraceOf(entity, relation), ROW_AUDITED_RELATIONS.has(key), `${key}: one trace exactly`);
+    const ways = [!!screenTraceOf(entity, relation), ROW_AUDITED_RELATIONS.has(key), SCREEN_SERVICE_RELATIONS.has(key)];
+    assert.equal(ways.filter(Boolean).length, 1, `${key}: one trace exactly`);
   }
-  for (const key of ROW_AUDITED_RELATIONS) assert.ok(relations.includes(key), `${key}: a relation of the writer`);
+  for (const key of [...ROW_AUDITED_RELATIONS, ...SCREEN_SERVICE_RELATIONS]) assert.ok(relations.includes(key), `${key}: a relation of the writer`);
   console.log('  every relation leaves the screen trace: OK');
 }
 

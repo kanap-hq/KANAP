@@ -18,16 +18,18 @@ import type { AiMutationAuditOptions } from './ai-mutation-audit.util';
  *   contacts; an asset's relations and cluster members; a contract's budget lines) is one row: the
  *   stored set before and after, in the screen's form;
  * - a link a Relations tab adds or removes one at a time (`setOwnedLink`, or a replacement of the
- *   set plus or minus one: an application's contracts, a project's and a request's applications,
- *   assets and lines) is one row per link added or removed, the removals first, each from the set
- *   the previous one left. A budget line's link is labelled by the line's nature (`auditTableOf`)
- *   and counts the lines the person cannot read (`auditedLinkSet`); the row names the parent the
- *   screen names (the line, the application or the asset toggled; from a line, the line itself);
+ *   set plus or minus one: an application's contracts) is one row per link added or removed, the
+ *   removals first, each from the set the previous one left. A budget line's link is labelled by
+ *   the line's nature (`auditTableOf`) and counts the lines the person cannot read
+ *   (`auditedLinkSet`); the row names the parent the screen names (from an asset, the line toggled;
+ *   from a line, the line itself);
  * - the rows the screen writes one per link (web links, server assignments, the contacts of a
  *   supplier, a contract or a line, a site's contacts and sub-locations) are audited row by row by
  *   the writer itself (`ROW_AUDITED_RELATIONS`).
  *
- * Every relation of the writer has one of the two (`ai-relation-mutation-support.service.spec.ts`).
+ * The relations the writer hands to the screen's own service leave the screen's trace by
+ * construction (`SCREEN_SERVICE_RELATIONS`). Every relation of the writer has exactly one of the
+ * three (`ai-relation-mutation-support.service.spec.ts`).
  */
 
 type TraceContext = { manager: EntityManager; tenantId: string; userId: string | null };
@@ -216,7 +218,7 @@ const contractLines: ScreenTrace = (() => {
 
 /** The sorted ids of a link set, with the count of hidden lines (`auditedLinkSet`): the application's and the line's form. */
 const idList = (set: string[], hidden: number) => auditedLinkSet(set, hidden);
-/** The `{ ids }` form (`AssetRelationsTabService.idsAudit`, the project's and the request's replacements). */
+/** The `{ ids }` form (`AssetRelationsTabService.idsAudit`). */
 const idsSet = (set: string[], hidden: number) => auditedLinkSet({ ids: set }, hidden);
 
 const SCREEN_TRACES: Readonly<Record<string, ScreenTrace>> = {
@@ -268,15 +270,7 @@ const SCREEN_TRACES: Readonly<Record<string, ScreenTrace>> = {
   'budget_lines.applications': fromLine('application_spend_items', 'spend_item_id', 'application_id'),
   'budget_lines.projects': fromLine('portfolio_project_opex', 'opex_id', 'project_id'),
   'budget_lines.contracts': fromLine('contract_spend_items', 'spend_item_id', 'contract_id'),
-  // The project's Relations tab (`PortfolioRelationsService.setProjectLink`): the replacement of the
-  // set plus or minus one, which names the application, the asset or the line toggled.
-  'projects.applications': toggles(plainSet('application_projects', 'project_id', 'application_id', (_projectId, id) => ({ table: 'applications', id })), idsSet, null),
-  'projects.assets': toggles(plainSet('asset_projects', 'project_id', 'asset_id', (_projectId, id) => ({ table: 'assets', id })), idsSet, null),
-  'projects.budget_lines': toggles(lineSets('portfolio_project_opex', 'project_id', 'opex_id', toggledLine), idsSet, 'project'),
-  // The request's Relations tab (`setRequestLink`): its applications and assets name no parent.
-  'requests.applications': toggles(plainSet('portfolio_request_applications', 'request_id', 'application_id'), idsSet, null),
-  'requests.assets': toggles(plainSet('portfolio_request_assets', 'request_id', 'asset_id'), idsSet, null),
-  'requests.budget_lines': toggles(lineSets('portfolio_request_opex', 'request_id', 'opex_id', toggledLine), idsSet, 'request'),
+  // The request's Relations tab (`setRequestLink`, `setOwnedLink`): one row per process toggled.
   'requests.business_processes': toggles(plainSet('portfolio_request_business_processes', 'request_id', 'business_process_id'), idList, null),
 };
 
@@ -298,6 +292,22 @@ export const ROW_AUDITED_RELATIONS: ReadonlySet<string> = new Set([
   'locations.external_contacts',
   'locations.links',
   'locations.sub_locations',
+]);
+
+/**
+ * The relations the assistant writes through the screen's own service, with the card's audit
+ * source: the lock, the audit rows and the other effects of the gesture (a project's or a request's
+ * activity, `portfolio_activities`) come from the screen's code.
+ * - a project's and a request's applications, assets and lines: the Relations tab's toggle
+ *   (`PortfolioRelationsService.setProjectLink`, `setRequestLink`), one link at a time;
+ */
+export const SCREEN_SERVICE_RELATIONS: ReadonlySet<string> = new Set([
+  'projects.applications',
+  'projects.assets',
+  'projects.budget_lines',
+  'requests.applications',
+  'requests.assets',
+  'requests.budget_lines',
 ]);
 
 export function screenTraceOf(sourceEntity: string, relation: string): ScreenTrace | null {

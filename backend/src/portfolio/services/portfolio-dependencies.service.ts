@@ -399,6 +399,8 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
         before: { ids: beforeSorted.map((id) => id.toLowerCase()) },
         after: { ids: afterSorted.map((id) => id.toLowerCase()) },
         userId: actorId,
+        source: opts?.audit?.source,
+        sourceRef: opts?.audit?.sourceRef,
         parent: changedId ? { table: 'applications', id: changedId } : null,
       }, { manager: mg });
     }
@@ -499,6 +501,8 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
         before: { ids: beforeSorted.map((id) => id.toLowerCase()) },
         after: { ids: afterSorted.map((id) => id.toLowerCase()) },
         userId: actorId,
+        source: opts?.audit?.source,
+        sourceRef: opts?.audit?.sourceRef,
         parent: changedId ? { table: 'assets', id: changedId } : null,
       }, { manager: mg });
     }

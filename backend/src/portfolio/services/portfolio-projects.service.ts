@@ -1,6 +1,7 @@
 import type { PortfolioLinkedReads } from '../portfolio-linked-reads';
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import type { AuditSourceOptions } from '../../audit/audit.service';
 import { PortfolioProject, ProjectStatus, ProjectOrigin } from '../portfolio-project.entity';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { PhaseStatus } from '../portfolio-project-phase.entity';
@@ -29,6 +30,8 @@ export interface ServiceOpts {
   readsBudget?: boolean;
   /** What the project may name of other records (see the base service's options). */
   linked?: PortfolioLinkedReads;
+  /** The audit source of the change (the assistant's card: `ai_chat` and its preview); the person's own when absent. */
+  audit?: AuditSourceOptions;
 }
 
 /**

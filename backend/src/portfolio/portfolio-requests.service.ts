@@ -30,7 +30,7 @@ import { PortfolioRequestDependency } from './portfolio-request-dependency.entit
 import { PortfolioProjectDependency } from './portfolio-project-dependency.entity';
 import { PortfolioProject } from './portfolio-project.entity';
 import { PortfolioActivity } from './portfolio-activity.entity';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { resolveRecordCreators } from '../audit/record-creator.util';
 import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { ItemNumberService } from '../common/item-number.service';
@@ -1824,7 +1824,7 @@ export class PortfolioRequestsService {
   async bulkReplaceApplications(
     requestId: string,
     applicationIds: string[],
-    opts?: { manager?: EntityManager; userId?: string | null; removable?: string[] },
+    opts?: { manager?: EntityManager; userId?: string | null; removable?: string[]; audit?: AuditSourceOptions },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const actorId = this.requireActivityAuthor(opts?.userId);
@@ -1897,6 +1897,8 @@ export class PortfolioRequestsService {
         before: { ids: beforeSorted.map((id) => id.toLowerCase()) },
         after: { ids: afterSorted.map((id) => id.toLowerCase()) },
         userId: actorId,
+        source: opts?.audit?.source,
+        sourceRef: opts?.audit?.sourceRef,
       }, { manager: mg });
     }
 
@@ -1926,7 +1928,7 @@ export class PortfolioRequestsService {
   async bulkReplaceAssets(
     requestId: string,
     assetIds: string[],
-    opts?: { manager?: EntityManager; userId?: string | null },
+    opts?: { manager?: EntityManager; userId?: string | null; audit?: AuditSourceOptions },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const actorId = this.requireActivityAuthor(opts?.userId);
@@ -1992,6 +1994,8 @@ export class PortfolioRequestsService {
         before: { ids: beforeSorted.map((id) => id.toLowerCase()) },
         after: { ids: afterSorted.map((id) => id.toLowerCase()) },
         userId: actorId,
+        source: opts?.audit?.source,
+        sourceRef: opts?.audit?.sourceRef,
       }, { manager: mg });
     }
 
@@ -2002,7 +2006,7 @@ export class PortfolioRequestsService {
   async bulkReplaceCapex(
     requestId: string,
     capexIds: string[],
-    opts?: { manager?: EntityManager; userId?: string | null },
+    opts?: { manager?: EntityManager; userId?: string | null; audit?: AuditSourceOptions },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioRequestOpex);
@@ -2048,7 +2052,7 @@ export class PortfolioRequestsService {
         type: 'change',
         changed_fields: { capex_items: [beforeLabels, afterLabels] },
       });
-      await this.auditBudgetLines(mg, 'capex', requestId, beforeSorted, afterSorted, actorId);
+      await this.auditBudgetLines(mg, 'capex', requestId, beforeSorted, afterSorted, actorId, opts?.audit);
     }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
@@ -2058,7 +2062,7 @@ export class PortfolioRequestsService {
   async bulkReplaceOpex(
     requestId: string,
     opexIds: string[],
-    opts?: { manager?: EntityManager; userId?: string | null },
+    opts?: { manager?: EntityManager; userId?: string | null; audit?: AuditSourceOptions },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioRequestOpex);
@@ -2104,7 +2108,7 @@ export class PortfolioRequestsService {
         type: 'change',
         changed_fields: { opex_items: [beforeLabels, afterLabels] },
       });
-      await this.auditBudgetLines(mg, 'opex', requestId, beforeSorted, afterSorted, actorId);
+      await this.auditBudgetLines(mg, 'opex', requestId, beforeSorted, afterSorted, actorId, opts?.audit);
     }
 
     return { ok: true, added: toInsert.length, removed: toDelete.length };
@@ -2123,6 +2127,7 @@ export class PortfolioRequestsService {
     beforeIds: string[],
     afterIds: string[],
     userId: string,
+    source?: AuditSourceOptions,
   ): Promise<void> {
     const hidden = await hiddenLineCount(mg, 'request', requestId);
     const lineId = singleChangedId(beforeIds, afterIds);
@@ -2133,6 +2138,8 @@ export class PortfolioRequestsService {
       before: auditedLinkSet({ ids: beforeIds }, hidden),
       after: auditedLinkSet({ ids: afterIds }, hidden),
       userId,
+      source: source?.source,
+      sourceRef: source?.sourceRef,
       parent: lineId ? { table: 'spend_items', id: lineId } : null,
     }, { manager: mg });
   }

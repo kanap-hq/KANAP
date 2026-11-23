@@ -53,7 +53,12 @@ import {
 } from '../../assets/placement-rules';
 import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 import { nameWithoutLeadingReference } from './name-without-leading-reference';
-import { ROW_AUDITED_RELATIONS, screenTraceOf } from './ai-relation-screen-audit';
+import { ROW_AUDITED_RELATIONS, SCREEN_SERVICE_RELATIONS, screenTraceOf } from './ai-relation-screen-audit';
+import {
+  PortfolioRelationsService,
+  type ProjectRelationsAccess,
+  type RequestRelationsAccess,
+} from '../../portfolio/portfolio-relations.service';
 import { LINKED_MODULE_RESOURCES, linkedParticipationScope } from '../../common/relations/linked-reads';
 import { idsInScope } from '../../portfolio/portfolio-linked-reads';
 
@@ -373,6 +378,7 @@ export class AiRelationMutationSupportService {
     private readonly taskSupport: AiTaskMutationSupportService,
     private readonly itOpsSettings: ItOpsSettingsService,
     @Optional() private readonly policy?: AiPolicyService,
+    @Optional() private readonly portfolioRelations?: PortfolioRelationsService,
   ) {}
 
   /**
@@ -1416,6 +1422,10 @@ export class AiRelationMutationSupportService {
     audit: AiMutationAuditOptions,
     nature: BudgetNature | null,
   ): Promise<void> {
+    if (config.kind === 'simple' && SCREEN_SERVICE_RELATIONS.has(`${config.sourceEntity}.${config.relation}`)) {
+      await this.replaceThroughPortfolioTab(context, config, sourceId, nextItems, audit);
+      return;
+    }
     if (config.kind === 'simple') {
       await this.replaceSimpleRelation(context, config, sourceId, nextItems);
       return;
@@ -1562,6 +1572,50 @@ export class AiRelationMutationSupportService {
         [context.tenantId, sourceId, targetId],
       );
       assertWritten(config.label, inserted.length);
+    }
+  }
+
+  /**
+   * A project's or a request's applications, assets and lines, through the Relations tab's own
+   * toggle (`PortfolioRelationsService.setProjectLink`, `setRequestLink`), one link at a time, the
+   * removals first, with the card's audit source. The record's lock, its activity entry
+   * (`portfolio_activities`, by the person, as on the screen), its audit row and the lines the person
+   * cannot read (kept and counted) come from the screen's code. Only the links the person reads are
+   * compared (`loadSimpleRelation`); the module's read was checked (`assertLinkedModuleRead`).
+   */
+  private async replaceThroughPortfolioTab(
+    context: AiExecutionContextWithManager,
+    config: SimpleRelationConfig,
+    sourceId: string,
+    nextItems: RelationItem[],
+    audit: AiMutationAuditOptions,
+  ): Promise<void> {
+    if (!this.portfolioRelations) throw new Error('The Relations tab of the portfolio is not available.');
+    const kind = config.relation as 'applications' | 'assets' | 'budget_lines';
+    const visible = (await this.loadSimpleRelation(context, config, sourceId)).map((item) => item.key.toLowerCase());
+    const next = Array.from(new Set(nextItems
+      .map((item) => String(item.payload[config.targetColumn] ?? '').toLowerCase())
+      .filter((id) => id !== '')));
+    const steps = [
+      ...visible.filter((id) => !next.includes(id)).map((id) => ({ id, add: false })),
+      ...next.filter((id) => !visible.includes(id)).map((id) => ({ id, add: true })),
+    ];
+    const who = { manager: context.manager, userId: context.userId, tenantId: context.tenantId };
+    const applicationScope = await resolveBusinessContributorScopeForUser(who, 'applications', 'reader');
+    const owner = async () => ({ id: sourceId, tenantId: context.tenantId });
+    const base = { manager: context.manager, tenantId: context.tenantId, userId: context.userId, applicationScope, audit };
+    for (const step of steps) {
+      const result = config.sourceEntity === 'projects'
+        ? await this.portfolioRelations.setProjectLink(kind, step.id, step.add, {
+          ...base,
+          access: { budget_lines: false, applications: false, assets: false, technologies: false, source_requests: false, [kind]: true } as ProjectRelationsAccess,
+        }, owner)
+        : await this.portfolioRelations.setRequestLink(kind, step.id, step.add, {
+          ...base,
+          access: { budget_lines: false, applications: false, assets: false, processes: false, resulting_projects: false, [kind]: true } as RequestRelationsAccess,
+          writes: { processes: false },
+        }, owner);
+      assertWritten(config.label, result.changed ? 1 : 0);
     }
   }
 
