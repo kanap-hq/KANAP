@@ -29,6 +29,19 @@ export interface ServiceOpts {
 }
 
 /**
+ * A baseline is stored when its start or end date is present, the signal the
+ * Timeline uses to show it. The first move to In progress copies the current
+ * plan into the four baseline fields. A later move leaves a stored baseline.
+ */
+export function captureBaselineOnce(project: PortfolioProject): void {
+  if (project.baseline_start_date != null || project.baseline_end_date != null) return;
+  project.baseline_start_date = project.planned_start;
+  project.baseline_end_date = project.planned_end;
+  project.baseline_effort_it = project.estimated_effort_it;
+  project.baseline_effort_business = project.estimated_effort_business;
+}
+
+/**
  * Valid project statuses.
  */
 export const PROJECT_STATUSES: ProjectStatus[] = [
