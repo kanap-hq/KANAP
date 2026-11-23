@@ -626,7 +626,7 @@ async function runScope(env: Env) {
     );
   }
 
-  // Dashboard: top increases on each column, the four hygiene counts.
+  // Dashboard: top increases on each column, the hygiene counts.
   for (const metric of METRIC_KEYS) {
     const name = label(`dashboard top increases ${metric}`);
     caseNames.push(name);
