@@ -727,7 +727,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         recipients,
         tenantId,
         excludeUserId: userId ?? undefined,
-        manager: mg,
+        itemRef: `PRJ-${saved.item_number}`,
       });
     }
 
@@ -856,7 +856,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
           role,
           addedUser: { userId: user.id, email: user.email, locale: user.locale },
           tenantId: project.tenant_id,
-          manager: mg,
+          itemRef: `PRJ-${project.item_number}`,
         });
         // Notify IT Lead about the team change
         const addedUserName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Unknown';

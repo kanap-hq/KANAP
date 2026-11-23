@@ -117,7 +117,7 @@ export class PortfolioStatusService extends PortfolioProjectsBaseService {
         recipients,
         tenantId,
         excludeUserId: userId ?? undefined,
-        manager: mg,
+        itemRef: `PRJ-${project.item_number}`,
       });
     }
 
@@ -139,7 +139,7 @@ export class PortfolioStatusService extends PortfolioProjectsBaseService {
         commentContent: normalizedContent || '',
         recipients,
         tenantId,
-        manager: mg,
+        itemRef: `PRJ-${project.item_number}`,
       });
     }
 

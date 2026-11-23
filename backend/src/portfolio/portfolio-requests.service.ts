@@ -1576,7 +1576,7 @@ export class PortfolioRequestsService {
         recipients,
         tenantId,
         excludeUserId: userId ?? undefined,
-        manager: mg,
+        itemRef: `REQ-${saved.item_number}`,
       });
     }
 
@@ -1711,7 +1711,7 @@ export class PortfolioRequestsService {
           role,
           addedUser: { userId: user.id, email: user.email, locale: user.locale },
           tenantId: request.tenant_id,
-          manager: mg,
+          itemRef: `REQ-${request.item_number}`,
         });
         // Notify IT Lead about the team change
         const addedUserName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Unknown';
@@ -2496,7 +2496,7 @@ export class PortfolioRequestsService {
         recipients,
         tenantId,
         excludeUserId: userId ?? undefined,
-        manager: mg,
+        itemRef: `REQ-${request.item_number}`,
       });
     }
 
@@ -2518,7 +2518,7 @@ export class PortfolioRequestsService {
         commentContent: normalizedContent || '',
         recipients,
         tenantId,
-        manager: mg,
+        itemRef: `REQ-${request.item_number}`,
       });
     }
 
