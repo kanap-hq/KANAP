@@ -122,6 +122,17 @@ describe('TechnologiesPage', () => {
     }
   });
 
+  it('keeps the reference header whole beside the sort icon in the four languages', () => {
+    renderPage();
+    const col = column('reference');
+    expect(col.headerName).toBe('pages.technologies.columns.reference');
+    for (const locale of [en, fr, de, es]) {
+      const label: string = (locale as any).pages.technologies.columns.reference;
+      // Same measure as the counters, plus 18 px for the sort icon a sorted column shows.
+      expect(label.length * 6.5 + 24 + 18).toBeLessThanOrEqual(col.width);
+    }
+  });
+
   it('filters by hosting type from the catalog, with its localized names', async () => {
     renderPage();
     expect(await column('hosting_type').filterParams.getValues({})).toEqual([

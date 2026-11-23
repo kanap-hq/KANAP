@@ -183,7 +183,8 @@ export default function TechnologiesPage() {
     {
       headerName: t('pages.technologies.columns.reference'),
       field: 'reference',
-      width: 90,
+      // Wide enough for the header in the four languages with the sort icon beside it.
+      width: 110,
       cellRenderer: LinkCell,
       cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px' },
     },
