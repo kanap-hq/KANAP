@@ -69,7 +69,11 @@ const DateFloatingFilter = React.forwardRef<IFloatingFilter, FloatingFilterProps
     const follow = () => setModel((api.getFilterModel?.() ?? {})[colId] ?? null);
     follow();
     api.addEventListener?.('filterChanged', follow);
-    return () => api.removeEventListener?.('filterChanged', follow);
+    return () => {
+      // Leaving the list destroys the grid before React runs this cleanup.
+      if (api.isDestroyed?.()) return;
+      api.removeEventListener?.('filterChanged', follow);
+    };
   }, [props.api, colId]);
 
   const text = useMemo(() => dateFilterText(t, model, locale), [t, model, locale]);

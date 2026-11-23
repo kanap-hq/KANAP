@@ -80,6 +80,8 @@ const CheckboxSetFloatingFilter = React.forwardRef<IFloatingFilter, FloatingFilt
     handleFilterChanged();
     api.addEventListener?.('filterChanged', handleFilterChanged);
     return () => {
+      // Leaving the list destroys the grid before React runs this cleanup.
+      if (api.isDestroyed?.()) return;
       api.removeEventListener?.('filterChanged', handleFilterChanged);
     };
   }, [props.api, colId, syncFromModel]);
