@@ -422,7 +422,7 @@ export class AiRelationMutationSupportService {
     if (relationItemSignature(currentItems) === relationItemSignature(askedItems)) {
       throw new BadRequestException(`${config.label} already has the requested links.`);
     }
-    await this.assertWritable(context, config, target.id, currentItems, askedItems);
+    await this.assertWritable(context, config, target.id);
     await this.assertClusterMemberAdds(context, config, target.id, currentItems, askedItems);
     const nextItems = await this.applyAssignmentRules(context, config, currentItems, askedItems);
     const replaced = await this.applyPlacementRules(context, config, target.id, currentItems, nextItems);
@@ -459,7 +459,7 @@ export class AiRelationMutationSupportService {
     if (relationItemSignature(currentItems) === relationItemSignature(originalItems)) {
       throw new BadRequestException(`${config.label} already matches the original values.`);
     }
-    await this.assertWritable(context, config, target.id, currentItems, originalItems);
+    await this.assertWritable(context, config, target.id);
     const previousItems = await this.applyAssignmentRules(context, config, currentItems, originalItems);
     const replaced = await this.applyPlacementRules(context, config, target.id, currentItems, previousItems);
     return {
@@ -559,7 +559,7 @@ export class AiRelationMutationSupportService {
     const expectedItems = this.coerceRelationItems(preview.current_values?.items, 'current_values.items');
     const nextItems = this.coerceRelationItems(preview.mutation_input?.next_items, 'mutation_input.next_items');
     // The screen's checks again, in the approver's access at the approval, before any lock or write.
-    await this.assertWritable(context, config, preview.target_entity_id, expectedItems, nextItems);
+    await this.assertWritable(context, config, preview.target_entity_id);
     // A budget line is locked, by its stored nature, before its relations are compared and
     // replaced (lock order, `spend/budget-locks.ts`): no writer of the line changes them in between.
     let sourceNature: BudgetNature | null = null;
@@ -628,9 +628,9 @@ export class AiRelationMutationSupportService {
    * - a contract's contacts, links and lines need the contract modifiable, as its panels and its
    *   Budget tab check (`assertContractsEditable`: 403 "This contract is read only in your
    *   access."). The policies of `contract_contacts` and `contract_links` would otherwise turn a
-   *   removal or a change into a write of no row;
-   * - the lines a contract gains or loses need to be modifiable (the link trigger of
-   *   `contract_spend_items`, `replaceSimpleRelation`).
+   *   removal or a change into a write of no row.
+   * The lines a contract gains or loses are checked at the approval (`replaceSimpleRelation`): the
+   * card is proposed, and refused once approved if one of them is read only, as before.
    * A budget line's own relations are checked by the preview (`assertTargetLineEditable`) and its
    * lock (`lockBudgetLine`). The links written from an application, an asset, a project or a
    * request need the line or the contract readable only, as their Relations tabs: the reference
@@ -640,18 +640,9 @@ export class AiRelationMutationSupportService {
     context: AiExecutionContextWithManager,
     config: RelationConfig,
     sourceId: string,
-    currentItems: RelationItem[],
-    nextItems: RelationItem[],
   ): Promise<void> {
     if (config.sourceEntity !== 'contracts') return;
     await assertContractsEditable(context.manager, [sourceId]);
-    if (config.relation !== 'budget_lines') return;
-    const current = new Set(currentItems.map((item) => item.key.toLowerCase()));
-    const next = new Set(nextItems.map((item) => item.key.toLowerCase()));
-    await assertLinesEditable(context.manager, [
-      ...Array.from(next).filter((id) => !current.has(id)),
-      ...Array.from(current).filter((id) => !next.has(id)),
-    ]);
   }
 
   /**
