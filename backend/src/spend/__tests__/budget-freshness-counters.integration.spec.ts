@@ -365,7 +365,6 @@ async function aiFinancialPlan(kind: Kind) {
     const tenantId = await seedTenant(runner, `br-ai-${kind}`);
     const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('100', 12) });
     const ai = new AiFinancialPlanMutationSupportService(
-      captureAudit() as any,
       undefined as any, amountsService('capex') as any, versionsService('capex'),
       undefined as any, amountsService('opex') as any, versionsService('opex'),
     );

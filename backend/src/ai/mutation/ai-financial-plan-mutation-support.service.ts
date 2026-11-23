@@ -1,12 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
-import { AuditService } from '../../audit/audit.service';
 import { CapexAllocationsService, SpendAllocationsService } from '../../spend/spend-allocations.service';
 import { lockBudgetLine, lockBudgetVersions } from '../../spend/budget-locks';
 import { CapexAmountsService, SpendAmountsService } from '../../spend/spend-amounts.service';
 import { CapexVersionsService, SpendVersionsService } from '../../spend/spend-versions.service';
-import { auditTableOf, BUDGET_LINE_PREFIX, BudgetNature, natureAnd } from '../../spend/budget-nature';
+import { BUDGET_LINE_PREFIX, BudgetNature, natureAnd } from '../../spend/budget-nature';
 import { budgetLineReferenceNumbers, parseItemRef } from '../../common/resolve-item-id';
 import { presentChild } from '../../spend/budget-line-presentation';
 import { AMOUNT_MEASURES, AmountMeasure, assertSpreadProfile, validateAmountValue } from '../../spend/amounts-write.util';
@@ -14,7 +13,7 @@ import { formatAmount, formatCents } from '../../common/amount';
 import { budgetColumnName, BudgetColumnsSettings, readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewAmounts } from '../ai.types';
-import { buildAiMutationAudit } from './ai-mutation-audit.util';
+import { AiMutationAuditOptions, buildAiMutationAudit } from './ai-mutation-audit.util';
 import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
@@ -323,7 +322,6 @@ function allocationInputsFromRows(rows: unknown[], method: string | null): Alloc
 @Injectable()
 export class AiFinancialPlanMutationSupportService {
   constructor(
-    private readonly audit: AuditService,
     private readonly capexAllocations: CapexAllocationsService,
     private readonly capexAmounts: CapexAmountsService,
     private readonly capexVersions: CapexVersionsService,
@@ -589,10 +587,13 @@ export class AiFinancialPlanMutationSupportService {
     if (!(await lockBudgetLine(context.manager, scope, context.tenantId, item.id))) {
       throw new NotFoundException(`${this.itemLabelSingular()} not found.`);
     }
+    // The services write the audit rows the screen writes for the same gesture, attributed to the
+    // card (lot K2a): Kad adds none of its own.
+    const audit = buildAiMutationAudit(preview);
 
     if (action === 'create_version') {
       const fields = objectValue(mutation.fields, 'mutation_input.fields');
-      const saved = await this.createVersion(context, item.nature, item.id, fields);
+      const saved = await this.createVersion(context, item.nature, item.id, fields, audit);
       const version = await this.resolveVersionById(context, item, String((saved as any).id));
       preview.mutation_input = {
         ...mutation,
@@ -600,7 +601,6 @@ export class AiFinancialPlanMutationSupportService {
         version_ref: version.ref,
         version_title: version.label,
       };
-      await this.logAiAudit(context, preview, this.versionAuditTable(item.nature), version.id, 'create', null, version.row);
       return;
     }
 
@@ -613,9 +613,7 @@ export class AiFinancialPlanMutationSupportService {
       const fields = objectValue(mutation.fields, 'mutation_input.fields');
       const previous = objectValue(preview.current_values?.values, 'current_values.values');
       this.assertVersionFieldsUnchanged(version.row, previous);
-      await this.updateVersion(context, item.nature, item.id, version.id, fields);
-      const after = await this.resolveVersionById(context, item, version.id);
-      await this.logAiAudit(context, preview, this.versionAuditTable(item.nature), version.id, 'update', version.row, after.row);
+      await this.updateVersion(context, item.nature, item.id, version.id, fields, audit);
       return;
     }
 
@@ -628,9 +626,7 @@ export class AiFinancialPlanMutationSupportService {
       if (amountRowsSignature(beforeItems) !== String(previous.signature || '')) {
         throw new ConflictException('Financial amounts changed after the preview was created.');
       }
-      await this.upsertAmounts(context, item.nature, version.id, amounts);
-      const after = await this.listAmounts(context, item.nature, version.id, amounts.year);
-      await this.logAiAudit(context, preview, this.amountsAuditTable(item.nature), null, 'update', before, after);
+      await this.upsertAmounts(context, item.nature, version.id, amounts, audit);
       return;
     }
 
@@ -641,9 +637,7 @@ export class AiFinancialPlanMutationSupportService {
       if (allocationSignature(before) !== String(previous.signature || '')) {
         throw new ConflictException('Financial allocations changed after the preview was created.');
       }
-      await this.replaceAllocations(context, item.nature, version.id, allocations);
-      const after = await this.listAllocations(context, item.nature, version.id);
-      await this.logAiAudit(context, preview, this.allocationsAuditTable(item.nature), null, 'update', before, after);
+      await this.replaceAllocations(context, item.nature, version.id, allocations, audit);
       return;
     }
 
@@ -673,8 +667,8 @@ export class AiFinancialPlanMutationSupportService {
   /**
    * Writes the amounts of a line the same preview has just created: its budget version for the
    * amounts' year, named as the budget tab names it (`Y2026`), then the amounts. Same services,
-   * locks and audit rows as `create_version` then `upsert_amounts`; same transaction as the line,
-   * so a refusal leaves nothing behind.
+   * locks and audit rows as `create_version` then `upsert_amounts` (the budget tab's, attributed to
+   * the card); same transaction as the line, so a refusal leaves nothing behind.
    */
   async writeNewLineAmounts(
     context: AiExecutionContextWithManager,
@@ -688,19 +682,16 @@ export class AiFinancialPlanMutationSupportService {
     if (!(await lockBudgetLine(context.manager, scope, context.tenantId, item.id))) {
       throw new NotFoundException(`${this.itemLabelSingular()} not found.`);
     }
+    const audit = buildAiMutationAudit(preview);
     const saved = await this.createVersion(context, item.nature, item.id, {
       version_name: `Y${amounts.year}`,
       budget_year: amounts.year,
       as_of_date: `${amounts.year}-01-01`,
       input_grain: amounts.kind,
-    });
+    }, audit);
     const version = await this.resolveVersionById(context, item, String((saved as any).id));
-    await this.logAiAudit(context, preview, this.versionAuditTable(item.nature), version.id, 'create', null, version.row);
     await lockBudgetVersions(context.manager, scope, context.tenantId, [version.id]);
-    const before = await this.listAmounts(context, item.nature, version.id, amounts.year);
-    await this.upsertAmounts(context, item.nature, version.id, amounts);
-    const after = await this.listAmounts(context, item.nature, version.id, amounts.year);
-    await this.logAiAudit(context, preview, this.amountsAuditTable(item.nature), null, 'update', before, after);
+    await this.upsertAmounts(context, item.nature, version.id, amounts, audit);
   }
 
   private pendingSummary(action: AiFinancialPlanAction, title: string): string {
@@ -1121,13 +1112,14 @@ export class AiFinancialPlanMutationSupportService {
     nature: BudgetNature,
     itemId: string,
     fields: Record<string, unknown>,
+    audit: AiMutationAuditOptions,
   ): Promise<unknown> {
     // A version created since the preview (a budget tab, an import) is refused,
     // not returned as if this action had created it (and audited as such).
     if (nature === 'opex') {
-      return this.spendVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true });
+      return this.spendVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true, audit });
     }
-    return this.capexVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true });
+    return this.capexVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true, audit });
   }
 
   private updateVersion(
@@ -1136,12 +1128,13 @@ export class AiFinancialPlanMutationSupportService {
     itemId: string,
     versionId: string,
     fields: Record<string, unknown>,
+    audit: AiMutationAuditOptions,
   ): Promise<unknown> {
     const body = { ...fields, id: versionId };
     if (nature === 'opex') {
-      return this.spendVersions.updateForItem(itemId, body as any, context.userId, { manager: context.manager });
+      return this.spendVersions.updateForItem(itemId, body as any, context.userId, { manager: context.manager, audit });
     }
-    return this.capexVersions.updateForItem(itemId, body as any, context.userId, { manager: context.manager });
+    return this.capexVersions.updateForItem(itemId, body as any, context.userId, { manager: context.manager, audit });
   }
 
   private async upsertAmounts(
@@ -1149,11 +1142,12 @@ export class AiFinancialPlanMutationSupportService {
     nature: BudgetNature,
     versionId: string,
     amounts: AmountPayload,
+    audit: AiMutationAuditOptions,
   ): Promise<unknown> {
     if (nature === 'opex') {
-      return this.spendAmounts.bulkUpsert(versionId, amounts as any, context.userId, { manager: context.manager });
+      return this.spendAmounts.bulkUpsert(versionId, amounts as any, context.userId, { manager: context.manager, audit });
     }
-    return this.capexAmounts.bulkUpsert(versionId, amounts as any, context.userId, { manager: context.manager });
+    return this.capexAmounts.bulkUpsert(versionId, amounts as any, context.userId, { manager: context.manager, audit });
   }
 
   private async replaceAllocations(
@@ -1161,11 +1155,12 @@ export class AiFinancialPlanMutationSupportService {
     nature: BudgetNature,
     versionId: string,
     allocations: AllocationInput[],
+    audit: AiMutationAuditOptions,
   ): Promise<unknown> {
     if (nature === 'opex') {
-      return this.spendAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager, tenantId: context.tenantId });
+      return this.spendAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager, tenantId: context.tenantId, audit });
     }
-    return this.capexAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager, tenantId: context.tenantId });
+    return this.capexAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager, tenantId: context.tenantId, audit });
   }
 
   private listAmounts(
@@ -1189,31 +1184,6 @@ export class AiFinancialPlanMutationSupportService {
       return this.spendAllocations.listForVersion(versionId, { manager: context.manager, tenantId: context.tenantId }) as any;
     }
     return this.capexAllocations.listForVersion(versionId, { manager: context.manager, tenantId: context.tenantId }) as any;
-  }
-
-  private async logAiAudit(
-    context: AiExecutionContextWithManager,
-    preview: AiMutationPreview,
-    table: string,
-    recordId: string | null,
-    action: 'create' | 'update',
-    before: unknown,
-    after: unknown,
-  ): Promise<void> {
-    const audit = buildAiMutationAudit(preview);
-    await this.audit.log(
-      {
-        table,
-        recordId,
-        action,
-        before,
-        after,
-        userId: context.userId,
-        source: audit.source,
-        sourceRef: audit.sourceRef,
-      },
-      { manager: context.manager },
-    );
   }
 
   // The approval card names columns as the tenant does, in the fixed column order.
@@ -1298,19 +1268,6 @@ export class AiFinancialPlanMutationSupportService {
 
   private itemLabelPlural(): string {
     return 'budget lines';
-  }
-
-  // The audit labels: the rows of a CAPEX line keep their CAPEX table names (`auditTableOf`).
-  private versionAuditTable(nature: BudgetNature): string {
-    return auditTableOf(nature, 'spend_versions');
-  }
-
-  private amountsAuditTable(nature: BudgetNature): string {
-    return auditTableOf(nature, 'spend_amounts');
-  }
-
-  private allocationsAuditTable(nature: BudgetNature): string {
-    return auditTableOf(nature, 'spend_allocations');
   }
 
 }

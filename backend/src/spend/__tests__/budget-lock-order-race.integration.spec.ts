@@ -55,7 +55,7 @@ function writers(race: Race, s: Seeded, round: number): Array<[string, (manager:
   const versions = new SpendVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any);
   const allocations = new SpendAllocationsService(undefined as any, undefined as any, undefined as any, captureAudit() as any);
   const ai = new AiFinancialPlanMutationSupportService(
-    captureAudit() as any, undefined as any, undefined as any, undefined as any, undefined as any, amountsService('opex') as any, versions as any,
+    undefined as any, undefined as any, undefined as any, undefined as any, amountsService('opex') as any, versions as any,
   );
   const pct = 50 + (round % 3) * 10;
   return [

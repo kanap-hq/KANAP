@@ -22,6 +22,9 @@ import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-docum
 // To add a family: seed what it needs in `seed`, give its role the module right in `PERMISSIONS`,
 // then add its entries to `CASES` (`card`: the tool and input; `screen`: the screen's service call;
 // `prepare`: the record an update changes, created through the screen's service).
+//
+// A gesture on a child of a record (a budget line's version, amounts, allocations) names that
+// record in `historyOf`: its History tab is the one read, and the card's target is its id.
 
 process.env.AI_CHAT_ENABLED = 'true';
 process.env.AI_SETTINGS_ENABLED = 'true';
@@ -39,7 +42,10 @@ type Harness = {
   dataSource: DataSource;
   tools: any;
   previews: any;
-  services: { applications: any; assets: any; contracts: any; budgetLines: any; projects: any; requests: any; interfaces: any; connections: any };
+  services: {
+    applications: any; assets: any; contracts: any; budgetLines: any; projects: any; requests: any; interfaces: any; connections: any;
+    versions: Record<'opex' | 'capex', any>; amounts: Record<'opex' | 'capex', any>; allocations: any;
+  };
 };
 
 type Seed = {
@@ -47,6 +53,7 @@ type Seed = {
   userId: string;
   userName: string;
   companyId: string;
+  secondCompanyId: string;
   supplierId: string;
   accountId: string;
   locationId: string;
@@ -71,14 +78,24 @@ type AuditRow = {
 type HistoryCase = {
   /** `<family>: <gesture>`, as the failures name it. */
   name: string;
-  /** The audit table of the record's own row, which is also its History tab's table. */
+  /** The audit table of the record's own row, which is also its History tab's table (unless `historyOf`). */
   table: string;
+  /**
+   * The gesture writes a child of the record whose History tab shows it (a budget line's version,
+   * amounts or allocations): that record's table, and the kind of entry the child makes there. The
+   * record's id is the card's target, which `screen` returns too; the child's own rows are the rows
+   * of `table`, whatever their id (amounts and allocations are keyed by their version).
+   */
+  historyOf?: { table: string; kind: string };
   /** The record an update changes, created through the screen's service. */
   prepare?: (h: Harness, runner: QueryRunner, s: Seed) => Promise<string>;
   /** Kad's card. */
   card: (s: Seed, recordId: string | null) => { tool: string; input: Record<string, unknown> };
-  /** The same gesture by the screen's service, with the fields the card stored; returns the record id. */
-  screen: (h: Harness, runner: QueryRunner, s: Seed, fields: Record<string, unknown>, recordId: string | null) => Promise<string>;
+  /**
+   * The same gesture by the screen's service, with the fields the card stored (and its whole stored
+   * input, for amounts and allocations); returns the record id.
+   */
+  screen: (h: Harness, runner: QueryRunner, s: Seed, fields: Record<string, unknown>, recordId: string | null, mutation: Record<string, any>) => Promise<string>;
   /** The card is a reversible change: "Undo" is checked. */
   undo?: boolean;
 };
@@ -104,6 +121,20 @@ const connectionFields = (s: Seed) => ({
   name: 'History connection', topology: 'server_to_server', source_asset_id: s.sourceAssetId, destination_asset_id: s.targetAssetId,
   protocol_codes: ['https'],
 });
+const lineFields = (s: Seed, nature: 'opex' | 'capex' = 'opex') => ({
+  nature, product_name: 'History line', paying_company_id: s.companyId, account_id: s.accountId, currency: 'EUR', effective_start: '2026-01-01',
+});
+/** The 2026 version of a line, as the budget tab creates it before its first amount. */
+const VERSION_2026 = { version_name: 'Y2026', budget_year: 2026, as_of_date: '2026-01-01', input_grain: 'annual' };
+const versionOf = async (runner: QueryRunner, s: Seed, lineId: string, year = 2026) => one(runner,
+  `SELECT id FROM spend_versions WHERE tenant_id = $1 AND spend_item_id = $2 AND budget_year = $3`, [s.tenantId, lineId, year]);
+/** A budget line with its 2026 version, through the screen's services. */
+async function lineWithVersion(h: Harness, runner: QueryRunner, s: Seed, nature: 'opex' | 'capex' = 'opex', version: Record<string, unknown> = {}) {
+  const lineId = String((await h.services.budgetLines.create(lineFields(s, nature), s.userId, { manager: runner.manager })).id);
+  await h.services.versions[nature].createForItem(lineId, { ...VERSION_2026, ...version }, s.userId, { manager: runner.manager });
+  return lineId;
+}
+const BUDGET_LINE = { table: 'spend_items', kind: 'version' };
 
 const CASES: HistoryCase[] = [
   {
@@ -179,6 +210,92 @@ const CASES: HistoryCase[] = [
     )).id),
     card: (_s, id) => ({ tool: 'update_business_record', input: { entity_type: 'budget_lines', ref: id, fields: { description: 'Renewal' } } }),
     screen: async (h, runner, s, fields, id) => String((await h.services.budgetLines.update(id, fields, s.userId, { manager: runner.manager })).id),
+    undo: true,
+  },
+  // The financial plan: a line created with its amount, then a line's versions, amounts and allocations.
+  {
+    name: 'budget_lines: create with amounts',
+    table: 'spend_items',
+    card: (s) => ({
+      tool: 'create_business_record',
+      input: { entity_type: 'budget_lines', fields: lineFields(s), amounts: { kind: 'annual', year: 2026, totals: { planned: 1200 } } },
+    }),
+    // The screen creates the line, then its first amount on the budget tab: the year's version, then the amount.
+    screen: async (h, runner, s, fields, _id, mutation) => {
+      const lineId = String((await h.services.budgetLines.create(fields, s.userId, { manager: runner.manager })).id);
+      await h.services.versions.opex.createForItem(lineId, VERSION_2026, s.userId, { manager: runner.manager });
+      await h.services.amounts.opex.bulkUpsert(await versionOf(runner, s, lineId), mutation.amounts, s.userId, { manager: runner.manager });
+      return lineId;
+    },
+  },
+  {
+    name: 'budget_lines: create version',
+    table: 'spend_versions',
+    historyOf: BUDGET_LINE,
+    prepare: async (h, runner, s) => String((await h.services.budgetLines.create(lineFields(s), s.userId, { manager: runner.manager })).id),
+    card: (_s, id) => ({
+      tool: 'write_financial_plan',
+      input: { entity_type: 'budget_lines', ref: id, action: 'create_version', fields: { ...VERSION_2026, version_name: 'Y2027', budget_year: 2027, as_of_date: '2027-01-01' } },
+    }),
+    screen: async (h, runner, s, fields, id) => {
+      await h.services.versions.opex.createForItem(id, fields, s.userId, { manager: runner.manager });
+      return String(id);
+    },
+  },
+  {
+    name: 'budget_lines: update version',
+    table: 'spend_versions',
+    historyOf: BUDGET_LINE,
+    prepare: (h, runner, s) => lineWithVersion(h, runner, s),
+    card: (_s, id) => ({
+      tool: 'write_financial_plan',
+      input: { entity_type: 'budget_lines', ref: id, action: 'update_version', version_ref: 'Y2026', fields: { notes: 'Renewal budget' } },
+    }),
+    screen: async (h, runner, s, fields, id) => {
+      await h.services.versions.opex.updateForItem(id, { ...fields, id: await versionOf(runner, s, id!) }, s.userId, { manager: runner.manager });
+      return String(id);
+    },
+    undo: true,
+  },
+  ...(['opex', 'capex'] as const).map((nature): HistoryCase => ({
+    name: `budget_lines (${nature}): amounts`,
+    table: nature === 'opex' ? 'spend_amounts' : 'capex_amounts',
+    historyOf: { table: 'spend_items', kind: 'amounts' },
+    prepare: (h, runner, s) => lineWithVersion(h, runner, s, nature),
+    card: (_s, id) => ({
+      tool: 'write_financial_plan',
+      input: { entity_type: 'budget_lines', ref: id, action: 'upsert_amounts', version_ref: 'Y2026', amounts: { kind: 'annual', year: 2026, totals: { planned: 2400 } } },
+    }),
+    screen: async (h, runner, s, _fields, id, mutation) => {
+      await h.services.amounts[nature].bulkUpsert(await versionOf(runner, s, id!), mutation.amounts, s.userId, { manager: runner.manager });
+      return String(id);
+    },
+    undo: true,
+  })),
+  {
+    name: 'budget_lines: allocations',
+    table: 'spend_allocations',
+    historyOf: { table: 'spend_items', kind: 'allocations' },
+    // A line split by hand on the paying company; the card adds a second company.
+    prepare: async (h, runner, s) => {
+      // A split by company follows the companies' 2026 headcount.
+      for (const [companyId, headcount] of [[s.companyId, 60], [s.secondCompanyId, 40]] as const) {
+        await runner.query(`INSERT INTO company_metrics (tenant_id, company_id, fiscal_year, headcount, it_users, turnover)
+                            VALUES ($1, $2, 2026, $3, 0, 0)`, [s.tenantId, companyId, headcount]);
+      }
+      const lineId = await lineWithVersion(h, runner, s, 'opex', { allocation_method: 'manual_company' });
+      await h.services.allocations.bulkUpsert(await versionOf(runner, s, lineId), [{ company_id: s.companyId, department_id: null }], s.userId, screenOpts(runner, s));
+      return lineId;
+    },
+    card: (s, id) => ({
+      tool: 'write_financial_plan',
+      input: { entity_type: 'budget_lines', ref: id, action: 'replace_allocations', version_ref: 'Y2026', allocations: [s.companyId, s.secondCompanyId] },
+    }),
+    // The Allocations tab saves its method and rows together; the method stays the version's.
+    screen: async (h, runner, s, _fields, id, mutation) => {
+      await h.services.allocations.put(await versionOf(runner, s, id!), { method: 'manual_company', rows: mutation.allocations, base_signature: null }, s.userId, screenOpts(runner, s));
+      return String(id);
+    },
     undo: true,
   },
   {
@@ -293,6 +410,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     [tenantId, `member-${tag}@example.test`, roleId]);
   const chart = await one(runner, `INSERT INTO chart_of_accounts (tenant_id, code, name, country_iso) VALUES ($1, $2, 'Chart', 'FR') RETURNING id`, [tenantId, `C${tag}`]);
   const companyId = await one(runner, `INSERT INTO companies (tenant_id, name, country_iso, city, coa_id) VALUES ($1, 'History company', 'FR', 'Lyon', $2) RETURNING id`, [tenantId, chart]);
+  const secondCompanyId = await one(runner, `INSERT INTO companies (tenant_id, name, country_iso, city, coa_id) VALUES ($1, 'Second company', 'FR', 'Nantes', $2) RETURNING id`, [tenantId, chart]);
   const accountId = await one(runner, `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name) VALUES ($1, $2, 6100, 'Software') RETURNING id`, [tenantId, chart]);
   const supplierId = await one(runner, `INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'History supplier') RETURNING id`, [tenantId]);
   const locationId = await one(runner,
@@ -308,7 +426,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
   const targetAssetId = await one(runner,
     `INSERT INTO assets (tenant_id, name, kind, environment, location_id) VALUES ($1, 'srv-billing', 'server', 'prod', $2) RETURNING id`, [tenantId, locationId]);
   return {
-    tenantId, userId, userName: 'Member Tester', companyId, supplierId, accountId, locationId,
+    tenantId, userId, userName: 'Member Tester', companyId, secondCompanyId, supplierId, accountId, locationId,
     sourceAppId, targetAppId, sourceAssetId, targetAssetId,
   };
 }
@@ -327,6 +445,9 @@ async function createHarness(): Promise<Harness> {
   const { InterfacesService } = require('../../interfaces/services/interfaces.service');
   const { ConnectionsService } = require('../../connections/services/connections.service');
   const { NotificationsService } = require('../../notifications/notifications.service');
+  const { SpendVersionsService, CapexVersionsService } = require('../../spend/spend-versions.service');
+  const { SpendAmountsService, CapexAmountsService } = require('../../spend/spend-amounts.service');
+  const { SpendAllocationsService } = require('../../spend/spend-allocations.service');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   // A project's or a request's change notifies people: nothing is sent from this spec.
   const notifications = app.get(NotificationsService, { strict: false });
@@ -347,6 +468,9 @@ async function createHarness(): Promise<Harness> {
       requests: app.get(PortfolioRequestsService, { strict: false }),
       interfaces: app.get(InterfacesService, { strict: false }),
       connections: app.get(ConnectionsService, { strict: false }),
+      versions: { opex: app.get(SpendVersionsService, { strict: false }), capex: app.get(CapexVersionsService, { strict: false }) },
+      amounts: { opex: app.get(SpendAmountsService, { strict: false }), capex: app.get(CapexAmountsService, { strict: false }) },
+      allocations: app.get(SpendAllocationsService, { strict: false }),
     },
   };
 }
@@ -424,8 +548,9 @@ function shapes(rows: AuditRow[], recordId: string, s: Seed): string[] {
     .sort();
 }
 
-function assertKadRows(name: string, rows: AuditRow[], table: string, recordId: string, previewId: string, s: Seed) {
-  const own = rows.filter((row) => row.table_name === table && row.record_id === recordId);
+function assertKadRows(name: string, rows: AuditRow[], table: string, recordId: string | null, previewId: string, s: Seed) {
+  // `recordId` null: a child keyed by another id (a version's amounts), counted by its table.
+  const own = rows.filter((row) => row.table_name === table && (recordId === null || row.record_id === recordId));
   assert.equal(own.length, 1, `${name}: one history line for the record (got ${own.length}: ${own.map((row) => row.source).join(', ')})`);
   for (const row of rows) {
     assert.deepEqual(
@@ -445,7 +570,7 @@ async function history(runner: QueryRunner, s: Seed, table: string, recordId: st
     recordId,
     { limit: 100 },
   );
-  return page.items as Array<{ id: string; action: string; actor: { kind: string; name: string | null }; subject: { kind: string }; changes: unknown[] }>;
+  return page.items as Array<{ id: string; action: string; actor: { kind: string; name: string | null }; subject: { kind: string; label?: string }; changes: unknown[] }>;
 }
 
 async function runCase(harness: Harness, entry: HistoryCase) {
@@ -467,16 +592,18 @@ async function runCase(harness: Harness, entry: HistoryCase) {
     const [stored] = await runner.query(`SELECT mutation_input FROM ai_mutation_previews WHERE id = $1`, [preview.preview_id]);
     const fields = { ...(stored.mutation_input.fields ?? {}) };
 
-    const historyBefore = prepared ? await history(runner, s, entry.table, prepared) : [];
+    const historyTable = entry.historyOf?.table ?? entry.table;
+    const ownKind = entry.historyOf?.kind ?? 'record';
+    const historyBefore = prepared ? await history(runner, s, historyTable, prepared) : [];
     const known = new Set(historyBefore.map((item) => item.id));
 
     // The screen's gesture, under a savepoint rolled back: the same state for Kad's.
     await runner.query('SAVEPOINT k2a_screen');
     let screenId = '';
     const screenRows = await rowsWrittenBy(runner, s, async () => {
-      screenId = (await entry.screen(harness, runner, s, fields, prepared)).toLowerCase();
+      screenId = (await entry.screen(harness, runner, s, fields, prepared, stored.mutation_input)).toLowerCase();
     });
-    const screenAdded = (await history(runner, s, entry.table, screenId)).filter((item) => !known.has(item.id));
+    const screenAdded = (await history(runner, s, historyTable, screenId)).filter((item) => !known.has(item.id));
     await runner.query('ROLLBACK TO SAVEPOINT k2a_screen');
     assert.ok(screenRows.length > 0, `${entry.name}: the screen writes its history`);
 
@@ -487,7 +614,8 @@ async function runCase(harness: Harness, entry: HistoryCase) {
     const [target] = await runner.query(`SELECT target_entity_id FROM ai_mutation_previews WHERE id = $1`, [preview.preview_id]);
     const recordId = String(target.target_entity_id).toLowerCase();
 
-    assertKadRows(entry.name, kadRows, entry.table, recordId, preview.preview_id, s);
+    const ownRecord = entry.historyOf ? null : recordId;
+    assertKadRows(entry.name, kadRows, entry.table, ownRecord, preview.preview_id, s);
     assert.deepEqual(
       shapes(kadRows, recordId, s),
       shapes(screenRows, screenId, s),
@@ -496,12 +624,17 @@ async function runCase(harness: Harness, entry: HistoryCase) {
 
     // The History tab: the entries the screen's gesture adds (one about the record, plus its
     // children's, such as an asset's operating system), each one by Kad for the person.
-    const added = (await history(runner, s, entry.table, recordId)).filter((item) => !known.has(item.id));
+    const added = (await history(runner, s, historyTable, recordId)).filter((item) => !known.has(item.id));
     const view = (items: typeof added) => items.map((item) => `${item.subject.kind}:${item.action}`).sort();
     assert.deepEqual(view(added), view(screenAdded), `${entry.name}: the History tab gets the entries the screen's gesture gives`);
-    const own = added.filter((item) => item.subject.kind === 'record');
-    assert.equal(own.length, 1, `${entry.name}: one History entry about the record (got ${own.length})`);
-    assert.ok(own[0].changes.length > 0, `${entry.name}: the entry says what changed`);
+    const own = added.filter((item) => item.subject.kind === ownKind);
+    assert.equal(own.length, 1, `${entry.name}: one History entry about the ${ownKind} (got ${own.length})`);
+    if (entry.historyOf && own[0].action === 'create') {
+      // A child's creation (a budget version) is an entry with its title and no field changes, as on the screen.
+      assert.ok(own[0].subject.label, `${entry.name}: the entry names the created ${ownKind}`);
+    } else {
+      assert.ok(own[0].changes.length > 0, `${entry.name}: the entry says what changed`);
+    }
     for (const item of added) {
       assert.deepEqual(item.actor, { kind: 'assistant', name: s.userName }, `${entry.name}: each entry is by Kad for the person`);
     }
@@ -512,7 +645,7 @@ async function runCase(harness: Harness, entry: HistoryCase) {
         const executed = await harness.previews.executePreview(ctx, reverse.preview_id) as any;
         assert.equal(executed.status, 'executed', `${entry.name} (undo): ${executed.error_message || 'the undo did not execute'}`);
       });
-      assertKadRows(`${entry.name} (undo)`, undoRows, entry.table, recordId, reverse.preview_id, s);
+      assertKadRows(`${entry.name} (undo)`, undoRows, entry.table, ownRecord, reverse.preview_id, s);
     }
   } finally {
     await runner.rollbackTransaction();
