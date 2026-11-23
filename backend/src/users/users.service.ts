@@ -37,6 +37,7 @@ import {
   getInviteLinkTtl,
 } from '../auth/password-reset.util';
 import { PasswordResetToken } from '../auth/password-reset-token.entity';
+import { LINK_CONFIRMATION_HASH_PREFIX } from '../auth/entra-link-confirmation';
 import { RefreshToken } from '../auth/refresh-token.entity';
 import { Tenant } from '../tenants/tenant.entity';
 import { type InviteSignIn, tenantSignsInWithEntra } from './invite-sign-in';
@@ -1505,7 +1506,8 @@ export class UsersService {
    * Invites a user by e-mail: a link that sets the password (`signIn` 'password', the default,
    * valid `INVITE_LINK_TTL`), or, in a workspace with Microsoft Entra sign-in, an e-mail that
    * asks the person to sign in with Microsoft (`signIn` 'microsoft': no link, no password; the
-   * first Microsoft sign-in links the account and enables it). The token, the status change and
+   * first Microsoft sign-in links the account and enables it; the person's pending password links
+   * are cancelled). The token, the status change and
    * the audit row are written first, the e-mail goes last.
    *
    * With `commitThenRun` (the HTTP route) those writes are committed and the
@@ -1563,6 +1565,14 @@ export class UsersService {
         tenantId: user.tenant_id ?? null,
         locale: user.locale ?? undefined,
       };
+      // One way in at a time: the person's pending password links (an earlier password invitation,
+      // a reset link: the table does not tell them apart) stop working. Microsoft link
+      // confirmations stay.
+      await (opts?.manager ?? repo.manager).query(
+        `UPDATE password_reset_tokens SET used_at = now()
+          WHERE tenant_id = $1 AND user_id = $2 AND used_at IS NULL AND token_hash NOT LIKE $3`,
+        [user.tenant_id, user.id, `${LINK_CONFIRMATION_HASH_PREFIX}%`],
+      );
       sendEmail = () => this.emailService.sendUserMicrosoftInviteEmail(email);
     } else {
       const token = buildPasswordResetToken(

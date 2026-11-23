@@ -269,6 +269,8 @@ Dans un espace de travail où [Microsoft Entra ID](#microsoft-entra-id) est conn
 
 Le compte affiche **Invité** jusqu'à la première connexion de la personne. Un lien de réinitialisation de mot de passe, envoyé par **Envoyer une réinitialisation de mot de passe** ou depuis la page de connexion, reste valable 1 heure.
 
+Un seul accès est valable à la fois : une invitation **Avec Microsoft** annule les liens de mot de passe envoyés plus tôt à la personne, aussi bien le lien d'une invitation avec mot de passe qu'un lien de réinitialisation. Un lien annulé est refusé, comme un lien expiré.
+
 ### Assignation multi-rôles
 
 Les utilisateurs peuvent se voir assigner plusieurs rôles. Leurs autorisations effectives sont la combinaison de tous les rôles assignés : si un rôle donne accès à une ressource, l'utilisateur a cet accès.

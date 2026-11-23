@@ -82,10 +82,47 @@ async function testEveryLanguage() {
   }
 }
 
+/**
+ * Without an inviter, the password invitation opens with the Microsoft invitation's sentence, in
+ * every language; with one, both keep their "{{inviterName}} invites you" sentence. Compared on the
+ * product name in the four languages, and on a workspace name where both e-mails name the
+ * workspace alike (de and es word the workspace differently in the two e-mails, with or without
+ * an inviter).
+ */
+async function testBothInvitationsOpenAlike() {
+  const cases: Array<{ locale: string; row: { name: string; branding: null }; noInviter: string }> = [
+    { locale: 'en', row: { name: 'My Organization', branding: null }, noInviter: `You are invited to join ${PRODUCT_NAME}.` },
+    { locale: 'fr', row: { name: 'My Organization', branding: null }, noInviter: `Vous êtes invité à rejoindre ${PRODUCT_NAME}.` },
+    { locale: 'de', row: { name: 'My Organization', branding: null }, noInviter: `Sie sind eingeladen, ${PRODUCT_NAME} beizutreten.` },
+    { locale: 'es', row: { name: 'My Organization', branding: null }, noInviter: `Está invitado a unirse a ${PRODUCT_NAME}.` },
+    { locale: 'en', row: { name: 'Acme', branding: null }, noInviter: `You are invited to join the Acme workspace on ${PRODUCT_NAME}.` },
+    { locale: 'fr', row: { name: 'Acme', branding: null }, noInviter: `Vous êtes invité à rejoindre l'espace Acme sur ${PRODUCT_NAME}.` },
+  ];
+  for (const { locale, row, noInviter } of cases) {
+    for (const inviterName of [null, 'Claire Dubois']) {
+      const microsoft = await send(row, { firstName: 'Julie', inviterName, locale });
+      const { service, delivered } = createEmailService(row);
+      await service.sendUserInviteEmail({
+        to: 'julie.martin@acme.test', inviteUrl: 'https://acme.kanap.net/accept-invite#token=t',
+        expiresInMinutes: 7 * 24 * 60, firstName: 'Julie', inviterName, tenantId: TENANT, locale,
+      });
+      await service.drain(Date.now() + 5_000);
+      assert.equal(delivered.length, 1);
+      const microsoftIntro = (microsoft.text ?? '').split('\n\n')[1];
+      const passwordIntro = (delivered[0].text ?? '').split('\n\n')[1];
+      const label = `${locale}, ${row.name}, inviter ${inviterName}`;
+      assert.ok(passwordIntro.startsWith(`${microsoftIntro} `), `${label}: "${passwordIntro}" / "${microsoftIntro}"`);
+      if (inviterName) assert.ok(microsoftIntro.startsWith('Claire Dubois '), `${label}: ${microsoftIntro}`);
+      else assert.equal(microsoftIntro, noInviter, label);
+    }
+  }
+}
+
 async function main() {
   await testFrenchInvitation();
   await testWithoutNamesOrOrganisation();
   await testEveryLanguage();
+  await testBothInvitationsOpenAlike();
   console.log('user-invite-microsoft-email.spec: ok');
 }
 

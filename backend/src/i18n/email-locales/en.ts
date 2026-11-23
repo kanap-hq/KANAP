@@ -267,7 +267,7 @@ export const en = {
     userInvite: {
       subject: 'Invitation to join {{organisation}}',
       intro: '{{inviterName}} invites you to join {{place}}.',
-      introNoInviter: 'You can now join {{place}}.',
+      introNoInviter: 'You are invited to join {{place}}.',
       placeWorkspace: `the {{organisation}} workspace on ${PRODUCT_NAME}`,
       placeProduct: PRODUCT_NAME,
       password: 'Choose your password to activate your account; this link remains valid for {{duration}}.',
