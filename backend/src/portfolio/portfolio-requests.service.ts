@@ -35,6 +35,7 @@ import { resolveRecordCreators } from '../audit/record-creator.util';
 import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { ItemNumberService } from '../common/item-number.service';
 import { replacedLinks } from '../common/relations/linked-reads';
+import { appliedLinks, OwnerLinkTable, writeOwnerLinks, wroteLinks } from './portfolio-link-writes.util';
 import { parseItemNumber } from '../common/parse-item-number';
 import { StorageService } from '../common/storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -85,7 +86,10 @@ type ConvertFromTaskOverrides = {
   origin_task_url?: string;
 };
 
-const normalizeScopeValue = (value: unknown): string | undefined => {
+const REQUEST_APPLICATION_LINKS: OwnerLinkTable = { table: 'portfolio_request_applications', owner: 'request_id', target: 'application_id' };
+const REQUEST_ASSET_LINKS: OwnerLinkTable = { table: 'portfolio_request_assets', owner: 'request_id', target: 'asset_id' };
+
+const normalizeScopeValue =(value: unknown): string | undefined => {
   if (value === null || value === undefined) return undefined;
   const normalized = String(value).trim();
   return normalized.length > 0 ? normalized : undefined;
@@ -1854,34 +1858,18 @@ export class PortfolioRequestsService {
     const beforeIds = Array.from(new Set(existing.map((row) => row.application_id)));
 
     // Only the stored links the person may remove leave (`removable`); the others stay untouched.
-    const { removed, added, after } = replacedLinks(beforeIds, unique, opts?.removable);
-    if (removed.length > 0) {
-      await mg.query(
-        `DELETE FROM portfolio_request_applications
-         WHERE request_id = $1
-           AND tenant_id = $2
-           AND application_id = ANY($3::uuid[])`,
-        [requestId, request.tenant_id, removed],
-      );
-    }
-
-    if (added.length > 0) {
-      await mg.query(
-        `INSERT INTO portfolio_request_applications (tenant_id, request_id, application_id)
-         SELECT $1, $2, application_id
-         FROM unnest($3::uuid[]) AS application_id
-         ON CONFLICT DO NOTHING`,
-        [request.tenant_id, requestId, added],
-      );
-    }
+    // Only what this call wrote counts: a link the other end stored or removed meanwhile is not
+    // logged twice (`writeOwnerLinks`).
+    const { removed, added } = replacedLinks(beforeIds, unique, opts?.removable);
+    const written = await writeOwnerLinks(mg, REQUEST_APPLICATION_LINKS, request.tenant_id, requestId, removed, added);
 
     const beforeSorted = beforeIds.map((id) => id.toLowerCase()).sort();
-    const afterSorted = [...after].sort();
-    if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
+    const afterSorted = appliedLinks(beforeSorted, written);
+    if (wroteLinks(written)) {
       // One after the other: the request's single connection runs its queries in turn anyway. The
       // activity names the applications the author reads (`removable` and the sent list) only.
       const beforeLabels = await this.resolveApplicationLabelsByIds(mg, opts?.removable ? [...opts.removable].sort() : beforeSorted);
-      const afterLabels = await this.resolveApplicationLabelsByIds(mg, opts?.removable ? [...unique].sort() : afterSorted);
+      const afterLabels = await this.resolveApplicationLabelsByIds(mg, opts?.removable ? appliedLinks(opts.removable, written) : afterSorted);
       await this.logActivity(mg, {
         request_id: requestId,
         tenant_id: request.tenant_id,
@@ -1902,7 +1890,7 @@ export class PortfolioRequestsService {
       }, { manager: mg });
     }
 
-    return { ok: true, count: unique.length };
+    return { ok: true, count: unique.length, added: written.added.length, removed: written.removed.length };
   }
 
   // ==================== LINKED ASSETS ====================
@@ -1957,25 +1945,14 @@ export class PortfolioRequestsService {
     );
     const beforeIds = Array.from(new Set(existing.map((row) => row.asset_id)));
 
-    await mg.query(
-      `DELETE FROM portfolio_request_assets
-       WHERE request_id = $1
-         AND tenant_id = $2`,
-      [requestId, request.tenant_id],
-    );
+    // The links that leave and those that come, and only what this call wrote counts: a link the
+    // other end stored or removed meanwhile is not logged twice (`writeOwnerLinks`).
+    const { removed, added } = replacedLinks(beforeIds, unique);
+    const written = await writeOwnerLinks(mg, REQUEST_ASSET_LINKS, request.tenant_id, requestId, removed, added);
 
-    if (unique.length > 0) {
-      await mg.query(
-        `INSERT INTO portfolio_request_assets (tenant_id, request_id, asset_id)
-         SELECT $1, $2, asset_id
-         FROM unnest($3::uuid[]) AS asset_id`,
-        [request.tenant_id, requestId, unique],
-      );
-    }
-
-    const beforeSorted = [...beforeIds].sort();
-    const afterSorted = [...unique].sort();
-    if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
+    const beforeSorted = beforeIds.map((id) => id.toLowerCase()).sort();
+    const afterSorted = appliedLinks(beforeSorted, written);
+    if (wroteLinks(written)) {
       // One after the other: the request's single connection runs its queries in turn anyway.
       const beforeLabels = await this.resolveAssetLabelsByIds(mg, beforeSorted);
       const afterLabels = await this.resolveAssetLabelsByIds(mg, afterSorted);
@@ -1999,7 +1976,7 @@ export class PortfolioRequestsService {
       }, { manager: mg });
     }
 
-    return { ok: true, count: unique.length };
+    return { ok: true, count: unique.length, added: written.added.length, removed: written.removed.length };
   }
 
   // ==================== CAPEX MANAGEMENT ====================
@@ -2026,22 +2003,26 @@ export class PortfolioRequestsService {
 
     const toDelete = existing.filter((e) => !unique.includes(e.opex_id));
     const existingSet = new Set(existing.map((e) => e.opex_id));
+    const toInsert = unique.filter((id) => !existingSet.has(id));
 
-    const toInsert = unique
-      .filter((id) => !existingSet.has(id))
-      .map((id) => repo.create({
-        tenant_id: request.tenant_id,
-        request_id: requestId,
-        opex_id: id,
-      }));
+    // Only what this call wrote counts: a link the line's side stored or removed meanwhile is not
+    // logged twice. Both writes are counted through a CTE (`portfolio-link-writes.util.ts`).
+    const gone: Array<{ id: string }> = toDelete.length === 0 ? [] : await mg.query(
+      `WITH gone AS (DELETE FROM portfolio_request_opex WHERE tenant_id = $1 AND id = ANY($2::uuid[]) RETURNING opex_id AS id)
+       SELECT id FROM gone`,
+      [request.tenant_id, toDelete.map((e) => e.id)],
+    );
+    const put: Array<{ id: string }> = toInsert.length === 0 ? [] : await mg.query(
+      `WITH put AS (INSERT INTO portfolio_request_opex (tenant_id, request_id, opex_id)
+         SELECT $1, $2, opex_id FROM unnest($3::uuid[]) AS opex_id ON CONFLICT DO NOTHING RETURNING opex_id AS id)
+       SELECT id FROM put`,
+      [request.tenant_id, requestId, toInsert],
+    );
+    const written = { removed: gone.map((row) => row.id), added: put.map((row) => row.id) };
 
-    if (toDelete.length > 0) await repo.remove(toDelete);
-    if (toInsert.length > 0) await repo.save(toInsert);
-
-    const afterIds = Array.from(new Set(unique));
     const beforeSorted = [...beforeIds].sort();
-    const afterSorted = [...afterIds].sort();
-    if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
+    const afterSorted = appliedLinks(beforeSorted, written);
+    if (wroteLinks(written)) {
       // One after the other: the request's single connection runs its queries in turn anyway.
       const beforeLabels = await activityBudgetLines(mg, 'capex', beforeSorted);
       const afterLabels = await activityBudgetLines(mg, 'capex', afterSorted);
@@ -2055,7 +2036,7 @@ export class PortfolioRequestsService {
       await this.auditBudgetLines(mg, 'capex', requestId, beforeSorted, afterSorted, actorId, opts?.audit);
     }
 
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added: written.added.length, removed: written.removed.length };
   }
 
   // ==================== OPEX MANAGEMENT ====================
@@ -2082,22 +2063,26 @@ export class PortfolioRequestsService {
 
     const toDelete = existing.filter((e) => !unique.includes(e.opex_id));
     const existingSet = new Set(existing.map((e) => e.opex_id));
+    const toInsert = unique.filter((id) => !existingSet.has(id));
 
-    const toInsert = unique
-      .filter((id) => !existingSet.has(id))
-      .map((id) => repo.create({
-        tenant_id: request.tenant_id,
-        request_id: requestId,
-        opex_id: id,
-      }));
+    // Only what this call wrote counts: a link the line's side stored or removed meanwhile is not
+    // logged twice. Both writes are counted through a CTE (`portfolio-link-writes.util.ts`).
+    const gone: Array<{ id: string }> = toDelete.length === 0 ? [] : await mg.query(
+      `WITH gone AS (DELETE FROM portfolio_request_opex WHERE tenant_id = $1 AND id = ANY($2::uuid[]) RETURNING opex_id AS id)
+       SELECT id FROM gone`,
+      [request.tenant_id, toDelete.map((e) => e.id)],
+    );
+    const put: Array<{ id: string }> = toInsert.length === 0 ? [] : await mg.query(
+      `WITH put AS (INSERT INTO portfolio_request_opex (tenant_id, request_id, opex_id)
+         SELECT $1, $2, opex_id FROM unnest($3::uuid[]) AS opex_id ON CONFLICT DO NOTHING RETURNING opex_id AS id)
+       SELECT id FROM put`,
+      [request.tenant_id, requestId, toInsert],
+    );
+    const written = { removed: gone.map((row) => row.id), added: put.map((row) => row.id) };
 
-    if (toDelete.length > 0) await repo.remove(toDelete);
-    if (toInsert.length > 0) await repo.save(toInsert);
-
-    const afterIds = Array.from(new Set(unique));
     const beforeSorted = [...beforeIds].sort();
-    const afterSorted = [...afterIds].sort();
-    if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
+    const afterSorted = appliedLinks(beforeSorted, written);
+    if (wroteLinks(written)) {
       // One after the other: the request's single connection runs its queries in turn anyway.
       const beforeLabels = await activityBudgetLines(mg, 'opex', beforeSorted);
       const afterLabels = await activityBudgetLines(mg, 'opex', afterSorted);
@@ -2111,7 +2096,7 @@ export class PortfolioRequestsService {
       await this.auditBudgetLines(mg, 'opex', requestId, beforeSorted, afterSorted, actorId, opts?.audit);
     }
 
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added: written.added.length, removed: written.removed.length };
   }
 
   /**

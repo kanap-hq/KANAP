@@ -32,6 +32,7 @@ import { readsPartOf, withCountedLinkChanges } from '../../common/relations/link
 import { auditedLinkSet, hiddenLineCount } from '../../data-access/hidden-links';
 import { singleChangedId } from '../../audit/audit-parent-rules';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
+import { appliedLinks, wroteLinks } from '../portfolio-link-writes.util';
 
 const ACTUAL_DATE_FIELDS = ['actual_start', 'actual_end'] as const;
 
@@ -980,13 +981,19 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const existingSet = new Set(existing.map((e) => e.opex_id));
     const toInsert = unique.filter((id) => !existingSet.has(id));
 
-    if (toDelete.length > 0) await repo.remove(toDelete);
-    await insertProjectBudgetLinks(mg, 'capex', project.tenant_id, toInsert.map((itemId) => ({ projectId, itemId })));
+    // Only what this call wrote counts: a link the line's side stored or removed meanwhile is not
+    // logged twice. Both writes are counted (`portfolio-link-writes.util.ts`).
+    const gone: Array<{ id: string }> = toDelete.length === 0 ? [] : await mg.query(
+      `WITH gone AS (DELETE FROM portfolio_project_opex WHERE tenant_id = $1 AND id = ANY($2::uuid[]) RETURNING opex_id AS id)
+       SELECT id FROM gone`,
+      [project.tenant_id, toDelete.map((e) => e.id)],
+    );
+    const put = await insertProjectBudgetLinks(mg, 'capex', project.tenant_id, toInsert.map((itemId) => ({ projectId, itemId })));
+    const written = { removed: gone.map((row) => row.id), added: put.map((link) => link.itemId) };
 
-    const afterIds = Array.from(new Set(unique));
     const beforeSorted = [...beforeIds].sort();
-    const afterSorted = [...afterIds].sort();
-    if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
+    const afterSorted = appliedLinks(beforeSorted, written);
+    if (wroteLinks(written)) {
       // One after the other: the request's single connection runs its queries in turn anyway.
       const beforeLabels = await activityBudgetLines(mg, 'capex', beforeSorted);
       const afterLabels = await activityBudgetLines(mg, 'capex', afterSorted);
@@ -1000,7 +1007,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       await this.auditBudgetLines(mg, 'capex', projectId, beforeSorted, afterSorted, actorId, opts?.audit);
     }
 
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added: written.added.length, removed: written.removed.length };
   }
 
   /**
@@ -1035,13 +1042,19 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const existingSet = new Set(existing.map((e) => e.opex_id));
     const toInsert = unique.filter((id) => !existingSet.has(id));
 
-    if (toDelete.length > 0) await repo.remove(toDelete);
-    await insertProjectBudgetLinks(mg, 'opex', project.tenant_id, toInsert.map((itemId) => ({ projectId, itemId })));
+    // Only what this call wrote counts: a link the line's side stored or removed meanwhile is not
+    // logged twice. Both writes are counted (`portfolio-link-writes.util.ts`).
+    const gone: Array<{ id: string }> = toDelete.length === 0 ? [] : await mg.query(
+      `WITH gone AS (DELETE FROM portfolio_project_opex WHERE tenant_id = $1 AND id = ANY($2::uuid[]) RETURNING opex_id AS id)
+       SELECT id FROM gone`,
+      [project.tenant_id, toDelete.map((e) => e.id)],
+    );
+    const put = await insertProjectBudgetLinks(mg, 'opex', project.tenant_id, toInsert.map((itemId) => ({ projectId, itemId })));
+    const written = { removed: gone.map((row) => row.id), added: put.map((link) => link.itemId) };
 
-    const afterIds = Array.from(new Set(unique));
     const beforeSorted = [...beforeIds].sort();
-    const afterSorted = [...afterIds].sort();
-    if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
+    const afterSorted = appliedLinks(beforeSorted, written);
+    if (wroteLinks(written)) {
       // One after the other: the request's single connection runs its queries in turn anyway.
       const beforeLabels = await activityBudgetLines(mg, 'opex', beforeSorted);
       const afterLabels = await activityBudgetLines(mg, 'opex', afterSorted);
@@ -1055,7 +1068,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       await this.auditBudgetLines(mg, 'opex', projectId, beforeSorted, afterSorted, actorId, opts?.audit);
     }
 
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added: written.added.length, removed: written.removed.length };
   }
 
   /**

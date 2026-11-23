@@ -340,18 +340,19 @@ export class PortfolioRelationsService {
   /**
    * Hand the whole stored set, plus or minus `id`, to the replacement that owns it.
    * The set includes a link the caller cannot see: the replacement rewrites every row it is
-   * given, and dropping an invisible id would remove it.
+   * given, and dropping an invisible id would remove it. `changed` says what the replacement really
+   * wrote: when the other end stored or removed the same link meanwhile, nothing, and no activity.
    */
   private async replaceOne(
     current: string[],
     id: string,
     add: boolean,
-    replace: (next: string[]) => Promise<unknown>,
+    replace: (next: string[]) => Promise<{ added: number; removed: number }>,
   ): Promise<{ ok: true; changed: boolean }> {
     if (current.includes(id) === add) return { ok: true, changed: false };
     const next = (add ? [...current, id] : current.filter((value) => value !== id)).sort();
-    await replace(next);
-    return { ok: true, changed: true };
+    const written = await replace(next);
+    return { ok: true, changed: written.added + written.removed > 0 };
   }
 
   /** The request's tab in one round trip. The request must exist in the tenant (404 otherwise). */

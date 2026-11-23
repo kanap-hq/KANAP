@@ -11,6 +11,10 @@ import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-
 import { AuditService } from '../../audit/audit.service';
 import { singleChangedId } from '../../audit/audit-parent-rules';
 import { replacedLinks } from '../../common/relations/linked-reads';
+import { appliedLinks, OwnerLinkTable, writeOwnerLinks, wroteLinks } from '../portfolio-link-writes.util';
+
+const PROJECT_APPLICATION_LINKS: OwnerLinkTable = { table: 'application_projects', owner: 'project_id', target: 'application_id' };
+const PROJECT_ASSET_LINKS: OwnerLinkTable = { table: 'asset_projects', owner: 'project_id', target: 'asset_id' };
 
 /**
  * Service for managing project dependencies and source request links.
@@ -354,34 +358,18 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
     const beforeIds = Array.from(new Set(existing.map((row) => row.application_id)));
 
     // Only the stored links the person may remove leave (`removable`); the others stay untouched.
-    const { removed, added, after } = replacedLinks(beforeIds, unique, opts?.removable);
-    if (removed.length > 0) {
-      await mg.query(
-        `DELETE FROM application_projects
-         WHERE project_id = $1
-           AND tenant_id = $2
-           AND application_id = ANY($3::uuid[])`,
-        [projectId, project.tenant_id, removed],
-      );
-    }
-
-    if (added.length > 0) {
-      await mg.query(
-        `INSERT INTO application_projects (tenant_id, application_id, project_id)
-         SELECT $1, application_id, $2
-         FROM unnest($3::uuid[]) AS application_id
-         ON CONFLICT DO NOTHING`,
-        [project.tenant_id, projectId, added],
-      );
-    }
+    // Only what this call wrote counts: a link the other end stored or removed meanwhile is not
+    // logged twice (`writeOwnerLinks`).
+    const { removed, added } = replacedLinks(beforeIds, unique, opts?.removable);
+    const written = await writeOwnerLinks(mg, PROJECT_APPLICATION_LINKS, project.tenant_id, projectId, removed, added);
 
     const beforeSorted = beforeIds.map((id) => id.toLowerCase()).sort();
-    const afterSorted = [...after].sort();
-    if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
+    const afterSorted = appliedLinks(beforeSorted, written);
+    if (wroteLinks(written)) {
       // One after the other: the request's single connection runs its queries in turn anyway. The
       // activity names the applications the author reads (`removable` and the sent list) only.
       const beforeLabels = await this.resolveApplicationLabelsByIds(mg, opts?.removable ? [...opts.removable].sort() : beforeSorted);
-      const afterLabels = await this.resolveApplicationLabelsByIds(mg, opts?.removable ? [...unique].sort() : afterSorted);
+      const afterLabels = await this.resolveApplicationLabelsByIds(mg, opts?.removable ? appliedLinks(opts.removable, written) : afterSorted);
       await this.logActivity(mg, {
         project_id: projectId,
         tenant_id: project.tenant_id,
@@ -405,7 +393,7 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
       }, { manager: mg });
     }
 
-    return this.listLinkedApplications(projectId, { manager: mg });
+    return { ...(await this.listLinkedApplications(projectId, { manager: mg })), added: written.added.length, removed: written.removed.length };
   }
 
   /**
@@ -462,25 +450,14 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
     );
     const beforeIds = Array.from(new Set(existing.map((row) => row.asset_id)));
 
-    await mg.query(
-      `DELETE FROM asset_projects
-       WHERE project_id = $1
-         AND tenant_id = $2`,
-      [projectId, project.tenant_id],
-    );
+    // The links that leave and those that come, and only what this call wrote counts: a link the
+    // other end stored or removed meanwhile is not logged twice (`writeOwnerLinks`).
+    const { removed, added } = replacedLinks(beforeIds, unique);
+    const written = await writeOwnerLinks(mg, PROJECT_ASSET_LINKS, project.tenant_id, projectId, removed, added);
 
-    if (unique.length > 0) {
-      await mg.query(
-        `INSERT INTO asset_projects (tenant_id, asset_id, project_id)
-         SELECT $1, asset_id, $2
-         FROM unnest($3::uuid[]) AS asset_id`,
-        [project.tenant_id, projectId, unique],
-      );
-    }
-
-    const beforeSorted = [...beforeIds].sort();
-    const afterSorted = [...unique].sort();
-    if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
+    const beforeSorted = beforeIds.map((id) => id.toLowerCase()).sort();
+    const afterSorted = appliedLinks(beforeSorted, written);
+    if (wroteLinks(written)) {
       // One after the other: the request's single connection runs its queries in turn anyway.
       const beforeLabels = await this.resolveAssetLabelsByIds(mg, beforeSorted);
       const afterLabels = await this.resolveAssetLabelsByIds(mg, afterSorted);
@@ -507,7 +484,7 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
       }, { manager: mg });
     }
 
-    return this.listLinkedAssets(projectId, { manager: mg });
+    return { ...(await this.listLinkedAssets(projectId, { manager: mg })), added: written.added.length, removed: written.removed.length };
   }
 
   private async resolveApplicationLabelsByIds(mg: EntityManager, applicationIds: string[]): Promise<string[]> {
