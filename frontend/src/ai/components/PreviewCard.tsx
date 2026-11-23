@@ -16,7 +16,8 @@ import { getPreviewTitle } from '../utils/previewClassification';
 import { usePreviewChangeLabels } from './previewChangeLabels';
 import ImportMappingPreview from './ImportMappingPreview';
 import { downloadServerExport } from '../../components/csv/serverExport';
-import { setImportChoices } from '../previewChains';
+import { previewChainId, setImportChoices } from '../previewChains';
+import BulkEditList from './BulkEditList';
 
 const LINKED_MARKDOWN_IMAGE_RE = /\[\s*!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)\s*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
 const MARKDOWN_IMAGE_RE = /!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
@@ -34,8 +35,8 @@ type PreviewCardProps = {
    */
   stickyActions?: boolean;
   /**
-   * A choice of the person on an import card made a new card: it takes the place of
-   * this one. Without it the card's choices are read only.
+   * A choice of the person on an import card, or a box of a change in bulk, made a new card: it
+   * takes the place of this one. Without it the card's choices are read only.
    */
   onReplace?: (previous: AiMutationPreview, next: AiMutationPreview) => void;
 };
@@ -374,6 +375,18 @@ function PreviewCard({
             );
           })}
         </Stack>
+        )}
+
+        {/* The records of a change in bulk, under the card's counts: a box each while the card is pending. */}
+        {preview.bulk_edit && (
+          <BulkEditList
+            key={previewChainId(preview)}
+            preview={preview}
+            bulk={preview.bulk_edit}
+            onReplace={onReplace}
+            disabled={disabled}
+            onCounting={setChoosing}
+          />
         )}
 
         {/* A failure of the service reads as a sentence in the person's language, its message as the detail. */}

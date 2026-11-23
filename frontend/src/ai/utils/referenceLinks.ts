@@ -40,6 +40,16 @@ function referenceUrl(entityType: string, reference: string): string | null {
   return buildEntityUrl(entityType, reference);
 }
 
+/**
+ * The page of a business reference (`APP-12`, `BL-7`) the person may open, as the conversation links
+ * it; null for another text or a page the person may not read.
+ */
+export function referencePageUrl(reference: string, canRead: (resource: string) => boolean): string | null {
+  const match = /^([A-Z]+)-[1-9]\d*$/.exec(reference);
+  const family = match ? LINKED_REFERENCE_FAMILIES[match[1]] : undefined;
+  return family && canRead(family.resource) ? referenceUrl(family.entityType, reference) : null;
+}
+
 // A KANAP reference number never starts with 0: `APP-01` is part of a name such as `PAR-APP-01`.
 const REFERENCE_PATTERN = new RegExp(
   `(?<![\\w/-])(${Object.keys(LINKED_REFERENCE_FAMILIES).join('|')})-[1-9]\\d*(?![\\w-])`,

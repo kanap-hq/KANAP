@@ -382,6 +382,16 @@
       "onPremises": "local",
       "cloud": "cloud"
     },
+    "bulkEdit": {
+      "busy": "Hay otra operación en curso. Vuelva a intentarlo en un momento.",
+      "changed": "Modificada",
+      "counting": "Contando",
+      "keep": "Conservar {{ref}} {{title}}",
+      "kept_one": "{{count}} conservada de {{total}}",
+      "kept_other": "{{count}} conservadas de {{total}}",
+      "leftOut": "Excluida",
+      "notChanged": "No modificada"
+    },
     "importChoices": {
       "stale": "Esta tarjeta ya no se puede modificar. Pida una nueva a {{agent}}."
     }
