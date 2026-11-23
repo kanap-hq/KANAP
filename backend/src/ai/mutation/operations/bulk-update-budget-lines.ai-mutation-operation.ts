@@ -455,6 +455,7 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
         .map((row) => ({ ref: text(row.ref), title: text(row.title) })),
       excluded: bulkExcluded(mutation).length,
       listed: list !== null,
+      done: preview.status === 'executed',
     }, language);
     const englishField = field === 'dimension' ? fieldLabel : BUDGET_LINE_BULK_FIELD_LABELS.en[field] ?? field;
     let summary = `Preview ${preview.id} ${preview.status}.`;
@@ -474,7 +475,7 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
       );
     }
     return {
-      target: { entity_type: 'budget_lines', entity_id: null, ref: null, title: bulkEditCardTitleText('budget_lines', language, changes, refs) },
+      target: { entity_type: 'budget_lines', entity_id: null, ref: null, title: bulkEditCardTitleText('budget_lines', language, preview.status === 'executed' ? done : changes, refs) },
       changes: { [CARD_FIELD]: { label: BULK_EDIT_CARD_LABEL[language], from: null, to: card, format: 'markdown' } },
       summary,
       // The list goes to the screen only: the model reads the counts of the card's change.

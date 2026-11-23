@@ -348,6 +348,8 @@ export type BulkEditCard = {
   excluded?: number;
   /** The card lists every row it changes (`bulk_edit`): the first rows are not named again. */
   listed?: boolean;
+  /** The card was approved: its summary says what changed, the counts made before are not shown again. */
+  done?: boolean;
 };
 
 /** The words of a refusal code, "Other reason" for a code the dialog does not word. */
@@ -376,6 +378,7 @@ export function bulkEditCardText(card: BulkEditCard, language: AiWriteLanguage):
   }
   const value = card.value === null ? BULK_EDIT_EMPTIED[language] : card.value;
   blocks.push(escapeMarkdownLabel(`${card.field} → ${value}`));
+  if (card.done) return blocks.join('\n\n');
   const counts = [{
     en: `${words.rows(card.changes)} to change`,
     fr: `${words.rows(card.changes)} à modifier`,

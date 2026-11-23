@@ -832,6 +832,9 @@ async function testUnlistedApplicationNeverWritten(harness: Harness) {
     await runner.query(`UPDATE applications SET criticality = 'business_critical' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.apps[1]]);
     const executed = await approve(harness, ctx, again);
     assert.equal(executed.summary, 'Business criticality changed on 1 application.');
+    // The approved card says no longer "2 applications to change" (browser pass of lot K2e).
+    assert.doesNotMatch(executed.changes.application_bulk_edit.to, /to change|already has/);
+    assert.match(executed.changes.application_bulk_edit.to, /Business criticality → Critical$/);
     assert.deepEqual(executed.bulk_edit.rows.map((row: any) => [row.ref, row.kept, row.changed]), [['APP-1', true, false], ['APP-6', true, true]]);
     console.log('  an application never listed refuses the approval; a kept one already at the value does not: OK');
   });

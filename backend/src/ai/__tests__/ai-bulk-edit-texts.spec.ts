@@ -201,6 +201,9 @@ function testTheCardListsItsRecords() {
   // Without the list (more than 200 records), the first five are named as before.
   assert.match(bulkEditCardText({ ...card, listed: false, excluded: 0 }, 'en'), /2 lines to change\n\n- BL-1 Line 1\n- BL-2 Line 2$/);
   assert.match(bulkEditCardText({ ...card, family: 'applications', excluded: 2 }, 'fr'), /2 applications à modifier, 2 écartées$/);
+  // Approved, the card no longer says what it would change: its summary says what changed (browser pass of lot K2e).
+  assert.equal(bulkEditCardText({ ...card, field: BUDGET_LINE_BULK_FIELD_LABELS.fr.cost_center, done: true }, 'fr'), 'Lignes choisies : BL-1, BL-2, BL-3\n\nCentre de coûts → IT-01 · Informatique');
+  assert.equal(bulkEditCardText({ ...card, listed: false, done: true }, 'en').includes('to change'), false);
   assert.match(bulkEditTooLongNote('applications', 250, AI_BULK_EDIT_LIST_MAX), /^This card changes 250 applications: more than 200, so it counts them without listing them.*offer to narrow the selection/);
 
   // The list for the screen: each value before in words, empty and hidden worded, the kept counted.
