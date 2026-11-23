@@ -42,7 +42,7 @@ Rendez-vous dans **Cartographie SI > Applications** pour voir votre liste. Pour 
 2. Saisissez le nom de l'application ou du service, de 200 caractères au plus. Voir [Noms uniques](#unique-names).
 3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis crée l'application aussitôt. Sa référence (`APP-12`) s'affiche et tous les onglets s'ouvrent.
 
-La nouvelle application est **Active**, dans la catégorie par défaut. Modifiez-les dans l'en-tête et le tiroir des propriétés, puis complétez le reste :
+La nouvelle application est **Active**, dans la catégorie par défaut. Modifiez-les dans l'en-tête et le panneau Propriétés, puis complétez le reste :
 
 - **Catégorie** : l'objectif principal de cette application (voir les catégories ci-dessus)
 - **Cycle de vie** : Actif, Proposé, Obsolète, Retiré, ou tout code personnalisé défini dans les Paramètres
@@ -86,7 +86,7 @@ Les applications qui portaient déjà le même nom avant cette règle restent mo
 La grille Applications offre une vue complète de votre portefeuille applicatif.
 
 **Filtre de périmètre en haut (Afficher)** :
-- **Mes applications** : affiche les apps où vous êtes listé dans le tiroir des propriétés comme **Responsable métier** ou **Responsable IT**. Les entrées multi-responsables sont supportées.
+- **Mes applications** : affiche les apps où vous êtes listé dans le panneau Propriétés comme **Responsable métier** ou **Responsable IT**. Les entrées multi-responsables sont supportées.
 - **Applications de mon équipe** : affiche les apps où tout membre de votre équipe Portefeuille est listé comme Responsable métier ou Responsable IT. Votre propre responsabilité est aussi incluse dans ce périmètre. Désactivé si vous n'êtes pas assigné à une équipe Portefeuille.
 - **Toutes les applications** (par défaut) : affiche la grille complète des Applications avec le comportement de filtre par défaut du cycle de vie.
 - Votre sélection est mémorisée entre les sessions : revenir sur la page restaure votre dernier choix.
@@ -165,7 +165,7 @@ Une cellule sans valeur affiche un tiret.
 
 ## L'espace de travail des applications
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **tiroir des propriétés** sur la droite (la carte d'identité de l'application, toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
+Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **panneau Propriétés** sur la droite (la carte d'identité de l'application, toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
 
 Les onglets sont **Vue d'ensemble**, **Déploiements**, **Interfaces**, **Exploitation**, **Conformité**, **Relations** et **Historique** (les modifications de l'application, voir [Historique des fiches](record-history.md)).
 
@@ -186,9 +186,9 @@ L'en-tête affiche :
 - **Supprimer**, une icône corbeille avec son nom en infobulle (`applications:admin`) : une application qui a des interfaces reçoit le refus et sa raison, avec seulement Fermer. Sinon, la confirmation nomme l’application et compte les déploiements supprimés avec elle, ainsi que ses liens vers d’autres éléments
 - **Précédent / Suivant** : parcourir la liste filtrée sans revenir à la grille
 
-### Tiroir des propriétés (panneau de droite)
+### Panneau Propriétés
 
-Le tiroir est la carte d'identité de l'application. Il est affiché sur chaque onglet et modifié en ligne. Les changements sont enregistrés automatiquement.
+Le panneau est la carte d'identité de l'application. Il est affiché sur chaque onglet et modifié en ligne. Les changements sont enregistrés automatiquement.
 
 **Identité** :
 - **Catégorie**, **Fournisseur**, **Éditeur**
@@ -363,7 +363,7 @@ Deux indications discrètes peuvent apparaître : des données au niveau de conf
 
 ### Relations
 
-L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches et incidents, chacun dans son propre tableau, puis ses liens et fichiers. Les technologies sont dans l'onglet [Exploitation](#operations), les processus métier dans le [tiroir des propriétés](#tiroir-des-proprietes-panneau-de-droite). Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets, demandes et incidents liés, ainsi que les liens et fichiers. Les tâches ne sont pas comptées.
+L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches et incidents, chacun dans son propre tableau, puis ses liens et fichiers. Les technologies sont dans l'onglet [Exploitation](#operations), les processus métier dans le [panneau Propriétés](#panneau-proprietes). Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets, demandes et incidents liés, ainsi que les liens et fichiers. Les tâches ne sont pas comptées.
 
 **Composants** (uniquement lorsque « Peut avoir des apps enfants » est activé) : un tableau listant les applications enfants de cette Suite, avec leur cycle de vie et criticité. Cliquez sur une ligne pour ouvrir l'espace de travail enfant.
 
@@ -428,12 +428,12 @@ Kadratis propose **deux approches pour gérer les versions d'applications**, sel
 
 | Approche | Idéale pour | Ce qui se passe |
 |----------|-------------|-----------------|
-| **Simple** | La plupart des applications | Mettez à jour les champs de version dans le tiroir des propriétés : même enregistrement, nouveau numéro de version |
+| **Simple** | La plupart des applications | Mettez à jour les champs de version dans le panneau Propriétés : même enregistrement, nouveau numéro de version |
 | **Avancée** | Migrations majeures | Utilisez **Nouvelle version** pour créer un nouvel enregistrement d'application avec suivi de lignée : exécutez ancienne et nouvelle versions côte à côte |
 
 ### Suivi de version simple (mise à jour en place)
 
-Pour la plupart des applications (où vous mettez à niveau et l'ancienne version disparaît simplement), mettez à jour **Version**, **Mise en production**, **Fin de support** et **Date de retrait** dans le tiroir des propriétés. La pastille de version dans l'en-tête et les métadonnées **Mise en production** reflètent ce que vous avez défini.
+Pour la plupart des applications (où vous mettez à niveau et l'ancienne version disparaît simplement), mettez à jour **Version**, **Mise en production**, **Fin de support** et **Date de retrait** dans le panneau Propriétés. La pastille de version dans l'en-tête et les métadonnées **Mise en production** reflètent ce que vous avez défini.
 
 Cette approche garde tout dans un seul enregistrement. Lors d'une mise à niveau, mettez à jour les champs de version et c'est fait. L'onglet **Historique** garde les valeurs précédentes.
 
@@ -455,7 +455,7 @@ La nouvelle version est créée comme une application séparée avec :
 - Des données copiées selon vos sélections
 - Des interfaces dupliquées pointant vers la nouvelle version
 
-Une fois la version créée, un message donne sa référence. Les deux applications sont alors reliées par **Version précédente** et **Version suivante** dans le tiroir des propriétés.
+Une fois la version créée, un message donne sa référence. Les deux applications sont alors reliées par **Version précédente** et **Version suivante** dans le panneau Propriétés.
 
 Les valeurs de classification et de continuité sont copiées, mais la nouvelle version démarre avec une revue réinitialisée et sans copie du dernier test de reprise.
 
@@ -792,7 +792,7 @@ Demandez par exemple : « Ajoute PostgreSQL 16 à CheeseTrack et à ses serveurs
 - **Utilisez les suites pour regrouper** : Activez « Peut avoir des apps enfants » dans l'onglet Exploitation pour marquer une application comme une Suite qui regroupe les composants liés (ex. : modules SAP sous une Suite SAP).
 - **Liez aux dépenses tôt** : Connectez les lignes OPEX, CAPEX et contrats dans l'onglet Relations pour voir l'image complète des coûts pour chaque application.
 - **Maintenez les déploiements à jour** : L'onglet Déploiements alimente les pastilles d'environnement dans la liste : maintenez-le à jour pour une visibilité précise.
-- **Documentez l'audience** : Définissez les audiences société et département dans le tiroir des propriétés ; le nombre d'utilisateurs est alors dérivé automatiquement et utilisé dans les rapports.
+- **Documentez l'audience** : Définissez les audiences société et département dans le panneau Propriétés ; le nombre d'utilisateurs est alors dérivé automatiquement et utilisé dans les rapports.
 - **Exploitez le filtrage par catégorie** : Utilisez le filtre de la colonne Catégorie pour vous concentrer sur des types d'applications spécifiques (ex. : afficher uniquement les apps Métier, ou exclure les outils de Productivité).
 - **Attachez les connaissances tôt** : Liez les runbooks et les documents d'architecture depuis l'onglet Vue d'ensemble pour que l'équipe sache où chercher lors des incidents.
 - **Liez les tâches depuis l'un ou l'autre côté** : Ajoutez une tâche depuis Relations > Tâches, ou définissez le champ App / Service sur la tâche elle-même ; les deux affichent le même lien.

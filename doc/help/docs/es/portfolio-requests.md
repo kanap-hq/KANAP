@@ -85,7 +85,7 @@ El encabezado del espacio de trabajo le da contexto operativo sin salir de la p�
 - una referencia de solicitud copiable como `REQ-42`
 - una franja de metadatos con **Estado**, **Puntuación**, **Solicitante**, **Responsable IT**, **Fecha de entrega objetivo** y (cuando aplica) la **Tarea de origen** desde la que se creó la solicitud
 - **Compartir** para enviar un enlace a la solicitud
-- **Convertir en proyecto** cuando la solicitud está **Aprobada** o **Convertida**
+- **Convertir en proyecto** cuando la solicitud está **Aprobada**, para una persona que puede crear proyectos
 - **Crear** (luego **Listo**) y **Cancelar**, mientras la solicitud se está creando. Consulte [Crear o cancelar](#cancelling-a-creation)
 - **Eliminar**, un icono de papelera, para administradores (cuando la solicitud aún no se ha convertido). Una solicitud convertida sigue siendo el origen de su proyecto y no se puede eliminar
 - navegación anterior/siguiente basada en el contexto exacto de la lista del que vino
@@ -334,7 +334,9 @@ Use documentos gestionados para la narrativa principal de la solicitud que siemp
 
 ## Convertir una solicitud en proyecto
 
-Una vez que una solicitud alcanza **Aprobada**, el espacio de trabajo ofrece **Convertir en proyecto** en el encabezado.
+Una vez que una solicitud alcanza **Aprobada**, el espacio de trabajo ofrece **Convertir en proyecto** en el encabezado, para una persona que puede crear proyectos.
+
+Una solicitud ya **Convertida** muestra sus proyectos en **Proyectos resultantes**. El encabezado no tiene el botón **Convertir en proyecto**. Otro proyecto para la misma necesidad se crea desde el portafolio y se vincula a la solicitud.
 
 El flujo de conversión le permite:
 

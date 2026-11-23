@@ -79,7 +79,7 @@ Autre est une valeur intégrée. Elle peut être retirée, mais pas supprimée, 
 **Colonnes** : Nom, Ne plus proposer
 
 **Où c'est utilisé** :
-- Espace de travail Actifs > Tiroir des propriétés > **Fournisseur cloud** (lecture seule, dérivé du site)
+- Espace de travail Actifs > Panneau Propriétés > **Fournisseur cloud** (lecture seule, dérivé du site)
 - Espace de travail Sites > Onglet Vue d'ensemble > **Fournisseur cloud** (lorsque le type d'hébergement est cloud)
 
 ### Types d'hébergement
@@ -260,7 +260,7 @@ Types logiques des serveurs et des actifs d'infrastructure (ex. : Serveur physiq
 **Colonnes** : Nom, Physique, Ne plus proposer
 
 **Où c'est utilisé** :
-- Espace de travail Actifs > Tiroir des propriétés > Champ **Type d'actif**
+- Espace de travail Actifs > Panneau Propriétés > Champ **Type d'actif**
 
 ---
 
@@ -436,7 +436,7 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 | **Zones réseau** | Sous-réseaux (Zone réseau), Actifs (auto-rempli depuis le sous-réseau) |
 | **Sous-réseaux** | Actifs (Onglet Réseau > Adresses IP > Sélecteur de sous-réseau) |
 | **Rôles de serveur** | Applications > Onglet Serveurs (rôle lors de la liaison actif-app), Carte des connexions (placement par niveau du graphe) |
-| **Types d'actif** | Actifs (Tiroir des propriétés > Type d'actif) |
+| **Types d'actif** | Actifs (Panneau Propriétés > Type d'actif) |
 | **Familles de technologies** | Technologies (Famille), page Zones d'administration (services d'annuaire) |
 
 ---

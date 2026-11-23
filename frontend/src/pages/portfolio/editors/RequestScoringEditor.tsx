@@ -10,6 +10,7 @@ import api from '../../../api';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { getScoreColor } from '../../tasks/theme/taskDetailTokens';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { displayedRequestPriority } from '../requestPriority';
 
 interface CriterionValue {
   id: string;
@@ -232,9 +233,16 @@ export const RequestScoringEditor = forwardRef<RequestScoringEditorHandle, Props
       onDirtyChange?.(true);
     };
 
-    // Calculate display score directly from current state (avoids stale calculatedScore issues)
+    // The live figure follows the same rule as the header and the list: no number until an
+    // enabled criterion is answered, unless a priority override is on.
     const liveScore = bypassActive ? 100 : calculateLocalScore(criteria, values);
-    const displayScore = override && !bypassActive ? overrideVal : liveScore;
+    const displayScore = displayedRequestPriority({
+      priorityScore: liveScore,
+      priorityOverride: override && !bypassActive,
+      overrideValue: overrideVal,
+      criteriaValues: values,
+      enabledCriterionIds: criteria.map((criterion) => criterion.id),
+    });
     const roundedDisplayScore = displayScore != null && !isNaN(displayScore) ? Math.round(displayScore) : null;
     const scoreDotColor = roundedDisplayScore == null
       ? theme.palette.kanap.text.tertiary
