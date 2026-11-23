@@ -252,6 +252,7 @@
       "overview_notes": "Overview notes",
       "reason": "Reason",
       "replaced_host_links": "Host links replaced",
+      "detached_assets": "Assets left without a sub-location",
       "reporting_currency": "Reporting currency",
       "review_due_at": "Review due",
       "risks": "Risks and mitigations",

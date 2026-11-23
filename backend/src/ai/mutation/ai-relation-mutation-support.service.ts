@@ -26,6 +26,7 @@ import {
 import { aiParticipationScopeSql } from '../query/ai-query-scope.util';
 import { SupplierContactsService } from '../../suppliers/supplier-contacts.service';
 import { AssetsService } from '../../assets/services/assets.service';
+import { LocationsService } from '../../locations/locations.service';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewRelationItem } from '../ai.types';
 import { AiMutationAuditOptions, buildAiMutationAudit } from './ai-mutation-audit.util';
@@ -351,6 +352,15 @@ function relationItemForCard(config: RelationConfig, item: RelationItem): AiPrev
   }
 }
 
+/**
+ * An asset a sub-location's removal leaves without a sub-location, its name `null` for a person who
+ * does not read the assets (the card counts it then, as the screen's confirmation does).
+ */
+type DetachedAsset = { id: string; name: string | null };
+
+/** The assets named on a card before their count: the first ones, then "+N". */
+const DETACHED_ASSETS_NAMED = 10;
+
 /** The host/asset pairs of a placement list, in a stable form for the execution comparison. */
 function replacedHostLinkSignature(links: ReplacedHostLink[]): string {
   return links.map((link) => `${link.host_id}:${link.asset_id}`).sort().join('|');
@@ -380,6 +390,7 @@ export class AiRelationMutationSupportService {
     @Optional() private readonly policy?: AiPolicyService,
     @Optional() private readonly portfolioRelations?: PortfolioRelationsService,
     @Optional() private readonly assets?: AssetsService,
+    @Optional() private readonly locations?: LocationsService,
   ) {}
 
   /**
@@ -426,6 +437,7 @@ export class AiRelationMutationSupportService {
     await this.assertClusterMemberAdds(context, config, target.id, currentItems, askedItems);
     const nextItems = await this.applyAssignmentRules(context, config, currentItems, askedItems);
     const replaced = await this.applyPlacementRules(context, config, target.id, currentItems, nextItems);
+    const detached = await this.detachedAssets(context, config, currentItems, nextItems, true);
     return {
       targetEntityType: config.sourceEntity,
       targetEntityId: target.id,
@@ -437,6 +449,7 @@ export class AiRelationMutationSupportService {
         next_items: nextItems,
         source_preview_id: null,
         ...(replaced.length > 0 ? { replaced_host_links: replaced } : {}),
+        ...(detached.length > 0 ? { detached_assets: detached } : {}),
       },
       currentValues: {
         target_ref: target.ref,
@@ -462,6 +475,7 @@ export class AiRelationMutationSupportService {
     await this.assertWritable(context, config, target.id);
     const previousItems = await this.applyAssignmentRules(context, config, currentItems, originalItems);
     const replaced = await this.applyPlacementRules(context, config, target.id, currentItems, previousItems);
+    const detached = await this.detachedAssets(context, config, currentItems, previousItems, true);
     return {
       targetEntityType: config.sourceEntity,
       targetEntityId: target.id,
@@ -473,6 +487,7 @@ export class AiRelationMutationSupportService {
         next_items: previousItems,
         source_preview_id: preview.id,
         ...(replaced.length > 0 ? { replaced_host_links: replaced } : {}),
+        ...(detached.length > 0 ? { detached_assets: detached } : {}),
       },
       currentValues: {
         target_ref: target.ref,
@@ -540,6 +555,21 @@ export class AiRelationMutationSupportService {
         },
       };
     }
+    // The assets the removed sub-locations hold, left without a sub-location (the screen's
+    // confirmation): named up to ten, then counted; only counted for a person who does not read them.
+    const detached = this.coerceDetachedAssets(preview.mutation_input?.detached_assets);
+    if (detached.length > 0) {
+      const names = detached.map((asset) => asset.name).filter((name): name is string => !!name).slice(0, DETACHED_ASSETS_NAMED);
+      const items: AiPreviewRelationItem[] = names.map((name) => ({ name, role: null }));
+      if (detached.length > names.length) items.push({ name: names.length > 0 ? `+${detached.length - names.length}` : String(detached.length), role: null });
+      changes.detached_assets = {
+        label: 'Assets left without a sub-location',
+        from: items.map((item) => item.name).join(', '),
+        to: null,
+        format: 'text',
+        relation_items: { from: items, to: [] },
+      };
+    }
     return {
       target: {
         entity_type: config.sourceEntity,
@@ -589,6 +619,13 @@ export class AiRelationMutationSupportService {
     const placement = await this.applyPlacementRules(context, config, preview.target_entity_id, expectedItems, nextItems);
     if (replacedHostLinkSignature(placement)
       !== replacedHostLinkSignature(this.coerceReplacedHostLinks(preview.mutation_input?.replaced_host_links))) {
+      throw new ConflictException(`${config.label} changed after the preview was created.`);
+    }
+    // The assets a removed sub-location holds are the ones the card named: an asset placed in it or
+    // moved out since makes the write differ from what the person saw.
+    const detachedNow = await this.detachedAssets(context, config, expectedItems, nextItems, false);
+    if (detachedNow.map((asset) => asset.id).sort().join('|')
+      !== this.coerceDetachedAssets(preview.mutation_input?.detached_assets).map((asset) => asset.id).sort().join('|')) {
       throw new ConflictException(`${config.label} changed after the preview was created.`);
     }
     const liveItems = await this.loadRelationItems(context, config, preview.target_entity_id);
@@ -785,6 +822,38 @@ export class AiRelationMutationSupportService {
     }
     await assertNotPlacedByCluster(context.manager, context.tenantId, assetId, addedIds);
     return [];
+  }
+
+  /**
+   * The assets the sub-locations a write removes hold: the site's Sub-locations table deletes a
+   * sub-location and leaves them without one (`LocationsService.deleteSubItem`), after a
+   * confirmation that counts them. Named for a person who reads the assets (`named`).
+   */
+  private async detachedAssets(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    currentItems: RelationItem[],
+    nextItems: RelationItem[],
+    named: boolean,
+  ): Promise<DetachedAsset[]> {
+    if (config.kind !== 'sub_locations') return [];
+    const kept = new Set(nextItems.map((item) => textOrNull(item.payload.id)).filter(Boolean));
+    const removed = currentItems.map((item) => String(item.payload.id)).filter((id) => !kept.has(id));
+    if (removed.length === 0) return [];
+    const rows: Array<{ id: string; name: string }> = await context.manager.query(
+      `SELECT id, name FROM assets WHERE tenant_id = $1 AND sub_location_id = ANY($2::uuid[]) ORDER BY lower(name), id`,
+      [context.tenantId, removed],
+    );
+    const readable = named && rows.length > 0 && !!(await this.policy?.canReadEntityType(context, 'assets', context.manager));
+    return rows.map((row) => ({ id: String(row.id), name: readable ? String(row.name) : null }));
+  }
+
+  /** The `detached_assets` a preview stored, read defensively. */
+  private coerceDetachedAssets(value: unknown): DetachedAsset[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((raw) => ({ id: String(objectValue(raw).id || ''), name: textOrNull(objectValue(raw).name) }))
+      .filter((asset) => asset.id);
   }
 
   /** The `replaced_host_links` a preview stored, read defensively (a stored preview may be old). */
@@ -1879,7 +1948,8 @@ export class AiRelationMutationSupportService {
   }
 
   /**
-   * A site's sub-locations: a removed one is deleted (refused while assets sit in it), a kept one
+   * A site's sub-locations: a removed one is deleted by the Sub-locations table's service, which
+   * leaves its assets without a sub-location (the card named them), a kept one
    * keeps its row (its name and description updated when they changed), a new one is created as
    * `LocationsService.createSubItem` creates it (after the others, in display order). With
    * `rowAudit`, each row is audited as that service audits it.
@@ -1897,19 +1967,18 @@ export class AiRelationMutationSupportService {
     const nextExistingIds = new Set(nextItems.map((item) => textOrNull(item.payload.id)).filter(Boolean) as string[]);
     const toDelete = current.filter((item) => !nextExistingIds.has(String(item.payload.id)));
     for (const item of toDelete) {
-      const assetRows: Array<{ c: string }> = await context.manager.query(
-        `SELECT COUNT(*)::text AS c FROM assets WHERE tenant_id = $1 AND sub_location_id = $2`,
-        [context.tenantId, item.payload.id],
-      );
-      if (Number(assetRows[0]?.c || '0') > 0) {
-        throw new BadRequestException(`Cannot remove sub-location "${item.label}" because assets are assigned to it.`);
-      }
-      const gone: Array<Record<string, unknown>> = await context.manager.query(
-        `WITH gone AS (DELETE FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2 AND id = $3 RETURNING *) SELECT * FROM gone`,
+      if (!this.locations) throw new Error('The locations service is not available.');
+      // The service answers "ok" for a sub-location already gone: the row is read first, so a removal
+      // that would write nothing refuses.
+      const [present]: Array<{ id: string }> = await context.manager.query(
+        `SELECT id FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2 AND id = $3 FOR UPDATE`,
         [context.tenantId, locationId, item.payload.id],
       );
-      assertWritten('Sub-locations', gone.length);
-      for (const row of gone) await log(String(row.id), 'delete', row, null);
+      assertWritten('Sub-locations', present ? 1 : 0);
+      await this.locations.deleteSubItem(locationId, String(item.payload.id), context.userId, {
+        manager: context.manager,
+        ...(rowAudit ? { audit: rowAudit } : {}),
+      });
     }
     const repo = context.manager.getRepository(LocationSubItem);
     for (const item of nextItems) {

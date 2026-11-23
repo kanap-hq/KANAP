@@ -1236,6 +1236,100 @@ async function run() {
         await runner.query('ROLLBACK TO SAVEPOINT read_only_contract');
       }
     }
+
+    // A sub-location that holds assets, removed by the assistant: the Sub-locations table's service
+    // deletes it and leaves its assets without a sub-location, after a confirmation that counts
+    // them. The card names them first (ten, then "+N"; only their count for a person who does not
+    // read the assets); an asset placed in it after the card makes the approval refuse.
+    await runner.query('SAVEPOINT sub_location_assets');
+    try {
+      const site = async (assets: number) => {
+        const rec = await locationRecord(env);
+        // One name on every site: the audit rows of both sides carry it.
+        const room = 'Salle pleine';
+        const roomId = await insertId(runner, `INSERT INTO location_sub_items (tenant_id, location_id, name, display_order) VALUES ($1, $2, $3, 0)`, [tenantId, rec.id, room]);
+        const names: string[] = [];
+        for (let i = 0; i < assets; i += 1) {
+          const name = `srv-${String(i).padStart(2, '0')}-${unique('baie').replace(/ /g, '')}`;
+          await runner.query(`INSERT INTO assets (tenant_id, name, kind, environment, location_id, sub_location_id) VALUES ($1, $2, 'server', 'prod', $3, $4)`, [tenantId, name, rec.id, roomId]);
+          names.push(name);
+        }
+        return { rec, room, roomId, names: names.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())) };
+      };
+      const held = async (roomId: string) => Number((await runner.query(`SELECT count(*)::int AS n FROM assets WHERE tenant_id = $1 AND sub_location_id = $2`, [tenantId, roomId]))[0].n);
+      const detachedOn = (preview: any) => preview?.changes?.detached_assets?.relation_items?.from?.map((item: any) => item.name);
+
+      let cell = 'locations.sub_locations with assets';
+      try {
+        const mine = await seeding(runner, () => site(12), (value) => value.rec.id);
+        const twin = await seeding(runner, () => site(12), (value) => value.rec.id);
+        const kadMarker = await now();
+        const preview = await previews.createPreview(ctx, 'update_entity_relations', {
+          entity_type: 'locations', ref: mine.rec.ref, relation: 'sub_locations', remove: [{ name: mine.room }],
+        });
+        assert.deepEqual(detachedOn(preview), [...mine.names.slice(0, 10), '+2'], `${cell}: the card names the assets left without a sub-location (${JSON.stringify(preview?.changes)})`);
+        const executed = await previews.executePreview(ctx, preview.preview_id);
+        assert.equal(executed.status, 'executed', `${cell}: the card runs (${executed.error_message ?? ''})`);
+        assert.equal(await held(mine.roomId), 0, `${cell}: the assets are left without a sub-location`);
+        const [{ n: kept }] = await runner.query(`SELECT count(*)::int AS n FROM assets WHERE tenant_id = $1 AND location_id = $2`, [tenantId, mine.rec.id]);
+        assert.equal(kept, 12, `${cell}: the assets are kept at the site`);
+        const kadRows = await auditSince(kadMarker);
+        assert.ok(kadRows.length > 0 && kadRows.every((row) => row.source === 'ai_chat' && row.source_ref === preview.preview_id), `${cell}: audited by the card`);
+        const screenMarker = await now();
+        await env.services.locations.deleteSubItem(twin.rec.id, twin.roomId, writer, { manager: runner.manager });
+        const screenRows = await auditSince(screenMarker);
+        const roles = rolesOf([[writer, 'WRITER'], [roleId, 'ROLE']]);
+        assert.deepEqual(shape(kadRows, namer(mine.rec.id, roles, '')), shape(screenRows, namer(twin.rec.id, roles, '')), `${cell}: the assistant's audit rows are the screen's`);
+        passed += 1;
+        console.log(`  ${cell}: OK`);
+      } catch (error: any) {
+        failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 40).join('\n')}`);
+        console.log(`  ${cell}: FAILED`);
+      }
+
+      cell = 'locations.sub_locations with assets, without the assets module';
+      try {
+        const blindRole = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Sites', 'Sites')`, [tenantId]);
+        await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'locations', 'admin'), ($1, $2, 'ai_chat', 'member')`, [tenantId, blindRole]);
+        const blind = await insertId(runner,
+          `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, 'Sacha', 'Sites', $3, 'enabled')`,
+          [tenantId, `sites-${tenantId.slice(0, 8)}@example.test`, blindRole]);
+        await runner.query(`INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary) VALUES ($1, $2, $3, true)`, [tenantId, blind, blindRole]);
+        const mine = await site(3);
+        const preview = await previews.createPreview({ ...ctx, userId: blind }, 'update_entity_relations', {
+          entity_type: 'locations', ref: mine.rec.ref, relation: 'sub_locations', remove: [{ name: mine.room }],
+        });
+        assert.deepEqual(detachedOn(preview), ['3'], `${cell}: the card counts the assets only (${JSON.stringify(preview?.changes)})`);
+        assert.ok(!mine.names.some((name) => JSON.stringify(preview).includes(name)), `${cell}: no asset is named`);
+        passed += 1;
+        console.log(`  ${cell}: OK`);
+      } catch (error: any) {
+        failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 40).join('\n')}`);
+        console.log(`  ${cell}: FAILED`);
+      }
+
+      cell = 'locations.sub_locations with assets, an asset placed after the card';
+      try {
+        const mine = await site(1);
+        const preview = await previews.createPreview(ctx, 'update_entity_relations', {
+          entity_type: 'locations', ref: mine.rec.ref, relation: 'sub_locations', remove: [{ name: mine.room }],
+        });
+        await runner.query(`INSERT INTO assets (tenant_id, name, kind, environment, location_id, sub_location_id) VALUES ($1, $2, 'server', 'prod', $3, $4)`, [tenantId, unique('srv-tard').replace(/ /g, '-'), mine.rec.id, mine.roomId]);
+        const marker = await now();
+        const executed = await previews.executePreview(ctx, preview.preview_id);
+        assert.equal(executed.status, 'failed', `${cell}: the card is refused (${executed.status})`);
+        assert.match(String(executed.error_message), /changed after the preview/, `${cell}: the refusal says why`);
+        assert.equal(await held(mine.roomId), 2, `${cell}: nothing is detached`);
+        assert.deepEqual(await auditSince(marker), [], `${cell}: no audit row`);
+        passed += 1;
+        console.log(`  ${cell}: OK`);
+      } catch (error: any) {
+        failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 40).join('\n')}`);
+        console.log(`  ${cell}: FAILED`);
+      }
+    } finally {
+      await runner.query('ROLLBACK TO SAVEPOINT sub_location_assets');
+    }
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

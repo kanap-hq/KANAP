@@ -1110,11 +1110,16 @@ export class LocationsService {
     return saved;
   }
 
+  /**
+   * Deletes a sub-location; the assets in it are kept and left without a sub-location (the
+   * Sub-locations table confirms it first). `opts.audit` carries the source of a write made for the
+   * assistant's card.
+   */
   async deleteSubItem(
     locationId: string,
     subItemId: string,
     userId: string | null,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: AuditSourceOptions },
   ) {
     await this.loadLocationOrThrow(locationId, opts?.manager);
     const mg = opts?.manager ?? this.repo.manager;
@@ -1132,7 +1137,16 @@ export class LocationsService {
 
     await repo.delete({ id: subItemId } as any);
     await this.audit.log(
-      { table: 'location_sub_items', recordId: subItemId, action: 'delete', before: existing, after: null, userId },
+      {
+        table: 'location_sub_items',
+        recordId: subItemId,
+        action: 'delete',
+        before: existing,
+        after: null,
+        userId,
+        source: opts?.audit?.source,
+        sourceRef: opts?.audit?.sourceRef ?? null,
+      },
       { manager: mg },
     );
     return { ok: true };
