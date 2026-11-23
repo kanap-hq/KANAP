@@ -46,8 +46,9 @@ export async function preflightBudgetFile(
   kind: Kind,
   tenantId: string,
   csv: string,
+  options: { canReadSuppliers?: boolean; canReadCompanies?: boolean } = {},
 ): Promise<BudgetFileReport> {
-  return budgetFileService().preflight(kind, Buffer.from(csv, 'utf8'), caller(manager, tenantId), BUDGET_FILE_OPTIONS);
+  return budgetFileService().preflight(kind, Buffer.from(csv, 'utf8'), caller(manager, tenantId), { ...BUDGET_FILE_OPTIONS, ...options });
 }
 
 /**

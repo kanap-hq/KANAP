@@ -299,8 +299,9 @@ type ProposalArgs<T> = {
  * (`reads`) and has not undone the match; then listed as a match of origin `model`. A name of several
  * records (an import that is not `caseBlind`): `many`, named by `label` (else `ref`), for the row's refusal
  * (`CSV_NAME_AMBIGUOUS_AMONG`), as a name written so. Refused (listed as missing, under Kad's own
- * words) otherwise. Undefined when there is no proposal to take or it was refused: the value then
- * follows its own rule.
+ * words) otherwise. Undefined when there is no proposal to take, when it names the record the value
+ * finds by itself (exactly, case or accents aside), or when it was refused: the value then follows its
+ * own rule.
  */
 export function proposedRecord<T extends { name: string }>(
   state: ImportMatchState,
@@ -312,6 +313,10 @@ export function proposedRecord<T extends { name: string }>(
     ? findRecordByName(args.rows, proposal, { beyondCase: false, caseBlind: args.caseBlind, label: args.label ?? args.ref })
     : null;
   if (found?.kind === 'one') {
+    // The server's own match first (lot I6b of 26.12.1): Kad naming the record the value finds alone
+    // is no proposal to list, taken or refused; the value follows its own rule, which finds it.
+    const own = findRecordByName(args.rows, args.value, { beyondCase: true, caseBlind: args.caseBlind });
+    if (own.kind === 'one' && own.row === found.row) return undefined;
     noteNameMatch(state.matches, {
       column: args.column, name: null, value: args.value.trim(), target: found.row.name.trim(), ref: args.ref?.(found.row) ?? null,
       origin: 'model', reason: 'model', undoable: true,

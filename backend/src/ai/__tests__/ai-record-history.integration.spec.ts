@@ -396,6 +396,50 @@ async function testEmptyPagesAreReadPast(seeded: Seeded) {
   console.log('  an empty page is read past, five pages at most: OK');
 }
 
+/**
+ * H1 (26.12.1): "what changed on BL-2?" A CAPEX line's budget input, written as the writer writes
+ * it (the lines on both sides of the row), and the lines used again after a calendar edit (the
+ * calculation alone): Plaid and the MCP server read the causes the History tab shows.
+ */
+async function testCostedLineCauses(seeded: Seeded) {
+  const { tenantId, capexVersion } = seeded.data;
+  const roundId = randomUUID();
+  const stored = {
+    id: roundId, tenant_id: tenantId, version_id: capexVersion, measure: 'planned', period_start: '2026-02-01', period_end: '2026-10-31',
+    method: 'computed', spread_profile_name: null, fte: '0.75', updated_by: seeded.reader.id,
+  };
+  const line = {
+    id: randomUUID(), sort: 1, label: 'Consultant', quantity_unit: 'people', quantity: '1', unit_price: '400', price_basis: 'per_day',
+    frequency: 'per_month', days_per_month: null, period_start: '2026-02-01', period_end: '2026-10-30',
+    working_day_profile_id: randomUUID(), working_day_profile_code: 'FR', working_day_profile_name: 'France',
+  };
+  const germany = { ...line, id: randomUUID(), working_day_profile_id: randomUUID(), working_day_profile_code: 'DE', working_day_profile_name: 'Germany' };
+  const calculation = (julyDays: string) => ({
+    kind: 'computed', total: '60000.00',
+    lines: [{ ...germany, day_counts: ['20', '20', '21', '20', '19', '21', julyDays, '21', '22', '21', '20', '20'] }],
+  });
+  await seed(tenantId, (runner) => audit(runner, {
+    table: 'capex_round_inputs', recordId: roundId, action: 'update', userId: seeded.reader.id,
+    before: { ...stored, last_calculation: null, lines: [line] }, after: { ...stored, last_calculation: calculation('23'), lines: [germany] },
+  }));
+  await seed(tenantId, (runner) => audit(runner, {
+    table: 'capex_round_inputs', recordId: roundId, action: 'update', userId: seeded.reader.id,
+    before: { ...stored, last_calculation: calculation('23') }, after: { ...stored, last_calculation: calculation('22') },
+  }));
+  for (const surface of ['chat', 'mcp'] as const) {
+    const page = await read(tenantId, seeded.reader, { entity_type: 'budget_lines', entity_id: 'BL-2' }, false, surface);
+    const inputs = page.items.filter((item) => item.subject.kind === 'round_input');
+    assert.equal(inputs.length, 2, `${surface}: both budget input entries are given`);
+    assert.deepEqual(inputs[0].changes, [
+      { field: 'calendar_days', calendar: 'Germany', year: 2026, before: '248', after: '247' },
+    ], `${surface}: the lines used again give the calendar's days of the year`);
+    assert.deepEqual(inputs[1].changes, [
+      { field: 'line_calendar', line: 'Consultant', lineNumber: 1, before: 'France', after: 'Germany' },
+    ], `${surface}: the calendar change names the line and both calendars`);
+  }
+  console.log('  a costed line\'s causes reach Plaid and the MCP server: OK');
+}
+
 async function seedAll(tenantId: string, otherTenantId: string): Promise<Seeded> {
   const base = await seed(tenantId, async (runner) => {
     const data = await seedHistoryData(runner, tenantId);
@@ -498,6 +542,7 @@ async function run() {
     await testImportAndSharedBudgetReference(seeded);
     await testEmptyPagesAreReadPast(seeded);
     await testStatesInThePersonsWords(seeded);
+    await testCostedLineCauses(seeded);
     console.log('ai-record-history.integration.spec: ok');
   } finally {
     await dropRaceTenant(tenantId);

@@ -649,6 +649,8 @@ La pestaña Historial lista los cambios hechos en la línea, el más reciente ar
 
 Los cambios en los elementos de la línea también aparecen aquí: importes, dimensiones, asignaciones, enlaces, archivos adjuntos, contactos, aplicaciones, tecnologías, activos y tareas. Cualquier persona que pueda abrir la línea puede leer su historial. Un registro de un módulo que usted no puede leer aparece solo por su tipo, por ejemplo «un contrato».
 
+En una columna construida con **Cantidad y precio**, la entrada de la introducción de importes también nombra cada propiedad modificada de una línea valorada, justo encima del cambio de importes. Por ejemplo: «Línea valorada Consultor, calendario: Francia → Alemania».
+
 Vea [Historial de los registros](record-history.md) para más detalles.
 
 ---

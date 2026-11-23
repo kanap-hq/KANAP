@@ -649,6 +649,8 @@ The History tab lists the changes made to the line, the most recent at the top. 
 
 The changes to the parts of the line appear here too: amounts, dimensions, allocations, links, attachments, contacts, applications, technologies, assets and tasks. Anyone who can open the line can read its history. A record from a module you cannot read appears by its kind only, for example "a contract".
 
+On a column built with **Quantity and price**, the entry of the budget input also names each property that changed on a costed line, just above the change of amounts. For example: "Costed line Consultant, calendar: France → Germany".
+
 See [Record history](record-history.md) for the details.
 
 ---
