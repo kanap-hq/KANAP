@@ -1790,9 +1790,9 @@
       "waiting": "Waiting for your choice"
     },
     "entryCheck": {
-      "account": "The line's account expects an entry in quantity and price.",
-      "consolidationNamed": "The consolidation account {{account}} expects an entry in quantity and price.",
-      "consolidation": "The consolidation account expects an entry in quantity and price.",
+      "account": "The line's account expects quantity and price entry.",
+      "consolidationNamed": "The consolidation account {{account}} expects quantity and price entry.",
+      "consolidation": "The consolidation account expects quantity and price entry.",
       "column": "{{column}} {{year}} to check.",
       "year": "To check in {{year}}: {{columns}}."
     },

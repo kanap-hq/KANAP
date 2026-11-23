@@ -3406,7 +3406,7 @@ describe('BudgetTab folded result', () => {
 });
 
 describe('BudgetTab: the account expects quantity and price (lot B12a)', () => {
-  const ACCOUNT = "The line's account expects an entry in quantity and price.";
+  const ACCOUNT = "The line's account expects quantity and price entry.";
   const expected = (columns: BudgetLineEntryCheck['columns'] = [], level: BudgetLineEntryCheck['level'] = 'account', consolidation: BudgetLineEntryCheck['consolidation_account'] = null): BudgetLineEntryCheck => (
     { expected: true, level, consolidation_account: consolidation, columns }
   );
@@ -3440,9 +3440,9 @@ describe('BudgetTab: the account expects quantity and price (lot B12a)', () => {
     setupApi({ empty: true });
     const view = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: expected([], 'consolidation', { number: 2400, name: 'Services extérieurs' }) });
     await waitForAmounts();
-    expect(within(editor()).getByRole('img', { name: 'The consolidation account 2400 - Services extérieurs expects an entry in quantity and price.' })).toBeInTheDocument();
+    expect(within(editor()).getByRole('img', { name: 'The consolidation account 2400 - Services extérieurs expects quantity and price entry.' })).toBeInTheDocument();
     view.rerenderEntryCheck(expected([], 'consolidation', null));
-    expect(within(editor()).getByRole('img', { name: 'The consolidation account expects an entry in quantity and price.' })).toBeInTheDocument();
+    expect(within(editor()).getByRole('img', { name: 'The consolidation account expects quantity and price entry.' })).toBeInTheDocument();
   });
 
   it('marks each column to check on its card and each year holding one on its tab, until a reading no longer lists it', async () => {
