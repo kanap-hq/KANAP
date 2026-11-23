@@ -986,7 +986,10 @@ export class AiRelationMutationSupportService {
   /**
    * A contact and its role. On a contract or a budget line a contact links once per role, whatever
    * brought it (the supplier or a person, `origin`), as their Contacts panels:
-   * removing it names the stored link, from the supplier too: the panel removes any link.
+   * - removing it names the stored link, from the supplier too: the panel removes any link;
+   * - adding by hand the link the supplier already brought with that role writes nothing on the
+   *   screen (`attachManualContactLink` returns the stored link): the card is not proposed, and the
+   *   model is told so. Another role stays possible.
    */
   private async resolveContactRoleInput(
     context: AiExecutionContextWithManager,
@@ -1007,6 +1010,19 @@ export class AiRelationMutationSupportService {
       ? currentItems.find((current) => current.payload.contact_id === contact.id && (current.payload.role ?? null) === role)
       : undefined;
     if (stored && mode === 'remove') return stored;
+    if (stored && stored.payload.origin === 'supplier' && origin !== 'supplier') {
+      const record = config.sourceEntity === 'contracts' ? 'contract' : 'budget line';
+      const [supplier]: Array<{ name: string | null }> = await context.manager.query(
+        `SELECT s.name FROM ${config.sourceEntity === 'contracts' ? 'contracts' : 'spend_items'} r
+           LEFT JOIN suppliers s ON s.tenant_id = r.tenant_id AND s.id = r.supplier_id
+          WHERE r.tenant_id = $1 AND r.id = $2`,
+        [context.tenantId, sourceId],
+      );
+      const by = supplier?.name ? `by its supplier ${supplier.name}` : 'by its supplier';
+      throw new BadRequestException(
+        `${contact.label} is already linked to this ${record} ${by}, with the role ${role ?? 'none'}: there is nothing to do. Another role can be added.`,
+      );
+    }
     return {
       key: `${contact.id}:${role ?? ''}:${origin ?? ''}`,
       label: [contact.label, role].filter(Boolean).join(' - '),

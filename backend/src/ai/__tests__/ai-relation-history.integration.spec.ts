@@ -1331,8 +1331,10 @@ async function run() {
       await runner.query('ROLLBACK TO SAVEPOINT sub_location_assets');
     }
 
-    // A contact the supplier brought to a contract or a budget line (`origin` supplier), removed: the
-    // screen's panel deletes it like any other, the assistant removes it the same way.
+    // A contact the supplier brought to a contract or a budget line (`origin` supplier). Added by hand
+    // with the same role, the screen's attach returns the link as it is and writes nothing: the
+    // assistant says so when the card is asked, with no card that would fail at its approval.
+    // Removed, the screen's panel deletes it like any other: the assistant removes it the same way.
     await runner.query('SAVEPOINT supplier_contacts');
     try {
       const supplierName = unique('Fournisseur du contact');
@@ -1367,7 +1369,31 @@ async function run() {
         };
         const links = async (rec: Rec) => runner.query(`SELECT role, origin FROM ${family.table} WHERE tenant_id = $1 AND ${family.column} = $2 ORDER BY role`, [tenantId, rec.id]);
 
-        const cell = `${family.name} from the supplier, removed`;
+        let cell = `${family.name} from the supplier, added by hand`;
+        try {
+          const rec = await seeded();
+          const marker = await now();
+          await runner.query('SAVEPOINT supplier_contact_preview');
+          let refusal = '';
+          try {
+            await previews.createPreview(ctx, 'update_entity_relations', {
+              entity_type: family.entity, ref: rec.ref, relation: 'contacts', add: [{ contact_ref: email, role: 'technical' }],
+            });
+          } catch (error: any) {
+            refusal = String(error?.message ?? error);
+          }
+          await runner.query('ROLLBACK TO SAVEPOINT supplier_contact_preview');
+          assert.match(refusal, new RegExp(`already linked to this .* by its supplier ${supplierName}, with the role technical: there is nothing to do`), `${cell}: the card is not proposed (${refusal || 'proposed'})`);
+          assert.deepEqual(await links(rec), [{ role: 'technical', origin: 'supplier' }], `${cell}: the link stays as it is`);
+          assert.deepEqual(await auditSince(marker), [], `${cell}: no audit row`);
+          passed += 1;
+          console.log(`  ${cell}: OK`);
+        } catch (error: any) {
+          failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 40).join('\n')}`);
+          console.log(`  ${cell}: FAILED`);
+        }
+
+        cell = `${family.name} from the supplier, removed`;
         try {
           const mine = await seeding(runner, seeded, (rec) => rec.id);
           const twin = await seeding(runner, seeded, (rec) => rec.id);
