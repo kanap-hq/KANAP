@@ -660,7 +660,7 @@ export class TasksUnifiedService {
       assignerName,
       dueDate: saved.due_date ? String(saved.due_date).split('T')[0] : undefined,
       tenantId,
-      manager,
+      itemRef: `T-${saved.item_number}`,
       locale: assignee[0].locale,
     });
   }
@@ -1035,7 +1035,7 @@ export class TasksUnifiedService {
           recipients,
           tenantId,
           excludeUserId: userId,
-          manager,
+          itemRef: `T-${saved.item_number}`,
         });
       }
     }
@@ -1244,7 +1244,7 @@ export class TasksUnifiedService {
           recipients,
           tenantId,
           excludeUserId: userId,
-          manager,
+          itemRef: `T-${saved.item_number}`,
         });
       }
     }

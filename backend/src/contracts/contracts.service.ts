@@ -1048,7 +1048,7 @@ export class ContractsService {
           recipients: [{ userId: user[0].id, email: user[0].email, locale: user[0].locale }],
           tenantId,
           excludeUserId: userId,
-          manager: mg,
+          itemRef: `CTR-${saved.item_number}`,
         });
       }
     }

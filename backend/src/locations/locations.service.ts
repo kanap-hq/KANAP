@@ -564,7 +564,7 @@ export class LocationsService {
         recipients: recipientRows,
         rawEmails,
         tenantId: tenant,
-        manager: mg,
+        itemRef: location.location_reference ?? undefined,
       });
     }
 

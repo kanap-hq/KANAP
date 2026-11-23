@@ -183,7 +183,7 @@ export class ConnectionsService {
         recipients: recipientRows,
         rawEmails,
         tenantId: tenant,
-        manager: mg,
+        itemRef: conn.connection_reference ?? undefined,
       });
     }
 
