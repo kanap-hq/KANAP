@@ -22,11 +22,11 @@ import { assert, inRolledBackTransaction, runSpecs } from '../../spend/__tests__
 const OLD = '2020-01-02T03:04:05.000Z';
 const migration = new Migration();
 
-type Trigger = { table: string; name: string; definition: string };
+type Trigger = { table: string; name: string; definition: string; enabled: string };
 
 async function searchTriggers(runner: Pick<QueryRunner, 'query'>): Promise<Trigger[]> {
   return runner.query(
-    `SELECT c.relname::text AS table, t.tgname::text AS name, pg_get_triggerdef(t.oid) AS definition
+    `SELECT c.relname::text AS table, t.tgname::text AS name, pg_get_triggerdef(t.oid) AS definition, t.tgenabled::text AS enabled
        FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
       WHERE NOT t.tgisinternal AND c.relnamespace = 'public'::regnamespace
         AND c.relname = ANY($1::text[]) AND t.tgname LIKE 'trg\\_search\\_index%'
@@ -58,8 +58,16 @@ function checkCatalog(triggers: Trigger[]): string[] {
       problems.push(`${t.table}: ${t.name} runs the search index sync on an update of the date alone (${t.definition}): ${fix}`);
     }
   }
+  // The three triggers of each table, present and enabled: a migration that suspends the sync of
+  // a table suspends `_update` with it, and enables both again.
   for (const table of Object.keys(UPDATED_AT_SEARCH_ENTITY_TYPES)) {
-    if (!triggers.some((t) => t.name === `trg_search_index_${table}_date`)) problems.push(`${table}: no trigger trg_search_index_${table}_date: ${fix}`);
+    for (const name of [`trg_search_index_${table}`, `trg_search_index_${table}_update`, `trg_search_index_${table}_date`]) {
+      const found = triggers.find((t) => t.name === name);
+      if (!found) problems.push(`${table}: no trigger ${name}: ${fix}`);
+      else if (found.enabled !== 'O') {
+        problems.push(`${table}: ${name} is not enabled (tgenabled = ${found.enabled}): enable it again after the update that suspended it (ALTER TABLE ${table} ENABLE TRIGGER ${name}), or ${fix}`);
+      }
+    }
   }
   for (const table of new Set(triggers.map((t) => t.table))) {
     if (!UPDATED_AT_SEARCH_ENTITY_TYPES[table]) problems.push(`${table}: has search index triggers but no entry in UPDATED_AT_SEARCH_ENTITY_TYPES (common/updated-at.inventory.ts)`);
@@ -82,6 +90,11 @@ async function testCatalog() {
     const problems = checkCatalog(await searchTriggers(runner));
     assert.equal(problems.length, 1, JSON.stringify(problems));
     assert.match(problems[0], /^contracts: trg_search_index_contracts runs the search index sync on an update of the date alone .*call syncSearchIndexTriggers/);
+    // A trigger left disabled by a migration fails it too, with what to do.
+    await runner.query(`ALTER TABLE contracts DISABLE TRIGGER trg_search_index_contracts_update`);
+    const disabled = checkCatalog(await searchTriggers(runner)).filter((problem) => problem.includes('not enabled'));
+    assert.equal(disabled.length, 1, JSON.stringify(disabled));
+    assert.match(disabled[0], /^contracts: trg_search_index_contracts_update is not enabled \(tgenabled = D\): enable it again .*ENABLE TRIGGER trg_search_index_contracts_update/);
   });
 }
 
@@ -224,7 +237,8 @@ async function testMissingSyncFunction() {
     }
     assert.deepEqual(warnings, ['[migration 1856275000000 search-index-date-only] users: no sync function, triggers left as they are']);
     const problems = checkCatalog(await searchTriggers(runner));
-    assert.deepEqual(problems, ['users: no trigger trg_search_index_users_date: call syncSearchIndexTriggers (common/updated-at-trigger.ts) for this table in your migration']);
+    const fix = 'call syncSearchIndexTriggers (common/updated-at-trigger.ts) for this table in your migration';
+    assert.deepEqual(problems, ['', '_update', '_date'].map((suffix) => `users: no trigger trg_search_index_users${suffix}: ${fix}`));
   });
 }
 
