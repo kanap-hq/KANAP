@@ -649,6 +649,8 @@ async function testLeaveOutAndApprove(harness: Harness) {
     const other = await card(harness, ctx, { field: 'run_build', value: 'run', rows: ['BL-4', 'BL-5'] });
     await rejects(() => exclude(harness, ctx, other, [seed.lines[6]]), 'Only a line this card lists can be left out.');
     const none = await exclude(harness, ctx, other, [seed.lines[4], seed.lines[5]]);
+    // The card says why it cannot be approved before any approval: the screen greys Approve out.
+    assert.equal(none.error_message, 'Every record of this card is left out: there is nothing to approve.');
     const refused = await harness.previews.executePreview(ctx, none.preview_id) as any;
     assert.equal(refused.status, 'pending');
     assert.equal(refused.error_message, 'Every record of this card is left out: there is nothing to approve.');

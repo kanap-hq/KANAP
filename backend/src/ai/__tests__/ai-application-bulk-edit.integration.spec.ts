@@ -736,6 +736,8 @@ async function testLeaveOutRefusals(harness: Harness) {
     const none = await exclude(harness, ctx, preview, [seed.apps[1], seed.apps[2]]);
     assert.deepEqual(listed(none), [['APP-1', 'Alpha', 'Active', false], ['APP-2', 'Bravo', 'Active', false]]);
     assert.equal(none.changes[CARD].to, 'Chosen applications: APP-1, APP-2\n\nLifecycle → Deprecated\n\n0 applications to change, 2 left out');
+    // The card says why it cannot be approved before any approval: the screen greys Approve out.
+    assert.equal(none.error_message, 'Every record of this card is left out: there is nothing to approve.');
     const refused = await harness.previews.executePreview(ctx, none.preview_id) as any;
     assert.equal(refused.status, 'pending');
     assert.equal(refused.error_message, 'Every record of this card is left out: there is nothing to approve.');
@@ -748,6 +750,7 @@ async function testLeaveOutRefusals(harness: Harness) {
     // One ticked again: approvable.
     const one = await exclude(harness, ctx, none, [seed.apps[2]]);
     assert.equal(one.bulk_edit.kept, 1);
+    assert.equal(one.error_message, null, 'a card with a record kept says nothing of a refusal');
 
     await httpStatus(() => exclude(harness, ctx, one, [randomUUID()]), 400, /^Only an application this card lists can be left out\.$/);
     await httpStatus(() => exclude(harness, ctx, one, [seed.apps[5]]), 400, /^Only an application this card lists can be left out\.$/);

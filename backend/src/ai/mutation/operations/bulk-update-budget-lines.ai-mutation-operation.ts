@@ -465,7 +465,10 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
       ...(!list && preview.status === 'pending' && changes > AI_BULK_EDIT_LIST_MAX
         ? { assistantNote: bulkEditTooLongNote('budget_lines', changes, AI_BULK_EDIT_LIST_MAX) }
         : {}),
-      ...(preview.error_message === BULK_EDIT_ALL_LEFT_OUT_MESSAGE ? { errorMessage: BULK_EDIT_ALL_LEFT_OUT[language] } : {}),
+      // A pending card with every record left out says why it cannot be approved, before any approval.
+      ...(preview.error_message === BULK_EDIT_ALL_LEFT_OUT_MESSAGE || (preview.status === 'pending' && this.approvalRefusal(preview) !== null)
+        ? { errorMessage: BULK_EDIT_ALL_LEFT_OUT[language] }
+        : {}),
     };
   }
 
