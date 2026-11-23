@@ -17,8 +17,8 @@ const currencySettings = { getSettings: async () => ({ reportingCurrency: 'EUR' 
 
 function versionsService(kind: Kind): { updateForItem: (...args: any[]) => Promise<any> } {
   return kind === 'opex'
-    ? new SpendVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any)
-    : new CapexVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any);
+    ? new SpendVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any, { computeForVersions: async () => new Map() } as any)
+    : new CapexVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any, { computeForVersions: async () => new Map() } as any);
 }
 
 /**

@@ -1289,8 +1289,8 @@ export class AiFinancialPlanMutationSupportService {
 
   /**
    * The version's own fields as the budget tab writes them; its allocation method and driver as the
-   * Allocations tab saves them (`PUT …/allocations`), so an automatic method drops the rows of a
-   * manual split with their audit row, and a driver change computes the split again.
+   * Allocations tab saves them (`updateForItem`, `changeAllocationMethod`), so an automatic method
+   * drops the rows of a manual split with their audit row, and a driver change computes the split again.
    */
   private async updateVersion(
     context: AiExecutionContextWithManager,
@@ -1300,29 +1300,8 @@ export class AiFinancialPlanMutationSupportService {
     fields: Record<string, unknown>,
     audit: AiMutationAuditOptions,
   ): Promise<void> {
-    const { allocation_method: method, allocation_driver: driver, ...own } = fields;
-    if (Object.keys(own).length > 0) {
-      const body = { ...own, id: version.id };
-      const versions = nature === 'opex' ? this.spendVersions : this.capexVersions;
-      await versions.updateForItem(itemId, body as any, context.userId, { manager: context.manager, audit });
-    }
-    if (method === undefined && driver === undefined) return;
-    const currentMethod = String(version.row.allocation_method || 'default');
-    const nextMethod = String(method ?? currentMethod);
-    // The tab sends the rows it shows: the stored split while a manual method stays (a new driver),
-    // none for a new method (a manual one keeps the stored rows until companies are picked).
-    let rows: AllocationInput[] = [];
-    if (nextMethod === currentMethod && MANUAL_SELECTION_METHODS.has(nextMethod)) {
-      const listed = await this.listAllocations(context, nature, version.id);
-      rows = allocationInputsFromRows(Array.isArray(listed.items) ? listed.items : [], nextMethod);
-    }
-    const allocations = nature === 'opex' ? this.spendAllocations : this.capexAllocations;
-    await allocations.put(
-      version.id,
-      { method: nextMethod, driver: driver ?? null, rows, base_signature: null },
-      context.userId,
-      { manager: context.manager, tenantId: context.tenantId, audit },
-    );
+    const versions = nature === 'opex' ? this.spendVersions : this.capexVersions;
+    await versions.updateForItem(itemId, { ...fields, id: version.id } as any, context.userId, { manager: context.manager, audit });
   }
 
   /**

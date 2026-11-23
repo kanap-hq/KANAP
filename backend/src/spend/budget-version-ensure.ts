@@ -89,10 +89,8 @@ export async function ensureBudgetVersion(
   return version ? { version, created } : null;
 }
 
-/** Version columns a PATCH writes as given (when present); the allocation fields, the currency and the approval have their own rules. */
+/** Version columns a PATCH writes as given (when present); the currency and the approval have their own rules. */
 const VERSION_PLAIN_COLUMNS = ['version_name', 'input_grain', 'as_of_date', 'notes'] as const;
-
-const defaultDriver = (method: string) => (method === 'it_users' ? 'it_users' : method === 'turnover' ? 'turnover' : 'headcount');
 
 /**
  * The PATCH of a budget version (the budget tab's view, the allocations tab's
@@ -102,10 +100,11 @@ const defaultDriver = (method: string) => (method === 'it_users' ? 'it_users' : 
  * between. Now the line, then the version are locked (`budget-locks.ts`), the
  * version is read again under the lock, and one UPDATE sets only the columns
  * the body supplies: `version_name`, `input_grain`, `as_of_date`, `notes`;
- * `allocation_method` (with its default driver unless one is given),
- * `allocation_driver`, `reporting_currency` when not empty; `is_approved:
- * false` clears the rate set. The budget year never changes. Returns the
- * version before (as locked) and after, for the caller's audit row.
+ * `reporting_currency` when not empty; `is_approved: false` clears the rate
+ * set. The budget year never changes. The allocation method and driver are
+ * not written here: the caller saves them as the Allocations tab does
+ * (`changeAllocationMethod`, `allocation-save.ts`). Returns the version
+ * before (as locked) and after, for the caller's audit row.
  */
 export async function updateBudgetVersionUnderLock(
   manager: EntityManager,
@@ -137,11 +136,6 @@ export async function updateBudgetVersionUnderLock(
   for (const column of VERSION_PLAIN_COLUMNS) {
     if (body[column] !== undefined) set[column] = body[column];
   }
-  if (body.allocation_method) {
-    set.allocation_method = body.allocation_method;
-    if (!body.allocation_driver) set.allocation_driver = defaultDriver(String(body.allocation_method));
-  }
-  if (body.allocation_driver) set.allocation_driver = body.allocation_driver;
   if (body.reporting_currency) set.reporting_currency = String(body.reporting_currency).trim().toUpperCase().slice(0, 3);
   if (body.is_approved === false) set.fx_rate_set_id = null;
   if (Object.keys(set).length > 0) {

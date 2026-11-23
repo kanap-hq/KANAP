@@ -350,6 +350,33 @@ export async function bulkUpsertAllocations(
 }
 
 /**
+ * A version's method or driver changed outside the Allocations tab (the version PATCH, Kad's card),
+ * saved as the tab saves it (`putVersionAllocations`) with the rows the tab sends: the stored split
+ * while a split by company or by department stays (a new driver computes it again), none otherwise
+ * (an automatic method drops the stored rows; a manual one keeps them until companies are picked).
+ * A driver not given stays the stored one, as on the tab.
+ */
+export async function changeAllocationMethod(
+  deps: AllocationSaveDeps,
+  scope: AmountScope,
+  tenantId: string,
+  versionId: string,
+  change: { method?: unknown; driver?: unknown },
+  userId: string | null | undefined,
+) {
+  if (!(await lockVersionWithLine(deps.manager, scope, tenantId, versionId))) throw new NotFoundException('Version not found');
+  const state = await readAllocationState(deps.manager, scope, tenantId, versionId);
+  if (!state) throw new NotFoundException('Version not found');
+  const method = change.method ? change.method : state.method;
+  const keepsSplit = method === state.method && (method === 'manual_company' || method === 'manual_department');
+  const rows = keepsSplit
+    ? state.rows.filter((row) => !row.is_system_generated)
+      .map((row) => ({ company_id: row.company_id, department_id: method === 'manual_department' ? row.department_id ?? null : null }))
+    : [];
+  return putVersionAllocations(deps, scope, tenantId, versionId, { method, driver: change.driver || state.driver, rows, base_signature: null }, userId);
+}
+
+/**
  * The rows the rows save (`bulkUpsertAllocations`) would store for `items`, validated and computed
  * the same way, with nothing written: what Kad's card shows before its approval. Null for an
  * automatic method, whose shares are computed when read.

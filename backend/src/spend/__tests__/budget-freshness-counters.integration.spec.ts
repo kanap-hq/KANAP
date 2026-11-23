@@ -42,8 +42,8 @@ const currencySettings = { getSettings: async () => ({ reportingCurrency: 'EUR',
 
 function versionsService(kind: Kind): any {
   return kind === 'opex'
-    ? new SpendVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any)
-    : new CapexVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any);
+    ? new SpendVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any, { computeForVersions: async () => new Map() } as any)
+    : new CapexVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any, { computeForVersions: async () => new Map() } as any);
 }
 
 async function rowVersion(runner: QueryRunner, kind: Kind, itemId: string): Promise<number> {
@@ -193,6 +193,8 @@ async function versionColumns(kind: Kind) {
     assert.equal(await bumpOf(br, () => patch({ input_grain: 'annual' })), 0, `${kind}: the view choice (input_grain) bumps nothing`);
     assert.equal(await bumpOf(br, () => patch({ allocation_method: 'manual_pct' })), 1, `${kind}: the allocation method bumps once`);
     assert.equal(await bumpOf(br, () => patch({ allocation_method: 'manual_pct' })), 0, `${kind}: the same method bumps nothing`);
+    // A driver applies to the split by company only, as on the Allocations tab.
+    assert.equal(await bumpOf(br, () => patch({ allocation_method: 'manual_company' })), 1, `${kind}: the split by company bumps once`);
     assert.equal(await bumpOf(br, () => patch({ allocation_driver: 'turnover' })), 1, `${kind}: the allocation driver bumps once`);
     assert.equal(await bumpOf(br, () => patch({ allocation_driver: 'turnover' })), 0, `${kind}: the same driver bumps nothing`);
     assert.equal(await bumpOf(br, () => patch({ notes: 'Budget note' })), 0, `${kind}: the notes bump nothing`);

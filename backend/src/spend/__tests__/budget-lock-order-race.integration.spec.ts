@@ -52,7 +52,7 @@ const cell = (month: number, planned: number) => ({ kind: 'monthly', year: YEAR,
 
 /** Every writer path of one line and version, as one request each; `round` varies the values. */
 function writers(race: Race, s: Seeded, round: number): Array<[string, (manager: any) => Promise<unknown>]> {
-  const versions = new SpendVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any);
+  const versions = new SpendVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any, { computeForVersions: async () => new Map() } as any);
   const allocations = new SpendAllocationsService(undefined as any, undefined as any, undefined as any, captureAudit() as any);
   const ai = new AiFinancialPlanMutationSupportService(
     undefined as any, undefined as any, undefined as any, undefined as any, amountsService('opex') as any, versions as any,
