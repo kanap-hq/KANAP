@@ -11,7 +11,19 @@ export function organizationLd(site: string) {
     legalName: 'KANAP SARL',
     url: site,
     logo: new URL('/logo.svg', site).href,
-    sameAs: ['https://github.com/kanap-hq/kanap'],
+    sameAs: ['https://github.com/kanap-hq/kanap', 'https://www.linkedin.com/company/kadratis/'],
+  };
+}
+
+/** Site identity for search engines: the name they show for kadratis.com. */
+export function websiteLd(site: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Kadratis',
+    url: site,
+    inLanguage: ['en', 'fr', 'de', 'es'],
+    publisher: { '@type': 'Organization', name: 'Kadratis', legalName: 'KANAP SARL', url: site },
   };
 }
 
