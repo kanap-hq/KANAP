@@ -159,7 +159,7 @@ Une cellule sans valeur affiche un tiret.
 - **Catégorie**, **Criticité business** et **Criticité cyber** ne listent que les valeurs encore proposées dans **Cartographie SI > Paramètres**
 - Une nouvelle criticité business ou cyber fait passer une application revue à **À revoir**, comme sur la page de l'application
 - Chaque application modifiée a sa propre entrée dans son onglet **Historique**
-- [Kad](ai-assistant.md#changing-records-in-bulk) fait la même modification quand vous la lui demandez dans une conversation, avec les mêmes droits. Vous approuvez son aperçu
+- [Kad](ai-assistant.md#changing-records-in-bulk) fait la même modification quand vous la lui demandez dans une conversation, avec les mêmes droits. Son aperçu liste les applications qu'il modifie, et vous pouvez en écarter avant de l'approuver
 
 ---
 

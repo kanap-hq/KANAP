@@ -159,7 +159,7 @@ Eine Zelle ohne Wert zeigt einen Strich.
 - **Kategorie**, **Geschäftskritikalität** und **Cyberkritikalität** bieten nur die Werte an, die unter **IT-Landschaft > Einstellungen** noch angeboten werden
 - Eine neue Geschäfts- oder Cyberkritikalität setzt eine geprüfte Anwendung auf **Erneut prüfen**, wie auf der Seite der Anwendung
 - Jede geänderte Anwendung erhält einen eigenen Eintrag in ihrem Tab **Verlauf**
-- [Kad](ai-assistant.md#changing-records-in-bulk) nimmt dieselbe Änderung vor, wenn Sie in einer Unterhaltung darum bitten, mit denselben Rechten. Sie genehmigen seine Vorschau
+- [Kad](ai-assistant.md#changing-records-in-bulk) nimmt dieselbe Änderung vor, wenn Sie in einer Unterhaltung darum bitten, mit denselben Rechten. Seine Vorschau listet die Anwendungen, die er ändert, und Sie können einzelne ausschließen, bevor Sie sie genehmigen
 
 ---
 
