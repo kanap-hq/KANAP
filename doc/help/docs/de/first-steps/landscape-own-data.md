@@ -15,7 +15,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **IT-Landschaft > Standorte**
 
-**Was Sie tun.** Klicken Sie auf **Standort hinzufügen** und legen Sie Ihre Serverräume, Rechenzentren oder Clouds an: ein Code, ein Name und ein Hosting-Typ.
+**Was Sie tun.** Klicken Sie auf **Standort hinzufügen** und legen Sie Ihre Serverräume, Rechenzentren oder Clouds an: ein Name und ein Hosting-Typ.
 
 **Was Sie sehen.** Jedes Asset gehört zu einem Standort, der ihm Anbieter, Hosting-Typ und Land gibt. Ein später fehlender Standort lässt sich auch im Feld **Standort** eines Assets anlegen.
 

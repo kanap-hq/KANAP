@@ -15,7 +15,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Panorama IT > Ubicaciones**
 
-**Qué hacer.** Haga clic en **Añadir ubicación** y cree sus salas de servidores, centros de datos o nubes: un código, un nombre y un tipo de alojamiento.
+**Qué hacer.** Haga clic en **Añadir ubicación** y cree sus salas de servidores, centros de datos o nubes: un nombre y un tipo de alojamiento.
 
 **Qué ve.** Cada activo pertenece a una ubicación, que le da su proveedor, su tipo de alojamiento y su país. Una ubicación que falte más adelante también se crea desde el campo **Ubicación** de un activo.
 
