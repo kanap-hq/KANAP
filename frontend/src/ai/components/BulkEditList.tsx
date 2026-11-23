@@ -66,7 +66,10 @@ export default function BulkEditList({
   const inert = disabled;
   const excluded = shown ?? excludedOf(bulk);
 
-  React.useEffect(() => () => countingRef.current?.(false), []);
+  // Unmounted while a count runs (another tab of the cards chosen), the count still ends and says so.
+  React.useEffect(() => () => {
+    if (!inFlight.current) countingRef.current?.(false);
+  }, []);
 
   // The card replaced, the box the person changed keeps the focus, unless it went elsewhere.
   React.useEffect(() => {

@@ -39,6 +39,8 @@ type PreviewCardProps = {
    * takes the place of this one. Without it the card's choices are read only.
    */
   onReplace?: (previous: AiMutationPreview, next: AiMutationPreview) => void;
+  /** The server counts a choice of this card (a box, an import choice): "Approve all" waits for it. */
+  onBusy?: (preview: AiMutationPreview, busy: boolean) => void;
 };
 
 function hasDisplayValue(value: string | null | undefined): boolean {
@@ -137,6 +139,7 @@ function PreviewCard({
   onReject,
   stickyActions,
   onReplace,
+  onBusy,
 }: PreviewCardProps) {
   const { t, i18n } = useTranslation(['ai', 'common']);
   const mode = useTheme().palette.mode;
@@ -167,6 +170,7 @@ function PreviewCard({
     if (!onReplace || !preview.conversation_id || sentFor.current === preview.preview_id) return;
     sentFor.current = preview.preview_id;
     setChoosing(true);
+    onBusy?.(preview, true);
     setChoiceError(null);
     setImportChoices(preview.conversation_id, preview.preview_id, choices)
       .then((next) => onReplace(preview, next))
@@ -178,8 +182,11 @@ function PreviewCard({
           ? { text: t('ai:previewCard.importChoices.stale'), detail: null }
           : { text: t('ai:previewCard.notApplied'), detail: message });
       })
-      .finally(() => setChoosing(false));
-  }, [onReplace, preview, t]);
+      .finally(() => {
+        setChoosing(false);
+        onBusy?.(preview, false);
+      });
+  }, [onBusy, onReplace, preview, t]);
 
   return (
     <Box
@@ -385,7 +392,10 @@ function PreviewCard({
             bulk={preview.bulk_edit}
             onReplace={onReplace}
             disabled={disabled}
-            onCounting={setChoosing}
+            onCounting={(counting) => {
+              setChoosing(counting);
+              onBusy?.(preview, counting);
+            }}
           />
         )}
 
