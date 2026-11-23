@@ -18,6 +18,12 @@ import { TechnologiesService } from '../../technologies/technologies.service';
 import { AnalyticsAxesService } from '../../analytics/analytics-axes.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
 import { UsersDeleteService } from '../../users/users-delete.service';
+import { IncidentsService } from '../../incidents/services/incidents.service';
+import { Supplier } from '../../suppliers/supplier.entity';
+import { Task } from '../../tasks/task.entity';
+import { writeTaskColumns } from '../../tasks/task-column-write';
+import { updateItemUnderLock } from '../../spend/item-locked-update';
+import { UPDATED_AT_TABLES } from '../updated-at.inventory';
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -32,7 +38,9 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 // - a record saved with nothing changed keeps its date; a changed field dates it;
 // - a document whose long content alone changes is dated;
 // - deleting a person dates neither the documents, incidents, requests and tasks they created
-//   nor the tasks that named them as owner or viewer.
+//   nor the tasks that named them as owner or viewer;
+// - the application never writes the date: no entity updates the column, so neither an entity
+//   saved twice (the date it was loaded with) nor a date sent in a request body comes back.
 
 const OLD = '2020-01-02T03:04:05.000Z';
 let app: any;
@@ -62,8 +70,8 @@ async function seed(r: QueryRunner) {
   const role = await one(`INSERT INTO roles (tenant_id, role_name) VALUES ($1, 'Administrator') RETURNING id`);
   const user = await one(`INSERT INTO users (tenant_id, email, role_id, status) VALUES ($1, 'writer@example.test', $2, 'enabled') RETURNING id`, [role]);
   // A second administrator: the workspace keeps one when the first is deleted.
-  await one(`INSERT INTO users (tenant_id, email, role_id, status) VALUES ($1, 'other@example.test', $2, 'enabled') RETURNING id`, [role]);
-  const ids: Record<string, string> = { role, user };
+  const other = await one(`INSERT INTO users (tenant_id, email, role_id, status) VALUES ($1, 'other@example.test', $2, 'enabled') RETURNING id`, [role]);
+  const ids: Record<string, string> = { role, user, other };
   ids.suppliers = await one(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Supplier') RETURNING id`);
   ids.locations = await one(`INSERT INTO locations (tenant_id, name, hosting_type, location_reference) VALUES ($1, 'Site', 'on_premise', 'LOC-1') RETURNING id`);
   ids.assets = await one(`INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, 'Server', 'vm', 'prod') RETURNING id`);
@@ -87,16 +95,22 @@ async function seed(r: QueryRunner) {
   ids.analytics_axes = await one(`INSERT INTO analytics_axes (tenant_id, code, name) VALUES ($1, 'upd', 'Axis') RETURNING id`);
   ids.chart_of_accounts = await one(`INSERT INTO chart_of_accounts (tenant_id, code, name, country_iso) VALUES ($1, 'UPD', 'Chart', 'FR') RETURNING id`);
   ids.incidents = await one(
-    `INSERT INTO incidents (tenant_id, item_number, title, severity, created_by, updated_by) VALUES ($1, 1, 'Incident', 'minor', $2, $2) RETURNING id`,
+    `INSERT INTO incidents (tenant_id, item_number, title, severity, description, created_by, updated_by)
+     VALUES ($1, 1, 'Incident', 'minor', 'What happened', $2, $2) RETURNING id`,
     [user],
   );
+  ids.spend_items = await one(
+    `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number, nature)
+     VALUES ($1, 'Line', 'EUR', '2026-01-01', 1, 'opex') RETURNING id`,
+  );
+  ids.category = await one(`INSERT INTO analytics_categories (tenant_id, axis_id, name) VALUES ($1, $2, 'Category') RETURNING id`, [ids.analytics_axes]);
   ids.tasks = await one(
     `INSERT INTO tasks (tenant_id, title, item_number, creator_id, owner_ids, viewer_ids)
      VALUES ($1, 'Task', 1, $2, jsonb_build_array($3::text), jsonb_build_array($3::text)) RETURNING id`,
     [user, user],
   );
   for (const table of Object.keys(ids)) {
-    if (table === 'role' || table === 'user') continue;
+    if (['role', 'user', 'other', 'category'].includes(table)) continue;
     await r.query(`UPDATE ${table} SET updated_at = $2 WHERE id = $1`, [ids[table], OLD]);
   }
   return { tenantId, ids };
@@ -180,6 +194,126 @@ async function testDeletingAPersonDatesNothing() {
   });
 }
 
+/** No entity of a table of the inventory writes the date: the database keeps it. */
+async function testNoEntityWritesTheDate() {
+  const wrong: string[] = [];
+  let checked = 0;
+  for (const table of Object.keys(UPDATED_AT_TABLES)) {
+    for (const meta of ds.entityMetadatas.filter((m) => m.tableName === table)) {
+      const column = meta.columns.find((c) => c.databaseName === 'updated_at');
+      if (!column) continue;
+      checked += 1;
+      if (column.isUpdate) wrong.push(`${meta.name} (${table})`);
+    }
+  }
+  assert.ok(checked >= 24, `the entities of the inventory are found (${checked})`);
+  assert.deepEqual(
+    wrong,
+    [],
+    'the database keeps updated_at (common/updated-at-trigger.ts): declare it '
+      + "@Column({ type: 'timestamptz', default: () => 'now()', update: false }) on these entities, "
+      + 'and date a record on purpose with touchUpdatedAt',
+  );
+}
+
+/**
+ * The date TypeORM would write back: (a) one entity saved twice, (b) a date in the body of a
+ * supplier update (PATCH /suppliers/:id), (c) a date in the columns of a task write (the task PATCH).
+ */
+async function testNoDateWrittenBack() {
+  await inTx(async (r) => {
+    const { tenantId, ids } = await seed(r);
+    const manager = r.manager;
+    const outcome: Record<string, string> = {};
+
+    const repo = manager.getRepository(Supplier);
+    const supplier = await repo.findOneByOrFail({ id: ids.suppliers });
+    supplier.notes = 'First save';
+    await repo.save(supplier);
+    supplier.notes = 'Second save';
+    await repo.save(supplier);
+    outcome['(a) one entity saved twice'] = await dateOf(r, 'suppliers', ids.suppliers);
+
+    await r.query(`UPDATE suppliers SET updated_at = $2 WHERE id = $1`, [ids.suppliers, OLD]);
+    await app.get(SuppliersService, { strict: false }).update(ids.suppliers, { notes: 'From the body', updated_at: '2019-06-07' } as any, ids.user, { manager });
+    outcome['(b) a date in a supplier body'] = await dateOf(r, 'suppliers', ids.suppliers);
+
+    const task = await writeTaskColumns(manager.getRepository(Task), { id: ids.tasks, tenant_id: tenantId }, { title: 'Task renamed', updated_at: '2019-06-07' });
+    assert.equal(task.title, 'Task renamed');
+    outcome['(c) a date in a task write'] = await dateOf(r, 'tasks', ids.tasks);
+
+    console.log(Object.entries(outcome).map(([name, date]) => `  ${name}: ${date === 'now' ? 'dated now' : date}`).join('\n'));
+    assert.deepEqual(
+      outcome,
+      { '(a) one entity saved twice': 'now', '(b) a date in a supplier body': 'now', '(c) a date in a task write': 'now' },
+      'the database dates the change; no date comes back from the entity or the body',
+    );
+  });
+}
+
+/**
+ * A budget line and an incident saved unchanged keep their date; a change dates them. A child alone
+ * dates its record only when it changed: a line's analytics value, a document's contributors.
+ */
+async function testBudgetLineAndIncident() {
+  await inTx(async (r) => {
+    const { tenantId, ids } = await seed(r);
+    const manager = r.manager;
+    const incidents = app.get(IncidentsService, { strict: false });
+    const opts = { manager, tenantId } as any;
+    const outcome: Record<string, string> = {};
+    const reset = (table: string) => r.query(`UPDATE ${table} SET updated_at = $2 WHERE id = $1`, [ids[table], OLD]);
+    const line = (body: Record<string, unknown>) => updateItemUnderLock(manager, 'opex', tenantId, ids.spend_items, body);
+
+    await line({ product_name: 'Line' });
+    outcome['budget line unchanged'] = await dateOf(r, 'spend_items', ids.spend_items);
+    await line({ product_name: 'Line renamed' });
+    outcome['budget line changed'] = await dateOf(r, 'spend_items', ids.spend_items);
+    await reset('spend_items');
+    await line({ analytics_values: { [ids.analytics_axes]: ids.category } });
+    outcome['budget line, analytics value alone'] = await dateOf(r, 'spend_items', ids.spend_items);
+    await reset('spend_items');
+    await line({ analytics_values: { [ids.analytics_axes]: ids.category } });
+    outcome['budget line, same analytics value'] = await dateOf(r, 'spend_items', ids.spend_items);
+
+    await incidents.update(ids.incidents, { description: 'What happened' }, ids.user, opts);
+    outcome['incident unchanged'] = await dateOf(r, 'incidents', ids.incidents);
+    await incidents.update(ids.incidents, { description: 'What happened, told again' }, ids.user, opts);
+    outcome['incident changed'] = await dateOf(r, 'incidents', ids.incidents);
+
+    // A document's contributors: rows of their own, compared before and after the save.
+    const knowledge = app.get(KnowledgeService, { strict: false });
+    const { lock_token: lockToken } = await knowledge.acquireLock(ids.documents, ids.user, opts);
+    const saveDocument = async (contributors: unknown[]) => {
+      const [{ revision }] = await r.query(`SELECT revision FROM documents WHERE id = $1`, [ids.documents]);
+      await knowledge.update(ids.documents, { title: 'Document', revision: Number(revision), contributors } as any, ids.user, lockToken, opts);
+    };
+    const author = [{ user_id: ids.user, role: 'author', is_primary: true }];
+    await saveDocument(author);
+    await reset('documents');
+    await saveDocument(author);
+    outcome['document, same contributors'] = await dateOf(r, 'documents', ids.documents);
+    await saveDocument([...author, { user_id: ids.other, role: 'reviewer' }]);
+    outcome['document, a contributor added'] = await dateOf(r, 'documents', ids.documents);
+
+    const label = (date: string) => (date === 'now' ? 'dated' : date === OLD ? 'keeps its date' : date);
+    console.log(Object.entries(outcome).map(([name, date]) => `  ${name}: ${label(date)}`).join('\n'));
+    assert.deepEqual(
+      Object.fromEntries(Object.entries(outcome).map(([name, date]) => [name, label(date)])),
+      {
+        'budget line unchanged': 'keeps its date',
+        'budget line changed': 'dated',
+        'budget line, analytics value alone': 'dated',
+        'budget line, same analytics value': 'keeps its date',
+        'incident unchanged': 'keeps its date',
+        'incident changed': 'dated',
+        'document, same contributors': 'keeps its date',
+        'document, a contributor added': 'dated',
+      },
+    );
+  });
+}
+
 async function main() {
   const { AppModule } = require('../../app.module');
   app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
@@ -190,6 +324,9 @@ async function main() {
       ['screens date only changes', testScreensDateOnlyChanges],
       ['long content dates the document', testLongContentDatesTheDocument],
       ['deleting a person dates nothing', testDeletingAPersonDatesNothing],
+      ['no entity writes the date', testNoEntityWritesTheDate],
+      ['no date written back', testNoDateWrittenBack],
+      ['budget line and incident', testBudgetLineAndIncident],
     ] as const) {
       try {
         await fn();

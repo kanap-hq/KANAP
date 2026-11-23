@@ -10,6 +10,7 @@ import { assertNoItemEditConflicts } from './item-edit-conflicts';
 import { ItemWriteFields, ItemWriteScope, resolveItemWrite } from './item-write.util';
 import { SpendItem } from './spend-item.entity';
 import { assertDataAccessWritten } from '../data-access/line-write-checks';
+import { touchUpdatedAt } from '../common/updated-at-trigger';
 
 /**
  * The update of one OPEX or CAPEX line, under its row lock (plan
@@ -31,10 +32,12 @@ import { assertDataAccessWritten } from '../data-access/line-write-checks';
  *    a field someone else changed meanwhile refuses the whole request with
  *    409 `edit_conflict`, before anything is written
  *    (`item-edit-conflicts.ts`, contract in `common/edit-conflicts.ts`);
- * 3. one UPDATE sets only the columns the body supplied, plus `updated_at`
- *    and the derived status and end of validity when they change; every other
- *    column stays as stored, whoever wrote it last;
- * 4. the analytics values, then the line is read again for the answer and the
+ * 3. one UPDATE sets only the columns the body supplied, plus the derived
+ *    status and end of validity when they change; every other column stays as
+ *    stored, whoever wrote it last. The database dates the line when one of
+ *    its columns changes (`common/updated-at-trigger.ts`);
+ * 4. the analytics values (a change of them alone dates the line through
+ *    `touchUpdatedAt`), then the line is read again for the answer and the
  *    audit row.
  * The caller writes the audit row (before: the locked row) and the side
  * effects (contact sync, notifications).
@@ -100,13 +103,15 @@ export async function updateItemUnderLock(
     before, analyticsBefore, values, disabledAt: lifecycle.disabled_at, analytics,
   }, fields);
 
-  // A plain column (no trigger, no @UpdateDateColumn): "recent updates" read it.
-  const set: Record<string, unknown> = { ...values, updated_at: now };
+  const set: Record<string, unknown> = { ...values };
   // The end of validity and the status only when they change: a date read back (to the
   // millisecond) and written again would lose the microseconds a SQL now() stored.
   const time = (value: Date | string | null | undefined) => (value == null ? null : new Date(value).getTime());
   if (time(lifecycle.disabled_at) !== time(before.disabled_at)) set.disabled_at = lifecycle.disabled_at;
   if (lifecycle.status !== before.status) set.status = lifecycle.status;
+  // A body with no column still writes the row (its tenant to itself): the policies of a limited
+  // person refuse it like any other write, and the trigger leaves the date as it was.
+  if (Object.keys(set).length === 0) set.tenant_id = () => 'tenant_id';
   const updated = await manager
     .createQueryBuilder()
     .update(SpendItem)
@@ -115,12 +120,18 @@ export async function updateItemUnderLock(
     .execute();
   // The line is locked: a limited person's UPDATE that touched nothing was hidden by a policy.
   await assertDataAccessWritten(manager, updated.affected);
-  // A change of analytics values alone is an edit too (updated_at above, the audit row of the caller).
   await writeItemAnalyticsValues(manager, scope, tenantId, itemId, analytics);
 
-  const after = (await read()) ?? before;
   const analyticsAfter = analytics.length > 0
     ? (await loadItemAnalyticsValues(manager, scope, tenantId, [itemId])).get(itemId) ?? []
     : analyticsBefore;
+  // A change of analytics values alone is an edit too (and the audit row of the caller): rows of
+  // their own, which the trigger of the line does not see.
+  const analyticsKey = (rows: ItemAnalyticsValue[]) => rows.map((row) => `${row.axis_id}:${row.category_id}`).sort().join(',');
+  if (analyticsKey(analyticsAfter) !== analyticsKey(analyticsBefore)) {
+    await assertDataAccessWritten(manager, await touchUpdatedAt(manager, 'spend_items', itemId));
+  }
+
+  const after = (await read()) ?? before;
   return { before, after, analyticsBefore, analyticsAfter, statusBefore: deriveStatusFromDisabledAt(before.disabled_at, now) };
 }

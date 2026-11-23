@@ -36,6 +36,7 @@ import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident
 import { ItemNumberService } from '../common/item-number.service';
 import { replacedLinks } from '../common/relations/linked-reads';
 import { parseItemNumber } from '../common/parse-item-number';
+import { touchUpdatedAt } from '../common/updated-at-trigger';
 import { StorageService } from '../common/storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
@@ -1397,7 +1398,7 @@ export class PortfolioRequestsService {
     const beforeTask = { ...task };
     // The status and its time only, never the task read above (`tasks/task-column-write.ts`).
     const savedTask = closing
-      ? await writeTaskColumns(taskRepo, task, { status: 'done', updated_at: new Date() })
+      ? await writeTaskColumns(taskRepo, task, { status: 'done' })
       : task;
 
     // The task's own audit row names the request it became (`converted_to_request_id`, beside the
@@ -1516,13 +1517,12 @@ export class PortfolioRequestsService {
     if (has('it_lead_id')) existing.it_lead_id = body.it_lead_id || null;
 
     // The purpose and the risks live in bound documents, which the trigger of the request does not
-    // see: their change dates the request here (migration 1856270000000).
+    // see: their change dates the request, after the save (migration 1856270000000).
     const changedBody = (next: string | null | undefined, stored: string | null | undefined) => next !== undefined && (next ?? null) !== (stored ?? null);
-    if (changedBody(nextPurpose, storedBodies?.get('purpose')) || changedBody(nextRisks, storedBodies?.get('risks_mitigations'))) {
-      existing.updated_at = new Date();
-    }
+    const bodiesChanged = changedBody(nextPurpose, storedBodies?.get('purpose')) || changedBody(nextRisks, storedBodies?.get('risks_mitigations'));
 
     const saved = await repo.save(existing);
+    if (bodiesChanged) await touchUpdatedAt(repo.manager, 'portfolio_requests', saved.id);
     const sourceDescriptor = {
       id: saved.id,
       tenant_id: saved.tenant_id,

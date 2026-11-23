@@ -22,6 +22,7 @@ import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { displayName } from '../../common/display-name';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { normalizeMarkdownRichText } from '../../common/markdown-worker';
+import { touchUpdatedAt } from '../../common/updated-at-trigger';
 
 /** Every asset has a site: a create without one, or an update that clears it, is refused. */
 function locationRequired() {
@@ -432,7 +433,7 @@ export class AssetsCrudService extends AssetsBaseService {
     if (has('operating_system') && await this.applyOperatingSystem(tenant, saved.id, (body as any).operating_system, userId, opts)) {
       // The operating system is a link of its own, which the trigger of the asset does not see: its
       // change dates the asset here (migration 1856270000000).
-      await (opts?.manager ?? repo.manager).query(`UPDATE assets SET updated_at = now() WHERE tenant_id = $1 AND id = $2`, [tenant, saved.id]);
+      await touchUpdatedAt(opts?.manager ?? repo.manager, 'assets', saved.id);
     }
     return this.attachOperatingSystem(saved, tenant, opts);
   }
@@ -588,7 +589,8 @@ export class AssetsCrudService extends AssetsBaseService {
         );
         await repo.save(payload);
       }
-      await this.getRepo(trx).update({ id: clusterId, tenant_id: tenant } as any, { updated_at: new Date() } as any);
+      // The members are rows of their own, which the trigger of the cluster does not see: their change dates it.
+      if ([...existingMembers].sort().join(',') !== [...normalizedIds].sort().join(',')) await touchUpdatedAt(trx, 'assets', clusterId);
 
       await this.audit.log(
         {

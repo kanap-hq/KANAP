@@ -1646,7 +1646,6 @@ export class CsvImportService {
         entity = {
           ...row.existingEntity,
           ...row.parsed,
-          updated_at: new Date(),
         };
       }
 

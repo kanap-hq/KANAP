@@ -670,7 +670,7 @@ export class OperatingSystemService {
     if (standard === row.standard_support_end && extended === row.extended_support_end) return;
     await mg.query(
       `UPDATE technology_versions
-          SET standard_support_end = $3, extended_support_end = $4, updated_at = now()
+          SET standard_support_end = $3, extended_support_end = $4
         WHERE tenant_id = $1 AND id = $2`,
       [tenantId, row.id, standard, extended],
     );

@@ -24,6 +24,7 @@ import { computeAutoAllocations } from '../utils/allocation-utils';
 import { formatItemLabel } from '../utils/activity-labels';
 import { detectChanges, PROJECT_TRACKED_FIELDS, resolveDisplayNames } from '../../common/change-detection';
 import { normalizeMarkdownRichText } from '../../common/markdown-worker';
+import { touchUpdatedAt } from '../../common/updated-at-trigger';
 import { loadSlotBodies } from '../../knowledge/integrated-document-bodies';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
@@ -674,10 +675,11 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     if (has('it_lead_id')) existing.it_lead_id = body.it_lead_id || null;
 
     // The purpose lives in a bound document, which the trigger of the project does not see: its
-    // change dates the project here (migration 1856270000000).
-    if (nextPurpose !== undefined && (nextPurpose ?? null) !== (storedPurpose ?? null)) existing.updated_at = new Date();
+    // change dates the project, after the save (migration 1856270000000).
+    const purposeChanged = nextPurpose !== undefined && (nextPurpose ?? null) !== (storedPurpose ?? null);
 
     const saved = await repo.save(existing);
+    if (purposeChanged) await touchUpdatedAt(repo.manager, 'portfolio_projects', saved.id);
     const sourceDescriptor = {
       id: saved.id,
       tenant_id: saved.tenant_id,
@@ -1320,11 +1322,13 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     // Set mode to manual
     const modeColumn = effortType === 'it' ? 'it_effort_allocation_mode' : 'business_effort_allocation_mode';
     await mg.query(
-      `UPDATE portfolio_projects SET ${modeColumn} = 'manual', updated_at = now() WHERE id = $1`,
+      `UPDATE portfolio_projects SET ${modeColumn} = 'manual' WHERE id = $1`,
       [projectId]
     );
 
     const after = await this.effortAllocationState(mg, projectId, effortType);
+    // The allocations are rows of their own: their change dates the project (the mode dates it by its trigger).
+    if (JSON.stringify(after) !== JSON.stringify(before)) await touchUpdatedAt(mg, 'portfolio_projects', projectId);
     await this.auditEffortAllocations(mg, projectId, before, after, opts?.userId ?? null);
 
     return { ok: true };
@@ -1351,11 +1355,12 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     // Set mode back to auto
     const modeColumn = effortType === 'it' ? 'it_effort_allocation_mode' : 'business_effort_allocation_mode';
     await mg.query(
-      `UPDATE portfolio_projects SET ${modeColumn} = 'auto', updated_at = now() WHERE id = $1`,
+      `UPDATE portfolio_projects SET ${modeColumn} = 'auto' WHERE id = $1`,
       [projectId]
     );
 
     const after = await this.effortAllocationState(mg, projectId, effortType);
+    if (JSON.stringify(after) !== JSON.stringify(before)) await touchUpdatedAt(mg, 'portfolio_projects', projectId);
     await this.auditEffortAllocations(mg, projectId, before, after, opts?.userId ?? null);
 
     return { ok: true };
