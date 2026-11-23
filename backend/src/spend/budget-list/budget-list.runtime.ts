@@ -5,6 +5,7 @@ import { BUDGET_NATURES } from '../budget-nature';
 import { buildDefaultByYear, STANDARD_DEFAULT } from '../allocation-rule-resolver';
 import { formatAllocationMethodLabel } from '../allocation-utils';
 import { buildFxTable, FxTable } from './budget-fx-table';
+import { EntryCheckSettings, loadEntryCheckSettings } from '../budget-line-entry-check';
 
 /**
  * What a budget list statement reads besides the request: small, per-request
@@ -30,6 +31,8 @@ export interface BudgetListRuntime {
    * not load `/accounts` before the reports moved to the server.
    */
   canReadAccounts: boolean;
+  /** The shown and frozen columns the `entry_check` field reads (`budget-line-entry-check.ts`). */
+  entryCheck?: EntryCheckSettings;
 }
 
 /**
@@ -55,6 +58,8 @@ export interface RuntimeNeeds {
   costCenters?: boolean;
   /** Years whose allocation label a statement reads. */
   ruleYears?: number[];
+  /** A field of the statement reads `entry_check`. */
+  entryCheck?: boolean;
 }
 
 export function mergeNeeds(...all: RuntimeNeeds[]): RuntimeNeeds {
@@ -62,17 +67,20 @@ export function mergeNeeds(...all: RuntimeNeeds[]): RuntimeNeeds {
   const ruleYears = new Set<number>();
   let axes = false;
   let costCenters = false;
+  let entryCheck = false;
   for (const needs of all) {
     needs.fxYears?.forEach((year) => fxYears.add(year));
     needs.ruleYears?.forEach((year) => ruleYears.add(year));
     axes = axes || !!needs.axes;
     costCenters = costCenters || !!needs.costCenters;
+    entryCheck = entryCheck || !!needs.entryCheck;
   }
   return {
     ...(fxYears.size ? { fxYears: Array.from(fxYears) } : {}),
     ...(ruleYears.size ? { ruleYears: Array.from(ruleYears) } : {}),
     axes,
     costCenters,
+    ...(entryCheck ? { entryCheck } : {}),
   };
 }
 
@@ -133,5 +141,6 @@ export async function loadBudgetRuntime(
     const byYear = buildDefaultByYear(rows, tenantId);
     runtime.ruleLabels = new Map(years.map((year) => [year, ruleLabel(byYear.get(year))]));
   }
+  if (needs.entryCheck) runtime.entryCheck = await loadEntryCheckSettings(manager, tenantId);
   return runtime;
 }

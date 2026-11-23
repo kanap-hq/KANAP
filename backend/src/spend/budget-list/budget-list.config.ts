@@ -22,6 +22,7 @@ import {
 import { fxKeyCurrency, fxSetKeySql, fxTableSql } from './budget-fx-table';
 import type { BudgetListRuntime, RuntimeNeeds } from './budget-list.runtime';
 import { BUDGET_NATURES, lineNumberSql, natureAnd, naturesAnd } from '../budget-nature';
+import { columnsToCheckSql, ENTRY_CHECK_FIELD, ENTRY_CHECK_TO_CHECK, expectedAccountsSql } from '../budget-line-entry-check';
 
 /**
  * The OPEX and CAPEX lists as a list-engine config, built from the scope
@@ -408,6 +409,25 @@ export class BudgetListConfig implements ListConfig {
     };
   }
 
+  /**
+   * `entry_check`: 'to_check' when the line's account, or its consolidation account, expects
+   * quantity and price and one of its columns is not built so, else null (`budget-line-entry-check.ts`).
+   * Its CTEs start from the accounts that set it; the shown and frozen columns were read once
+   * (`loadBudgetRuntime`) and are bound. Read whatever the caller's right on accounts: the field
+   * names no account.
+   */
+  private entryCheck(stmt: SqlStatement): FieldSql {
+    const settings = this.rt.entryCheck;
+    if (!settings) throw new Error('The entry check settings were not loaded for this statement');
+    const s = this.scope;
+    const natures = s.nature ? [s.nature] : BUDGET_NATURES;
+    stmt.cte('ec_accounts', () => expectedAccountsSql(stmt));
+    stmt.cte('ec_columns', () => columnsToCheckSql(stmt, 'ec_accounts', settings, natures));
+    stmt.cte('ec_lines', () => 'SELECT DISTINCT item_id FROM ec_columns');
+    this.join(stmt, 'ecl', 'LEFT JOIN ec_lines ecl ON ecl.item_id = i.id');
+    return { kind: 'text', sql: `(CASE WHEN ecl.item_id IS NOT NULL THEN ${sqlLiteral(ENTRY_CHECK_TO_CHECK)} END)`, joins: ['ecl'] };
+  }
+
   /** The allocation label of the version of `year` ('' without one): its own method, else the year's rule. */
   private allocationLabelSql(versionAlias: string, year: number): string {
     const ruleLabel = this.rt.ruleLabels?.get(year);
@@ -743,6 +763,8 @@ export class BudgetListConfig implements ListConfig {
         return this.allocationLabel(stmt, Y + 1);
       case 'has_fte':
         return this.hasFte(stmt);
+      case ENTRY_CHECK_FIELD:
+        return this.entryCheck(stmt);
       case 'spread_mode_for_y': {
         const v = this.version(stmt, Y);
         return { kind: 'text', sql: `(CASE WHEN ${v}.id IS NULL THEN NULL WHEN ${v}.input_grain::text = 'annual' THEN 'flat' ELSE 'manual' END)`, joins: [v] };
@@ -891,6 +913,7 @@ export function budgetRuntimeNeeds(currentYear: number, keys: string[], hasQuick
   const ruleYears = new Set<number>();
   let axes = hasQuickSearch;
   let costCenters = hasQuickSearch;
+  let entryCheck = false;
   if (hasQuickSearch) ruleYears.add(currentYear);
   for (const key of keys) {
     const amount = resolveAmountField(key) ?? resolveLocalAmountField(key);
@@ -908,8 +931,9 @@ export function budgetRuntimeNeeds(currentYear: number, keys: string[], hasQuick
     if (['cost_center_code', 'cost_center_name', 'cost_center_path', 'cost_center_label', 'budget_holder_id', 'budget_holder_name'].includes(key)) costCenters = true;
     if (key === 'allocation_label' || key === 'allocation_method_label') ruleYears.add(currentYear);
     if (key === 'next_year_allocation_method_label') ruleYears.add(currentYear + 1);
+    if (key === ENTRY_CHECK_FIELD) entryCheck = true;
   }
-  return { fxYears: Array.from(fxYears), ruleYears: Array.from(ruleYears), axes, costCenters };
+  return { fxYears: Array.from(fxYears), ruleYears: Array.from(ruleYears), axes, costCenters, ...(entryCheck ? { entryCheck } : {}) };
 }
 
 /** Project fields are lists of names; the others one value. */

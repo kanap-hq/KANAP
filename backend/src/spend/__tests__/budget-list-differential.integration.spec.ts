@@ -98,7 +98,7 @@ const GRID_ITEM_KEYS: Record<SummaryScopeConfig['scope'], string[]> = {
 const GRID_DERIVED_KEYS = [
   'cost_center_id', 'run_build', 'latest_contract_id', 'latest_contract_name', 'supplier_name', 'paying_company_name', 'account_display',
   'allocation_method_label', 'owner_it_name', 'owner_business_name', 'cost_center_label', 'cost_center_path', 'budget_holder_name',
-  'project_name', 'analytics_category_name', 'has_fte',
+  'project_name', 'analytics_category_name', 'has_fte', 'entry_check',
 ];
 const GRID_SLOTS = ['yMinus1', 'y', 'yPlus1', 'yPlus2'];
 
@@ -119,7 +119,7 @@ function fieldCatalogue(scope: SummaryScopeConfig, axisIds: string[]) {
     // The name field first (OPEX `product_name`; the CAPEX name is `description`), the type's own enums last.
     text: [
       ...(scope.nameField === 'description' ? [] : [scope.nameField]), 'description', 'notes', 'currency', 'supplier_name', 'paying_company_name', 'company_name', 'account_display', 'account_name',
-      'account_warning', 'owner_it_name', 'owner_business_name', 'analytics_category_name', ...axisIds.map((id) => `analytics_${id}`), 'cost_center_code',
+      'account_warning', 'entry_check', 'owner_it_name', 'owner_business_name', 'analytics_category_name', ...axisIds.map((id) => `analytics_${id}`), 'cost_center_code',
       'cost_center_name', 'cost_center_label', 'cost_center_path', 'budget_holder_name', 'contract_name', 'latest_contract_name', 'latest_task_text',
       'allocation_label', 'allocation_method_label', 'next_year_allocation_method_label', 'spread_mode_for_y', 'run_build',
       ...scope.extraFields,

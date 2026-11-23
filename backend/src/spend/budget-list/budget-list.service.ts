@@ -62,7 +62,7 @@ export const FILTER_VALUE_FIELDS = [
   'supplier_name', 'paying_company_name', 'company_name', 'account_display', 'allocation_label', 'allocation_method_label',
   'contract_name', 'currency', 'owner_it_name', 'owner_business_name', 'analytics_category_name', 'project_name',
   'project_stream_name', 'project_category_name', 'cost_center_label', 'cost_center_code', 'cost_center_name', 'cost_center_path',
-  'budget_holder_name', 'run_build', 'has_fte',
+  'budget_holder_name', 'run_build', 'has_fte', 'entry_check',
 ];
 
 /** The neutral list adds nature; legacy callers and their oracle keep the existing field list. */

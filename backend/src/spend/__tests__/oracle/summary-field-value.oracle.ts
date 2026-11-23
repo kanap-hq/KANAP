@@ -60,6 +60,7 @@ export function getSummaryFieldValue(row: any, field: string): any {
     case 'project_stream_name':
     case 'project_category_name':
     case 'account_warning':
+    case 'entry_check':
       return blankToNull(row?.[field]);
     case 'contract_name':
       return blankToNull(row?.latest_contract_name);
