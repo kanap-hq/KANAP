@@ -2070,7 +2070,7 @@ export class KnowledgeService {
       const latestVersionNumber = Number(latestVersion.version_number || 0);
       if (Number(document.current_version_number || 0) !== latestVersionNumber) {
         document.current_version_number = latestVersionNumber;
-        await docsRepo.save(document);
+        await docsRepo.update({ id: document.id } as any, { current_version_number: latestVersionNumber } as any);
       }
       return { version: latestVersion, created: false };
     }
@@ -2093,8 +2093,11 @@ export class KnowledgeService {
     });
     const savedVersion = await versionsRepo.save(version);
 
+    // The counter alone, by a targeted write: saving the whole document again would write back the
+    // modification date it was loaded with, over the one the database gave its save (migration
+    // 1856270000000).
     document.current_version_number = nextVersion;
-    await docsRepo.save(document);
+    await docsRepo.update({ id: document.id } as any, { current_version_number: nextVersion } as any);
     return { version: savedVersion, created: true };
   }
 
@@ -2756,7 +2759,6 @@ export class KnowledgeService {
     existing.library_id = target.libraryId;
     existing.folder_id = target.folderId;
     existing.updated_by = userId ?? existing.updated_by;
-    existing.updated_at = new Date();
 
     const saved = await repo.save(existing);
 
@@ -4549,7 +4551,6 @@ export class KnowledgeService {
 
       if (changed) {
         saved.updated_by = userId;
-        saved.updated_at = new Date();
         saved = await repo.save(saved);
       }
     }
@@ -4652,7 +4653,6 @@ export class KnowledgeService {
 
     existing.revision = Number(existing.revision) + 1;
     existing.updated_by = userId;
-    existing.updated_at = new Date();
 
     const saved = await repo.save(existing);
 
@@ -4976,7 +4976,11 @@ export class KnowledgeService {
 
     existing.revision = Number(existing.revision) + 1;
     existing.updated_by = userId;
-    existing.updated_at = new Date();
+    // The contributors, classifications and links are rows of their own, which the trigger of the
+    // document does not see: a save that carries them dates the document here (migration 1856270000000).
+    if (body?.contributors !== undefined || body?.classifications !== undefined || body?.relations !== undefined) {
+      existing.updated_at = new Date();
+    }
 
     const saved = await repo.save(existing);
 
@@ -5743,7 +5747,6 @@ export class KnowledgeService {
     doc.content_plain = version.content_plain;
     doc.revision = Number(doc.revision) + 1;
     doc.updated_by = userId;
-    doc.updated_at = new Date();
 
     const saved = await manager.getRepository(Document).save(doc);
 

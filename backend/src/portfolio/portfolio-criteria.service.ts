@@ -665,7 +665,6 @@ export class PortfolioCriteriaService {
       request.priority_score = newScore;
     }
 
-    request.updated_at = new Date();
     const saved = await requestRepo.save(request);
 
     // Log scoring change as activity
@@ -849,7 +848,6 @@ export class PortfolioCriteriaService {
       request.priority_score = await this.calculateScore(requestId, tenantId, { manager: mg });
     }
 
-    request.updated_at = new Date();
     const saved = await requestRepo.save(request);
 
     const changedFields: Record<string, [unknown, unknown]> = {};
@@ -1021,7 +1019,6 @@ export class PortfolioCriteriaService {
       project.priority_score = newScore;
     }
 
-    project.updated_at = new Date();
     const saved = await projectRepo.save(project);
 
     // Log scoring change as activity
@@ -1110,7 +1107,6 @@ export class PortfolioCriteriaService {
       );
     }
 
-    project.updated_at = new Date();
     const saved = await projectRepo.save(project);
 
     const changedFields: Record<string, [unknown, unknown]> = {};

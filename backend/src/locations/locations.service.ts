@@ -510,7 +510,6 @@ export class LocationsService {
       existing.city = this.normalizeNullable(body.city);
     }
 
-    existing.updated_at = new Date();
     const saved = await repo.save(existing);
     await this.audit.log(
       {
@@ -1126,7 +1125,7 @@ export class LocationsService {
 
     // Clear sub_location_id on affected assets before deleting
     await mg.query(
-      `UPDATE assets SET sub_location_id = NULL, updated_at = now() WHERE sub_location_id = $1`,
+      `UPDATE assets SET sub_location_id = NULL WHERE sub_location_id = $1`,
       [subItemId],
     );
 

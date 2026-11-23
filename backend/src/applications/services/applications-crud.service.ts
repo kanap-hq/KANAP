@@ -305,7 +305,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const classification = classificationPatch(body, existing, catalog);
     const patch: any = { ...body, ...classification };
     if (description !== undefined) patch.description = description;
-    for (const key of ['id', 'tenant_id', 'created_at', 'sequential_id']) delete patch[key];
+    // The modification date is the database's (migration 1856270000000): a date sent by the client never wins.
+    for (const key of ['id', 'tenant_id', 'created_at', 'updated_at', 'sequential_id']) delete patch[key];
     if (patch.last_dr_test !== undefined) patch.last_dr_test = patch.last_dr_test ? new Date(patch.last_dr_test as any) : null;
     if (patch.retired_date !== undefined) patch.retired_date = patch.retired_date ? new Date(patch.retired_date as any) : null;
     if (patch.end_of_support_date !== undefined) patch.end_of_support_date = patch.end_of_support_date ? new Date(patch.end_of_support_date as any) : null;
@@ -330,7 +331,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     if (patch.is_suite !== undefined && !patch.is_suite && existing.is_suite) {
       await assertSuiteHasNoChildren(mg, tenantId, existing.id);
     }
-    Object.assign(existing, patch, { updated_at: new Date() });
+    Object.assign(existing, patch);
     const saved = (await repo.save(existing as any)) as Application;
     await this.audit.log({
       table: 'applications', recordId: saved.id, action: 'update', before, after: saved, userId,

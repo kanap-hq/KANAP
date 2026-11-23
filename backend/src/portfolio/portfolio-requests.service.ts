@@ -1515,7 +1515,12 @@ export class PortfolioRequestsService {
     if (has('it_sponsor_id')) existing.it_sponsor_id = body.it_sponsor_id || null;
     if (has('it_lead_id')) existing.it_lead_id = body.it_lead_id || null;
 
-    existing.updated_at = new Date();
+    // The purpose and the risks live in bound documents, which the trigger of the request does not
+    // see: their change dates the request here (migration 1856270000000).
+    const changedBody = (next: string | null | undefined, stored: string | null | undefined) => next !== undefined && (next ?? null) !== (stored ?? null);
+    if (changedBody(nextPurpose, storedBodies?.get('purpose')) || changedBody(nextRisks, storedBodies?.get('risks_mitigations'))) {
+      existing.updated_at = new Date();
+    }
 
     const saved = await repo.save(existing);
     const sourceDescriptor = {

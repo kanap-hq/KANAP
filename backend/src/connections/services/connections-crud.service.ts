@@ -455,7 +455,17 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     existing.data_class = data_class;
     existing.contains_pii = contains_pii;
     existing.risk_mode = risk_mode;
-    existing.updated_at = new Date();
+    // The protocols and the servers are rows of their own, which the trigger of the connection does
+    // not see: their change dates the connection here (migration 1856270000000).
+    const protocolsOf = (rows: Array<{ code: string; port_override: string | null }>) =>
+      rows.map((row) => `${row.code}|${row.port_override ?? ''}`).sort().join(',');
+    let childrenChanged = protocolsOf(nextProtocols)
+      !== protocolsOf(existingProtocols.map((row) => ({ code: row.connection_type_code, port_override: row.port_override ?? null })));
+    if (!childrenChanged && topology === 'multi_server' && before.topology === 'multi_server' && multiAssetIds) {
+      const stored = (await this.getConnServerRepo(mg).find({ where: { connection_id: id } })).map((row) => row.asset_id);
+      childrenChanged = [...stored].sort().join(',') !== [...multiAssetIds].sort().join(',');
+    }
+    if (childrenChanged) existing.updated_at = new Date();
 
     const saved = await repo.save(existing);
 

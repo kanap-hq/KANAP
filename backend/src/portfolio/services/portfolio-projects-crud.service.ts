@@ -490,7 +490,6 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       const requestBefore = { ...request };
       request.status = 'converted';
       request.converted_date = new Date();
-      request.updated_at = new Date();
       await requestRepo.save(request);
       // The request's row names the project it became (`converted_to_project_id`, beside the saved
       // row): its history reads "Converted to project: PRJ-7".
@@ -585,12 +584,10 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const before = { ...existing };
     const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
     // The purpose lives in a bound document. A text that repeats what is stored is kept as it is.
-    const nextPurpose = has('purpose')
-      ? await this.normalizeNullable(
-        body.purpose,
-        (await loadSlotBodies(mg, existing.tenant_id, 'projects', [existing.id], ['purpose'])).get(existing.id)?.get('purpose'),
-      )
+    const storedPurpose = has('purpose')
+      ? (await loadSlotBodies(mg, existing.tenant_id, 'projects', [existing.id], ['purpose'])).get(existing.id)?.get('purpose')
       : undefined;
+    const nextPurpose = has('purpose') ? await this.normalizeNullable(body.purpose, storedPurpose) : undefined;
 
     // Status transition handling
     if (has('status')) {
@@ -676,7 +673,9 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     if (has('it_sponsor_id')) existing.it_sponsor_id = body.it_sponsor_id || null;
     if (has('it_lead_id')) existing.it_lead_id = body.it_lead_id || null;
 
-    existing.updated_at = new Date();
+    // The purpose lives in a bound document, which the trigger of the project does not see: its
+    // change dates the project here (migration 1856270000000).
+    if (nextPurpose !== undefined && (nextPurpose ?? null) !== (storedPurpose ?? null)) existing.updated_at = new Date();
 
     const saved = await repo.save(existing);
     const sourceDescriptor = {

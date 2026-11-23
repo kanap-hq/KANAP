@@ -412,10 +412,14 @@ export class InterfacesCrudService extends InterfacesBaseService {
     await assertSpecificationSourceTexts(existing, before);
 
     if (Array.isArray(body.middleware_application_ids)) {
+      // The middleware applications are rows of their own, which the trigger of the interface does
+      // not see: their change dates the interface here (migration 1856270000000).
+      const stored = (await this.getMiddlewareRepo(opts?.manager).find({ where: { interface_id: existing.id } as any })).map((row) => row.application_id);
+      const next = Array.from(new Set((body.middleware_application_ids as unknown[]).map((value) => String(value).trim()).filter(Boolean)));
+      if ([...stored].sort().join(',') !== [...next].sort().join(',')) existing.updated_at = new Date();
       await this.syncMiddlewareApplications(existing, body.middleware_application_ids, opts?.manager);
     }
 
-    existing.updated_at = new Date();
     const saved = await repo.save(existing);
     const titleFieldsChanged = before.name !== saved.name
       || before.interface_reference !== saved.interface_reference

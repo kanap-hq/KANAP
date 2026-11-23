@@ -189,8 +189,7 @@ export async function resyncFromChart(mg: EntityManager, chartId: string, actor:
      changed AS (
        UPDATE accounts a
        SET consolidation_account_name = src.account_name,
-           consolidation_account_description = src.description,
-           updated_at = now()
+           consolidation_account_description = src.description
        FROM prev
        JOIN src ON src.account_number = prev.consolidation_account_number
        WHERE a.id = prev.id AND a.tenant_id = ${CURRENT_TENANT}
@@ -233,8 +232,7 @@ export async function remapToConsolidationAccount(
        UPDATE accounts a
        SET consolidation_account_number = $3::bigint,
            consolidation_account_name = $4::text,
-           consolidation_account_description = $5::text,
-           updated_at = now()
+           consolidation_account_description = $5::text
        FROM prev
        WHERE a.id = prev.id AND a.tenant_id = ${CURRENT_TENANT}
        RETURNING a.id, to_jsonb(prev) AS before, to_jsonb(a) AS after

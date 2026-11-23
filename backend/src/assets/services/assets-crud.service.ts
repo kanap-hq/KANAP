@@ -60,10 +60,10 @@ export class AssetsCrudService extends AssetsBaseService {
     value: unknown,
     userId: string | null,
     opts?: ServiceOpts,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const mg = this.getManager(opts);
     const resolved = await this.operatingSystems.resolve(mg, tenantId, value == null ? null : String(value), { create: true, userId, audit: opts?.audit });
-    await this.operatingSystems.setOperatingSystem(mg, tenantId, assetId, resolved, this.osSource(opts), userId, opts?.audit);
+    return (await this.operatingSystems.setOperatingSystem(mg, tenantId, assetId, resolved, this.osSource(opts), userId, opts?.audit)).changed;
   }
 
   /** The readable label, after the asset audit has already snapshotted the columns. */
@@ -422,7 +422,6 @@ export class AssetsCrudService extends AssetsBaseService {
       existing.end_of_life_date = this.normalizeNullable((body as any).end_of_life_date);
     }
 
-    existing.updated_at = new Date();
     const saved = await repo.save(existing);
     await this.audit.log(
       { table: 'assets', recordId: saved.id, action: 'update', before, after: saved, userId, ...this.auditSource(opts) },
@@ -430,8 +429,10 @@ export class AssetsCrudService extends AssetsBaseService {
     );
     // Retired or back in service: its technologies are matched again with the vulnerabilities.
     if (before.status !== saved.status) await this.cpeEvents?.emitForSubjects(opts?.manager ?? repo.manager, tenant, 'asset', [saved.id]);
-    if (has('operating_system')) {
-      await this.applyOperatingSystem(tenant, saved.id, (body as any).operating_system, userId, opts);
+    if (has('operating_system') && await this.applyOperatingSystem(tenant, saved.id, (body as any).operating_system, userId, opts)) {
+      // The operating system is a link of its own, which the trigger of the asset does not see: its
+      // change dates the asset here (migration 1856270000000).
+      await (opts?.manager ?? repo.manager).query(`UPDATE assets SET updated_at = now() WHERE tenant_id = $1 AND id = $2`, [tenant, saved.id]);
     }
     return this.attachOperatingSystem(saved, tenant, opts);
   }

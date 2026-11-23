@@ -412,7 +412,7 @@ export const RECOMMENDED_DIMENSION_SQL = {
        SELECT 1 FROM analytics_axes WHERE tenant_id = $1 AND lower(name) = lower($2) AND ($3::uuid IS NULL OR id <> $3::uuid)
      ) AS taken`,
   /** Names the default dimension. */
-  nameDefault: `UPDATE analytics_axes SET name = $3, description = $4, updated_at = now()
+  nameDefault: `UPDATE analytics_axes SET name = $3, description = $4
       WHERE tenant_id = $1 AND id = $2::uuid AND is_default`,
   /** A new dimension after the tenant's last one: for OPEX and CAPEX lines, optional, enabled. */
   insertAxis: `INSERT INTO analytics_axes (tenant_id, code, name, description, sort_order, applies_to, required, status)
