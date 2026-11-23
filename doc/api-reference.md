@@ -1620,6 +1620,8 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - DELETE `/tasks/bulk` — bulk delete `{ ids: string[] }` → `{ deleted: string[], failed: { id, name, reason }[] }` **[Requires: tasks:admin]**
 
 ## Portfolio Requests
+- POST `/portfolio/requests/:id/convert` — create a project from an approved request **[Requires: portfolio_projects:member]**
+  - The request must be Approved. A request that is already Converted is refused (`400`, `This request has already been converted to a project.`) and no project is created. Any other status is refused (`400`). `actual_start` and `actual_end` in the body are refused (`400`), as on project creation.
 - GET `/portfolio/requests/:id?include=activities` — load request (include activity feed via `include=activities`) **[Requires: portfolio_requests:reader]**
   - Activity rows are ordered newest-first and tenant-scoped in SQL (`a.tenant_id = app_current_tenant()`).
 - PATCH `/portfolio/requests/:id` — update request **[Requires: portfolio_requests:member]**

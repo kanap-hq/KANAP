@@ -416,7 +416,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
   }
 
   /**
-   * Convert a request to a project.
+   * Convert an approved request to a project. A request that is already converted is refused:
+   * a further project for the same need is created from the portfolio and linked to the request.
    */
   async convertFromRequest(
     requestId: string,
@@ -434,7 +435,12 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const request = await requestRepo.findOne({ where: { id: requestId } });
     if (!request) throw new NotFoundException('Request not found');
 
-    if (request.status !== 'approved' && request.status !== 'converted') {
+    // A converted request already has its project. A further project for the same need is
+    // created from the portfolio and linked to the request.
+    if (request.status === 'converted') {
+      throw new BadRequestException('This request has already been converted to a project.');
+    }
+    if (request.status !== 'approved') {
       throw new BadRequestException(
         `Cannot convert request with status '${request.status}'. Request must be Approved.`
       );
@@ -486,32 +492,29 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       project_id: savedProject.id,
     }));
 
-    // Update request status to 'converted' if not already
-    if (request.status === 'approved') {
-      const requestBefore = { ...request };
-      request.status = 'converted';
-      request.converted_date = new Date();
-      request.updated_at = new Date();
-      await requestRepo.save(request);
-      // The request's row names the project it became (`converted_to_project_id`, beside the saved
-      // row): its history reads "Converted to project: PRJ-7".
-      await this.audit.log({
-        table: 'portfolio_requests',
-        recordId: request.id,
-        action: 'update',
-        before: requestBefore,
-        after: { ...request, converted_to_project_id: savedProject.id },
-        userId,
-      }, { manager: mg });
+    const requestBefore = { ...request };
+    request.status = 'converted';
+    request.converted_date = new Date();
+    request.updated_at = new Date();
+    await requestRepo.save(request);
+    // The request's row names the project it became (`converted_to_project_id`, beside the saved
+    // row): its history reads "Converted to project: PRJ-7".
+    await this.audit.log({
+      table: 'portfolio_requests',
+      recordId: request.id,
+      action: 'update',
+      before: requestBefore,
+      after: { ...request, converted_to_project_id: savedProject.id },
+      userId,
+    }, { manager: mg });
 
-      await this.logActivity(mg, {
-        request_id: requestId,
-        tenant_id: tenantId,
-        author_id: userId,
-        type: 'change',
-        changed_fields: { status: ['approved', 'converted'] },
-      });
-    }
+    await this.logActivity(mg, {
+      request_id: requestId,
+      tenant_id: tenantId,
+      author_id: userId,
+      type: 'change',
+      changed_fields: { status: ['approved', 'converted'] },
+    });
 
     await this.integratedDocuments.createProjectPurposeFromRequest(
       {
