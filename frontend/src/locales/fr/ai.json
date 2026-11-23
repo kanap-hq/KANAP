@@ -2,7 +2,7 @@
   "conversationList": {
     "delete": "Supprimer",
     "deleteConfirmMessage": "La conversation et ses messages sont supprimés. Cette action est irréversible.",
-    "deleteConfirmTitle": "Supprimer cette conversation ?",
+    "deleteConfirmTitle": "Supprimer {{name}} ?",
     "dateGroups": {
       "lastWeek": "7 derniers jours",
       "older": "Plus ancien",
@@ -316,8 +316,10 @@
         "it_users": "Utilisateurs IT",
         "manual_company": "Manuelle par société",
         "manual_department": "Manuelle par département",
+        "manual_pct": "Pourcentages manuels",
         "turnover": "Chiffre d'affaires"
       },
+      "allocationsRemoved": "Supprimées",
       "classificationReview": {
         "reviewed": "Revue faite",
         "stale": "À revoir après cette modification"
@@ -437,10 +439,10 @@
     "aliases": "Alias : {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Volume traité",
-    "input": "Tokens en entrée",
-    "output": "Tokens en sortie",
-    "lastInput": "Contexte de la dernière requête"
+    "total": "Volume traité :",
+    "input": "Tokens en entrée :",
+    "output": "Tokens en sortie :",
+    "lastInput": "Contexte de la dernière requête :"
   },
   "usageIndicator": {
     "limitReached": "Limite mensuelle atteinte. Réinitialisation le {{resetDate}}.",

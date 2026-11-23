@@ -195,7 +195,7 @@ describe('Overview tab support', () => {
     fireEvent.change(notes, { target: { value: 'Call the desk' } });
     expect(onPatch).not.toHaveBeenCalled();
     fireEvent.blur(notes);
-    expect(onPatch).toHaveBeenCalledWith({ support_notes: 'Call the desk' });
+    expect(onPatch).toHaveBeenCalledWith({ support_notes: 'Call the desk' }, 'app-1');
     const row = screen.getByText('Ada Lovelace').closest('tr') as HTMLElement;
     fireEvent.click(within(row).getByRole('button', { name: /removeContact/ }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/support-contacts/bulk-replace', { contacts: [] }));

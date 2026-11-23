@@ -245,7 +245,11 @@ export class InterfacesCrudService extends InterfacesBaseService {
   /**
    * Create a new interface.
    */
-  async create(body: any, tenantId: string, userId: string | null, opts?: ServiceOpts) {
+  /**
+   * `audit`: the source of the audit rows (the interface's and its specification's) when it is not
+   * the person on the screen (Kad's card).
+   */
+  async create(body: any, tenantId: string, userId: string | null, opts?: ServiceOpts & { audit?: AuditSourceOptions }) {
     const repo = this.getRepo(opts?.manager);
     if (!body || typeof body !== 'object') throw new BadRequestException('Body is required');
     if (!tenantId) throw new BadRequestException('Tenant context is required');
@@ -319,11 +323,14 @@ export class InterfacesCrudService extends InterfacesBaseService {
         specification: String(body?.specification_markdown || '').trim() || null,
       },
       userId,
-      { manager: opts?.manager },
+      { manager: opts?.manager, audit: opts?.audit },
     );
 
     await this.audit.log(
-      { table: 'interfaces', recordId: saved.id, action: 'create', before: null, after: saved, userId },
+      {
+        table: 'interfaces', recordId: saved.id, action: 'create', before: null, after: saved, userId,
+        ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null } : {}),
+      },
       { manager: opts?.manager },
     );
     return saved;
@@ -332,7 +339,8 @@ export class InterfacesCrudService extends InterfacesBaseService {
   /**
    * Update an existing interface.
    */
-  async update(id: string, body: any, tenantId: string, userId: string | null, opts?: ServiceOpts) {
+  /** `audit`: as for `create`. */
+  async update(id: string, body: any, tenantId: string, userId: string | null, opts?: ServiceOpts & { audit?: AuditSourceOptions }) {
     const repo = this.getRepo(opts?.manager);
     if (!body || typeof body !== 'object') throw new BadRequestException('Body is required');
     const interfaceDbId = await this.resolveInterfaceIdentifier(id, opts?.manager);
@@ -425,11 +433,14 @@ export class InterfacesCrudService extends InterfacesBaseService {
         'interfaces',
         this.buildSourceDescriptor(saved),
         userId,
-        { manager: opts?.manager },
+        { manager: opts?.manager, audit: opts?.audit },
       );
     }
     await this.audit.log(
-      { table: 'interfaces', recordId: saved.id, action: 'update', before, after: saved, userId },
+      {
+        table: 'interfaces', recordId: saved.id, action: 'update', before, after: saved, userId,
+        ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null } : {}),
+      },
       { manager: opts?.manager },
     );
     return saved;

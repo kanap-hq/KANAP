@@ -211,7 +211,8 @@ export type BudgetFileReport = {
       code: string;
       costCenter: string;
       company: string;
-      costCenterCompany: string;
+      /** Absent for a person who does not read the companies (`_UNREAD` code): `company` is then the file's name. */
+      costCenterCompany?: string;
       message: string;
     }>;
     /** Cells the load does not read, by line and column (the description of a CAPEX line). */

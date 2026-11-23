@@ -29,6 +29,8 @@ Der Verlauf listet einen Eintrag pro Änderung, den neuesten oben. Jeder Eintrag
 
 Eine Betragsänderung nennt das Jahr, die Spalte und die Werte vorher und nachher.
 
+Eine Änderung durch Kad hinterlässt dieselben Einträge wie dieselbe Änderung auf dem Bildschirm, markiert mit **Kad für** die Person, die sie genehmigt hat. Wenn Sie Kad bitten, eine Änderung rückgängig zu machen, hinterlässt das Rückgängigmachen seine Einträge auf dieselbe Weise.
+
 Lange Verläufe werden seitenweise geladen: Klicken Sie unten in der Liste auf **Mehr laden**, um ältere Änderungen zu sehen.
 
 ## Änderungen an den Bestandteilen eines Datensatzes
@@ -42,6 +44,14 @@ Der Verlauf listet auch die Änderungen an den Bestandteilen eines Datensatzes a
 - Kontakte;
 - verknüpfte Anwendungen, Technologien und Assets;
 - Aufgaben.
+
+Bei einer Budgetspalte, die mit **Menge und Preis** aufgebaut ist, sagt der Eintrag einer Eingabe auch, was sich in der Berechnung geändert hat, direkt über der Änderung der Beträge:
+
+- jede geänderte Eigenschaft einer bepreisten Zeile: Kalender, Menge, Einheit, Stückpreis, Preis pro, Häufigkeit, Tage pro Monat oder Zeitraum. Die Zeile wird mit ihrer Beschreibung genannt, oder mit ihrer Nummer, wenn sie keine hat. Zum Beispiel: „Bepreiste Zeile Berater, Kalender: Frankreich → Deutschland“;
+- die Arbeitstage eines Kalenders, nach Kalender und Jahr, wenn Sie die Zeilen nach einer Änderung des Kalenders wieder verwenden. Zum Beispiel: „Arbeitstage von Frankreich 2027: 218 → 217“;
+- die Kalender, die eine Spaltenkopie nicht behalten konnte, mit den Worten der Vorschau der Kopie.
+
+Eine wiederhergestellte Spalte listet sie auf dieselbe Weise. Ältere Einträge zeigen sie ebenfalls.
 
 Bei den anderen Datensätzen listet der Verlauf ebenso ihre Verknüpfungen und Bestandteile: Budgetzeilen, Anwendungen, Assets, Verträge, Teammitglieder, Kontakte, Abhängigkeiten, Weblinks, eingebettete Dokumente, Anhänge, Aufgaben, Bereitstellungen und Bewertungen nach Kriterien.
 

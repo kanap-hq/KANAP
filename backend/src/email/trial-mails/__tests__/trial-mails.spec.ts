@@ -145,6 +145,20 @@ function testVariants() {
     assert.ok(!/>https?:\/\/doc\.kadratis\.com/.test(mails.j0Angle.html) && !/>doc\.kadratis\.com/.test(mails.j0Angle.html), `${locale}: no address as link text`);
     assert.ok(mails.j0Angle.text.includes('/first-steps/budget-own-data/') && mails.j0Angle.text.includes('/first-steps/portfolio-own-data/'));
     assert.ok(mails.j0None.text.includes('/first-steps/budget-example/') && mails.j0None.text.includes('/first-steps/landscape-example/'));
+    // The portfolio path reads as the portfolio, as in the app and in its guide title.
+    const portfolioWords = { en: 'portfolio', fr: 'portefeuille', de: 'Portfolio', es: 'portafolio' }[locale]!;
+    const portfolioLabel = getEmailStrings(locale).trialMails.pathNames.portfolio;
+    const j0Portfolio = buildTrialWelcomeEmail({
+      locale, firstName: 'Camille', workspace: 'Acme', appUrl: APP,
+      angle: 'portfolio', mode: 'example', call: CALL, unsubscribeUrl: UNSUBSCRIBE,
+    });
+    for (const [name, mail] of [['j0Angle', mails.j0Angle], ['j0None', mails.j0None], ['j0Portfolio', j0Portfolio]] as const) {
+      assert.ok(!/requests|demandes|Anfragen|solicitudes/.test(mail.text), `${locale} ${name}: the portfolio path is not "projects and requests"`);
+      assert.ok(mail.text.includes(portfolioWords), `${locale} ${name}: names the portfolio`);
+    }
+    for (const mail of [mails.j0Angle, mails.j0None]) {
+      assert.ok(portfolioLabel.includes(portfolioWords) && mail.html.includes(`>${escapeForHtml(portfolioLabel)}</a>`), `${locale}: the portfolio link reads as the portfolio`);
+    }
     for (const name of ['j5', 'j5NoCall'] as const) {
       assert.equal(buttons(mails[name].html), 0, `${locale} ${name}: a personal note has no button`);
     }

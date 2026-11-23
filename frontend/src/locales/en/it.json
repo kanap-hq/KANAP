@@ -270,6 +270,7 @@
         "applications": "Applications",
         "itOwner": "IT owner",
         "nextSupportEnd": "Next end of support",
+        "nextSupportEndShort": "End of support",
         "vulnerabilities": "Vulnerabilities to review",
         "vulnerabilitiesShort": "Vulnerabilities"
       },

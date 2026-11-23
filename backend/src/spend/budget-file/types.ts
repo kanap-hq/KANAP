@@ -263,10 +263,14 @@ export interface BudgetFileSentence {
 export interface CostCenterCompanyWarning {
   line: number;
   /** Translation code of the sentence (frontend `errors` namespace); `message` is its English text. */
-  code: 'BUDGET_FILE_COST_CENTER_OTHER_COMPANY';
+  code: 'BUDGET_FILE_COST_CENTER_OTHER_COMPANY' | 'BUDGET_FILE_COST_CENTER_OTHER_COMPANY_UNREAD';
   costCenter: string;
   company: string;
-  costCenterCompany: string;
+  /**
+   * The cost center's company, for a person who reads the companies; absent otherwise (`_UNREAD`, P10
+   * of 26.12.1): `company` is then the name the file writes.
+   */
+  costCenterCompany?: string;
   message: string;
 }
 

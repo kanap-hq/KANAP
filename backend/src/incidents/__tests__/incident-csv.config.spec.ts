@@ -100,6 +100,8 @@ async function testHiddenRefIsUnknownOnValidate(): Promise<void> {
   await incidentCsvConfig.beforeValidate!([row], mockContext([hiddenRow]));
   assert.equal(row.raw.ref, '12');
   assert.equal(row.errors.length, 1);
+  assert.equal(row.errors[0].code, 'CSV_REFERENCE_NOT_FOUND');
+  assert.deepEqual(row.errors[0].params, { value: 'INC-12' });
   assert.match(row.errors[0].message, /Unknown incident reference\(s\): INC-12/);
 }
 

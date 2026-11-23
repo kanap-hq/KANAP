@@ -82,4 +82,27 @@ describe('DateFloatingFilter', () => {
     expect(screen.queryByTestId('FilterListIcon')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Clear filter' })).toBeNull();
   });
+
+  it('skips removeEventListener once the grid is destroyed, and still removes the listener on a live grid', () => {
+    const column = { getColId: () => 'disabled_at', getColDef: () => ({ headerName: 'End of validity' }) };
+    const mount = (isDestroyed: () => boolean) => {
+      const api = {
+        isDestroyed,
+        getFilterModel: () => ({}),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      };
+      const view = render(<DateFloatingFilter {...({ api, column, showParentFilter: vi.fn() } as any)} />);
+      return { api, view };
+    };
+
+    const destroyed = mount(() => true);
+    destroyed.view.unmount();
+    expect(destroyed.api.removeEventListener).not.toHaveBeenCalled();
+
+    const live = mount(() => false);
+    live.view.unmount();
+    expect(live.api.removeEventListener).toHaveBeenCalledTimes(1);
+    expect(live.api.removeEventListener).toHaveBeenCalledWith('filterChanged', expect.any(Function));
+  });
 });

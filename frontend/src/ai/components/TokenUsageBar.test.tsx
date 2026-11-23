@@ -29,28 +29,28 @@ describe('TokenUsageBar labels', () => {
 
   it('names the processed volume and the context of the last request in each language', async () => {
     expect(en.tokenUsage).toEqual({
-      total: 'Volume processed',
-      input: 'Input tokens',
-      output: 'Output tokens',
-      lastInput: 'Context of the last request',
+      total: 'Volume processed:',
+      input: 'Input tokens:',
+      output: 'Output tokens:',
+      lastInput: 'Context of the last request:',
     });
     expect(fr.tokenUsage).toEqual({
-      total: 'Volume traité',
-      input: 'Tokens en entrée',
-      output: 'Tokens en sortie',
-      lastInput: 'Contexte de la dernière requête',
+      total: 'Volume traité :',
+      input: 'Tokens en entrée :',
+      output: 'Tokens en sortie :',
+      lastInput: 'Contexte de la dernière requête :',
     });
     expect(de.tokenUsage).toEqual({
-      total: 'Verarbeitetes Volumen',
-      input: 'Eingabe-Tokens',
-      output: 'Ausgabe-Tokens',
-      lastInput: 'Kontext der letzten Anfrage',
+      total: 'Verarbeitetes Volumen:',
+      input: 'Eingabe-Tokens:',
+      output: 'Ausgabe-Tokens:',
+      lastInput: 'Kontext der letzten Anfrage:',
     });
     expect(es.tokenUsage).toEqual({
-      total: 'Volumen procesado',
-      input: 'Tokens de entrada',
-      output: 'Tokens de salida',
-      lastInput: 'Contexto de la última solicitud',
+      total: 'Volumen procesado:',
+      input: 'Tokens de entrada:',
+      output: 'Tokens de salida:',
+      lastInput: 'Contexto de la última solicitud:',
     });
 
     await i18n.changeLanguage('en');
@@ -66,10 +66,11 @@ describe('TokenUsageBar labels', () => {
     await i18n.changeLanguage('fr');
     renderBar();
     const bar = screen.getByTestId('token-usage-bar');
-    expect(bar).toHaveTextContent('Volume traité');
-    expect(bar).toHaveTextContent('Contexte de la dernière requête');
-    expect(bar).toHaveTextContent('Tokens en entrée');
-    expect(bar).toHaveTextContent('Tokens en sortie');
+    // French typography: a no-break space before the colon. A regular space would not match.
+    expect(bar.textContent).toContain('Volume traité\u00a0: 16');
+    expect(bar.textContent).toContain('Tokens en entrée\u00a0: 12');
+    expect(bar.textContent).toContain('Tokens en sortie\u00a0: 4');
+    expect(bar.textContent).toContain('Contexte de la dernière requête\u00a0: 7');
   });
 
   it('omits the last-request context when that usage is missing', async () => {

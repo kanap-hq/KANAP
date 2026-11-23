@@ -1,6 +1,8 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
+const stripTrailingSlash = (url) => (new URL(url).pathname === '/' ? url : url.replace(/\/$/, ''));
+
 export default defineConfig({
   site: 'https://kadratis.com',
   trailingSlash: 'ignore',
@@ -40,6 +42,13 @@ export default defineConfig({
       },
       // Exclude the trial funnel from the sitemap — it's behind robots noindex
       filter: (page) => !page.includes('/trial/') && !page.includes('/404'),
+      // Same address form as the canonical and hreflang links: no trailing
+      // slash except on the root.
+      serialize(item) {
+        item.url = stripTrailingSlash(item.url);
+        item.links = item.links?.map((l) => ({ ...l, url: stripTrailingSlash(l.url) }));
+        return item;
+      },
     }),
   ],
   server: {

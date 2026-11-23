@@ -88,6 +88,14 @@ async function testOperatingSystemAtTheCheck() {
     );
     assert.equal((await runner.query(`SELECT 1 FROM technologies WHERE tenant_id = $1`, [tenantId])).length, 0, 'the check writes nothing');
 
+    // Lot I6b of 26.12.1: Kad proposing the version the cell finds alone (a prefix rule) is the server's match.
+    const same = await importCsv(runner, tenantId, [OS_HEADER, 'srv-f;LOC-1;vm;prod;Ubuntu 22.04'], {
+      proposals: { operating_system: { 'Ubuntu 22.04': 'Ubuntu 22.04 LTS' } },
+    }, ADMIN);
+    assert.equal(same.ok, true, JSON.stringify(same.errors));
+    assert.deepEqual(listed(same), ['operating_system:Ubuntu 22.04>Ubuntu 22.04 LTS:version:server:2:true']);
+    assert.equal(same.refusedProposals, undefined);
+
     const load = await importCsv(runner, tenantId, file, { dryRun: false }, ADMIN);
     assert.equal(load.ok, true, JSON.stringify(load.errors));
     assert.deepEqual(load.matches, check.matches, 'the load lists the same matches');
@@ -165,6 +173,13 @@ async function testClusterNames() {
       'cluster:Réseau>Grappe Réseau:model:model:2:true',
       'cluster:Pole A>Pôle A:model:model:2:true',
     ]);
+    // Lot I6b of 26.12.1: Kad proposing the cluster the name finds alone (accents aside) is the server's match.
+    const same = await importCsv(runner, tenantId, [header, 'node-4;LOC-1;vm;prod;no;Grappe Reseau'], {
+      proposals: { cluster: { 'Grappe Reseau': 'Grappe Réseau' } },
+    }, ADMIN);
+    assert.equal(same.ok, true, JSON.stringify(same.errors));
+    assert.deepEqual(listed(same), ['cluster:Grappe Reseau>Grappe Réseau:accents:server:2:true']);
+    assert.equal(same.refusedProposals, undefined);
   });
 }
 

@@ -73,6 +73,9 @@ process.env.WB_BASE_URL = 'http://127.0.0.1:9';
 process.env.WB_CSV_URL = 'http://127.0.0.1:9/wb.csv';
 process.env.FX_SPOT_BASE_URL = 'http://127.0.0.1:9/latest';
 process.env.WB_CACHE_DIR = path.join(os.tmpdir(), 'kanap-1190-wb-empty');
+// Retries stay on. One millisecond is the base, so a refused source does not
+// sit through the 1.5 s, 2 s and 1 s production delays.
+process.env.WB_RETRY_DELAY_MS = '1';
 
 const FIXTURES = backendPath('fixtures', 'fromage-co');
 

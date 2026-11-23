@@ -182,8 +182,70 @@ async function testSameNameTwice() {
   });
 }
 
+// Lot I6b of 26.12.1: the server's own match comes first, in every column of the two files. Kad
+// proposing the record (or the version) a value finds alone, accents aside or by the prefix rule, is
+// the server's match: nothing of Kad's is listed, taken or refused. Kad proposing what only its
+// proposal finds stays Kad's.
+async function testServerMatchBeforeKadsProposal() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'links-csv-server-first');
+    const csv = service();
+    const ctx = { manager: runner.manager, tenantId, userId: null };
+    await asset(runner, tenantId, 'Serveur Comptabilité');
+    await asset(runner, tenantId, 'Base Équipe');
+    const ubuntu = await technology(runner, tenantId, 1, 'Ubuntu Serveur', 'operating_system');
+    await version(runner, tenantId, ubuntu, '22.04 LTS');
+    await version(runner, tenantId, ubuntu, '24.04 LTS');
+    await technology(runner, tenantId, 2, 'Pilote réseau');
+    await technology(runner, tenantId, 3, 'Moteur Java');
+    await application(runner, tenantId, 'Gestion des congés');
+    await application(runner, tenantId, 'Paie Centrale');
+    const sorted = (result: TechnologyLinksImportResult) => listed(result).sort();
+
+    const servers = csvFile([
+      ASSETS,
+      ',Serveur Comptabilite,,Pilote reseau,,no,',
+      ',Serveur Comptabilite,,Ubuntu Serveur,22.04,,',
+      ',compta,,UBS,Noble,,',
+    ]);
+    const screen = await csv.importAssetLinks({ file: servers, dryRun: true, language: 'en', access: ADMIN }, ctx);
+    const kad = await csv.importAssetLinks({
+      file: servers, dryRun: true, language: 'en', access: ADMIN,
+      proposals: {
+        asset_name: { 'Serveur Comptabilite': 'Serveur Comptabilité', compta: 'Base Équipe' },
+        technology_name: { 'Pilote reseau': 'Pilote réseau', UBS: 'Ubuntu Serveur' },
+        version: { '22.04': '22.04 LTS', Noble: '24.04 LTS' },
+      },
+    }, ctx);
+    assert.equal(kad.ok, true, JSON.stringify(kad.errors));
+    assert.deepEqual(sorted(kad), [
+      'asset_name:Serveur Comptabilite>Serveur Comptabilité:accents:server:2|3',
+      'asset_name:compta>Base Équipe:model:model:4',
+      'technology_name:Pilote reseau>Pilote réseau:accents:server:2',
+      'technology_name:UBS>Ubuntu Serveur:model:model:4',
+      'version:22.04>22.04 LTS:version:server:3',
+      'version:Noble>24.04 LTS:model:model:4',
+    ]);
+    assert.deepEqual(sorted(kad).filter((entry) => entry.includes(':server:')), sorted(screen), 'the server\'s matches, as the screen lists them');
+    assert.equal(kad.refusedProposals, undefined, 'nothing of Kad\'s refused');
+
+    const apps = csvFile([APPS, ',Gestion des conges,,Moteur Java,,', ',paie,,Moteur Java,,']);
+    const appsKad = await csv.importApplicationLinks({
+      file: apps, dryRun: true, language: 'en', access: ADMIN,
+      proposals: { application_name: { 'Gestion des conges': 'Gestion des congés', paie: 'Paie Centrale' } },
+    }, ctx, {});
+    assert.equal(appsKad.ok, true, JSON.stringify(appsKad.errors));
+    assert.deepEqual(sorted(appsKad), [
+      'application_name:Gestion des conges>Gestion des congés:accents:server:2',
+      'application_name:paie>Paie Centrale:model:model:3',
+    ]);
+    assert.equal(appsKad.refusedProposals, undefined, 'nothing of Kad\'s refused');
+  });
+}
+
 void runSpecs('technology-links-csv-matching.integration.spec.ts', [
   ['server links', testServerLinks],
   ['application links', testApplicationLinks],
   ['the same name twice', testSameNameTwice],
+  ['the server\'s own match before Kad\'s proposal', testServerMatchBeforeKadsProposal],
 ]);

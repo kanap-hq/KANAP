@@ -165,6 +165,8 @@ export default function LocationSelect({
   const canCreate = hasLevel('locations', 'member') && !disabled;
   const label = labelProp ?? t('selects.location');
   const naked = hideLabel || label === '';
+  // A hidden label still names the field for assistive technology; the placeholder must not.
+  const ariaLabel = naked && label ? label : undefined;
   const { data: locations, isLoading } = useLocationOptions();
   const [creating, setCreating] = React.useState<string | null>(null);
 
@@ -265,6 +267,7 @@ export default function LocationSelect({
             required={required}
             variant="standard"
             placeholder={placeholder ?? (naked ? t('selects.notSet') : undefined)}
+            inputProps={ariaLabel ? { ...params.inputProps, 'aria-label': ariaLabel } : params.inputProps}
             InputProps={{
               ...params.InputProps,
               endAdornment: (

@@ -530,3 +530,93 @@ describe('request history entries', () => {
       .toMatch(/ : Order to cash$/);
   });
 });
+
+describe('costed line causes of a budget input (H1)', () => {
+  const fr = i18n.getFixedT('fr', ['admin', 'ops', 'common']) as unknown as Translate;
+  const frContext: HistoryTextContext = { t: fr, locale: 'fr' };
+  const input = (changes: RecordHistoryChange[]) => item({ kind: 'round_input', label: 'planned' }, changes);
+
+  it('names each property of a costed line that moved, with the line', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'line_calendar', line: 'Consultant', lineNumber: 1, before: 'France', after: 'Germany' },
+      { field: 'line_calendar', line: 'Consultant', lineNumber: 1, before: null, after: { hidden: true, kind: 'calendar' } },
+      { field: 'line_quantity', line: 'Consultant', lineNumber: 1, before: '1', after: '2.5' },
+      { field: 'line_unit', line: 'Consultant', lineNumber: 1, before: 'days', after: 'people' },
+      { field: 'line_unit_price', line: 'Consultant', lineNumber: 1, before: '12000', after: '12450.5' },
+      { field: 'line_price_basis', line: 'Consultant', lineNumber: 1, before: 'per_day', after: 'per_month' },
+      { field: 'line_frequency', lineNumber: 2, before: 'per_month', after: 'once' },
+      { field: 'line_days_per_month', line: 'Consultant', lineNumber: 1, before: null, after: '5' },
+      {
+        field: 'line_period', line: 'Consultant', lineNumber: 1,
+        before: { start: '2026-02-01', end: '2026-10-30' }, after: { start: '2026-03-20', end: '2026-03-20' },
+      },
+    ];
+    expect(historyLines(input(changes), context)).toEqual([
+      { label: 'Costed line Consultant, calendar', before: 'France', after: 'Germany' },
+      { label: 'Costed line Consultant, calendar', before: 'No calendar', after: 'a working-day calendar' },
+      { label: 'Costed line Consultant, quantity', before: '1', after: '2.5' },
+      { label: 'Costed line Consultant, unit', before: 'days', after: 'people' },
+      { label: 'Costed line Consultant, unit price', before: '12 000', after: '12 450.5' },
+      { label: 'Costed line Consultant, price per', before: 'per day', after: 'per month' },
+      { label: 'Costed line no. 2, how often', before: 'per month', after: 'once' },
+      { label: 'Costed line Consultant, days per month', before: 'Full time', after: '5' },
+      { label: 'Costed line Consultant, period', before: '1 Feb 2026 to 30 Oct 2026', after: '20 Mar 2026' },
+    ]);
+    expect(historyLines(input(changes.slice(0, 1).concat(changes.slice(4, 5), changes.slice(7, 9))), frContext)).toEqual([
+      { label: 'Ligne chiffrée Consultant, calendrier', before: 'France', after: 'Germany' },
+      { label: 'Ligne chiffrée Consultant, prix unitaire', before: '12 000', after: '12 450,5' },
+      { label: 'Ligne chiffrée Consultant, jours par mois', before: 'Temps plein', after: '5' },
+      { label: 'Ligne chiffrée Consultant, période', before: 'du 1 févr. 2026 au 30 oct. 2026', after: '20 mars 2026' },
+    ]);
+  });
+
+  it('gives the working days of a calendar per year when the lines are used again', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'calendar_days', calendar: 'France', year: 2027, before: '218', after: '217' },
+      { field: 'calendar_days', calendar: null, year: 2027, before: '218', after: '217.5' },
+    ];
+    expect(historyLines(input(changes), context)).toEqual([
+      { label: 'Working days of France 2027', before: '218', after: '217' },
+      { label: 'Working days 2027', before: '218', after: '217.5' },
+    ]);
+    expect(historyLines(input(changes.slice(0, 1)), frContext)).toEqual([
+      { label: 'Jours ouvrés de France 2027', before: '218', after: '217' },
+    ]);
+  });
+
+  it('writes the full-time equivalent of the input with the decimal mark of the language', () => {
+    const changes: RecordHistoryChange[] = [{ field: 'fte', before: '0.86', after: '2.36' }];
+    expect(historyLines(input(changes), frContext)).toEqual([{ label: 'ETP', before: '0,86', after: '2,36' }]);
+    expect(historyLines(input(changes), context)).toEqual([{ label: 'FTE', before: '0.86', after: '2.36' }]);
+    expect(historyLines(input([{ field: 'fte', before: null, after: '2.00' }]), frContext)).toEqual([
+      { label: 'ETP', before: '—', after: '2,00' },
+    ]);
+  });
+
+  it('says which calendar a column copy replaced, with the words of the copy preview', () => {
+    const changes: RecordHistoryChange[] = [
+      { field: 'planned', before: 1000, after: 1200, year: 2027, sourceYear: 2026, sourceColumn: 'planned', percentageIncrease: '0' },
+      { field: 'line_calendar_replaced', line: 'Consultant', lineNumber: 1, year: 2027, before: 'France', after: 'France standard' },
+      { field: 'line_calendar_missing', lineNumber: 2, year: 2027, before: 'Old' },
+      { field: 'line_calendar_disabled', line: 'Licences', lineNumber: 3, after: 'Retired' },
+    ];
+    const lines = historyLines(item({ kind: 'record' }, changes), context);
+    expect(lines.slice(1)).toEqual([
+      { text: 'Consultant: France has no working days for 2027, uses France standard instead.' },
+      { text: 'Line 2: Old has no working days for 2027 and no replacement calendar. The amounts are copied without recalculation.' },
+      { text: 'Licences: Retired is disabled and is still used.' },
+    ]);
+  });
+
+  it('keeps the added and removed lines and the new order as they read before', () => {
+    expect(historyLines(input([
+      { field: 'line', event: 'added', after: 'Database' },
+      { field: 'line', event: 'removed', before: 'Licences' },
+      { field: 'lines', before: 2, after: 2, changed: true },
+    ]), context)).toEqual([
+      { text: 'Costed line added: Database' },
+      { text: 'Costed line removed: Licences' },
+      { text: 'Costed lines: distribution changed' },
+    ]);
+  });
+});

@@ -192,7 +192,14 @@ export type RoundInputsContext = {
   audit: Pick<AuditService, 'log'>;
   /** The action of the record's audit rows; by default `create`, `update` or `delete`. A restore writes `restored`. */
   auditAction?: 'restored';
+  /** The source of the record's audit rows when it is not the person on the screen (Kad's card). */
+  auditSource?: { source: string; sourceRef: string | null };
 };
+
+/** The audit row's source and reference, when the context names them. */
+function auditSourceOf(ctx: RoundInputsContext): { source?: string; sourceRef?: string | null } {
+  return ctx.auditSource ? { source: ctx.auditSource.source, sourceRef: ctx.auditSource.sourceRef } : {};
+}
 
 export function isRoundMeasure(value: unknown): value is AmountMeasure {
   return typeof value === 'string' && (ROUND_MEASURES as readonly string[]).includes(value);
@@ -483,6 +490,7 @@ export async function saveRoundInput(
       before: stored && linesChanged ? { ...stored, lines: storedLines } : stored,
       after: linesChanged ? { ...saved, lines: savedLines } : saved,
       userId: ctx.userId,
+      ...auditSourceOf(ctx),
     },
     { manager: ctx.manager },
   );
@@ -533,6 +541,7 @@ export async function deleteRoundInput(ctx: RoundInputsContext, rawMeasure: stri
       before: lines.length ? { ...stored, lines } : stored,
       after: null,
       userId: ctx.userId,
+      ...auditSourceOf(ctx),
     },
     { manager: ctx.manager },
   );

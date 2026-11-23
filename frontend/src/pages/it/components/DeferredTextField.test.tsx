@@ -57,4 +57,18 @@ describe('DeferredTextField', () => {
     await act(async () => { await Promise.resolve(); });
     expect(input.value).toBe('kept');
   });
+  it('saves a value typed before another record opens on the record it was typed on', async () => {
+    const saveA = vi.fn(async (_value: string) => undefined);
+    const saveB = vi.fn(async (_value: string) => undefined);
+    const { rerender } = render(<DeferredTextField value="Old A" resetKey="a" inputProps={{ 'aria-label': 'Publisher' }} onSave={saveA} />);
+    const input = screen.getByLabelText('Publisher') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'New A' } });
+    await act(async () => { vi.advanceTimersByTime(DEFERRED_SAVE_MS / 2); });
+    rerender(<DeferredTextField value="Value B" resetKey="b" inputProps={{ 'aria-label': 'Publisher' }} onSave={saveB} />);
+    await act(async () => { vi.advanceTimersByTime(DEFERRED_SAVE_MS * 2); });
+    expect(saveA).toHaveBeenCalledTimes(1);
+    expect(saveA).toHaveBeenCalledWith('New A');
+    expect(saveB).not.toHaveBeenCalled();
+    expect(input.value).toBe('Value B');
+  });
 });

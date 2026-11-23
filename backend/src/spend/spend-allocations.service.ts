@@ -13,6 +13,7 @@ import {
   AllocationInput,
   allocationSignature,
   bulkUpsertAllocations,
+  plannedAllocationRows,
   putVersionAllocations,
   readAllocationState,
 } from './allocation-save';
@@ -33,25 +34,45 @@ export class SpendAllocationsService {
   /**
    * The rows save (`POST …/allocations/bulk-upsert`, the AI): the rows are read with the method and
    * driver stored on the version. `opts.tenantId` is the request's tenant; without it, the tenant of
-   * the request transaction.
+   * the request transaction. `opts.audit`: the source of the audit row when it is not the person on
+   * the screen (Kad's card).
    */
-  async bulkUpsert(versionId: string, items: AllocationInput[], userId?: string | null, opts?: { manager?: EntityManager; tenantId?: string }) {
+  async bulkUpsert(
+    versionId: string, items: AllocationInput[], userId?: string | null,
+    opts?: { manager?: EntityManager; tenantId?: string; audit?: { source: string; sourceRef: string | null } },
+  ) {
     const manager = opts?.manager ?? this.repo.manager;
     const tenantId = opts?.tenantId ?? await currentTenantId(manager);
     // A version of a line of another nature is not found (`budget-nature.ts`); a missing one is refused as before.
     await budgetLineOfChild(manager, this.nature, 'version', tenantId, versionId, 'Version not found');
-    return bulkUpsertAllocations({ manager, audit: this.audit, calculator: this.calculator }, this.nature, tenantId, versionId, items, userId);
+    return bulkUpsertAllocations(
+      { manager, audit: this.audit, calculator: this.calculator, ...(opts?.audit ? { auditSource: opts.audit } : {}) },
+      this.nature, tenantId, versionId, items, userId,
+    );
+  }
+
+  /** What the rows save would store for `items` (`plannedAllocationRows`), with nothing written: Kad's card shows it. */
+  async plan(versionId: string, items: AllocationInput[], opts: { manager: EntityManager; tenantId: string }) {
+    await budgetLineOfChild(opts.manager, this.nature, 'version', opts.tenantId, versionId, 'Version not found');
+    return plannedAllocationRows(opts.manager, this.nature, opts.tenantId, versionId, items, this.calculator.fxRates);
   }
 
   /**
    * The Allocations tab's save (`PUT …/versions/:id/allocations`): method, driver and rows in one
    * request, compared with `base_signature` under the version's lock (`allocation-save.ts`). Answers
-   * what is stored, its distribution and its new signature.
+   * what is stored, its distribution and its new signature. Also Kad's change of a version's method or
+   * driver (`audit`: the source of the audit rows, as `bulkUpsert`).
    */
-  async put(versionId: string, body: unknown, userId?: string | null, opts?: { manager?: EntityManager; tenantId?: string }) {
+  async put(
+    versionId: string, body: unknown, userId?: string | null,
+    opts?: { manager?: EntityManager; tenantId?: string; audit?: { source: string; sourceRef: string | null } },
+  ) {
     const manager = opts?.manager ?? this.repo.manager;
     const tenantId = opts?.tenantId ?? await currentTenantId(manager);
-    const saved = await putVersionAllocations({ manager, audit: this.audit, calculator: this.calculator }, this.nature, tenantId, versionId, body, userId);
+    const saved = await putVersionAllocations(
+      { manager, audit: this.audit, calculator: this.calculator, ...(opts?.audit ? { auditSource: opts.audit } : {}) },
+      this.nature, tenantId, versionId, body, userId,
+    );
     const listed = await this.listForVersion(versionId, { manager, tenantId });
     return { ...listed, updated: saved.updated };
   }
