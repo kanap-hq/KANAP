@@ -708,7 +708,7 @@ async function testUnlistedLineNeverWritten(harness: Harness) {
     assert.match(preview.changes.budget_line_bulk_edit.to, /\n\n5 lines to change, 1 refused: Read only for you \(1\)$/);
     assert.equal(listed(preview).some((row) => row[0] === 'BL-7'), false, 'the read-only line is not listed');
     // Company B goes to edit before the approval: BL-7 becomes editable.
-    await runner.query('RESET ROLE');
+    assert.equal((await runner.query(`SELECT data_access_apply($1) AS mode`, [seed.users.member]))[0].mode, 'all');
     await runner.query(`UPDATE user_data_access_nodes SET access = 'edit' WHERE tenant_id = $1 AND user_id = $2 AND company_id = $3`, [seed.tenantId, seed.users.limited, seed.companies.b]);
     assert.equal((await runner.query(`SELECT data_access_apply($1) AS mode`, [seed.users.limited]))[0].mode, 'limited');
     const refused = await harness.previews.executePreview(ctx, preview.preview_id) as any;
