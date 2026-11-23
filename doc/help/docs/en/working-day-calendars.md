@@ -145,7 +145,7 @@ These rules apply to both kinds of calendar:
 
 ### When working days change
 
-**Changing working days never changes a budget line on its own.** The amounts already saved on a budget line stay as they are. When you open the line's budget tab, the **Quantity and price** tab says so, for example "Working days changed since the last computation: March: 20 days, now 19." Click **Use the lines again** there to apply the new days.
+**Changing working days never changes a budget line on its own.** The amounts already saved on a budget line stay as they are. When you open the line's budget tab, the **Quantity and price** tab says so, for example "Working days changed since the last computation: March: 20 days, now 19." Click **Use the lines again** there to apply the new days. The **History** tab of the budget line then records the working days before and after, by calendar and year, for example "Working days of France 2027: 218 → 217".
 
 ---
 

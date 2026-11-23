@@ -145,7 +145,7 @@ Diese Regeln gelten für beide Arten von Kalendern:
 
 ### Wenn sich Arbeitstage ändern
 
-**Eine Änderung der Arbeitstage ändert nie von selbst eine Budgetzeile.** Die bereits auf einer Budgetzeile gespeicherten Beträge bleiben unverändert. Wenn Sie den Budget-Tab der Zeile öffnen, weist der Tab **Menge und Preis** darauf hin, zum Beispiel „Seit der letzten Berechnung geänderte Arbeitstage: März: 20 Tage, jetzt 19“. Klicken Sie dort auf **Die Zeilen wieder verwenden**, um die neuen Tage anzuwenden.
+**Eine Änderung der Arbeitstage ändert nie von selbst eine Budgetzeile.** Die bereits auf einer Budgetzeile gespeicherten Beträge bleiben unverändert. Wenn Sie den Budget-Tab der Zeile öffnen, weist der Tab **Menge und Preis** darauf hin, zum Beispiel „Seit der letzten Berechnung geänderte Arbeitstage: März: 20 Tage, jetzt 19“. Klicken Sie dort auf **Die Zeilen wieder verwenden**, um die neuen Tage anzuwenden. Der Tab **Verlauf** der Budgetzeile hält dann die Arbeitstage vorher und nachher fest, nach Kalender und Jahr, zum Beispiel „Arbeitstage von Frankreich 2027: 218 → 217“.
 
 ---
 
