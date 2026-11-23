@@ -4,6 +4,9 @@ import { QueryRunner } from 'typeorm';
 import { TechnologyAdminZone1854290000000 as Migration } from '../../migrations/1854290000000-technology-admin-zone';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { technology } from './technologies.fixtures';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1854290000000 (`technologies.admin_zone`), against a real database, in transactions
 // rolled back at the end:
@@ -26,6 +29,7 @@ const EXPECTED = { data_type: 'text', is_nullable: 'YES', column_default: null }
 
 async function testMigratedAndRerun() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     assert.deepEqual(await column(runner), EXPECTED);
     const tenantId = await seedTenant(runner, 'adz-rerun');
     const tech = await technology(runner, tenantId, 1, 'Active Directory', 'directory');
@@ -40,6 +44,7 @@ async function testMigratedAndRerun() {
 
 async function testDirtyDatabase() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     await runner.query(`ALTER TABLE technologies DROP COLUMN admin_zone`);
     await runner.query(`ALTER TABLE technologies ADD COLUMN admin_zone varchar(20) NOT NULL DEFAULT ''`);
     const a = await seedTenant(runner, 'adz-dirty-a');

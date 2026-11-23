@@ -3,6 +3,9 @@ import * as assert from 'node:assert/strict';
 import { QueryRunner } from 'typeorm';
 import { AnalyticsAxisAppliesTo1853900000000 as Migration } from '../../migrations/1853900000000-analytics-axis-applies-to';
 import { runSpecs, seedTenant, setCurrentTenant, withRollback } from './analytics-test-helpers';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1853900000000 (which line types a dimension applies to), against a
 // real database, in a transaction rolled back at the end: a second up() changes
@@ -56,6 +59,7 @@ async function shape(runner: QueryRunner) {
 
 async function testRerunAndDownUp() {
   await withRollback(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const tenantId = await seedTenant(runner, 'migration');
     const [axis] = await runner.query(
       `INSERT INTO analytics_axes (tenant_id, code, name, applies_to) VALUES ($1, 'recurrence', 'Recurrence', 'capex') RETURNING id`,
@@ -90,6 +94,7 @@ async function rowSecurity(runner: QueryRunner) {
 
 async function testRepairsDirtyRows() {
   await withRollback(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const applied = await shape(runner);
     const security = await rowSecurity(runner);
     const tenantId = await seedTenant(runner, 'migration-dirty');
