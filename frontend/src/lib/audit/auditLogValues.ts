@@ -54,7 +54,15 @@ export type AuditValueContext = {
    * `cyberCriticalityLevels`, `recoveryWaves`). Without it, a code reads with the shipped label.
    */
   catalogLabel?: (list: AuditCatalogList, code: string) => string | null;
+  /**
+   * The records a budget line's link entry names, by id, as the audit detail returns them
+   * (`linked_records`). An id it does not hold names a record that no longer exists.
+   */
+  linkedRecords?: Readonly<Record<string, AuditLinkedRecord>>;
 };
+
+/** A record a link entry names: its business reference when it has one, and its name. */
+export type AuditLinkedRecord = { ref: string | null; name: string };
 
 /**
  * The catalog lists an audit value may name with a tenant label: the IT settings
@@ -259,9 +267,24 @@ function changedKeys(before: Record<string, unknown>, after: Record<string, unkn
   return Array.from(keys).filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]));
 }
 
+/**
+ * The links of a budget line to applications and technologies, written from either side as a bare
+ * array of ids. The detail reads them as one row, the linked records, named by the API.
+ */
+const LINK_ID_TABLES = new Set(['application_spend_items', 'application_capex_items', 'technology_spend_items']);
+/** The one row of a link entry. */
+export const LINKED_RECORDS_FIELD = 'linked_records';
+
+function isLinkIdsEntry(row: AuditPayloadRow): boolean {
+  return LINK_ID_TABLES.has(String(row.table_name || ''))
+    && (row.before_json == null || Array.isArray(row.before_json))
+    && (row.after_json == null || Array.isArray(row.after_json));
+}
+
 /** A payload that is not an object (an array, a string…) cannot be read as fields. */
 export function auditHasNonObjectPayload(row: AuditPayloadRow | null | undefined): boolean {
   if (!row) return false;
+  if (isLinkIdsEntry(row)) return false;
   return (row.before_json != null && !isPlainObject(row.before_json))
     || (row.after_json != null && !isPlainObject(row.after_json));
 }
@@ -269,6 +292,9 @@ export function auditHasNonObjectPayload(row: AuditPayloadRow | null | undefined
 /** The rows of the field table: the changed keys of an update, else the fields of the one side present. */
 export function auditFields(row: AuditPayloadRow | null | undefined): AuditFields {
   if (!row) return { mode: 'single', rows: [] };
+  if (isLinkIdsEntry(row)) {
+    return { mode: 'change', rows: [{ key: LINKED_RECORDS_FIELD, before: row.before_json ?? [], after: row.after_json ?? [] }] };
+  }
   const action = String(row.action || '').toLowerCase();
   const table = String(row.table_name || '');
   const before = isPlainObject(row.before_json) ? row.before_json : {};
@@ -293,6 +319,35 @@ export function auditFields(row: AuditPayloadRow | null | undefined): AuditField
       .filter((key) => !omitted(key, action, table))
       .map((key) => ({ key, value: source[key] })),
   };
+}
+
+/** The label of a field row: its screen name, or the stored key when it has none. */
+export function auditFieldLabel(key: string, t: Translate): string {
+  const label = t(`auditLogs.fields.${key}`, { defaultValue: key });
+  return typeof label === 'string' && label.trim() ? label : key;
+}
+
+/**
+ * The rows in alphabetical order of their label, in the reader's language: accents and case do
+ * not change the order.
+ */
+export function sortAuditFields(fields: AuditFields, t: Translate, locale: string): AuditFields {
+  const collator = new Intl.Collator(locale, { sensitivity: 'base', numeric: true });
+  const labelled = fields.rows.map((row) => ({ row, label: auditFieldLabel(row.key, t) }));
+  labelled.sort((a, b) => collator.compare(a.label, b.label) || a.row.key.localeCompare(b.row.key));
+  return { mode: fields.mode, rows: labelled.map((entry) => entry.row) };
+}
+
+/** The ids of a link entry's row are records: named by reference and name, a missing one as deleted. */
+function linkedRecordsText(ids: unknown[], context: AuditValueContext): AuditValue {
+  if (ids.length === 0) return { text: DASH };
+  const texts = ids.map((id) => {
+    const record = typeof id === 'string' ? context.linkedRecords?.[id.toLowerCase()] : undefined;
+    if (!record) return context.t('auditLogs.values.deletedRecord');
+    return [record.ref, record.name].filter(Boolean).join(' ') || context.t('auditLogs.values.deletedRecord');
+  });
+  const text = texts.join('\n');
+  return { text, title: texts.join(', ') };
 }
 
 /** The payload the detail reads around a value: the after side wins, the before side fills what it no longer holds. */
@@ -882,6 +937,7 @@ export function formatAuditValue(value: unknown, field: string, context: AuditVa
   if (value === null || value === undefined) return { text: DASH };
   const exported = formatExportValue(value, field, context);
   if (exported) return exported;
+  if (field === LINKED_RECORDS_FIELD && Array.isArray(value)) return linkedRecordsText(value, context);
   if (field === 'mode' && isDataAccessSnapshot(context.snapshot)) {
     const mode = dataAccessModeText(value, context);
     if (mode) return mode;
