@@ -73,12 +73,13 @@ export class BudgetLinesService {
     return this.items(line.nature).getDetail(line.id, { ...opts, native: true });
   }
 
-  async create(body: unknown, userId: string | undefined, opts: { manager: EntityManager }) {
+  /** `audit`: the source of the line's audit row (Kad's card), the POST's being the person's. */
+  async create(body: unknown, userId: string | undefined, opts: { manager: EntityManager; audit?: BudgetLineAuditSource }) {
     const nature = (body as any)?.nature;
     if (nature !== 'opex' && nature !== 'capex') throw new BadRequestException('nature must be opex or capex.');
     const input = this.nativeBody(body, nature, false);
-    const created = await this.items(nature).create(input, userId, { ...opts, fields: 'columns', native: true });
-    return this.get(created.id, opts);
+    const created = await this.items(nature).create(input, userId, { manager: opts.manager, audit: opts.audit, fields: 'columns', native: true });
+    return this.get(created.id, { manager: opts.manager });
   }
 
   /**

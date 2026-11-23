@@ -53,6 +53,11 @@ export const ALLOCATION_METHODS = ['default', 'headcount', 'it_users', 'turnover
 export const ALLOCATION_DRIVERS = ['headcount', 'it_users', 'turnover'] as const;
 const MANUAL_METHODS = new Set<string>(['manual_company', 'manual_department', 'manual_pct']);
 
+/** The audit row's source and reference, when the save names them. */
+function auditSourceOf(deps: AllocationSaveDeps): { source?: string; sourceRef?: string | null } {
+  return deps.auditSource ? { source: deps.auditSource.source, sourceRef: deps.auditSource.sourceRef } : {};
+}
+
 /** The signature of an allocation nobody touched (the default method and driver, no row): known to the screen before a version exists. */
 export const UNTOUCHED_ALLOCATION_SIGNATURE = 'default';
 
@@ -70,6 +75,8 @@ type AllocationRow = SpendAllocation;
 export type AllocationSaveDeps = {
   manager: EntityManager;
   audit: Pick<AuditService, 'log'>;
+  /** The source of the save's audit rows when it is not the person on the screen (Kad's card). */
+  auditSource?: { source: string; sourceRef: string | null };
   /** The scope's calculator: the shares of an automatic method. */
   calculator: {
     computeForVersions(versions: any[], opts: { manager: EntityManager; tenantId: string }): Promise<Map<string, { shares: Array<{ allocation_pct: number | string }> }>>;
@@ -304,7 +311,7 @@ async function storeRows(
     const computation = await deps.calculator.computeForVersions([version], { manager, tenantId });
     const total = computation.get(version.id)?.shares.reduce((acc, share) => acc + Number(share.allocation_pct || 0), 0) ?? 0;
     // Keyed by the version: the Allocations tab's conflicts read who changed the allocation from here.
-    await deps.audit.log({ table: auditTableOf(scope, t.allocations), recordId: version.id, action: 'update', before, after: [], userId }, { manager });
+    await deps.audit.log({ table: auditTableOf(scope, t.allocations), recordId: version.id, action: 'update', before, after: [], userId, ...auditSourceOf(deps) }, { manager });
     return { updated: 0, total_pct: round(total) };
   }
 
@@ -312,7 +319,7 @@ async function storeRows(
   if (plan.kind === 'manual' && !sameAllocationRows(before, plan.rows)) {
     await repo.delete({ tenant_id: tenantId, version_id: version.id } as any);
     after = await repo.save(plan.rows);
-    await deps.audit.log({ table: auditTableOf(scope, t.allocations), recordId: version.id, action: 'update', before, after, userId }, { manager });
+    await deps.audit.log({ table: auditTableOf(scope, t.allocations), recordId: version.id, action: 'update', before, after, userId, ...auditSourceOf(deps) }, { manager });
   }
   return { updated: after.length, total_pct: round(after.reduce((acc, row) => acc + Number(row.allocation_pct || 0), 0)) };
 }
@@ -340,6 +347,55 @@ export async function bulkUpsertAllocations(
   const driver = (version.allocation_driver as string | null) ?? 'headcount';
   const plan = await planRows(manager, scope, tenantId, version, method, driver, items, 'refuse', deps.calculator?.fxRates);
   return storeRows(deps, scope, tenantId, version, plan, userId);
+}
+
+/**
+ * A version's method or driver changed outside the Allocations tab (the version PATCH, Kad's card),
+ * saved as the tab saves it (`putVersionAllocations`) with the rows the tab sends: the stored split
+ * while a split by company or by department stays (a new driver computes it again), none otherwise
+ * (an automatic method drops the stored rows; a manual one keeps them until companies are picked).
+ * A driver not given stays the stored one, as on the tab.
+ */
+export async function changeAllocationMethod(
+  deps: AllocationSaveDeps,
+  scope: AmountScope,
+  tenantId: string,
+  versionId: string,
+  change: { method?: unknown; driver?: unknown },
+  userId: string | null | undefined,
+) {
+  if (!(await lockVersionWithLine(deps.manager, scope, tenantId, versionId))) throw new NotFoundException('Version not found');
+  const state = await readAllocationState(deps.manager, scope, tenantId, versionId);
+  if (!state) throw new NotFoundException('Version not found');
+  const method = change.method ? change.method : state.method;
+  const keepsSplit = method === state.method && (method === 'manual_company' || method === 'manual_department');
+  const rows = keepsSplit
+    ? state.rows.filter((row) => !row.is_system_generated)
+      .map((row) => ({ company_id: row.company_id, department_id: method === 'manual_department' ? row.department_id ?? null : null }))
+    : [];
+  return putVersionAllocations(deps, scope, tenantId, versionId, { method, driver: change.driver || state.driver, rows, base_signature: null }, userId);
+}
+
+/**
+ * The rows the rows save (`bulkUpsertAllocations`) would store for `items`, validated and computed
+ * the same way, with nothing written: what Kad's card shows before its approval. Null for an
+ * automatic method, whose shares are computed when read.
+ */
+export async function plannedAllocationRows(
+  manager: EntityManager,
+  scope: AmountScope,
+  tenantId: string,
+  versionId: string,
+  items: AllocationInput[],
+  fxRates: TurnoverFxRates | undefined,
+): Promise<Array<{ company_id: string; department_id: string | null; allocation_pct: number }> | null> {
+  const version = await manager.getRepository<AllocationVersion>(SCOPES[scope].versionEntity).findOne({ where: { id: versionId, tenant_id: tenantId } as any });
+  if (!version) throw new BadRequestException('Invalid version');
+  const method = (version.allocation_method as string | null) ?? 'default';
+  const driver = (version.allocation_driver as string | null) ?? 'headcount';
+  const plan = await planRows(manager, scope, tenantId, version, method, driver, items, 'refuse', fxRates);
+  if (plan.kind !== 'manual') return null;
+  return plan.rows.map((row) => ({ company_id: row.company_id, department_id: row.department_id ?? null, allocation_pct: Number(row.allocation_pct) }));
 }
 
 /** The body of the PUT, validated. */
@@ -518,6 +574,7 @@ export async function putVersionAllocations(
       before: { allocation_method: state.method, allocation_driver: state.driver },
       after: { allocation_method: method, allocation_driver: driver },
       userId,
+      ...auditSourceOf(deps),
     }, { manager });
     (version as any).allocation_method = method;
     (version as any).allocation_driver = driver;

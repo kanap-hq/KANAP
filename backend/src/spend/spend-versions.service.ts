@@ -9,6 +9,8 @@ import { ensureBudgetVersion, updateBudgetVersionUnderLock } from './budget-vers
 import { lockBudgetLine } from './budget-locks';
 import { auditTableOf, type BudgetNature } from './budget-nature';
 import { presentChild, presentChildren } from './budget-line-presentation';
+import { AllocationCalculatorService } from './allocation-calculator.service';
+import { changeAllocationMethod } from './allocation-save';
 
 /** The messages and the year rule of each nature's routes, as before lot Z1. */
 const NATURE_CONTRACT: Record<BudgetNature, { itemNotFound: string; duplicateName: string }> = {
@@ -27,6 +29,8 @@ export class SpendVersionsService {
     @InjectRepository(SpendItem) private readonly items: Repository<SpendItem>,
     private readonly audit: AuditService,
     private readonly currencySettings: CurrencySettingsService,
+    /** The shares of a split, for a change of the allocation method or driver. */
+    private readonly calculator?: AllocationCalculatorService,
   ) {}
 
   private get contract() {
@@ -64,8 +68,12 @@ export class SpendVersionsService {
    * With `refuseExisting`, an existing version of the year is refused (409)
    * instead of returned: for a caller that asked to create one and would
    * otherwise report a creation that did not happen (the AI action).
+   * `audit`: the source of the audit row when it is not the person on the screen (Kad's card).
    */
-  async createForItem(itemId: string, body: Partial<SpendVersion>, userId?: string | null, opts?: { manager?: EntityManager; refuseExisting?: boolean }) {
+  async createForItem(
+    itemId: string, body: Partial<SpendVersion>, userId?: string | null,
+    opts?: { manager?: EntityManager; refuseExisting?: boolean; audit?: { source: string; sourceRef: string | null } },
+  ) {
     if (!body.version_name) throw new BadRequestException('version_name required');
     const asOf = body.as_of_date ?? new Date().toISOString().slice(0, 10);
     const yr = this.nature === 'capex'
@@ -103,20 +111,42 @@ export class SpendVersionsService {
       await this.audit.log({
         table: auditTableOf(this.nature, 'spend_versions'), recordId: ensured.version.id, action: 'create', before: null,
         after: presentChild(this.nature, ensured.version), userId,
+        ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
       }, { manager: mg });
     }
     return presentChild(this.nature, ensured.version) as SpendVersion;
   }
 
-  /** Only the fields the body supplies, under the line's and the version's locks; see `updateBudgetVersionUnderLock`. */
-  async updateForItem(itemId: string, body: Partial<SpendVersion> & { id: string }, userId?: string | null, opts?: { manager?: EntityManager }) {
+  /**
+   * Only the fields the body supplies, under the line's and the version's locks; see
+   * `updateBudgetVersionUnderLock`. The allocation method and driver are saved as the Allocations tab
+   * saves them (`changeAllocationMethod`): an automatic method removes a stored manual split, with the
+   * tab's audit rows. `audit` as `createForItem`.
+   */
+  async updateForItem(
+    itemId: string, body: Partial<SpendVersion> & { id: string }, userId?: string | null,
+    opts?: { manager?: EntityManager; audit?: { source: string; sourceRef: string | null } },
+  ) {
     const mg = opts?.manager ?? this.repo.manager;
-    const { before, after } = await updateBudgetVersionUnderLock(mg, this.nature, itemId, body as any, this.contract.duplicateName);
-    await this.audit.log({
-      table: auditTableOf(this.nature, 'spend_versions'), recordId: after.id, action: 'update',
-      before: presentChild(this.nature, before), after: presentChild(this.nature, after), userId,
-    }, { manager: mg });
-    return presentChild(this.nature, after) as SpendVersion;
+    const { allocation_method: method, allocation_driver: driver, ...own } = body as Record<string, unknown> & { id: string };
+    const allocation = !!method || !!driver;
+    const { before, after } = await updateBudgetVersionUnderLock(mg, this.nature, itemId, own, this.contract.duplicateName);
+    const source = opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {};
+    // A body that only changes the allocation writes the tab's rows alone.
+    if (!allocation || Object.keys(own).some((key) => key !== 'id')) {
+      await this.audit.log({
+        table: auditTableOf(this.nature, 'spend_versions'), recordId: after.id, action: 'update',
+        before: presentChild(this.nature, before), after: presentChild(this.nature, after), userId, ...source,
+      }, { manager: mg });
+    }
+    if (!allocation) return presentChild(this.nature, after) as SpendVersion;
+    if (!this.calculator) throw new Error('The allocation calculator is required to change an allocation method.');
+    await changeAllocationMethod(
+      { manager: mg, audit: this.audit, calculator: this.calculator, ...(opts?.audit ? { auditSource: opts.audit } : {}) },
+      this.nature, after.tenant_id, after.id, { method, driver }, userId,
+    );
+    const saved = await mg.getRepository(SpendVersion).findOne({ where: { id: after.id, tenant_id: after.tenant_id } });
+    return presentChild(this.nature, saved ?? after) as SpendVersion;
   }
 }
 

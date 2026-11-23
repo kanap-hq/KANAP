@@ -30,7 +30,7 @@ import { PortfolioRequestDependency } from './portfolio-request-dependency.entit
 import { PortfolioProjectDependency } from './portfolio-project-dependency.entity';
 import { PortfolioProject } from './portfolio-project.entity';
 import { PortfolioActivity } from './portfolio-activity.entity';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { resolveRecordCreators } from '../audit/record-creator.util';
 import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { ItemNumberService } from '../common/item-number.service';
@@ -1158,11 +1158,12 @@ export class PortfolioRequestsService {
   }
 
   // ==================== CREATE ====================
+  /** `audit`: the source of the audit rows when it is not the person on the screen (Kad's card). */
   async create(
     body: Partial<PortfolioRequest>,
     tenantId: string,
     userId: string | null,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: AuditSourceOptions },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioRequest);
@@ -1220,7 +1221,7 @@ export class PortfolioRequestsService {
         risks_mitigations: risksContent,
       },
       userId,
-      { manager: mg },
+      { manager: mg, audit: opts?.audit },
     );
 
     await this.audit.log({
@@ -1230,6 +1231,7 @@ export class PortfolioRequestsService {
       before: null,
       after: saved,
       userId,
+      ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null } : {}),
     }, { manager: mg });
 
     return saved;
@@ -1436,7 +1438,8 @@ export class PortfolioRequestsService {
     },
     tenantId: string,
     userId: string | null,
-    opts?: { manager?: EntityManager },
+    /** `audit`: as for `create`. */
+    opts?: { manager?: EntityManager; audit?: AuditSourceOptions },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioRequest);
@@ -1532,7 +1535,7 @@ export class PortfolioRequestsService {
         'purpose',
         nextPurpose,
         userId,
-        { manager: mg, logSourceActivity: true },
+        { manager: mg, logSourceActivity: true, audit: opts?.audit },
       );
     }
     if (has('risks')) {
@@ -1542,11 +1545,11 @@ export class PortfolioRequestsService {
         'risks_mitigations',
         nextRisks,
         userId,
-        { manager: mg, logSourceActivity: true },
+        { manager: mg, logSourceActivity: true, audit: opts?.audit },
       );
     }
     if (before.name !== saved.name) {
-      await this.integratedDocuments.syncTitles('requests', sourceDescriptor, userId, { manager: mg });
+      await this.integratedDocuments.syncTitles('requests', sourceDescriptor, userId, { manager: mg, audit: opts?.audit });
     }
 
     // Log status change as activity (optionally as decision)
@@ -1648,6 +1651,7 @@ export class PortfolioRequestsService {
       before,
       after: saved,
       userId,
+      ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null } : {}),
     }, { manager: mg });
 
     // Cleanup orphaned inline images for rich text fields
