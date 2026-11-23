@@ -12,8 +12,6 @@ import type { AuditSourceOptions } from '../../audit/audit.service';
  */
 export interface ServiceOpts {
   manager?: EntityManager;
-  /** The source of the write's audit rows when it is not the person on the screen (Kad's card: `ai_chat` and its reference). */
-  audit?: { source: string; sourceRef: string | null };
   userId?: string | null;
   tenantId?: string;
   accessScope?: ParticipationAccessScope;
@@ -27,7 +25,10 @@ export interface ServiceOpts {
    * inside a Business Contributor's participation. Absent names none of them.
    */
   linked?: PortfolioLinkedReads;
-  /** The audit source of the change (the assistant's card: `ai_chat` and its preview); the person's own when absent. */
+  /**
+   * The source of the write's audit rows when it is not the person on the screen (Kad's card:
+   * `ai_chat` and its preview); the person's own when absent.
+   */
   audit?: AuditSourceOptions;
 }
 
