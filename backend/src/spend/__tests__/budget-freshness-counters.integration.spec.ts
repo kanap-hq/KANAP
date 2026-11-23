@@ -7,7 +7,7 @@ import { FreezeService } from '../../freeze/freeze.service';
 import { copyAllocations, sameAllocationRows, storedAllocationPct } from '../budget-allocation-operations';
 import { clearBudgetColumn, copyBudgetColumn } from '../budget-column-operations';
 import { SpendAllocation } from '../spend-allocation.entity';
-import { SpendAllocationsService } from '../spend-allocations.service';
+import { CapexAllocationsService, SpendAllocationsService } from '../spend-allocations.service';
 import { SpendVersionsService } from '../spend-versions.service';
 import { exportBudgetFile, fileRows, loadBudgetFile, withCell } from './budget-file.fixtures';
 import { itemService, lineBody, seedCompany } from './cost-center.fixtures';
@@ -364,9 +364,13 @@ async function aiFinancialPlan(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, `br-ai-${kind}`);
     const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('100', 12) });
+    // The method goes through the Allocations tab's save, which answers the distribution: none computed here.
+    const calculator = { computeForVersions: async () => new Map() };
     const ai = new AiFinancialPlanMutationSupportService(
-      undefined as any, amountsService('capex') as any, versionsService('capex'),
-      undefined as any, amountsService('opex') as any, versionsService('opex'),
+      new CapexAllocationsService(undefined as any, undefined as any, calculator as any, captureAudit() as any),
+      amountsService('capex') as any, versionsService('capex'),
+      new SpendAllocationsService(undefined as any, undefined as any, calculator as any, captureAudit() as any),
+      amountsService('opex') as any, versionsService('opex'),
     );
     const context: any = { tenantId, userId: null, manager: runner.manager };
     const entityType = 'budget_lines';
