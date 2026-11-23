@@ -5,6 +5,8 @@ import { hiddenContractLineCount } from '../../contracts/contract-relations';
 import { auditedLinkSet, hiddenLineCount, type HiddenLineOwner } from '../../data-access/hidden-links';
 import { auditTableOf, BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
 import type { AiMutationAuditOptions } from './ai-mutation-audit.util';
+import { lockApplicationRow } from '../../applications/application-rules';
+import { lockClusterForMembers } from '../../assets/asset-rules';
 
 /**
  * The audit trace a relation the assistant replaces leaves, in the form the screen writes for the
@@ -273,6 +275,62 @@ const SCREEN_TRACES: Readonly<Record<string, ScreenTrace>> = {
   // The request's Relations tab (`setRequestLink`, `setOwnedLink`): one row per process toggled.
   'requests.business_processes': toggles(plainSet('portfolio_request_business_processes', 'request_id', 'business_process_id'), idList, null),
 };
+
+/**
+ * The lock the screen takes on the record before it reads and replaces the relation, on the same row
+ * and in the same mode, so the approval takes it before it compares the links with its preview: a
+ * gesture on the screen at the same time either committed first (the links changed: 409) or waits
+ * for the approval. The approval takes no other row lock first, so no lock order is reversed.
+ * - an application's owners: the application `FOR UPDATE` (`lockApplicationRow`,
+ *   `ApplicationsOwnersService.bulkReplaceOwners`);
+ * - the Relations tab of an application or an asset (`setOwnedLink`, and
+ *   `ApplicationsInstancesService.bulkReplaceLinkedContracts`): the record `FOR NO KEY UPDATE`;
+ * - a cluster's members: the cluster `FOR UPDATE` (`lockClusterForMembers`,
+ *   `AssetsCrudService.replaceClusterMembers`), after the members added are read `FOR SHARE`
+ *   (`assertClusterMemberCandidates`), the screen's order;
+ * - a contract's Budget tab: the contract `FOR NO KEY UPDATE` (`replaceContractRelations`), after
+ *   the check that it may be modified;
+ * - a request's business processes (`setOwnedLink`): the request `FOR NO KEY UPDATE`;
+ * - a project's or a request's applications, assets and lines: the record `FOR NO KEY UPDATE`
+ *   (`lockProject`, `lockRequest`), taken again by the screen's own toggle (`SCREEN_SERVICE_RELATIONS`).
+ * Taken elsewhere by the approval, the screen's way: a budget line's relations, contacts and links
+ * (`lockBudgetLine`, `FOR NO KEY UPDATE` on the line, first); an asset's relations (the clusters
+ * then the asset, `applyPlacementRules`); an application's server assignments (the clusters,
+ * `lockAssignmentClusters`). The other screens lock no record row (an application's companies,
+ * departments and support contacts, an asset's support contacts and web links, a supplier's, a
+ * contract's and a site's contacts and links, a site's sub-locations): neither does the approval.
+ */
+type ScreenLock = (manager: EntityManager, tenantId: string, id: string) => Promise<boolean>;
+
+const rowLock = (table: 'applications' | 'assets' | 'contracts' | 'portfolio_projects' | 'portfolio_requests'): ScreenLock =>
+  async (manager, tenantId, id) => {
+    const rows: unknown[] = await manager.query(`SELECT 1 FROM ${table} WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, id]);
+    return rows.length > 0;
+  };
+
+const SCREEN_LOCKS: Readonly<Record<string, ScreenLock>> = {
+  'applications.owners': lockApplicationRow,
+  'applications.budget_lines': rowLock('applications'),
+  'applications.contracts': rowLock('applications'),
+  'applications.projects': rowLock('applications'),
+  'assets.budget_lines': rowLock('assets'),
+  'assets.contracts': rowLock('assets'),
+  'assets.projects': rowLock('assets'),
+  'assets.cluster_members': async (manager, tenantId, id) => (await lockClusterForMembers(manager, tenantId, id)) !== null,
+  'contracts.budget_lines': rowLock('contracts'),
+  'projects.applications': rowLock('portfolio_projects'),
+  'projects.assets': rowLock('portfolio_projects'),
+  'projects.budget_lines': rowLock('portfolio_projects'),
+  'requests.applications': rowLock('portfolio_requests'),
+  'requests.assets': rowLock('portfolio_requests'),
+  'requests.budget_lines': rowLock('portfolio_requests'),
+  'requests.business_processes': rowLock('portfolio_requests'),
+};
+
+/** The screen's lock of the relation's record (`SCREEN_LOCKS`), or null when the screen takes none here. */
+export function screenLockOf(sourceEntity: string, relation: string): ScreenLock | null {
+  return SCREEN_LOCKS[`${sourceEntity}.${relation}`] ?? null;
+}
 
 /**
  * The relations whose writer audits each row as the screen does: web links, server assignments,

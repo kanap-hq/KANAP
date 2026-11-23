@@ -3,7 +3,6 @@ import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AuditService } from '../../audit/audit.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
-import { lockApplicationRow } from '../../applications/application-rules';
 import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { assertContractReadable, assertContractsEditable } from '../../data-access/contract-write-checks';
 import { parseItemNumber } from '../../common/parse-item-number';
@@ -53,7 +52,7 @@ import {
 } from '../../assets/placement-rules';
 import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 import { nameWithoutLeadingReference } from './name-without-leading-reference';
-import { ROW_AUDITED_RELATIONS, SCREEN_SERVICE_RELATIONS, screenTraceOf } from './ai-relation-screen-audit';
+import { ROW_AUDITED_RELATIONS, SCREEN_SERVICE_RELATIONS, screenLockOf, screenTraceOf } from './ai-relation-screen-audit';
 import {
   PortfolioRelationsService,
   type ProjectRelationsAccess,
@@ -569,13 +568,16 @@ export class AiRelationMutationSupportService {
         throw new NotFoundException(`${config.label}: the line was not found.`);
       }
     }
-    // An application's owners: the application is locked before they are compared and replaced,
-    // the lock order of every writer of them (`lockApplicationRow`).
-    if (config.kind === 'owner_role' && !(await lockApplicationRow(context.manager, context.tenantId, preview.target_entity_id))) {
-      throw new NotFoundException(`${config.label}: the application was not found.`);
-    }
-    // A cluster's members follow the rules of the members endpoint; the cluster row is locked first.
+    // A cluster's members follow the rules of the members endpoint (the members added read, then the
+    // cluster row locked).
     await this.assertClusterMemberAdds(context, config, preview.target_entity_id, expectedItems, nextItems);
+    // The record row the screen locks for the same gesture, the same way, before the links are read
+    // and compared with the preview (`screenLockOf`): a gesture on the screen at the same time either
+    // committed first, and the links changed (409), or waits for this approval.
+    const lock = screenLockOf(config.sourceEntity, config.relation);
+    if (lock && !(await lock(context.manager, context.tenantId, preview.target_entity_id))) {
+      throw new NotFoundException(`${config.label}: the record was not found.`);
+    }
     // Assignments: the clusters are locked and the cluster rules checked again before the rows are
     // compared; an absorption that would now differ from the preview is a change since the preview.
     const checkedItems = await this.applyAssignmentRules(context, config, expectedItems, nextItems);
@@ -667,10 +669,12 @@ export class AiRelationMutationSupportService {
     const current = new Set(currentItems.map((item) => item.key.toLowerCase()));
     const added = Array.from(new Set(nextItems.map((item) => item.key.toLowerCase()))).filter((id) => !current.has(id));
     if (added.length === 0) return;
+    // The screen's order (`AssetsCrudService.replaceClusterMembers`): the members read `FOR SHARE`,
+    // then the cluster row locked `FOR UPDATE`.
+    await assertClusterMemberCandidates(context.manager, context.tenantId, clusterId, added);
     const cluster = await lockClusterForMembers(context.manager, context.tenantId, clusterId);
     if (!cluster) throw new NotFoundException('Asset not found');
     if (!cluster.isCluster) throw new BadRequestException('Asset is not a cluster');
-    await assertClusterMemberCandidates(context.manager, context.tenantId, clusterId, added);
     if (cluster.os) throw clusterOsWithMembersRefusal(cluster.os);
   }
 
