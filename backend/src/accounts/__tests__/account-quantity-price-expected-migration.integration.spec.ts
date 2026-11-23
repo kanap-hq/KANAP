@@ -11,7 +11,10 @@ import { AccountQuantityPriceExpected1856280000000 as Migration } from '../../mi
 // - the column is `boolean NULL`, with no default: every account starts unset;
 // - nothing else changes on the account (updated_at included), no audit line is written;
 // - row level security on `accounts` stays as found (enabled and forced);
-// - a second run, on a database already migrated, changes nothing.
+// - a stored `false` (left by a run without the check) is set back to NULL, `true` is kept, and
+//   the check `accounts_quantity_price_expected_check` then refuses `false`;
+// - a second run, on a database already migrated, changes nothing;
+// - down() drops the check with the column.
 
 const migration = new Migration();
 const UPDATED = '2026-01-01T00:00:00.000Z';
@@ -22,6 +25,13 @@ async function columnOf(runner: QueryRunner) {
       WHERE table_schema = current_schema() AND table_name = 'accounts' AND column_name = 'quantity_price_expected'`,
   );
   return rows[0] ?? null;
+}
+
+async function hasCheck(runner: QueryRunner): Promise<boolean> {
+  const rows = await runner.query(
+    `SELECT 1 FROM pg_constraint WHERE conrelid = 'accounts'::regclass AND conname = 'accounts_quantity_price_expected_check'`,
+  );
+  return rows.length === 1;
 }
 
 async function rowSecurity(runner: QueryRunner) {
@@ -37,6 +47,7 @@ async function testRerun() {
     const security = await rowSecurity(runner);
     await migration.down(runner);
     assert.equal(await columnOf(runner), null, 'down() drops the column');
+    assert.equal(await hasCheck(runner), false, 'down() drops the check');
 
     const tenantId = randomUUID();
     await runner.query(
@@ -55,9 +66,28 @@ async function testRerun() {
       [tenantId, chart.id, UPDATED],
     );
     const auditBefore = Number((await runner.query(`SELECT count(*) FROM audit_log WHERE record_id = $1`, [account.id]))[0].count);
+    // A database where the column exists without its check, and holds a `false` and a `true`.
+    await runner.query(`ALTER TABLE accounts ADD COLUMN quantity_price_expected boolean NULL`);
+    const seeded = async (number: number, value: boolean) => (await runner.query(
+      `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name, nature, quantity_price_expected)
+       VALUES ($1, $2, $3, 'Seeded', 'opex', $4) RETURNING id`,
+      [tenantId, chart.id, number, value],
+    ))[0].id as string;
+    const stored = { false: await seeded(6200, false), true: await seeded(6300, true) };
 
     for (const pass of [1, 2]) {
       await migration.up(runner);
+      const values = await runner.query(`SELECT id, quantity_price_expected FROM accounts WHERE id = ANY($1::uuid[])`, [[stored.false, stored.true]]);
+      const valueOf = new Map(values.map((row: any) => [row.id, row.quantity_price_expected]));
+      assert.deepEqual([valueOf.get(stored.false), valueOf.get(stored.true)], [null, true], `pass ${pass}: false set back to NULL, true kept`);
+      assert.equal(await hasCheck(runner), true, `pass ${pass}: the check is there`);
+      await runner.query('SAVEPOINT refused');
+      await assert.rejects(
+        runner.query(`UPDATE accounts SET quantity_price_expected = false WHERE id = $1`, [stored.true]),
+        (error: any) => error?.code === '23514' && /accounts_quantity_price_expected_check/.test(error?.constraint ?? error?.message ?? ''),
+        `pass ${pass}: false is refused`,
+      );
+      await runner.query('ROLLBACK TO SAVEPOINT refused');
       assert.deepEqual(await columnOf(runner), { data_type: 'boolean', is_nullable: 'YES', column_default: null }, `pass ${pass}: boolean NULL, no default`);
       const [row] = await runner.query(
         `SELECT quantity_price_expected, nature, account_name, updated_at FROM accounts WHERE id = $1`,
@@ -69,6 +99,10 @@ async function testRerun() {
       assert.equal(audits, auditBefore, `pass ${pass}: no audit line`);
       assert.deepEqual(await rowSecurity(runner), security, `pass ${pass}: row level security as found`);
     }
+    await migration.down(runner);
+    assert.deepEqual([await columnOf(runner), await hasCheck(runner)], [null, false], 'down() drops the check and the column');
+    await migration.up(runner);
+    assert.equal(await hasCheck(runner), true, 'up() after down() adds them back');
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
