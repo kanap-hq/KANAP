@@ -453,6 +453,29 @@ describe('AccountWorkspacePage', () => {
     expect(screen.queryByTestId('nature-conflict')).toBeNull();
   });
 
+  it('ticks the quantity and price entry and clears it when unticked, never sending false', async () => {
+    renderAt('/master-data/accounts/acc-1/overview');
+    await screen.findByText('Software subscriptions');
+    const box = screen.getByRole('checkbox', { name: 'accounts.fields.quantityPriceExpected' });
+    expect(box).not.toBeChecked();
+    fireEvent.click(box);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/accounts/acc-1', { quantity_price_expected: true }));
+    await waitFor(() => expect(box).toBeChecked());
+    fireEvent.click(box);
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/accounts/acc-1', { quantity_price_expected: null }));
+    await waitFor(() => expect(box).not.toBeChecked());
+  });
+
+  it('shows the quantity and price entry of a read-only account ticked and disabled', async () => {
+    auth.canEdit = false;
+    serve({ account: { ...ACCOUNT, quantity_price_expected: true } });
+    renderAt('/master-data/accounts/acc-1/overview');
+    await screen.findByText('Software subscriptions');
+    const box = screen.getByRole('checkbox', { name: 'accounts.fields.quantityPriceExpected' });
+    expect(box).toBeChecked();
+    expect(box).toBeDisabled();
+  });
+
   it('shows read-only users disabled fields and no title edit', async () => {
     auth.canEdit = false;
     renderAt('/master-data/accounts/acc-1/overview');
@@ -553,6 +576,7 @@ describe('AccountWorkspacePage', () => {
       description: null,
       consolidation_account_number: 1200,
       nature: null,
+      quantity_price_expected: null,
       status: 'enabled',
       disabled_at: null,
     }));

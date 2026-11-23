@@ -563,6 +563,7 @@
       "parent_id": "Grupo superior",
       "process_type": "Tipo de proceso",
       "accountNature": "Usada para",
+      "quantity_price_expected": "Introducción por cantidad y precio",
       "costCenterOwner": "Responsable del presupuesto",
       "summary": "Resumen",
       "folder_id": "Carpeta",

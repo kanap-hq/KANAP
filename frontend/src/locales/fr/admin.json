@@ -563,6 +563,7 @@
       "parent_id": "Groupe parent",
       "process_type": "Type de processus",
       "accountNature": "Utilisé pour",
+      "quantity_price_expected": "Saisie en quantité et prix",
       "costCenterOwner": "Responsable budgétaire",
       "summary": "Résumé",
       "folder_id": "Dossier",

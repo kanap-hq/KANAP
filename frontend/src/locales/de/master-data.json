@@ -564,6 +564,7 @@
       "accountNumber": "Kontonr.",
       "accountName": "Name",
       "nature": "Verwendet für",
+      "quantityPriceExpected": "Erfassung nach Menge und Preis",
       "nativeName": "Lokaler Name",
       "consolAccountNumber": "Konsol.-Kontonr.",
       "consolAccountName": "Konsol.-Name",
@@ -702,6 +703,7 @@
       "accountNumber": "Kontonummer",
       "accountName": "Kontoname",
       "nature": "Verwendet für",
+      "quantityPriceExpected": "Erfassung nach Menge und Preis",
       "nativeName": "Lokaler Name (Landessprache)",
       "description": "Beschreibung",
       "consolidationAccount": "Konsolidierungskonto",
@@ -711,6 +713,9 @@
       "selectChart": "Wählen Sie einen Kontenplan",
       "lifecycle": "Lebenszyklus",
       "loadCoAsError": "Fehler beim Laden der Kontenpläne"
+    },
+    "hints": {
+      "quantityPriceExpected": "Budgetzeilen auf diesem Konto werden nach Menge und Preis erwartet. Auf einem Konsolidierungskonto gilt die Einstellung für die ihm zugeordneten Konten."
     },
     "placeholders": {
       "chartOfAccounts": "z. B. COA-FR",
