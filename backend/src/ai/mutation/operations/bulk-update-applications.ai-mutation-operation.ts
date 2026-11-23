@@ -33,6 +33,7 @@ import {
   AI_BULK_FILTER_VALUE,
   assertBulkWriteKept,
   bulkListGrew,
+  BULK_EDIT_ANSWER,
   bulkEditPreviewDto,
   bulkExcluded,
   bulkListApplied,
@@ -205,7 +206,7 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
       + `${OTHER_FIELD} `
       + 'For one of these fields set to the same value on two applications or more, named or described by a filter, use this tool: one card, never update_business_record application by application nor prepare_mutation_plan. '
       + 'Different values, several fields or another field stay one card per application. '
-      + `The card lists each application it changes (up to ${AI_BULK_EDIT_LIST_MAX}) with its value before, and the person may leave any of them out before approving; it cannot be undone.`,
+      + `The card lists each application it changes (up to ${AI_BULK_EDIT_LIST_MAX}) with its value before, and the person may leave any of them out before approving; it cannot be undone. ` + BULK_EDIT_ANSWER,
   };
 
   constructor(

@@ -58,6 +58,10 @@ function testAnotherFieldIsSaidNotChangedInBulk() {
     assert.match(operation.writePreview.prompt_hint, new RegExp(`For one of these fields set to the same value on two ${row}s or more, named or described by a filter, use this tool: one card`), `${operation.toolName}: its own fields only`);
     // Two values or two fields stay a card per record (review of lot K2e).
     assert.ok(operation.writePreview.prompt_hint.includes(`Different values, several fields or another field stay one card per ${row}. `), `${operation.toolName}: one value only`);
+    // The card lists the records: the answer gives no table of them (browser pass of lot K2e).
+    assert.ok(operation.writePreview.prompt_hint.endsWith('it cannot be undone. With a bulk card, the answer repeats none of the records it changes, in a table or a list: the card lists them. '
+      + 'One or two sentences give the field, the value, the number of records that change, the ones left out and why (already at that value, refused), '
+      + 'and that the person may untick a record before approving; a useful warning may stay.'), `${operation.toolName}: no table of the records`);
   }
   console.log('  the bulk edit tools say when a field is not changed in bulk: OK');
 }

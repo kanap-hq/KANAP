@@ -47,6 +47,14 @@ export const MUTATION_PLAN_IS_NOT_BULK = 'A plan of cards that each change one r
   + 'first say in the answer that this field is not changed in bulk and which fields are, then prepare the cards.';
 
 /**
+ * What Kad's answer says next to a bulk card (browser pass of lot K2e): its own table of the records
+ * repeated the card and went wrong once a box was unticked.
+ */
+export const BULK_EDIT_ANSWER = 'With a bulk card, the answer repeats none of the records it changes, in a table or a list: the card lists them. '
+  + 'One or two sentences give the field, the value, the number of records that change, the ones left out and why (already at that value, refused), '
+  + 'and that the person may untick a record before approving; a useful warning may stay.';
+
+/**
  * The exception to "one card per record" of the write rules (lot K2e of 26.12.1, decision P6 of
  * Fried): one field a bulk tool changes, set to the same value on two records or more of its family,
  * named or described by a filter, is one card of that tool; different values stay one card per
@@ -63,7 +71,8 @@ export function bulkEditToolRule(toolNames: readonly string[]): string | null {
   const each = families.map((family) => `\`${family.tool}\` for ${family.rows} (${family.fields})`).join('; ');
   return `Exception, the change in bulk: one of these fields set to the same value on two records or more of the family, whether the person names them (references or names) or describes them, is one card of its bulk tool, never one card per record nor a plan: ${each}. `
     + 'That card lists each record it changes with its value before, and the person leaves out the ones they do not want before approving. '
-    + 'Different values, several fields or a field outside these lists stay one card per record.';
+    + 'Different values, several fields or a field outside these lists stay one card per record. '
+    + BULK_EDIT_ANSWER;
 }
 
 export const BULK_EDIT_PLAN_REFUSAL = 'A change in bulk (bulk_update_budget_lines, bulk_update_applications) changes its rows in one card and cannot be part of a mutation plan: call it on its own.';
