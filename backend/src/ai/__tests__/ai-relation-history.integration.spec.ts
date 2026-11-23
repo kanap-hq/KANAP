@@ -744,24 +744,94 @@ type AuditRow = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}(:?\d{2})?)?)?$/;
 
-/** A row as both sides compare it: the record itself `SELF`, other generated ids `ID`, dates `DATE`, sets unordered. */
-function neutral(value: unknown, self: string, known: Set<string>): unknown {
+/**
+ * The rows seeded for the spec, by id: the record (or the case's targets) they were seeded for, and
+ * their name there, `<table> <k>` for the k-th row of that table. The assistant's record and its
+ * twin are seeded by the same code: their rows bear the same names.
+ */
+const SEEDED = new Map<string, { owner: string; name: string }>();
+
+/**
+ * Runs a seeding and names the rows it inserts (`SEEDED`), for the record `ownerOf` returns. Its
+ * inserts answer their rows (`RETURNING *` when they ask for none).
+ */
+async function seeding<T>(runner: QueryRunner, fn: () => Promise<T>, ownerOf: (value: T) => string): Promise<T> {
+  const query = runner.query;
+  const born: Array<{ table: string; id: string }> = [];
+  runner.query = (async (sql: string, parameters?: unknown[], structured?: boolean) => {
+    const insert = /^\s*INSERT\s+INTO\s+([\w."]+)/i.exec(sql);
+    const text = insert && !/\bRETURNING\b/i.test(sql) ? `${sql.replace(/;\s*$/, '')} RETURNING *` : sql;
+    const result: any = await (query as any).call(runner, text, parameters, structured);
+    if (insert) {
+      const table = insert[1].replace(/"/g, '').replace(/^public\./, '');
+      for (const row of Array.isArray(result) ? result : result?.records ?? []) {
+        if (typeof row?.id === 'string' && UUID.test(row.id)) born.push({ table, id: row.id.toLowerCase() });
+      }
+    }
+    return result;
+  }) as QueryRunner['query'];
+  let value: T;
+  try {
+    value = await fn();
+  } finally {
+    runner.query = query;
+  }
+  const owner = ownerOf(value).toLowerCase();
+  const counts = new Map<string, number>();
+  for (const { table, id } of born) {
+    if (SEEDED.has(id)) continue;
+    const k = (counts.get(table) ?? 0) + 1;
+    counts.set(table, k);
+    SEEDED.set(id, { owner, name: `${table} ${k}` });
+  }
+  return value;
+}
+
+type Namer = (id: string) => string;
+
+/**
+ * How a cell names an id: `SELF` for the record, its role for a target or a person (`KEPT`,
+ * `REMOVED`, `ADDED`, `WRITER`...), `own <table> <k>` for a row seeded with the record,
+ * `target <table> <k>` for a row seeded with the case's targets, `other <uuid>` for a row seeded
+ * for anything else (another record, the twin, a shared row). `ID` is left to the ids born from
+ * the write itself (a link row it creates).
+ */
+function namer(self: string, roles: Map<string, string>, targetsOwner: string): Namer {
+  const selfKey = self.toLowerCase();
+  const targetsKey = targetsOwner.toLowerCase();
+  return (id) => {
+    const key = id.toLowerCase();
+    if (key === selfKey) return 'SELF';
+    const role = roles.get(key);
+    if (role) return role;
+    const seeded = SEEDED.get(key);
+    if (!seeded) return 'ID';
+    if (seeded.owner === selfKey) return `own ${seeded.name}`;
+    if (seeded.owner === targetsKey) return `target ${seeded.name}`;
+    return `other ${key}`;
+  };
+}
+
+/** The ids of a cell by role, lower case. */
+const rolesOf = (entries: Array<[string, string]>) => new Map(entries.map(([id, role]) => [id.toLowerCase(), role]));
+
+/** A row as both sides compare it: ids named by the cell (`namer`), dates `DATE`, sets unordered. */
+function neutral(value: unknown, name: Namer): unknown {
   if (typeof value === 'string') {
-    if (value.toLowerCase() === self.toLowerCase()) return 'SELF';
-    if (UUID.test(value)) return known.has(value.toLowerCase()) ? value.toLowerCase() : 'ID';
+    if (UUID.test(value)) return name(value);
     if (DATE.test(value)) return 'DATE';
     return value;
   }
   if (Array.isArray(value)) {
     // The sets the screens write carry no order: compared as sets.
-    return value.map((entry) => neutral(entry, self, known)).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    return value.map((entry) => neutral(entry, name)).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
   }
   if (value && typeof value === 'object') {
     return Object.fromEntries(Object.entries(value as Record<string, unknown>)
       // The tenancy column: an entity the screen saves without it does not read it back; every
       // allow-list hides it.
       .filter(([key, entry]) => entry !== undefined && key !== 'tenant_id')
-      .map(([key, entry]) => [key, neutral(entry, self, known)]));
+      .map(([key, entry]) => [key, neutral(entry, name)]));
   }
   return value;
 }
@@ -769,19 +839,19 @@ function neutral(value: unknown, self: string, known: Set<string>): unknown {
 type ActivityRow = { type: string; context: string | null; content: string | null; decision_outcome: string | null; changed_fields: unknown; author_id: string | null };
 
 /** The activities of a record as both sides compare them: a set. */
-function activityShape(rows: ActivityRow[], self: string, known: Set<string>) {
-  return rows.map((row) => neutral(row, self, known)).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+function activityShape(rows: ActivityRow[], name: Namer) {
+  return rows.map((row) => neutral(row, name)).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 }
 
-function shape(rows: AuditRow[], self: string, known: Set<string>) {
+function shape(rows: AuditRow[], name: Namer) {
   return rows.map((row) => ({
     table: row.table_name,
     action: row.action,
-    record_id: neutral(row.record_id, self, known),
-    before: neutral(row.before_json, self, known),
-    after: neutral(row.after_json, self, known),
+    record_id: neutral(row.record_id, name),
+    before: neutral(row.before_json, name),
+    after: neutral(row.after_json, name),
     parent_table: row.parent_table,
-    parent_id: neutral(row.parent_id, self, known),
+    parent_id: neutral(row.parent_id, name),
   }));
 }
 
@@ -878,8 +948,9 @@ async function run() {
 
     let n = 100;
     for (const c of CASES) {
-      const targets = await c.targets(env);
-      const known = new Set([targets.kept, targets.removed, targets.added].map((t) => t.id.toLowerCase()).concat(writer));
+      const targetsOwner = `targets ${c.name}`;
+      const targets = await seeding(runner, () => c.targets(env), () => targetsOwner);
+      const roles = rolesOf([[targets.kept.id, 'KEPT'], [targets.removed.id, 'REMOVED'], [targets.added.id, 'ADDED'], [writer, 'WRITER'], [roleId, 'ROLE']]);
       for (const gesture of GESTURES) {
         const cell = `${c.name} ${gesture}`;
         try {
@@ -890,7 +961,8 @@ async function run() {
             ...(gesture !== 'remove' ? { added: targets.added } : {}),
           };
           // The assistant, up to the approval of its card.
-          const mine = await c.record(env, ++n, targets.kept, targets.removed);
+          const mine = await seeding(runner, () => c.record(env, ++n, targets.kept, targets.removed), (rec) => rec.id);
+          const ofMine = namer(mine.id, roles, targetsOwner);
           const kadMarker = await now();
           const preview = await previews.createPreview(ctx, 'update_entity_relations', {
             entity_type: c.entity, ref: mine.ref, relation: c.relation,
@@ -907,16 +979,17 @@ async function run() {
           }
 
           // The screen, on the twin.
-          const twin = await c.record(env, ++n, targets.kept, targets.removed);
+          const twin = await seeding(runner, () => c.record(env, ++n, targets.kept, targets.removed), (rec) => rec.id);
+          const ofTwin = namer(twin.id, roles, targetsOwner);
           {
             const screenMarker = await now();
             await c.screen(env, twin, step);
             const screenRows = await auditSince(screenMarker);
-            assert.deepEqual(shape(kadRows, mine.id, known), shape(screenRows, twin.id, known), `${cell}: the assistant's audit rows are the screen's`);
+            assert.deepEqual(shape(kadRows, ofMine), shape(screenRows, ofTwin), `${cell}: the assistant's audit rows are the screen's`);
             if (c.activities) {
               const kadActivities = await activitiesOf(c.activities, mine.id);
               assert.ok(kadActivities.length > 0, `${cell}: the assistant writes the record's activity`);
-              assert.deepEqual(activityShape(kadActivities, mine.id, known), activityShape(await activitiesOf(c.activities, twin.id), twin.id, known), `${cell}: the assistant's activity is the screen's`);
+              assert.deepEqual(activityShape(kadActivities, ofMine), activityShape(await activitiesOf(c.activities, twin.id), ofTwin), `${cell}: the assistant's activity is the screen's`);
             }
           }
           // The assistant reads its own change in the project's recent activity.
@@ -963,9 +1036,9 @@ async function run() {
               const screenMarker = await now();
               await c.screen(env, twin, { kept: targets.kept, stays: step.stays, removed: targets.added });
               const screenRows = await auditSince(screenMarker);
-              assert.deepEqual(shape(undoRows, mine.id, known), shape(screenRows, twin.id, known), `${cell}: the undo's audit rows are the screen's removal`);
+              assert.deepEqual(shape(undoRows, ofMine), shape(screenRows, ofTwin), `${cell}: the undo's audit rows are the screen's removal`);
               if (c.activities) {
-                assert.deepEqual(activityShape(await activitiesOf(c.activities, mine.id), mine.id, known), activityShape(await activitiesOf(c.activities, twin.id), twin.id, known), `${cell}: the undo's activity is the screen's`);
+                assert.deepEqual(activityShape(await activitiesOf(c.activities, mine.id), ofMine), activityShape(await activitiesOf(c.activities, twin.id), ofTwin), `${cell}: the undo's activity is the screen's`);
               }
             }
           }
@@ -1004,17 +1077,19 @@ async function run() {
           await runner.query(`UPDATE spend_items SET paying_company_id = $2 WHERE id = $1`, [t.id, companyId]);
           return t;
         };
-        const kept = await paidBy(readable);
-        const added = await paidBy(readable);
-        const hidden = await paidBy(outside);
+        const limitedTargets = 'targets limited access';
+        const [kept, added, hidden] = await seeding(runner, async () => [await paidBy(readable), await paidBy(readable), await paidBy(outside)], () => limitedTargets);
         const seeded = async () => {
           const rec = await projectRecord(env);
           for (const t of [kept, hidden]) await insertLink('portfolio_project_opex', 'project_id', 'opex_id')(env, rec, t);
           return rec;
         };
-        const mine = await seeded();
-        const twin = await seeded();
-        const known = new Set([kept.id, added.id, hidden.id, limited].map((id) => id.toLowerCase()));
+        const mine = await seeding(runner, seeded, (rec) => rec.id);
+        const twin = await seeding(runner, seeded, (rec) => rec.id);
+        const roles = rolesOf([
+          [kept.id, 'KEPT'], [added.id, 'ADDED'], [hidden.id, 'HIDDEN'], [limited, 'LIMITED'], [readable, 'READABLE COMPANY'],
+          [outside, 'OUTSIDE COMPANY'], [roleId, 'ROLE'],
+        ]);
         await runner.query(`SELECT data_access_apply($1)`, [limited]);
         const limitedCtx = { ...ctx, userId: limited };
 
@@ -1034,7 +1109,7 @@ async function run() {
         const screenMarker = await now();
         await env.services.portfolioRelations.setProjectLink('budget_lines', added.id, true, { ...projectCtx(env), userId: limited }, owner(env, twin));
         const screenRows = await auditSince(screenMarker);
-        assert.deepEqual(shape(kadRows, mine.id, known), shape(screenRows, twin.id, known), `${cell}: the assistant's audit rows are the screen's`);
+        assert.deepEqual(shape(kadRows, namer(mine.id, roles, limitedTargets)), shape(screenRows, namer(twin.id, roles, limitedTargets)), `${cell}: the assistant's audit rows are the screen's`);
         passed += 1;
         console.log(`  ${cell}: OK`);
       } catch (error: any) {
