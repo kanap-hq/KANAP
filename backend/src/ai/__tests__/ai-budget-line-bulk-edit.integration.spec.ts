@@ -19,7 +19,7 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   second time. A line held by another transaction gives up after the bounded wait.
 // - A change in bulk is never a step of a mutation plan.
 // - Lot K2e of 26.12.1: the card lists each line it changes (up to 200) with its value before; a
-//   box leaves one out (the card recounted and replaced, the exclusion signed by the approval), all
+//   box leaves one out (the card recounted and replaced, the exclusion kept in the card's input), all
 //   left out refused, a limited person's own lines only, 409 operation_running on a box; the list
 //   never reaches the model.
 
@@ -598,7 +598,7 @@ async function previewRow(manager: any, tenantId: string, id: string) {
 
 /**
  * The card lists each line it changes (lot K2e of 26.12.1): a box leaves one out, the card is
- * recounted and replaced; the approval signs the lines left out and writes only those kept, each
+ * recounted and replaced; the approval writes only those kept, each
  * audited by Kad; the list stays, the changed lines marked. The list never reaches the model.
  */
 async function testLeaveOutAndApprove(harness: Harness) {
@@ -629,7 +629,7 @@ async function testLeaveOutAndApprove(harness: Harness) {
     const { AiActionRequestService } = require('../control-plane/action-request/ai-action-request.service');
     const actions = harness.app.get(AiActionRequestService);
     const { excluded: _left, ...without } = stored.mutation_input;
-    assert.notEqual(actions.inputHashForPreview(stored), actions.inputHashForPreview({ ...stored, mutation_input: without }), 'the approval signs the exclusion');
+    assert.notEqual(actions.inputHashForPreview(stored), actions.inputHashForPreview({ ...stored, mutation_input: without }), 'the card\'s input names the exclusion');
 
     const executed = await approve(harness, ctx, second);
     assert.equal(executed.summary, 'Supplier changed on 2 budget lines.');
@@ -684,6 +684,38 @@ async function testLimitedPersonLeavesOut(harness: Harness) {
     assert.deepEqual(await changedLines(runner, seed, 'run_build', 'build'), [1, 2, 4, 5], 'the kept lines of the access only');
     assert.equal(await column(runner, seed, 3, 'run_build'), null, 'the line left out is left as it is');
     console.log('  a limited person: its own lines listed, one left out, the read-only line counted without a box: OK');
+  });
+}
+
+/**
+ * The approval writes no line the card did not list (review of lot K2e): BL-7, counted read only for a
+ * limited person (no box), made editable before the approval, would be written; the whole write is
+ * refused.
+ */
+async function testUnlistedLineNeverWritten(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    if (!(await runner.query(`SELECT to_regrole('kanap_data_limited') IS NOT NULL AS present`))[0].present) {
+      if (process.env.CI) assert.fail('CI installs kanap_data_limited before the migrations');
+      console.log('  skip - kanap_data_limited not installed');
+      return;
+    }
+    await runner.query(`INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, access) VALUES ($1, $2, 'company', $3, 'edit'), ($1, $2, 'company', $4, 'read')`,
+      [seed.tenantId, seed.users.limited, seed.companies.a, seed.companies.b]);
+    const ctx = context(seed, runner, 'unlisted', seed.users.limited);
+    await ensureConversation(ctx);
+    assert.equal((await runner.query(`SELECT data_access_apply($1) AS mode`, [seed.users.limited]))[0].mode, 'limited');
+    const preview = await card(harness, ctx, { field: 'run_build', value: 'build', filters: { supplier: ['Acme'] } });
+    assert.match(preview.changes.budget_line_bulk_edit.to, /\n\n5 lines to change, 1 refused: Read only for you \(1\)$/);
+    assert.equal(listed(preview).some((row) => row[0] === 'BL-7'), false, 'the read-only line is not listed');
+    // Company B goes to edit before the approval: BL-7 becomes editable.
+    await runner.query('RESET ROLE');
+    await runner.query(`UPDATE user_data_access_nodes SET access = 'edit' WHERE tenant_id = $1 AND user_id = $2 AND company_id = $3`, [seed.tenantId, seed.users.limited, seed.companies.b]);
+    assert.equal((await runner.query(`SELECT data_access_apply($1) AS mode`, [seed.users.limited]))[0].mode, 'limited');
+    const refused = await harness.previews.executePreview(ctx, preview.preview_id) as any;
+    assert.equal(refused.status, 'failed');
+    assert.equal(refused.error_message, LIST_CHANGED);
+    assert.deepEqual(await changedLines(runner, seed, 'run_build', 'build'), [], 'nothing written, the line never listed included');
+    console.log('  a line counted read only, made editable before the approval, refuses it: OK');
   });
 }
 
@@ -757,6 +789,7 @@ async function run() {
     await testOperationRunningAndHeldLine(harness);
     await testLeaveOutAndApprove(harness);
     await testLimitedPersonLeavesOut(harness);
+    await testUnlistedLineNeverWritten(harness);
     await testListUpTo200(harness);
   } finally {
     await harness.app.close();

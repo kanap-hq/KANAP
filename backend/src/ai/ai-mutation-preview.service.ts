@@ -1441,7 +1441,8 @@ export class AiMutationPreviewService {
    * import card's choices do (`replaceImportChoices`): the card locked, the person's and the
    * conversation's, pending and alive, the rights of the write checked again; this one expires, the
    * new one names the chain's first card (`replaces_preview_id`). The ids left out are in the new
-   * card's `mutation_input`, which the approval signs (`inputHashForPreview`) and the write reads.
+   * card's `mutation_input`, which the write reads; the stored card and its fingerprint hold the write
+   * to the count.
    */
   async replaceBulkExclusions(
     context: AiExecutionContextWithManager,

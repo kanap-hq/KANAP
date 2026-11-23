@@ -19,8 +19,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   named nor changed; a right withdrawn refuses the approval; a frozen subscription refuses both.
 // - An application held by another transaction: the bounded wait, the card stays to approve.
 // - Lot K2e of 26.12.1: the card lists each application it changes (up to 200) with its value
-//   before; a box leaves one out (the card recounted and replaced, the exclusion signed by the
-//   approval), ticked again, all left out refused; refusals of the route; the list never reaches the model.
+//   before; a box leaves one out (the card recounted and replaced, the exclusion kept in the
+//   card's input), ticked again, all left out refused; refusals of the route; the list never reaches the model.
 
 process.env.AI_CHAT_ENABLED = 'true';
 process.env.AI_SETTINGS_ENABLED = 'true';
@@ -664,7 +664,7 @@ async function httpStatus(fn: () => Promise<unknown>, status: number, pattern?: 
 /**
  * The card lists each application it changes (lot K2e of 26.12.1): a box leaves one out, the card is
  * recounted and replaced, the application stays listed unticked and can be ticked again; the
- * approval signs the applications left out and writes only those kept; the list stays on the card,
+ * approval writes only those kept; the list stays on the card,
  * each application changed marked.
  */
 async function testLeaveOutAndApprove(harness: Harness) {
@@ -682,7 +682,8 @@ async function testLeaveOutAndApprove(harness: Harness) {
     assert.equal(second.summary, 'Change Business criticality on 2 applications.');
     assert.deepEqual((await previewRow(runner, seed, second.preview_id)).mutation_input.excluded, [seed.apps[2]], 'the card stores the application left out');
 
-    // What the approval signs: the hash of the card's input holds the applications left out.
+    // The hash of the card's input names the applications left out: the approval's record of what it
+    // approved. The write is held to the count by the stored card and its fingerprint, never by this hash.
     const { AiActionRequestService } = require('../control-plane/action-request/ai-action-request.service');
     const actions = harness.app.get(AiActionRequestService);
     const stored = await previewRow(runner, seed, second.preview_id);
@@ -702,7 +703,7 @@ async function testLeaveOutAndApprove(harness: Harness) {
     assert.equal((await previewRow(runner, seed, third.preview_id)).mutation_input.excluded, undefined);
     const fourth = await exclude(harness, ctx, third, [seed.apps[2]]);
 
-    // The approval goes through the durable approval: the action signs the hash of the card with its exclusion.
+    // The approval goes through the durable approval: its action records the hash of the card's input.
     const { AiApprovalService } = require('../control-plane/approval/ai-approval.service');
     const { action } = await harness.app.get(AiApprovalService).approvePreviewFromChat(ctx, fourth.preview_id);
     assert.equal(action.input_hash, actions.inputHashForPreview(await previewRow(runner, seed, fourth.preview_id)));
@@ -806,6 +807,35 @@ async function testLeaveOutOfAFilter(harness: Harness) {
   });
 }
 
+/**
+ * The approval writes no application the card did not list (review of lot K2e): APP-2, already low
+ * at the count (reached, unchanged, not listed), set to high elsewhere before the approval, would be
+ * written back to low; the whole write is refused. A kept application that reached the value in the
+ * meantime does not refuse it: it is marked not changed.
+ */
+async function testUnlistedApplicationNeverWritten(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'unlisted');
+    const first = await card(harness, ctx, { field: 'criticality', value: 'low', filters: { supplier: ['Acme'] } });
+    const second = await exclude(harness, ctx, first, [seed.apps[6]]);
+    assert.deepEqual(listed(second).map((row) => [row[0], row[3]]), [['APP-1', true], ['APP-6', false]], 'APP-2 is not listed');
+    await runner.query(`UPDATE applications SET criticality = 'high' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.apps[2]]);
+    const refused = await harness.previews.executePreview(ctx, second.preview_id) as any;
+    assert.equal(refused.status, 'failed');
+    assert.equal(refused.error_message, LIST_CHANGED);
+    assert.equal(await column(runner, seed, 2, 'criticality'), 'high', 'the application never listed is left as it is');
+    assert.equal(await column(runner, seed, 1, 'criticality'), null, 'nothing written');
+
+    // A kept application set to the value elsewhere: the approval goes on, the others changed.
+    const again = await card(harness, ctx, { field: 'criticality', value: 'critical', rows: ['APP-1', 'APP-6'] });
+    await runner.query(`UPDATE applications SET criticality = 'business_critical' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.apps[1]]);
+    const executed = await approve(harness, ctx, again);
+    assert.equal(executed.summary, 'Business criticality changed on 1 application.');
+    assert.deepEqual(executed.bulk_edit.rows.map((row: any) => [row.ref, row.kept, row.changed]), [['APP-1', true, false], ['APP-6', true, true]]);
+    console.log('  an application never listed refuses the approval; a kept one already at the value does not: OK');
+  });
+}
+
 /** Up to 200 applications listed; beyond, the count and five examples, and the model is told to offer narrowing. */
 async function testListUpTo200(harness: Harness) {
   await inSeed(harness, async (runner, seed) => {
@@ -902,6 +932,7 @@ async function run() {
     await testLeaveOutAndApprove(harness);
     await testLeaveOutRefusals(harness);
     await testLeaveOutOfAFilter(harness);
+    await testUnlistedApplicationNeverWritten(harness);
     await testListUpTo200(harness);
     await testTheModelReadsNoList(harness);
   } finally {

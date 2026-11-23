@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { z } from 'zod';
 import type { EntityManager } from 'typeorm';
+import { bulkListChanged } from '../../common/bulk-edit/bulk-edit';
 import { UUID_RE } from '../../common/relations/relation-target';
 import { BULK_WRITE_TIMEOUTS } from '../../common/request-db-timeouts';
 import { BULK_EDIT_EMPTIED, BULK_EDIT_HIDDEN } from '../ai-bulk-edit-texts';
@@ -140,7 +141,7 @@ export function storedBulkList(currentValues: Record<string, unknown> | null | u
   return list && Array.isArray(list.rows) && list.words && typeof list.words === 'object' ? list : null;
 }
 
-/** The records the person left out of the card (`mutation_input.excluded`), part of what the approval signs. */
+/** The records the person left out of the card (`mutation_input.excluded`), part of the card's input. */
 export function bulkExcluded(mutation: Record<string, unknown> | null | undefined): string[] {
   return Array.isArray(mutation?.excluded) ? (mutation!.excluded as unknown[]).map((id) => String(id)) : [];
 }
@@ -194,6 +195,18 @@ export function bulkListWithExclusions(counted: AiBulkList, previous: AiBulkList
 export function bulkListApplied(list: AiBulkList, changedIds: readonly string[]): AiBulkList {
   const changed = new Set(changedIds.map((id) => id.toLowerCase()));
   return { ...list, rows: list.rows.map((row) => ({ ...row, changed: row.kept && changed.has(row.id) })) };
+}
+
+/**
+ * The write of a card that lists its records changes none it did not keep (review of lot K2e): a
+ * record reached unchanged at the count (not listed), or refused there (counted without a box), that
+ * the write would change refuses the whole write as a list changed since the count. Run in the
+ * card's savepoint (`withAiBulkEditWaits`): nothing of the write stays.
+ */
+export function assertBulkWriteKept(list: AiBulkList | null, changedIds: readonly string[]): void {
+  if (!list) return;
+  const kept = new Set(list.rows.filter((row) => row.kept).map((row) => row.id.toLowerCase()));
+  if (changedIds.some((id) => !kept.has(id.toLowerCase()))) throw bulkListChanged();
 }
 
 /** A list stored on a card, sorted by reference. */

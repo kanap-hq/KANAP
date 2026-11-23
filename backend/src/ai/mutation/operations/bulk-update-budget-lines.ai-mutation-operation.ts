@@ -32,6 +32,7 @@ import { resolveAiEntityRegistry } from '../../query/registries';
 import {
   AI_BULK_EDIT_LIST_MAX,
   AI_BULK_FILTER_VALUE,
+  assertBulkWriteKept,
   bulkEditPreviewDto,
   bulkExcluded,
   bulkListApplied,
@@ -241,7 +242,7 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
   /**
    * The card recounted with the lines the person left out (lot K2e of 26.12.1): the stored selection
    * and change, never the model's words again; the left out lines go in `excluded`, which the
-   * approval signs with the rest of `mutation_input`, and stay listed, unticked. The count takes the
+   * write reads with the rest of `mutation_input`, and stay listed, unticked. The count takes the
    * workspace's budget-operations lock, as the first one: another operation running refuses it (409
    * `operation_running`) and the card stays as it was.
    */
@@ -478,16 +479,21 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
     await this.policy.assertWriteAccess(context, 'budget', context.manager, { level: 'member' });
     const mutation = (preview.mutation_input ?? {}) as Record<string, unknown>;
     if (!mutation.selection || typeof mutation.selection !== 'object' || !mutation.changes) throw new BadRequestException('Preview is missing its lines.');
-    // The card's selection less the lines left out: what the approval signed.
+    // The card's selection less the lines left out, as the card holds it.
     const selection = effectiveBulkSelection(mutation);
     if (!selection) throw new BadRequestException(BULK_EDIT_ALL_LEFT_OUT_MESSAGE);
     // The count's instant, lines and fingerprint: a list that changed since refuses the write whole.
-    const result = await withAiBulkEditWaits(context.manager, async () => this.budgetLines.bulkUpdate(
-      { ...selection, changes: mutation.changes, as_of: mutation.as_of, expected_rows: mutation.expected_rows, fingerprint: mutation.fingerprint },
-      context.userId ?? undefined,
-      { manager: context.manager, access: await aiBudgetListAccess(this.policy, context), audit: buildAiMutationAudit(preview), options: { changedIds: true } },
-    )) as BulkEditResult;
     const list = storedBulkList(preview.current_values);
+    const result = await withAiBulkEditWaits(context.manager, async () => {
+      const written = await this.budgetLines.bulkUpdate(
+        { ...selection, changes: mutation.changes, as_of: mutation.as_of, expected_rows: mutation.expected_rows, fingerprint: mutation.fingerprint },
+        context.userId ?? undefined,
+        { manager: context.manager, access: await aiBudgetListAccess(this.policy, context), audit: buildAiMutationAudit(preview), options: { changedIds: true } },
+      ) as BulkEditResult;
+      // A record the card did not keep in its list would change: nothing is written.
+      assertBulkWriteKept(list, written.changed_ids ?? []);
+      return written;
+    });
     preview.current_values = {
       ...(preview.current_values ?? {}),
       applied: { changed: Number(result.changed) || 0, unchanged: result.unchanged, refused: result.refused },
