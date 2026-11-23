@@ -436,7 +436,8 @@ export class BudgetListConfig implements ListConfig {
     const s = this.scope;
     const natures = s.nature ? [s.nature] : BUDGET_NATURES;
     stmt.cte('ec_columns', () => columnsToCheckSql(stmt, 'ec_accounts', settings, natures));
-    stmt.cte('ec_lines', () => 'SELECT DISTINCT item_id FROM ec_columns');
+    // Materialized: built once per statement whatever the statistics say (`SqlStatement.cte`).
+    stmt.cte('ec_lines', () => 'SELECT DISTINCT item_id FROM ec_columns', { materialized: true });
     this.join(stmt, 'ecl', 'LEFT JOIN ec_lines ecl ON ecl.item_id = i.id');
     return { kind: 'text', sql: `(CASE WHEN ecl.item_id IS NOT NULL THEN ${toCheck} END)`, joins: ['ecl'] };
   }
