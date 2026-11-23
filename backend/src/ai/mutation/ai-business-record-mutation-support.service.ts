@@ -4,7 +4,6 @@ import { validate as isUuid } from 'uuid';
 import { PRODUCT_NAME } from '../../config/product';
 import { ApplicationsService } from '../../applications/services/applications.service';
 import { AssetsService } from '../../assets/services/assets.service';
-import { AuditService } from '../../audit/audit.service';
 import {
   applicationParticipantCondition,
   resolveBusinessContributorScopeForUser,
@@ -23,7 +22,7 @@ import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.ser
 import { PortfolioProjectsService } from '../../portfolio/services';
 import { BudgetLinesService } from '../../spend/budget-lines.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
-import { auditTableOf, BUDGET_LINE_PREFIX, BUDGET_NATURES, BudgetNature, naturesAnd } from '../../spend/budget-nature';
+import { BUDGET_LINE_PREFIX, BUDGET_NATURES, BudgetNature, naturesAnd } from '../../spend/budget-nature';
 import { parseItemNumber } from '../../common/parse-item-number';
 import { budgetLineReferenceNumbers, parseItemRef, resolveBudgetLine } from '../../common/resolve-item-id';
 import {
@@ -168,8 +167,6 @@ type EntityConfig = {
   labelSingular: string;
   labelPlural: string;
   businessResource: string;
-  /** The table the audit log names for the record: a CAPEX line keeps its CAPEX label (`auditTableOf`). */
-  tableName: string;
   fields: Record<string, FieldConfig>;
 };
 
@@ -248,7 +245,6 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     labelSingular: 'application',
     labelPlural: 'applications',
     businessResource: 'applications',
-    tableName: 'applications',
     fields: {
       name: { label: 'Name', kind: 'text', requiredOnCreate: true },
       supplier_id: { label: 'Supplier', kind: 'relation', nullable: true, relationTarget: 'suppliers', aliases: ['supplier'] },
@@ -294,7 +290,6 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     labelSingular: 'asset',
     labelPlural: 'assets',
     businessResource: 'infrastructure',
-    tableName: 'assets',
     fields: {
       name: { label: 'Name', kind: 'text', requiredOnCreate: true },
       asset_reference: { label: 'Asset Reference', kind: 'text', nullable: true, aliases: ['reference'] },
@@ -324,7 +319,6 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     labelSingular: 'contract',
     labelPlural: 'contracts',
     businessResource: 'contracts',
-    tableName: 'contracts',
     fields: {
       name: { label: 'Name', kind: 'text', requiredOnCreate: true },
       company_id: { label: 'Company', kind: 'relation', requiredOnCreate: true, relationTarget: 'companies', aliases: ['company'] },
@@ -347,7 +341,6 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     labelSingular: 'project',
     labelPlural: 'projects',
     businessResource: 'portfolio_projects',
-    tableName: 'portfolio_projects',
     fields: {
       name: { label: 'Name', kind: 'text', requiredOnCreate: true },
       purpose: { label: 'Purpose', kind: 'text', nullable: true },
@@ -368,7 +361,6 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     labelSingular: 'request',
     labelPlural: 'requests',
     businessResource: 'portfolio_requests',
-    tableName: 'portfolio_requests',
     fields: {
       name: { label: 'Name', kind: 'text', requiredOnCreate: true },
       purpose: { label: 'Purpose', kind: 'text', nullable: true },
@@ -386,7 +378,6 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     labelSingular: 'interface',
     labelPlural: 'interfaces',
     businessResource: 'applications',
-    tableName: 'interfaces',
     fields: {
       interface_reference: { label: 'Interface reference', kind: 'text', aliases: ['reference'] },
       interface_id: { label: 'Interface code', kind: 'text', nullable: true, aliases: ['legacy_code', 'external_code'] },
@@ -420,7 +411,6 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     labelSingular: 'connection',
     labelPlural: 'connections',
     businessResource: 'infrastructure',
-    tableName: 'connections',
     fields: {
       connection_reference: { label: 'Connection reference', kind: 'text', requiredOnCreate: false, aliases: ['reference', 'connection_id'] },
       name: { label: 'Name', kind: 'text', requiredOnCreate: true },
@@ -443,7 +433,6 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     labelSingular: 'incident',
     labelPlural: 'incidents',
     businessResource: 'incidents',
-    tableName: 'incidents',
     fields: {
       title: { label: 'Title', kind: 'text', requiredOnCreate: true },
       category: { label: 'Category', kind: 'incident_category', nullable: true },
@@ -469,7 +458,6 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     labelSingular: 'technology',
     labelPlural: 'technologies',
     businessResource: 'infrastructure',
-    tableName: 'technologies',
     fields: {
       name: { label: 'Name', kind: 'text', requiredOnCreate: true, maxLength: 200 },
       editor: { label: 'Editor', kind: 'text', nullable: true, maxLength: 200 },
@@ -491,7 +479,6 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     labelSingular: 'budget line',
     labelPlural: 'budget lines',
     businessResource: 'budget',
-    tableName: 'spend_items',
     fields: {
       // The nature is required on create and never changes here: a change of type is the budget
       // screen's action (`spend/budget-lines.service.ts`, `changeType`).
@@ -692,7 +679,6 @@ export class AiBusinessRecordMutationSupportService {
   constructor(
     private readonly applications: ApplicationsService,
     private readonly assets: AssetsService,
-    private readonly audit: AuditService,
     private readonly budgetLines: BudgetLinesService,
     private readonly connections: ConnectionsService,
     private readonly contracts: ContractsService,
@@ -2157,12 +2143,9 @@ export class AiBusinessRecordMutationSupportService {
     const action = String(mutation.action || '');
     const fields = coerceRecord(mutation.fields, 'mutation_input.fields');
     const executionFields = this.executionFields(fields);
+    // The services write the record's audit rows themselves, with the preview's source and
+    // reference: Kad adds none of its own (lots K1 and K2a).
     const audit = buildAiMutationAudit(preview);
-    // The services of these families write the record's one audit row themselves, with the
-    // preview's source and reference: Kad adds none of its own (lots K1 and K2a).
-    const serviceWritesAudit = (['incidents', 'technologies', 'budget_lines', 'applications', 'assets', 'contracts',
-      'projects', 'requests', 'interfaces', 'connections'] as string[])
-      .includes(entityType);
     if (action === 'create') {
       const adoption = mutation.adopt && typeof mutation.adopt === 'object'
         ? mutation.adopt as Record<string, unknown>
@@ -2253,9 +2236,6 @@ export class AiBusinessRecordMutationSupportService {
         target_ref: ref.ref,
         target_title: ref.label,
       };
-      if (!serviceWritesAudit) {
-        await this.logAiAudit(context, preview, entityType, 'create', null, snapshot);
-      }
       return;
     }
     if (action !== 'update') throw new BadRequestException('Unsupported business record mutation action.');
@@ -2278,7 +2258,6 @@ export class AiBusinessRecordMutationSupportService {
         throw new ConflictException(`${label} changed after the preview was created.`);
       }
     }
-    const before = { ...live };
     try {
       await this.updateRecord(context, entityType, preview.target_entity_id, executionFields, audit);
     } catch (error) {
@@ -2287,12 +2266,8 @@ export class AiBusinessRecordMutationSupportService {
       }
       throw error;
     }
-    // These services write their own audit row, with the preview's source and reference (a budget
-    // line's or a contract's contacts too, when a new supplier brings theirs); the detail they
-    // return stays the author's, even when the change makes the record invisible to them.
-    if (serviceWritesAudit) return;
-    const after = await this.getRecordSnapshot(context, entityType, preview.target_entity_id);
-    await this.logAiAudit(context, preview, entityType, 'update', before, after);
+    // The services write their own audit row, with the preview's source and reference (a budget
+    // line's or a contract's contacts too, when a new supplier brings theirs).
   }
 
   /**
@@ -2357,32 +2332,6 @@ export class AiBusinessRecordMutationSupportService {
   ) {
     const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
     return { manager: context.manager, tenantId: context.tenantId, viewer, ...(audit ? { audit } : {}) };
-  }
-
-  private async logAiAudit(
-    context: AiExecutionContextWithManager,
-    preview: AiMutationPreview,
-    entityType: AiBusinessRecordEntityType,
-    action: 'create' | 'update',
-    before: unknown,
-    after: unknown,
-  ): Promise<void> {
-    const audit = buildAiMutationAudit(preview);
-    // A CAPEX line's audit rows keep their CAPEX table name (`auditTableOf`).
-    const nature = lineNatureOf((after ?? before) as Record<string, unknown> | null) ?? 'opex';
-    await this.audit.log(
-      {
-        table: entityType === 'budget_lines' ? auditTableOf(nature, 'spend_items') : this.getConfig(entityType).tableName,
-        recordId: preview.target_entity_id ?? null,
-        action,
-        before,
-        after,
-        userId: context.userId,
-        source: audit.source,
-        sourceRef: audit.sourceRef,
-      },
-      { manager: context.manager },
-    );
   }
 
   private async createRecord(

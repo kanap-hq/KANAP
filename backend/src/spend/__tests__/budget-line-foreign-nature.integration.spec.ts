@@ -656,7 +656,7 @@ async function testAi() {
     const fin: any = new AiFinancialPlanMutationSupportService(none, none, none, none, none, none);
     const task: any = new AiTaskMutationSupportService();
     const rel: any = new AiRelationMutationSupportService(audit, none, task, undefined as any);
-    const biz: any = new (AiBusinessRecordMutationSupportService as any)(...Array.from({ length: 20 }, (_, i) => (i === 2 ? audit : undefined)));
+    const biz: any = new (AiBusinessRecordMutationSupportService as any)(...Array.from({ length: 20 }, () => undefined));
     const appBudgetLines = {
       sourceEntity: 'applications', relation: 'budget_lines', label: 'Budget Lines', table: 'application_spend_items',
       sourceColumn: 'application_id', targetColumn: 'spend_item_id', target: 'budget_lines', businessResource: 'applications', kind: 'simple',
