@@ -2,7 +2,7 @@
   "conversationList": {
     "delete": "Delete",
     "deleteConfirmMessage": "The conversation and its messages are deleted. This cannot be undone.",
-    "deleteConfirmTitle": "Delete this conversation?",
+    "deleteConfirmTitle": "Delete {{name}}?",
     "dateGroups": {
       "lastWeek": "Last 7 days",
       "older": "Older",
