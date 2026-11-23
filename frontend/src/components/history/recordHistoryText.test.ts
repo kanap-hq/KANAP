@@ -210,7 +210,9 @@ describe('history lines', () => {
 
   it('names the version in the header and the budget column of a round input', () => {
     expect(historySubjectText({ kind: 'version', label: '2026' }, t)).toBe('Budget 2026');
-    expect(historySubjectText({ kind: 'round_input', label: 'planned' }, t)).toBe('Budget input Budget');
+    expect(historySubjectText({ kind: 'round_input', label: 'planned' }, t)).toBe('Budget entry');
+    expect(historySubjectText({ kind: 'round_input', label: 'forecast' }, t)).toBe('Forecast entry');
+    expect(historySubjectText({ kind: 'round_input' }, t)).toBe('Entry');
     expect(historySubjectText({ kind: 'allocations', label: 'Y2026' }, t)).toBe('Allocation Y2026');
     expect(historySubjectText({ kind: 'record' }, t)).toBeNull();
   });
@@ -266,7 +268,7 @@ describe('history lines', () => {
     expect(historyChildTitle({ ...item({ kind: 'support' }, []), action: 'create' }, t)).toBe('Support added');
     expect(historyChildTitle({ ...item({ kind: 'support' }, []), action: 'delete' }, t)).toBe('Support removed');
     const inputCreate = { ...item({ kind: 'round_input', label: 'planned' }, []), action: 'create' };
-    expect(historyChildTitle(inputCreate, t)).toBe('Budget input Budget added');
+    expect(historyChildTitle(inputCreate, t)).toBe('Budget entry added');
     const allocationCreate = { ...item({ kind: 'allocations', label: 'Y2026' }, []), action: 'create' };
     expect(historyChildTitle(allocationCreate, t)).toBe('Allocation Y2026 added');
     const versionDelete = { ...versionCreate, action: 'delete' };
