@@ -45,6 +45,14 @@ L'historique liste aussi les modifications des éléments d'une fiche. Sur une l
 - les applications, technologies et actifs liés ;
 - les tâches.
 
+Sur une colonne budgétaire construite en **Quantité et prix**, l'entrée d'une saisie dit aussi ce qui a changé dans le calcul, juste au-dessus de la modification des montants :
+
+- chaque propriété modifiée d'une ligne chiffrée : calendrier, quantité, unité, prix unitaire, prix par, fréquence, jours par mois ou période. La ligne est nommée par sa description, ou par son numéro quand elle n'en a pas. Par exemple : « Ligne chiffrée Consultant, calendrier : France → Allemagne » ;
+- les jours ouvrés d'un calendrier, par calendrier et par année, quand vous utilisez à nouveau les lignes après une modification du calendrier. Par exemple : « Jours ouvrés de France 2027 : 218 → 217 » ;
+- les calendriers qu'une copie de colonne n'a pas pu garder, dans les mots de l'aperçu de la copie.
+
+Une colonne restaurée les liste de la même façon. Les entrées plus anciennes les montrent aussi.
+
 Sur les autres fiches, l'historique liste de la même façon les liens et les éléments qu'elles portent : lignes budgétaires, applications, actifs, contrats, membres de l'équipe, contacts, dépendances, liens web, documents intégrés, pièces jointes, tâches, déploiements et notes par critère.
 
 ## Fiches que vous ne pouvez pas lire

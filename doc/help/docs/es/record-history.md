@@ -45,6 +45,14 @@ El historial también lista los cambios en los elementos de un registro. En una 
 - las aplicaciones, tecnologías y activos vinculados;
 - las tareas.
 
+En una columna de presupuesto construida con **Cantidad y precio**, la entrada de una introducción de importes también indica qué cambió en el cálculo, justo encima del cambio de importes:
+
+- cada propiedad modificada de una línea valorada: calendario, cantidad, unidad, precio unitario, precio por, frecuencia, días por mes o periodo. La línea se nombra por su descripción, o por su número cuando no tiene. Por ejemplo: «Línea valorada Consultor, calendario: Francia → Alemania»;
+- los días laborables de un calendario, por calendario y año, cuando usa de nuevo las líneas tras un cambio en el calendario. Por ejemplo: «Días laborables de Francia 2027: 218 → 217»;
+- los calendarios que una copia de columna no pudo conservar, con las palabras de la vista previa de la copia.
+
+Una columna restaurada los lista de la misma forma. Las entradas más antiguas también los muestran.
+
 En los demás registros, el historial lista del mismo modo los vínculos y los elementos que contienen: líneas presupuestarias, aplicaciones, activos, contratos, miembros del equipo, contactos, dependencias, enlaces web, documentos integrados, archivos adjuntos, tareas, despliegues y puntuaciones por criterio.
 
 ## Registros que no puede leer
