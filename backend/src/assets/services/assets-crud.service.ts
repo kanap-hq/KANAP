@@ -22,7 +22,6 @@ import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { displayName } from '../../common/display-name';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { normalizeMarkdownRichText } from '../../common/markdown-worker';
-import { touchUpdatedAt } from '../../common/updated-at-trigger';
 
 /** Every asset has a site: a create without one, or an update that clears it, is refused. */
 function locationRequired() {
@@ -61,10 +60,10 @@ export class AssetsCrudService extends AssetsBaseService {
     value: unknown,
     userId: string | null,
     opts?: ServiceOpts,
-  ): Promise<boolean> {
+  ): Promise<void> {
     const mg = this.getManager(opts);
     const resolved = await this.operatingSystems.resolve(mg, tenantId, value == null ? null : String(value), { create: true, userId, audit: opts?.audit });
-    return (await this.operatingSystems.setOperatingSystem(mg, tenantId, assetId, resolved, this.osSource(opts), userId, opts?.audit)).changed;
+    await this.operatingSystems.setOperatingSystem(mg, tenantId, assetId, resolved, this.osSource(opts), userId, opts?.audit);
   }
 
   /** The readable label, after the asset audit has already snapshotted the columns. */
@@ -430,11 +429,9 @@ export class AssetsCrudService extends AssetsBaseService {
     );
     // Retired or back in service: its technologies are matched again with the vulnerabilities.
     if (before.status !== saved.status) await this.cpeEvents?.emitForSubjects(opts?.manager ?? repo.manager, tenant, 'asset', [saved.id]);
-    if (has('operating_system') && await this.applyOperatingSystem(tenant, saved.id, (body as any).operating_system, userId, opts)) {
-      // The operating system is a link of its own, which the trigger of the asset does not see: its
-      // change dates the asset here (migration 1856270000000).
-      await touchUpdatedAt(opts?.manager ?? repo.manager, 'assets', saved.id);
-    }
+    // The operating system is a link of its own: its change writes the asset's history entry
+    // (asset_technologies), which dates it (audit/record-dating.ts).
+    if (has('operating_system')) await this.applyOperatingSystem(tenant, saved.id, (body as any).operating_system, userId, opts);
     return this.attachOperatingSystem(saved, tenant, opts);
   }
 
@@ -589,9 +586,8 @@ export class AssetsCrudService extends AssetsBaseService {
         );
         await repo.save(payload);
       }
-      // The members are rows of their own, which the trigger of the cluster does not see: their change dates it.
-      if ([...existingMembers].sort().join(',') !== [...normalizedIds].sort().join(',')) await touchUpdatedAt(trx, 'assets', clusterId);
-
+      // The members are rows of their own: their change shows in the cluster's history entry below,
+      // which dates it (audit/record-dating.ts); an unchanged set shows nothing.
       await this.audit.log(
         {
           table: 'asset_cluster_members',

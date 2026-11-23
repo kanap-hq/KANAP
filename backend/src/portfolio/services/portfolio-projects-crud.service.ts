@@ -24,7 +24,6 @@ import { computeAutoAllocations } from '../utils/allocation-utils';
 import { formatItemLabel } from '../utils/activity-labels';
 import { detectChanges, PROJECT_TRACKED_FIELDS, resolveDisplayNames } from '../../common/change-detection';
 import { normalizeMarkdownRichText } from '../../common/markdown-worker';
-import { touchUpdatedAt } from '../../common/updated-at-trigger';
 import { loadSlotBodies } from '../../knowledge/integrated-document-bodies';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
@@ -585,10 +584,12 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const before = { ...existing };
     const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
     // The purpose lives in a bound document. A text that repeats what is stored is kept as it is.
-    const storedPurpose = has('purpose')
-      ? (await loadSlotBodies(mg, existing.tenant_id, 'projects', [existing.id], ['purpose'])).get(existing.id)?.get('purpose')
+    const nextPurpose = has('purpose')
+      ? await this.normalizeNullable(
+        body.purpose,
+        (await loadSlotBodies(mg, existing.tenant_id, 'projects', [existing.id], ['purpose'])).get(existing.id)?.get('purpose'),
+      )
       : undefined;
-    const nextPurpose = has('purpose') ? await this.normalizeNullable(body.purpose, storedPurpose) : undefined;
 
     // Status transition handling
     if (has('status')) {
@@ -674,12 +675,9 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     if (has('it_sponsor_id')) existing.it_sponsor_id = body.it_sponsor_id || null;
     if (has('it_lead_id')) existing.it_lead_id = body.it_lead_id || null;
 
-    // The purpose lives in a bound document, which the trigger of the project does not see: its
-    // change dates the project, after the save (migration 1856270000000).
-    const purposeChanged = nextPurpose !== undefined && (nextPurpose ?? null) !== (storedPurpose ?? null);
-
+    // The purpose lives in a bound document: its change writes the project's history entry
+    // (portfolio_project_documents), which dates it (audit/record-dating.ts).
     const saved = await repo.save(existing);
-    if (purposeChanged) await touchUpdatedAt(repo.manager, 'portfolio_projects', saved.id);
     const sourceDescriptor = {
       id: saved.id,
       tenant_id: saved.tenant_id,
@@ -1327,8 +1325,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     );
 
     const after = await this.effortAllocationState(mg, projectId, effortType);
-    // The allocations are rows of their own: their change dates the project (the mode dates it by its trigger).
-    if (JSON.stringify(after) !== JSON.stringify(before)) await touchUpdatedAt(mg, 'portfolio_projects', projectId);
+    // The allocations are rows of their own: their audit row below dates the project (the mode dates it by its trigger).
     await this.auditEffortAllocations(mg, projectId, before, after, opts?.userId ?? null);
 
     return { ok: true };
@@ -1360,7 +1357,6 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     );
 
     const after = await this.effortAllocationState(mg, projectId, effortType);
-    if (JSON.stringify(after) !== JSON.stringify(before)) await touchUpdatedAt(mg, 'portfolio_projects', projectId);
     await this.auditEffortAllocations(mg, projectId, before, after, opts?.userId ?? null);
 
     return { ok: true };

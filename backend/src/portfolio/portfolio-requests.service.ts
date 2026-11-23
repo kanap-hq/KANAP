@@ -36,7 +36,6 @@ import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident
 import { ItemNumberService } from '../common/item-number.service';
 import { replacedLinks } from '../common/relations/linked-reads';
 import { parseItemNumber } from '../common/parse-item-number';
-import { touchUpdatedAt } from '../common/updated-at-trigger';
 import { StorageService } from '../common/storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
@@ -1516,13 +1515,9 @@ export class PortfolioRequestsService {
     if (has('it_sponsor_id')) existing.it_sponsor_id = body.it_sponsor_id || null;
     if (has('it_lead_id')) existing.it_lead_id = body.it_lead_id || null;
 
-    // The purpose and the risks live in bound documents, which the trigger of the request does not
-    // see: their change dates the request, after the save (migration 1856270000000).
-    const changedBody = (next: string | null | undefined, stored: string | null | undefined) => next !== undefined && (next ?? null) !== (stored ?? null);
-    const bodiesChanged = changedBody(nextPurpose, storedBodies?.get('purpose')) || changedBody(nextRisks, storedBodies?.get('risks_mitigations'));
-
+    // The purpose and the risks live in bound documents: their change writes the request's history
+    // entry (portfolio_request_documents), which dates it (audit/record-dating.ts).
     const saved = await repo.save(existing);
-    if (bodiesChanged) await touchUpdatedAt(repo.manager, 'portfolio_requests', saved.id);
     const sourceDescriptor = {
       id: saved.id,
       tenant_id: saved.tenant_id,

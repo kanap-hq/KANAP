@@ -10,7 +10,6 @@ import { assertNoItemEditConflicts } from './item-edit-conflicts';
 import { ItemWriteFields, ItemWriteScope, resolveItemWrite } from './item-write.util';
 import { SpendItem } from './spend-item.entity';
 import { assertDataAccessWritten } from '../data-access/line-write-checks';
-import { touchUpdatedAt } from '../common/updated-at-trigger';
 
 /**
  * The update of one OPEX or CAPEX line, under its row lock (plan
@@ -36,9 +35,9 @@ import { touchUpdatedAt } from '../common/updated-at-trigger';
  *    status and end of validity when they change; every other column stays as
  *    stored, whoever wrote it last. The database dates the line when one of
  *    its columns changes (`common/updated-at-trigger.ts`);
- * 4. the analytics values (a change of them alone dates the line through
- *    `touchUpdatedAt`), then the line is read again for the answer and the
- *    audit row.
+ * 4. the analytics values (a change of them alone dates the line through the
+ *    caller's audit row, `audit/record-dating.ts`), then the line is read again
+ *    for the answer and the audit row.
  * The caller writes the audit row (before: the locked row) and the side
  * effects (contact sync, notifications).
  */
@@ -125,12 +124,8 @@ export async function updateItemUnderLock(
   const analyticsAfter = analytics.length > 0
     ? (await loadItemAnalyticsValues(manager, scope, tenantId, [itemId])).get(itemId) ?? []
     : analyticsBefore;
-  // A change of analytics values alone is an edit too (and the audit row of the caller): rows of
-  // their own, which the trigger of the line does not see.
-  const analyticsKey = (rows: ItemAnalyticsValue[]) => rows.map((row) => `${row.axis_id}:${row.category_id}`).sort().join(',');
-  if (analyticsKey(analyticsAfter) !== analyticsKey(analyticsBefore)) {
-    await assertDataAccessWritten(manager, await touchUpdatedAt(manager, 'spend_items', itemId));
-  }
+  // A change of analytics values alone is an edit too: the caller's audit row carries them
+  // (`analytics_values`), and that history entry dates the line (audit/record-dating.ts).
 
   const after = (await read()) ?? before;
   return { before, after, analyticsBefore, analyticsAfter, statusBefore: deriveStatusFromDisabledAt(before.disabled_at, now) };
