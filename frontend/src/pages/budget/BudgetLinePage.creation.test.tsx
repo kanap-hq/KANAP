@@ -641,7 +641,9 @@ describe('Budget line born complete', () => {
     // As in a browser, the picker keeps the focus once a value is chosen.
     const choose = async (name: string) => {
       const input = screen.getByRole('combobox', { name: 'Site' });
+      fireEvent.pointerDown(input);
       act(() => { input.focus(); });
+      fireEvent.pointerUp(input);
       fireEvent.mouseDown(input);
       fireEvent.click(await screen.findByRole('option', { name }));
     };
@@ -757,6 +759,7 @@ describe('Budget line born complete', () => {
     pick('opex.fields.payingCompany', 'company-2');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, expect.objectContaining({ paying_company_id: 'company-2', account_id: null })));
     await waitFor(() => expect(field('opex.fields.account')).toHaveValue(''));
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'common:buttons.done' }));
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
     await waitFor(() => expect(field('opex.fields.account')).toHaveFocus());
     expect(fieldLabel('opex.fields.account')).toHaveAttribute('data-missing');

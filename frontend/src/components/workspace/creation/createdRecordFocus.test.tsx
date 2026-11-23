@@ -38,11 +38,17 @@ type Post = (name: string) => Promise<{ id: string; creation_token: string }>;
 
 /**
  * What the record shows once created. `description`: the description is declared and may be
- * changed (`editable`), declared and shown read only (`readonly`), on another tab (`elsewhere`),
+ * changed (`editable`), shown read only and not declared (`readonly`), on another tab (`elsewhere`),
  * declared once the record has loaded, 400 ms after its properties (`late`), or a rich text editor
  * (`rich`).
  */
-type Shape = { description?: 'editable' | 'readonly' | 'elsewhere' | 'late' | 'rich' };
+type Shape = {
+  description?: 'editable' | 'readonly' | 'elsewhere' | 'late' | 'rich';
+  /** The defaults the write needs load 300 ms after the page (a document's library, a task's status). */
+  defaultsLate?: boolean;
+  /** The record's page focuses a field of its own as it mounts (an autofocus). */
+  autofocus?: boolean;
+};
 
 function RichDescription() {
   const [value, setValue] = React.useState('');
@@ -54,7 +60,7 @@ function RichDescription() {
   );
 }
 
-function RecordBody({ description = 'editable', live = false }: Shape & { live?: boolean }) {
+function RecordBody({ description = 'editable', live = false, autofocus = false }: Shape & { live?: boolean }) {
   const [text, setText] = React.useState('');
   const [loaded, setLoaded] = React.useState(!(description === 'late' && live));
   React.useEffect(() => {
@@ -63,11 +69,15 @@ function RecordBody({ description = 'editable', live = false }: Shape & { live?:
     return () => window.clearTimeout(timer);
   }, [loaded]);
   if (description === 'elsewhere') return <input aria-label="budget amount" />;
+  // A description this person may not change is not declared (pages mark it only where it may be changed).
+  if (description === 'readonly') return <textarea aria-label="description" readOnly value="" />;
   if (description === 'rich') return <RichDescription />;
   if (!loaded) return <div>loading</div>;
   return (
     <div data-creation-description="">
-      <textarea aria-label="description" readOnly={description === 'readonly'} value={text} onChange={(event) => setText(event.target.value)} />
+      {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
+      {live && autofocus ? <input aria-label="notes" autoFocus /> : null}
+      <textarea aria-label="description" value={text} onChange={(event) => setText(event.target.value)} />
     </div>
   );
 }
@@ -85,9 +95,16 @@ function TitlePage({ post, shape }: { post: Post; shape: Shape; pick?: 'list' | 
   const isCreate = id === 'new';
   const navigate = useNavigate();
   const creation = useRecordCreation({ family: 'things', apiBase: '/things', recordId: isCreate ? null : id, listPath: '/things', recordLabel: 'The thing' });
+  const [ready, setReady] = React.useState(!shape.defaultsLate);
+  React.useEffect(() => {
+    if (ready) return undefined;
+    const timer = window.setTimeout(() => setReady(true), 300);
+    return () => window.clearTimeout(timer);
+  }, [ready]);
   const title = useTitleCreation<{ id: string }>({
     isCreate,
     requiredMessage: 'required',
+    ready,
     post,
     onCreated: (created, token) => {
       creation.startCreation({ recordId: created.id, token, returnTo: '/things' });
@@ -209,6 +226,13 @@ function TypedChoice({ onChoose }: { onChoose: (value: string) => void }) {
   );
 }
 
+/** A press that puts the cursor in `field`, as a click does. */
+function pressInto(field: HTMLElement) {
+  fireEvent.pointerDown(field);
+  act(() => field.focus());
+  fireEvent.pointerUp(field);
+}
+
 function Where() {
   const navigate = useNavigate();
   return (
@@ -322,7 +346,7 @@ describe('the cursor once the creation frame has written a record', () => {
     renderPage(TitlePage, { post: slow });
     fireEvent.keyDown(typeTitle('Billing'), { key: 'Enter' });
     const search = screen.getByLabelText('search');
-    act(() => search.focus());
+    pressInto(search);
     await act(async () => answer({ id: ID, creation_token: 'token-1' }));
     await onRecord();
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -338,7 +362,7 @@ describe('the cursor once the creation frame has written a record', () => {
     const owner = screen.getByLabelText('owner');
     await user.selectOptions(owner, 'ana');
     // The record is being written: the person opens the list again.
-    fireEvent.mouseDown(owner);
+    pressInto(owner);
     await act(async () => answer({ id: ID, creation_token: 'token-1' }));
     await onRecord();
     await new Promise((resolve) => setTimeout(resolve, 150));
@@ -450,23 +474,10 @@ describe('what the person does while the record is written', () => {
     expect(await screen.findByText('refused')).toBeTruthy();
     expect(title).toHaveValue('Billing');
     expect(title).toHaveFocus();
+    expect(document.querySelector('[data-creation-hold]')).toBeNull();
     // Typing again goes to the title, as before the write.
     await user.keyboard('s');
     expect(title).toHaveValue('Billings');
-  });
-
-  it('leaves shortcuts and the keys of a composition alone', async () => {
-    const user = userEvent.setup();
-    const write = heldWrite();
-    renderPage(TitlePage, { post: write.post });
-    const title = typeTitle('Billing');
-    fireEvent.keyDown(title, { key: 'Enter' });
-    expect(fireEvent.keyDown(title, { key: 'a', ctrlKey: true })).toBe(true);
-    expect(fireEvent.keyDown(title, { key: 'Process', keyCode: 229, isComposing: true })).toBe(true);
-    await user.keyboard('xy');
-    await write.answer();
-    await onRecord();
-    await waitFor(() => expect(screen.getByLabelText('description')).toHaveValue('xy'));
   });
 
   it('puts the characters typed meanwhile in a rich text description, through the editor', async () => {
@@ -493,7 +504,7 @@ describe('what the person does while the record is written', () => {
       await write.answer();
       await onRecord();
       await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus(), { timeout: 2000 });
-      const elsewhere = visited.filter((el) => !el.closest('[data-creation-title], [data-creation-description]'));
+      const elsewhere = visited.filter((el) => !el.closest('[data-creation-title], [data-creation-description], [data-creation-hold]'));
       expect(elsewhere).toEqual([]);
     } finally {
       document.removeEventListener('focusin', onFocusIn);
@@ -508,19 +519,100 @@ describe('what the person does while the record is written', () => {
     const preview = screen.getAllByTestId('creation-preview')[0];
     fireEvent.pointerDown(preview);
     fireEvent.mouseDown(preview);
+    fireEvent.pointerUp(preview);
     await write.answer();
     await onRecord();
     await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
   });
 
-  it('lets the keys go once the person left the page while the record was written', async () => {
+  it('waits in a field named as the description, which the title and the field just given never are', async () => {
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post });
+    const title = typeTitle('Billing');
+    fireEvent.keyDown(title, { key: 'Enter' });
+    expect(document.activeElement).toHaveAttribute('data-creation-hold');
+    expect(document.activeElement).toHaveAttribute('aria-label', 'description');
+    await write.answer();
+    await onRecord();
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+    expect(document.querySelector('[data-creation-hold]')).toBeNull();
+  });
+
+  it('keeps the title as given while the defaults the write waits for load, the text typed meanwhile going to the description', async () => {
+    const user = userEvent.setup();
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post, shape: { defaultsLate: true } });
+    const title = typeTitle('Billing');
+    fireEvent.keyDown(title, { key: 'Enter' });
+    await user.keyboard('abc');
+    expect(write.calls).toEqual([]);
+    await waitFor(() => expect(write.calls).toEqual(['Billing']), { timeout: 2000 });
+    await user.keyboard('de');
+    expect(title).toHaveValue('Billing');
+    await write.answer();
+    await onRecord();
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveValue('abcde'));
+    expect(screen.getByLabelText('description')).toHaveFocus();
+  });
+
+  it('puts a paste, the new lines and the corrections made while the record is written in the description, once', async () => {
+    const user = userEvent.setup();
     const write = heldWrite();
     renderPage(TitlePage, { post: write.post });
     fireEvent.keyDown(typeTitle('Billing'), { key: 'Enter' });
-    expect(fireEvent.keyDown(document.body, { key: 'a' })).toBe(false);
+    // An Enter before any letter (the gesture's own key held) adds no line.
+    await user.keyboard('{Enter}abx{Backspace}c{Enter}');
+    await user.paste('pasted');
+    await write.answer();
+    await onRecord();
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveValue('abc\npasted'));
+  });
+
+  it('waits for a composition under way to end before the description takes the text', async () => {
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post });
+    fireEvent.keyDown(typeTitle('Billing'), { key: 'Enter' });
+    const waiting = document.activeElement as HTMLTextAreaElement;
+    fireEvent.compositionStart(waiting);
+    fireEvent.change(waiting, { target: { value: 'é' } });
+    await write.answer();
+    await onRecord();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const description = screen.getAllByLabelText('description').find((el) => el !== waiting);
+    expect(description).toHaveValue('');
+    expect(waiting).toHaveFocus();
+    fireEvent.compositionEnd(waiting);
+    await waitFor(() => expect(description).toHaveValue('é'));
+    expect(description).toHaveFocus();
+  });
+
+  it('takes the cursor back from a field the page focuses by itself, and the text typed goes to the description', async () => {
+    const user = userEvent.setup();
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post, shape: { autofocus: true } });
+    fireEvent.keyDown(typeTitle('Billing'), { key: 'Enter' });
+    await user.keyboard('ab');
+    await write.answer();
+    await onRecord();
+    await user.keyboard('c');
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+    await user.keyboard('d');
+    expect(screen.getByLabelText('description')).toHaveValue('abcd');
+    expect(screen.getByLabelText('notes')).toHaveValue('');
+  });
+
+  it('lets the cursor go once the person left the page while the record was written', async () => {
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post });
+    fireEvent.keyDown(typeTitle('Billing'), { key: 'Enter' });
+    expect(document.activeElement).toHaveAttribute('data-creation-hold');
     fireEvent.click(screen.getByRole('button', { name: 'back to the list' }));
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/things$/));
-    expect(fireEvent.keyDown(document.body, { key: 'Tab' })).toBe(true);
+    await waitFor(() => expect(document.querySelector('[data-creation-hold]')).toBeNull());
+    // The application's own field, focused by the application: nothing takes it back.
+    const search = screen.getByLabelText('search');
+    act(() => search.focus());
     await write.answer();
+    expect(search).toHaveFocus();
   });
 });

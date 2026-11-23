@@ -1,5 +1,5 @@
 import { describe, expect, it, afterEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import {
   armCreatedRecordFocus,
@@ -28,6 +28,20 @@ function tabFromTitleToPageStep() {
 function tabFromTitle() {
   noteCreationWrite();
   armCreatedRecordFocus();
+}
+
+/** A press that puts the cursor in `field`, as a click does. */
+function pressInto(field: HTMLElement) {
+  fireEvent.pointerDown(field);
+  act(() => field.focus());
+  fireEvent.pointerUp(field);
+}
+
+/** A description shown as text, which opens its editor once it takes the focus (an integrated document). */
+function OpensOnFocus() {
+  const [open, setOpen] = React.useState(false);
+  if (open) return <textarea aria-label="description editor" />;
+  return <div role="textbox" tabIndex={0} aria-label="description" onFocus={() => setTimeout(() => setOpen(true), 30)}>Add a description</div>;
 }
 
 function Record({ page = 'record:overview', children }: { page?: string; children: React.ReactNode }) {
@@ -86,16 +100,11 @@ describe('useCreationFieldFocus', () => {
     await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
   });
 
-  it('focuses a description shown read-only, which opens its editor', async () => {
+  it('opens a description that opens its editor once focused, then gives the cursor to its editor', async () => {
     tabFromTitle();
-    render(
-      <Record>
-        <div data-creation-panel="main">
-          <div data-creation-description=""><div role="textbox" tabIndex={0} aria-label="description">Add a description</div></div>
-        </div>
-      </Record>,
-    );
-    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+    render(<Record><div data-creation-panel="main"><div data-creation-description=""><OpensOnFocus /></div></div></Record>);
+    await waitFor(() => expect(screen.getByLabelText('description editor')).toHaveFocus());
+    expect(document.querySelector('[data-creation-hold]')).toBeNull();
   });
 
   it('leaves the focus alone on the page the Tab was pressed on', async () => {
@@ -132,13 +141,13 @@ describe('useCreationFieldFocus', () => {
     await waitFor(() => expect(screen.getByLabelText('site')).toHaveFocus());
   });
 
-  it('does not take the focus from where the person went meanwhile', async () => {
+  it('does not take the focus from a field the person pressed into meanwhile', async () => {
     tabFromTitle();
-    const view = render(<Record><button type="button">Elsewhere</button></Record>);
-    screen.getByRole('button', { name: 'Elsewhere' }).focus();
-    view.rerender(<Record><button type="button">Elsewhere</button><textarea aria-label="description" data-creation-description="" /></Record>);
+    const view = render(<Record><input aria-label="elsewhere" /></Record>);
+    pressInto(screen.getByLabelText('elsewhere'));
+    view.rerender(<Record><input aria-label="elsewhere" /><textarea aria-label="description" data-creation-description="" /></Record>);
     await new Promise((resolve) => setTimeout(resolve, 150));
-    expect(screen.getByRole('button', { name: 'Elsewhere' })).toHaveFocus();
+    expect(screen.getByLabelText('elsewhere')).toHaveFocus();
   });
 
   it('keeps placing the focus after a key typed while the focus is nowhere yet', async () => {
@@ -175,7 +184,7 @@ describe('useCreationFieldFocus', () => {
 
     tabFromTitle();
     const next = render(<Record><div data-creation-panel="main"><input aria-label="code" /><div data-creation-description="" /></div></Record>);
-    fireEvent.pointerDown(screen.getByLabelText('code'));
+    pressInto(screen.getByLabelText('code'));
     next.rerender(loaded);
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(screen.getByLabelText('description')).not.toHaveFocus();

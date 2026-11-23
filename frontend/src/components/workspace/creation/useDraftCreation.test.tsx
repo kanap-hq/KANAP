@@ -2,11 +2,12 @@ import React from 'react';
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { KanapDialogProvider } from '../../design';
 import { creationKey, getCreation, resetCreationStore, setCreation } from './creationStore';
 import useDraftCreation, { type DraftCreated } from './useDraftCreation';
 import CreationActions from './CreationActions';
+import { clearCreationFieldFocus } from './creationFieldFocus';
 
 const stableT = vi.hoisted(() => (key: string) => key);
 
@@ -158,6 +159,8 @@ describe('useDraftCreation on the draft: leaving gives nothing', () => {
   beforeEach(() => {
     resetCreationStore();
   });
+  // The record's page here places no cursor: the field the cursor waited in goes with the test.
+  afterEach(() => clearCreationFieldFocus());
 
   it('writes nothing when the last field loses the focus to a link outside the page', async () => {
     const post = vi.fn(async () => THING);

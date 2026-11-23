@@ -66,7 +66,6 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
   const write = React.useCallback(async (name: string) => {
     if (running.current) return;
     running.current = true;
-    noteCreationWrite();
     setWriting(true);
     setTitleError(null);
     latest.current.onStart?.();
@@ -86,6 +85,8 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
 
   const commit = React.useCallback((name: string) => {
     sent.current = true;
+    // From the gesture on, what is typed waits for the record's description, defaults or not.
+    noteCreationWrite();
     setTitleError(null);
     if (latest.current.ready) void write(name);
     else setPendingName(name);

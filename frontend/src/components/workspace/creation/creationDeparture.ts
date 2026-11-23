@@ -2,8 +2,12 @@ import React from 'react';
 import { isCreationField } from './creationFieldFocus';
 
 const PAGE = '[data-workspace-shell]';
-/** A list, a menu or a dialog opened over the page: a choice made there is made on the page. */
-const OVER_PAGE = '.MuiModal-root, .MuiPopper-root, [role="dialog"]';
+/**
+ * A list, a menu or a dialog opened over the page: a choice made there is made on the page. The
+ * field the cursor waits in while the record is written (`noteCreationWrite`) is neither a passage
+ * nor a departure.
+ */
+const OVER_PAGE = '.MuiModal-root, .MuiPopper-root, [role="dialog"], [data-creation-hold]';
 
 /**
  * Follows the focus as it leaves a field of a page that creates a record (`useDraftCreation`), and
