@@ -6,7 +6,8 @@ import {
   importCell,
   refuseClear,
 } from '../common/csv';
-import { CsvCellError } from '../common/csv/csv-field.types';
+import { CsvCellError, CsvImportRow } from '../common/csv/csv-field.types';
+import { isCalendarDate } from '../common/report-period';
 import {
   accentFreeKey, foldKey, noteNameMatch, noteRefusedProposal, proposalFor, undoneMatch, type MatchHow,
 } from '../common/name-matching';
@@ -177,6 +178,17 @@ function incidentStatusLabel(code: unknown, language: CsvLanguage | undefined): 
 }
 
 const IMPORT_STATUS_RESERVED_CODE = 'CSV_INCIDENT_STATUS_RESERVED';
+const IMPORT_REFERENCE_INVALID_CODE = 'CSV_INCIDENT_REFERENCE_INVALID';
+
+/** The refusal of a ref cell that is not an incident reference (INC-12) or a bare number. */
+function invalidReferenceMessage(value: string): string {
+  return `Invalid reference "${value}". Use the incident reference (INC-12), or leave the column empty to create a new incident.`;
+}
+
+/** The refusal of a category that is not in the register's list. The English sentence stays for the API. */
+function unknownCategoryMessage(label: string, category: string, names: string): string {
+  return `${label}: unknown category "${category}". Use one of ${names}, or add it under IT settings first.`;
+}
 
 function importViewer(context: CsvImportContext): IncidentViewer {
   return context.viewer ?? { userId: context.userId ?? null, isAdmin: context.isAdmin === true };
@@ -193,18 +205,19 @@ function parseRef(value: string): number | null {
   const text = value.trim();
   if (text === '') return null;
   const match = REF_INPUT_RE.exec(text);
-  if (!match) {
-    throw new Error(
-      `Invalid reference "${value}". Use the incident reference (INC-12), or leave the column empty to create a new incident.`,
-    );
-  }
-  const number = parseItemNumber(match[1]);
+  const number = match ? parseItemNumber(match[1]) : null;
   if (number == null) {
-    throw new Error(
-      `Invalid reference "${value}". Use the incident reference (INC-12), or leave the column empty to create a new incident.`,
-    );
+    throw new CsvCellError(IMPORT_REFERENCE_INVALID_CODE, invalidReferenceMessage(value), { value });
   }
   return number;
+}
+
+function refuseDate(column: string, value: string): never {
+  throw new CsvCellError(
+    'CSV_DATE_INVALID',
+    `Invalid date in ${column}: "${value}". Use 2026-09-02, 2026-09-02T14:32:00Z or 02/09/2026 14:32.`,
+    { value },
+  );
 }
 
 /**
@@ -212,7 +225,8 @@ function parseRef(value: string): number | null {
  * (Europe/Paris)`, as the export writes it), UTC when it names none. Accepts the
  * export's form (`16/10/2026 10:38`, `2026-10-16 10:38`), the European formats
  * Excel produces, a plain day (the zone's midnight) and ISO with its own offset
- * (2026-09-02T14:32:00Z), which wins over the header.
+ * (2026-09-02T14:32:00Z), which wins over the header. A day that is not on the
+ * calendar (`31/31/2026`) is refused: the clock math would roll it into another month.
  */
 function parseDateTime(value: string, column: string, timeZone = 'UTC'): Date | null {
   const text = value.trim();
@@ -226,15 +240,15 @@ function parseDateTime(value: string, column: string, timeZone = 'UTC'): Date | 
     : euro ? [euro[3], euro[2], euro[1], euro[4], euro[5], euro[6]] : null;
   if (parts) {
     const [year, month, day, hour, minute, second] = parts;
+    const isoDay = `${year}-${pad(month)}-${pad(day)}`;
+    if (!isCalendarDate(isoDay)) refuseDate(column, value);
     const time = hour == null ? null : `${pad(hour)}:${minute}:${second ?? '00'}`;
-    const read = instantInTimeZone(`${year}-${pad(month)}-${pad(day)}`, time, timeZone);
+    const read = instantInTimeZone(isoDay, time, timeZone);
     if (!isNaN(read.getTime())) return read;
   }
 
   const parsed = new Date(text);
-  if (isNaN(parsed.getTime())) {
-    throw new Error(`Invalid date in ${column}: "${value}". Use 2026-09-02, 2026-09-02T14:32:00Z or 02/09/2026 14:32.`);
-  }
+  if (isNaN(parsed.getTime())) refuseDate(column, value);
   return parsed;
 }
 
@@ -249,7 +263,12 @@ function parseCode(
   if (fromLabel) return fromLabel;
   const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, '_');
   if (!valid.includes(normalized)) {
-    throw new Error(`Invalid ${column}: "${value}". Valid values: ${valid.join(', ')}`);
+    const allowed = valid.join(', ');
+    throw new CsvCellError(
+      'CSV_ENUM_INVALID',
+      `Invalid ${column}: "${value}". Valid values: ${allowed}`,
+      { value, allowed },
+    );
   }
   return normalized;
 }
@@ -339,11 +358,15 @@ function resolveUser(value: string, column: string, context: CsvImportContext, l
     const proposed = proposedByEmail?.id
       ? [{ id: proposedByEmail.id, email: proposal.toLowerCase(), name: `${proposedByEmail.first_name ?? ''} ${proposedByEmail.last_name ?? ''}`.trim() }]
       : reads ? findPeople(users, proposal, false).people : [];
-    if (proposed.length === 1) {
+    // The server's own match first (lot I6b of 26.12.1): Kad naming the person the cell finds alone is
+    // no proposal to list, taken or refused; the cell follows its own rule below.
+    const own = proposed.length === 1 ? findPeople(users, text, reads).people : [];
+    const same = own.length === 1 && own[0].id === proposed[0].id;
+    if (proposed.length === 1 && !same) {
       note(proposed[0], 'model');
       return proposed[0].id;
     }
-    if (context.refusedProposals) {
+    if (!same && context.refusedProposals) {
       noteRefusedProposal(context.refusedProposals, { column, name: null, value: text, target: proposal, reason: 'missing' }, line);
     }
   }
@@ -405,6 +428,38 @@ function textField(csvColumn: string, label: string, group: string) {
     label,
     group,
   };
+}
+
+/**
+ * An unknown category, as a row error of the check and of the load. A name that matches several
+ * categories stays the write-time refusal: that sentence is not one of these row errors.
+ */
+async function refuseUnknownCategories(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
+  const filled = rows.filter((row) => {
+    const category = row.parsed.category;
+    return category != null && String(category).trim() !== '';
+  });
+  if (filled.length === 0) return;
+  const categories = (await requireImportCatalogs(context)).incidentCategories;
+  const names = categories.map((category) => category.label).join(', ');
+  for (const row of filled) {
+    const category = String(row.parsed.category);
+    let resolved: string | undefined;
+    try {
+      resolved = findCatalogOption(category, categories)?.code;
+    } catch {
+      continue;
+    }
+    if (resolved) continue;
+    const label = incidentLabel(row.existingEntity?.item_number ? row.existingEntity : { title: row.parsed.title });
+    row.errors.push({
+      row: row.rowNumber,
+      column: 'category',
+      message: unknownCategoryMessage(label, category, names),
+      code: 'CSV_ENUM_INVALID',
+      params: { value: category, allowed: names },
+    });
+  }
 }
 
 export const incidentCsvConfig: CsvEntityConfig = {
@@ -579,7 +634,9 @@ export const incidentCsvConfig: CsvEntityConfig = {
           row.errors.push({
             row: row.rowNumber,
             column: 'ref',
-            message: `Invalid reference "${value}". Use the incident reference (INC-12), or leave the column empty to create a new incident.`,
+            message: invalidReferenceMessage(value),
+            code: IMPORT_REFERENCE_INVALID_CODE,
+            params: { value },
           });
           continue;
         }
@@ -609,10 +666,13 @@ export const incidentCsvConfig: CsvEntityConfig = {
     for (const row of rows) {
       const n = Number(row.raw.ref);
       if (!hidden.has(n)) continue;
+      const reference = `INC-${n}`;
       row.errors.push({
         row: row.rowNumber,
         column: 'ref',
-        message: `Unknown incident reference(s): INC-${n}. ${UNKNOWN_REF_HINT}`,
+        message: `Unknown incident reference(s): ${reference}. ${UNKNOWN_REF_HINT}`,
+        code: 'CSV_REFERENCE_NOT_FOUND',
+        params: { value: reference },
       });
     }
   },
@@ -631,6 +691,9 @@ export const incidentCsvConfig: CsvEntityConfig = {
   afterValidate: async (rows, context) => {
     // A review cell that repeats its document is kept as stored, whatever tags it holds.
     await keepStoredSlotBodies(rows, context, 'incidents', { [REVIEW_ENTITY_PROPERTY]: 'review' });
+    // The comparison swallows an unknown category, and the commit throw does not run on the check.
+    // The row error is what the person reads, on the check and on the load.
+    await refuseUnknownCategories(rows, context);
     const viewer = importViewer(context);
     for (const row of rows) {
       // A matched row an insert-only import skips is not checked.
@@ -669,6 +732,7 @@ export const incidentCsvConfig: CsvEntityConfig = {
       }
       if (!next.category) return;
       const resolved = findCatalogOption(next.category, categories)?.code;
+      // Not shown: an unresolved category counts as a change. The row error is added in afterValidate.
       if (!resolved) throw new Error(`unknown category "${next.category}"`);
       next.category = resolved;
     }, { blankKeepsDocument: true });
@@ -694,10 +758,11 @@ export const incidentCsvConfig: CsvEntityConfig = {
       if (entity.category) {
         const resolved = findCatalogOption(entity.category, categories)?.code;
         if (!resolved) {
-          throw new Error(
-            `${incidentLabel(entity)}: unknown category "${entity.category}". ` +
-            `Use one of ${categories.map((c) => c.label).join(', ')}, or add it under IT settings first.`,
-          );
+          throw new Error(unknownCategoryMessage(
+            incidentLabel(entity),
+            String(entity.category),
+            categories.map((c) => c.label).join(', '),
+          ));
         }
         entity.category = resolved;
       }
