@@ -1189,6 +1189,8 @@
     "fteDeclared": "VZÄ gemeldet",
     "fteDeclaredYes": "Ja",
     "fteDeclaredNo": "Nein",
+    "entryCheck": "Prüfung Menge und Preis",
+    "entryToCheck": "Zu prüfen",
     "yearSlotWithYear": "{{slot}} ({{year}})",
     "yearSlots": {
       "yMinus2": "J-2",
@@ -1786,6 +1788,13 @@
     "card": {
       "frozen": "Eingefroren",
       "waiting": "Wartet auf Ihre Wahl"
+    },
+    "entryCheck": {
+      "account": "Das Konto der Zeile erwartet eine Erfassung nach Menge und Preis.",
+      "consolidationNamed": "Das Konsolidierungskonto {{account}} erwartet eine Erfassung nach Menge und Preis.",
+      "consolidation": "Das Konsolidierungskonto erwartet eine Erfassung nach Menge und Preis.",
+      "column": "{{column}} {{year}} zu prüfen. {{reason}}",
+      "year": "Zu prüfen in {{year}}: {{columns}}. {{reason}}"
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "Aufbau der Spalte",

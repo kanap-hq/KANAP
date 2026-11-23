@@ -20,6 +20,7 @@ import { patchYearlyTotalsCache } from '../yearlyTotals';
 import { AMOUNT_COLUMNS } from '../amountColumns';
 import { budgetConflictsOf, centsByColumn, monthsBase, unreadableConflict, type BudgetConflict } from '../budgetConflicts';
 import { namesInSentence, type HeldBudgetChoices, type OpeningValues, type OpeningYear } from '../heldChoices';
+import { entryExpectedText, type BudgetLineEntryCheck } from './entryCheck';
 import {
   AmountMeasure,
   LinePayload,
@@ -96,6 +97,12 @@ export type BudgetTabProps = {
    * the item page then tells someone else's change from the tab's own saves (lot 3G).
    */
   onBudgetRev?: (year: number, budgetRev: number | null) => void;
+  /**
+   * The line's quantity and price check (`entryCheck.tsx`), read by the item page. When the account
+   * expects it, an empty column opens in « Quantity and price », the editor says which account
+   * expects it and the columns to check are marked; otherwise nothing shows.
+   */
+  entryCheck?: BudgetLineEntryCheck | null;
 };
 
 export type AmountCol = AmountMeasure;
@@ -106,11 +113,15 @@ export type AmountCol = AmountMeasure;
  */
 export type ColumnMode = 'amount' | 'lines' | 'monthly';
 
-/** The mode a column's stored record gives: computed from lines, edited by hand, else an amount (a spread, a copy, nothing yet). */
-export function storedMode(record: RoundInput | null | undefined, cents: number): ColumnMode {
+/**
+ * The mode a column's stored record gives: computed from lines, edited by hand, else an amount (a
+ * spread, a copy, nothing yet). `expectLines`: the line's account expects quantity and price, so an
+ * empty column starts there.
+ */
+export function storedMode(record: RoundInput | null | undefined, cents: number, expectLines = false): ColumnMode {
   if (record?.method === 'computed') return 'lines';
-  // An empty column starts on an amount, whatever wrote its zeros.
-  if (cents === 0) return 'amount';
+  // An empty column starts on an amount, whatever wrote its zeros, unless the account expects quantity and price.
+  if (cents === 0) return expectLines ? 'lines' : 'amount';
   return record?.method === 'manual' ? 'monthly' : 'amount';
 }
 
@@ -486,8 +497,12 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   const spreadProfileRef = React.useRef(spreadProfile); spreadProfileRef.current = spreadProfile;
   const suggestionRef = React.useRef(suggestion); suggestionRef.current = suggestion;
 
-  // The mode a column shows: the user's pick, else the one its record gives.
-  const modeOf = (col: AmountCol): ColumnMode => modeChoice[col] ?? storedMode(recordFor(col), monthsCents(months, col));
+  // The quantity and price check, when the line's account expects it (else nothing of it shows).
+  const entryCheck = props.entryCheck?.expected ? props.entryCheck : null;
+  // The mode a column shows: the user's pick, else the one its record gives. An empty column of an
+  // expected line opens in « Quantity and price »; one with lines kept as a reference keeps its mode.
+  const modeOf = (col: AmountCol): ColumnMode => modeChoice[col]
+    ?? storedMode(recordFor(col), monthsCents(months, col), !!entryCheck && !hasLines(recordFor(col)));
   const modeOfRef = React.useRef(modeOf); modeOfRef.current = modeOf;
 
   // The amount editor holds a period or a distribution the user chose and that is not the column's
@@ -1829,6 +1844,26 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
 
   const parked = parkedPanelRef.current;
 
+  // The quantity and price check: which account expects it (the editor's mark), and the columns to
+  // check as the server last listed them, a column frozen since left out on the year shown.
+  const entryExpected = entryCheck ? entryExpectedText(t, entryCheck) : null;
+  const entryColumns = entryCheck
+    ? entryCheck.columns.filter((c) => (c.year !== year || !isFrozen(c.measure)) && shown.some((s) => s.measure === c.measure))
+    : [];
+  const entryColumnText = (col: AmountCol): string | null => (
+    entryExpected && entryColumns.some((c) => c.year === year && c.measure === col)
+      ? t('budgetTab.entryCheck.column', { column: labelFor(col), year, reason: entryExpected })
+      : null
+  );
+  const entryYearMarks: Record<number, string> = {};
+  if (entryExpected) {
+    const years = [...new Set(entryColumns.map((c) => c.year))];
+    for (const y of years) {
+      const columns = ALL_COLS.filter((col) => entryColumns.some((c) => c.year === y && c.measure === col)).map(labelFor);
+      entryYearMarks[y] = t('budgetTab.entryCheck.year', { year: y, columns: namesInSentence(locale, columns), reason: entryExpected });
+    }
+  }
+
   return {
     t,
     locale,
@@ -1929,6 +1964,10 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     restoreOpening,
     restoreNotice,
     closeRestoreNotice: () => setRestoreNotice(null),
+    // The quantity and price check (null and empty when the account expects nothing).
+    entryExpected,
+    entryColumnText,
+    entryYearMarks,
   };
 }
 

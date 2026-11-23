@@ -1190,6 +1190,8 @@
     "fteDeclared": "ETP déclarés",
     "fteDeclaredYes": "Oui",
     "fteDeclaredNo": "Non",
+    "entryCheck": "Contrôle quantité et prix",
+    "entryToCheck": "À vérifier",
     "yearSlotWithYear": "{{slot}} ({{year}})",
     "yearSlots": {
       "yMinus2": "A-2",
@@ -1787,6 +1789,13 @@
     "card": {
       "frozen": "Gelée",
       "waiting": "En attente de votre choix"
+    },
+    "entryCheck": {
+      "account": "Le compte de la ligne attend une saisie en quantité et prix.",
+      "consolidationNamed": "Le compte de consolidation {{account}} attend une saisie en quantité et prix.",
+      "consolidation": "Le compte de consolidation attend une saisie en quantité et prix.",
+      "column": "{{column}} {{year}} à vérifier. {{reason}}",
+      "year": "À vérifier en {{year}} : {{columns}}. {{reason}}"
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "Construction de la colonne",

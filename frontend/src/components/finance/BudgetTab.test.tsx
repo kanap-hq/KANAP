@@ -83,6 +83,7 @@ import { linePayloadOf, type LinePayload, type RoundInput, type RoundLine } from
 import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../../services/budgetColumns';
 import { allocationsSnapshotKey } from './allocationsCache';
 import { useHeldChoices, type HeldBudgetChoices, type OpeningValues } from './heldChoices';
+import type { BudgetLineEntryCheck } from './budgetTab/entryCheck';
 
 const ALL_SHOWN: BudgetColumnsSettings = {
   ...DEFAULT_BUDGET_COLUMNS,
@@ -257,17 +258,18 @@ function renderTab(
     onYearChange?: (y: number) => void;
     availableYears?: number[];
     onBudgetRev?: (year: number, rev: number | null) => void;
+    entryCheck?: BudgetLineEntryCheck | null;
   } = {},
 ) {
   const ref = React.createRef<BudgetTabHandle>();
-  const ui = (y: number) => (
+  const ui = (y: number, entryCheck = extra.entryCheck) => (
     <MemoryRouter>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
           <KanapDialogProvider>
             <BudgetTab
               ref={ref} id="item-1" year={y} currency="EUR" onYearChange={extra.onYearChange ?? (() => undefined)} config={config}
-              held={extra.held} openings={extra.openings} availableYears={extra.availableYears} onBudgetRev={extra.onBudgetRev}
+              held={extra.held} openings={extra.openings} availableYears={extra.availableYears} onBudgetRev={extra.onBudgetRev} entryCheck={entryCheck}
               effectiveStart={dates.effectiveStart} endOfValidity={dates.endOfValidity} payingCompanyCountry={dates.payingCompanyCountry}
             />
           </KanapDialogProvider>
@@ -276,7 +278,12 @@ function renderTab(
     </MemoryRouter>
   );
   const view = render(ui(year));
-  return { ...view, ref, queryClient, rerenderYear: (y: number) => view.rerender(ui(y)) };
+  return {
+    ...view, ref, queryClient,
+    rerenderYear: (y: number) => view.rerender(ui(y)),
+    // The line's quantity and price check read again by the item page.
+    rerenderEntryCheck: (entryCheck: BudgetLineEntryCheck | null) => view.rerender(ui(year, entryCheck)),
+  };
 }
 
 const bulkCalls = () => mocked.post.mock.calls.filter(([url]) => url === BULK);
@@ -3395,5 +3402,101 @@ describe('BudgetTab folded result', () => {
     fireEvent.click(switchButton());
     expect(screen.getByTestId('monthly-result')).toBeInTheDocument();
     expect(monthInput('planned', 1)).not.toBeNull();
+  });
+});
+
+describe('BudgetTab: the account expects quantity and price (lot B12a)', () => {
+  const ACCOUNT = "The line's account expects an entry in quantity and price.";
+  const expected = (columns: BudgetLineEntryCheck['columns'] = [], level: BudgetLineEntryCheck['level'] = 'account', consolidation: BudgetLineEntryCheck['consolidation_account'] = null): BudgetLineEntryCheck => (
+    { expected: true, level, consolidation_account: consolidation, columns }
+  );
+  const NOT_EXPECTED: BudgetLineEntryCheck = { expected: false, level: null, consolidation_account: null, columns: [] };
+  const selectedMode = () => within(editor()).getAllByRole('tab').find((tab) => tab.getAttribute('aria-selected') === 'true')?.textContent;
+  const label = (measure: string) => within(card(measure)).getAllByText(/./)[0].textContent;
+
+  it('opens an empty column in « Quantity and price », with the account named beside the title', async () => {
+    setupApi({ empty: true });
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: expected() });
+    await waitForAmounts();
+    expect(selectedMode()).toBe('Quantity and price');
+    expect(within(editor()).getByRole('img', { name: ACCOUNT })).toBeInTheDocument();
+    // Another empty column opens there too.
+    pick('forecast');
+    expect(selectedMode()).toBe('Quantity and price');
+    // Amount stays one click away, at once on an empty column.
+    fireEvent.click(modeTab('Amount'));
+    expect(selectedMode()).toBe('Amount');
+  });
+
+  it('keeps the mode of a column that already holds an amount', async () => {
+    setupApi();
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: expected() });
+    await waitForAmounts();
+    expect(selectedMode()).toBe('Amount');
+    expect(within(editor()).getByRole('img', { name: ACCOUNT })).toBeInTheDocument();
+  });
+
+  it('names the consolidation account when the person reads the accounts, else says the consolidation account', async () => {
+    setupApi({ empty: true });
+    const view = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: expected([], 'consolidation', { number: 2400, name: 'Services extérieurs' }) });
+    await waitForAmounts();
+    expect(within(editor()).getByRole('img', { name: 'The consolidation account 2400 - Services extérieurs expects an entry in quantity and price.' })).toBeInTheDocument();
+    view.rerenderEntryCheck(expected([], 'consolidation', null));
+    expect(within(editor()).getByRole('img', { name: 'The consolidation account expects an entry in quantity and price.' })).toBeInTheDocument();
+  });
+
+  it('marks each column to check on its card and each year holding one on its tab, until a reading no longer lists it', async () => {
+    setupApi();
+    const view = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, {
+      availableYears: [YEAR, YEAR + 1],
+      entryCheck: expected([{ year: YEAR, measure: 'planned' }, { year: YEAR, measure: 'forecast' }, { year: YEAR + 1, measure: 'committed' }]),
+    });
+    await waitForAmounts();
+    const planned = within(card('planned')).getByRole('img', { name: `${label('planned')} ${YEAR} to check. ${ACCOUNT}` });
+    expect(planned).toHaveAttribute('data-testid', 'entry-check-planned');
+    expect(within(card('forecast')).getByTestId('entry-check-forecast')).toBeInTheDocument();
+    // A column of another year is marked on that year only.
+    expect(within(card('committed')).queryByTestId('entry-check-committed')).not.toBeInTheDocument();
+    expect(screen.getByTestId(`year-mark-${YEAR}`)).toHaveAccessibleName(`To check in ${YEAR}: ${label('planned')} and ${label('forecast')}. ${ACCOUNT}`);
+    expect(screen.getByTestId(`year-mark-${YEAR + 1}`)).toHaveAccessibleName(`To check in ${YEAR + 1}: ${label('committed')}. ${ACCOUNT}`);
+    // Read again after a save: the column built as quantity and price leaves the list, its mark goes.
+    view.rerenderEntryCheck(expected([{ year: YEAR, measure: 'forecast' }]));
+    expect(within(card('planned')).queryByTestId('entry-check-planned')).not.toBeInTheDocument();
+    expect(within(card('forecast')).getByTestId('entry-check-forecast')).toBeInTheDocument();
+    expect(screen.queryByTestId(`year-mark-${YEAR + 1}`)).not.toBeInTheDocument();
+    view.rerenderEntryCheck(expected([]));
+    expect(screen.queryByTestId('entry-check-forecast')).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`year-mark-${YEAR}`)).not.toBeInTheDocument();
+    // The account still expects it: the mark beside the title stays.
+    expect(within(editor()).getByRole('img', { name: ACCOUNT })).toBeInTheDocument();
+  });
+
+  it('leaves out a column frozen since the server listed it', async () => {
+    setupApi({ frozen: ['budget'] });
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: expected([{ year: YEAR, measure: 'planned' }, { year: YEAR, measure: 'forecast' }]) });
+    await waitForAmounts();
+    await waitFor(() => expect(within(card('planned')).getByTitle('Frozen')).toBeInTheDocument());
+    expect(within(card('planned')).queryByTestId('entry-check-planned')).not.toBeInTheDocument();
+    expect(within(card('forecast')).getByTestId('entry-check-forecast')).toBeInTheDocument();
+  });
+
+  it('shows the marks on a line the person may only read, with no field', async () => {
+    permissions.budgetMember = false;
+    setupApi();
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: expected([{ year: YEAR, measure: 'planned' }]) });
+    await waitForAmounts();
+    expect(editor()).toHaveAttribute('data-read-only', 'true');
+    expect(within(editor()).getByRole('img', { name: ACCOUNT })).toBeInTheDocument();
+    expect(within(card('planned')).getByTestId('entry-check-planned')).toBeInTheDocument();
+  });
+
+  it('shows nothing of it when the account expects nothing: an empty column opens on an amount', async () => {
+    setupApi({ empty: true });
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { availableYears: [YEAR, YEAR + 1], entryCheck: NOT_EXPECTED });
+    await waitForAmounts();
+    expect(selectedMode()).toBe('Amount');
+    expect(within(editor()).queryByRole('img', { name: /quantity and price/ })).not.toBeInTheDocument();
+    expect(screen.queryByTestId(/^entry-check-/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(/^year-mark-/)).not.toBeInTheDocument();
   });
 });

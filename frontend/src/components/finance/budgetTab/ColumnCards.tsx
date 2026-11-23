@@ -6,6 +6,7 @@ import { StatusDot } from '../../design/StatusDot';
 import { formatAmount } from '../../../i18n/formatters';
 import { chipLines, isOneDay, linesText, longDate, periodMonths, periodText } from '../roundPeriod';
 import type { AmountCol, BudgetTabState } from './useBudgetTab';
+import { EntryCheckDot } from './entryCheck';
 
 /** The tint of a column waiting for the user's choice, on its card and in the result table. */
 export const conflictTint = (theme: Theme) => alpha(theme.palette.warning.main, theme.palette.mode === 'dark' ? 0.12 : 0.08);
@@ -59,8 +60,9 @@ export function ColumnHowText({ tab, col, testId }: { tab: BudgetTabState; col: 
 }
 
 /**
- * One card per shown column (1 to 5, named freely): its name, a lock when frozen, a dot while it
- * waits for the user's choice, its total and how it is built. A click makes it the active column.
+ * One card per shown column (1 to 5, named freely): its name, a lock when frozen, an orange dot
+ * when its account expects quantity and price and it is not built so, a dot while it waits for the
+ * user's choice, its total and how it is built. A click makes it the active column.
  * Nothing here depends on a column's name or rank.
  */
 export default function ColumnCards({ tab }: { tab: BudgetTabState }) {
@@ -80,6 +82,7 @@ export default function ColumnCards({ tab }: { tab: BudgetTabState }) {
         const frozen = isFrozen(c.measure);
         const waits = waitingSet.has(c.measure);
         const total = totals[c.measure];
+        const toCheck = tab.entryColumnText(c.measure);
         return (
           <ButtonBase
             key={c.measure}
@@ -110,6 +113,7 @@ export default function ColumnCards({ tab }: { tab: BudgetTabState }) {
             <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 12, color: 'kanap.text.secondary', minWidth: 0 }}>
               <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</Box>
               {frozen && <LockOutlinedIcon titleAccess={t('budgetTab.card.frozen')} sx={{ fontSize: 12, color: 'kanap.text.tertiary', flex: 'none' }} />}
+              {toCheck && <EntryCheckDot text={toCheck} testId={`entry-check-${c.measure}`} />}
               {waits && (
                 <Box component="span" title={t('budgetTab.card.waiting')} sx={{ ml: 'auto', display: 'inline-flex' }}>
                   <StatusDot color="warning.main" />

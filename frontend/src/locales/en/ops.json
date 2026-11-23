@@ -1189,6 +1189,8 @@
     "fteDeclared": "FTE declared",
     "fteDeclaredYes": "Yes",
     "fteDeclaredNo": "No",
+    "entryCheck": "Quantity and price check",
+    "entryToCheck": "To check",
     "yearSlotWithYear": "{{slot}} ({{year}})",
     "yearSlots": {
       "yMinus2": "Y-2",
@@ -1786,6 +1788,13 @@
     "card": {
       "frozen": "Frozen",
       "waiting": "Waiting for your choice"
+    },
+    "entryCheck": {
+      "account": "The line's account expects an entry in quantity and price.",
+      "consolidationNamed": "The consolidation account {{account}} expects an entry in quantity and price.",
+      "consolidation": "The consolidation account expects an entry in quantity and price.",
+      "column": "{{column}} {{year}} to check. {{reason}}",
+      "year": "To check in {{year}}: {{columns}}. {{reason}}"
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "How the column is built",

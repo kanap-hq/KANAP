@@ -1,21 +1,25 @@
 import React from 'react';
-import { Box, Tab, Tabs, IconButton, Stack, Typography } from '@mui/material';
+import { Box, Tab, Tabs, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useTranslation } from 'react-i18next';
+import { attentionDotSx } from '../../theme/formSx';
 
 interface YearTabsProps {
   currentYear: number;
   availableYears?: number[];
   onYearChange: (year: number) => void;
   disabled?: boolean;
+  /** An orange dot on the years that hold something to check, with its text in a tooltip and as its accessible name. */
+  marks?: Partial<Record<number, string>>;
 }
 
 export default function YearTabs({
   currentYear,
   availableYears = [],
   onYearChange,
-  disabled = false
+  disabled = false,
+  marks,
 }: YearTabsProps) {
   const { t } = useTranslation('common');
   // Generate years around current year if no availableYears provided. The current year is always one
@@ -95,14 +99,24 @@ export default function YearTabs({
           }
         }}
       >
-        {visibleYears.map((year) => (
-          <Tab
-            key={year}
-            label={year.toString()}
-            value={year}
-            disabled={disabled}
-          />
-        ))}
+        {visibleYears.map((year) => {
+          const mark = marks?.[year];
+          return (
+            <Tab
+              key={year}
+              label={mark ? (
+                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  {year}
+                  <Tooltip title={mark}>
+                    <Box component="span" role="img" aria-label={mark} data-testid={`year-mark-${year}`} sx={attentionDotSx} />
+                  </Tooltip>
+                </Box>
+              ) : year.toString()}
+              value={year}
+              disabled={disabled}
+            />
+          );
+        })}
       </Tabs>
 
       <IconButton

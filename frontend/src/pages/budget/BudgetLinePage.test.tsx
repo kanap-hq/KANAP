@@ -190,7 +190,8 @@ const budgetStandIn = vi.hoisted(() => ({ rev: 3, reloads: 0, typed: false, fail
 vi.mock('../../components/finance/BudgetTab', async () => {
   const React = await import('react');
   type Held = { current: { lineId: string; labels: string[] } | null };
-  const BudgetTabStandIn = React.forwardRef(({ id, year, held, onBudgetRev, lineEditable }: { id: string; year: number; held?: Held; onBudgetRev?: (year: number, rev: number | null) => void; lineEditable?: boolean }, ref) => {
+  type EntryCheck = { expected: boolean; columns: Array<{ year: number; measure: string }> } | null;
+  const BudgetTabStandIn = React.forwardRef(({ id, year, held, onBudgetRev, lineEditable, entryCheck }: { id: string; year: number; held?: Held; onBudgetRev?: (year: number, rev: number | null) => void; lineEditable?: boolean; entryCheck?: EntryCheck }, ref) => {
     const waiting = React.useRef<string[]>(held?.current?.lineId === id ? held.current.labels : []);
     const [, redraw] = React.useState(0);
     React.useEffect(() => {
@@ -213,10 +214,14 @@ vi.mock('../../components/finance/BudgetTab', async () => {
       },
     }));
     return (
-      <div data-testid="budget-tab" data-line-editable={String(lineEditable)}>
+      <div
+        data-testid="budget-tab" data-line-editable={String(lineEditable)}
+        data-entry-expected={String(!!entryCheck?.expected)} data-entry-columns={(entryCheck?.columns ?? []).map((c) => `${c.year}:${c.measure}`).join(',')}
+      >
         <span data-testid="budget-waiting">{waiting.current.join(',')}</span>
         <button type="button" onClick={() => { waiting.current = ['Budget']; redraw((n) => n + 1); }}>budget refused</button>
         <button type="button" onClick={() => { budgetStandIn.typed = true; }}>budget typed</button>
+        <button type="button" onClick={() => { budgetStandIn.rev += 1; onBudgetRev?.(year, budgetStandIn.rev); }}>budget saved</button>
       </div>
     );
   });
@@ -2462,5 +2467,70 @@ describe('BudgetLinePage load failure', () => {
     const before = reads();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.retry' }));
     await waitFor(() => expect(reads()).toBe(before + 1));
+  });
+});
+
+describe('BudgetLinePage quantity and price check (lot B12a)', () => {
+  const ROUTE = `/budget-lines/${ITEM_ID}/entry-check`;
+  const EXPECTED = { id: ITEM_ID, reference: 'BL-7', expected: true, level: 'account', consolidation_account: null, columns: [{ year: 2026, measure: 'planned' }], to_check: true };
+  const NOT_EXPECTED = { id: ITEM_ID, reference: 'BL-7', expected: false, level: null, consolidation_account: null, columns: [], to_check: false };
+  let check: Record<string, unknown> = EXPECTED;
+  let accountId = 'account-1';
+  beforeEach(() => {
+    auth.canEdit = true;
+    budgetStandIn.rev = 3;
+    check = EXPECTED;
+    accountId = 'account-1';
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    mocked.patch.mockResolvedValue({ data: {} });
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `/budget-lines/${ITEM_ID}`) {
+        return { data: { id: ITEM_ID, item_number: 7, product_name: 'Monitoring', description: 'Probes', supplier_id: 'supplier-1', paying_company_id: 'company-1', account_id: accountId, currency: 'EUR', effective_start: '2026-01-01' } };
+      }
+      if (url === ROUTE) return { data: { ...check } };
+      return { data: {} };
+    });
+  });
+  const reads = () => mocked.get.mock.calls.filter(([url]) => url === ROUTE).length;
+  const tab = () => screen.getByTestId('budget-tab');
+
+  it('reads the check when the Budget tab opens, gives it to the tab, and reads it again after each budget save while the account expects it', async () => {
+    renderAt(`/ops/budget/${ITEM_ID}/budget`);
+    await waitFor(() => expect(tab()).toHaveAttribute('data-entry-columns', '2026:planned'));
+    expect(tab()).toHaveAttribute('data-entry-expected', 'true');
+    expect(reads()).toBe(1);
+    // The column is now built as quantity and price: the next reading no longer lists it.
+    check = { ...EXPECTED, columns: [], to_check: false };
+    fireEvent.click(screen.getByRole('button', { name: 'budget saved' }));
+    await waitFor(() => expect(tab()).toHaveAttribute('data-entry-columns', ''));
+    expect(reads()).toBe(2);
+  });
+
+  it('reads nothing more on a budget save when the account expects nothing', async () => {
+    check = NOT_EXPECTED;
+    renderAt(`/ops/budget/${ITEM_ID}/budget`);
+    await waitFor(() => expect(reads()).toBe(1));
+    expect(tab()).toHaveAttribute('data-entry-expected', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'budget saved' }));
+    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    expect(reads()).toBe(1);
+  });
+
+  it('reads it again once the line has another account', async () => {
+    check = NOT_EXPECTED;
+    const { queryClient } = renderAt(`/ops/budget/${ITEM_ID}/budget`);
+    await waitFor(() => expect(reads()).toBe(1));
+    accountId = 'account-2';
+    check = EXPECTED;
+    await queryClient.invalidateQueries({ queryKey: ['budget-line'] });
+    await waitFor(() => expect(tab()).toHaveAttribute('data-entry-columns', '2026:planned'));
+    expect(reads()).toBe(2);
+  });
+
+  it('does not read it on another tab', async () => {
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
+    expect(await screen.findByDisplayValue('Probes')).toBeInTheDocument();
+    expect(reads()).toBe(0);
   });
 });

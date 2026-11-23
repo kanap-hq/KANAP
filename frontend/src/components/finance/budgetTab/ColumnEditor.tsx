@@ -7,6 +7,8 @@ import { columnPeriodProblem, followsLines, formatMoney, hasLines, isOneDay, joi
 import { drawerMenuItemSx, drawerSelectSx, selectKeepsFocus } from '../../../theme/formSx';
 import AmountEditor from './AmountEditor';
 import { ColumnHowText } from './ColumnCards';
+import InfoHint from '../../workspace/InfoHint';
+import { EntryCheckDot } from './entryCheck';
 import type { AmountCol, BudgetTabState, ColumnMode, ModeSwitch } from './useBudgetTab';
 
 const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
@@ -122,6 +124,17 @@ export default function ColumnEditor({ tab, i18nPrefix, effectiveStart, endOfVal
   const title = t('budgetTab.editorTitle', { column: label, year });
   const record = recordFor(col);
 
+  // The account expects quantity and price: an icon beside the title says which one. With one column
+  // (no cards), the column's own mark when it is to check sits there too.
+  const columnCheck = single ? tab.entryColumnText(col) : null;
+  const entryMarks = (tab.entryExpected || columnCheck) && (
+    <>
+      {tab.entryExpected && <InfoHint text={tab.entryExpected} />}
+      {columnCheck && <EntryCheckDot text={columnCheck} testId={`entry-check-${col}`} />}
+    </>
+  );
+  const titleRowSx = { display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 } as const;
+
   const surfaceSx = {
     display: 'flex', flexDirection: 'column', gap: 1.75, minWidth: 0,
     border: '1px solid', borderColor: 'kanap.border.default', borderRadius: '8px', bgcolor: 'kanap.bg.drawer', px: 2, py: 1.75,
@@ -135,7 +148,10 @@ export default function ColumnEditor({ tab, i18nPrefix, effectiveStart, endOfVal
         <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'flex-start', color: 'kanap.text.secondary' }}>
           <LockOutlinedIcon sx={{ fontSize: 14, mt: '3px', color: 'kanap.text.tertiary' }} />
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0 }}>
-            <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary' }}>{frozenCol ? t('budgetTab.frozen.title', { column: label, year }) : title}</Typography>
+            <Box sx={titleRowSx}>
+              <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary' }}>{frozenCol ? t('budgetTab.frozen.title', { column: label, year }) : title}</Typography>
+              {entryMarks}
+            </Box>
             {/* A line read only through the data access needs no sentence: the lock says it. */}
             {(frozenCol || !tab.readOnlyInAccess) && <Typography sx={captionSx}>{frozenCol ? t('budgetTab.frozen.hint') : t('budgetTab.readOnlyHint')}</Typography>}
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'baseline', flexWrap: 'wrap' }}>
@@ -280,7 +296,10 @@ export default function ColumnEditor({ tab, i18nPrefix, effectiveStart, endOfVal
     <Box data-testid="column-editor" data-waiting={waits ? 'true' : undefined} data-ready={loaded && !loading ? 'true' : undefined} sx={surfaceSx}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1.5, flexWrap: 'wrap' }}>
         <Box sx={{ minWidth: 0 }}>
-          <Typography component="h3" sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary' }}>{title}</Typography>
+          <Box sx={titleRowSx}>
+            <Typography component="h3" sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary' }}>{title}</Typography>
+            {entryMarks}
+          </Box>
           {single && <ColumnHowText tab={tab} col={col} testId={`period-line-${col}`} />}
         </Box>
         {/* The three ways to build a column, always offered. */}
