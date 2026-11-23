@@ -1699,9 +1699,10 @@ type Listed = { name: string; disabledAt: string | null };
 type ListedMatch<T> = NameMatch<T> & { column?: string; dimensionName?: string | null; value?: string; byModel?: boolean };
 
 /**
- * The supplier, company or dimension value of `rows` a value of the file stands for. Kad's proposal
- * for the value comes first, accepted when it names an enabled value of the list (by its name, case
- * aside); else it is refused, and the value is matched as the file writes it. A match the person undid
+ * The supplier, company or dimension value of `rows` a value of the file stands for. The server's own
+ * match is found first: Kad's proposal for the same value is the server's match (lot I6b of 26.12.1).
+ * Otherwise Kad's proposal comes first, accepted when it names an enabled value of the list (by its
+ * name, case aside); else it is refused, and the value is matched as the file writes it. A match the person undid
  * goes no further than case. Every match beyond case is listed once the row uses it (`noteMatch`).
  * A list the person does not read (`reads` false, the suppliers or the companies without their module)
  * goes no further than case and takes no proposal.
@@ -1720,26 +1721,31 @@ function findListed<T extends Listed>(
   const state = bag.matching;
   const undone = state.unmatched.has(key);
   const proposal = state.proposals.get(key);
+  // The server's own match comes first: Kad proposing the value it finds alone is the server's match.
+  const found = matchByName(rows, cell, { beyondCase: reads && !undone, translate });
   if (proposal !== undefined && foldKey(proposal) !== foldKey(cell)) {
     if (undone) {
       state.applied.add(key);
     } else {
       // A list the person does not read: Kad's proposal is refused as missing, naming nothing of it.
       const target = reads ? matchByName(rows, proposal, { beyondCase: false }) : { kind: 'none' as const };
-      if (target.kind === 'one' && isActiveAt(target.row.disabledAt)) {
+      // Kad naming the value the server finds alone: nothing of Kad's is listed, taken or refused.
+      const same = target.kind === 'one' && found.kind === 'one' && found.row === target.row;
+      if (!same && target.kind === 'one' && isActiveAt(target.row.disabledAt)) {
         return { kind: 'one', row: target.row, how: 'exact', column, dimensionName, value: cell, byModel: true };
       }
-      const refused = state.refused.get(key) ?? {
-        column, name: dimensionName, value: cell.trim(),
-        target: target.kind === 'one' ? target.row.name : proposal,
-        reason: target.kind === 'one' ? 'disabled' as const : 'missing' as const,
-        lines: [], count: 0,
-      };
-      addLine(refused, line);
-      state.refused.set(key, refused);
+      if (!same) {
+        const refused = state.refused.get(key) ?? {
+          column, name: dimensionName, value: cell.trim(),
+          target: target.kind === 'one' ? target.row.name : proposal,
+          reason: target.kind === 'one' ? 'disabled' as const : 'missing' as const,
+          lines: [], count: 0,
+        };
+        addLine(refused, line);
+        state.refused.set(key, refused);
+      }
     }
   }
-  const found = matchByName(rows, cell, { beyondCase: reads && !undone, translate });
   if (reads && undone && found.kind !== 'one') {
     const would = matchByName(rows, cell, { beyondCase: true, translate });
     if (would.kind === 'one' && (would.how === 'accents' || would.how === 'translation')) state.applied.add(key);

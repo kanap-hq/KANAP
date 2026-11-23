@@ -149,6 +149,12 @@ async function testCodesAndAccents(): Promise<void> {
     assert.deepEqual([...proposed.nameMatches!.values()].map((m) => [m.value, m.target, m.origin, m.reason]), [['E. Lefèvre', 'Élodie Lefèvre', 'model', 'model']]);
     assert.equal((await cellError(() => transform(column)('X. Inconnu', {}, proposed, 3))).code, 'CSV_REFERENCE_NOT_FOUND');
     assert.deepEqual([...proposed.refusedProposals!.values()].map((r) => [r.column, r.value, r.target, r.reason]), [[column, 'X. Inconnu', 'Personne Absente', 'missing']]);
+
+    // Lot I6b of 26.12.1: Kad proposing the person the cell finds alone (accents aside) is the server's match.
+    const same = accentContext({ proposals: { [column]: { 'Lefevre Elodie': ELODIE_EMAIL } } });
+    assert.equal(await transform(column)('Lefevre Elodie', {}, same, 2), ELODIE, `${column}: the server's own match`);
+    assert.deepEqual([...same.nameMatches!.values()].map((m) => [m.value, m.target, m.origin, m.reason]), [['Lefevre Elodie', 'Élodie Lefèvre', 'server', 'accents']]);
+    assert.equal(same.refusedProposals!.size, 0);
   }
 }
 

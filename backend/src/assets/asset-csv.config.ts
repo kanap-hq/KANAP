@@ -279,8 +279,17 @@ async function resolveClusterNames(
       });
       return 'ambiguous';
     };
-    if (proposal !== undefined) {
-      const proposed = reads ? clustersNamed(proposal) : [];
+    // The cluster the name finds by itself, case aside, then accents aside for a person who reads the servers.
+    const ownCluster = (): Candidate | null => {
+      const clusters = clustersNamed(name);
+      if (clusters.length > 0 || (byName.get(nameKey(name)) ?? []).length > 0 || !reads) return clusters.length === 1 ? clusters[0] : null;
+      const accents = candidates.filter((c) => c.isCluster && accentFreeKey(c.name) === accentFreeKey(name));
+      return accents.length === 1 ? accents[0] : null;
+    };
+    // The server's own match first (lot I6b of 26.12.1): Kad naming the cluster the name finds alone is
+    // no proposal to list, taken or refused; the name follows its own rule below.
+    const proposed = proposal !== undefined && reads ? clustersNamed(proposal) : [];
+    if (proposal !== undefined && !(proposed.length === 1 && ownCluster() === proposed[0])) {
       if (proposed.length === 1) {
         note(proposed[0], 'model');
         return proposed;
@@ -441,7 +450,12 @@ async function previewOperatingSystems(rows: ImportRow[], context: CsvImportCont
     const proposal = undone ? undefined : proposalFor(params.proposals, 'operating_system', cell);
     if (proposal !== undefined) {
       const proposed = readsInfrastructure(context) ? await preview(proposal, true) : null;
-      if (proposed && proposed.technology !== 'created' && proposed.version?.how !== 'created') {
+      const taken = !!proposed && proposed.technology !== 'created' && proposed.version?.how !== 'created';
+      // The server's own match first (lot I6b of 26.12.1): Kad naming the system the cell finds alone
+      // (its version by a prefix rule) is no proposal to list, taken or refused.
+      const own = taken ? await preview(cell, false) : null;
+      const same = !!own && own.technology !== 'created' && own.version?.how !== 'created' && own.label === proposed!.label;
+      if (proposed && taken && !same) {
         row.parsed.operating_system = proposal;
         previews.set(row, proposed);
         if (context.nameMatches) {
@@ -451,7 +465,7 @@ async function previewOperatingSystems(rows: ImportRow[], context: CsvImportCont
         }
         continue;
       }
-      if (context.refusedProposals) {
+      if (!same && context.refusedProposals) {
         noteRefusedProposal(context.refusedProposals, { column: 'operating_system', name: null, value: cell, target: proposal, reason: 'missing' }, row.rowNumber);
       }
     }

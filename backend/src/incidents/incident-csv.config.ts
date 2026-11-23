@@ -339,11 +339,15 @@ function resolveUser(value: string, column: string, context: CsvImportContext, l
     const proposed = proposedByEmail?.id
       ? [{ id: proposedByEmail.id, email: proposal.toLowerCase(), name: `${proposedByEmail.first_name ?? ''} ${proposedByEmail.last_name ?? ''}`.trim() }]
       : reads ? findPeople(users, proposal, false).people : [];
-    if (proposed.length === 1) {
+    // The server's own match first (lot I6b of 26.12.1): Kad naming the person the cell finds alone is
+    // no proposal to list, taken or refused; the cell follows its own rule below.
+    const own = proposed.length === 1 ? findPeople(users, text, reads).people : [];
+    const same = own.length === 1 && own[0].id === proposed[0].id;
+    if (proposed.length === 1 && !same) {
       note(proposed[0], 'model');
       return proposed[0].id;
     }
-    if (context.refusedProposals) {
+    if (!same && context.refusedProposals) {
       noteRefusedProposal(context.refusedProposals, { column, name: null, value: text, target: proposal, reason: 'missing' }, line);
     }
   }

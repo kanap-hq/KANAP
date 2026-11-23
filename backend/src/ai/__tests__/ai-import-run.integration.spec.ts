@@ -850,6 +850,43 @@ async function testProposalsOfTheOtherImports(h: Harness, runner: QueryRunner, s
   console.log('  processes, cost centers, tasks, requests: Kad\'s proposals checked against their lists: OK');
 }
 
+// Lot I6b of 26.12.1: the server's own match comes first. Kad proposing the record a value finds
+// alone (accents aside) is the server's match, not Kad's: an application's supplier (the shared
+// resolver), a contract's supplier (an import that reads its own lists) and a task's related object.
+async function testServerMatchBeforeKadsProposal(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const card = async (entity_type: string, csv: string[], columns: unknown[]) => h.previews.createPreview(admin, 'prepare_import_mapping', {
+    attachment_id: attach(h, `${entity_type}.csv`, csv.join('\n')), entity_type, columns,
+  });
+  const summary = (check: any) => ({
+    matches: (check.report.matches ?? []).map((match: any) => [match.column, match.value, match.target, match.origin, match.reason]),
+    refused: check.report.refusedProposals ?? [],
+  });
+  const apps = (await card('applications', ['Appli;Editeur', 'Orion P6;Societe Generale P2'], [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'supplier_name', source: 2, confidence: 'high', values: { 'Societe Generale P2': 'Société Générale P2' } },
+  ])).import_mapping.validation;
+  assert.deepEqual(summary(apps), { matches: [['supplier_name', 'Societe Generale P2', 'Société Générale P2', 'server', 'accents']], refused: [] });
+  const contracts = await card('contracts', ['Contrat;Société;Fournisseur;Début', 'Révision P6;Fromage P2 SA;Societe Generale P2;2026-03-01'], [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'company_name', source: 2, confidence: 'high' },
+    { column: 'supplier_name', source: 3, confidence: 'high', values: { 'Societe Generale P2': 'Société Générale P2' } },
+    { column: 'start_date', source: 4, confidence: 'high' },
+  ]);
+  assert.deepEqual(summary(contracts.import_mapping.validation), {
+    matches: [['supplier_name', 'Societe Generale P2', 'Société Générale P2', 'server', 'accents']], refused: [],
+  });
+  const done = await h.previews.executePreview(admin, contracts.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  const tasks = (await card('tasks', ['Tâche;Type;Objet', 'Relire P6;contract;Revision P6'], [
+    { column: 'title', source: 1, confidence: 'high' },
+    { column: 'related_object_type', source: 2, confidence: 'high' },
+    { column: 'related_object_name', source: 3, confidence: 'high', values: { 'Revision P6': 'Révision P6' } },
+  ])).import_mapping.validation;
+  assert.deepEqual(summary(tasks), { matches: [['related_object_name', 'Revision P6', 'Révision P6', 'server', 'accents']], refused: [] });
+  console.log('  applications, contracts, tasks: Kad\'s proposal of the server\'s own record is the server\'s match: OK');
+}
+
 // Lot I3 of 26.11.9, merge of the fourth and fifth passes: Kad's import of server links finds a
 // server written without its accents, for a person who reads the infrastructure, lists the match on
 // the card, and the card's choice route undoes it: the next card no longer makes it.
@@ -1251,6 +1288,7 @@ async function run() {
       await testSupplierProposals(harness, runner, s);
       await testContractMatchUndoneByTheRoute(harness, runner, s);
       await testProposalsOfTheOtherImports(harness, runner, s);
+      await testServerMatchBeforeKadsProposal(harness, runner, s);
       await testLinkServerNameUndoneByTheRoute(harness, runner, s);
       await testServerVersionAndHosting(harness, runner, s);
       await testHostingNeedsTheSites(harness, runner, s);
