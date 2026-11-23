@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { BudgetLinePredecessor1854000000000 as Migration } from '../../migrations/1854000000000-budget-line-predecessor';
-import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
+import { dropUpdatedAtTriggers, restoreSearchIndexTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1854000000000 (the line a budget line continues, lot M of plan
 // planning/budget-unifie.md), against a real database, each test in a transaction that is rolled
@@ -29,6 +29,7 @@ async function inRolledBackTransaction(fn: (runner: QueryRunner) => Promise<void
   await runner.startTransaction();
   // The database of this migration's time: the modification date trigger (1856270000000) came later.
   await dropUpdatedAtTriggers(runner, ['spend_items']);
+  await restoreSearchIndexTriggers(runner, ['spend_items']);
   try {
     await fn(runner);
   } finally {

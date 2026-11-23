@@ -1,5 +1,5 @@
 import type { EntityManager, QueryRunner } from 'typeorm';
-import { UPDATED_AT_TABLES } from './updated-at.inventory';
+import { UPDATED_AT_SEARCH_ENTITY_TYPES, UPDATED_AT_TABLES } from './updated-at.inventory';
 
 /**
  * The modification date the database keeps (`doc/architecture.md`, "Modification Dates"): the
@@ -95,6 +95,80 @@ export async function syncUpdatedAtTrigger(executor: Executor, table: string): P
        FOR EACH ROW WHEN (${condition}) EXECUTE FUNCTION stamp_updated_at()`,
   );
   return 'placed';
+}
+
+/**
+ * The update changed the date and nothing else (`syncSearchIndexTriggers`). The cheap test first:
+ * an update that leaves the date (a status alone, a row written back as it was) never reads the
+ * row as a whole, and runs the sync as before.
+ */
+export const SEARCH_INDEX_DATE_ONLY = `OLD.updated_at IS DISTINCT FROM NEW.updated_at AND (to_jsonb(OLD) - 'updated_at') = (to_jsonb(NEW) - 'updated_at')`;
+
+export type SearchIndexTriggerOutcome = 'placed' | 'no search index' | 'table missing' | 'no sync function';
+
+/**
+ * (Re)places the search index triggers of a table of `UPDATED_AT_SEARCH_ENTITY_TYPES`, so that an
+ * update of the date alone (the dating of a history entry, `touchUpdatedAtMany`) does not compute
+ * the record's search entry again:
+ * - `trg_search_index_<table>`: insert and delete, on `search_index_sync_<table>()` as before;
+ * - `trg_search_index_<table>_update`: every other update, same function;
+ * - `trg_search_index_<table>_date`: a statement that names `updated_at` and moves it, on
+ *   `search_index_stamp_source(<entity types>)`, which copies the date to the entry's
+ *   `source_updated_at` (read by the assistant) and does nothing else. It does not read the row
+ *   as a whole: when the update changed more (a backdate with an edit), the sync also runs and
+ *   writes the same date.
+ * The sync functions are left as they are. A migration that recreates `trg_search_index_<table>`
+ * for every update calls this again; `__tests__/updated-at.search-index.integration.spec.ts`
+ * fails until it does.
+ */
+export async function syncSearchIndexTriggers(executor: Executor, table: string): Promise<SearchIndexTriggerOutcome> {
+  const types = UPDATED_AT_SEARCH_ENTITY_TYPES[table];
+  if (!types) return 'no search index';
+  const [found] = await executor.query(
+    `SELECT to_regclass($1) IS NOT NULL AS has_table, to_regprocedure($2) IS NOT NULL AS has_sync`,
+    [`public.${table}`, `public.search_index_sync_${table}()`],
+  );
+  if (!found?.has_table) return 'table missing';
+  if (!found.has_sync) return 'no sync function';
+  const on = `public.${quoteIdent(table)}`;
+  const sync = `public.${quoteIdent(`search_index_sync_${table}`)}()`;
+  const name = (suffix: string) => quoteIdent(`trg_search_index_${table}${suffix}`);
+  const args = types.map((type) => `'${type.replace(/'/g, "''")}'`).join(', ');
+  await executor.query(`CREATE OR REPLACE TRIGGER ${name('')} AFTER INSERT OR DELETE ON ${on} FOR EACH ROW EXECUTE FUNCTION ${sync}`);
+  await executor.query(
+    `CREATE OR REPLACE TRIGGER ${name('_update')} AFTER UPDATE ON ${on}
+       FOR EACH ROW WHEN (NOT (${SEARCH_INDEX_DATE_ONLY})) EXECUTE FUNCTION ${sync}`,
+  );
+  // `UPDATE OF updated_at`: a statement that does not name the date never fires it.
+  await executor.query(
+    `CREATE OR REPLACE TRIGGER ${name('_date')} AFTER UPDATE OF updated_at ON ${on}
+       FOR EACH ROW WHEN (OLD.updated_at IS DISTINCT FROM NEW.updated_at) EXECUTE FUNCTION public.search_index_stamp_source(${args})`,
+  );
+  return 'placed';
+}
+
+/**
+ * Puts back the search index trigger of each table as it was before migration 1856275000000 (one
+ * `trg_search_index_<table>` on every insert, update and delete): the migration's `down()`, and a
+ * spec that replays an older migration (the database of that migration's time, like
+ * `dropUpdatedAtTriggers`). Without `tables`: every table of `UPDATED_AT_SEARCH_ENTITY_TYPES`.
+ */
+export async function restoreSearchIndexTriggers(executor: Executor, tables: readonly string[] = Object.keys(UPDATED_AT_SEARCH_ENTITY_TYPES)): Promise<void> {
+  for (const table of tables) {
+    const [found] = await executor.query(
+      `SELECT to_regclass($1) IS NOT NULL AS has_table, to_regprocedure($2) IS NOT NULL AS has_sync`,
+      [`public.${table}`, `public.search_index_sync_${table}()`],
+    );
+    if (!found?.has_table) continue;
+    const on = `public.${quoteIdent(table)}`;
+    await executor.query(`DROP TRIGGER IF EXISTS ${quoteIdent(`trg_search_index_${table}_update`)} ON ${on}`);
+    await executor.query(`DROP TRIGGER IF EXISTS ${quoteIdent(`trg_search_index_${table}_date`)} ON ${on}`);
+    if (!found.has_sync) continue;
+    await executor.query(
+      `CREATE OR REPLACE TRIGGER ${quoteIdent(`trg_search_index_${table}`)} AFTER INSERT OR DELETE OR UPDATE ON ${on}
+         FOR EACH ROW EXECUTE FUNCTION public.${quoteIdent(`search_index_sync_${table}`)}()`,
+    );
+  }
 }
 
 /** Disables or enables the trigger of each table that has it; the tables without one are left. */

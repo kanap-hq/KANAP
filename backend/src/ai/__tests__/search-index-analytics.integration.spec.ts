@@ -19,7 +19,7 @@ import { linkValue, runSpecs, seedLine, seedTenant, setCurrentTenant, withRollba
 import { lockOwnTables } from '../../data-access/__tests__/data-access-test-helpers';
 // The database of these migrations' time: the modification date triggers (1856270000000) came
 // later, and their WHEN clause blocks dropping or retyping the columns it names.
-import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
+import { dropUpdatedAtTriggers, restoreSearchIndexTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1853940000000 (lot S), against a real database, each test in a transaction rolled back
 // at the end: an OPEX or CAPEX line's search entry carries the names of the values it holds on the
@@ -205,6 +205,7 @@ const BOTH = 'Nature de coût: Matériel; Récurrence: Récurrent';
 async function testLinkedValuesAreIndexed() {
   await withRollback(async (runner) => {
     await dropUpdatedAtTriggers(runner);
+    await restoreSearchIndexTriggers(runner);
     const d = await seedDimensions(runner, 'si-indexed');
     const defaultAxis = await seedAxis(runner, d.tenantId, null, { isDefault: true, sortOrder: 0 });
     const infrastructure = await seedValue(runner, d.tenantId, defaultAxis, 'Infrastructure');
@@ -235,6 +236,7 @@ async function testLinkedValuesAreIndexed() {
 async function testValueWritesRefreshTheirLines() {
   await withRollback(async (runner) => {
     await dropUpdatedAtTriggers(runner);
+    await restoreSearchIndexTriggers(runner);
     const d = await seedDimensions(runner, 'si-writes');
     const calls = await recordRefreshes(runner);
     for (const kind of KINDS) {
@@ -291,6 +293,7 @@ async function testValueWritesRefreshTheirLines() {
 async function testValueChanges() {
   await withRollback(async (runner) => {
     await dropUpdatedAtTriggers(runner);
+    await restoreSearchIndexTriggers(runner);
     const d = await seedDimensions(runner, 'si-value');
     const lines = { opex: await seedLine(runner, 'opex', d.tenantId), capex: await seedLine(runner, 'capex', d.tenantId) };
     for (const kind of KINDS) await linkValue(runner, kind, d.tenantId, lines[kind], d.nature, d.materiel);
@@ -331,6 +334,7 @@ async function testValueChanges() {
 async function testDimensionChanges() {
   await withRollback(async (runner) => {
     await dropUpdatedAtTriggers(runner);
+    await restoreSearchIndexTriggers(runner);
     const d = await seedDimensions(runner, 'si-dimension');
     const lines = { opex: await seedLine(runner, 'opex', d.tenantId), capex: await seedLine(runner, 'capex', d.tenantId) };
     for (const kind of KINDS) {
@@ -391,6 +395,7 @@ async function testDimensionChanges() {
 async function testTenantIsolation() {
   await withRollback(async (runner) => {
     await dropUpdatedAtTriggers(runner);
+    await restoreSearchIndexTriggers(runner);
     const a = await seedDimensions(runner, 'si-tenant-a');
     const lineA = await seedLine(runner, 'opex', a.tenantId);
     await linkValue(runner, 'opex', a.tenantId, lineA, a.nature, a.materiel);
@@ -426,6 +431,7 @@ async function testTenantIsolation() {
 async function testRefreshPaths() {
   await withRollback(async (runner) => {
     await dropUpdatedAtTriggers(runner);
+    await restoreSearchIndexTriggers(runner);
     const d = await seedDimensions(runner, 'si-paths');
     for (const kind of KINDS) {
       const first = await seedLine(runner, kind, d.tenantId);
@@ -510,6 +516,7 @@ async function asMigration(runner: QueryRunner, step: () => Promise<void>): Prom
 async function testMigration() {
   await withRollback(async (runner) => {
     await dropUpdatedAtTriggers(runner);
+    await restoreSearchIndexTriggers(runner);
     const d = await seedDimensions(runner, 'si-migration');
     const lines = { opex: await seedLine(runner, 'opex', d.tenantId), capex: await seedLine(runner, 'capex', d.tenantId) };
     for (const kind of KINDS) await linkValue(runner, kind, d.tenantId, lines[kind], d.nature, d.materiel);
@@ -591,6 +598,7 @@ async function testMigration() {
 async function nativeFunctionBodies() {
   await withRollback(async (runner) => {
     await dropUpdatedAtTriggers(runner);
+    await restoreSearchIndexTriggers(runner);
     assert.deepEqual(await bodies(runner), NATIVE_BODIES, 'native BL refresh fingerprints');
   });
 }

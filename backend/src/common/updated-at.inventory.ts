@@ -104,3 +104,34 @@ export const UPDATED_AT_FAMILIES: Readonly<Record<AiQueryEntityType, string | { 
   vulnerabilities: 'technology_vulnerabilities',
   working_day_calendars: 'working_day_profiles',
 };
+
+/**
+ * The tables of the inventory whose rows the search index keeps (`search_index_sync_<table>()`,
+ * on the triggers `trg_search_index_<table>*`), with the `search_index.entity_type` of their
+ * entries. An update of the date alone does not run the sync: the date trigger copies it to
+ * `source_updated_at` (`syncSearchIndexTriggers`, `updated-at-trigger.ts`).
+ */
+export const UPDATED_AT_SEARCH_ENTITY_TYPES: Readonly<Record<string, readonly string[]>> = {
+  accounts: ['accounts'],
+  analytics_categories: ['analytics_categories'],
+  applications: ['applications'],
+  assets: ['assets'],
+  business_processes: ['business_processes'],
+  chart_of_accounts: ['chart_of_accounts'],
+  companies: ['companies'],
+  connections: ['connections'],
+  contacts: ['contacts'],
+  contracts: ['contracts'],
+  departments: ['departments'],
+  documents: ['documents'],
+  incidents: ['incidents'],
+  interfaces: ['interfaces'],
+  locations: ['locations'],
+  portfolio_projects: ['projects'],
+  portfolio_requests: ['requests'],
+  spend_items: ['spend_items', 'capex_items'],
+  suppliers: ['suppliers'],
+  tasks: ['tasks'],
+  technologies: ['technologies'],
+  users: ['users'],
+};
