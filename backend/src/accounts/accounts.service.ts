@@ -994,6 +994,14 @@ export class AccountsService {
       normalized.push(item);
       rowOf.set(item, row);
     });
+    const coaCodeMixed = () => ({
+      ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0,
+      errors: [{ row: 0, message: 'All rows must specify the same coa_code or provide ?coaId parameter', code: 'CSV_ACCOUNT_COA_CODE_MIXED' }],
+      ignoredColumns: read.ignoredColumns, notices: read.notices,
+    });
+    // A file of several charts is refused for that first: a number repeated across its charts is
+    // not a repeated row of one chart.
+    if (!opts?.targetCoaId && opts?.allowCoaCodeColumn && coaCodes.size > 1) return coaCodeMixed();
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
@@ -1002,9 +1010,7 @@ export class AccountsService {
       // Resolve unique coa_code to id
       const codes = Array.from(coaCodes.values()).filter(Boolean);
       const uniqCodes = Array.from(new Set(codes));
-      if (uniqCodes.length !== 1) {
-        return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: 'All rows must specify the same coa_code or provide ?coaId parameter', code: 'CSV_ACCOUNT_COA_CODE_MIXED' }], ignoredColumns: read.ignoredColumns, notices: read.notices };
-      }
+      if (uniqCodes.length !== 1) return coaCodeMixed();
       const code = uniqCodes[0];
       const found = await repo.manager.query(`SELECT id FROM chart_of_accounts WHERE code = $1 AND tenant_id = current_setting('app.current_tenant', true)::uuid LIMIT 1`, [code]);
       if (!found?.[0]?.id) {

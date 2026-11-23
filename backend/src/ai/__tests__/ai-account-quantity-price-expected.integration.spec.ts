@@ -19,7 +19,8 @@ import { AiMasterDataMutationSupportService } from '../mutation/ai-master-data-m
 // - read: the accounts registry filters on it (true, or null for the accounts without it; false is
 //   refused with the accepted values, the column never holds it), and an account's summary carries it;
 // - import: the accounts template has the column, yes or no, titled in the person's language; a
-//   file's oui/non reach the accounts import as true/false, which sets and clears it;
+//   file's oui/non reach the accounts import as true/false, which sets and clears it; a file of two
+//   charts is refused for mixing them, even where a number repeats across them;
 // - write: Kad's account create and update take it (yes sets it, no clears it, stored null), and
 //   the approval card names the field and the values.
 
@@ -138,6 +139,16 @@ async function testImport() {
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     const rows = await runner.query(`SELECT account_number::int AS number, quantity_price_expected AS expected FROM accounts WHERE coa_id = $1 ORDER BY 1`, [chartId]);
     assert.deepEqual(rows.map((row: any) => [row.number, row.expected]), [[6100, true], [6200, null]], 'true sets it, false clears it');
+
+    // The same number in two charts: the file mixes charts, which is what it is refused for (the
+    // number repeats only because the charts differ).
+    const mixed = { buffer: Buffer.from('coa_code;account_number;account_name\nKQP;6100;A\nOTHER;6100;B\n', 'utf8') } as Express.Multer.File;
+    const refused: any = await accountsService().importCsv(
+      { file: mixed, dryRun: true, language: 'fr', mode: 'enrich' },
+      { manager: runner.manager, allowCoaCodeColumn: true },
+    );
+    assert.equal(refused.ok, false, 'a file of two charts is refused');
+    assert.deepEqual(refused.errors.map((error: any) => error.code), ['CSV_ACCOUNT_COA_CODE_MIXED'], 'with the mixed charts message, not a repeated number');
   });
 }
 
