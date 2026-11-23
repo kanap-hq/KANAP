@@ -46,17 +46,17 @@ export default function TokenUsageBar({ usage, lastRequestUsage }: TokenUsageBar
     >
       <Stack direction="row" spacing={2} useFlexGap flexWrap="wrap">
         <Typography variant="caption" color="text.secondary">
-          {t('tokenUsage.total')}: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatTokenCount(totalTokens, locale)}</Box>
+          {t('tokenUsage.total')}{' '}<Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatTokenCount(totalTokens, locale)}</Box>
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          {t('tokenUsage.input')}: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatTokenCount(usage.input_tokens, locale)}</Box>
+          {t('tokenUsage.input')}{' '}<Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatTokenCount(usage.input_tokens, locale)}</Box>
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          {t('tokenUsage.output')}: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatTokenCount(usage.output_tokens, locale)}</Box>
+          {t('tokenUsage.output')}{' '}<Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatTokenCount(usage.output_tokens, locale)}</Box>
         </Typography>
         {lastRequestUsage && (
           <Typography variant="caption" color="text.secondary">
-            {t('tokenUsage.lastInput')}: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatTokenCount(lastRequestUsage.input_tokens, locale)}</Box>
+            {t('tokenUsage.lastInput')}{' '}<Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatTokenCount(lastRequestUsage.input_tokens, locale)}</Box>
           </Typography>
         )}
       </Stack>

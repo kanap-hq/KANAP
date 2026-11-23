@@ -436,10 +436,10 @@
     "aliases": "Alias : {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Volume traité",
-    "input": "Tokens en entrée",
-    "output": "Tokens en sortie",
-    "lastInput": "Contexte de la dernière requête"
+    "total": "Volume traité :",
+    "input": "Tokens en entrée :",
+    "output": "Tokens en sortie :",
+    "lastInput": "Contexte de la dernière requête :"
   },
   "usageIndicator": {
     "limitReached": "Limite mensuelle atteinte. Réinitialisation le {{resetDate}}.",
