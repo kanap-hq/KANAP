@@ -23,7 +23,7 @@ import {
   AI_BULK_EDIT_LIST_MAX,
   bulkEditPreviewDto,
   bulkListApplied,
-  bulkListWithExclusions,
+  bulkListLeftOut,
   effectiveBulkSelection,
   parseBulkExclusions,
 } from '../mutation/ai-bulk-edit';
@@ -226,11 +226,10 @@ function testTheCardListsItsRecords() {
   assert.equal(new Set(LANGUAGES.map((language) => bulkEditListGrewText(language, 200))).size, 4);
   // Once approved, each kept record marked changed or not; a left out one never.
   assert.deepEqual(bulkListApplied(list, ['A', 'c']).rows.map((row) => row.changed), [true, false, false]);
-  // A recount: the counted records kept, the left out ones as the previous card listed them, by reference.
-  const counted = { rows: [{ id: 'b', ref: 'BL-2', title: 'Line 2 renamed', before: null, kept: true }], words: {} };
-  const next = bulkListWithExclusions(counted, list, ['a']);
-  assert.deepEqual(next.rows.map((row) => [row.ref, row.title, row.kept]), [['BL-1', 'Line 1', false], ['BL-2', 'Line 2 renamed', true]]);
-  assert.deepEqual(next.words, list.words, 'the words of a record left out are kept');
+  // A recount, read again whole: the records left out unticked, the others kept.
+  const next = bulkListLeftOut(list, ['a']);
+  assert.deepEqual(next.rows.map((row) => [row.ref, row.kept]), [['BL-1', false], ['BL-2', true], ['BL-3', true]]);
+  assert.deepEqual(next.words, list.words);
 
   // The selection the count and the write run on: the filter's exclude_ids, or the chosen ids less those left out.
   const [x, y] = ['0b0e5c3c-0000-4000-8000-000000000001', '0b0e5c3c-0000-4000-8000-000000000002'];

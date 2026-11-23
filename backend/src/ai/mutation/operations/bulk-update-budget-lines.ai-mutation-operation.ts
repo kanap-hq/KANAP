@@ -37,7 +37,7 @@ import {
   bulkEditPreviewDto,
   bulkExcluded,
   bulkListApplied,
-  bulkListWithExclusions,
+  bulkListLeftOut,
   effectiveBulkSelection,
   isEmptyAiBulkFilterValue,
   sortedBulkList,
@@ -263,7 +263,7 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
         targetEntityId: null,
         mutationInput: {
           ...rest,
-          ...(excluded.length > 0 ? { excluded } : {}),
+          ...(counted.excluded.length > 0 ? { excluded: counted.excluded } : {}),
           as_of: counted.dry?.as_of ?? null,
           expected_rows: counted.dry?.rows ?? 0,
           fingerprint: counted.dry?.fingerprint ?? null,
@@ -295,33 +295,34 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
     selection: Record<string, unknown>,
     excluded: string[],
     previous: AiBulkList | null,
-  ): Promise<{ dry: BulkEditResult<BudgetLineBulkRow> | null; currentValues: Record<string, unknown> }> {
-    const body = effectiveBulkSelection({ selection, excluded });
-    const leftOut = excluded.length > 0 ? { excluded: excluded.length } : {};
+  ): Promise<{ dry: BulkEditResult<BudgetLineBulkRow> | null; excluded: string[]; currentValues: Record<string, unknown> }> {
+    // The records left out, read again as the kept ones (review of lot K2e): their name and value
+    // before of today. One the person no longer reads, or that would no longer change, leaves the list
+    // and the records left out: the count reaches it again, unchanged, refused or not at all.
+    const leftOutRows = excluded.length > 0 ? (await this.dryRun(context, { ids: excluded }, changes)).changed_rows ?? [] : [];
+    const stillOut = leftOutRows.map((row) => row.id).sort();
+    const body = effectiveBulkSelection({ selection, excluded: stillOut });
+    const leftOut = stillOut.length > 0 ? { excluded: stillOut.length } : {};
     if (!body) {
       // Every chosen line left out: nothing to count, the card lists them unticked.
       return {
         dry: null,
+        excluded: stillOut,
         currentValues: {
           values: { rows: 0, changes: 0, unchanged: 0, refused: {}, examples: [], ...leftOut },
-          bulk_list: bulkListWithExclusions({ rows: [], words: {} }, previous!, excluded),
+          bulk_list: bulkListLeftOut(await this.listOf(context, field, changes, leftOutRows), stillOut),
         },
       };
     }
-    const dry = await this.budgetLines.bulkUpdate(
-      { ...body, changes, dry_run: true },
-      context.userId ?? undefined,
-      { manager: context.manager, access: await aiBudgetListAccess(this.policy, context), options: { changedIds: true, changedRows: true } },
-    ) as BulkEditResult<BudgetLineBulkRow>;
+    const dry = await this.dryRun(context, body, changes);
     const changed = dry.changed_rows ?? [];
     // A recount past the bound would drop the list and the records left out with it: refused.
-    if (previous && changed.length + excluded.length > AI_BULK_EDIT_LIST_MAX) throw await bulkListGrew(context);
+    if (previous && changed.length + leftOutRows.length > AI_BULK_EDIT_LIST_MAX) throw await bulkListGrew(context);
     let list: AiBulkList | null = null;
     let examples: Array<{ ref: string; title: string }>;
-    if (changed.length <= AI_BULK_EDIT_LIST_MAX) {
-      const counted = await this.listOf(context, field, changes, changed);
-      list = previous ? bulkListWithExclusions(counted, previous, excluded) : counted;
-      examples = counted.rows.slice(0, CARD_EXAMPLES).map((row) => ({ ref: row.ref, title: row.title }));
+    if (changed.length + leftOutRows.length <= AI_BULK_EDIT_LIST_MAX) {
+      list = bulkListLeftOut(await this.listOf(context, field, changes, [...changed, ...leftOutRows]), stillOut);
+      examples = list.rows.filter((row) => row.kept).slice(0, CARD_EXAMPLES).map((row) => ({ ref: row.ref, title: row.title }));
     } else {
       // The first lines that would change, by reference, read under the person's access.
       examples = (await context.manager.query(
@@ -335,11 +336,21 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
     }
     return {
       dry,
+      excluded: stillOut,
       currentValues: {
         values: { rows: dry.rows, changes: dry.changes, unchanged: dry.unchanged, refused: dry.refused, examples, ...leftOut },
         ...(list ? { bulk_list: list } : {}),
       },
     };
+  }
+
+  /** The screen's dry run of a selection, with the lines it changes as `reach` read them. */
+  private async dryRun(context: AiExecutionContextWithManager, body: Record<string, unknown>, changes: BulkChanges): Promise<BulkEditResult<BudgetLineBulkRow>> {
+    return await this.budgetLines.bulkUpdate(
+      { ...body, changes, dry_run: true },
+      context.userId ?? undefined,
+      { manager: context.manager, access: await aiBudgetListAccess(this.policy, context), options: { changedIds: true, changedRows: true } },
+    ) as BulkEditResult<BudgetLineBulkRow>;
   }
 
   /**

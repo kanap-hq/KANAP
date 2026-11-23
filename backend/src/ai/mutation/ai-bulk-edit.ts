@@ -189,17 +189,12 @@ function byReference(a: { ref: string }, b: { ref: string }): number {
 }
 
 /**
- * The list of a recounted card: the records the count changes (kept), and the records left out as
- * the previous card listed them (unticked, so that they can be ticked again), by reference.
+ * The list of a recounted card, read again whole: the records left out unticked (so that they can be
+ * ticked again), the others kept.
  */
-export function bulkListWithExclusions(counted: AiBulkList, previous: AiBulkList, excluded: string[]): AiBulkList {
+export function bulkListLeftOut(list: AiBulkList, excluded: readonly string[]): AiBulkList {
   const left = new Set(excluded);
-  const leftOut = previous.rows.filter((row) => left.has(row.id)).map((row) => ({ ...row, kept: false }));
-  const words = { ...counted.words };
-  for (const row of leftOut) {
-    if (row.before !== null && previous.words[row.before]) words[row.before] = previous.words[row.before];
-  }
-  return { rows: [...counted.rows.filter((row) => !left.has(row.id)), ...leftOut].sort(byReference), words };
+  return { ...list, rows: list.rows.map((row) => ({ ...row, kept: !left.has(row.id) })) };
 }
 
 /** The list of a card once approved: each kept record marked changed, or not. */

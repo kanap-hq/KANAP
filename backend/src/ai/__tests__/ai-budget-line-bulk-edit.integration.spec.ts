@@ -719,6 +719,39 @@ async function testUnlistedLineNeverWritten(harness: Harness) {
   });
 }
 
+/**
+ * The lines left out are read again at each recount (review of lot K2e): one that left the person's
+ * access leaves the list and the lines left out; another shows its name and value before of today.
+ */
+async function testLeftOutLinesReadAgain(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    if (!(await runner.query(`SELECT to_regrole('kanap_data_limited') IS NOT NULL AS present`))[0].present) {
+      if (process.env.CI) assert.fail('CI installs kanap_data_limited before the migrations');
+      console.log('  skip - kanap_data_limited not installed');
+      return;
+    }
+    await runner.query(`INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, access) VALUES ($1, $2, 'company', $3, 'edit')`,
+      [seed.tenantId, seed.users.limited, seed.companies.a]);
+    const ctx = context(seed, runner, 'read-again', seed.users.limited);
+    await ensureConversation(ctx);
+    assert.equal((await runner.query(`SELECT data_access_apply($1) AS mode`, [seed.users.limited]))[0].mode, 'limited');
+    const first = await card(harness, ctx, { field: 'run_build', value: 'build', rows: ['BL-2', 'BL-3', 'BL-4', 'BL-5'] });
+    const second = await exclude(harness, ctx, first, [seed.lines[3], seed.lines[4]]);
+    assert.deepEqual(listed(second).map((row) => [row[0], row[3]]), [['BL-2', true], ['BL-3', false], ['BL-4', false], ['BL-5', true]]);
+    // Meanwhile someone with every access moves BL-3 out of the person's access, renames BL-4 and sets it to run.
+    assert.equal((await runner.query(`SELECT data_access_apply($1) AS mode`, [seed.users.member]))[0].mode, 'all');
+    await runner.query(`UPDATE spend_items SET paying_company_id = NULL, account_id = NULL WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.lines[3]]);
+    await runner.query(`UPDATE spend_items SET product_name = 'Line 4 renamed', run_build = 'run' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.lines[4]]);
+    assert.equal((await runner.query(`SELECT data_access_apply($1) AS mode`, [seed.users.limited]))[0].mode, 'limited');
+    const third = await exclude(harness, ctx, second, [seed.lines[3], seed.lines[4], seed.lines[5]]);
+    assert.deepEqual(listed(third), [['BL-2', 'Line 2', 'Empty', true], ['BL-4', 'Line 4 renamed', 'Run', false], ['BL-5', 'Line 5', 'Empty', false]]);
+    assert.equal(JSON.stringify(third).includes('Line 3'), false, 'the line outside the access is never named');
+    assert.deepEqual((await previewRow(runner.manager, seed.tenantId, third.preview_id)).mutation_input.excluded, [seed.lines[4], seed.lines[5]].sort());
+    assert.match(third.changes.budget_line_bulk_edit.to, /\n\n1 line to change, 2 left out, 1 refused: /);
+    console.log('  the lines left out read again at each recount, one out of the access dropped: OK');
+  });
+}
+
 /** Up to 200 lines listed; beyond, the count and five examples, and the model is told to offer narrowing. */
 async function testListUpTo200(harness: Harness) {
   await inSeed(harness, async (runner, seed) => {
@@ -800,6 +833,7 @@ async function run() {
     await testLeaveOutAndApprove(harness);
     await testLimitedPersonLeavesOut(harness);
     await testUnlistedLineNeverWritten(harness);
+    await testLeftOutLinesReadAgain(harness);
     await testListUpTo200(harness);
   } finally {
     await harness.app.close();
