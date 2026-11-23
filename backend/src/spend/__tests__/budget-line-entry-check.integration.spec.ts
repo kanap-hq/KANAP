@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 import { AMOUNT_MEASURES, MEASURE_FREEZE_COLUMN, type AmountMeasure } from '../amounts-write.util';
-import { readEntryChecks, type LineEntryCheck } from '../budget-line-entry-check';
+import { loadEntryCheckSettings, readEntryChecks, type LineEntryCheck } from '../budget-line-entry-check';
 import { describeAiEntityFilters } from '../../ai/query/ai-filter-description.util';
 import { resolveAiEntityRegistry } from '../../ai/query/registries';
 
@@ -24,7 +24,9 @@ import { resolveAiEntityRegistry } from '../../ai/query/registries';
 //   check; the consolidation account named for a reader of the accounts only;
 // - Kad and the MCP server: `entry_check` filters, counts as the hygiene tile's aggregate, lists
 //   the same lines, shows on each line and in the detail, for a reader of budget without accounts too;
-// - a person limited to one company reads, counts and lists the lines of that company only.
+// - a person limited to one company reads, counts and lists the lines of that company only, with the
+//   same answers on them as with every row readable (the reader, the field, its filter, sort and
+//   values, as seeded and after each change), though both read the columns line by line then.
 // @database-spec: boots the application context, so run-ci-tests.js runs this file in a database lane.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -109,6 +111,8 @@ const LINES: Array<LineDef & { expect: Expect }> = [
   { label: 'outside', nature: 'opex', account: 'outside', company: 'b', columns: [spread(Y)], expect: { level: null, columns: [] } },
   { label: 'otherChart', nature: 'opex', account: 'otherChart', company: 'a', columns: [spread(Y)], expect: { level: null, columns: [] } },
   { label: 'noAccount', nature: 'opex', account: null, company: 'b', columns: [spread(Y)], expect: { level: null, columns: [] } },
+  // A round left `computed` without lines: to check, the rule reads the lines (last, to keep the references above).
+  { label: 'computedNoLines', nature: 'opex', account: 'tick', company: 'a', columns: [{ year: Y, measure: 'planned', months: [1200], method: 'computed' }], expect: { level: 'account', columns: [[Y, 'planned']] } },
 ];
 
 type Seed = {
@@ -299,6 +303,7 @@ async function savepoint(runner: QueryRunner, fn: () => Promise<void>) {
 // ----- tests -----
 
 async function testParity(h: Harness, runner: QueryRunner, s: Seed) {
+  assert.equal((await loadEntryCheckSettings(runner.manager, s.tenantId)).lineByLine, false, 'every row readable: one join over the tenant');
   const expected = truth();
   await assertAgree(h, runner, s, expected, 'as seeded');
   const checks = await readEntryChecks(runner.manager, s.tenantId, [s.lines.cons.id, s.lines.qp.id, s.lines.none.id], { accounts: true });
@@ -429,7 +434,53 @@ async function testLimitedPerson(h: Harness, runner: QueryRunner, s: Seed) {
   }
   const companyA = toCheckLabels(truth()).filter((label) => s.lines[label].company === 'a');
   assert.ok(companyA.length > 0 && companyA.length < toCheckLabels(truth()).length, 'company A has some of the lines to check');
-  assert.equal((await runner.query(`SELECT data_access_apply($1) AS mode`, [s.users.limited]))[0].mode, 'limited');
+  const apply = async () => assert.equal((await runner.query(`SELECT data_access_apply($1) AS mode`, [s.users.limited]))[0].mode, 'limited');
+  const none: Expect = { level: null, columns: [] };
+  const ofA = (table: Map<string, Expect>) => Object.fromEntries([...table].filter(([label]) => s.lines[label].company === 'a'));
+  // Each change is made with every row readable, then read by the person, then rolled back with
+  // their access (a savepoint): the answers on company A are the truth table's, which the
+  // administrator's reads match (`testParity`, `testChanges`), and company B reads as not expected.
+  const changes: Array<[string, () => Promise<unknown>, Partial<Record<string, Expect>>]> = [
+    ['as seeded', async () => undefined, {}],
+    ['the forecast column on', () => runner.query(`UPDATE tenants SET metadata = metadata || '{"budget_columns":{"enabled":{"forecast":true}}}'::jsonb WHERE id = $1`, [s.tenantId]),
+      { forecast: { level: 'account', columns: [[Y, 'forecast']] } }],
+    ['no consolidation chart', () => runner.query(`UPDATE chart_of_accounts SET is_consolidation = false WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.consolidationChart]),
+      { cons: none, consQp: none, consCapex: none }],
+    ['the setting removed', () => runner.query(`UPDATE accounts SET quantity_price_expected = NULL WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.accounts.tick]),
+      Object.fromEntries(LINES.filter((line) => line.account === 'tick').map((line) => [line.label, none]))],
+    ['the column rebuilt as quantity and price', async () => {
+      const round = s.rounds[`monthly:${Y}:planned`];
+      await runner.query(`UPDATE spend_round_inputs SET method = 'computed' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, round]);
+      await addLine(runner, s.tenantId, round, Y);
+    }, { monthly: { level: 'account', columns: [] } }],
+    ['the computed column given its lines', () => addLine(runner, s.tenantId, s.rounds[`computedNoLines:${Y}:planned`], Y),
+      { computedNoLines: { level: 'account', columns: [] } }],
+  ];
+  for (const [what, change, edits] of changes) {
+    await savepoint(runner, async () => {
+      await change();
+      await apply();
+      assert.equal((await loadEntryCheckSettings(runner.manager, s.tenantId)).lineByLine, true, `${what}: limited, line by line`);
+      const expected = truth(edits);
+      const reader = await readerTable(runner, s);
+      assert.deepEqual(ofA(reader), ofA(expected), `${what}: the reader on company A`);
+      assert.ok([...reader].every(([label, e]) => s.lines[label].company === 'a' || (e.level === null && e.columns.length === 0)), `${what}: company B reads as not expected`);
+      const field = await listField(h, runner, s);
+      const fromTruth = Object.fromEntries(Object.entries(ofA(expected)).map(([label, e]) => [label, e.columns.length > 0 ? 'to_check' : null]));
+      assert.deepEqual(Object.fromEntries(field), fromTruth, `${what}: the list's field on each line of company A`);
+      const toCheck = toCheckLabels(new Map(Object.entries(ofA(expected))));
+      assert.equal(await tileCount(h, runner), toCheck.filter((label) => !LINES.find((line) => line.label === label)!.disabledAt).length, `${what}: the tile`);
+      const labels = labelOf(s);
+      const filtered = await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, filters: JSON.stringify({ entry_check: { filterType: 'set', values: ['to_check'] } }) },
+        { manager: runner.manager, access: { accounts: true } });
+      assert.deepEqual(filtered.items.map((item: any) => labels.get(item.id)).sort(), toCheck, `${what}: the filter`);
+      const sorted = await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, sort: 'entry_check:asc' }, { manager: runner.manager, access: { accounts: true } });
+      assert.deepEqual(sorted.items.slice(0, toCheck.length).map((item: any) => labels.get(item.id)).sort(), toCheck, `${what}: the sort`);
+      const values = await h.budgetLines.summaryFilterValues({ ...ALL_LINES, fields: 'entry_check' }, { manager: runner.manager, access: { accounts: true } });
+      assert.deepEqual(values.entry_check, toCheck.length ? ['to_check', null] : [null], `${what}: the values`);
+    });
+  }
+  await apply();
   const labels = labelOf(s);
   assert.equal(await tileCount(h, runner), companyA.length, 'the tile counts their lines only');
   const field = await listField(h, runner, s);
@@ -443,7 +494,7 @@ async function testLimitedPerson(h: Harness, runner: QueryRunner, s: Seed) {
   const counted = await h.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'nature', filters: { entry_check: ['to_check'] } });
   assert.equal(counted.total, companyA.length, 'Kad counts their lines only');
   assert.equal(counted.data_access, 'limited', 'said within their access');
-  console.log('ok - a person limited to one company reads, counts and lists the lines of that company only');
+  console.log('ok - a person limited to one company reads, counts and lists the lines of that company only, as with every row readable');
 }
 
 function testFreezeKeys() {

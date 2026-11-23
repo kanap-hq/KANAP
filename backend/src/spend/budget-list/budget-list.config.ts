@@ -22,7 +22,7 @@ import {
 import { fxKeyCurrency, fxSetKeySql, fxTableSql } from './budget-fx-table';
 import type { BudgetListRuntime, RuntimeNeeds } from './budget-list.runtime';
 import { BUDGET_NATURES, lineNumberSql, natureAnd, naturesAnd } from '../budget-nature';
-import { columnsToCheckSql, ENTRY_CHECK_FIELD, ENTRY_CHECK_TO_CHECK, expectedAccountsSql } from '../budget-line-entry-check';
+import { columnsToCheckSql, ENTRY_CHECK_FIELD, ENTRY_CHECK_TO_CHECK, expectedAccountsSql, lineColumnsToCheckSql } from '../budget-line-entry-check';
 
 /**
  * The OPEX and CAPEX lists as a list-engine config, built from the scope
@@ -413,19 +413,32 @@ export class BudgetListConfig implements ListConfig {
    * `entry_check`: 'to_check' when the line's account, or its consolidation account, expects
    * quantity and price and one of its columns is not built so, else null (`budget-line-entry-check.ts`).
    * Its CTEs start from the accounts that set it; the shown and frozen columns were read once
-   * (`loadBudgetRuntime`) and are bound. Read whatever the caller's right on accounts: the field
-   * names no account.
+   * (`loadBudgetRuntime`) and are bound. With every row readable, the columns to check of the whole
+   * tenant are built once and joined; under data-scoped access they are probed line by line, only
+   * for the lines the person sees on such an account, stopping at the first column to check, as
+   * `has_fte` does (`lineColumnsToCheckSql` says why). Read whatever the caller's right on
+   * accounts: the field names no account.
    */
   private entryCheck(stmt: SqlStatement): FieldSql {
     const settings = this.rt.entryCheck;
     if (!settings) throw new Error('The entry check settings were not loaded for this statement');
+    const toCheck = sqlLiteral(ENTRY_CHECK_TO_CHECK);
+    stmt.cte('ec_accounts', () => expectedAccountsSql(stmt));
+    if (settings.lineByLine) {
+      this.join(stmt, 'eca', 'LEFT JOIN ec_accounts eca ON eca.account_id = i.account_id');
+      return {
+        kind: 'text',
+        sql: `(CASE WHEN eca.account_id IS NULL THEN NULL
+          WHEN EXISTS (${lineColumnsToCheckSql(stmt, 'i', settings)}) THEN ${toCheck} END)`,
+        joins: ['eca'],
+      };
+    }
     const s = this.scope;
     const natures = s.nature ? [s.nature] : BUDGET_NATURES;
-    stmt.cte('ec_accounts', () => expectedAccountsSql(stmt));
     stmt.cte('ec_columns', () => columnsToCheckSql(stmt, 'ec_accounts', settings, natures));
     stmt.cte('ec_lines', () => 'SELECT DISTINCT item_id FROM ec_columns');
     this.join(stmt, 'ecl', 'LEFT JOIN ec_lines ecl ON ecl.item_id = i.id');
-    return { kind: 'text', sql: `(CASE WHEN ecl.item_id IS NOT NULL THEN ${sqlLiteral(ENTRY_CHECK_TO_CHECK)} END)`, joins: ['ecl'] };
+    return { kind: 'text', sql: `(CASE WHEN ecl.item_id IS NOT NULL THEN ${toCheck} END)`, joins: ['ecl'] };
   }
 
   /** The allocation label of the version of `year` ('' without one): its own method, else the year's rule. */

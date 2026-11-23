@@ -3,6 +3,7 @@ import { readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { SqlStatement } from '../common/list-engine/sql-statement';
 import { AMOUNT_MEASURES, MEASURE_FREEZE_COLUMN, type AmountMeasure } from './amounts-write.util';
 import { BUDGET_NATURES, naturesAnd, type BudgetNature } from './budget-nature';
+import { isLimitedTransaction } from '../data-access/line-write-checks';
 
 /**
  * "Quantity and price expected" read on the budget lines (lot B12a): an account
@@ -18,7 +19,7 @@ import { BUDGET_NATURES, naturesAnd, type BudgetNature } from './budget-nature';
  * A column of an expected line is looked at when it is shown in the tenant's settings
  * (`readBudgetColumns`), its net total for the year is not zero, and `nature:year:column` is not
  * frozen; every year the line has a version, after the end of validity cut as the list cuts it.
- * Such a column is to check unless it conforms (`COLUMN_CONFORMS_SQL`). A line is `to_check` when
+ * Such a column is to check unless it conforms (`columnConformsSql`). A line is `to_check` when
  * at least one of its columns is.
  *
  * Both readers build their SQL here: the list's field (`budget-list.config.ts`, `entry_check`) and
@@ -37,6 +38,11 @@ export type EntryCheckSettings = {
   measures: AmountMeasure[];
   /** The frozen columns: `nature:year:measure`. */
   frozen: string[];
+  /**
+   * The statement runs under data-scoped access (`isLimitedTransaction`): the columns are probed
+   * line by line (`lineColumnsToCheckSql`). Same answer either way, only the cost differs.
+   */
+  lineByLine: boolean;
 };
 
 /** A column to check: its year and its column (the storage key of the budget tab, `planned` …). */
@@ -99,9 +105,49 @@ export function expectedAccountsSql(stmt: Binder): string {
 }
 
 /**
+ * The columns to check of one line: the `FROM` and `WHERE` that select its versions and columns
+ * (`v`, `m`). `line` is the alias of the line's `spend_items` row in the enclosing statement, whose
+ * account the caller already knows to expect quantity and price.
+ *
+ * Two shapes of the same test, after `settings.lineByLine`:
+ * - all data (`false`): `NOT EXISTS`, which the planner turns into one anti-join against the
+ *   conforming columns of the whole tenant, the cheapest when every row is readable;
+ * - data-scoped access (`true`): each column's round is probed by the unique (tenant, version,
+ *   column) index through a scalar subquery, which the planner cannot turn into a join. Under that
+ *   access every row these tables return is checked against the person's scope, at a cost per row:
+ *   probing reads only the rows of the lines the person sees, and stops at the first column to
+ *   check when the caller asks whether there is one (the list's field), where the join checked
+ *   every round and every round line of the tenant.
+ */
+function lineColumnsParts(stmt: Binder, line: string, settings: EntryCheckSettings): { from: string; where: string } {
+  const t = stmt.tenant;
+  // Each measure is one of the five column names (`AMOUNT_MEASURES`): never request text.
+  const values = AMOUNT_MEASURES.map((measure) => `('${measure}', vt.${measure})`).join(', ');
+  const conforming = `SELECT 1 FROM spend_round_inputs er
+        WHERE er.tenant_id = ${t} AND er.version_id = v.id AND er.measure = m.measure AND ${columnConformsSql('er')}`;
+  return {
+    from: `spend_versions v
+    JOIN spend_version_totals vt ON vt.tenant_id = ${t} AND vt.version_id = v.id
+    CROSS JOIN LATERAL (VALUES ${values}) m(measure, total)`,
+    where: `v.tenant_id = ${t} AND v.spend_item_id = ${line}.id
+      AND (${line}.disabled_at IS NULL OR v.budget_year <= extract(year FROM ${line}.disabled_at AT TIME ZONE 'UTC'))
+      AND m.measure = ANY(${stmt.bind(settings.measures, 'text[]')}) AND m.total <> 0
+      AND NOT ((${line}.nature || ':' || v.budget_year || ':' || m.measure) = ANY(${stmt.bind(settings.frozen, 'text[]')}))
+      AND ${settings.lineByLine ? `(${conforming}) IS NULL` : `NOT EXISTS (${conforming})`}`,
+  };
+}
+
+/** The columns to check of one line (`year`, `measure`), as a subquery on `line` (`lineColumnsParts`). */
+export function lineColumnsToCheckSql(stmt: Binder, line: string, settings: EntryCheckSettings): string {
+  const { from, where } = lineColumnsParts(stmt, line, settings);
+  return `SELECT v.budget_year AS year, m.measure FROM ${from} WHERE ${where}`;
+}
+
+/**
  * The columns to check of the expected lines (`item_id`, `year`, `measure`), from the CTE of
  * `expectedAccountsSql` named `accounts`. `natures`: the lines read; `itemIds`: only these lines
- * (a bound uuid array), else every line of the tenant.
+ * (a bound uuid array), else every line of the tenant. With every row readable, one flat join the
+ * planner may hash; line by line, a subquery kept apart (`OFFSET 0`) that runs for each line.
  */
 export function columnsToCheckSql(
   stmt: Binder,
@@ -111,24 +157,22 @@ export function columnsToCheckSql(
   itemIds?: string,
 ): string {
   const t = stmt.tenant;
-  // Each measure is one of the five column names (`AMOUNT_MEASURES`): never request text.
-  const values = AMOUNT_MEASURES.map((measure) => `('${measure}', vt.${measure})`).join(', ');
+  const lines = `${accounts} ea
+    JOIN spend_items li ON li.tenant_id = ${t} AND li.account_id = ea.account_id${naturesAnd('li', natures)}${itemIds ? ` AND li.id = ANY(${itemIds})` : ''}`;
+  if (settings.lineByLine) {
+    return `SELECT li.id AS item_id, c.year, c.measure
+    FROM ${lines}
+    CROSS JOIN LATERAL (${lineColumnsToCheckSql(stmt, 'li', settings)} OFFSET 0) c`;
+  }
+  const { from, where } = lineColumnsParts(stmt, 'li', settings);
   return `SELECT li.id AS item_id, v.budget_year AS year, m.measure
-    FROM ${accounts} ea
-    JOIN spend_items li ON li.tenant_id = ${t} AND li.account_id = ea.account_id${naturesAnd('li', natures)}${itemIds ? ` AND li.id = ANY(${itemIds})` : ''}
-    JOIN spend_versions v ON v.tenant_id = ${t} AND v.spend_item_id = li.id
-      AND (li.disabled_at IS NULL OR v.budget_year <= extract(year FROM li.disabled_at AT TIME ZONE 'UTC'))
-    JOIN spend_version_totals vt ON vt.tenant_id = ${t} AND vt.version_id = v.id
-    CROSS JOIN LATERAL (VALUES ${values}) m(measure, total)
-    WHERE m.measure = ANY(${stmt.bind(settings.measures, 'text[]')}) AND m.total <> 0
-      AND NOT ((li.nature || ':' || v.budget_year || ':' || m.measure) = ANY(${stmt.bind(settings.frozen, 'text[]')}))
-      AND NOT EXISTS (SELECT 1 FROM spend_round_inputs er
-        WHERE er.tenant_id = ${t} AND er.version_id = v.id AND er.measure = m.measure AND ${columnConformsSql('er')})`;
+    FROM ${lines}, ${from}
+    WHERE ${where}`;
 }
 
 /**
  * The tenant's shown columns and frozen columns, read once (two small reads: the tenant's settings
- * and its freezes).
+ * and its freezes), and whether the transaction runs under data-scoped access.
  */
 export async function loadEntryCheckSettings(manager: EntityManager, tenantId: string): Promise<EntryCheckSettings> {
   const columns = await readBudgetColumns(manager, tenantId);
@@ -142,7 +186,11 @@ export async function loadEntryCheckSettings(manager: EntityManager, tenantId: s
     const measure = measureOf.get(row.column_key);
     return measure ? [`${row.scope}:${Number(row.budget_year)}:${measure}`] : [];
   });
-  return { measures: AMOUNT_MEASURES.filter((measure) => columns.enabled[measure]), frozen };
+  return {
+    measures: AMOUNT_MEASURES.filter((measure) => columns.enabled[measure]),
+    frozen,
+    lineByLine: await isLimitedTransaction(manager),
+  };
 }
 
 const NOT_EXPECTED: LineEntryCheck = { expected: false, level: null, consolidation_account: null, columns: [], to_check: false };
