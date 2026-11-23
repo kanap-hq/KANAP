@@ -120,6 +120,7 @@ La lista (en **Gestión presupuestaria > Líneas presupuestarias**) reúne las l
 - **Columnas de importes**: Cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización. El encabezado indica la columna, el año respecto a hoy y el año natural, por ejemplo **Revisión A+1 (2027)**. Las columnas ocultas no se ofrecen
 - **Columnas de ETC**: El ETC de cada columna presupuestaria visible para A-1, A, A+1 y A+2, con los nombres que eligió su organización, justo después de las columnas de importes en el selector de columnas. El encabezado indica la columna y el año natural, por ejemplo **ETC Presupuesto (2026)**. El ETC de una línea es la suma del ETC de sus líneas de cantidad y precio en esa columna. Consulte [ETC](#etc). La celda queda vacía cuando la columna no tiene líneas
 - **ETC declarados**: **Sí** cuando la línea declara ETC en al menos una columna presupuestaria de cualquier año; si no, vacía. Son las líneas que conserva el filtro **Líneas con ETC** de los informes
+- **Control de cantidad y precio**: **Por verificar** cuando la cuenta de la línea espera una introducción por cantidad y precio y una columna de la línea está introducida de otro modo; si no, vacía. Consulte [Cuando la cuenta espera una introducción por cantidad y precio](#quantity-and-price-expected)
 - **Habilitado**: Estado de la línea (habilitado o deshabilitado)
 - **Descripción**: La descripción de la línea
 - **Moneda**: Código de moneda ISO
@@ -145,7 +146,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 **Filtrado**:
 
 - **Búsqueda rápida**: Busca en la referencia (`BL-12`, y los antiguos `OPX-12` o `CPX-3`), el nombre del producto, la descripción, el proveedor, la empresa pagadora, la cuenta, el contrato, los nombres de proyectos, la asignación, los responsables, los valores analíticos, el centro de coste (código, nombre y ruta), el responsable del presupuesto, las notas, la moneda y el estado. Filtra la lista en tiempo real mientras escribe, sin distinguir acentos ni mayúsculas y minúsculas
-- **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Tipo**, **Proveedor**, **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build** y **ETC declarados** usan filtros de conjunto de casillas (selección múltiple). El filtro **ETC declarados** ofrece **Sí** y **No**. El filtro **Habilitado** muestra la opción de **Mostrar** (**Todos**, **Activos** o **Desactivados**): cambiar uno cambia el otro
+- **Filtros de columna**: Haga clic en el icono de filtro en cualquier encabezado de columna. **Tipo**, **Proveedor**, **Empresa pagadora**, **Cuenta**, **Asignación**, **Moneda**, **Responsable IT**, **Responsable de negocio**, cada dimensión analítica, **Centro de coste**, **Responsable del presupuesto**, **Run o build**, **ETC declarados** y **Control de cantidad y precio** usan filtros de conjunto de casillas (selección múltiple). El filtro **ETC declarados** ofrece **Sí** y **No**. El filtro **Habilitado** muestra la opción de **Mostrar** (**Todos**, **Activos** o **Desactivados**): cambiar uno cambia el otro
 - **Todos menos algunos**: Marque **Todos** y luego desmarque los valores que quiera excluir: el filtro conserva todo salvo esos (el encabezado muestra, por ejemplo, **Todos menos 3**), y un valor creado más tarde se incluye automáticamente
 - **Filtros de importe**: Cada columna de importe tiene un filtro numérico. Un número escrito en el cuadro bajo el encabezado conserva las líneas con al menos ese importe. Abra el menú del filtro para las demás condiciones: mayor que, menor que, igual, distinto o entre dos importes
 - **Filtros de ETC**: Cada columna de ETC tiene un filtro numérico con las mismas condiciones, más vacío y no vacío. **Vacío** conserva las líneas cuya columna no tiene líneas de cantidad y precio
@@ -181,6 +182,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 - Hacer clic en cualquier celda abre el espacio de trabajo en la pestaña más relevante:
     - **Ref**, **Nombre del producto**, **Proveedor**, **Empresa pagadora**, **Cuenta**, las columnas de dimensión y otras columnas generales: Abre la pestaña **Vista general**
     - **Columnas de importes** (Presupuesto A, Aterrizaje previsto A, Revisión A+1, etc.) y **Columnas de ETC**: Abre la pestaña **Presupuesto** preconfigurada en el año de la columna
+    - **Control de cantidad y precio**: Abre la pestaña **Presupuesto**
     - **Asignación**: Abre la pestaña **Asignaciones** para el año actual
     - **Tarea**: Abre la pestaña **Vista general**, donde está el panel de tareas
     - **Contrato**: Abre directamente el espacio de trabajo del Contrato vinculado
@@ -523,6 +525,20 @@ Haga clic en **Añadir una línea** bajo la tabla para añadir una línea, y en 
 - Los días laborables de un calendario cambiaron: la pestaña **Cantidad y precio** indica, por ejemplo, «Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19.», seguido de **Usar de nuevo las líneas**. Nada cambia en la columna hasta que haga clic en **Usar de nuevo las líneas**. Las líneas siguen siendo editables mientras tanto
 - **Restablecer columna presupuestaria** en la Administración presupuestaria quita las líneas junto con los importes. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria)
 - Un archivo de presupuesto cambia los meses de una columna y deja sus líneas. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md)
+
+#### Cuando la cuenta espera una introducción por cantidad y precio { #quantity-and-price-expected }
+
+Una cuenta puede esperar que sus líneas presupuestarias se construyan por cantidad y precio (consulte [Introducción por cantidad y precio](chart-of-accounts.md#quantity-and-price-entry)). Kadratis lee el ajuste en la cuenta de la línea y, si no lo tiene, en su cuenta de consolidación. El ajuste de una cuenta de consolidación se aplica a todas las cuentas vinculadas a ella. No se rechaza nada: una columna introducida de otro modo se guarda igualmente.
+
+En una línea así, la pestaña **Presupuesto**:
+
+- Abre una columna vacía en **Cantidad y precio**
+- Muestra un icono de información junto al título del editor. Pase el cursor por encima para leer qué cuenta la espera, por ejemplo «La cuenta de consolidación 2400 - Servicios informáticos espera una introducción por cantidad y precio.» Sin el derecho de leer las cuentas, la frase dice «La cuenta de consolidación», sin número ni nombre
+- Muestra un punto naranja en la tarjeta de cada columna por verificar, y en la pestaña de cada año que contiene una. Pase el cursor por encima del punto para leer las columnas por verificar. Con una sola columna mostrada, el punto aparece junto al título del editor
+
+Una columna está por verificar cuando se muestra, no está congelada, tiene un total distinto de cero para el año y no está construida a partir de líneas de cantidad y precio. Cuentan todos los años. Una columna repartida, introducida por mes o editada a mano, y una columna que conserva sus líneas solo como referencia están por verificar. Una columna copiada de una columna construida a partir de líneas también está construida a partir de líneas: no está por verificar.
+
+Para encontrar estas líneas, muestre la columna **Control de cantidad y precio** de la lista y fíltrela por **Por verificar**, o haga clic en **Cantidad y precio por verificar** en el mosaico [Calidad de datos](my-dashboard.md#data-hygiene).
 
 #### ETC
 

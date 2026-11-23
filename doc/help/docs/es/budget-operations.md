@@ -71,6 +71,7 @@ Sin el nivel Administrador en la administración presupuestaria, la página mues
 - Rechaza eliminar una línea, o cambiar su tipo, mientras tenga importes en una columna congelada de los años afectados
 - **No** afecta el acceso de lectura: los datos siguen siendo visibles
 - También se aplica a las columnas ocultas. Una columna congelada sigue congelada cuando se oculta, y las importaciones en ella se siguen rechazando
+- Una columna congelada deja de marcarse por verificar cuando la cuenta de la línea espera una introducción por cantidad y precio. Consulte [Cuando la cuenta espera una introducción por cantidad y precio](budget-lines.md#quantity-and-price-expected)
 
 ### Candados en la lista
 

@@ -94,6 +94,7 @@ Das Grid zeigt nur Konten für den ausgewählten Kontenplan.
 - **Beschreibung**: Kontobeschreibung.
 - **Konsol.-Beschreibung**: Konsolidierungs-Kontobeschreibung.
 - **Status**: Ob das Konto aktiviert oder deaktiviert ist.
+- **Erfassung nach Menge und Preis**: **Ja**, wenn das Konto seine Budgetzeilen nach Menge und Preis erwartet. Sein Filter bietet **Ja** und **Nein**. Siehe [Erfassung nach Menge und Preis](#quantity-and-price-entry).
 - **Erstellt**: Zeitstempel der Kontoerstellung.
 
 **Filtern**:
@@ -118,7 +119,7 @@ Klicken Sie auf eine beliebige Zeile im Konten-Grid, um den Konten-Arbeitsbereic
 ### Aufbau
 
 - **Kopfbereich**: Die Kontonummer dient als Referenz (Sie können sie dort kopieren) und der Kontoname als Titel. Klicken Sie auf den Titel, um das Konto umzubenennen. Die Pfeile **Vorheriges Konto** und **Nächstes Konto** führen durch die Konten der Liste, aus der Sie kommen, in derselben Reihenfolge und mit derselben Suche und denselben Filtern. Der Link zurück führt zu **Kontenpläne** und behält Ihre Auswahl bei.
-- **Eigenschaftenbereich** rechts: **Kontenplan**, **Kontonummer**, **Verwendet für** und **Lebenszyklus** (der Statusschalter und das Datum **Ende der Gültigkeit**). Mit der Bereichsschaltfläche klappen Sie ihn ein oder wieder aus. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus).
+- **Eigenschaftenbereich** rechts: **Kontenplan**, **Kontonummer**, **Verwendet für**, **Erfassung nach Menge und Preis** und **Lebenszyklus** (der Statusschalter und das Datum **Ende der Gültigkeit**). Mit der Bereichsschaltfläche klappen Sie ihn ein oder wieder aus. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus).
 - **Hauptspalte**: **Lokaler Name (Landessprache)**, **Beschreibung** und der Abschnitt **Konsolidierung**.
 
 **Änderungen werden automatisch gespeichert.** Jedes Feld wird gespeichert, sobald Sie es verlassen, und es gibt keine Schaltfläche „Speichern". Wird ein Wert abgelehnt, erscheint unter dem Feld eine Meldung. Die **Kontonummer** muss eine ganze Zahl größer als null mit höchstens 15 Ziffern sein.
@@ -140,6 +141,15 @@ Die Kontoauswahl einer OPEX-Zeile zeigt die Konten für OPEX und für beides. Di
 Wenn ein gewählter Wert mit Zeilen in Konflikt steht, die das Konto bereits verwenden, erscheint unter dem Feld ein Hinweis, zum Beispiel „12 CAPEX-Zeilen verwenden dieses Konto. Sie behalten es. Neue CAPEX-Zeilen können es nicht auswählen.“ Klicken Sie auf **Diese Zeilen anzeigen**, um diese Zeilen in der Liste in einem neuen Tab zu öffnen. Der Hinweis bleibt, solange der Konflikt besteht.
 
 Beim Hinzufügen dieser Einstellung hat Kadratis sie für Sie ausgefüllt. Ein Konto, das nur von OPEX-Zeilen verwendet wird, wurde zu **Nur OPEX**, und ein Konto, das nur von CAPEX-Zeilen verwendet wird, zu **Nur CAPEX**. Ein Konto, das von beiden verwendet wird, bleibt **OPEX und CAPEX**. Ein ungenutztes Konto folgt seinem Konsolidierungskonto: Vermögenskonten des IFRS-Konsolidierungskontenplans sind für CAPEX, Betriebsaufwandskonten für OPEX. Administratoren können jedes davon ändern.
+
+### Erfassung nach Menge und Preis { #quantity-and-price-entry }
+
+Kreuzen Sie **Erfassung nach Menge und Preis** im Eigenschaftenbereich an, wenn die Budgetzeilen des Kontos nach Menge und Preis aufgebaut werden sollen. Die Einstellung lehnt nichts ab: Sie markiert die anders erfassten Zeilen, damit Sie sie prüfen können. Siehe [Wenn das Konto eine Erfassung nach Menge und Preis erwartet](budget-lines.md#quantity-and-price-expected).
+
+- Eine Zeile folgt der Einstellung ihres Kontos. Ist sie bei ihrem Konto nicht angekreuzt, folgt die Zeile ihrem Konsolidierungskonto
+- Die Einstellung eines Konsolidierungskontos gilt für alle ihm zugeordneten Konten. Alle folgen ihr: Keines kann ausgenommen werden
+- Ein deaktiviertes Konto mit angekreuzter Einstellung wendet sie weiterhin an
+- Jede Änderung erscheint in der Historie des Kontos
 
 ### Konsolidierungskonto
 
@@ -476,12 +486,12 @@ Die globale `/accounts`-Datei enthält eine `coa_code`-Spalte, um zu identifizie
   - **Importieren**: **Vorlage herunterladen** im Dialog liefert eine Datei nur mit den Kopfzeilen. Beginnen Sie mit der **Vorabprüfung**, um Struktur, Kodierung, Pflichtfelder und Duplikate zu prüfen, und dann **Laden**, um die Einfügungen und Aktualisierungen anzuwenden
   - **Zuordnung**: nach `(coa_code, account_number)` innerhalb Ihres Arbeitsbereichs
   - **Pflichtspalten**: `coa_code` und `account_number`, dazu `account_name` für ein neues Konto. Alle Zeilen einer Datei müssen denselben `coa_code` tragen
-  - **Optionale Spalten**: `native_name`, `description`, die Konsolidierungsspalten, `status`, `nature`. Eine Datei kann sie weglassen: Die Konten, die sie aktualisiert, behalten ihre gespeicherten Werte, und neue Konten erhalten die Standardwerte (leer, enabled, **OPEX und CAPEX**). Bei einem Konto, das die Datei aktualisiert, behält eine leere Zelle den gespeicherten Wert, und `-` leert ihn. `-` kann `coa_code`, `account_number`, `account_name` oder `status` nicht leeren: Die Zeile wird abgelehnt. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing)
-  - Duplikate in der Datei (gleicher coa_code + account_number) werden dedupliziert; erstes Vorkommen gewinnt
+  - **Optionale Spalten**: `native_name`, `description`, die Konsolidierungsspalten, `status`, `nature`, `quantity_price_expected`. Eine Datei kann sie weglassen: Die Konten, die sie aktualisiert, behalten ihre gespeicherten Werte, und neue Konten erhalten die Standardwerte (leer, enabled, **OPEX und CAPEX**). Bei einem Konto, das die Datei aktualisiert, behält eine leere Zelle den gespeicherten Wert, und `-` leert ihn. `-` kann `coa_code`, `account_number`, `account_name` oder `status` nicht leeren: Die Zeile wird abgelehnt. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing)
+  - Eine Datei, die dasselbe Konto zweimal nennt (gleicher `coa_code` und `account_number`), wird vollständig abgelehnt, und nichts wird geschrieben. Die Meldung nennt beide Zeilen
 
 **CSV-Schema** (der Export schreibt das Trennzeichen der Sprache der Oberfläche; hier mit Semikolons dargestellt):
 ```
-coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
+coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected
 ```
 
 ### Konten (Kontenplan-bezogen)
@@ -494,7 +504,7 @@ Von der Kontenpläne-Seite aus sind **Importieren** und **Exportieren** automati
 
 **CSV-Schema** (Kontenplan-bezogen; hier mit Semikolons dargestellt):
 ```
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected
 ```
 
 **Hinweise**:
@@ -503,7 +513,8 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Kontonummern sollten innerhalb eines Kontenplans eindeutig sein
   - `account_number` und `consolidation_account_number`: ganze Zahlen mit höchstens 15 Ziffern. Eine längere Nummer wird für diese Zeile abgelehnt. Führende Nullen entfallen (`06156` wird als `6156` gespeichert): die **Vorabprüfung** führt diese Zeilen als Warnungen auf, und die Datei wird trotzdem geladen
   - Statuswerte: `enabled` oder `disabled` (Standard ist enabled)
-  - `nature` ist die Einstellung **Verwendet für**, immer die letzte Spalte. Werte: `opex`, `capex` oder leer für **OPEX und CAPEX**. Eine Datei ohne diese Spalte lässt die Einstellungen unverändert. Eine leere Zelle behält die Einstellung eines gespeicherten Kontos, und ein neues Konto gilt für **OPEX und CAPEX**. `-` setzt **OPEX und CAPEX**. Jeder andere Wert wird für diese Zeile abgelehnt
+  - `nature` ist die Einstellung **Verwendet für**. Werte: `opex`, `capex` oder leer für **OPEX und CAPEX**. Eine Datei ohne diese Spalte lässt die Einstellungen unverändert. Eine leere Zelle behält die Einstellung eines gespeicherten Kontos, und ein neues Konto gilt für **OPEX und CAPEX**. `-` setzt **OPEX und CAPEX**. Jeder andere Wert wird für diese Zeile abgelehnt
+  - `quantity_price_expected` ist die Einstellung **Erfassung nach Menge und Preis**. Ja, in einer der vier Sprachen (`yes`, `oui`, `ja`, `sí`), kreuzt sie an. Nein oder `-` entfernt sie. Eine leere Zelle behält die Einstellung eines gespeicherten Kontos, und ein neues Konto beginnt ohne sie. Eine Datei ohne diese Spalte lässt die Einstellungen unverändert. Jeder andere Wert wird für diese Zeile abgelehnt. Der Export schreibt Ja in der Sprache der Datei und lässt die Zelle für ein Konto ohne die Einstellung leer
   - Konsolidierungsspalten: Existiert `consolidation_account_number` in Ihrem Konsolidierungskontenplan, ersetzen dessen Name und Beschreibung die Zellen `consolidation_account_name` und `consolidation_account_description`. `-` in der Nummer leert alle drei, und eine leere Nummer behält sie. Siehe [Konsolidierungszuordnungen einrichten](#konsolidierungszuordnungen-einrichten)
 
 ## Tipps

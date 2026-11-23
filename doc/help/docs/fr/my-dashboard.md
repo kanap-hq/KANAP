@@ -295,7 +295,7 @@ Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. **Ouv
 
 Les cinq lignes budgétaires modifiées le plus récemment, OPEX et CAPEX confondues. Chaque ligne du tableau affiche la date de la dernière modification, la référence de la ligne budgétaire, son nom et son type. Cliquez sur une ligne du tableau pour ouvrir la ligne budgétaire.
 
-### Hygiène des données
+### Hygiène des données { #data-hygiene }
 
 Des contrôles qui vous aident à repérer les lignes incomplètes en un coup d'œil. La tuile affiche une colonne de compteurs par type : **OPEX** et **CAPEX** côte à côte. Les compteurs portent sur les lignes que la liste affiche par défaut (**Afficher : Activés**).
 
@@ -305,6 +305,7 @@ Des contrôles qui vous aident à repérer les lignes incomplètes en un coup d'
 - **Sans centre de coûts** : lignes sans centre de coûts
 - **Sans Budget l'an prochain** : lignes dont la colonne par défaut est nulle ou vide pour l'année prochaine. Le contrôle nomme votre colonne par défaut
 - **Compte hors du plan de la société** : lignes dont le compte n'appartient pas au plan comptable de la société payeuse
+- **Quantité et prix à vérifier** : lignes dont le compte attend une saisie en quantité et prix, avec une colonne saisie autrement. Elle n'apparaît que lorsqu'elle compte au moins une ligne. Voir [Quand le compte attend une saisie en quantité et prix](budget-lines.md#quantity-and-price-expected)
 
 Un compteur devient orange (rouge pour le contrôle du plan comptable) lorsqu'il est supérieur à zéro. Cliquez sur un compteur pour ouvrir la liste sur exactement les lignes qu'il compte.
 

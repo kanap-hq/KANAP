@@ -94,6 +94,7 @@ The grid shows accounts for the selected CoA only.
 - **Description**: Account description.
 - **Consol. description**: Consolidation account description.
 - **Status**: Whether the account is enabled or disabled.
+- **Quantity and price entry**: **Yes** when the account expects its budget lines in quantity and price. Its filter offers **Yes** and **No**. See [Quantity and price entry](#quantity-and-price-entry).
 - **Created**: Timestamp when the account was created.
 
 **Filtering**:
@@ -118,7 +119,7 @@ Click any row in the accounts grid to open the account workspace. The **History*
 ### Layout
 
 - **Header**: the account number is the reference (you can copy it from there) and the account name is the title. Click the title to rename the account. **Previous** and **Next** move through the accounts of the list you came from, in the same order, with the same search and filters. The back link returns to **Charts of accounts** with your selection kept.
-- **Properties panel** on the right: **Chart of accounts**, **Account number**, **Used for** and **Lifecycle** (the status switch and the **End of validity** date). Use the panel toggle to collapse it or open it again. See [Status and lifecycle](#status-and-lifecycle).
+- **Properties panel** on the right: **Chart of accounts**, **Account number**, **Used for**, **Quantity and price entry** and **Lifecycle** (the status switch and the **End of validity** date). Use the panel toggle to collapse it or open it again. See [Status and lifecycle](#status-and-lifecycle).
 - **Main column**: **Native name (local language)**, **Description** and the **Consolidation** section.
 
 **Changes save automatically.** Each field saves when you leave it, and there is no Save button. If a value is refused, a message appears under the field. The **Account number** must be a whole number greater than zero, with at most 15 digits.
@@ -140,6 +141,15 @@ The account picker of an OPEX line shows the accounts for OPEX and for both. The
 When you set a value that conflicts with lines already using the account, a note appears under the field, for example "12 CAPEX lines use this account. They keep it. New CAPEX lines cannot choose it." Click **Show these lines** to open those lines in the list, in a new tab. The note stays as long as the conflict exists.
 
 When Kadratis added this setting, it filled it in for you. An account used only by OPEX lines became **OPEX only**, and an account used only by CAPEX lines became **CAPEX only**. An account used by both stays **OPEX and CAPEX**. An unused account follows its consolidation account: asset accounts of the IFRS consolidation chart are for CAPEX and operating expense accounts are for OPEX. Administrators can change any of them.
+
+### Quantity and price entry { #quantity-and-price-entry }
+
+Tick **Quantity and price entry** in the properties panel when the budget lines of the account should be built as quantity and price. The setting refuses nothing: it marks the lines entered another way so that you can check them. See [When the account expects quantity and price](budget-lines.md#quantity-and-price-expected).
+
+- A line follows the setting of its account. When its account is not ticked, it follows its consolidation account
+- Ticking a consolidation account applies to every account attached to it. They all follow it: none can be left out
+- A disabled account that is ticked still applies its setting
+- Each change shows in the account's history
 
 ### Consolidation account
 
@@ -476,12 +486,12 @@ The global `/accounts` file includes a `coa_code` column to identify which CoA e
   - **Import**: **Download template** in the dialog gives a file with the headers only. Start with **Preflight check** to validate the structure, the encoding, the required fields and the duplicates, then **Load** to apply the inserts and the updates
   - **Matching**: by `(coa_code, account_number)` within your workspace
   - **Required columns**: `coa_code` and `account_number`, plus `account_name` for a new account. All rows of one file must carry the same `coa_code`
-  - **Optional columns**: `native_name`, `description`, the consolidation columns, `status`, `nature`. A file can leave them out: the accounts it updates keep their stored values, and new accounts take the defaults (empty, enabled, **OPEX and CAPEX**). On an account the file updates, an empty cell keeps the stored value, and `-` clears it. `-` cannot clear `coa_code`, `account_number`, `account_name` or `status`: the row is refused. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
-  - Duplicates in the file (same coa_code + account_number) are deduplicated; first occurrence wins
+  - **Optional columns**: `native_name`, `description`, the consolidation columns, `status`, `nature`, `quantity_price_expected`. A file can leave them out: the accounts it updates keep their stored values, and new accounts take the defaults (empty, enabled, **OPEX and CAPEX**). On an account the file updates, an empty cell keeps the stored value, and `-` clears it. `-` cannot clear `coa_code`, `account_number`, `account_name` or `status`: the row is refused. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
+  - A file that names the same account twice (same `coa_code` and `account_number`) is refused whole, and nothing is written. The message names both rows
 
 **CSV schema** (the export writes the separator of the screen language; shown here with semicolons):
 ```
-coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
+coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected
 ```
 
 ### Accounts (CoA-scoped)
@@ -494,7 +504,7 @@ From the Charts of Accounts page, **Import** and **Export** are automatically sc
 
 **CSV schema** (CoA-scoped; shown here with semicolons):
 ```
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected
 ```
 
 **Notes**:
@@ -503,7 +513,8 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Account numbers should be unique within a CoA
   - `account_number` and `consolidation_account_number`: whole numbers of at most 15 digits. A longer number is refused for that row. Leading zeros are dropped (`06156` is stored as `6156`): the **Preflight check** lists these rows as warnings, and the file still loads
   - Status values: `enabled` or `disabled` (defaults to enabled)
-  - `nature` is the **Used for** setting, always the last column. Values: `opex`, `capex`, or empty for **OPEX and CAPEX**. A file without this column leaves the settings unchanged. An empty cell keeps the setting of a stored account, and a new account is for **OPEX and CAPEX**. `-` sets **OPEX and CAPEX**. Any other value is refused for that row
+  - `nature` is the **Used for** setting. Values: `opex`, `capex`, or empty for **OPEX and CAPEX**. A file without this column leaves the settings unchanged. An empty cell keeps the setting of a stored account, and a new account is for **OPEX and CAPEX**. `-` sets **OPEX and CAPEX**. Any other value is refused for that row
+  - `quantity_price_expected` is the **Quantity and price entry** setting. Yes, in any of the four languages (`yes`, `oui`, `ja`, `sí`), ticks it. No, or `-`, clears it. An empty cell keeps the setting of a stored account, and a new account starts unticked. A file without this column leaves the settings unchanged. Any other value is refused for that row. The export writes yes in the language of the file, and leaves the cell empty for an account that is not ticked
   - Consolidation columns: when `consolidation_account_number` exists in your consolidation chart, its name and description replace the `consolidation_account_name` and `consolidation_account_description` cells. `-` in the number clears all three, and an empty number keeps them. See [Setting up consolidation mappings](#setting-up-consolidation-mappings)
 
 ## Tips

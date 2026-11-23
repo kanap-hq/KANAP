@@ -120,6 +120,7 @@ Die Liste (unter **Budgetverwaltung > Budgetzeilen**) enthält die OPEX- und CAP
 - **Betragsspalten**: Jede angezeigte Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat. Die Überschrift nennt die Spalte, das Jahr relativ zu heute und das Kalenderjahr, zum Beispiel **Revision J+1 (2027)**. Ausgeblendete Spalten werden nicht angeboten
 - **VZÄ-Spalten**: Die VZÄ jeder angezeigten Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat, in der Spaltenauswahl direkt nach den Betragsspalten. Die Überschrift nennt die Spalte und das Kalenderjahr, zum Beispiel **VZÄ Budget (2026)**. Die VZÄ einer Zeile sind die Summe der VZÄ ihrer Zeilen unter Menge und Preis in dieser Spalte. Siehe [VZÄ](#vza). Die Zelle ist leer, wenn die Spalte keine solchen Zeilen hat
 - **VZÄ gemeldet**: **Ja**, wenn die Zeile in mindestens einer Budgetspalte eines beliebigen Jahres VZÄ meldet, sonst leer. Das sind die Zeilen, die der Filter **Zeilen mit VZÄ** der Berichte behält
+- **Prüfung Menge und Preis**: **Zu prüfen**, wenn das Konto der Zeile eine Erfassung nach Menge und Preis erwartet und eine Spalte der Zeile anders erfasst ist, sonst leer. Siehe [Wenn das Konto eine Erfassung nach Menge und Preis erwartet](#quantity-and-price-expected)
 - **Aktiviert**: Status der Zeile (aktiviert oder deaktiviert)
 - **Beschreibung**: Die Beschreibung der Zeile
 - **Währung**: ISO-Währungscode
@@ -145,7 +146,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 **Filtern**:
 
 - **Schnellsuche**: Durchsucht Referenz (`BL-12` und die früheren `OPX-12` oder `CPX-3`), Produktname, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysewerte, Kostenstelle (Code, Name und Pfad), Budgetverantwortlicher, Notizen, Währung und Status. Filtert die Liste in Echtzeit während der Eingabe, unabhängig von Akzenten und Groß-/Kleinschreibung
-- **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Typ**, **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build** und **VZÄ gemeldet** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl). Der Filter **VZÄ gemeldet** bietet **Ja** und **Nein**. Der Filter **Aktiviert** zeigt die Auswahl von **Anzeigen** (**Alle**, **Aktiv** oder **Deaktiviert**): Eine Änderung an einem ändert auch das andere
+- **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Typ**, **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build**, **VZÄ gemeldet** und **Prüfung Menge und Preis** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl). Der Filter **VZÄ gemeldet** bietet **Ja** und **Nein**. Der Filter **Aktiviert** zeigt die Auswahl von **Anzeigen** (**Alle**, **Aktiv** oder **Deaktiviert**): Eine Änderung an einem ändert auch das andere
 - **Alle außer einigen**: Aktivieren Sie **Alle** und deaktivieren Sie dann die Werte, die Sie ausschließen möchten: Der Filter behält alles außer diesen (die Überschrift zeigt dann zum Beispiel **Alle außer 3**), und ein später angelegter Wert wird automatisch einbezogen
 - **Betragsfilter**: Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Zeilen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen
 - **VZÄ-Filter**: Jede VZÄ-Spalte hat einen Zahlenfilter mit denselben Bedingungen, dazu leer und nicht leer. **Leer** behält die Zeilen, deren Spalte keine Zeilen unter Menge und Preis hat
@@ -181,6 +182,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 - Das Anklicken einer beliebigen Zelle öffnet den Arbeitsbereich auf dem relevantesten Tab:
     - **Ref**, **Produktname**, **Lieferant**, **Zahlendes Unternehmen**, **Konto**, die Dimensionsspalten und andere allgemeine Spalten: Öffnet den Tab **Übersicht**
     - **Betragsspalten** (Budget J, Erwarteter Endwert J, Revision J+1 usw.) und **VZÄ-Spalten**: Öffnet den Tab **Budget**, voreingestellt auf das Jahr der Spalte
+    - **Prüfung Menge und Preis**: Öffnet den Tab **Budget**
     - **Zuordnung**: Öffnet den Tab **Zuordnungen** für das aktuelle Jahr
     - **Aufgabe**: Öffnet den Tab **Übersicht**, in dem sich der Aufgabenbereich befindet
     - **Vertrag**: Öffnet den verknüpften Vertrags-Arbeitsbereich direkt
@@ -523,6 +525,20 @@ Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzuf�
 - Geänderte Arbeitstage eines Kalenders: Der Tab **Menge und Preis** zeigt zum Beispiel „Seit der letzten Berechnung geänderte Arbeitstage: März: 20 Tage, jetzt 19.“, gefolgt von **Die Zeilen wieder verwenden**. An der Spalte ändert sich nichts, bis Sie auf **Die Zeilen wieder verwenden** klicken. Die Zeilen bleiben bis dahin bearbeitbar
 - **Budgetspalte zurücksetzen** in der Budgetadministration entfernt die Zeilen zusammen mit den Beträgen. Siehe [Budgetspalte zurücksetzen](budget-operations.md#budgetspalte-zurucksetzen)
 - Eine Budgetdatei ändert die Monate einer Spalte und lässt ihre Zeilen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md)
+
+#### Wenn das Konto eine Erfassung nach Menge und Preis erwartet { #quantity-and-price-expected }
+
+Ein Konto kann erwarten, dass seine Budgetzeilen nach Menge und Preis aufgebaut werden (siehe [Erfassung nach Menge und Preis](chart-of-accounts.md#quantity-and-price-entry)). Kadratis liest die Einstellung am Konto der Zeile, sonst an seinem Konsolidierungskonto. Die Einstellung eines Konsolidierungskontos gilt für alle ihm zugeordneten Konten. Nichts wird abgelehnt: Eine anders erfasste Spalte wird trotzdem gespeichert.
+
+Auf einer solchen Zeile gilt im Tab **Budget**:
+
+- Eine leere Spalte öffnet sich auf **Menge und Preis**
+- Neben dem Titel des Editors steht ein Infosymbol. Fahren Sie mit der Maus darüber, um zu lesen, welches Konto sie erwartet, zum Beispiel „Das Konsolidierungskonto 2400 - IT-Dienstleistungen erwartet eine Erfassung nach Menge und Preis.“ Ohne das Recht, Konten zu lesen, sagt der Satz „Das Konsolidierungskonto“, ohne Nummer und Namen
+- Ein orangefarbener Punkt steht auf der Karte jeder zu prüfenden Spalte und auf dem Tab jedes Jahres, das eine enthält. Fahren Sie mit der Maus über den Punkt, um die zu prüfenden Spalten zu lesen. Bei einer einzigen angezeigten Spalte steht der Punkt neben dem Titel des Editors
+
+Eine Spalte ist zu prüfen, wenn sie angezeigt wird, nicht eingefroren ist, für das Jahr eine Summe ungleich null hat und nicht aus Zeilen nach Menge und Preis aufgebaut ist. Jedes Jahr zählt. Eine verteilte, monatlich erfasste oder von Hand geänderte Spalte und eine Spalte, die ihre Zeilen nur als Referenz behält, sind zu prüfen. Eine Spalte, die aus einer aus Zeilen aufgebauten Spalte kopiert wurde, ist ebenfalls aus Zeilen aufgebaut: Sie ist nicht zu prüfen.
+
+Um diese Zeilen zu finden, blenden Sie die Spalte **Prüfung Menge und Preis** der Liste ein und filtern Sie sie auf **Zu prüfen**, oder klicken Sie in der Kachel [Datenqualität](my-dashboard.md#data-hygiene) auf **Menge und Preis zu prüfen**.
 
 #### VZÄ
 

@@ -295,7 +295,7 @@ Wählen Sie den Typ mit den Tabs **Alle** / **OPEX** / **CAPEX**. **Öffnen** ö
 
 Die fünf zuletzt bearbeiteten Budgetzeilen, OPEX und CAPEX zusammen. Jede Zeile zeigt das Datum der letzten Bearbeitung, die Referenz der Zeile, ihren Namen und ihren Typ. Klicken Sie auf eine Zeile, um die Budgetzeile zu öffnen.
 
-### Datenqualität
+### Datenqualität { #data-hygiene }
 
 Prüfungen, die Ihnen helfen, unvollständige Zeilen auf einen Blick zu erkennen. Die Kachel zeigt eine Spalte mit Zählern pro Typ: **OPEX** und **CAPEX** nebeneinander. Die Zähler umfassen die Zeilen, die die Liste standardmäßig zeigt (**Anzeigen: Aktiv**).
 
@@ -305,6 +305,7 @@ Prüfungen, die Ihnen helfen, unvollständige Zeilen auf einen Blick zu erkennen
 - **Ohne Kostenstelle**: Zeilen ohne Kostenstelle
 - **Ohne Budget im nächsten Jahr**: Zeilen, deren Standardspalte für das nächste Jahr null oder leer ist. Die Prüfung nennt Ihre Standardspalte
 - **Konto nicht im Kontenplan des Unternehmens**: Zeilen, deren Konto nicht zum Kontenplan des zahlenden Unternehmens gehört
+- **Menge und Preis zu prüfen**: Zeilen, deren Konto eine Erfassung nach Menge und Preis erwartet, mit einer anders erfassten Spalte. Diese Prüfung erscheint nur, wenn sie mindestens eine Zeile zählt. Siehe [Wenn das Konto eine Erfassung nach Menge und Preis erwartet](budget-lines.md#quantity-and-price-expected)
 
 Ein Zähler wird orange (rot bei der Kontenplan-Prüfung), wenn er über null liegt. Klicken Sie auf einen Zähler, um die Liste genau mit den Zeilen zu öffnen, die er zählt.
 

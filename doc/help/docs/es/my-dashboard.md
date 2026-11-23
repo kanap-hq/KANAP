@@ -295,7 +295,7 @@ Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. **Abrir**
 
 Las cinco líneas presupuestarias modificadas más recientemente, OPEX y CAPEX juntas. Cada fila muestra la fecha de la última modificación, la referencia de la línea, su nombre y su tipo. Haga clic en una fila para abrir la línea.
 
-### Calidad de datos
+### Calidad de datos { #data-hygiene }
 
 Controles que le ayudan a detectar líneas incompletas de un vistazo. El mosaico muestra una columna de recuentos por tipo: **OPEX** y **CAPEX** una junto a la otra. Los recuentos cubren las líneas que la lista muestra por defecto (**Mostrar: Activos**).
 
@@ -305,6 +305,7 @@ Controles que le ayudan a detectar líneas incompletas de un vistazo. El mosaico
 - **Sin centro de coste**: líneas sin centro de coste
 - **Sin Presupuesto para el próximo año**: líneas cuya columna por defecto es cero o está vacía para el próximo año. El control nombra su columna por defecto
 - **Cuenta fuera del plan de la empresa**: líneas cuya cuenta no pertenece al plan de cuentas de la empresa pagadora
+- **Cantidad y precio por verificar**: líneas cuya cuenta espera una introducción por cantidad y precio, con una columna introducida de otro modo. Solo aparece cuando cuenta al menos una línea. Consulte [Cuando la cuenta espera una introducción por cantidad y precio](budget-lines.md#quantity-and-price-expected)
 
 Un recuento se vuelve naranja (rojo para el control del plan de cuentas) cuando es superior a cero. Haga clic en un recuento para abrir la lista exactamente en las líneas que cuenta.
 
