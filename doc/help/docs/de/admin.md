@@ -269,6 +269,8 @@ In einem Arbeitsbereich, in dem [Microsoft Entra ID](#microsoft-entra-id) verbun
 
 Das Konto zeigt **Eingeladen** bis zur ersten Anmeldung der Person. Ein Link zum Zurücksetzen des Passworts, gesendet über **Passwort-Zurücksetzung senden** oder von der Anmeldeseite, bleibt 1 Stunde gültig.
 
+Es gilt immer nur ein Zugang: Eine Einladung **Mit Microsoft** macht die Passwort-Links ungültig, die der Person zuvor gesendet wurden, sowohl den Link einer Einladung mit Passwort als auch einen Link zum Zurücksetzen des Passworts. Ein ungültig gewordener Link wird abgelehnt, wie ein abgelaufener.
+
 ### Mehrfach-Rollenzuweisung
 
 Benutzern können mehrere Rollen zugewiesen werden. Ihre effektiven Berechtigungen sind die Kombination aller zugewiesenen Rollen: wenn eine Rolle Zugriff auf eine Ressource gewährt, hat der Benutzer diesen Zugriff.
