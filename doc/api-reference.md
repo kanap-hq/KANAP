@@ -461,6 +461,7 @@ Notes
 - GET `/accounts/:id` → detail, with `consolidation_status` and `line_counts: { opex, capex }` (the OPEX and CAPEX lines, all statuses, that use the account)
 - DELETE `/accounts/:id` (and `DELETE /accounts/bulk`): an account used by budget lines of either nature is refused, 409 `Cannot delete account "6000 - Licences": 2 OPEX item(s) reference this account; 1 CAPEX item(s) reference this account. Please disable instead or remove references first.` (in `failed[].reason` for the bulk delete)
 - Accounts carry `nature` (`opex`, `capex` or null for both) on list, detail, POST and PATCH (`null` clears it, absent leaves it unchanged); the list filter on `nature` is a set filter where a blank value means null. A line write that creates a line or changes its account to an account of the other type is a 400: `This account is for CAPEX lines only. Choose an account for OPEX lines.` (swapped for the other side)
+- Accounts carry `quantity_price_expected`: `true` when the budget lines of the account are expected to be entered as quantity and price, `null` otherwise (never `false`: POST, PATCH and the CSV import store `false` as `null`). A local account without it takes it from its consolidation account; the budget lines read it through `entry_check` (see [Quantity and price entry check](#quantity-and-price-entry-check)). The list filter on it is a set filter where `true` keeps the accounts that set it and any other value the others
 - POST `/accounts`, PATCH `/accounts/:id` and the CSV imports derive `consolidation_account_name` and `consolidation_account_description` from the consolidation chart's account of the given number; without a match (or without a consolidation chart) the values sent are kept, and a new number drops the name and description not sent with it; a null or empty number clears both. When an account of the consolidation chart is created, renamed, described or renumbered, or an account joins the consolidation chart (`coa_id`), every account mapped to its old or new number follows it (number, name, description) in the same transaction, one audit line per account. An account that leaves the consolidation chart takes nobody along (the accounts mapped to it become `outside`).
 - GET `/accounts/export?scope=template|data&coaId=...&language=…`
   - Global export includes `coa_code`; when `coaId` is provided, export is scoped
@@ -470,14 +471,15 @@ Notes
 
 CSV schema (Global):
 ```
-coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature
+coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected
 ```
 Validation/behavior:
 - `account_number`: required, a whole number from 1 to 15 digits (`bigint`). A longer one is a row error with `code: CSV_ACCOUNT_NUMBER_TOO_LONG`; leading zeros are dropped and listed in `warnings: [{ row, column, code: CSV_ACCOUNT_NUMBER_LEADING_ZEROS, params: { value, stored }, message }]`
 - `account_name`: required (English UI label)
 - `native_name`: optional (local-language label); exported and visible in UI tooltip
 - `consolidation_*`: optional; the number follows the `account_number` rules when present
-- `nature`: optional last column, `opex`, `capex` or empty (both). An absent column leaves the stored natures unchanged; another value is a row error
+- `nature`: optional, `opex`, `capex` or empty (both). An absent column leaves the stored natures unchanged; another value is a row error
+- `quantity_price_expected`: optional last column, yes or no in any of the four languages (the export writes yes in the file's language, or leaves the cell empty); no, `-` or empty clears it; another value is a row error with `code: CSV_BOOLEAN_INVALID`
 - Every column but `coa_code` (without `coaId`), `account_number` and `account_name` may be absent from the header: an update keeps the stored values of an absent column, a new account takes the defaults (empty, `enabled`, both natures)
 - Deduplicates by `(account_number, target CoA)`; classifies rows as insert/update in the target CoA; supports `dryRun` preflight
 
@@ -1263,6 +1265,20 @@ tenant without scoped access. The rows keep the `/users/lookup` columns and orde
 is `400`. The owner pickers of a line use this list as their first group and still offer every
 enabled person. The line's paying company is not part of this rule: a person who reads the line
 through it is not proposed unless they also read the centre.
+
+## Quantity and price entry check
+
+An account that sets `quantity_price_expected` expects its budget lines to be entered as quantity × price. A local account without the setting takes it from its consolidation account: the account of the tenant's consolidation chart whose number is the account's `consolidation_account_number`. Nothing is stored on the line and no write is refused: the check is computed when it is read (`spend/budget-line-entry-check.ts`), starting from the accounts that set it.
+
+A column of an expected line is looked at when it is shown in the [budget columns settings](#budget-columns-tenant-settings), its net total for the year is not zero, and that column of that nature and year is not frozen; every year the line has a version, up to the year of its end of validity. Such a column is to check unless it is built as quantity × price: its round is `computed` from the lines it still holds. A copy of such a column keeps its lines and is computed again for the destination year, so it conforms. A column spread from a yearly amount or from quarters, entered by month, imported without lines, or copied from a column that was not built from lines (or kept without being computed again because its calendar has no working days that year) is to check.
+
+| Route | Required access | Response |
+|---|---|---|
+| GET `/budget-lines/:id/entry-check` | `budget:reader` | `{ id, reference, expected, level, consolidation_account, columns, to_check }` |
+
+`:id` is a UUID or any reference the line resolver accepts. The line is read with the caller's data access: a line the caller cannot read is `404`, as a missing one. `expected` is true when the line's account or its consolidation account sets it; `level` is `account`, `consolidation` or `null`; `consolidation_account` is `{ number, name }` when `level` is `consolidation` and the caller reads the accounts (`accounts:reader` or Administrator), `null` otherwise; `columns` lists the columns to check as `{ year, measure }` (`planned`, `committed`, `forecast`, `actual` or `expected_landing`), by year then in the columns' order; `to_check` is true when `columns` is not empty.
+
+The budget lists (`/budget-lines/summary*`, `/spend-items/summary*`, `/capex-items/summary*`) read the same rule as the field `entry_check`: `to_check` or `null`. It is a field of the rows (grid shape included), a set filter (`{ "entry_check": { "filterType": "set", "values": ["to_check"] } }`, `null` for the other lines), a sort, a group of the aggregate and a field of the filter values. It is read whatever the caller's right on the accounts: it names no account. `POST /budget-lines/summary/aggregate` with that filter and `groupBy: []` counts the lines to check in one statement. The assistant and the MCP server read it as the `budget_lines` field `entry_check`, and the detail of a line holds the route's answer under `quantity_price_entry`, with `consolidation_account_withheld` (the reason, in words) when the level is `consolidation` and the person does not read the accounts.
 
 ## Budget line relations
 
