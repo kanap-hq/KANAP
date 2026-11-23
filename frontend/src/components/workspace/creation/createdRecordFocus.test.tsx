@@ -216,6 +216,7 @@ function Where() {
       <div data-testid="where">{useLocation().pathname}</div>
       {/* A link elsewhere in the application to a record that exists. */}
       <button type="button" onClick={() => navigate(`/things/${ID}`)}>open the record</button>
+      <button type="button" onClick={() => navigate('/things')}>back to the list</button>
     </>
   );
 }
@@ -510,5 +511,16 @@ describe('what the person does while the record is written', () => {
     await write.answer();
     await onRecord();
     await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+  });
+
+  it('lets the keys go once the person left the page while the record was written', async () => {
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post });
+    fireEvent.keyDown(typeTitle('Billing'), { key: 'Enter' });
+    expect(fireEvent.keyDown(document.body, { key: 'a' })).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'back to the list' }));
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/things$/));
+    expect(fireEvent.keyDown(document.body, { key: 'Tab' })).toBe(true);
+    await write.answer();
   });
 });
