@@ -1844,15 +1844,16 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
 
   const parked = parkedPanelRef.current;
 
-  // The quantity and price check: which account expects it (the editor's mark), and the columns to
-  // check as the server last listed them, a column frozen since left out on the year shown.
+  // The quantity and price check: which account expects it (the icon beside the editor's title, the
+  // reason said once), and the columns to check as the server last listed them, a column frozen since
+  // left out on the year shown: the dots of the cards and the years name the column or the year only.
   const entryExpected = entryCheck ? entryExpectedText(t, entryCheck) : null;
   const entryColumns = entryCheck
     ? entryCheck.columns.filter((c) => (c.year !== year || !isFrozen(c.measure)) && shown.some((s) => s.measure === c.measure))
     : [];
   const entryColumnText = (col: AmountCol): string | null => (
     entryExpected && entryColumns.some((c) => c.year === year && c.measure === col)
-      ? t('budgetTab.entryCheck.column', { column: labelFor(col), year, reason: entryExpected })
+      ? t('budgetTab.entryCheck.column', { column: labelFor(col), year })
       : null
   );
   const entryYearMarks: Record<number, string> = {};
@@ -1860,7 +1861,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     const years = [...new Set(entryColumns.map((c) => c.year))];
     for (const y of years) {
       const columns = ALL_COLS.filter((col) => entryColumns.some((c) => c.year === y && c.measure === col)).map(labelFor);
-      entryYearMarks[y] = t('budgetTab.entryCheck.year', { year: y, columns: namesInSentence(locale, columns), reason: entryExpected });
+      entryYearMarks[y] = t('budgetTab.entryCheck.year', { year: y, columns: namesInSentence(locale, columns) });
     }
   }
 

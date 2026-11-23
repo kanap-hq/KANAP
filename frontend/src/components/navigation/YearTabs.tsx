@@ -10,7 +10,7 @@ interface YearTabsProps {
   availableYears?: number[];
   onYearChange: (year: number) => void;
   disabled?: boolean;
-  /** An orange dot on the years that hold something to check, with its text in a tooltip and as its accessible name. */
+  /** An orange dot on the years that hold something to check, its text in a tooltip and as the tab's description (the tab's name stays the year). */
   marks?: Partial<Record<number, string>>;
 }
 
@@ -22,6 +22,7 @@ export default function YearTabs({
   marks,
 }: YearTabsProps) {
   const { t } = useTranslation('common');
+  const markId = React.useId();
   // Generate years around current year if no availableYears provided. The current year is always one
   // of them: a page opened on a year outside the list still shows it selected.
   const allYears = availableYears.length > 0
@@ -107,17 +108,22 @@ export default function YearTabs({
               label={mark ? (
                 <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                   {year}
-                  <Tooltip title={mark}>
-                    <Box component="span" role="img" aria-label={mark} data-testid={`year-mark-${year}`} sx={attentionDotSx} />
+                  <Tooltip title={mark} describeChild>
+                    <Box component="span" aria-hidden data-testid={`year-mark-${year}`} sx={attentionDotSx} />
                   </Tooltip>
                 </Box>
               ) : year.toString()}
+              aria-describedby={mark ? `${markId}-${year}` : undefined}
               value={year}
               disabled={disabled}
             />
           );
         })}
       </Tabs>
+      {/* The marks as the tabs' descriptions: read by a screen reader with the tab, never part of its name. */}
+      {visibleYears.filter((year) => marks?.[year]).map((year) => (
+        <Box key={year} component="span" id={`${markId}-${year}`} hidden>{marks?.[year]}</Box>
+      ))}
 
       <IconButton
         onClick={handleNextYear}

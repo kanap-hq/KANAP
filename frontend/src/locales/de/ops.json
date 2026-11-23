@@ -1793,8 +1793,8 @@
       "account": "Das Konto der Zeile erwartet eine Erfassung nach Menge und Preis.",
       "consolidationNamed": "Das Konsolidierungskonto {{account}} erwartet eine Erfassung nach Menge und Preis.",
       "consolidation": "Das Konsolidierungskonto erwartet eine Erfassung nach Menge und Preis.",
-      "column": "{{column}} {{year}} zu prüfen. {{reason}}",
-      "year": "Zu prüfen in {{year}}: {{columns}}. {{reason}}"
+      "column": "{{column}} {{year}} zu prüfen.",
+      "year": "Zu prüfen in {{year}}: {{columns}}."
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "Aufbau der Spalte",

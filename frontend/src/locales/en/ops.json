@@ -1793,8 +1793,8 @@
       "account": "The line's account expects an entry in quantity and price.",
       "consolidationNamed": "The consolidation account {{account}} expects an entry in quantity and price.",
       "consolidation": "The consolidation account expects an entry in quantity and price.",
-      "column": "{{column}} {{year}} to check. {{reason}}",
-      "year": "To check in {{year}}: {{columns}}. {{reason}}"
+      "column": "{{column}} {{year}} to check.",
+      "year": "To check in {{year}}: {{columns}}."
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "How the column is built",

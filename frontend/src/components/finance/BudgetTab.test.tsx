@@ -3452,13 +3452,17 @@ describe('BudgetTab: the account expects quantity and price (lot B12a)', () => {
       entryCheck: expected([{ year: YEAR, measure: 'planned' }, { year: YEAR, measure: 'forecast' }, { year: YEAR + 1, measure: 'committed' }]),
     });
     await waitForAmounts();
-    const planned = within(card('planned')).getByRole('img', { name: `${label('planned')} ${YEAR} to check. ${ACCOUNT}` });
+    // The reason once, on the icon beside the title; the dots say the column or the year only.
+    const planned = within(card('planned')).getByRole('img', { name: `${label('planned')} ${YEAR} to check.` });
     expect(planned).toHaveAttribute('data-testid', 'entry-check-planned');
     expect(within(card('forecast')).getByTestId('entry-check-forecast')).toBeInTheDocument();
     // A column of another year is marked on that year only.
     expect(within(card('committed')).queryByTestId('entry-check-committed')).not.toBeInTheDocument();
-    expect(screen.getByTestId(`year-mark-${YEAR}`)).toHaveAccessibleName(`To check in ${YEAR}: ${label('planned')} and ${label('forecast')}. ${ACCOUNT}`);
-    expect(screen.getByTestId(`year-mark-${YEAR + 1}`)).toHaveAccessibleName(`To check in ${YEAR + 1}: ${label('committed')}. ${ACCOUNT}`);
+    expect(within(editor()).getByRole('img', { name: ACCOUNT })).toBeInTheDocument();
+    // A year tab keeps the year as its name, the columns to check as its description.
+    expect(screen.getByTestId(`year-mark-${YEAR}`)).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: String(YEAR) })).toHaveAccessibleDescription(`To check in ${YEAR}: ${label('planned')} and ${label('forecast')}.`);
+    expect(screen.getByRole('tab', { name: String(YEAR + 1) })).toHaveAccessibleDescription(`To check in ${YEAR + 1}: ${label('committed')}.`);
     // Read again after a save: the column built as quantity and price leaves the list, its mark goes.
     view.rerenderEntryCheck(expected([{ year: YEAR, measure: 'forecast' }]));
     expect(within(card('planned')).queryByTestId('entry-check-planned')).not.toBeInTheDocument();

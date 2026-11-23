@@ -1794,8 +1794,8 @@
       "account": "Le compte de la ligne attend une saisie en quantité et prix.",
       "consolidationNamed": "Le compte de consolidation {{account}} attend une saisie en quantité et prix.",
       "consolidation": "Le compte de consolidation attend une saisie en quantité et prix.",
-      "column": "{{column}} {{year}} à vérifier. {{reason}}",
-      "year": "À vérifier en {{year}} : {{columns}}. {{reason}}"
+      "column": "{{column}} {{year}} à vérifier.",
+      "year": "À vérifier en {{year}} : {{columns}}."
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "Construction de la colonne",
