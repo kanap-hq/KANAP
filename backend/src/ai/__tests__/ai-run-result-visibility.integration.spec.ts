@@ -406,8 +406,11 @@ async function testOtherPeoplesRunsShowTheirLineWithoutTheResult(s: Seed) {
           continue;
         }
         assert.equal(hasResult, false, `${path.name} gave the result of the ${run} run: ${text.slice(0, 400)}`);
-        for (const value of Object.values(RESULTS[run][0])) {
-          assert.equal(text.includes(JSON.stringify(value)), false, `${path.name} gave ${JSON.stringify(value)} of the ${run} run`);
+        // JSON.stringify writes a number as its digits alone (`4200`). Those digits also occur
+        // inside a uuid, so the match is the key and the value, the way the result itself is written.
+        for (const [key, value] of Object.entries(RESULTS[run][0])) {
+          const needle = typeof value === 'number' ? `"${key}":${JSON.stringify(value)}` : JSON.stringify(value);
+          assert.equal(text.includes(needle), false, `${path.name} gave ${JSON.stringify(value)} of the ${run} run`);
         }
         // The line stays: the run, its author, the tool.
         assert.ok(text.includes(s.runs[run]), `${path.name} lost the line of the ${run} run`);
