@@ -317,6 +317,7 @@
         "manual_department": "Manual por departamento",
         "turnover": "Facturación"
       },
+      "allocationsRemoved": "Eliminadas",
       "classificationReview": {
         "reviewed": "Revisada",
         "stale": "Desactualizada tras este cambio"

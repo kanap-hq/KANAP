@@ -78,6 +78,8 @@ const VALUE_RULES: ValueRule[] = [
   { fields: ['users_mode'], key: (code) => `ai:previewCard.values.usersMode.${code}` },
   { fields: ['input_grain'], key: (code) => `ai:previewCard.values.inputGrain.${code}` },
   { fields: ['allocation_method', 'allocation_driver'], key: (code) => `ai:previewCard.values.allocationMethod.${code}` },
+  // A version leaving a manual split: the stored split the card removes.
+  { tools: new Set(['write_financial_plan']), fields: ['allocations'], key: (code) => (code === 'removed' ? 'ai:previewCard.values.allocationsRemoved' : '') },
   { fields: ['status'], key: (code) => `common:statuses.${code}` },
 ];
 

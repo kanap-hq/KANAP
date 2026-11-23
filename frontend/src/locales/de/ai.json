@@ -317,6 +317,7 @@
         "manual_department": "Manuell nach Abteilung",
         "turnover": "Umsatz"
       },
+      "allocationsRemoved": "Entfernt",
       "classificationReview": {
         "reviewed": "Geprüft",
         "stale": "Nach dieser Änderung veraltet"

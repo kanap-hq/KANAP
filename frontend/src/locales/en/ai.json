@@ -317,6 +317,7 @@
         "manual_department": "Manual by department",
         "turnover": "Turnover"
       },
+      "allocationsRemoved": "Removed",
       "classificationReview": {
         "reviewed": "Reviewed",
         "stale": "Stale after this change"

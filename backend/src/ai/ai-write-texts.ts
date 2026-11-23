@@ -74,6 +74,18 @@ const WRITE_PREVIEW_MISSING: Texts = {
   es: 'No he podido preparar este cambio para su aprobación. No se ha modificado nada.',
 };
 
+/** A version leaving a manual split for an automatic method: its card removes the stored split itself. */
+const MANUAL_ALLOCATION_REMOVED: Texts = {
+  en: 'Approving this card also removes the stored manual allocation. No other step is needed.',
+  fr: "Approuver cette carte supprime aussi la ventilation manuelle enregistrée. Aucune autre étape n'est nécessaire.",
+  de: 'Mit der Genehmigung dieser Karte wird auch die gespeicherte manuelle Zuordnung entfernt. Kein weiterer Schritt ist nötig.',
+  es: 'Aprobar esta tarjeta también elimina la asignación manual guardada. No hace falta ningún otro paso.',
+};
+
+export function manualAllocationRemovedText(language: AiWriteLanguage): string {
+  return MANUAL_ALLOCATION_REMOVED[language];
+}
+
 export function bulkPreviewsIncompleteText(language: AiWriteLanguage): string {
   return BULK_PREVIEWS_INCOMPLETE[language];
 }

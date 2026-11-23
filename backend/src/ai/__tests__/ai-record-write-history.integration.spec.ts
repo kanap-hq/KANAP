@@ -390,6 +390,8 @@ type SequenceCase = {
     kad: ((s: Seed, lineId: string) => { tool: string; input: Record<string, unknown> }) | { undo: number };
     /** The same gesture on the screen. */
     screen: (h: Harness, runner: QueryRunner, s: Seed, lineId: string) => Promise<void>;
+    /** What the pending card shows (and the model reads). */
+    preview?: (preview: any) => void;
   }>;
   /** What the suite must leave as the screen leaves it. */
   state: (runner: QueryRunner, s: Seed, lineId: string) => Promise<unknown>;
@@ -453,6 +455,12 @@ const allocationsTab = (nature: 'opex' | 'capex', method: string, rows: (s: Seed
   async (h: Harness, runner: QueryRunner, s: Seed, lineId: string) => {
     await h.services.allocations[nature].put(await versionOf(runner, s, lineId), { method, rows: rows(s), base_signature: null }, s.userId, screenOpts(runner, s));
   };
+/** A card that leaves a manual split for an automatic method names the split it removes, and says no other step is needed. */
+const removesTheSplit = (preview: any) => {
+  assert.deepEqual(preview.changes.allocations, { label: 'Allocations', from: 'History company, Second company', to: 'removed', format: 'text' },
+    'the card shows the manual split it removes');
+  assert.match(preview.summary, /also removes the stored manual allocation\. No other step is needed\./, 'the card says no other step is needed');
+};
 const twoCompanies = (s: Seed) => [{ company_id: s.companyId, department_id: null }, { company_id: s.secondCompanyId, department_id: null }];
 const budgetTab = (payload: Record<string, unknown>) => async (h: Harness, runner: QueryRunner, s: Seed, lineId: string) => {
   await h.services.amounts.opex.bulkUpsert(await versionOf(runner, s, lineId), payload, s.userId, { manager: runner.manager });
@@ -480,7 +488,7 @@ const SEQUENCES: SequenceCase[] = [
     steps: [
       { kad: (_s, id) => financialCard(id, { action: 'update_version', fields: { allocation_method: 'manual_company' } }), screen: allocationsTab(nature, 'manual_company', () => []) },
       { kad: (s, id) => financialCard(id, { action: 'replace_allocations', allocations: [s.companyId, s.secondCompanyId] }), screen: allocationsTab(nature, 'manual_company', twoCompanies) },
-      { kad: { undo: 0 }, screen: allocationsTab(nature, 'default', () => []) },
+      { kad: { undo: 0 }, screen: allocationsTab(nature, 'default', () => []), preview: removesTheSplit },
     ],
     state: allocationState,
   })),
@@ -493,7 +501,17 @@ const SEQUENCES: SequenceCase[] = [
     steps: [
       { kad: (_s, id) => financialCard(id, { action: 'update_version', fields: { allocation_method: 'manual_company' } }), screen: allocationsTab('opex', 'manual_company', () => []) },
       { kad: (s, id) => financialCard(id, { action: 'replace_allocations', allocations: [s.companyId, s.secondCompanyId] }), screen: allocationsTab('opex', 'manual_company', twoCompanies) },
-      { kad: (_s, id) => financialCard(id, { action: 'update_version', fields: { allocation_method: 'default' } }), screen: allocationsTab('opex', 'default', () => []) },
+      { kad: (_s, id) => financialCard(id, { action: 'update_version', fields: { allocation_method: 'default' } }), screen: allocationsTab('opex', 'default', () => []), preview: removesTheSplit },
+    ],
+    state: allocationState,
+  },
+  // A manual method set by Kad and undone before any company was picked: nothing to remove, and the card says nothing of it.
+  {
+    name: 'budget_lines: manual method undone before any split',
+    prepare: (h, runner, s) => lineWithVersion(h, runner, s),
+    steps: [
+      { kad: (_s, id) => financialCard(id, { action: 'update_version', fields: { allocation_method: 'manual_company' } }), screen: allocationsTab('opex', 'manual_company', () => []) },
+      { kad: { undo: 0 }, screen: allocationsTab('opex', 'default', () => []) },
     ],
     state: allocationState,
   },
@@ -842,6 +860,8 @@ async function runSequence(harness: Harness, entry: SequenceCase) {
         preview = await harness.previews.createReversePreview(ctx, previewIds[step.kad.undo]);
       }
       assert.equal(preview.status, 'pending', `${at}: ${JSON.stringify(preview)}`);
+      step.preview?.(preview);
+      if (!step.preview) assert.equal(preview.changes.allocations?.to === 'removed', false, `${at}: the card removes no manual split`);
       previewIds.push(preview.preview_id);
       const rows = await rowsWrittenBy(runner, s, async () => {
         const executed = await harness.previews.executePreview(ctx, preview.preview_id) as any;
@@ -867,6 +887,34 @@ async function runSequence(harness: Harness, entry: SequenceCase) {
   }
 }
 
+/**
+ * An empty split under a manual method (what undoing a first split by company prepares) is refused
+ * with the way out: an automatic method removes the stored split, with nothing else to do.
+ */
+async function emptyManualSplitRefusal(harness: Harness) {
+  const runner = harness.dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    const s = await seed(runner);
+    const ctx = context(s, runner, randomUUID());
+    const lineId = await lineWithVersion(harness, runner, s, 'opex', { allocation_method: 'manual_company' });
+    let message = '';
+    try {
+      const answer = await harness.tools.execute(ctx, 'write_financial_plan', financialCard(lineId, { action: 'replace_allocations', allocations: [] }).input) as any;
+      message = String(answer?.error ?? answer?.message ?? JSON.stringify(answer));
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    assert.match(message, /require at least one allocation entry\. To remove a manual allocation, set the version to an automatic allocation method with update_version/,
+      `an empty manual split says how to remove the split (got: ${message})`);
+    assert.match(message, /no other step is needed/, 'the refusal says no other step is needed');
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -885,7 +933,12 @@ async function run() {
         failures.push(`${entry.name}: ${(error as Error).message}`);
       }
     }
-    const total = CASES.length + SEQUENCES.length;
+    try {
+      await emptyManualSplitRefusal(harness);
+    } catch (error) {
+      failures.push(`budget_lines: empty manual split refused: ${(error as Error).message}`);
+    }
+    const total = CASES.length + SEQUENCES.length + 1;
     if (failures.length) throw new Error(`${failures.length} of ${total} cases failed:\n${failures.join('\n\n')}`);
     console.log(`ai-record-write-history.integration.spec.ts passed (${total} cases)`);
   } finally {

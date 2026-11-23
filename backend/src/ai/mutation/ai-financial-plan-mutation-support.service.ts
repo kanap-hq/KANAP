@@ -20,7 +20,7 @@ import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
-import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
+import { AiWriteLanguage, manualAllocationRemovedText, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 
 export const AI_FINANCIAL_PLAN_ENTITY_TYPES = ['budget_lines'] as const;
 export type AiFinancialPlanEntityType = typeof AI_FINANCIAL_PLAN_ENTITY_TYPES[number];
@@ -122,6 +122,8 @@ const ALLOCATION_METHODS = ['default', 'headcount', 'it_users', 'turnover', 'man
 const ALLOCATION_DRIVERS = ['headcount', 'it_users', 'turnover'] as const;
 /** The methods whose split is the companies or departments picked by hand. */
 const MANUAL_SELECTION_METHODS: ReadonlySet<string> = new Set(['manual_company', 'manual_department']);
+/** Every method whose split is stored rows, which an automatic method drops. */
+const MANUAL_METHODS: ReadonlySet<string> = new Set([...MANUAL_SELECTION_METHODS, 'manual_pct']);
 
 const VERSION_FIELD_CONFIG: Record<string, {
   label: string;
@@ -426,7 +428,7 @@ export class AiFinancialPlanMutationSupportService {
 
     const version = await this.resolveVersion(context, item, input.version_ref);
     if (action === 'update_version') {
-      return this.prepareUpdateVersionPreview(item, version, input.fields, null);
+      return this.withManualAllocationRemoval(context, version, this.prepareUpdateVersionPreview(item, version, input.fields, null));
     }
     if (action === 'upsert_amounts') {
       const amounts = this.normalizeAmountPayload(input.amounts);
@@ -521,7 +523,7 @@ export class AiFinancialPlanMutationSupportService {
       if (!versionId) throw new BadRequestException('Original preview is missing the financial version.');
       const version = await this.resolveVersionById(context, item, versionId);
       const previousValues = objectValue(preview.current_values?.values, 'current_values.values');
-      return this.prepareUpdateVersionPreview(item, version, previousValues, preview.id);
+      return this.withManualAllocationRemoval(context, version, this.prepareUpdateVersionPreview(item, version, previousValues, preview.id));
     }
     if (action === 'upsert_amounts') {
       const versionId = textOrNull(mutation.version_id);
@@ -567,6 +569,9 @@ export class AiFinancialPlanMutationSupportService {
     const current = preview.current_values ?? {};
     const title = textOrNull(current.target_title) || textOrNull(mutation.version_title) || 'Financial plan';
     const changes: Record<string, AiMutationPreviewChangeDto> = {};
+    const removedAllocation = action === 'update_version' && Array.isArray(mutation.removes_manual_allocation)
+      ? mutation.removes_manual_allocation.map(String)
+      : [];
 
     if (action === 'create_version' || action === 'update_version') {
       const fields = objectValue(mutation.fields, 'mutation_input.fields');
@@ -580,6 +585,10 @@ export class AiFinancialPlanMutationSupportService {
           to: formatValue(displayValues[fieldName] ?? fields[fieldName]),
           format: 'text',
         };
+      }
+      // An automatic method drops the stored manual split: the card says so (`removed`, a code the card translates).
+      if (removedAllocation.length > 0) {
+        changes.allocations = { label: 'Allocations', from: removedAllocation.join(', '), to: 'removed', format: 'text' };
       }
     } else if (action === 'upsert_amounts') {
       const display = current.display_values && typeof current.display_values === 'object' ? current.display_values as Record<string, unknown> : {};
@@ -620,6 +629,7 @@ export class AiFinancialPlanMutationSupportService {
         errorMessage: preview.error_message,
       });
     }
+    if (preview.status === 'pending' && removedAllocation.length > 0) summary = `${summary} ${manualAllocationRemovedText(language)}`;
 
     return {
       target: {
@@ -771,6 +781,34 @@ export class AiFinancialPlanMutationSupportService {
       case 'upsert_amounts': return `Updated financial amounts for "${title}".`;
       case 'replace_allocations': return `Replaced financial allocations for "${title}".`;
     }
+  }
+
+  /**
+   * A version leaving a manual split for an automatic method: its approval drops the stored rows (the
+   * Allocations tab's save), so the card names them (company, or company / department) and says that
+   * no other step is needed.
+   */
+  private async withManualAllocationRemoval(
+    context: AiExecutionContextWithManager,
+    version: FinancialVersionRef,
+    prepared: AiPreparedMutationPreview,
+  ): Promise<AiPreparedMutationPreview> {
+    const fields = (prepared.mutationInput.fields ?? {}) as Record<string, unknown>;
+    const nextMethod = fields.allocation_method;
+    if (typeof nextMethod !== 'string' || MANUAL_METHODS.has(nextMethod)) return prepared;
+    if (!MANUAL_METHODS.has(String(version.row.allocation_method || 'default'))) return prepared;
+    const rows: Array<{ company: string | null; department: string | null }> = await context.manager.query(
+      `SELECT c.name AS company, d.name AS department
+         FROM spend_allocations a
+         LEFT JOIN companies c ON c.tenant_id = a.tenant_id AND c.id = a.company_id
+         LEFT JOIN departments d ON d.tenant_id = a.tenant_id AND d.id = a.department_id
+        WHERE a.tenant_id = $1 AND a.version_id = $2 AND NOT a.is_system_generated
+        ORDER BY c.name, d.name`,
+      [context.tenantId, version.id],
+    );
+    if (rows.length === 0) return prepared;
+    const labels = rows.map((row) => [row.company, row.department].map(textOrNull).filter(Boolean).join(' / '));
+    return { ...prepared, mutationInput: { ...prepared.mutationInput, removes_manual_allocation: labels } };
   }
 
   private prepareUpdateVersionPreview(
@@ -1010,7 +1048,13 @@ export class AiFinancialPlanMutationSupportService {
       }
       normalized.push({ company_id: department.company_id, department_id: department.id });
     }
-    if (normalized.length === 0) throw new BadRequestException('Manual allocation methods require at least one allocation entry.');
+    if (normalized.length === 0) {
+      throw new BadRequestException(
+        'Manual allocation methods require at least one allocation entry. To remove a manual allocation, set the version to an '
+        + 'automatic allocation method with update_version (allocation_method default, headcount, it_users or turnover): '
+        + 'that removes the stored manual rows, and no other step is needed.',
+      );
+    }
     return Array.from(
       new Map(normalized.map((item) => [`${item.company_id}:${item.department_id ?? ''}`, item])).values(),
     );

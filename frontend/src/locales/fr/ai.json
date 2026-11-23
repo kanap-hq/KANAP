@@ -317,6 +317,7 @@
         "manual_department": "Manuelle par département",
         "turnover": "Chiffre d'affaires"
       },
+      "allocationsRemoved": "Supprimées",
       "classificationReview": {
         "reviewed": "Revue faite",
         "stale": "À revoir après cette modification"
