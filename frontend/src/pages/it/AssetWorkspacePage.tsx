@@ -2399,7 +2399,7 @@ function AssetWorkspaceRoute() {
                   ) : null}
                 </Stack>
               ) : null}
-              <Box data-creation-description="">
+              <Box data-creation-description={canManage ? '' : undefined}>
                 <Box sx={{ mb: 1 }}>
                   <SectionLabel>{t('workspace.asset.overview.description')}</SectionLabel>
                 </Box>

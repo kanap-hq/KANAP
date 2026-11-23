@@ -43,7 +43,9 @@ vi.mock('./workspace/portfolioRelations', () => ({
   portfolioLinksKey: (entity: string, id: string) => ['portfolio-links', entity, id],
   usePortfolioRelationsBadge: () => 0,
 }));
-vi.mock('../../components/IntegratedDocumentEditor', () => ({ default: () => <div data-testid="purpose-editor" /> }));
+vi.mock('../../components/IntegratedDocumentEditor', () => ({
+  default: (props: { disabled?: boolean }) => <textarea data-testid="purpose-editor" aria-label="purpose editor" disabled={props.disabled} />,
+}));
 vi.mock('./workspace/request/RequestActivityTab', () => ({ default: () => <div data-testid="request-activity" /> }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/workspace/MetadataUserPicker', () => ({
@@ -172,6 +174,12 @@ describe('Request creation at the title', () => {
     renderPage(['/portfolio/requests/new/summary'], { staleTime: 30_000 });
     await createDataPlatform();
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/portfolio/requests/REQ-9', expect.anything()));
+  });
+
+  it('puts the cursor in the purpose of the request its title created', async () => {
+    renderPage(['/portfolio/requests/new/summary']);
+    await createDataPlatform();
+    await waitFor(() => expect(screen.getByLabelText('purpose editor')).toHaveFocus());
   });
 
   it('takes Ctrl+S as Create: the empty title is asked for, nothing created', async () => {

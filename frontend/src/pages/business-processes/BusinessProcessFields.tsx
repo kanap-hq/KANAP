@@ -88,13 +88,15 @@ export function BusinessProcessOverview({ process, disabled, onPatch }: {
   const { t } = useTranslation(['master-data']);
   return (
     <Stack spacing={3} sx={{ maxWidth: 900 }}>
-      <LongTextField
-        label={t('shared.fields.description')}
-        placeholder={t('businessProcesses.fields.descriptionPlaceholder')}
-        value={process.description ?? ''}
-        disabled={disabled}
-        onCommit={(description) => onPatch({ description })}
-      />
+      <Box data-creation-description={disabled ? undefined : ''}>
+        <LongTextField
+          label={t('shared.fields.description')}
+          placeholder={t('businessProcesses.fields.descriptionPlaceholder')}
+          value={process.description ?? ''}
+          disabled={disabled}
+          onCommit={(description) => onPatch({ description })}
+        />
+      </Box>
       <LongTextField
         label={t('shared.fields.notes')}
         placeholder={t('businessProcesses.fields.notesPlaceholder')}

@@ -85,7 +85,9 @@ vi.mock('../../components/fields/LocationSelect', () => ({
   ),
 }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
-vi.mock('../../components/MarkdownEditor', () => ({ default: () => <div data-testid="description-editor" /> }));
+vi.mock('../../components/MarkdownEditor', () => ({
+  default: (props: { disabled?: boolean }) => <textarea data-testid="description-editor" aria-label="description editor" disabled={props.disabled} />,
+}));
 vi.mock('../../components/history/RecordHistoryTab', () => ({ default: () => null }));
 
 const mocked = vi.mocked(api);
@@ -361,6 +363,11 @@ describe('An asset born complete', () => {
     expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
     expect(screen.getByRole('button', { name: TITLE })).toHaveTextContent('Web 1');
     expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('puts the cursor in the description of the asset its last required field wrote', async () => {
+    await createAsset();
+    await waitFor(() => expect(screen.getByLabelText('description editor')).toHaveFocus());
   });
 
   it('writes the asset when its site is chosen in the metadata bar', async () => {

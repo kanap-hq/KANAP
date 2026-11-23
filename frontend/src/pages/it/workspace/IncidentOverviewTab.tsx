@@ -73,7 +73,7 @@ export default function IncidentOverviewTab({
         <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{lockedBanner}</Typography>
       )}
 
-      <Box>
+      <Box data-creation-description={readOnly ? undefined : ''}>
         <SectionLabel label={t('workspace.incident.overview.description')} hint={savingHint} />
         <TextField
           value={description}

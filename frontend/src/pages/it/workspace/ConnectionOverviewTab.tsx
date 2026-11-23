@@ -325,7 +325,7 @@ export default function ConnectionOverviewTab({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {later(<Box data-creation-description="">
+      {later(<Box data-creation-description={canManage ? '' : undefined}>
         <SectionHeader
           action={
             status === 'saving' ? (

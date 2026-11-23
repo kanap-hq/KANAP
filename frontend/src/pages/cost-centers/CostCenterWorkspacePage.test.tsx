@@ -64,6 +64,7 @@ import * as service from '../../services/costCenters';
 import api from '../../api';
 import { lookupSearchKey } from '../../hooks/useLookupPicker';
 import CostCenterWorkspacePage from './CostCenterWorkspacePage';
+import { findCreatedRecordField } from '../../components/workspace/creation/creationFieldFocus';
 import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = service as unknown as {
@@ -125,6 +126,12 @@ describe('CostCenterWorkspacePage', () => {
       id === 'cc-2' ? { ...NODE, id: 'cc-2', code: 'IT-400', name: 'Workplace' } : NODE
     ));
     mocked.updateCostCenter.mockImplementation(async (_id: string, patch: Partial<CostCenterDetail>) => ({ ...NODE, ...patch }));
+  });
+
+  it('declares its description as the place of the cursor once a node is created', async () => {
+    renderAt('/master-data/cost-centers/cc-1/overview');
+    const description = await screen.findByLabelText('costCenters.fields.description');
+    expect(findCreatedRecordField(document.body)).toBe(description);
   });
 
   it('opens the Access tab of a cost center from its route', async () => {

@@ -54,6 +54,7 @@ import deMasterData from '../../locales/de/master-data.json';
 import esMasterData from '../../locales/es/master-data.json';
 import enMasterData from '../../locales/en/master-data.json';
 import CompanyWorkspacePage from './CompanyWorkspacePage';
+import { findCreatedRecordField } from '../../components/workspace/creation/creationFieldFocus';
 import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as {
@@ -357,6 +358,21 @@ describe('CompanyWorkspacePage', () => {
     await screen.findByText('Acme France');
     await pickOption('companies.fields.baseCurrency', 'US Dollar', 'USD · US Dollar');
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/companies/co-1', { base_currency: 'USD' }));
+  });
+
+  it('declares its notes as the place of the cursor once a company is created', async () => {
+    renderAt('/master-data/companies/co-1/overview');
+    const notes = await screen.findByLabelText('companies.fields.notes');
+    expect(findCreatedRecordField(document.body)).toBe(notes);
+  });
+
+  it('declares no description to a person who may not change it', async () => {
+    auth.canEdit = false;
+    auth.canAdmin = false;
+    renderAt('/master-data/companies/co-1/overview');
+    await screen.findByLabelText('companies.fields.notes');
+    expect(document.querySelector('[data-creation-description]')).toBeNull();
+    expect(findCreatedRecordField(document.body)).not.toBe(screen.getByLabelText('companies.fields.notes'));
   });
 
   it('shows read-only users disabled fields and no title edit', async () => {

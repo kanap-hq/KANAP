@@ -67,6 +67,7 @@ vi.mock('../../components/fields/DateEUField', () => ({
 
 import api from '../../api';
 import ContractWorkspacePage from './ContractWorkspacePage';
+import { findCreatedRecordField } from '../../components/workspace/creation/creationFieldFocus';
 import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
@@ -143,6 +144,12 @@ describe('ContractWorkspacePage creation', () => {
       disabled_at: null,
     }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/ops/contracts/c-new/overview', { replace: true }));
+  });
+
+  it('declares its notes as the place of the cursor once the contract is created', async () => {
+    renderNew();
+    const notes = await screen.findByLabelText('markdown-editor');
+    expect(findCreatedRecordField(document.body)).toBe(notes);
   });
 
   it('fills the one company of the workspace, and writes nothing before the name (lot A2)', async () => {

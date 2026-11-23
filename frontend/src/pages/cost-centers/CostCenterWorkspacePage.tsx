@@ -496,7 +496,7 @@ function DescriptionField({
   const { t } = useTranslation(['master-data']);
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   return (
-    <Box>
+    <Box data-creation-description={disabled ? undefined : ''}>
       <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 1 }}>
         {t('costCenters.fields.description')}
       </Typography>
