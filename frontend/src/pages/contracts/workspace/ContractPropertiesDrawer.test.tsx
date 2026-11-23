@@ -8,7 +8,8 @@ import { createAppTheme } from '../../../config/ThemeContext';
 const apiGet = vi.hoisted(() => vi.fn());
 
 vi.mock('react-i18next', () => {
-  const t = (key: string) => key;
+  // The start field's name is the English label; every other key stays itself, as the other tests read it.
+  const t = (key: string) => (key === 'contracts.fields.startDate' ? 'Start' : key);
   return {
     initReactI18next: { type: '3rdParty', init: () => undefined },
     useTranslation: () => ({ t, i18n: { language: 'en', resolvedLanguage: 'en' } }),
@@ -28,7 +29,6 @@ vi.mock('../../../components/fields/CostCenterSelect', () => ({
     <div data-testid="cost-center-select" data-required={String(!!p.required)} data-clearable={String(!p.disableClearable)} />
   ),
 }));
-vi.mock('../../../components/fields/DateEUField', () => ({ default: () => null }));
 vi.mock('../../../components/fields/StatusLifecycleField', () => ({ default: () => null }));
 vi.mock('./ContractFields', () => ({ BillingField: () => null, CurrencyField: () => null, NumberField: () => null, RenewalField: () => null }));
 vi.mock('../../../hooks/useCostCenterTree', () => ({ useCostCenterNode: () => null }));
@@ -75,6 +75,20 @@ function renderDrawer(props: { disabled?: boolean; onPatch?: (patch: unknown) =>
     </QueryClientProvider>,
   );
 }
+
+describe('ContractPropertiesDrawer start', () => {
+  beforeEach(() => {
+    apiGet.mockReset();
+    apiGet.mockResolvedValue({ data: { items: [] } });
+  });
+
+  it('names the start date after its label, not after the placeholder', () => {
+    renderDrawer();
+    const input = screen.getByLabelText('Start', { exact: true });
+    expect(input).toHaveAttribute('placeholder', 'labels.datePlaceholder');
+    expect(screen.getByText('Start', { selector: '.kanap-field-label' })).toBeInTheDocument();
+  });
+});
 
 describe('ContractPropertiesDrawer owner', () => {
   beforeEach(() => {

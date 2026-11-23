@@ -19,6 +19,14 @@ function renderField(props: Partial<React.ComponentProps<typeof DateEUField>> = 
   return { onChangeYmd };
 }
 
+describe('DateEUField accessible name', () => {
+  it('names the input after its label when the label is hidden, not after the placeholder', () => {
+    renderField({ label: 'Start', hideLabel: true, valueYmd: '' });
+    const input = screen.getByRole('textbox', { name: 'Start' });
+    expect(input).toHaveAttribute('placeholder', 'dd/mm/yyyy');
+  });
+});
+
 describe('DateEUField calendar', () => {
   it('opens the in-page calendar on the value and emits the picked day', () => {
     const { onChangeYmd } = renderField();
