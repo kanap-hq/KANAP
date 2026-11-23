@@ -53,12 +53,19 @@ export class SpendAllocationsService {
   /**
    * The Allocations tab's save (`PUT …/versions/:id/allocations`): method, driver and rows in one
    * request, compared with `base_signature` under the version's lock (`allocation-save.ts`). Answers
-   * what is stored, its distribution and its new signature.
+   * what is stored, its distribution and its new signature. Also Kad's change of a version's method or
+   * driver (`audit`: the source of the audit rows, as `bulkUpsert`).
    */
-  async put(versionId: string, body: unknown, userId?: string | null, opts?: { manager?: EntityManager; tenantId?: string }) {
+  async put(
+    versionId: string, body: unknown, userId?: string | null,
+    opts?: { manager?: EntityManager; tenantId?: string; audit?: { source: string; sourceRef: string | null } },
+  ) {
     const manager = opts?.manager ?? this.repo.manager;
     const tenantId = opts?.tenantId ?? await currentTenantId(manager);
-    const saved = await putVersionAllocations({ manager, audit: this.audit, calculator: this.calculator }, this.nature, tenantId, versionId, body, userId);
+    const saved = await putVersionAllocations(
+      { manager, audit: this.audit, calculator: this.calculator, ...(opts?.audit ? { auditSource: opts.audit } : {}) },
+      this.nature, tenantId, versionId, body, userId,
+    );
     const listed = await this.listForVersion(versionId, { manager, tenantId });
     return { ...listed, updated: saved.updated };
   }

@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { CapexAllocationsService, SpendAllocationsService } from '../../spend/spend-allocations.service';
+import { defaultAllocationDriver } from '../../spend/allocation-save';
 import { lockBudgetLine, lockBudgetVersions } from '../../spend/budget-locks';
 import { CapexAmountsService, SpendAmountsService } from '../../spend/spend-amounts.service';
 import { CapexVersionsService, SpendVersionsService } from '../../spend/spend-versions.service';
@@ -118,6 +119,8 @@ type AllocationInput = {
 const INPUT_GRAINS = ['annual', 'quarterly', 'monthly'] as const;
 const ALLOCATION_METHODS = ['default', 'headcount', 'it_users', 'turnover', 'manual_company', 'manual_department'] as const;
 const ALLOCATION_DRIVERS = ['headcount', 'it_users', 'turnover'] as const;
+/** The methods whose split is the companies or departments picked by hand. */
+const MANUAL_SELECTION_METHODS: ReadonlySet<string> = new Set(['manual_company', 'manual_department']);
 
 const VERSION_FIELD_CONFIG: Record<string, {
   label: string;
@@ -613,7 +616,7 @@ export class AiFinancialPlanMutationSupportService {
       const fields = objectValue(mutation.fields, 'mutation_input.fields');
       const previous = objectValue(preview.current_values?.values, 'current_values.values');
       this.assertVersionFieldsUnchanged(version.row, previous);
-      await this.updateVersion(context, item.nature, item.id, version.id, fields, audit);
+      await this.updateVersion(context, item.nature, item.id, version, fields, audit);
       return;
     }
 
@@ -734,6 +737,14 @@ export class AiFinancialPlanMutationSupportService {
     }
     if (Object.keys(nextFields).length === 0) {
       throw new BadRequestException('Financial version already has the requested values.');
+    }
+    // As on the Allocations tab: a driver is chosen for the manual split by company; every other
+    // method has its own, which the save stores whatever is sent.
+    if (nextFields.allocation_driver !== undefined) {
+      const method = String(nextFields.allocation_method ?? version.row.allocation_method ?? 'default');
+      if (method !== 'manual_company' && nextFields.allocation_driver !== defaultAllocationDriver(method)) {
+        throw new BadRequestException(`Allocation Driver applies to the manual_company method only; ${method} uses ${defaultAllocationDriver(method)}.`);
+      }
     }
     return {
       targetEntityType: 'budget_lines',
@@ -1122,19 +1133,42 @@ export class AiFinancialPlanMutationSupportService {
     return this.capexVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true, audit });
   }
 
-  private updateVersion(
+  /**
+   * The version's own fields as the budget tab writes them; its allocation method and driver as the
+   * Allocations tab saves them (`PUT …/allocations`), so an automatic method drops the rows of a
+   * manual split with their audit row, and a driver change computes the split again.
+   */
+  private async updateVersion(
     context: AiExecutionContextWithManager,
     nature: BudgetNature,
     itemId: string,
-    versionId: string,
+    version: FinancialVersionRef,
     fields: Record<string, unknown>,
     audit: AiMutationAuditOptions,
-  ): Promise<unknown> {
-    const body = { ...fields, id: versionId };
-    if (nature === 'opex') {
-      return this.spendVersions.updateForItem(itemId, body as any, context.userId, { manager: context.manager, audit });
+  ): Promise<void> {
+    const { allocation_method: method, allocation_driver: driver, ...own } = fields;
+    if (Object.keys(own).length > 0) {
+      const body = { ...own, id: version.id };
+      const versions = nature === 'opex' ? this.spendVersions : this.capexVersions;
+      await versions.updateForItem(itemId, body as any, context.userId, { manager: context.manager, audit });
     }
-    return this.capexVersions.updateForItem(itemId, body as any, context.userId, { manager: context.manager, audit });
+    if (method === undefined && driver === undefined) return;
+    const currentMethod = String(version.row.allocation_method || 'default');
+    const nextMethod = String(method ?? currentMethod);
+    // The tab sends the rows it shows: the stored split while a manual method stays (a new driver),
+    // none for a new method (a manual one keeps the stored rows until companies are picked).
+    let rows: AllocationInput[] = [];
+    if (nextMethod === currentMethod && MANUAL_SELECTION_METHODS.has(nextMethod)) {
+      const listed = await this.listAllocations(context, nature, version.id);
+      rows = allocationInputsFromRows(Array.isArray(listed.items) ? listed.items : [], nextMethod);
+    }
+    const allocations = nature === 'opex' ? this.spendAllocations : this.capexAllocations;
+    await allocations.put(
+      version.id,
+      { method: nextMethod, driver: driver ?? null, rows, base_signature: null },
+      context.userId,
+      { manager: context.manager, tenantId: context.tenantId, audit },
+    );
   }
 
   private async upsertAmounts(

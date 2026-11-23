@@ -44,7 +44,7 @@ type Harness = {
   previews: any;
   services: {
     applications: any; assets: any; contracts: any; budgetLines: any; projects: any; requests: any; interfaces: any; connections: any;
-    versions: Record<'opex' | 'capex', any>; amounts: Record<'opex' | 'capex', any>; allocations: any;
+    versions: Record<'opex' | 'capex', any>; amounts: Record<'opex' | 'capex', any>; allocations: Record<'opex' | 'capex', any>;
   };
 };
 
@@ -284,7 +284,7 @@ const CASES: HistoryCase[] = [
                             VALUES ($1, $2, 2026, $3, 0, 0)`, [s.tenantId, companyId, headcount]);
       }
       const lineId = await lineWithVersion(h, runner, s, 'opex', { allocation_method: 'manual_company' });
-      await h.services.allocations.bulkUpsert(await versionOf(runner, s, lineId), [{ company_id: s.companyId, department_id: null }], s.userId, screenOpts(runner, s));
+      await h.services.allocations.opex.bulkUpsert(await versionOf(runner, s, lineId), [{ company_id: s.companyId, department_id: null }], s.userId, screenOpts(runner, s));
       return lineId;
     },
     card: (s, id) => ({
@@ -293,7 +293,7 @@ const CASES: HistoryCase[] = [
     }),
     // The Allocations tab saves its method and rows together; the method stays the version's.
     screen: async (h, runner, s, _fields, id, mutation) => {
-      await h.services.allocations.put(await versionOf(runner, s, id!), { method: 'manual_company', rows: mutation.allocations, base_signature: null }, s.userId, screenOpts(runner, s));
+      await h.services.allocations.opex.put(await versionOf(runner, s, id!), { method: 'manual_company', rows: mutation.allocations, base_signature: null }, s.userId, screenOpts(runner, s));
       return String(id);
     },
     undo: true,
@@ -375,6 +375,130 @@ const CASES: HistoryCase[] = [
   },
 ];
 
+/**
+ * A suite of cards on one budget line, "Undo" included, against the same suite of gestures on the
+ * screen: every approval writes, under Kad's name, the audit rows the screen writes for its gesture,
+ * and the line ends in the state the screen leaves (`state`), which for an undo is the state before
+ * the card it undoes (`stateBefore`: the state right after `prepare`).
+ */
+type SequenceCase = {
+  name: string;
+  /** The line the suite works on, with its 2026 version, through the screen's services. */
+  prepare: (h: Harness, runner: QueryRunner, s: Seed) => Promise<string>;
+  steps: Array<{
+    /** A card, or "Undo" of the card of an earlier step (its index). */
+    kad: ((s: Seed, lineId: string) => { tool: string; input: Record<string, unknown> }) | { undo: number };
+    /** The same gesture on the screen. */
+    screen: (h: Harness, runner: QueryRunner, s: Seed, lineId: string) => Promise<void>;
+  }>;
+  /** What the suite must leave as the screen leaves it. */
+  state: (runner: QueryRunner, s: Seed, lineId: string) => Promise<unknown>;
+  /** The suite ends where it started (it undoes all it did). */
+  stateBefore?: boolean;
+};
+
+/** A version's allocation as stored: method, driver and rows. */
+async function allocationState(runner: QueryRunner, s: Seed, lineId: string) {
+  const versionId = await versionOf(runner, s, lineId);
+  const [version] = await runner.query(`SELECT allocation_method, allocation_driver FROM spend_versions WHERE tenant_id = $1 AND id = $2`, [s.tenantId, versionId]);
+  const rows = await runner.query(
+    `SELECT company_id, department_id, allocation_pct::text AS pct FROM spend_allocations WHERE tenant_id = $1 AND version_id = $2 ORDER BY company_id`,
+    [s.tenantId, versionId],
+  );
+  return { method: version.allocation_method, driver: version.allocation_driver, rows };
+}
+
+/** The 2026 budget column as stored: its twelve months and its record (how it was entered, its lines). */
+async function plannedColumn(runner: QueryRunner, s: Seed, lineId: string) {
+  const versionId = await versionOf(runner, s, lineId);
+  const months = (await runner.query(
+    `SELECT planned::text AS amount FROM spend_amounts WHERE tenant_id = $1 AND version_id = $2 AND period BETWEEN '2026-01-01' AND '2026-12-31' ORDER BY period`,
+    [s.tenantId, versionId],
+  )).map((row: { amount: string }) => row.amount);
+  const [record] = await runner.query(
+    `SELECT r.method, to_char(r.period_start, 'YYYY-MM-DD') AS period_start, to_char(r.period_end, 'YYYY-MM-DD') AS period_end,
+            r.spread_profile_name, r.last_calculation, r.fte::text AS fte,
+            (SELECT json_agg(json_build_object('label', l.label, 'quantity', l.quantity::text, 'unit_price', l.unit_price::text,
+                                               'period_start', l.period_start, 'period_end', l.period_end) ORDER BY l.sort)
+               FROM spend_round_input_lines l WHERE l.tenant_id = r.tenant_id AND l.round_input_id = r.id) AS lines
+       FROM spend_round_inputs r WHERE r.tenant_id = $1 AND r.version_id = $2 AND r.measure = 'planned'`,
+    [s.tenantId, versionId],
+  );
+  return { months, record: record ?? null };
+}
+
+/**
+ * The same column, its last calculation and profile left aside: a column typed by hand keeps the
+ * ones it had before (`markRoundsManual`), on the screen as by Kad.
+ */
+async function plannedColumnByHand(runner: QueryRunner, s: Seed, lineId: string) {
+  const { months, record } = await plannedColumn(runner, s, lineId);
+  return { months, record: record ? { ...record, last_calculation: '<kept>', spread_profile_name: '<kept>' } : null };
+}
+
+/** A split by company follows the companies' 2026 headcount. */
+async function companyHeadcounts(runner: QueryRunner, s: Seed) {
+  for (const [companyId, headcount] of [[s.companyId, 60], [s.secondCompanyId, 40]] as const) {
+    await runner.query(`INSERT INTO company_metrics (tenant_id, company_id, fiscal_year, headcount, it_users, turnover)
+                        VALUES ($1, $2, 2026, $3, 0, 0)`, [s.tenantId, companyId, headcount]);
+  }
+}
+
+const financialCard = (lineId: string, input: Record<string, unknown>) => ({
+  tool: 'write_financial_plan',
+  input: { entity_type: 'budget_lines', ref: lineId, version_ref: 'Y2026', ...input },
+});
+/** The Allocations tab's save: method, driver and rows together. */
+const allocationsTab = (nature: 'opex' | 'capex', method: string, rows: (s: Seed) => Array<Record<string, unknown>>) =>
+  async (h: Harness, runner: QueryRunner, s: Seed, lineId: string) => {
+    await h.services.allocations[nature].put(await versionOf(runner, s, lineId), { method, rows: rows(s), base_signature: null }, s.userId, screenOpts(runner, s));
+  };
+const twoCompanies = (s: Seed) => [{ company_id: s.companyId, department_id: null }, { company_id: s.secondCompanyId, department_id: null }];
+const budgetTab = (payload: Record<string, unknown>) => async (h: Harness, runner: QueryRunner, s: Seed, lineId: string) => {
+  await h.services.amounts.opex.bulkUpsert(await versionOf(runner, s, lineId), payload, s.userId, { manager: runner.manager });
+};
+const TWELVE_HUNDREDS = Array.from({ length: 12 }, (_, i) => ({ period: `2026-${String(i + 1).padStart(2, '0')}-01`, planned: 1000 }));
+const LICENCE_LINES = [{
+  label: 'Licences', quantity_unit: 'pieces', quantity: '10', unit_price: '100', price_basis: 'per_piece', frequency: 'per_month',
+  period_start: '2026-01-01', period_end: '2026-12-31',
+}];
+/** A line whose 2026 budget column holds 12,000, entered as `payload` on the budget tab. */
+const lineWithBudget = (payload: Record<string, unknown>) => async (h: Harness, runner: QueryRunner, s: Seed) => {
+  const lineId = await lineWithVersion(h, runner, s);
+  await budgetTab(payload)(h, runner, s, lineId);
+  return lineId;
+};
+
+const SEQUENCES: SequenceCase[] = [
+  // An allocation by company set by Kad, then undone: the rows go, as on the Allocations tab.
+  ...(['opex', 'capex'] as const).map((nature): SequenceCase => ({
+    name: `budget_lines (${nature}): manual allocation, two companies, undo`,
+    prepare: async (h, runner, s) => {
+      await companyHeadcounts(runner, s);
+      return lineWithVersion(h, runner, s, nature);
+    },
+    steps: [
+      { kad: (_s, id) => financialCard(id, { action: 'update_version', fields: { allocation_method: 'manual_company' } }), screen: allocationsTab(nature, 'manual_company', () => []) },
+      { kad: (s, id) => financialCard(id, { action: 'replace_allocations', allocations: [s.companyId, s.secondCompanyId] }), screen: allocationsTab(nature, 'manual_company', twoCompanies) },
+      { kad: { undo: 0 }, screen: allocationsTab(nature, 'default', () => []) },
+    ],
+    state: allocationState,
+  })),
+  {
+    name: 'budget_lines: manual allocation, then back to the default method',
+    prepare: async (h, runner, s) => {
+      await companyHeadcounts(runner, s);
+      return lineWithVersion(h, runner, s);
+    },
+    steps: [
+      { kad: (_s, id) => financialCard(id, { action: 'update_version', fields: { allocation_method: 'manual_company' } }), screen: allocationsTab('opex', 'manual_company', () => []) },
+      { kad: (s, id) => financialCard(id, { action: 'replace_allocations', allocations: [s.companyId, s.secondCompanyId] }), screen: allocationsTab('opex', 'manual_company', twoCompanies) },
+      { kad: (_s, id) => financialCard(id, { action: 'update_version', fields: { allocation_method: 'default' } }), screen: allocationsTab('opex', 'default', () => []) },
+    ],
+    state: allocationState,
+  },
+];
+
 async function one(runner: QueryRunner, sql: string, params: unknown[]): Promise<string> {
   return String((await runner.query(sql, params))[0].id);
 }
@@ -447,7 +571,7 @@ async function createHarness(): Promise<Harness> {
   const { NotificationsService } = require('../../notifications/notifications.service');
   const { SpendVersionsService, CapexVersionsService } = require('../../spend/spend-versions.service');
   const { SpendAmountsService, CapexAmountsService } = require('../../spend/spend-amounts.service');
-  const { SpendAllocationsService } = require('../../spend/spend-allocations.service');
+  const { SpendAllocationsService, CapexAllocationsService } = require('../../spend/spend-allocations.service');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   // A project's or a request's change notifies people: nothing is sent from this spec.
   const notifications = app.get(NotificationsService, { strict: false });
@@ -470,7 +594,7 @@ async function createHarness(): Promise<Harness> {
       connections: app.get(ConnectionsService, { strict: false }),
       versions: { opex: app.get(SpendVersionsService, { strict: false }), capex: app.get(CapexVersionsService, { strict: false }) },
       amounts: { opex: app.get(SpendAmountsService, { strict: false }), capex: app.get(CapexAmountsService, { strict: false }) },
-      allocations: app.get(SpendAllocationsService, { strict: false }),
+      allocations: { opex: app.get(SpendAllocationsService, { strict: false }), capex: app.get(CapexAllocationsService, { strict: false }) },
     },
   };
 }
@@ -653,6 +777,65 @@ async function runCase(harness: Harness, entry: HistoryCase) {
   }
 }
 
+async function runSequence(harness: Harness, entry: SequenceCase) {
+  const runner = harness.dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    const s = await seed(runner);
+    const ctx = context(s, runner, randomUUID());
+    await runner.query(
+      `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+       VALUES ($1, $2, $3, 'AI record history', 'custom', 'history-model', 'custom', now(), now())`,
+      [ctx.conversationId, s.tenantId, s.userId],
+    );
+    const lineId = (await entry.prepare(harness, runner, s)).toLowerCase();
+    const before = await entry.state(runner, s, lineId);
+
+    // The screen's suite, under a savepoint rolled back: the same state for Kad's.
+    await runner.query('SAVEPOINT k2a_screen');
+    const screenRows: AuditRow[] = [];
+    for (const step of entry.steps) screenRows.push(...await rowsWrittenBy(runner, s, () => step.screen(harness, runner, s, lineId)));
+    const screenState = await entry.state(runner, s, lineId);
+    await runner.query('ROLLBACK TO SAVEPOINT k2a_screen');
+
+    const previewIds: string[] = [];
+    const kadRows: AuditRow[] = [];
+    for (const [index, step] of entry.steps.entries()) {
+      const at = `${entry.name}, step ${index + 1}`;
+      let preview: any;
+      if (typeof step.kad === 'function') {
+        const { tool, input } = step.kad(s, lineId);
+        preview = await harness.tools.execute(ctx, tool, input);
+      } else {
+        preview = await harness.previews.createReversePreview(ctx, previewIds[step.kad.undo]);
+      }
+      assert.equal(preview.status, 'pending', `${at}: ${JSON.stringify(preview)}`);
+      previewIds.push(preview.preview_id);
+      const rows = await rowsWrittenBy(runner, s, async () => {
+        const executed = await harness.previews.executePreview(ctx, preview.preview_id) as any;
+        assert.equal(executed.status, 'executed', `${at}: ${executed.error_message || 'the card did not execute'}`);
+      });
+      for (const row of rows) {
+        assert.deepEqual(
+          { table: row.table_name, source: row.source, sourceRef: row.source_ref, user: row.user_id },
+          { table: row.table_name, source: 'ai_chat', sourceRef: preview.preview_id, user: s.userId },
+          `${at}: every row of the approval is Kad's, for the person who approved`,
+        );
+      }
+      kadRows.push(...rows);
+    }
+
+    assert.deepEqual(shapes(kadRows, lineId, s), shapes(screenRows, lineId, s), `${entry.name}: Kad's rows carry what the screen writes for the same suite`);
+    const after = await entry.state(runner, s, lineId);
+    assert.deepEqual(after, screenState, `${entry.name}: Kad leaves the line as the screen does`);
+    if (entry.stateBefore) assert.deepEqual(after, before, `${entry.name}: the undo puts the line back as it was`);
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -664,8 +847,16 @@ async function run() {
         failures.push(`${entry.name}: ${(error as Error).message}`);
       }
     }
-    if (failures.length) throw new Error(`${failures.length} of ${CASES.length} cases failed:\n${failures.join('\n\n')}`);
-    console.log(`ai-record-write-history.integration.spec.ts passed (${CASES.length} cases)`);
+    for (const entry of SEQUENCES) {
+      try {
+        await runSequence(harness, entry);
+      } catch (error) {
+        failures.push(`${entry.name}: ${(error as Error).message}`);
+      }
+    }
+    const total = CASES.length + SEQUENCES.length;
+    if (failures.length) throw new Error(`${failures.length} of ${total} cases failed:\n${failures.join('\n\n')}`);
+    console.log(`ai-record-write-history.integration.spec.ts passed (${total} cases)`);
   } finally {
     await harness.app.close();
   }
