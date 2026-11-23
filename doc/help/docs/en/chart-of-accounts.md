@@ -288,7 +288,7 @@ Click **Manage charts** in the chip bar to open the dialog. One table lists ever
 - **Companies**: the number of companies assigned to the chart
 - **Accounts**: the number of accounts in the chart
 
-Three short lines under the table explain the roles. **New chart** (`accounts:member`) at the bottom left opens the Create dialog.
+An information icon beside **Roles** explains the roles. **New chart** (`accounts:member`) at the bottom left opens the Create dialog.
 
 Each row has a **⋯** menu with only the actions that apply to that chart. The wording follows the current state.
 

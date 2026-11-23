@@ -186,9 +186,41 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
             color: `${kanap.text.tertiary} !important`,
             fontSize: '11px !important' as any,
           },
+          // The tertiary colour above is `!important`, including while focused.
+          // In dark mode the error label follows `kanap.danger` (#F87171). Light
+          // mode stays tertiary: this label is not `error.main` there.
+          ...(isDark
+            ? {
+                '&.Mui-error, &.Mui-error.Mui-focused': {
+                  color: `${kanap.danger} !important`,
+                },
+              }
+            : {}),
         },
         asterisk: {
           color: '#E8920F !important',
+        },
+      },
+    },
+    // MUI paints an error label and its asterisk from `error.main` (#DC2626 in
+    // both modes). That red fails 4.5:1 on the dark surfaces. `kanap.danger` is
+    // the same red in light mode and #F87171 in dark mode. A TextField label is
+    // an InputLabel, handled above; this covers a bare FormLabel.
+    MuiFormLabel: {
+      styleOverrides: {
+        root: {
+          '&.Mui-error': { color: kanap.danger },
+        },
+        asterisk: {
+          '&.Mui-error': { color: kanap.danger },
+        },
+      },
+    },
+    // The error line under a field (`FormHelperText`). Same reason as the label.
+    MuiFormHelperText: {
+      styleOverrides: {
+        root: {
+          '&.Mui-error': { color: kanap.danger },
         },
       },
     },

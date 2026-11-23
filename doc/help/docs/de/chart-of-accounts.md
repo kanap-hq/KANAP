@@ -288,7 +288,7 @@ Klicken Sie in der Chip-Leiste auf **Kontenpläne verwalten**, um den Dialog zu 
 - **Gesellschaften**: die Anzahl der dem Kontenplan zugewiesenen Unternehmen
 - **Konten**: die Anzahl der Konten im Kontenplan
 
-Drei kurze Zeilen unter der Tabelle erklären die Rollen. **Neuer Kontenplan** (`accounts:member`) unten links öffnet den Erstellen-Dialog.
+Ein Informationssymbol neben **Rollen** erklärt die Rollen. **Neuer Kontenplan** (`accounts:member`) unten links öffnet den Erstellen-Dialog.
 
 Jede Zeile hat ein Menü **⋯**, das nur die Aktionen anbietet, die für diesen Kontenplan gelten. Die Beschriftung folgt dem aktuellen Zustand.
 

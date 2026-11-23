@@ -288,7 +288,7 @@ Cliquez sur **Gérer les plans** dans la barre de pastilles pour ouvrir la fenê
 - **Sociétés** : le nombre de sociétés assignées au plan
 - **Comptes** : le nombre de comptes du plan
 
-Trois courtes lignes sous le tableau expliquent les rôles. **Nouveau plan** (`accounts:member`), en bas à gauche, ouvre la boîte de dialogue de création.
+Une icône d'information à côté de **Rôles** explique les rôles. **Nouveau plan** (`accounts:member`), en bas à gauche, ouvre la boîte de dialogue de création.
 
 Chaque ligne a un menu **⋯** qui ne propose que les actions applicables à ce plan. Le libellé suit l'état actuel.
 

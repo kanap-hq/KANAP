@@ -132,7 +132,27 @@ describe('ManageCoAsDialog', () => {
     expect(de).not.toHaveTextContent('Default');
 
     expect(screen.queryByText(/★|⊕/)).not.toBeInTheDocument();
-    expect(screen.getByText(/proposed when you create a company in that country/)).toBeInTheDocument();
+  });
+
+  it('explains the roles from the information icon beside Roles, not as text under the table', async () => {
+    renderDialog();
+    await row('FR-PCG');
+
+    const country = 'Country default: proposed when you create a company in that country.';
+    const global = 'Default for other countries: used for companies in a country that has no default chart.';
+    const consolidation = 'Consolidation chart: the group accounts every local account maps to for consolidated reporting.';
+
+    expect(screen.queryByText(country)).not.toBeInTheDocument();
+    expect(screen.queryByText(global)).not.toBeInTheDocument();
+    expect(screen.queryByText(consolidation)).not.toBeInTheDocument();
+
+    const header = screen.getByRole('columnheader', { name: 'Roles' });
+    const hint = within(header).getByRole('img', { name: new RegExp(`${country}[\\s\\S]*${global}[\\s\\S]*${consolidation}`) });
+    fireEvent.mouseOver(hint);
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip).toHaveTextContent(country);
+    expect(tooltip).toHaveTextContent(global);
+    expect(tooltip).toHaveTextContent(consolidation);
   });
 
   it('offers only the actions that apply, worded by the current state', async () => {
