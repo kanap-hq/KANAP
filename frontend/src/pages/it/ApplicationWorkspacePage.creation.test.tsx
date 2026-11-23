@@ -184,14 +184,15 @@ describe('Application creation at the title', () => {
     expect(done).toHaveFocus();
   });
 
-  it('creates the application when the title is committed, then opens every tab with the focus on the title', async () => {
+  it('creates the application when the title is committed, then opens every tab with the cursor in the description', async () => {
     renderPage(['/it/applications/new/overview']);
     await createBilling();
     expect(mocked.post).toHaveBeenCalledTimes(1);
     expect(mocked.post).toHaveBeenCalledWith('/applications', { name: 'Billing' });
     const title = await screen.findByRole('button', { name: TITLE });
     expect(title).toHaveTextContent('Billing');
-    await waitFor(() => expect(title).toHaveFocus());
+    // Enter gives the name as Tab and Create do: the cursor goes to the description.
+    await waitFor(() => expect(screen.getByLabelText('description editor')).toHaveFocus());
     for (const tab of screen.getAllByRole('tab')) expect(tab).not.toBeDisabled();
     expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
   });

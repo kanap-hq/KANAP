@@ -1,18 +1,33 @@
 import { describe, expect, it, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
-import { clearCreationFieldFocus, followCreationFields, useCreationFieldFocus } from './creationFieldFocus';
+import {
+  armCreatedRecordFocus,
+  clearCreationFieldFocus,
+  followCreationFields,
+  noteCreationWrite,
+  useCreationFieldFocus,
+} from './creationFieldFocus';
 
-/** A new record's title with a name typed: its Tab arms the focus for the page that follows. */
-function tabFromTitle() {
+/**
+ * A new record's title with a name typed, whose Tab the page takes for its own step (an interface
+ * opens its Flow tab): the focus follows on the page that shows next.
+ */
+function tabFromTitleToPageStep() {
   const view = render(
-    <div onKeyDownCapture={followCreationFields}>
+    <div onKeyDownCapture={(event) => followCreationFields(event, () => undefined)}>
       <span data-creation-actions="" />
       <div data-creation-title=""><input aria-label="title" defaultValue="Billing" /></div>
     </div>,
   );
   fireEvent.keyDown(screen.getByLabelText('title'), { key: 'Tab' });
   view.unmount();
+}
+
+/** The creation frame wrote the record from its title: the record's page places the cursor. */
+function tabFromTitle() {
+  noteCreationWrite();
+  armCreatedRecordFocus();
 }
 
 function Record({ page = 'record:overview', children }: { page?: string; children: React.ReactNode }) {
@@ -24,23 +39,22 @@ function Record({ page = 'record:overview', children }: { page?: string; childre
 describe('useCreationFieldFocus', () => {
   afterEach(() => clearCreationFieldFocus());
 
-  it('focuses the first required field still empty on the record the title created', async () => {
+  it('focuses the description on the record created, ahead of a field left empty', async () => {
     tabFromTitle();
     render(
       <Record>
-        <div data-creation-panel="main"><textarea aria-label="description" /></div>
+        <div data-creation-panel="main"><div data-creation-description=""><textarea aria-label="description" /></div></div>
         <div data-creation-panel="properties">
-          <div data-required-field=""><input aria-label="currency" defaultValue="EUR" /></div>
           <div data-required-field=""><input aria-label="company" /></div>
         </div>
       </Record>,
     );
-    await waitFor(() => expect(screen.getByLabelText('company')).toHaveFocus());
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
   });
 
   it('takes the focus back from the page scroller Layout focused after the navigation', async () => {
     tabFromTitle();
-    const view = render(<Record><div data-creation-panel="main"><textarea aria-label="description" /></div></Record>);
+    const view = render(<Record><div data-creation-panel="main" data-creation-description=""><textarea aria-label="description" /></div></Record>);
     const scroller = document.createElement('div');
     scroller.setAttribute('data-primary-scroll', '');
     scroller.tabIndex = -1;
@@ -94,7 +108,7 @@ describe('useCreationFieldFocus', () => {
 
   it('places the focus on the tab the page opened', async () => {
     const view = render(<Record page="new:overview"><div data-creation-panel="main"><textarea aria-label="description" /></div></Record>);
-    tabFromTitle();
+    tabFromTitleToPageStep();
     view.rerender(
       <Record page="new:flow">
         <div data-creation-panel="main"><div data-creation-field="source"><input aria-label="source" /></div></div>
@@ -103,8 +117,8 @@ describe('useCreationFieldFocus', () => {
     await waitFor(() => expect(screen.getByLabelText('source')).toHaveFocus());
   });
 
-  it('passes by a required field the record fills a moment after it shows', async () => {
-    tabFromTitle();
+  it('passes by a required field the tab the page opened fills a moment after it shows', async () => {
+    tabFromTitleToPageStep();
     const fields = (type: string) => (
       <Record>
         <div data-creation-panel="properties">
@@ -158,7 +172,7 @@ describe('useCreationFieldFocus', () => {
   });
 
   it('leaves the cursor in the field it placed once the person types there', async () => {
-    tabFromTitle();
+    tabFromTitleToPageStep();
     const fields = (type: string) => (
       <Record>
         <div data-creation-panel="properties">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { clearCreationFieldFocus } from './creationFieldFocus';
+import { clearCreationFieldFocus, endCreationWrite, noteCreationWrite } from './creationFieldFocus';
 import { useCreationPresence } from './creationDeparture';
 
 type Options<C> = {
@@ -66,6 +66,7 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
   const write = React.useCallback(async (name: string) => {
     if (running.current) return;
     running.current = true;
+    noteCreationWrite();
     setWriting(true);
     setTitleError(null);
     latest.current.onStart?.();
@@ -77,6 +78,7 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
       sent.current = false;
       setTitleError(latest.current.errorMessage(err));
     } finally {
+      endCreationWrite();
       running.current = false;
       setWriting(false);
     }
@@ -107,7 +109,7 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
       commit(name);
       return;
     }
-    // Nothing is created: the cursor the press of Create armed stays in the title.
+    // Nothing is created: the cursor stays in the title.
     clearCreationFieldFocus();
     setTitleError((current) => current || requiredMessage);
     setFocusRequest((n) => n + 1);

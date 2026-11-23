@@ -287,6 +287,8 @@ async function giveTitle(name = 'Monitoring') {
 }
 
 const field = (label: string) => screen.getByRole('textbox', { name: label });
+/** The description the line declares to the creation frame, where the cursor goes once it is written. */
+const descriptionField = () => document.querySelector<HTMLElement>('[data-creation-description] textarea');
 
 /** Gives a picker its value, as a choice in its list. */
 function pick(label: string, value: string) {
@@ -774,7 +776,7 @@ describe('Budget line born complete', () => {
     expect(lineWrites()).toHaveLength(1);
   });
 
-  it('keeps the cursor on the account given last, and the line shows its start date', async () => {
+  it('puts the cursor in the description of the line the account given last wrote, and the line shows its start date', async () => {
     const input = await startNewLine();
     fireEvent.change(input, { target: { value: 'Monitoring' } });
     fireEvent.keyDown(input, { key: 'Tab' });
@@ -802,7 +804,8 @@ describe('Budget line born complete', () => {
     watch.disconnect();
     expect(accountDisabled).toEqual([]);
     const start = within(fieldRow('opex.fields.effectiveStart')).getByRole('textbox');
-    expect(field('opex.fields.account')).toHaveFocus();
+    // The line written, the cursor goes to its description (the rule of the creation frame).
+    expect(descriptionField()).toHaveFocus();
     expect(start).not.toHaveFocus();
     expect(start).toHaveValue(formatShortDate(YEAR_START, 'en', { year: 'always' }));
     // Through the date and out of it: nothing is sent.
@@ -1082,7 +1085,7 @@ describe('Budget line born complete', () => {
     };
     const settle = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
 
-    it('writes the line when the account is chosen last with the mouse, the cursor on the account', async () => {
+    it('writes the line when the account is chosen last with the mouse, the cursor then in the description', async () => {
       access.realAccountPicker = true;
       const user = userEvent.setup();
       await startNewLine({ accounts: TWO_ACCOUNTS });
@@ -1093,7 +1096,7 @@ describe('Budget line born complete', () => {
       await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
       expect(lineWrites()[0][1]).toMatchObject({ paying_company_id: 'company-1', account_id: 'account-2' });
       await settle();
-      expect(screen.getByRole('combobox', { name: 'opex.fields.account' })).toHaveFocus();
+      expect(descriptionField()).toHaveFocus();
     });
 
     it('writes the line when the cost center a limited access requires is chosen last with the mouse', async () => {
@@ -1114,7 +1117,7 @@ describe('Budget line born complete', () => {
       await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
       expect(lineWrites()[0][1]).toMatchObject({ paying_company_id: 'company-2', cost_center_id: 'cc-bureau', account_id: 'account-1' });
       await settle();
-      expect(screen.getByRole('combobox', { name: 'opex.fields.costCenter' })).toHaveFocus();
+      expect(descriptionField()).toHaveFocus();
     });
 
     it('writes the line when the company is chosen last with the mouse and its one account fills', async () => {
@@ -1126,7 +1129,7 @@ describe('Budget line born complete', () => {
       await waitFor(() => expect(location()).toBe('/ops/budget/BL-12/overview'));
       expect(lineWrites()[0][1]).toMatchObject({ paying_company_id: 'company-1', account_id: 'account-1' });
       await settle();
-      expect(screen.getByRole('combobox', { name: 'opex.fields.payingCompany' })).toHaveFocus();
+      expect(descriptionField()).toHaveFocus();
     });
   });
 });

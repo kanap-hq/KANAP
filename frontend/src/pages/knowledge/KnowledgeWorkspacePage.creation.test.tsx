@@ -323,11 +323,10 @@ describe('Document creation at the title', () => {
     await waitFor(() => expect(screen.getByLabelText('Document body')).toHaveFocus());
   });
 
-  it('leaves the text alone when Enter created the document', async () => {
+  it('puts the cursor in the text of the document Enter created, as Tab and Create do', async () => {
     renderPage(['/knowledge/new?library=runbooks']);
     await createRunbook();
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(screen.getByLabelText('Document body')).not.toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText('Document body')).toHaveFocus());
   });
 
   it('shows the error under the empty title on Create, nothing created', async () => {

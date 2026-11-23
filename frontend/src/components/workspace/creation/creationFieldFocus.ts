@@ -122,24 +122,105 @@ export function focusFirstMissingField(): void {
   });
 }
 
-// Armed by a Tab along the creation, or by the press of Create (`CreationActions`). When the page
-// shows something else (the record the title created, a tab the page opened), it places the focus
-// once. Cleared then, or after a few seconds.
-let armedUntil = 0;
+/** A field shown but closed to this person: read only, or kept for a value written elsewhere. */
+const FIELD_LIKE = 'input:not([type="hidden"]), textarea, select, [contenteditable], [role="textbox"], [role="combobox"]';
+
+/** A field this person may change, on screen: within reach, not hidden, not read only. */
+function editable(el: HTMLElement): boolean {
+  return isCreationField(el)
+    && !el.matches('[readonly], [aria-readonly="true"]')
+    && !el.closest('[hidden], [aria-hidden="true"]');
+}
+
+/**
+ * Where the cursor goes once a record is created (the rule of the creation frame): the
+ * description the page declares (`data-creation-description`, only where this person may change
+ * it), else the first field this person may change, in reading order (the content, then the
+ * properties panel; the title, in the header, comes before both). A description on a tab not shown
+ * is not on screen: the first field shown is the target. `undefined` while the declared
+ * description is still loading (its editor shows no field yet): the target is not known yet.
+ */
+function createdRecordTarget(root: ParentNode): HTMLElement | null | undefined {
+  for (const declared of root.querySelectorAll<HTMLElement>('[data-creation-description]')) {
+    if (!reachable(declared) || declared.closest('[hidden], [aria-hidden="true"]')) continue;
+    const field = fieldsOf(declared).find(editable);
+    if (field) return field;
+    // A description shown read only has its field, closed: the next field is the target.
+    if (!declared.querySelector(FIELD_LIKE)) return undefined;
+  }
+  for (const name of ['main', 'properties'] as const) {
+    for (const panel of root.querySelectorAll<HTMLElement>(`[data-creation-panel="${name}"]`)) {
+      const field = Array.from(panel.querySelectorAll<HTMLElement>(ENTRY_FIELDS))
+        .find((el) => editable(el) && !el.closest('[data-creation-title], [data-creation-actions]'));
+      if (field) return field;
+    }
+  }
+  return null;
+}
+
+/** The field the cursor goes to on a record just created; null when there is none. */
+export function findCreatedRecordField(root: ParentNode): HTMLElement | null {
+  return createdRecordTarget(root) ?? null;
+}
+
+// What the focus does once the page shows something else (the record just created, a tab the
+// page opened). `follow`: Tab in a new record's title handed to the page's own step (an interface
+// opens its Flow tab): the first field to fill there. `created`: the creation frame wrote the
+// record (`useRecordCreation`): its description, else its first field. Placed once, then cleared,
+// or after a few seconds.
+type Armed = { kind: 'follow' | 'created'; until: number; origin: Element | null };
+let armed: Armed | null = null;
+// The record being written (`noteCreationWrite`): where the focus was when its write started, and
+// whether the person has used the page since (a press, a key typed in a field).
+let write: { origin: Element | null; acted: boolean; stop: () => void } | null = null;
+
+function endWrite(): void {
+  write?.stop();
+  write = null;
+}
+
+/** The write is over, refused or not: what it watched is let go (`armCreatedRecordFocus` took it on success). */
+export function endCreationWrite(): void {
+  endWrite();
+}
 
 export function clearCreationFieldFocus(): void {
-  armedUntil = 0;
+  armed = null;
 }
 
 export function armCreationFieldFocus(): void {
-  armedUntil = Date.now() + 8000;
+  armed = { kind: 'follow', until: Date.now() + 8000, origin: null };
 }
 
-/** For a page that places the cursor itself once its record is created: whether it is armed, cleared. */
-export function takeCreationFieldFocus(): boolean {
-  const live = Date.now() < armedUntil;
-  clearCreationFieldFocus();
-  return live;
+/**
+ * The creation frame starts writing a record (`useTitleCreation`, `useDraftCreation`): where the
+ * focus is now (the title, the field just given, Create) is the gesture's own place, which the
+ * cursor may leave for the record created. A field the person goes to while the record is written
+ * is theirs: the cursor stays there.
+ */
+export function noteCreationWrite(): void {
+  endWrite();
+  const current: NonNullable<typeof write> = { origin: document.activeElement, acted: false, stop: () => undefined };
+  const act = (event: Event) => {
+    // A key typed while the focus is nowhere yet (the title the write closed) chooses nothing.
+    if (event.type === 'keydown' && atStart(document, document.activeElement)) return;
+    current.acted = true;
+  };
+  const events = ['keydown', 'pointerdown', 'mousedown'] as const;
+  events.forEach((name) => document.addEventListener(name, act, true));
+  current.stop = () => events.forEach((name) => document.removeEventListener(name, act, true));
+  write = current;
+}
+
+/**
+ * The record is written and the person is on it (`useRecordCreation`): its page places the
+ * cursor, unless the person used the page while it was written (a press, a key typed in a field):
+ * the cursor then stays where they put it.
+ */
+export function armCreatedRecordFocus(): void {
+  const done = write;
+  endWrite();
+  armed = done?.acted ? null : { kind: 'created', until: Date.now() + 8000, origin: done?.origin ?? null };
 }
 
 /**
@@ -154,18 +235,21 @@ function atStart(root: ParentNode, active: Element | null): boolean {
 }
 
 /**
- * Focuses the creation's first field once it is on screen. Until the person types in a field or
- * clicks, for a few seconds, the focus follows that field as the record loads: an editor arrives,
- * a default fills a required field a moment after it shows, Layout hands the focus to the page
- * scroller. The focus somewhere else (the page's choice) ends it too. A key typed while the focus
- * is nowhere yet chooses nothing: the field it was meant for still gets the cursor.
+ * Focuses the field `find` names once it is on screen (`undefined`: not known yet). Until the
+ * person types in a field or clicks, for a few seconds, the focus follows that field as the record
+ * loads: an editor arrives, a default fills a required field a moment after it shows, Layout hands
+ * the focus to the page scroller. The focus somewhere else (the page's choice, or a field the
+ * person went to while the record was written) ends it too; `origin` is where the gesture that
+ * wrote the record left it. A key typed while the focus is nowhere yet chooses nothing: the field
+ * it was meant for still gets the cursor.
  */
-function placeFirstField(root: HTMLElement): void {
+function placeField(root: HTMLElement, find: (root: HTMLElement) => HTMLElement | null | undefined, origin: Element | null = null): void {
   const started = Date.now();
   let placed: HTMLElement | null = null;
   let acted = false;
+  const atRest = (active: Element | null) => atStart(root, active) || (!!origin && active === origin);
   const act = (event: Event) => {
-    if (event.type === 'keydown' && atStart(root, document.activeElement)) return;
+    if (event.type === 'keydown' && atRest(document.activeElement)) return;
     acted = true;
   };
   document.addEventListener('keydown', act, true);
@@ -176,11 +260,11 @@ function placeFirstField(root: HTMLElement): void {
   };
   const attempt = () => {
     const active = document.activeElement;
-    if (acted || !root.isConnected || (active !== placed && !atStart(root, active))) {
+    if (acted || !root.isConnected || (active !== placed && !atRest(active))) {
       stop();
       return;
     }
-    const field = findFirstCreationField(root);
+    const field = find(root);
     if (field && field !== active) {
       field.focus();
       placed = field;
@@ -236,15 +320,16 @@ export function followCreationFields(event: React.KeyboardEvent<HTMLElement>, on
   const field = next ? fieldsOf(next.el)[0] : undefined;
   if (!field && !titleToCommit) return;
   event.preventDefault();
-  // A record created meanwhile reopens on its own address: the focus goes on there.
-  armCreationFieldFocus();
+  // A record this Tab gives is written by the creation frame, which places the cursor on it.
   field?.focus();
 }
 
 /**
- * Places the focus armed by `followCreationFields` once the page shows something else: `page`
- * names what it shows (a new record or a record, and its tab), and a page that mounts is new.
- * On the page where Tab was pressed, the focus has already moved.
+ * Places the focus armed above once the page shows something else: `page` names what it shows (a
+ * new record or a record, and its tab), and a page that mounts is new. A record the creation frame
+ * has just written gets its cursor here (`armCreatedRecordFocus`), whatever gave it (Enter, Tab,
+ * Create, the choice of its last required field); a record opened otherwise gets none. On the page
+ * where Tab was pressed, the focus has already moved.
  */
 export function useCreationFieldFocus(rootRef: React.RefObject<HTMLElement | null>, page: string): void {
   const shown = React.useRef<string | null>(null);
@@ -254,10 +339,12 @@ export function useCreationFieldFocus(rootRef: React.RefObject<HTMLElement | nul
     if (!root) return;
     const changed = shown.current !== page;
     shown.current = page;
-    if (!changed || !armedUntil) return;
-    const live = Date.now() < armedUntil;
+    if (!changed || !armed) return;
+    const { kind, until, origin } = armed;
     clearCreationFieldFocus();
-    if (live) placeFirstField(root);
+    if (Date.now() >= until) return;
+    if (kind === 'created') placeField(root, createdRecordTarget, origin);
+    else placeField(root, findFirstCreationField);
   });
   React.useLayoutEffect(() => () => {
     queueMicrotask(() => {
