@@ -9,6 +9,7 @@ import type { LocalizedBudgetColumnAiContext } from '../budget-columns/budget-co
 import type { AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 import { isoDateTimeInTimeZone, knownTimeZone } from '../common/csv-sheet';
 import { AI_PERSON_WITHOUT_NAME } from './query/ai-support.query';
+import { bulkEditToolRule } from './mutation/ai-bulk-edit';
 import { AGENT_NAME, PRODUCT_NAME, workspaceDisplayName } from '../config/product';
 import { aiScreenName, unreadFamiliesSentence, type AiAdminFamiliesGap, type AiScreenLanguage, type AiUnreadFamiliesReach } from './ai-unread-families';
 
@@ -353,6 +354,8 @@ export class AiSystemPromptService {
         tool.write_preview != null,
     );
     const hasWritePreviewTools = writePreviewTools.length > 0;
+    // The change in bulk of applications and budget lines: one card from two records on (lot K2e of 26.12.1).
+    const bulkRule = bulkEditToolRule(writePreviewTools.map((tool) => tool.name));
     const hasUndoPreviewTool = availableToolNames.has('undo_preview');
 
     addSection(
@@ -437,6 +440,7 @@ export class AiSystemPromptService {
         'For bulk requests affecting several records, first resolve the complete target set, then create one backend preview per target record in the same assistant turn before asking for approval. ' +
         'Do not stop after the first bulk preview and do not ask the user to type "continue" between previews. ' +
         'Do not compress unrelated record edits into one preview; the user must be able to approve or reject each preview independently. ' +
+        (bulkRule ? `${bulkRule} ` : '') +
         'Do not claim a write succeeded until you receive the execution result from the backend.\n' +
         unsupportedWritesRule(params.currentUser.screenLanguage ?? null),
       );
@@ -545,6 +549,7 @@ export class AiSystemPromptService {
           .join('\n') +
         '\n' +
         '- A write-preview tool returns a backend-created preview object. For one target, describe the proposed change clearly and wait for explicit approval.\n' +
+        (bulkRule ? `- ${bulkRule}\n` : '') +
         '- For bulk changes, use `prepare_mutation_plan` when changes are related, span multiple object types, or include dependencies. Otherwise continue calling write-preview tools until every selected target has a preview before writing assistant text that asks for approval.\n' +
         '- In `prepare_mutation_plan`, give every step a stable `operation_id`; use `depends_on` and placeholders such as `{{create_project.ref}}`, `{{create_project.id}}`, or `{{create_project.title}}` in dependent step inputs. For bulk target sets, include expected_target_refs/expected_target_count and explicit_exclusions for targets intentionally excluded by your assumption.\n' +
         '- Multiple write-preview tool calls may be used in the same turn for bulk changes, but every returned preview still requires explicit user approval before execution.\n' +
