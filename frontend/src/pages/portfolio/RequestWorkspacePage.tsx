@@ -48,6 +48,8 @@ import { useLocale } from '../../i18n/useLocale';
 import { useTenant } from '../../tenant/TenantContext';
 import { useRecordTitle } from '../../tenant/workspaceTitle';
 import { getScoreColor } from '../tasks/theme/taskDetailTokens';
+import { displayedRequestPriority } from './requestPriority';
+import { useEnabledCriterionIds } from './useEnabledCriterionIds';
 import { portfolioLinksKey, usePortfolioRelationsBadge } from './workspace/portfolioRelations';
 import { KanapDialog, unsavedConfirm, useKanapDialogs } from '../../components/design';
 import { carryListFilters } from '../../lib/listContext';
@@ -234,6 +236,7 @@ export default function RequestWorkspacePage() {
     },
     enabled: canReadPortfolioEvaluationSettings,
   });
+  const enabledCriteria = useEnabledCriterionIds();
 
   const sources = classificationData?.sources?.filter((t) => t.is_active) || [];
   const categories = classificationData?.categories?.filter((c) => c.is_active) || [];
@@ -921,7 +924,16 @@ export default function RequestWorkspacePage() {
     };
   });
   const requestReference = data?.item_number ? `REQ-${data.item_number}` : null;
-  const scoreColor = getScoreColor(Number(form?.priority_score || 0), theme.palette.mode);
+  const shownPriority = enabledCriteria.pending
+    ? null
+    : displayedRequestPriority({
+      priorityScore: form?.priority_score,
+      priorityOverride: form?.priority_override,
+      overrideValue: form?.override_value,
+      criteriaValues: form?.criteria_values,
+      enabledCriterionIds: enabledCriteria.unavailable ? null : enabledCriteria.ids,
+    });
+  const scoreColor = getScoreColor(Number(shownPriority ?? 0), theme.palette.mode);
   const targetDeliveryDateLabel = formatDate(locale, form?.target_delivery_date);
   const originTaskLabel = form?.origin_task?.item_number
     ? `T-${form.origin_task.item_number}`
@@ -1069,7 +1081,7 @@ export default function RequestWorkspacePage() {
               />
             )}
             <PortfolioScoreMetadata
-              value={form?.priority_score}
+              value={shownPriority}
               color={scoreColor}
               title={form?.priority_override ? t('portfolio:workspace.request.priority.overriddenTitle') : t('portfolio:workspace.request.priority.title')}
             />
@@ -1371,7 +1383,7 @@ export default function RequestWorkspacePage() {
         currentStatus={form?.status || ''}
         allowedTransitions={ALLOWED_TRANSITIONS[form?.status] || []}
         statusOptions={statusOptions}
-        priorityScore={form?.priority_score}
+        priorityScore={shownPriority}
         onClose={() => setRecommendationDialogOpen(false)}
         onSubmit={handleSubmitRecommendation}
         onImageUpload={handleImageUpload}
