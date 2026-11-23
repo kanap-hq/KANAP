@@ -156,17 +156,27 @@ describe('useCreationFieldFocus', () => {
     await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
   });
 
-  it('stops placing the focus after a press of the pointer elsewhere', async () => {
+  it('stops placing the focus after a press in a field, and only then', async () => {
     tabFromTitle();
-    const view = render(<Record><div data-creation-panel="main"><div data-creation-description="" /></div></Record>);
-    fireEvent.pointerDown(document.body);
-    view.rerender(
+    const loaded = (
       <Record>
         <div data-creation-panel="main">
+          <input aria-label="code" />
           <div data-creation-description=""><div aria-label="description" contentEditable suppressContentEditableWarning /></div>
         </div>
-      </Record>,
+      </Record>
     );
+    const view = render(<Record><div data-creation-panel="main"><input aria-label="code" /><div data-creation-description="" /></div></Record>);
+    // A press that puts the cursor in no field (the page around the fields) changes nothing.
+    fireEvent.pointerDown(document.body);
+    view.rerender(loaded);
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+    view.unmount();
+
+    tabFromTitle();
+    const next = render(<Record><div data-creation-panel="main"><input aria-label="code" /><div data-creation-description="" /></div></Record>);
+    fireEvent.pointerDown(screen.getByLabelText('code'));
+    next.rerender(loaded);
     await new Promise((resolve) => setTimeout(resolve, 150));
     expect(screen.getByLabelText('description')).not.toHaveFocus();
   });

@@ -498,4 +498,17 @@ describe('what the person does while the record is written', () => {
       document.removeEventListener('focusin', onFocusIn);
     }
   });
+
+  it('counts no click that put the cursor in no field: the description still gets it', async () => {
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post });
+    fireEvent.keyDown(typeTitle('Billing'), { key: 'Enter' });
+    // A field of the preview, out of reach until the record exists.
+    const preview = screen.getAllByTestId('creation-preview')[0];
+    fireEvent.pointerDown(preview);
+    fireEvent.mouseDown(preview);
+    await write.answer();
+    await onRecord();
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+  });
 });

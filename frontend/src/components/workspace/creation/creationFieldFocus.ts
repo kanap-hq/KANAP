@@ -243,6 +243,9 @@ function typedBy(event: KeyboardEvent): string | null {
   return Array.from(event.key).length === 1 ? event.key : null;
 }
 
+/** An open list or menu, where a press chooses. */
+const LISTS = '[role="listbox"], [role="menu"]';
+
 /** A field this person may change, the origin locked by the write included. */
 function ownField(active: Element | null, current: Write): active is HTMLElement {
   return !!active && (active === current.locked || (active instanceof HTMLElement && editable(active)));
@@ -255,7 +258,8 @@ function ownField(active: Element | null, current: Write): active is HTMLElement
  * description (Enter as a new line, after a first character), and Tab, Shift+Tab and Enter move
  * nothing: the field the write started from takes none of them. This holds while the focus is
  * there or nowhere yet (`atStart`); elsewhere the keys are the person's. The person takes a field
- * of their own by a press, or by typing in another field than that one: the cursor stays there.
+ * of their own by a press that puts the cursor in a field, or by typing in another field than that
+ * one: the cursor stays there.
  * Shortcuts and the keys of a composition (accents, input methods) are left alone; a composition
  * cannot start in the read-only origin.
  */
@@ -300,8 +304,22 @@ export function noteCreationWrite(): void {
     event.preventDefault();
     event.stopPropagation();
   };
-  const onPress = () => {
-    if (!current.acted) takeOver();
+  // A press counts once it put the cursor in a field: pressed on one (the list the write started
+  // from, opened again, too), in an open list, or the focus moved into one. A press on what takes
+  // no cursor (the preview, the page around the fields) leaves the cursor to the record.
+  const onPress = (event: Event) => {
+    if (current.acted) return;
+    const target = event.target instanceof Element ? event.target : null;
+    const pressed = target?.closest(ENTRY_FIELDS) ?? target?.closest('.MuiInputBase-root, .MuiAutocomplete-root')?.querySelector(ENTRY_FIELDS) ?? null;
+    if (ownField(pressed, current) || target?.closest(LISTS)) {
+      takeOver();
+      return;
+    }
+    const before = document.activeElement;
+    window.setTimeout(() => {
+      const after = document.activeElement;
+      if (write === current && !current.acted && after !== before && (ownField(after, current) || after?.closest(LISTS))) takeOver();
+    }, 0);
   };
   document.addEventListener('keydown', onKeyDown, true);
   document.addEventListener('pointerdown', onPress, true);
@@ -410,12 +428,15 @@ function placeField(
   created = false,
 ): void {
   const started = Date.now();
+  // The write whose record this is: what was typed meanwhile, and whether the person took a field.
+  const session = created ? write : null;
   let placed: HTMLElement | null = null;
   let acted = false;
   const atRest = (active: Element | null) => atStart(root, active) || (!!origin && active === origin);
   const act = (event: Event) => {
-    // A key the write kept for the record moved nothing.
+    // A key the write kept for the record moved nothing; while it keeps them, it judges presses.
     if (event.defaultPrevented || (event.type === 'keydown' && atRest(document.activeElement))) return;
+    if (event.type === 'pointerdown' && session && write === session) return;
     acted = true;
   };
   document.addEventListener('keydown', act, true);
@@ -423,7 +444,7 @@ function placeField(
   const stop = () => {
     document.removeEventListener('keydown', act, true);
     document.removeEventListener('pointerdown', act, true);
-    if (created && write?.shown) endWrite();
+    if (session && write === session) endWrite();
   };
   const attempt = () => {
     const active = document.activeElement;
@@ -431,14 +452,14 @@ function placeField(
     const late = Date.now() - started >= 3000;
     // An editor that opens on focus may take the focus into its text itself: the field found.
     const field = root.isConnected ? find(root, late) : null;
-    if (acted || (created && write?.acted) || !root.isConnected || (active !== placed && active !== field && !atRest(active))) {
+    if (acted || session?.acted || !root.isConnected || (active !== placed && active !== field && !atRest(active))) {
       stop();
       return;
     }
     if (field) {
       if (field !== active) field.focus();
       placed = field;
-      if (created) enterPlaced(field);
+      if (session && write === session) enterPlaced(field);
     }
     if (!late) window.setTimeout(attempt, 50);
     else stop();
