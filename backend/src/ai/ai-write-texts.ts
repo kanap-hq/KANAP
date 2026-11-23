@@ -86,6 +86,42 @@ export function manualAllocationRemovedText(language: AiWriteLanguage): string {
   return MANUAL_ALLOCATION_REMOVED[language];
 }
 
+/** Where the shares of a split come from, when a driver computes them. */
+export type AllocationBasis = 'headcount' | 'it_users' | 'turnover' | 'department_headcount';
+
+/**
+ * A split as a `replace_allocations` card shows it: each company (or company / department) by name,
+ * with its share when known, and the driver that computes the shares.
+ */
+export type AllocationSplitView =
+  | { kind: 'none' }
+  | { kind: 'automatic' }
+  | { kind: 'rows'; rows: Array<{ label: string; pct: number | null }>; basis: AllocationBasis | null };
+
+const NO_ALLOCATION: Texts = { en: 'No allocation rows', fr: 'Aucune ventilation', de: 'Keine Zuordnung', es: 'Sin asignación' };
+const AUTOMATIC_ALLOCATION: Texts = { en: 'Automatic allocation', fr: 'Ventilation automatique', de: 'Automatische Zuordnung', es: 'Asignación automática' };
+const ALLOCATION_BASIS: Record<AllocationBasis, Texts> = {
+  headcount: { en: 'headcount', fr: 'effectif', de: 'Mitarbeiterzahl', es: 'plantilla' },
+  it_users: { en: 'IT users', fr: 'utilisateurs IT', de: 'IT-Benutzer', es: 'usuarios IT' },
+  turnover: { en: 'turnover', fr: "chiffre d'affaires", de: 'Umsatz', es: 'facturación' },
+  department_headcount: { en: 'department headcount', fr: 'effectif des départements', de: 'Mitarbeiterzahl der Abteilungen', es: 'plantilla de los departamentos' },
+};
+const ALLOCATION_BASIS_PHRASE: Record<AiWriteLanguage, (basis: string) => string> = {
+  en: (basis) => `according to the driver: ${basis}`,
+  fr: (basis) => `selon l'inducteur : ${basis}`,
+  de: (basis) => `nach Zuordnungsschlüssel: ${basis}`,
+  es: (basis) => `según el inductor: ${basis}`,
+};
+
+export function allocationSplitText(language: AiWriteLanguage, split: AllocationSplitView): string {
+  if (split.kind === 'none') return NO_ALLOCATION[language];
+  if (split.kind === 'automatic') return AUTOMATIC_ALLOCATION[language];
+  const number = new Intl.NumberFormat(language, { maximumFractionDigits: 2 });
+  const percent = (pct: number) => `${number.format(pct)}${language === 'en' ? '%' : ' %'}`;
+  const rows = split.rows.map((row) => (row.pct == null ? row.label : `${row.label} ${percent(row.pct)}`)).join(', ');
+  return split.basis ? `${rows} (${ALLOCATION_BASIS_PHRASE[language](ALLOCATION_BASIS[split.basis][language])})` : rows;
+}
+
 export function bulkPreviewsIncompleteText(language: AiWriteLanguage): string {
   return BULK_PREVIEWS_INCOMPLETE[language];
 }

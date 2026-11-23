@@ -20,7 +20,10 @@ import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
-import { AiWriteLanguage, manualAllocationRemovedText, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
+import { AiPolicyService } from '../ai-policy.service';
+import {
+  AiWriteLanguage, AllocationBasis, AllocationSplitView, allocationSplitText, manualAllocationRemovedText, previewSummaryText, quoted, writeActionText,
+} from '../ai-write-texts';
 
 export const AI_FINANCIAL_PLAN_ENTITY_TYPES = ['budget_lines'] as const;
 export type AiFinancialPlanEntityType = typeof AI_FINANCIAL_PLAN_ENTITY_TYPES[number];
@@ -385,6 +388,7 @@ export class AiFinancialPlanMutationSupportService {
     private readonly spendAllocations: SpendAllocationsService,
     private readonly spendAmounts: SpendAmountsService,
     private readonly spendVersions: SpendVersionsService,
+    private readonly policy: AiPolicyService,
   ) {}
 
   getWritableFieldDescriptions(): string[] {
@@ -473,6 +477,9 @@ export class AiFinancialPlanMutationSupportService {
     if (action === 'replace_allocations') {
       const before = await this.listAllocations(context, item.nature, version.id);
       const allocations = await this.normalizeAllocations(context, input.allocations ?? [], String(version.row.allocation_method || 'default'));
+      const beforeItems = Array.isArray(before.items) ? before.items as Array<Record<string, unknown>> : [];
+      const fromSplit = beforeItems.length === 0 ? { kind: 'none' as const } : await this.splitView(context, beforeItems, null);
+      const toSplit = allocations.length === 0 ? { kind: 'automatic' as const } : await this.splitView(context, allocations, null);
       return {
         targetEntityType: entityType,
         targetEntityId: item.id,
@@ -493,10 +500,8 @@ export class AiFinancialPlanMutationSupportService {
             ...before,
             signature: allocationSignature(before),
           },
-          display_values: {
-            from: this.formatAllocationSummary(before),
-            to: this.formatAllocationInputs(allocations),
-          },
+          // The split before and after, by name (`splitView`), written in the person's language when shown.
+          display_values: { from_split: fromSplit, to_split: toSplit, from: allocationSplitText('en', fromSplit), to: allocationSplitText('en', toSplit) },
         },
       };
     }
@@ -603,10 +608,12 @@ export class AiFinancialPlanMutationSupportService {
       };
     } else if (action === 'replace_allocations') {
       const display = current.display_values && typeof current.display_values === 'object' ? current.display_values as Record<string, unknown> : {};
+      // A card stored before the split was kept by name shows its texts as they were.
+      const side = (split: unknown, text: unknown) => (split && typeof split === 'object' ? allocationSplitText(language, split as AllocationSplitView) : formatValue(text));
       changes.allocations = {
         label: 'Allocations',
-        from: formatValue(display.from),
-        to: formatValue(display.to),
+        from: side(display.from_split, display.from),
+        to: side(display.to_split, display.to),
         format: 'text',
       };
     }
@@ -797,17 +804,13 @@ export class AiFinancialPlanMutationSupportService {
     const nextMethod = fields.allocation_method;
     if (typeof nextMethod !== 'string' || MANUAL_METHODS.has(nextMethod)) return prepared;
     if (!MANUAL_METHODS.has(String(version.row.allocation_method || 'default'))) return prepared;
-    const rows: Array<{ company: string | null; department: string | null }> = await context.manager.query(
-      `SELECT c.name AS company, d.name AS department
-         FROM spend_allocations a
-         LEFT JOIN companies c ON c.tenant_id = a.tenant_id AND c.id = a.company_id
-         LEFT JOIN departments d ON d.tenant_id = a.tenant_id AND d.id = a.department_id
-        WHERE a.tenant_id = $1 AND a.version_id = $2 AND NOT a.is_system_generated
-        ORDER BY c.name, d.name`,
+    const rows: Array<Record<string, unknown>> = await context.manager.query(
+      `SELECT company_id, department_id FROM spend_allocations WHERE tenant_id = $1 AND version_id = $2 AND NOT is_system_generated`,
       [context.tenantId, version.id],
     );
     if (rows.length === 0) return prepared;
-    const labels = rows.map((row) => [row.company, row.department].map(textOrNull).filter(Boolean).join(' / '));
+    const split = await this.splitView(context, rows, null);
+    const labels = split.kind === 'rows' ? split.rows.map((row) => row.label) : [];
     return { ...prepared, mutationInput: { ...prepared.mutationInput, removes_manual_allocation: labels } };
   }
 
@@ -1427,17 +1430,35 @@ export class AiFinancialPlanMutationSupportService {
     return { year, currency: /^[A-Z]{3}$/.test(code) ? code : null, column_names: columnNames };
   }
 
-  private formatAllocationSummary(value: Record<string, unknown>): string {
-    const items = Array.isArray(value.items) ? value.items : [];
-    if (items.length === 0) return 'No allocation rows';
-    return items
-      .map((row: any) => [row.company_id, row.department_id, row.allocation_pct == null ? null : `${row.allocation_pct}%`, row.source].map(textOrNull).filter(Boolean).join(' / '))
-      .join(', ');
-  }
-
-  private formatAllocationInputs(value: AllocationInput[]): string {
-    if (value.length === 0) return 'Automatic allocation';
-    return value.map((row) => [row.company_id, row.department_id].filter(Boolean).join(' / ')).join(', ');
+  /**
+   * Split rows as a card shows them, sorted by name: a company or department by its name, as the
+   * Allocations tab shows them to the person: a company they do not read shows as '—', a department
+   * they do not read is left out. Never an id.
+   */
+  private async splitView(
+    context: AiExecutionContextWithManager,
+    rows: ReadonlyArray<{ company_id?: unknown; department_id?: unknown; allocation_pct?: unknown }>,
+    basis: AllocationBasis | null,
+  ): Promise<AllocationSplitView> {
+    const readable = await this.policy.readableResources(context, ['companies', 'departments'], context.manager);
+    const namesOf = async (table: 'companies' | 'departments', key: 'company_id' | 'department_id') => {
+      const ids = Array.from(new Set(rows.map((row) => textOrNull(row[key])).filter((id): id is string => !!id)));
+      if (!readable.has(table) || ids.length === 0) return new Map<string, string>();
+      const found: Array<{ id: string; name: string }> = await context.manager.query(
+        `SELECT id::text AS id, name FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [context.tenantId, ids],
+      );
+      return new Map(found.map((row) => [row.id, row.name]));
+    };
+    const companies = await namesOf('companies', 'company_id');
+    const departments = await namesOf('departments', 'department_id');
+    const view = rows.map((row) => {
+      const department = departments.get(String(row.department_id ?? ''));
+      const label = [companies.get(String(row.company_id ?? '')) ?? '—', department].filter(Boolean).join(' / ');
+      const pct = row.allocation_pct == null || row.allocation_pct === '' ? null : Math.round(Number(row.allocation_pct) * 100) / 100;
+      return { label, pct: pct != null && Number.isFinite(pct) ? pct : null };
+    }).sort((a, b) => a.label.localeCompare(b.label));
+    return { kind: 'rows', rows: view, basis };
   }
 
   private itemLabelSingular(): string {

@@ -103,6 +103,9 @@ type HistoryCase = {
 /** The module rights of the person who approves: one per family of `CASES`. */
 const PERMISSIONS: Record<string, string> = {
   ai_chat: 'member',
+  // The companies and departments a split names (the Allocations tab reads them).
+  companies: 'reader',
+  departments: 'reader',
   applications: 'member',
   infrastructure: 'member',
   contracts: 'member',
@@ -915,6 +918,191 @@ async function emptyManualSplitRefusal(harness: Harness) {
   }
 }
 
+/** A card as the person reads it: its changes and its summary. */
+const cardText = (preview: any) => JSON.stringify({ changes: preview.changes, summary: preview.summary });
+const UUID_IN_TEXT = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+/** A person with the rights of `PERMISSIONS` but `left out`: a context for them. */
+async function personWithout(runner: QueryRunner, s: Seed, leftOut: string[], conversationId: string) {
+  const roleId = await one(runner,
+    `INSERT INTO roles (tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
+     VALUES ($1, 'Narrow member', 'Narrow member', false, false, now(), now()) RETURNING id`, [s.tenantId]);
+  for (const [resource, level] of Object.entries(PERMISSIONS)) {
+    if (leftOut.includes(resource)) continue;
+    await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level, created_at, updated_at) VALUES ($1, $2, $3, $4, now(), now())`,
+      [s.tenantId, roleId, resource, level]);
+  }
+  const userId = await one(runner,
+    `INSERT INTO users (tenant_id, first_name, last_name, email, role_id, mfa_enabled, status, locale, created_at, updated_at)
+     VALUES ($1, 'Narrow', 'Member', $2, $3, false, 'enabled', 'en', now(), now()) RETURNING id`,
+    [s.tenantId, `narrow-${s.tenantId.slice(0, 8)}@example.test`, roleId]);
+  await runner.query(
+    `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+     VALUES ($1, $2, $3, 'AI allocation card', 'custom', 'history-model', 'custom', now(), now())`,
+    [conversationId, s.tenantId, userId]);
+  return { ...context(s, runner, conversationId), userId };
+}
+
+/** The stored split of a line's 2026 version: company (and department) names with their shares. */
+async function storedSplit(runner: QueryRunner, s: Seed, lineId: string) {
+  return runner.query(
+    `SELECT c.name AS company, d.name AS department, round(a.allocation_pct, 2)::float AS pct
+       FROM spend_allocations a
+       JOIN companies c ON c.tenant_id = a.tenant_id AND c.id = a.company_id
+       LEFT JOIN departments d ON d.tenant_id = a.tenant_id AND d.id = a.department_id
+      WHERE a.tenant_id = $1 AND a.version_id = $2 ORDER BY c.name, d.name`,
+    [s.tenantId, await versionOf(runner, s, lineId)],
+  );
+}
+
+/** A line's split cards, with what they need: head counts of 80 / 20 (the driver's split differs from a 60 / 40 asked for), two departments. */
+async function withSplitWorld(harness: Harness, play: (w: {
+  runner: QueryRunner; s: Seed; ctx: ReturnType<typeof context>; logistics: string;
+  card: (ctx: any, lineId: string, input: Record<string, unknown>) => Promise<any>;
+  approve: (previewId: string) => Promise<void>;
+  refusal: (lineId: string, input: Record<string, unknown>) => Promise<string>;
+  french: (previewId: string) => Promise<any>;
+  splitLine: (method: string, first?: { company_id: string; department_id: string | null }) => Promise<string>;
+}) => Promise<void>) {
+  const runner = harness.dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    const s = await seed(runner);
+    const ctx = context(s, runner, randomUUID());
+    await runner.query(
+      `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+       VALUES ($1, $2, $3, 'AI allocation card', 'custom', 'history-model', 'custom', now(), now())`,
+      [ctx.conversationId, s.tenantId, s.userId],
+    );
+    for (const [companyId, headcount] of [[s.companyId, 80], [s.secondCompanyId, 20]] as const) {
+      await runner.query(`INSERT INTO company_metrics (tenant_id, company_id, fiscal_year, headcount, it_users, turnover)
+                          VALUES ($1, $2, 2026, $3, 0, 0)`, [s.tenantId, companyId, headcount]);
+    }
+    const finance = await one(runner, `INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Finance') RETURNING id`, [s.tenantId, s.companyId]);
+    const logistics = await one(runner, `INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Logistics') RETURNING id`, [s.tenantId, s.secondCompanyId]);
+    for (const [departmentId, headcount] of [[finance, 30], [logistics, 10]] as const) {
+      await runner.query(`INSERT INTO department_metrics (tenant_id, department_id, fiscal_year, headcount) VALUES ($1, $2, 2026, $3)`,
+        [s.tenantId, departmentId, headcount]);
+    }
+    const { WriteFinancialPlanAiMutationOperation } = require('../mutation/operations/write-financial-plan.ai-mutation-operation');
+    const operation = harness.app.get(WriteFinancialPlanAiMutationOperation, { strict: false });
+    await play({
+      runner, s, ctx, logistics,
+      card: async (who, lineId, input) => {
+        const preview = await harness.tools.execute(who, 'write_financial_plan', financialCard(lineId, input).input) as any;
+        assert.equal(preview.status, 'pending', JSON.stringify(preview));
+        return preview;
+      },
+      approve: async (previewId) => {
+        const executed = await harness.previews.executePreview(ctx, previewId) as any;
+        assert.equal(executed.status, 'executed', executed.error_message || 'the card did not execute');
+      },
+      refusal: async (lineId, input) => {
+        try {
+          const answer = await harness.tools.execute(ctx, 'write_financial_plan', financialCard(lineId, input).input) as any;
+          return String(answer?.error ?? answer?.message ?? JSON.stringify(answer));
+        } catch (error) {
+          return (error as Error).message;
+        }
+      },
+      french: async (previewId) => {
+        const [entity] = await runner.query(`SELECT * FROM ai_mutation_previews WHERE id = $1`, [previewId]);
+        return operation.presentPreview(entity, 'fr');
+      },
+      // A line split by hand: its 2026 version with the method, and a first row stored by the Allocations tab's rows save.
+      splitLine: async (method, first) => {
+        const lineId = await lineWithVersion(harness, runner, s, 'opex', { allocation_method: method });
+        if (first) await harness.services.allocations.opex.bulkUpsert(await versionOf(runner, s, lineId), [first], s.userId, screenOpts(runner, s));
+        return lineId;
+      },
+    });
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
+/**
+ * The cards of a split name the companies and departments, never an id (item 1 of the K2a
+ * leftovers): a `replace_allocations` card and its "Undo". A person who does not read the companies
+ * and departments sees no name, as on their Allocations tab.
+ */
+async function allocationCardsName(harness: Harness) {
+  await withSplitWorld(harness, async ({ runner, s, ctx, logistics, card, approve, splitLine }) => {
+    const names = (preview: any, expected: string[], what: string) => {
+      assert.doesNotMatch(cardText(preview), UUID_IN_TEXT, `${what} shows no id: ${cardText(preview)}`);
+      for (const name of expected) assert.ok(cardText(preview).includes(name), `${what} names ${name}: ${cardText(preview)}`);
+    };
+    const byCompany = await splitLine('manual_company', { company_id: s.companyId, department_id: null });
+    const companies = await card(ctx, byCompany, { action: 'replace_allocations', allocations: [s.companyId, s.secondCompanyId] });
+    names(companies, ['History company', 'Second company'], 'the card by company');
+    await approve(companies.preview_id);
+    names(await harness.previews.createReversePreview(ctx, companies.preview_id), ['History company', 'Second company'], 'its undo');
+
+    const byDepartment = await splitLine('manual_department', { company_id: s.companyId, department_id: await one(runner,
+      `SELECT id FROM departments WHERE tenant_id = $1 AND name = 'Finance'`, [s.tenantId]) });
+    const departments = await card(ctx, byDepartment, { action: 'replace_allocations', allocations: [{ department: 'Finance' }, { department: logistics }] });
+    names(departments, ['History company / Finance', 'Second company / Logistics'], 'the card by department');
+    await approve(departments.preview_id);
+    names(await harness.previews.createReversePreview(ctx, departments.preview_id), ['History company / Finance', 'Second company / Logistics'], 'its undo');
+
+    const narrow = await personWithout(runner, s, ['companies', 'departments'], randomUUID());
+    for (const [lineId, allocations] of [[byCompany, [s.companyId]], [byDepartment, [logistics]]] as const) {
+      const preview = await card(narrow, lineId, { action: 'replace_allocations', allocations });
+      assert.doesNotMatch(cardText(preview), UUID_IN_TEXT, `the card shows no id: ${cardText(preview)}`);
+      assert.doesNotMatch(cardText(preview), /History company|Second company|Finance|Logistics/, `no name the person does not read: ${cardText(preview)}`);
+    }
+  });
+}
+
+/**
+ * The shares of a split (item 2 of the K2a leftovers): the card shows the shares the approval
+ * stores and where they come from; percentages the method does not apply are refused with what to
+ * do; manual percentages are stored as given.
+ */
+async function allocationCardsShares(harness: Harness) {
+  await withSplitWorld(harness, async ({ runner, s, ctx, logistics, card, approve, refusal, french, splitLine }) => {
+    const byCompany = await splitLine('manual_company');
+    const companies = await card(ctx, byCompany, { action: 'replace_allocations', allocations: [s.companyId, s.secondCompanyId] });
+    assert.equal(companies.changes.allocations.to, 'History company 80%, Second company 20% (according to the driver: headcount)');
+    assert.equal((await french(companies.preview_id)).changes.allocations.to,
+      'History company 80 %, Second company 20 % (selon l\'inducteur : effectif)');
+    await approve(companies.preview_id);
+    assert.deepEqual(await storedSplit(runner, s, byCompany), [
+      { company: 'History company', department: null, pct: 80 },
+      { company: 'Second company', department: null, pct: 20 },
+    ], 'the approval stores the shares the card showed');
+
+    const refused = await refusal(byCompany, {
+      action: 'replace_allocations',
+      allocations: [{ company: s.companyId, allocation_pct: 60 }, { company: s.secondCompanyId, allocation_pct: 40 }],
+    });
+    assert.match(refused, /manual_company.*shares follow the driver/i, `the refusal says the shares follow the driver (got: ${refused})`);
+    assert.match(refused, /without allocation_pct.*manual_pct/i, `the refusal says what to do (got: ${refused})`);
+
+    const byPct = await splitLine('manual_pct');
+    const percentages = await card(ctx, byPct, {
+      action: 'replace_allocations',
+      allocations: [{ company: 'History company', allocation_pct: 60 }, { company: 'Second company', allocation_pct: '40%' }],
+    });
+    assert.equal(percentages.changes.allocations.to, 'History company 60%, Second company 40%');
+    await approve(percentages.preview_id);
+    assert.deepEqual((await storedSplit(runner, s, byPct)).map((row: any) => row.pct), [60, 40], 'the percentages asked for are stored');
+    const badSum = await refusal(byPct, { action: 'replace_allocations', allocations: [{ company: s.companyId, allocation_pct: 60 }, { company: s.secondCompanyId, allocation_pct: 30 }] });
+    assert.match(badSum, /must sum to 100%/, `a split that does not make 100 % is refused (got: ${badSum})`);
+    const noPct = await refusal(byPct, { action: 'replace_allocations', allocations: [s.companyId, s.secondCompanyId] });
+    assert.match(noPct, /allocation_pct/, `manual percentages need a percentage per company (got: ${noPct})`);
+
+    const byDepartment = await splitLine('manual_department');
+    const departments = await card(ctx, byDepartment, { action: 'replace_allocations', allocations: [{ department: 'Finance' }, { department: logistics }] });
+    assert.equal(departments.changes.allocations.to,
+      'History company / Finance 75%, Second company / Logistics 25% (according to the driver: department headcount)');
+    await approve(departments.preview_id);
+    assert.deepEqual((await storedSplit(runner, s, byDepartment)).map((row: any) => row.pct), [75, 25], 'the approval stores the shares the card showed');
+  });
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -938,7 +1126,14 @@ async function run() {
     } catch (error) {
       failures.push(`budget_lines: empty manual split refused: ${(error as Error).message}`);
     }
-    const total = CASES.length + SEQUENCES.length + 1;
+    for (const [name, check] of [['allocation cards name the records', allocationCardsName]] as const) {
+      try {
+        await check(harness);
+      } catch (error) {
+        failures.push(`budget_lines: ${name}: ${(error as Error).message}`);
+      }
+    }
+    const total = CASES.length + SEQUENCES.length + 2;
     if (failures.length) throw new Error(`${failures.length} of ${total} cases failed:\n${failures.join('\n\n')}`);
     console.log(`ai-record-write-history.integration.spec.ts passed (${total} cases)`);
   } finally {

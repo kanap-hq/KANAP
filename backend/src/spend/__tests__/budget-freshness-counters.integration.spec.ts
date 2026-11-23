@@ -371,6 +371,8 @@ async function aiFinancialPlan(kind: Kind) {
       amountsService('capex') as any, versionsService('capex'),
       new SpendAllocationsService(undefined as any, undefined as any, calculator as any, captureAudit() as any),
       amountsService('opex') as any, versionsService('opex'),
+      // The rights read by a card that names companies: all of them here.
+      { readableResources: async (_context: unknown, resources: string[]) => new Set(resources) } as any,
     );
     const context: any = { tenantId, userId: null, manager: runner.manager };
     const entityType = 'budget_lines';

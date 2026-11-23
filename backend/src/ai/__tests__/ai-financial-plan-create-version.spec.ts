@@ -22,7 +22,7 @@ function setup(existing: boolean) {
     },
   };
   const service = new AiFinancialPlanMutationSupportService(
-    {} as any, {} as any, versions as any, {} as any, {} as any, versions as any,
+    {} as any, {} as any, versions as any, {} as any, {} as any, versions as any, {} as any,
   );
   const context: any = {
     tenantId: 'tenant-1',
