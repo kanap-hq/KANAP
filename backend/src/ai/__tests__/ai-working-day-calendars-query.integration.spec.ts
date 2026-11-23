@@ -348,6 +348,33 @@ async function testRightTenantAndHistory(): Promise<void> {
   console.log('ok - working_day_calendars: refused in words without the right, another tenant invisible, history by code');
 }
 
+/**
+ * "Changed since" (migration 1856270000000): a calendar changed through the screen's service is
+ * found by the date filter; a neighbour saved with nothing changed keeps its date and is not.
+ */
+async function testChangedSinceFilter(): Promise<void> {
+  await inTransaction(async (runner) => {
+    const s = await seed(runner);
+    const { query } = executors();
+    const service = calendarService();
+    const sctx = { manager: runner.manager, tenantId: s.tenantId, userId: s.english };
+    await runner.query(`UPDATE working_day_profiles SET updated_at = '2020-01-02T03:04:05Z' WHERE tenant_id = $1`, [s.tenantId]);
+
+    await service.update(s.ids.fr, { name: `France renamed ${s.tag}` }, sctx);
+    await service.update(s.ids.de, { name: `Germany ${s.tag}` }, sctx);
+
+    const changed: any = await query.execute(context(runner, s, s.english), {
+      entity_type: 'working_day_calendars',
+      filters: { updated_at: { op: 'after', value: '2021-01-01' } },
+    });
+    assert.deepEqual(changed.items.map((item: any) => item.ref), ['FR'], 'only the changed calendar');
+    const [{ now }] = await runner.query(`SELECT now() AS now`);
+    assert.equal(new Date(changed.items[0].updated_at).toISOString(), (now as Date).toISOString(), 'dated by its change');
+    const [de] = await runner.query(`SELECT updated_at FROM working_day_profiles WHERE id = $1`, [s.ids.de]);
+    assert.equal(de.updated_at.toISOString(), '2020-01-02T03:04:05.000Z', 'the calendar saved unchanged keeps its date');
+  });
+}
+
 async function run(): Promise<void> {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for ai-working-day-calendars-query.integration.spec.ts.');
   const { AppModule } = require('../../app.module');
@@ -359,6 +386,7 @@ async function run(): Promise<void> {
       ['year as the screen', testYearAsTheScreen],
       ['language and detail', testLanguageAndDetail],
       ['right, tenant and history', testRightTenantAndHistory],
+      ['changed since filter', testChangedSinceFilter],
     ] as Array<[string, () => Promise<void>]>) {
       try {
         await test();

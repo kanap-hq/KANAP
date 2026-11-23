@@ -656,7 +656,7 @@ export class WorkingDayProfilesService {
       const rows = existing
         ? await ctx.manager.query(
           `UPDATE working_day_profiles
-              SET code = $3, name = $4, description = $5, days_by_year = $6::jsonb, status = $7, disabled_at = $8, updated_at = now()
+              SET code = $3, name = $4, description = $5, days_by_year = $6::jsonb, status = $7, disabled_at = $8
             WHERE tenant_id = $1 AND id = $2
         RETURNING *`,
           [ctx.tenantId, existing.id, values.code, values.name, values.description, days, values.status, values.disabled_at],
