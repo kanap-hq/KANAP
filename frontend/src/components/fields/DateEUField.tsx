@@ -198,6 +198,8 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
   const shownHelperText = helperText ?? (ownError ? t('labels.dateInvalid') : undefined);
 
   const naked = hideLabel || !label;
+  // A hidden label still names the field for assistive technology; the placeholder must not.
+  const ariaLabel = naked && label ? label : undefined;
 
   return (
     <Box ref={rootRef} sx={{ position: 'relative', ...sx }}>
@@ -224,6 +226,7 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
           inputMode: 'numeric',
           onMouseDown: () => { mouseDownRef.current = true; },
           onMouseUp: onInputMouseUp,
+          ...(ariaLabel ? { 'aria-label': ariaLabel } : {}),
         }}
         InputProps={{
           endAdornment: (
