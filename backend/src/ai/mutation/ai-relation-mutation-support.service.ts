@@ -43,6 +43,7 @@ import {
 } from '../../assets/placement-rules';
 import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 import { nameWithoutLeadingReference } from './name-without-leading-reference';
+import { ROW_AUDITED_RELATIONS, screenTraceOf } from './ai-relation-screen-audit';
 import { LINKED_MODULE_RESOURCES, linkedParticipationScope } from '../../common/relations/linked-reads';
 import { idsInScope } from '../../portfolio/portfolio-linked-reads';
 
@@ -556,7 +557,12 @@ export class AiRelationMutationSupportService {
     }
     await this.assertAddedTargetsReadable(context, config, expectedItems, nextItems);
     const audit = buildAiMutationAudit(preview);
+    // The trace of the screen's gesture (`ai-relation-screen-audit.ts`): the stored state the
+    // screen reads, before the write and after it.
+    const trace = screenTraceOf(config.sourceEntity, config.relation);
+    const traceBefore = trace ? await trace.read(context, preview.target_entity_id) : null;
     await this.replaceRelationItems(context, config, preview.target_entity_id, nextItems, audit);
+    if (trace) await trace.log(context, this.audit, audit, preview.target_entity_id, traceBefore);
     // R1: the host links the cluster replaces, removed after the cluster's own relations are in
     // place, with the preview's audit source.
     if (placement.length > 0) {
@@ -570,7 +576,10 @@ export class AiRelationMutationSupportService {
         { source: audit.source, sourceRef: audit.sourceRef },
       );
     }
-    await this.logRelationAudit(context, config, preview, sourceNature, expectedItems, nextItems, audit);
+    // The relations without the screen's trace yet keep the assistant's summary row.
+    if (!trace && !ROW_AUDITED_RELATIONS.has(`${config.sourceEntity}.${config.relation}`)) {
+      await this.logRelationAudit(context, config, preview, sourceNature, expectedItems, nextItems, audit);
+    }
   }
 
   /**
@@ -1395,7 +1404,7 @@ export class AiRelationMutationSupportService {
         await this.replaceAssetRelations(context, sourceId, nextItems);
         return;
       case 'link':
-        await this.replaceLinks(context, config, sourceId, nextItems);
+        await this.replaceLinks(context, config, sourceId, nextItems, ROW_AUDITED_RELATIONS.has(`${config.sourceEntity}.${config.relation}`) ? audit : null);
         return;
       case 'location_internal_contacts':
         await this.replaceLocationContacts(context, 'location_user_contacts', 'user_id', sourceId, nextItems);
@@ -1598,14 +1607,57 @@ export class AiRelationMutationSupportService {
     }
   }
 
-  private async replaceLinks(context: AiExecutionContextWithManager, config: RelationConfig, sourceId: string, nextItems: RelationItem[]): Promise<void> {
+  /**
+   * The web links: a removed link is deleted, a kept one keeps its row (its description updated when
+   * it changed), a new one is inserted. With `rowAudit`, each row is audited as the screen audits a
+   * link (`create`, `update`, `delete`, the stored row before and after, `recordId` the link).
+   */
+  private async replaceLinks(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    sourceId: string,
+    nextItems: RelationItem[],
+    rowAudit: AiMutationAuditOptions | null,
+  ): Promise<void> {
     const table = this.linkTable(config);
-    await context.manager.query(`DELETE FROM ${table.table} WHERE tenant_id = $1 AND ${table.sourceColumn} = $2`, [context.tenantId, sourceId]);
-    for (const item of nextItems) {
-      await context.manager.query(
-        `INSERT INTO ${table.table} (tenant_id, ${table.sourceColumn}, url, description) VALUES ($1, $2, $3, $4)`,
-        [context.tenantId, sourceId, item.payload.url, item.payload.description ?? null],
+    const logRow = async (recordId: string, action: 'create' | 'update' | 'delete', before: unknown, after: unknown) => {
+      if (!rowAudit) return;
+      await this.audit.log(
+        { table: table.table, recordId, action, before, after, userId: context.userId, source: rowAudit.source, sourceRef: rowAudit.sourceRef },
+        { manager: context.manager },
       );
+    };
+    const current = await this.loadLinks(context, config, sourceId);
+    const keptIds = new Set(nextItems.map((item) => textOrNull(item.payload.id)).filter((id): id is string => !!id));
+    for (const item of current) {
+      const id = String(item.payload.id);
+      if (keptIds.has(id)) continue;
+      const gone: Array<Record<string, unknown>> = await context.manager.query(
+        `WITH gone AS (DELETE FROM ${table.table} WHERE tenant_id = $1 AND ${table.sourceColumn} = $2 AND id = $3 RETURNING *) SELECT * FROM gone`,
+        [context.tenantId, sourceId, id],
+      );
+      for (const row of gone) await logRow(String(row.id), 'delete', row, null);
+    }
+    for (const item of nextItems) {
+      const id = textOrNull(item.payload.id);
+      if (!id) {
+        const added: Array<Record<string, unknown>> = await context.manager.query(
+          `WITH added AS (INSERT INTO ${table.table} (tenant_id, ${table.sourceColumn}, url, description) VALUES ($1, $2, $3, $4) RETURNING *) SELECT * FROM added`,
+          [context.tenantId, sourceId, item.payload.url, item.payload.description ?? null],
+        );
+        for (const row of added) await logRow(String(row.id), 'create', null, row);
+        continue;
+      }
+      const [before]: Array<Record<string, unknown>> = await context.manager.query(
+        `SELECT * FROM ${table.table} WHERE tenant_id = $1 AND ${table.sourceColumn} = $2 AND id = $3`,
+        [context.tenantId, sourceId, id],
+      );
+      if (!before || (before.url === item.payload.url && (before.description ?? null) === (item.payload.description ?? null))) continue;
+      const after = firstReturnedRow<Record<string, unknown>>(await context.manager.query(
+        `UPDATE ${table.table} SET url = $4, description = $5 WHERE tenant_id = $1 AND ${table.sourceColumn} = $2 AND id = $3 RETURNING *`,
+        [context.tenantId, sourceId, id, item.payload.url, item.payload.description ?? null],
+      ));
+      if (after) await logRow(id, 'update', before, after);
     }
   }
 
@@ -1660,7 +1712,11 @@ export class AiRelationMutationSupportService {
     }
   }
 
-  /** Each deleted row (removed, or absorbed by its cluster's row) is audited as the service audits a deletion. */
+  /**
+   * Each row is audited as the service audits it: a deleted row (removed, or absorbed by its
+   * cluster's row) as a deletion, an added one as a creation, a kept one whose date or notes
+   * changed (a cluster's row absorbing its members') as an update, the stored row before and after.
+   */
   private async replaceAppAssetAssignments(
     context: AiExecutionContextWithManager,
     applicationId: string,
@@ -1693,17 +1749,35 @@ export class AiRelationMutationSupportService {
         }
       }
     }
+    const log = (recordId: string, action: 'create' | 'update', before: unknown, after: unknown) => this.audit.log(
+      { table: 'app_asset_assignments', recordId, action, before, after, userId: context.userId, source: audit.source, sourceRef: audit.sourceRef },
+      { manager: context.manager },
+    );
     for (const item of nextItems) {
+      const slot = [context.tenantId, item.payload.app_instance_id, item.payload.asset_id, item.payload.role];
       if (currentKeys.has(item.key)) {
-        await context.manager.query(
-          `UPDATE app_asset_assignments SET since_date = $1, notes = $2, updated_at = now() WHERE tenant_id = $3 AND app_instance_id = $4 AND asset_id = $5 AND role = $6`,
-          [item.payload.since_date ?? null, item.payload.notes ?? null, context.tenantId, item.payload.app_instance_id, item.payload.asset_id, item.payload.role],
+        const [before]: Array<Record<string, unknown>> = await context.manager.query(
+          `SELECT * FROM app_asset_assignments WHERE tenant_id = $1 AND app_instance_id = $2 AND asset_id = $3 AND role = $4`,
+          slot,
         );
+        // A row whose date and notes stay is not written: the screen saves nothing for it.
+        const after = firstReturnedRow<{ id: string }>(await context.manager.query(
+          `UPDATE app_asset_assignments SET since_date = $5, notes = $6, updated_at = now()
+            WHERE tenant_id = $1 AND app_instance_id = $2 AND asset_id = $3 AND role = $4
+              AND (since_date IS DISTINCT FROM $5::date OR notes IS DISTINCT FROM $6::text)
+            RETURNING *`,
+          [...slot, item.payload.since_date ?? null, item.payload.notes ?? null],
+        ));
+        if (before && after) await log(String(after.id), 'update', before, after);
       } else {
-        await context.manager.query(
-          `INSERT INTO app_asset_assignments (tenant_id, app_instance_id, asset_id, role, since_date, notes) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING`,
-          [context.tenantId, item.payload.app_instance_id, item.payload.asset_id, item.payload.role, item.payload.since_date ?? null, item.payload.notes ?? null],
+        const added: Array<{ id: string }> = await context.manager.query(
+          `WITH added AS (
+             INSERT INTO app_asset_assignments (tenant_id, app_instance_id, asset_id, role, since_date, notes) VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT DO NOTHING RETURNING *
+           ) SELECT * FROM added`,
+          [...slot, item.payload.since_date ?? null, item.payload.notes ?? null],
         );
+        for (const row of added) await log(String(row.id), 'create', null, row);
       }
     }
   }

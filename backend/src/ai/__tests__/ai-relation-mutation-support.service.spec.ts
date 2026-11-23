@@ -111,8 +111,9 @@ async function testRelationTitleNamesTheReferenceOnce() {
 
 /**
  * A link written by Plaid from the budget line names the line as parent, as the screens do, so
- * the line's History tab shows it. The same link written from the application carries no parent:
- * one write may touch several lines (`record-history/records/spend_items.ts`).
+ * the line's History tab shows it. The same link written from the application leaves the row of the
+ * application's Relations tab: one row per toggled line, on the application, with no parent
+ * (`ai-relation-screen-audit.ts`).
  */
 async function testRelationAuditParentsTheBudgetLine() {
   const line = await runRelation({
@@ -146,6 +147,8 @@ async function testRelationAuditParentsTheBudgetLine() {
   assert.equal(application.audited[0].table, 'application_spend_items');
   assert.equal(application.audited[0].recordId, APP_ID);
   assert.equal(application.audited[0].parent, undefined);
+  assert.deepEqual(application.audited[0].before, []);
+  assert.deepEqual(application.audited[0].after, [LINE_ID]);
   console.log('  relation audit parent: OK');
 }
 
@@ -153,6 +156,8 @@ type AuditedRelation = {
   table: string;
   recordId?: string;
   parent?: { table: string; id: string };
+  before?: unknown;
+  after?: unknown;
 };
 
 async function runRelation(input: {
@@ -164,10 +169,15 @@ async function runRelation(input: {
 }): Promise<{ audited: AuditedRelation[] }> {
   const audited: AuditedRelation[] = [];
   const queries: string[] = [];
+  let lineLinked = false;
   const manager = {
     query: async (sql: string) => {
       const text = sql.replace(/\s+/g, ' ').trim();
       queries.push(text);
+      if (/INSERT INTO application_spend_items/.test(text)) lineLinked = true;
+      if (/SELECT l\.spend_item_id AS id FROM application_spend_items/.test(text)) {
+        return lineLinked && /nature = 'opex'/.test(text) ? [{ id: LINE_ID }] : [];
+      }
       if (/FROM\s+users\b|FROM\s+user_roles\b|assigned_roles/.test(text)) return [];
       if (/FOR NO KEY UPDATE/.test(text)) return [{ ok: 1 }];
       if (/SELECT DISTINCT nature FROM spend_items/.test(text)) return [{ nature: 'opex' }];
