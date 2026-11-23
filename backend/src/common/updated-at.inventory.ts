@@ -2,9 +2,10 @@ import type { AiQueryEntityType } from '../ai/query/ai-filter.types';
 
 /**
  * The tables whose `updated_at` the database keeps, with their technical columns: each has the
- * trigger `<table>_updated_at` on `stamp_updated_at()` (migration 1856270000000), whose
- * arguments are these columns. A change of technical columns alone is no edit and leaves the
- * date; any other change takes `now()`, unless the statement writes `updated_at` itself.
+ * trigger `<table>_updated_at` on `stamp_updated_at()` (migration 1856270000000), whose `WHEN`
+ * compares every other column (`updated-at-trigger.ts`). A change of technical columns alone is
+ * no edit and leaves the date; any other change takes `now()`, unless the statement writes
+ * `updated_at` itself. A column added here is applied by `syncUpdatedAtTrigger` in a migration.
  *
  * A table enters here when the assistant, the MCP server or a screen list reads its date (the
  * family map below), through a migration that places its trigger.
@@ -23,7 +24,7 @@ export const UPDATED_AT_TABLES: Readonly<Record<string, readonly string[]>> = {
   contacts: [],
   contracts: ['status'],
   departments: ['status'],
-  documents: ['search_vector'],
+  documents: ['search_vector', 'revision', 'current_version_number', 'updated_by'],
   incidents: [],
   interfaces: [],
   locations: [],
@@ -47,6 +48,9 @@ export const UPDATED_AT_TECHNICAL_REASONS: Readonly<Record<string, string>> = {
   row_version: 'concurrency counter of the budget line, written by its own trigger',
   priority_score: 'computed from the criteria values and the override, which carry the change',
   search_vector: 'search index of the document',
+  revision: 'save counter of the document (its editors\' optimistic lock): every save takes one, changed or not',
+  current_version_number: 'number of the last version snapshot, which keeps a content the document already holds',
+  updated_by: 'who saved last: written by every save, changed or not',
   last_login_at: 'sign-in stamp',
   external_synced_at: 'directory synchronization stamp',
   password_hash: 'sign-in secret',

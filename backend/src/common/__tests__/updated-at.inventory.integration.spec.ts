@@ -4,13 +4,15 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import { aiEntityRegistries } from '../../ai/query/registries';
 import { UPDATED_AT_FAMILIES, UPDATED_AT_TABLES, UPDATED_AT_TECHNICAL_REASONS } from '../updated-at.inventory';
+import { updatedAtColumns } from '../updated-at-trigger';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
 
 // The modification date the database keeps (migration 1856270000000), against a real database,
 // in transactions rolled back at the end:
 // - the inventory: every family of the assistant's and the MCP server's queries names its table or
 //   why it shows no date; each table of the inventory has its trigger, enabled, on
-//   `stamp_updated_at()` with its technical columns, and no other table has one;
+//   `stamp_updated_at()`, whose WHEN clause compares exactly the columns of today but the
+//   technical ones, and no other table has one;
 // - on every table of the inventory, by raw SQL (the path no service guards): a changed column
 //   takes now(); a row written back as it was, or changed in its technical columns only, keeps
 //   its date; a statement that writes `updated_at` itself keeps its value.
@@ -39,7 +41,15 @@ const CASES: Record<string, Case> = {
   contacts: { edit: 'notes' },
   contracts: { edit: 'notes', technical: { status: STATUS_FLIP } },
   departments: { edit: 'description', technical: { status: STATUS_FLIP } },
-  documents: { edit: 'summary', technical: { search_vector: `to_tsvector('simple', 'reindexed')` } },
+  documents: {
+    edit: 'summary',
+    technical: {
+      search_vector: `to_tsvector('simple', 'reindexed')`,
+      revision: 'revision + 1',
+      current_version_number: 'current_version_number + 1',
+      updated_by: `(SELECT id FROM users WHERE tenant_id = documents.tenant_id LIMIT 1)`,
+    },
+  },
   incidents: { edit: 'description' },
   interfaces: { edit: 'overview_notes' },
   locations: { edit: 'additional_info' },
@@ -125,11 +135,11 @@ async function testInventoryMatchesTheDatabase() {
       for (const column of technical) assert.ok(UPDATED_AT_TECHNICAL_REASONS[column], `${column}: a reason`);
     }
 
-    const rows: Array<{ table: string; name: string; enabled: string; definition: string; args: string[]; columns: string[] }> = await runner.query(
+    const rows: Array<{ table: string; name: string; enabled: string; definition: string; qual: string | null; columns: string[]; by_number: Record<string, string> }> = await runner.query(
       `SELECT c.relname AS table, t.tgname AS name, t.tgenabled::text AS enabled, pg_get_triggerdef(t.oid) AS definition,
-              CASE WHEN t.tgnargs = 0 THEN '{}'::text[]
-                   ELSE string_to_array(rtrim(encode(t.tgargs, 'escape'), E'\\\\000'), E'\\\\000') END AS args,
-              ARRAY(SELECT a.attname::text FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped) AS columns
+              t.tgqual AS qual,
+              ARRAY(SELECT a.attname::text FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped ORDER BY a.attnum) AS columns,
+              (SELECT jsonb_object_agg(a.attnum, a.attname) FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped) AS by_number
          FROM pg_trigger t
          JOIN pg_class c ON c.oid = t.tgrelid
          JOIN pg_proc p ON p.oid = t.tgfoid
@@ -140,9 +150,24 @@ async function testInventoryMatchesTheDatabase() {
     for (const row of rows) {
       assert.equal(row.name, `${row.table}_updated_at`, `${row.table}: the trigger's name`);
       assert.equal(row.enabled, 'O', `${row.table}: the trigger is enabled`);
-      assert.match(row.definition, /BEFORE UPDATE ON public\.\w+ FOR EACH ROW EXECUTE FUNCTION stamp_updated_at\(/, `${row.table}: ${row.definition}`);
-      assert.deepEqual(row.args, [...UPDATED_AT_TABLES[row.table]], `${row.table}: the technical columns`);
-      for (const column of ['updated_at', ...row.args]) assert.ok(row.columns.includes(column), `${row.table}: the column ${column} exists`);
+      assert.match(
+        row.definition,
+        /^CREATE TRIGGER \w+ BEFORE UPDATE ON public\.\w+ FOR EACH ROW WHEN \(.+\) EXECUTE FUNCTION stamp_updated_at\(\)$/,
+        `${row.table}: ${row.definition}`,
+      );
+      for (const column of ['updated_at', ...UPDATED_AT_TABLES[row.table]]) assert.ok(row.columns.includes(column), `${row.table}: the column ${column} exists`);
+      // The columns the WHEN clause compares (its Var nodes, NEW and OLD alike), against those of today.
+      const compared = [...new Set([...(row.qual ?? '').matchAll(/\{VAR :varno \d+ :varattno (\d+)/g)].map((m) => row.by_number[m[1]] ?? `#${m[1]}`))].sort();
+      const expected = ['updated_at', ...(await updatedAtColumns(runner, row.table)).map((column) => column.name)].sort();
+      const missing = expected.filter((column) => !compared.includes(column));
+      const extra = compared.filter((column) => !expected.includes(column));
+      assert.deepEqual(
+        { missing, extra },
+        { missing: [], extra: [] },
+        `${row.table}: the trigger does not compare exactly the columns of today. A migration that adds or drops a column of ${row.table} `
+          + `calls syncUpdatedAtTrigger(queryRunner, '${row.table}') (common/updated-at-trigger.ts); a column whose change alone is no edit `
+          + `goes to the technical columns of ${row.table} in common/updated-at.inventory.ts, with its reason, and the trigger is synced again.`,
+      );
     }
     const [fn] = await runner.query(
       `SELECT p.prosecdef AS definer, p.proconfig AS config FROM pg_proc p WHERE p.proname = 'stamp_updated_at'`,
