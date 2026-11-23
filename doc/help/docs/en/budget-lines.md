@@ -227,7 +227,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 - Amounts cannot be changed this way. Change them on the line or in the [budget file](budget-file.md)
 - Each changed line gets its own entry in its **History** tab
 - With limited data access, you change the lines of your access. A change that would take a line out of your access is refused for that line
-- [Kad](ai-assistant.md#changing-records-in-bulk) makes the same change when you ask for it in a conversation, with the same rights. You approve its preview
+- [Kad](ai-assistant.md#changing-records-in-bulk) makes the same change when you ask for it in a conversation, with the same rights. Its preview lists the lines it changes, and you can leave some out before you approve it
 
 ---
 
