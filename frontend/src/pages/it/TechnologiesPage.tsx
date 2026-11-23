@@ -234,9 +234,10 @@ export default function TechnologiesPage() {
     },
     // Secondary columns start hidden: the default set fits a 1,440 px window without scrolling.
     { headerName: t('pages.technologies.columns.versionsInUse'), field: 'versions_in_use', width: 140, defaultHidden: true, sortable: false, filter: false, cellRenderer: LinkCell },
-    // Counters: narrow and right-aligned, so that the default set fits a 1,440 px window.
-    { headerName: t('pages.technologies.columns.servers'), field: 'servers', width: 80, type: 'rightAligned', sortable: false, filter: false, cellRenderer: LinkCell },
-    { headerName: t('pages.technologies.columns.applications'), field: 'applications', width: 100, type: 'rightAligned', sortable: false, filter: false, cellRenderer: LinkCell },
+    // Counters: narrow and right-aligned, so that the default set fits a 1,440 px window, and just
+    // wide enough for their header in the four languages ("Servidores", "Anwendungen").
+    { headerName: t('pages.technologies.columns.servers'), field: 'servers', width: 90, type: 'rightAligned', sortable: false, filter: false, cellRenderer: LinkCell },
+    { headerName: t('pages.technologies.columns.applications'), field: 'applications', width: 110, type: 'rightAligned', sortable: false, filter: false, cellRenderer: LinkCell },
     {
       headerName: t('pages.technologies.columns.itOwner'),
       field: 'it_owner_names',
