@@ -1138,15 +1138,14 @@ async function run() {
           `INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, access) VALUES ($1, $2, 'company', $3, 'read')`,
           [tenantId, reader, companyId]);
         const readerCtx = { ...ctx, userId: reader };
-        // The access of the person, taken again as the approval takes it.
+        // The access of the person, taken again as the approval takes it. Each cell starts from the
+        // writer's role: the rollback to its savepoint drops the person's.
         const access = async (level: 'read' | 'edit') => {
-          await runner.query('RESET ROLE');
           await runner.query(`UPDATE user_data_access_nodes SET access = $3 WHERE tenant_id = $1 AND user_id = $2`, [tenantId, reader, level]);
           await runner.query(`SELECT data_access_apply($1)`, [reader]);
         };
-        // Seeded outside the person's access.
+        // Seeded by the writer, before the person's access is taken.
         const contract = async () => {
-          await runner.query('RESET ROLE');
           const name = unique('Contrat lu');
           const id = await insertId(runner,
             `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES ($1, $2, $3, $4, '2026-01-01')`,
