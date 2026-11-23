@@ -8,9 +8,10 @@ import ConnectionEndpointPicker from './ConnectionEndpointPicker';
 import type { ServerOption } from '../../../components/fields/serverOptionRender';
 
 const apiGet = vi.hoisted(() => vi.fn());
+const settings = vi.hoisted(() => ({ entities: [] as Array<{ code: string; label: string }> }));
 vi.mock('../../../api', () => ({ default: { get: apiGet } }));
 vi.mock('../../../hooks/useItOpsEnumOptions', () => ({
-  default: () => ({ settings: { entities: [] }, labelFor: (_field: string, code: string) => code }),
+  default: () => ({ settings: { entities: settings.entities }, labelFor: (_field: string, code: string) => code }),
 }));
 
 const CLUSTER: ServerOption = {
@@ -24,11 +25,16 @@ const CLUSTER: ServerOption = {
   member_names: ['PAR-SQL-01', 'PAR-SQL-02'],
 };
 
-function renderPicker(value = { asset_id: null as string | null, entity_code: null as string | null }, initialAsset: ServerOption | null = null, onChange = vi.fn()) {
+function renderPicker(
+  value = { asset_id: null as string | null, entity_code: null as string | null },
+  initialAsset: ServerOption | null = null,
+  onChange = vi.fn(),
+  label = 'Destination',
+) {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <ConnectionEndpointPicker
-        label="Destination"
+        label={label}
         value={value}
         initialAsset={initialAsset}
         onChange={onChange}
@@ -41,6 +47,7 @@ describe('ConnectionEndpointPicker', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('en');
     apiGet.mockReset();
+    settings.entities = [];
   });
 
   it('shows the cluster mark and the members of a cluster in the list', async () => {
@@ -57,8 +64,22 @@ describe('ConnectionEndpointPicker', () => {
     apiGet.mockResolvedValue({ data: { items: [] } });
     renderPicker({ asset_id: CLUSTER.id, entity_code: null }, CLUSTER);
     const input = await screen.findByDisplayValue('AST-10 · PAR-SQL-CL01');
-    expect(input).toBeInTheDocument();
+    expect(input).toHaveAccessibleName('Destination');
     expect(screen.getByRole('img', { name: 'Cluster' })).toBeInTheDocument();
+  });
+
+  it('names the server combobox after its label, not after the placeholder', async () => {
+    apiGet.mockResolvedValue({ data: { items: [] } });
+    renderPicker({ asset_id: null, entity_code: null }, null, vi.fn(), 'Source');
+    const input = screen.getByRole('combobox', { name: 'Source' });
+    expect(input).toHaveAttribute('placeholder', 'e.g., AST-12 or hostname');
+    expect(screen.getByText('Source')).toBeInTheDocument();
+  });
+
+  it('names the entity select after its label', () => {
+    settings.entities = [{ code: 'hq', label: 'Headquarters' }];
+    renderPicker({ asset_id: null, entity_code: 'hq' }, null, vi.fn(), 'Source');
+    expect(screen.getByRole('combobox', { name: 'Source' })).toHaveTextContent('Headquarters');
   });
 
   it('hands the chosen option to onChange', async () => {

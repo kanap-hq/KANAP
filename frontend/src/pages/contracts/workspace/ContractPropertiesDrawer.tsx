@@ -155,7 +155,8 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, mis
         <PropertyRow label={t('contracts.fields.startDate')} required missing={missing.has('start_date')}>
           <Box sx={hideInnerLabelSx}>
             <DateEUField
-              label=""
+              hideLabel
+              label={t('contracts.fields.startDate')}
               valueYmd={values.start_date}
               onChangeYmd={(next) => { if (next && next !== values.start_date) onPatch({ start_date: next }); }}
               disabled={disabled}

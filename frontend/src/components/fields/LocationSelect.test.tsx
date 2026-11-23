@@ -29,14 +29,14 @@ vi.mock('../../hooks/useItOpsEnumOptions', () => ({
   }),
 }));
 
-function renderSelect(onChange = vi.fn()) {
+function renderSelect(onChange = vi.fn(), props: Partial<React.ComponentProps<typeof LocationSelect>> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
       <I18nextProvider i18n={i18n}>
         <ThemeProvider theme={createAppTheme('light')}>
           <KanapDialogProvider>
-            <LocationSelect value={null} onChange={onChange} hideLabel required />
+            <LocationSelect value={null} onChange={onChange} hideLabel required {...props} />
           </KanapDialogProvider>
         </ThemeProvider>
       </I18nextProvider>
@@ -84,6 +84,11 @@ describe('LocationSelect', () => {
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'lyon' } });
     expect(await screen.findByRole('option', { name: /Lyon/ })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: /Create location/ })).not.toBeInTheDocument();
+  });
+
+  it('names the combobox after its label when the label is hidden, not after the placeholder', () => {
+    renderSelect(vi.fn(), { label: 'Location' });
+    expect(screen.getByRole('combobox', { name: 'Location' })).toHaveAttribute('placeholder', 'Not set');
   });
 
   it('offers no creation without the right to create a site', async () => {
