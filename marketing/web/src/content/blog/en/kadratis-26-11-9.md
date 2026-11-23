@@ -1,7 +1,7 @@
 ---
 title: "Kadratis 26.11.9: what's new since 26.11.1"
 description: "Eight releases have shipped since 26.11.1, with notable new features: imports run advanced duplicate detection, lists allow bulk changes (Kad too), and finer management of budget access rights improves collaboration in the budgeting process. A tour of what is new."
-date: 2026-11-22
+date: 2026-11-23
 topic: release
 features: [budget, ai]
 author: Friedrich
@@ -10,7 +10,7 @@ draft: false
 translationKey: kadratis-26-11-9
 ---
 
-Eight releases have shipped since 26.11.1. This article goes through the main changes, up to 26.11.9, released on November 22:
+This article goes through the main changes, up to 26.11.9, released on November 22:
 
 - An import, from the screen or through Kad, finds the records that exist before creating any.
 - One field can be changed on a whole selection of budget lines or applications, from the list or by asking Kad.
@@ -103,7 +103,7 @@ Portfolio contributors, which carried the `CTR` prefix, become `MEM-n`. Addresse
 ## For on-premise installations
 
 - **An encrypted backup every night.** A script (`infra/backup/`) encrypts the database, the files and the configuration with `age`, and puts them in an S3 bucket where the server can only write and list. The [operations guide](https://doc.kadratis.com/on-premise/operations/#nightly-encrypted-backup-to-an-s3-bucket) explains the setup, the check and the restore.
-- **`kadratis-*` images.** Since 26.11.4, the published images are called `kadratis-api`, `kadratis-web` and `kadratis-api-tools`. The compose file of the release names them explicitly, and they are updated automatically.
+- **`kadratis-*` images.** Since 26.11.4, the published images are called `kadratis-api`, `kadratis-web` and `kadratis-api-tools`. The compose file of the release names them explicitly, and the usual upgrade picks them up.
 - **Long imports complete.** The proxy of the web container waits 300 seconds for API responses: a long import or synchronization no longer ends on a 504 page.
 - **Integrations without redirects.** Calls to GLPI, PRTG, Netbox or the server of an AI model no longer follow a redirect to another address, for example from `http://` to `https://`. Check that the saved addresses are the final addresses.
 

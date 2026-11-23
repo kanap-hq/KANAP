@@ -1,7 +1,7 @@
 ---
 title: "Kadratis 26.11.9: las novedades desde 26.11.1"
 description: "Desde 26.11.1 se han publicado ocho versiones, con novedades destacadas: las importaciones realizan una búsqueda avanzada de duplicados, las listas permiten la modificación en bloque (también con Kad), y una gestión más precisa de los derechos de acceso al presupuesto mejora la colaboración en el proceso presupuestario. Un recorrido por las novedades."
-date: 2026-11-22
+date: 2026-11-23
 topic: release
 features: [budget, ai]
 author: Friedrich
@@ -10,7 +10,7 @@ draft: false
 translationKey: kadratis-26-11-9
 ---
 
-Desde 26.11.1 se han publicado ocho versiones. Este artículo repasa los principales cambios, hasta 26.11.9, publicada el 22 de noviembre:
+Este artículo repasa los principales cambios, hasta 26.11.9, publicada el 22 de noviembre:
 
 - Una importación, desde la pantalla o a través de Kad, encuentra los registros que existen antes de crear otros nuevos.
 - Un campo se modifica en toda una selección de líneas presupuestarias o de aplicaciones, desde la lista o pidiéndoselo a Kad.
@@ -103,7 +103,7 @@ Los colaboradores del portafolio, que llevaban el prefijo `CTR`, pasan a `MEM-n`
 ## Para las instalaciones on-premise
 
 - **Una copia de seguridad cifrada cada noche.** Un script (`infra/backup/`) cifra la base de datos, los archivos y la configuración con `age`, y los deposita en un bucket S3 donde el servidor solo puede escribir y listar. La [guía de operaciones](https://doc.kadratis.com/es/on-premise/operations/#copia-de-seguridad-nocturna-cifrada-en-un-bucket-s3) explica la puesta en marcha, el control y la restauración.
-- **Imágenes `kadratis-*`.** Desde 26.11.4, las imágenes publicadas se llaman `kadratis-api`, `kadratis-web` y `kadratis-api-tools`. El archivo compose de la versión las nombra explícitamente y se actualizan automáticamente.
+- **Imágenes `kadratis-*`.** Desde 26.11.4, las imágenes publicadas se llaman `kadratis-api`, `kadratis-web` y `kadratis-api-tools`. El archivo compose de la versión las nombra explícitamente, y la actualización habitual las toma.
 - **Las importaciones largas terminan.** El proxy del contenedor web espera 300 segundos las respuestas de la API: una importación o una sincronización larga ya no termina en una página 504.
 - **Integraciones sin redirección.** Las llamadas a GLPI, PRTG, Netbox o al servidor de un modelo de IA ya no siguen una redirección a otra dirección, por ejemplo de `http://` a `https://`. Compruebe que las direcciones guardadas son las direcciones finales.
 
