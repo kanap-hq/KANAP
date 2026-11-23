@@ -1046,6 +1046,8 @@ export class AiQueryExecutor {
         consolidation_account_number: numericScalar(row.consolidation_account_number),
         consolidation_account_name: scalar(row.consolidation_account_name),
         nature: scalar(row.nature),
+        // True when the account sets it, null otherwise (never stored false).
+        quantity_price_expected: row.quantity_price_expected === true ? true : null,
       },
     });
   }

@@ -47,6 +47,17 @@ export const accountsRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: true,
     },
+    quantity_price_expected: {
+      ai: 'quantity_price_expected',
+      grid: 'quantity_price_expected',
+      type: 'set',
+      description: 'Whether the budget lines of the account are expected to be entered as quantity and price: true when the account sets it, null when it does not. '
+        + 'A local account without the setting may still inherit it from its consolidation account.',
+      values: ['true', null],
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
   },
   sortFields: {
     label: 'account_name',
@@ -55,6 +66,7 @@ export const accountsRegistry: AiEntityFilterRegistry = {
     account_number: 'account_number',
     account_name: 'account_name',
     nature: 'nature',
+    quantity_price_expected: 'quantity_price_expected',
     created_at: 'created_at',
     updated_at: 'updated_at',
   },
@@ -73,6 +85,7 @@ export const accountsRegistry: AiEntityFilterRegistry = {
       },
       account_number: { expression: 'a.account_number' },
       nature: { expression: 'a.nature' },
+      quantity_price_expected: { expression: 'a.quantity_price_expected' },
     },
   },
 };
