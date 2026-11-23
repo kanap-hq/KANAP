@@ -16,9 +16,11 @@ vi.mock('../../../components/IntegratedDocumentEditor', () => ({
 
 import InterfaceOverviewTab from './InterfaceOverviewTab';
 
-const renderTab = (canManage: boolean) => render(
+const LOADED = { id: 'iface-1' } as React.ComponentProps<typeof InterfaceOverviewTab>['data'];
+
+const renderTab = (canManage: boolean, data: React.ComponentProps<typeof InterfaceOverviewTab>['data'] = LOADED) => render(
   <ThemeProvider theme={createAppTheme('light')}>
-    <InterfaceOverviewTab canManage={canManage} data={null} isCreate={false} specificationEditorRef={{ current: null }} onPatch={async () => undefined} />
+    <InterfaceOverviewTab canManage={canManage} data={data} isCreate={false} specificationEditorRef={{ current: null }} onPatch={async () => undefined} />
   </ThemeProvider>,
 );
 
@@ -26,6 +28,11 @@ describe('InterfaceOverviewTab place of the cursor once an interface is created'
   it('declares its specification when the person may change it', () => {
     renderTab(true);
     expect(findCreatedRecordField(document.body)).toBe(screen.getByLabelText('specification editor'));
+  });
+
+  it('declares nothing while the interface just written has not loaded: the editor of the draft still shows', () => {
+    renderTab(true, null);
+    expect(document.querySelector('[data-creation-description]')).toBeNull();
   });
 
   it('declares nothing when the person may not change it', () => {

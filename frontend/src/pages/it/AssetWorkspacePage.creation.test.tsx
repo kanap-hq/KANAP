@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { Link, MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -368,6 +368,28 @@ describe('An asset born complete', () => {
   it('puts the cursor in the description of the asset its last required field wrote', async () => {
     await createAsset();
     await waitFor(() => expect(screen.getByLabelText('description editor')).toHaveFocus());
+  });
+
+  it('gives the cursor to the description once the asset just written has loaded, which would replace it', async () => {
+    await startNewAsset();
+    await typeTitle('Web 1');
+    await pickType();
+    const read = mocked.get.getMockImplementation()!;
+    let loaded: () => void = () => undefined;
+    const loading = new Promise<void>((resolve) => { loaded = resolve; });
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/assets/by-ref/AST-7') await loading;
+      return read(url);
+    });
+    pickSite();
+    await waitFor(() => expect(location()).toBe('/it/assets/AST-7/overview'));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(document.querySelector('[data-creation-description]')).toBeNull();
+    // The cursor waits meanwhile in a field of the creation frame, named as the description.
+    const editor = () => screen.getAllByLabelText('description editor').find((el) => !el.hasAttribute('data-creation-hold'));
+    expect(document.activeElement).toHaveAttribute('data-creation-hold');
+    await act(async () => { loaded(); });
+    await waitFor(() => expect(editor()).toHaveFocus());
   });
 
   it('writes the asset when its site is chosen in the metadata bar', async () => {

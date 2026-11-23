@@ -636,6 +636,9 @@ function AssetWorkspaceRoute() {
   const [subLocationOptions, setSubLocationOptions] = React.useState<Array<{ id: string; name: string; description?: string | null }>>([]);
   const [subLocationLoading, setSubLocationLoading] = React.useState(false);
   const [notes, setNotes] = React.useState<string>('');
+  // The asset whose description the editor shows: until it has loaded, the description is not
+  // offered to the cursor of a creation (its load would replace what is typed there).
+  const [notesLoadedFor, setNotesLoadedFor] = React.useState<string | null>(null);
   const [domain, setDomain] = React.useState<string>('');
   const [adminZone, setAdminZone] = React.useState<string>('');
   const [aliases, setAliases] = React.useState<string[]>([]);
@@ -905,6 +908,7 @@ function AssetWorkspaceRoute() {
     setLocationId(data.location_id || null);
     setSubLocationId((data as any).sub_location_id || null);
     setNotes(data.notes || '');
+    setNotesLoadedFor(data.id);
   }, [data]);
 
   React.useEffect(() => {
@@ -2399,7 +2403,7 @@ function AssetWorkspaceRoute() {
                   ) : null}
                 </Stack>
               ) : null}
-              <Box data-creation-description={canManage ? '' : undefined}>
+              <Box data-creation-description={canManage && (isCreate || (!!data && notesLoadedFor === data.id)) ? '' : undefined}>
                 <Box sx={{ mb: 1 }}>
                   <SectionLabel>{t('workspace.asset.overview.description')}</SectionLabel>
                 </Box>
