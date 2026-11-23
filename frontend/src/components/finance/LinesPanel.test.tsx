@@ -19,7 +19,9 @@ vi.mock('react-i18next', async () => {
   return { useTranslation: () => translation };
 });
 
-vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+// The language of the numbers, English unless a test says otherwise.
+const localeState = vi.hoisted(() => ({ value: 'en' }));
+vi.mock('../../i18n/useLocale', () => ({ useLocale: () => localeState.value }));
 
 // The tenant's calendars, set per test.
 const calendarsState = vi.hoisted(() => ({ list: [] as unknown[], ready: true }));
@@ -192,6 +194,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 const options = async () => (await screen.findAllByRole('option')).map((o) => o.textContent);
 
 beforeEach(() => {
+  localeState.value = 'en';
   calendarsState.list = [FRANCE, MOSELLE, US, CUSTOM];
   calendarsState.ready = true;
   yearDays.byId = {};
@@ -503,6 +506,15 @@ describe('LinesPanel', () => {
     expect(screen.queryByTestId('lines-status')).not.toBeInTheDocument();
     expect(notes()).not.toHaveTextContent('Amounts are computed');
     expect(notes()).not.toHaveTextContent('75 000');
+  });
+
+  it('writes the amounts and the FTE in the number format of the language', () => {
+    localeState.value = 'fr';
+    const analyst = storedLine({ id: 'l2', sort: 1, label: 'Analyst', unit_price: '8000.0000', price_basis: 'per_month', days_per_month: null, working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null });
+    const first = storedLine();
+    renderPanel({ record: roundWith([first, analyst], {}, [explained(first, { total: '27000.50' }), explained(analyst, { total: '48000.00', fte: '1.00' })]) });
+    expect(screen.getAllByTestId('line-amount').map((cell) => cell.textContent)).toEqual(['27 000,50', '48 000']);
+    expect(screen.getByTestId('lines-fte')).toHaveTextContent(/^FTE over the period 0,24 · Full-year average 0,12$/);
   });
 
   it('shows no FTE line when every line counts pieces', () => {

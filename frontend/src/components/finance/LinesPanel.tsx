@@ -35,7 +35,6 @@ import {
   dateProblem,
   dayChangeText,
   followsLines,
-  formatFteValue,
   formatMoney,
   hasLines,
   isDateLine,
@@ -46,6 +45,7 @@ import {
   trimDecimal,
   wholeYear,
 } from './roundPeriod';
+import { formatFte } from './amountColumns';
 
 const CALENDARS_PATH = '/master-data/working-day-calendars';
 
@@ -546,9 +546,9 @@ export default function LinesPanel({
       if (lineProblem(year, draft)) return '';
       const stored = calc?.lines?.[index];
       index += 1;
-      return stored && sameLine(payloadOf(draft), linePayloadOf(stored)) ? formatMoney(stored.total) : '';
+      return stored && sameLine(payloadOf(draft), linePayloadOf(stored)) ? formatMoney(stored.total, locale) : '';
     });
-  }, [drafts, calc, year]);
+  }, [drafts, calc, year, locale]);
 
   // Working days of the calendars the stored per-day lines use, now: one query per calendar.
   const perDayLines = React.useMemo(() => (calc?.lines ?? [])
@@ -605,7 +605,7 @@ export default function LinesPanel({
 
   // The column shows the total; under the table only the FTE, when a line counts days or people.
   const fteText = calc && drafts.length > 0 && countsFte(calc.lines) && calc.fte != null && calc.fte_period != null
-    ? t('budgetTab.lines.fte', { fte_period: formatFteValue(calc.fte_period), fte: formatFteValue(calc.fte) })
+    ? t('budgetTab.lines.fte', { fte_period: formatFte(calc.fte_period, locale), fte: formatFte(calc.fte, locale) })
     : '';
 
   const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;
