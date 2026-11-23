@@ -430,6 +430,13 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Make a list of the applications by criticality', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
   { prompt: 'Fais une liste des applications par criticité', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
   { prompt: 'Put the lines of supplier Acme in a table by cost center', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  // K2e (26.12.1): reading turns on a general write verb stay reads, with their read tools.
+  { prompt: 'Mets en évidence les lignes du fournisseur Acme sans centre de coûts', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Peux-tu mettre en évidence les applications retirées ?', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Change de vue : montre les applications par criticité', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  { prompt: 'Update me on the retired applications', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
+  // The same verbs still write when they change a field.
+  { prompt: 'Update the lifecycle of APP-3 and APP-4 to retired', profile: 'write_business', mode: 'write', tools: ['bulk_update_applications'] },
   { prompt: 'Présente les lignes du fournisseur Acme dans un tableau par centre de coûts', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
   { prompt: 'Show the applications in a report by lifecycle', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
   { prompt: 'Combien de failles sont traitées ?', profile: 'read_query', mode: 'read' },
