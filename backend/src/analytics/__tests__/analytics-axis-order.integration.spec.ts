@@ -111,10 +111,11 @@ async function testReorder() {
 
     // The full list in the same order moves nothing: no write, no audit row.
     await runner.query(`DELETE FROM audit_log WHERE tenant_id = $1`, [tenantId]);
+    await runner.query(`UPDATE analytics_axes SET updated_at = '2020-01-01T00:00:00Z' WHERE tenant_id = $1`, [tenantId]);
     const unchanged = await svc.axes.reorder([ids.project, ids.default, ids.nature, ids.site], ctx);
     assert.deepEqual(unchanged.items.map((axis) => axis.code), ['project', 'default', 'nature', 'site']);
     assert.deepEqual(await auditRows(), [], 'nothing moved, nothing audited');
-    assert.deepEqual(await stamps(), updatedBefore, 'still the old updated_at');
+    assert.deepEqual(await stamps(), updatedBefore, 'still the old updated_at: no entry, no date');
 
     // A new dimension goes last.
     const created = await svc.axes.create({ code: 'owner', name: 'Owner' }, ctx);
