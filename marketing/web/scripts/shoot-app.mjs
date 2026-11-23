@@ -1650,6 +1650,121 @@ const PAGES = {
       await sleep(2000);
     },
   },
+  // Release 26.11.9: Kad imports a workbook in a customer's own columns (scripts/fixtures/budget-lines-2027.xlsx) and
+  // matches its values to what exists. The preview is left pending (nothing approved): reject the card afterwards.
+  'kad-import-matches-2026-11-22': {
+    frame: 1600,
+    path: '/ai',
+    waitFor: 'main',
+    async prepare(page) {
+      const title = 'Import this workbook into the budget lines.';
+      if (has('reopen')) {
+        await page.waitForSelector('textarea', { timeout: 30000 });
+        await page.waitForFunction((t) => document.body.innerText.includes(t), { timeout: 15000 }, title);
+        const [conversation] = await page.$$(`xpath/.//*[normalize-space(text())="${title}"]`);
+        await conversation.click();
+        await page.waitForFunction(() => [...document.querySelectorAll('main button')].some((b) => b.innerText.trim() === 'Approve'), { timeout: 30000 });
+      } else {
+        await page.waitForFunction(() => document.querySelector('main textarea') || /I agree/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+        const [consent] = await page.$$('xpath/.//main//label[contains(., "I agree")]//input[@type="checkbox"]');
+        if (consent) await consent.click();
+        await page.waitForSelector('textarea', { timeout: 30000 });
+        const input = await page.$('input[type="file"]');
+        await input.uploadFile(resolve('scripts/fixtures/budget-lines-2027.xlsx'));
+        await page.waitForFunction(() => /budget-lines-2027/.test(document.querySelector('main')?.innerText || ''), { timeout: 20000 });
+        await askPlaid(page, title, () => /Approve/i.test(document.querySelector('main')?.innerText || ''));
+        // Kad asks whether "Dell" is the existing supplier "Dell Technologies": the answer makes it propose the match.
+        await askPlaid(page, 'Yes, Dell is Dell Technologies. Link them.', () => /Dell\s*(→|->)\s*Dell Technologies/.test(document.querySelector('main')?.innerText || ''));
+      }
+      await sleep(1500);
+      await hideDevBadge(page);
+      // Unfold "N values matched" in the preview and bring it to the top of the panel; the mouse goes back to the margin (no tooltip).
+      const [matched] = await page.$$('xpath/.//*[contains(normalize-space(text()),"matched")]');
+      await matched.click();
+      await sleep(800);
+      await matched.evaluate((el) => {
+        let e = el;
+        while (e && !(e.scrollHeight > e.clientHeight + 20 && getComputedStyle(e).overflowY === 'auto')) e = e.parentElement;
+        e.scrollBy(0, el.getBoundingClientRect().top - e.getBoundingClientRect().top - 12);
+      });
+      // The chat shows the answer to the second message, the one that carries the match.
+      await page.evaluate(() => {
+        const you = [...document.querySelectorAll('main *')].filter((n) => !n.children.length && n.textContent?.trim() === 'You').pop();
+        you?.scrollIntoView({ block: 'start' });
+      });
+      await page.mouse.move(5, 900);
+      await sleep(800);
+    },
+  },
+  // Release 26.11.9: Kad prepares a change on a whole selection of budget lines. The preview is left pending
+  // (nothing approved): reject the card afterwards.
+  'kad-bulk-change-2026-11-22': {
+    frame: 1600,
+    path: '/ai',
+    waitFor: 'main',
+    async prepare(page) {
+      const title = 'Make Nadia Lemaire the IT owner of the budget lines of the supplier Fromatech Consulting.';
+      if (has('reopen')) {
+        await page.waitForSelector('textarea', { timeout: 30000 });
+        await page.waitForFunction((t) => document.body.innerText.includes(t), { timeout: 15000 }, title);
+        const [conversation] = await page.$$(`xpath/.//*[normalize-space(text())="${title}"]`);
+        await conversation.click();
+        await page.waitForFunction(() => [...document.querySelectorAll('main button')].some((b) => b.innerText.trim() === 'Approve'), { timeout: 30000 });
+      } else {
+        await page.waitForFunction(() => document.querySelector('main textarea') || /I agree/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+        const [consent] = await page.$$('xpath/.//main//label[contains(., "I agree")]//input[@type="checkbox"]');
+        if (consent) await consent.click();
+        await askPlaid(page, title, () => /Approve/i.test(document.querySelector('main')?.innerText || ''));
+      }
+      await sleep(1500);
+      await hideDevBadge(page);
+      await page.mouse.move(5, 900);
+      await sleep(800);
+    },
+  },
+  // Release 26.11.9: "Change the selection" on the budget lines: the 16 enabled lines of Fromatech Consulting, all ticked,
+  // IT owner to Nadia Lemaire (3 already have her). Nothing is confirmed: the dialog is cancelled after the shot (the
+  // browser is closed, nothing saved).
+  'bulk-edit-budget-lines-2026-11-22': {
+    frame: 1440,
+    path: `/ops/budget?filters=${encodeURIComponent(JSON.stringify({ supplier_name: { filterType: 'set', values: ['Fromatech Consulting'] } }))}`,
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await page.waitForFunction(() => /Total \(16 lines\)/.test(document.querySelector('.ag-floating-bottom')?.textContent || ''), { timeout: 30000 });
+      await hideDevBadge(page);
+      // Header checkbox of the list (the one MUI checkbox of the header row): ticks every row.
+      const box = await page.$('.ag-header-cell[col-id="select"] input.PrivateSwitchBase-input');
+      await box.evaluate((e) => e.click());
+      await sleep(800);
+      await page.click('button[aria-label^="Change the selection"]');
+      await sleep(1200);
+      await page.click('[role="dialog"] [role="combobox"]');
+      await sleep(600);
+      const [field] = await page.$$('xpath/.//li[@role="option"][normalize-space(.)="IT owner"]');
+      await field.click();
+      await sleep(800);
+      await page.click('[role="dialog"] .MuiAutocomplete-root input');
+      await page.keyboard.type('Nadia');
+      await sleep(1500);
+      const [person] = await page.$$('xpath/.//li[@role="option"][contains(normalize-space(.), "Nadia Lemaire")]');
+      await person.click();
+      await page.waitForFunction(() => /already have this value/.test(document.querySelector('[role="dialog"]')?.innerText || ''), { timeout: 20000 });
+      await page.mouse.move(5, 900);
+      await sleep(800);
+    },
+  },
+  // Release 26.11.9: a contract page, its reference (CTR-n) in the header; read-only.
+  'contract-reference-2026-11-22': {
+    frame: 1280,
+    path: '/ops/contracts',
+    waitFor: 'main',
+    async prepare(page) {
+      await openContract(page, 'SAP Maintenance & Support');
+      await hideDevBadge(page);
+      await sleep(1200);
+    },
+  },
   // Release 26.11.1: the business process list as a tree with its ISO 9001 type (fromage fixture).
   'business-processes-tree-2026-11-08': {
     frame: 1440,
