@@ -1064,21 +1064,28 @@ export class UsersService {
       roleByName.set(key, role);
       return role;
     };
-    // Company lookup cache
+    // Company names are unique whatever their case (`uq_companies_tenant_name_ci`).
+    // The cache key and the lookup both ignore case, so a name finds the same company
+    // on every row, and a name that matches nothing is refused on every row.
     const companyCache = new Map<string, Company | null>();
     const getCompanyByName = async (name: string): Promise<Company | null> => {
       const key = name.toLowerCase();
       if (companyCache.has(key)) return companyCache.get(key) ?? null;
-      const c = await companiesRepo.findOne({ where: { name } });
+      const c = await companiesRepo.createQueryBuilder('c')
+        .where('c.tenant_id = app_current_tenant() AND lower(c.name) = lower(:name)', { name })
+        .getOne();
       companyCache.set(key, c ?? null);
       return c ?? null;
     };
-    // Department lookup cache (by company_id + name)
+    // Department names are unique in their company whatever their case
+    // (`uniq_departments_tenant_company_name_ci`): the same rule as companies.
     const deptCache = new Map<string, Department | null>();
     const getDepartmentByName = async (companyId: string, name: string): Promise<Department | null> => {
       const key = `${companyId}|${name.toLowerCase()}`;
       if (deptCache.has(key)) return deptCache.get(key) ?? null;
-      const d = await departmentsRepo.findOne({ where: { company_id: companyId, name } });
+      const d = await departmentsRepo.createQueryBuilder('d')
+        .where('d.tenant_id = app_current_tenant() AND d.company_id = :companyId AND lower(d.name) = lower(:name)', { companyId, name })
+        .getOne();
       deptCache.set(key, d ?? null);
       return d ?? null;
     };

@@ -850,6 +850,171 @@ async function testProposalsOfTheOtherImports(h: Harness, runner: QueryRunner, s
   console.log('  processes, cost centers, tasks, requests: Kad\'s proposals checked against their lists: OK');
 }
 
+// Lot I6b of 26.12.1: the server's own match comes first. Kad proposing the record a value finds
+// alone (accents aside) is the server's match, not Kad's: an application's supplier (the shared
+// resolver), a contract's supplier (an import that reads its own lists) and a task's related object.
+async function testServerMatchBeforeKadsProposal(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const card = async (entity_type: string, csv: string[], columns: unknown[]) => h.previews.createPreview(admin, 'prepare_import_mapping', {
+    attachment_id: attach(h, `${entity_type}.csv`, csv.join('\n')), entity_type, columns,
+  });
+  const summary = (check: any) => ({
+    matches: (check.report.matches ?? []).map((match: any) => [match.column, match.value, match.target, match.origin, match.reason]),
+    refused: check.report.refusedProposals ?? [],
+  });
+  const apps = (await card('applications', ['Appli;Editeur', 'Orion P6;Societe Generale P2'], [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'supplier_name', source: 2, confidence: 'high', values: { 'Societe Generale P2': 'Société Générale P2' } },
+  ])).import_mapping.validation;
+  assert.deepEqual(summary(apps), { matches: [['supplier_name', 'Societe Generale P2', 'Société Générale P2', 'server', 'accents']], refused: [] });
+  const contracts = await card('contracts', ['Contrat;Société;Fournisseur;Début', 'Révision P6;Fromage P2 SA;Societe Generale P2;2026-03-01'], [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'company_name', source: 2, confidence: 'high' },
+    { column: 'supplier_name', source: 3, confidence: 'high', values: { 'Societe Generale P2': 'Société Générale P2' } },
+    { column: 'start_date', source: 4, confidence: 'high' },
+  ]);
+  assert.deepEqual(summary(contracts.import_mapping.validation), {
+    matches: [['supplier_name', 'Societe Generale P2', 'Société Générale P2', 'server', 'accents']], refused: [],
+  });
+  const done = await h.previews.executePreview(admin, contracts.preview_id);
+  assert.equal(done.status, 'executed', done.error_message ?? '');
+  const tasks = (await card('tasks', ['Tâche;Type;Objet', 'Relire P6;contract;Revision P6'], [
+    { column: 'title', source: 1, confidence: 'high' },
+    { column: 'related_object_type', source: 2, confidence: 'high' },
+    { column: 'related_object_name', source: 3, confidence: 'high', values: { 'Revision P6': 'Révision P6' } },
+  ])).import_mapping.validation;
+  assert.deepEqual(summary(tasks), { matches: [['related_object_name', 'Revision P6', 'Révision P6', 'server', 'accents']], refused: [] });
+  console.log('  applications, contracts, tasks: Kad\'s proposal of the server\'s own record is the server\'s match: OK');
+}
+
+/**
+ * Lot I6b of 26.12.1, after its review: the same rule through the real path of every other import
+ * and column that takes Kad's proposals (the technology links: their own spec; the servers, the
+ * incidents and the budget file: theirs). Each file has two rows: on line 2, a value the import finds
+ * alone, accents aside, which Kad proposes too (the server's match, nothing of Kad's listed); on line
+ * 3, a value only Kad's proposal finds (Kad's match).
+ */
+const SERVER_FIRST_CASES: Array<{
+  entity_type: string;
+  /** The template's columns, in the file's order, and the file's two data rows. */
+  columns: string[];
+  rows: [string[], string[]];
+  /** By column: the value found alone and its record, the value only Kad's proposal finds and its record. */
+  matched: Record<string, [string, string, string, string]>;
+}> = [
+  {
+    entity_type: 'contacts', columns: ['email', 'supplier_name'],
+    rows: [['ana.i6@example.test', 'Societe Ardente I6'], ['bob.i6@example.test', 'BRL']],
+    matched: { supplier_name: ['Societe Ardente I6', 'Société Ardente I6', 'BRL', 'Brûlerie I6'] },
+  },
+  {
+    entity_type: 'cost_centers', columns: ['code', 'kind', 'name', 'company_name'],
+    rows: [['CC-I6X', 'cost_center', 'Centre X I6', 'Societe Lumiere I6'], ['CC-I6Y', 'cost_center', 'Centre Y I6', 'FRG']],
+    matched: { company_name: ['Societe Lumiere I6', 'Société Lumière I6', 'FRG', 'Fromagerie I6'] },
+  },
+  {
+    entity_type: 'contracts', columns: ['name', 'company_name', 'supplier_name', 'cost_center', 'start_date'],
+    rows: [
+      ['Contrat A I6', 'Societe Lumiere I6', 'Brûlerie I6', 'Centre Ete I6', '2026-03-01'],
+      ['Contrat B I6', 'FRG', 'Brûlerie I6', 'CH', '2026-03-01'],
+    ],
+    matched: {
+      company_name: ['Societe Lumiere I6', 'Société Lumière I6', 'FRG', 'Fromagerie I6'],
+      cost_center: ['Centre Ete I6', 'Centre Été I6', 'CH', 'Centre Hiver I6'],
+    },
+  },
+  {
+    entity_type: 'business_processes', columns: ['name', 'parent_name'],
+    rows: [['Recouvrement I6', 'Creances I6'], ['Placement I6', 'TRS']],
+    matched: { parent_name: ['Creances I6', 'Créances I6', 'TRS', 'Trésorerie I6'] },
+  },
+  {
+    entity_type: 'tasks', columns: ['title', 'related_object_type', 'related_object_name', 'phase_name'],
+    rows: [['Cadrer I6', 'project', 'Projet Phases I6', 'Etude I6'], ['Livrer I6', 'project', 'Projet Phases I6', 'LIV']],
+    matched: { phase_name: ['Etude I6', 'Étude I6', 'LIV', 'Livraison I6'] },
+  },
+  {
+    entity_type: 'tasks', columns: ['title', 'task_type_name', 'source_name', 'category_name', 'stream_name', 'company_name'],
+    rows: [
+      ['Tâche A I6', 'Revision I6', 'Evenement I6', 'Categorie Reseau I6', 'Flux Donnees I6', 'Societe Lumiere I6'],
+      ['Tâche B I6', 'AUD', 'SAL', 'SEC', 'INF', 'FRG'],
+    ],
+    matched: {
+      task_type_name: ['Revision I6', 'Révision I6', 'AUD', 'Audit I6'],
+      source_name: ['Evenement I6', 'Événement I6', 'SAL', 'Salon I6'],
+      category_name: ['Categorie Reseau I6', 'Catégorie Réseau I6', 'SEC', 'Sécurité I6'],
+      stream_name: ['Flux Donnees I6', 'Flux Données I6', 'INF', 'Infra I6'],
+      company_name: ['Societe Lumiere I6', 'Société Lumière I6', 'FRG', 'Fromagerie I6'],
+    },
+  },
+  ...['portfolio_projects', 'portfolio_requests'].map((entity_type) => ({
+    entity_type, columns: ['name', 'source_name', 'category_name', 'stream_name', 'company_name', 'department_name'],
+    rows: [
+      [`${entity_type} A I6`, 'Evenement I6', 'Categorie Reseau I6', 'Flux Donnees I6', 'Societe Lumiere I6', 'Equipe Achats I6'],
+      [`${entity_type} B I6`, 'SAL', 'SEC', 'INF', 'FRG', 'LOG'],
+    ] as [string[], string[]],
+    matched: {
+      source_name: ['Evenement I6', 'Événement I6', 'SAL', 'Salon I6'],
+      category_name: ['Categorie Reseau I6', 'Catégorie Réseau I6', 'SEC', 'Sécurité I6'],
+      stream_name: ['Flux Donnees I6', 'Flux Données I6', 'INF', 'Infra I6'],
+      company_name: ['Societe Lumiere I6', 'Société Lumière I6', 'FRG', 'Fromagerie I6'],
+      department_name: ['Equipe Achats I6', 'Équipe Achats I6', 'LOG', 'Logistique I6'],
+    } as Record<string, [string, string, string, string]>,
+  })),
+];
+
+async function testServerMatchBeforeKadsProposalEverywhere(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s, 'admin');
+  const t = s.tenantId;
+  const add = (sql: string, params: unknown[]) => insertId(runner, sql, [t, ...params]);
+  for (const name of ['Société Ardente I6', 'Brûlerie I6']) await add(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2)`, [name]);
+  const lumiere = await add(`INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, $2, 'FR', 'Lyon')`, ['Société Lumière I6']);
+  const fromagerie = await add(`INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, $2, 'FR', 'Lyon')`, ['Fromagerie I6']);
+  await add(`INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, $3)`, [lumiere, 'Équipe Achats I6']);
+  await add(`INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, $3)`, [fromagerie, 'Logistique I6']);
+  for (const name of ['Événement I6', 'Salon I6']) await add(`INSERT INTO portfolio_sources (tenant_id, name) VALUES ($1, $2)`, [name]);
+  const network = await add(`INSERT INTO portfolio_categories (tenant_id, name) VALUES ($1, $2)`, ['Catégorie Réseau I6']);
+  const security = await add(`INSERT INTO portfolio_categories (tenant_id, name) VALUES ($1, $2)`, ['Sécurité I6']);
+  await add(`INSERT INTO portfolio_streams (tenant_id, category_id, name) VALUES ($1, $2, $3)`, [network, 'Flux Données I6']);
+  await add(`INSERT INTO portfolio_streams (tenant_id, category_id, name) VALUES ($1, $2, $3)`, [security, 'Infra I6']);
+  for (const name of ['Révision I6', 'Audit I6']) await add(`INSERT INTO portfolio_task_types (tenant_id, name) VALUES ($1, $2)`, [name]);
+  for (const name of ['Créances I6', 'Trésorerie I6']) await add(`INSERT INTO business_processes (tenant_id, name) VALUES ($1, $2)`, [name]);
+  await add(`INSERT INTO cost_centers (tenant_id, code, kind, name, company_id) VALUES ($1, 'CC-I6E', 'cost_center', $2, $3)`, ['Centre Été I6', lumiere]);
+  await add(`INSERT INTO cost_centers (tenant_id, code, kind, name, company_id) VALUES ($1, 'CC-I6H', 'cost_center', $2, $3)`, ['Centre Hiver I6', fromagerie]);
+  // The project's number from the workspace's sequence, as the screens take it: a later import numbers after it.
+  const { allocateItemNumbers } = require('../../common/item-number.service');
+  const number = await allocateItemNumbers('project', t, 1, runner.manager);
+  const project = await add(`INSERT INTO portfolio_projects (tenant_id, name, item_number) VALUES ($1, $2, $3)`, ['Projet Phases I6', number]);
+  for (const name of ['Étude I6', 'Livraison I6']) await add(`INSERT INTO portfolio_project_phases (tenant_id, project_id, name) VALUES ($1, $2, $3)`, [project, name]);
+
+  for (const entry of SERVER_FIRST_CASES) {
+    const label = `${entry.entity_type} ${Object.keys(entry.matched).join(', ')}`;
+    const columns = entry.columns.map((column, index) => {
+      const matched = entry.matched[column];
+      return {
+        column, source: index + 1, confidence: 'high',
+        ...(matched ? { values: { [matched[0]]: matched[1], [matched[2]]: matched[3] } } : {}),
+      };
+    });
+    const csv = [entry.columns.map((_, index) => `Colonne ${index + 1}`).join(';'), ...entry.rows.map((row) => row.join(';'))].join('\n');
+    const card = await h.previews.createPreview(admin, 'prepare_import_mapping', {
+      attachment_id: attach(h, `${entry.entity_type}.csv`, csv), entity_type: entry.entity_type, columns,
+    });
+    const check = card.import_mapping.validation;
+    const errors = check.report.kind === 'rows' ? check.report.errors : check.issues;
+    assert.deepEqual(errors, [], `${label}: ${JSON.stringify(errors)}`);
+    const matches = (check.report.matches ?? []).map((match: any) => [match.column, match.value, match.target, match.origin, match.reason, match.lines]);
+    const expected = Object.entries(entry.matched).flatMap(([column, [own, ownTarget, kad, kadTarget]]) => [
+      [column, own, ownTarget, 'server', 'accents', [2]],
+      [column, kad, kadTarget, 'model', 'model', [3]],
+    ]);
+    const order = (list: unknown[][]) => [...list].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    assert.deepEqual(order(matches), order(expected), `${label}: the server's match on line 2, Kad's on line 3`);
+    assert.equal(check.report.refusedProposals, undefined, `${label}: nothing of Kad's refused`);
+  }
+  console.log(`  ${SERVER_FIRST_CASES.length} imports: Kad's proposal of the record a value finds alone is the server's match, through each real path: OK`);
+}
+
 // Lot I3 of 26.11.9, merge of the fourth and fifth passes: Kad's import of server links finds a
 // server written without its accents, for a person who reads the infrastructure, lists the match on
 // the card, and the card's choice route undoes it: the next card no longer makes it.
@@ -1251,6 +1416,8 @@ async function run() {
       await testSupplierProposals(harness, runner, s);
       await testContractMatchUndoneByTheRoute(harness, runner, s);
       await testProposalsOfTheOtherImports(harness, runner, s);
+      await testServerMatchBeforeKadsProposal(harness, runner, s);
+      await testServerMatchBeforeKadsProposalEverywhere(harness, runner, s);
       await testLinkServerNameUndoneByTheRoute(harness, runner, s);
       await testServerVersionAndHosting(harness, runner, s);
       await testHostingNeedsTheSites(harness, runner, s);
