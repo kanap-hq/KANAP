@@ -42,6 +42,11 @@ export type RecordHistoryChange = {
   changed?: boolean;
   /** A fixed word standing for the change of a hidden value (a document body): `contentChanged`. */
   text?: string;
+  /** The costed line a change names: its description (absent when it has none) and its place, from 1. */
+  line?: string;
+  lineNumber?: number;
+  /** The working-day calendar whose days of the year changed (`calendar_days`). */
+  calendar?: string | null;
 };
 export type RecordHistorySubject = {
   kind: 'record' | 'version' | 'amounts' | 'allocations' | 'round_input' | 'link' | 'attachment'
@@ -583,6 +588,120 @@ function allocationsLine(change: RecordHistoryChange, context: HistoryTextContex
   return { label, before, after, ...(suffix.length > 0 ? { suffix } : {}) };
 }
 
+/** The property of a costed line each change names, by field (`auditLogs.history.calc.*`). */
+const CALC_LINE_FIELDS: Readonly<Record<string, string>> = {
+  line_calendar: 'calendar',
+  line_quantity: 'quantity',
+  line_unit: 'unit',
+  line_unit_price: 'unitPrice',
+  line_price_basis: 'priceBasis',
+  line_frequency: 'frequency',
+  line_days_per_month: 'daysPerMonth',
+  line_period: 'period',
+};
+
+/** The copy preview's sentence for each calendar a column copy could not keep. */
+const COPY_CALENDAR_FIELDS: Readonly<Record<string, string>> = {
+  line_calendar_replaced: 'fallback',
+  line_calendar_missing: 'missing',
+  line_calendar_disabled: 'disabled',
+};
+
+/**
+ * A stored decimal ('12450.5') grouped as the amounts of the history are, with its decimals kept
+ * and the locale's decimal mark: a unit price or a number of days is never rounded here.
+ */
+function decimalText(value: unknown, locale: string): string {
+  if (value === null || value === undefined || value === '') return DASH;
+  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(value).trim());
+  if (!match) return String(value);
+  const mark = new Intl.NumberFormat(locale).formatToParts(1.5).find((part) => part.type === 'decimal')?.value ?? '.';
+  return `${match[1]}${formatAmount(Number(match[2]))}${match[3] ? `${mark}${match[3]}` : ''}`;
+}
+
+/** The line a change names: "Costed line Consultant", or "Costed line no. 2" when it has no description. */
+function calcLineName(change: RecordHistoryChange, t: Translate): string {
+  const name = typeof change.line === 'string' ? change.line.trim() : '';
+  if (name) return t('auditLogs.history.calc.line', { name });
+  return typeof change.lineNumber === 'number'
+    ? t('auditLogs.history.calc.lineNumber', { number: change.lineNumber })
+    : unnamedRecord('line', t);
+}
+
+/** A word of the costed lines editor (`ops:budgetTab.lines.*`), or the stored code. */
+function editorWord(path: string, code: unknown, t: Translate): string {
+  if (typeof code !== 'string' || !code) return DASH;
+  const key = `ops:budgetTab.lines.${path}.${code}`;
+  const value = t(key, { defaultValue: '' });
+  return value && value !== key ? value : code;
+}
+
+function calcValueText(property: string, value: unknown, context: HistoryTextContext): string {
+  switch (property) {
+    case 'calendar':
+      if (value === null || value === undefined || value === '') return context.t('auditLogs.history.calc.noCalendar');
+      return isHiddenReference(value) ? unnamedRecord('calendar', context.t) : String(value);
+    case 'unit':
+      return editorWord('unitNames', value, context.t);
+    case 'priceBasis':
+      return editorWord('basis', value, context.t);
+    case 'frequency':
+      return editorWord('frequency', value, context.t);
+    case 'daysPerMonth':
+      return value === null || value === undefined ? context.t('ops:budgetTab.lines.fullTime') : decimalText(value, context.locale);
+    case 'period': {
+      if (!isPlainObject(value)) return DASH;
+      const start = historyValueText(value.start, 'period_start', context);
+      const end = historyValueText(value.end, 'period_end', context);
+      return value.start === value.end ? start : context.t('auditLogs.history.calc.periodRange', { start, end });
+    }
+    default:
+      return decimalText(value, context.locale);
+  }
+}
+
+/**
+ * What changed in the calculation of a budget column: a property of a costed line ("Costed line
+ * Consultant, calendar: France → Germany"), the working days of a calendar when the lines are used
+ * again ("Working days of France 2027: 218 → 217"), or a calendar a column copy could not keep, in
+ * the words of the copy preview. Null for any other change.
+ */
+function calcLine(change: RecordHistoryChange, context: HistoryTextContext): HistoryLine | null {
+  const property = CALC_LINE_FIELDS[change.field];
+  if (property) {
+    return {
+      label: context.t(`auditLogs.history.calc.${property}`, { line: calcLineName(change, context.t) }),
+      ...(has(change, 'before') ? { before: calcValueText(property, change.before, context) } : {}),
+      ...(has(change, 'after') ? { after: calcValueText(property, change.after, context) } : {}),
+    };
+  }
+  if (change.field === 'calendar_days') {
+    const calendar = typeof change.calendar === 'string' ? change.calendar.trim() : '';
+    return {
+      label: calendar
+        ? context.t('auditLogs.history.calc.calendarDays', { calendar, year: change.year })
+        : context.t('auditLogs.history.calc.calendarDaysNoName', { year: change.year }),
+      before: decimalText(change.before, context.locale),
+      after: decimalText(change.after, context.locale),
+    };
+  }
+  const issue = COPY_CALENDAR_FIELDS[change.field];
+  if (issue) {
+    const name = typeof change.line === 'string' ? change.line.trim() : '';
+    const line = name || context.t('ops:operations.copyBudget.lineNumber', { n: change.lineNumber ?? '' });
+    const calendarName = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : unnamedRecord('calendar', context.t));
+    return {
+      text: context.t(`ops:operations.copyBudget.calendarIssue.${issue}`, {
+        line,
+        year: change.year,
+        calendar: calendarName(issue === 'disabled' ? change.after : change.before),
+        fallback: calendarName(change.after),
+      }),
+    };
+  }
+  return null;
+}
+
 /** A changed field: its label, and the side(s) the write carried, or the full sentence of an event. */
 function fieldLine(change: RecordHistoryChange, context: HistoryTextContext): HistoryLine | null {
   // A hidden value speaks through its word: a document body changed, never its text.
@@ -611,6 +730,8 @@ function fieldLine(change: RecordHistoryChange, context: HistoryTextContext): Hi
   if (change.field === 'renewal_reason' && typeof change.after === 'string') {
     return { text: context.t('ops:contracts.renewal.reasonShown', { reason: change.after }) };
   }
+  const calc = calcLine(change, context);
+  if (calc) return calc;
   const event = eventLine(change, context.t);
   if (event) return event;
   if (change.field === 'dimension') return dimensionLine(change, context);
@@ -643,6 +764,14 @@ function roundInputLine(change: RecordHistoryChange, context: HistoryTextContext
       return { text: context.t('auditLogs.history.distributionChanged', { label }) };
     }
     return { label, before, after };
+  }
+  // The full-time equivalent is a stored decimal: it takes the decimal mark of the language.
+  if (change.field === 'fte' && (has(change, 'before') || has(change, 'after'))) {
+    return {
+      label: historyFieldLabel('fte', context.t, context.table),
+      ...(has(change, 'before') ? { before: decimalText(change.before, context.locale) } : {}),
+      ...(has(change, 'after') ? { after: decimalText(change.after, context.locale) } : {}),
+    };
   }
   return fieldLine(change, context);
 }

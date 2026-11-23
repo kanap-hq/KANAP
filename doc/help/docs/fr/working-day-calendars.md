@@ -145,7 +145,7 @@ Ces règles s'appliquent aux deux types de calendrier :
 
 ### Quand les jours ouvrés changent
 
-**Modifier les jours ouvrés ne change jamais une ligne budgétaire d'elle-même.** Les montants déjà enregistrés sur une ligne budgétaire restent tels quels. Lorsque vous ouvrez l'onglet Budget de la ligne, l'onglet **Quantité et prix** le signale, par exemple « Jours ouvrés modifiés depuis le dernier calcul : mars : 20 jours, maintenant 19. » Cliquez alors sur **Utiliser à nouveau les lignes** pour appliquer les nouveaux jours.
+**Modifier les jours ouvrés ne change jamais une ligne budgétaire d'elle-même.** Les montants déjà enregistrés sur une ligne budgétaire restent tels quels. Lorsque vous ouvrez l'onglet Budget de la ligne, l'onglet **Quantité et prix** le signale, par exemple « Jours ouvrés modifiés depuis le dernier calcul : mars : 20 jours, maintenant 19. » Cliquez alors sur **Utiliser à nouveau les lignes** pour appliquer les nouveaux jours. L'onglet **Historique** de la ligne budgétaire note alors les jours ouvrés d'avant et d'après, par calendrier et par année, par exemple « Jours ouvrés de France 2027 : 218 → 217 ».
 
 ---
 
