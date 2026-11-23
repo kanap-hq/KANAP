@@ -75,12 +75,14 @@ export class SpendAmountsService {
    * Every write of the budget tab, the API and the AI (`annual`, `quarterly`, `monthly`, `lines`).
    * `restore` (`budget-column-restore.ts`) and `copy` (`budget-line-copy.ts`) are the budget tab's
    * own; the AI never sends them (its payloads are rebuilt from annual, quarterly and monthly).
+   * `audit`: the source of the write's audit rows (amounts and column records) when it is not the
+   * person on the screen (Kad's card).
    */
   async bulkUpsert(
     versionId: string,
     payload: AnnualPayload | QuarterlyPayload | MonthlyPayload | LinesAmountsPayload | RestoreAmountsPayload | CopyAmountsPayload,
     userId?: string | null,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: { source: string; sourceRef: string | null } },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     // Lock order (`budget-locks.ts`): the line, then the version, before any month; read again under the locks.
@@ -106,9 +108,14 @@ export class SpendAmountsService {
     if (after.length > 0) {
       // Keyed by the version: the budget tab's conflicts read who changed a column from here.
       const action = isRestoreResult(result) ? 'restored' : 'update';
-      await this.audit.log({ table: auditTableOf(this.nature, 'spend_amounts'), recordId: version.id, action, before, after, userId }, { manager: mg });
+      await this.audit.log({
+        table: auditTableOf(this.nature, 'spend_amounts'), recordId: version.id, action, before, after, userId,
+        ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
+      }, { manager: mg });
     }
-    const rctx: RoundInputsContext = { manager: mg, scope: this.nature, version, userId: userId ?? null, audit: this.audit };
+    const rctx: RoundInputsContext = {
+      manager: mg, scope: this.nature, version, userId: userId ?? null, audit: this.audit, ...(opts?.audit ? { auditSource: opts.audit } : {}),
+    };
     if (isRestoreResult(result)) await recordRestore(rctx, result.restore);
     else if (isCopyResult(result)) await recordColumnCopy(rctx, result.copy);
     else await recordPayloadRoundInputs(rctx, result);

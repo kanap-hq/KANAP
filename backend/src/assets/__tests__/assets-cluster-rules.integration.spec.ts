@@ -115,7 +115,7 @@ async function testSwitch() {
     // The assistant writes through the same service, so it meets the same refusal.
     const assets = new AssetsService(undefined as any, crud, undefined as any, undefined as any, undefined as any, undefined as any);
     const assistant = new AiBusinessRecordMutationSupportService(
-      undefined as any, assets, undefined as any, undefined as any, undefined as any, undefined as any,
+      undefined as any, assets, undefined as any, undefined as any, undefined as any,
       undefined as any, undefined as any, undefined as any, undefined as any, undefined as any,
       {} as any, {} as any, {} as any,
     );

@@ -29,6 +29,8 @@ Der Verlauf listet einen Eintrag pro Änderung, den neuesten oben. Jeder Eintrag
 
 Eine Betragsänderung nennt das Jahr, die Spalte und die Werte vorher und nachher.
 
+Eine Änderung durch Kad hinterlässt dieselben Einträge wie dieselbe Änderung auf dem Bildschirm, markiert mit **Kad für** die Person, die sie genehmigt hat. Wenn Sie Kad bitten, eine Änderung rückgängig zu machen, hinterlässt das Rückgängigmachen seine Einträge auf dieselbe Weise.
+
 Lange Verläufe werden seitenweise geladen: Klicken Sie unten in der Liste auf **Mehr laden**, um ältere Änderungen zu sehen.
 
 ## Änderungen an den Bestandteilen eines Datensatzes

@@ -7,7 +7,7 @@ import { FreezeService } from '../../freeze/freeze.service';
 import { copyAllocations, sameAllocationRows, storedAllocationPct } from '../budget-allocation-operations';
 import { clearBudgetColumn, copyBudgetColumn } from '../budget-column-operations';
 import { SpendAllocation } from '../spend-allocation.entity';
-import { SpendAllocationsService } from '../spend-allocations.service';
+import { CapexAllocationsService, SpendAllocationsService } from '../spend-allocations.service';
 import { SpendVersionsService } from '../spend-versions.service';
 import { exportBudgetFile, fileRows, loadBudgetFile, withCell } from './budget-file.fixtures';
 import { itemService, lineBody, seedCompany } from './cost-center.fixtures';
@@ -42,8 +42,8 @@ const currencySettings = { getSettings: async () => ({ reportingCurrency: 'EUR',
 
 function versionsService(kind: Kind): any {
   return kind === 'opex'
-    ? new SpendVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any)
-    : new CapexVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any);
+    ? new SpendVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any, { computeForVersions: async () => new Map() } as any)
+    : new CapexVersionsService(undefined as any, undefined as any, captureAudit() as any, currencySettings as any, { computeForVersions: async () => new Map() } as any);
 }
 
 async function rowVersion(runner: QueryRunner, kind: Kind, itemId: string): Promise<number> {
@@ -193,6 +193,8 @@ async function versionColumns(kind: Kind) {
     assert.equal(await bumpOf(br, () => patch({ input_grain: 'annual' })), 0, `${kind}: the view choice (input_grain) bumps nothing`);
     assert.equal(await bumpOf(br, () => patch({ allocation_method: 'manual_pct' })), 1, `${kind}: the allocation method bumps once`);
     assert.equal(await bumpOf(br, () => patch({ allocation_method: 'manual_pct' })), 0, `${kind}: the same method bumps nothing`);
+    // A driver applies to the split by company only, as on the Allocations tab.
+    assert.equal(await bumpOf(br, () => patch({ allocation_method: 'manual_company' })), 1, `${kind}: the split by company bumps once`);
     assert.equal(await bumpOf(br, () => patch({ allocation_driver: 'turnover' })), 1, `${kind}: the allocation driver bumps once`);
     assert.equal(await bumpOf(br, () => patch({ allocation_driver: 'turnover' })), 0, `${kind}: the same driver bumps nothing`);
     assert.equal(await bumpOf(br, () => patch({ notes: 'Budget note' })), 0, `${kind}: the notes bump nothing`);
@@ -364,10 +366,15 @@ async function aiFinancialPlan(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, `br-ai-${kind}`);
     const { itemId, versionId } = await seedLine(runner, kind, tenantId, YEAR, { planned: repeat('100', 12) });
+    // The method goes through the Allocations tab's save, which answers the distribution: none computed here.
+    const calculator = { computeForVersions: async () => new Map() };
     const ai = new AiFinancialPlanMutationSupportService(
-      captureAudit() as any,
-      undefined as any, amountsService('capex') as any, versionsService('capex'),
-      undefined as any, amountsService('opex') as any, versionsService('opex'),
+      new CapexAllocationsService(undefined as any, undefined as any, calculator as any, captureAudit() as any),
+      amountsService('capex') as any, versionsService('capex'),
+      new SpendAllocationsService(undefined as any, undefined as any, calculator as any, captureAudit() as any),
+      amountsService('opex') as any, versionsService('opex'),
+      // The rights read by a card that names companies: all of them here.
+      { readableResources: async (_context: unknown, resources: string[]) => new Set(resources) } as any,
     );
     const context: any = { tenantId, userId: null, manager: runner.manager };
     const entityType = 'budget_lines';

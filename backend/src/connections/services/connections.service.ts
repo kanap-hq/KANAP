@@ -80,11 +80,11 @@ export class ConnectionsService {
     return this.crudService.get(id, tenantId, opts);
   }
 
-  create(body: any, tenantId: string, userId: string | null, opts?: ServiceOpts) {
+  create(body: any, tenantId: string, userId: string | null, opts?: ServiceOpts & { audit?: AuditSourceOptions }) {
     return this.crudService.create(body, tenantId, userId, opts);
   }
 
-  update(id: string, body: any, tenantId: string, userId: string | null, opts?: ServiceOpts) {
+  update(id: string, body: any, tenantId: string, userId: string | null, opts?: ServiceOpts & { audit?: AuditSourceOptions }) {
     return this.crudService.update(id, body, tenantId, userId, opts);
   }
 

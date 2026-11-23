@@ -1220,6 +1220,7 @@ Budget-file export takes the same filtering and file options as the existing exp
   - `allocation_method` defaults to `default`; `allocation_driver` defaults to `headcount`
 - PATCH `/spend-items/:id/versions` with `{ id, ...updates }`
   - `budget_year` immutable; `allocation_method` can change
+  - `allocation_method` and `allocation_driver` are saved as the Allocations tab saves them (`PUT …/versions/:id/allocations`, `changeAllocationMethod`): an automatic method removes a stored manual split with its audit row, a new driver computes a split by company again; a driver applies to `manual_company` only, and a driver not sent keeps the stored one
 
 ## Native budget line detail and writes
 
@@ -1340,7 +1341,8 @@ An asset is written from the line with the asset's audit shape. The table is `as
 - POST `/capex-items/:id/versions` with `{ version_name, as_of_date, input_grain, budget_year?, allocation_method?, allocation_driver? }`
   - `allocation_method` defaults to `default`; `allocation_driver` defaults to `headcount`
   - One version per (item, budget_year)
-- PATCH `/capex-items/:id/versions` with `{ id, input_grain?, notes?, allocation_method? }`
+- PATCH `/capex-items/:id/versions` with `{ id, input_grain?, notes?, allocation_method?, allocation_driver? }`
+  - `allocation_method` and `allocation_driver` are saved as the Allocations tab saves them (`PUT …/versions/:id/allocations`, `changeAllocationMethod`): an automatic method removes a stored manual split with its audit row, a new driver computes a split by company again; a driver applies to `manual_company` only, and a driver not sent keeps the stored one
 
 ## Amounts (CAPEX)
 - POST `/capex-versions/:id/amounts/bulk-upsert` → annual or monthly payload; server writes the appropriate rows to `spend_amounts` (audited as `capex_amounts`)
@@ -1976,7 +1978,7 @@ PATCH /spend-items/9a2f…/versions
 {
   "id": "v-2025",
   "allocation_method": "manual_company",
-  "allocation_driver": "it_users"   // optional, defaults to "headcount"
+  "allocation_driver": "it_users"   // optional, keeps the stored driver
 }
 
 POST  /spend-versions/v-2025/allocations/bulk-upsert
@@ -1986,7 +1988,7 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert
 ]
 ```
 - Send only the companies you want to keep. `allocation_pct` is optional and ignored—percentages are recomputed from the latest company metrics using the stored `allocation_driver`.
-- `allocation_driver` may be `headcount`, `it_users`, or `turnover`. Omit it to fall back to headcount.
+- `allocation_driver` may be `headcount`, `it_users`, or `turnover`. Omit it to keep the stored driver (headcount on a new version).
 
 ### Auto (headcount) allocations (empty payload → full materialization)
 ```

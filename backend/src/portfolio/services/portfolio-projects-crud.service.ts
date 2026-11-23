@@ -19,7 +19,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { displayName } from '../../common/display-name';
-import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
+import { captureBaselineOnce, PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { computeAutoAllocations } from '../utils/allocation-utils';
 import { formatItemLabel } from '../utils/activity-labels';
 import { detectChanges, PROJECT_TRACKED_FIELDS, resolveDisplayNames } from '../../common/change-detection';
@@ -399,7 +399,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         purpose: purposeContent,
       },
       userId,
-      { manager: mg },
+      { manager: mg, audit: opts?.audit },
     );
 
     await this.audit.log({
@@ -409,6 +409,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       before: null,
       after: saved,
       userId,
+      ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
     }, { manager: mg });
 
     return saved;
@@ -608,10 +609,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
           existing.estimated_effort_business = 0;
         }
 
-        existing.baseline_start_date = existing.planned_start;
-        existing.baseline_end_date = existing.planned_end;
-        existing.baseline_effort_it = existing.estimated_effort_it;
-        existing.baseline_effort_business = existing.estimated_effort_business;
+        captureBaselineOnce(existing);
         // The actual start is set once, the first time the project moves to In progress.
         if (existing.actual_start == null) {
           existing.actual_start = new Date();
@@ -693,11 +691,11 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         'purpose',
         nextPurpose,
         userId,
-        { manager: mg, logSourceActivity: true },
+        { manager: mg, logSourceActivity: true, audit: opts?.audit },
       );
     }
     if (before.name !== saved.name) {
-      await this.integratedDocuments.syncTitles('projects', sourceDescriptor, userId, { manager: mg });
+      await this.integratedDocuments.syncTitles('projects', sourceDescriptor, userId, { manager: mg, audit: opts?.audit });
     }
 
     // Log status change as activity (optionally as decision)
@@ -799,6 +797,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       before,
       after: saved,
       userId,
+      ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
     }, { manager: mg });
 
     return saved;

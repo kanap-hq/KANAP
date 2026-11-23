@@ -2365,7 +2365,7 @@ export class IntegratedDocumentsService {
       specification?: string | null;
     },
     userId: string | null | undefined,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: KnowledgeAuditOptions },
   ): Promise<void> {
     const manager = this.getManager(opts);
     const ownerUserId = await this.loadPreferredOwnerUserId('interfaces', source.id, manager);
@@ -2380,6 +2380,7 @@ export class IntegratedDocumentsService {
     await this.ensureBoundDocument('interfaces', source, 'specification', explicitContent, userId, manager, {
       ownerUserId,
       useTemplateWhenBlank: false,
+      audit: opts?.audit,
     });
   }
 
