@@ -184,57 +184,195 @@ export function findCreatedRecordField(root: ParentNode): HTMLElement | null {
 // or after a few seconds.
 type Armed = { kind: 'follow' | 'created'; until: number; origin: Element | null };
 let armed: Armed | null = null;
-// The record being written (`noteCreationWrite`): where the focus was when its write started, and
-// whether the person has used the page since (a press, a key typed in a field).
-let write: { origin: Element | null; acted: boolean; stop: () => void } | null = null;
+
+/**
+ * A record being written (`noteCreationWrite`), then shown, until its cursor is placed: where the
+ * focus was when the write started (`origin`: the title, the field just given, Create), the
+ * characters typed meanwhile (`typed`), and whether the person took a field of their own
+ * (`acted`): the cursor then stays there and nothing typed is replayed.
+ */
+type Write = {
+  origin: Element | null;
+  // The origin, a text field, read only while the write runs: what is typed does not go into it.
+  locked: HTMLInputElement | HTMLTextAreaElement | null;
+  typed: string;
+  acted: boolean;
+  // The record is written and shown: the page places its cursor (`armCreatedRecordFocus`).
+  shown: boolean;
+  // The field the page placed the cursor in, still to be entered (an editor opening on focus).
+  placed: Element | null;
+  stop: () => void;
+};
+let write: Write | null = null;
 
 function endWrite(): void {
   write?.stop();
   write = null;
 }
 
-/** The write is over, refused or not: what it watched is let go (`armCreatedRecordFocus` took it on success). */
+/** The write is over: refused, or the person left. What it kept is dropped (`armCreatedRecordFocus` took a success). */
 export function endCreationWrite(): void {
-  endWrite();
+  if (!write?.shown) endWrite();
 }
 
 export function clearCreationFieldFocus(): void {
   armed = null;
+  endWrite();
 }
 
 export function armCreationFieldFocus(): void {
   armed = { kind: 'follow', until: Date.now() + 8000, origin: null };
 }
 
+/** A shortcut: Ctrl, Cmd or Alt held (AltGr, which types a character, aside). */
+function MODIFIERS(event: KeyboardEvent): boolean {
+  return event.metaKey || ((event.ctrlKey || event.altKey) && !event.getModifierState?.('AltGraph'));
+}
+
+/** The text a key types, or null: one printable character, or Enter (a new line). */
+function typedBy(event: KeyboardEvent): string | null {
+  if (MODIFIERS(event)) return null;
+  if (event.key === 'Enter') return '\n';
+  return Array.from(event.key).length === 1 ? event.key : null;
+}
+
+/** A field this person may change, the origin locked by the write included. */
+function ownField(active: Element | null, current: Write): active is HTMLElement {
+  return !!active && (active === current.locked || (active instanceof HTMLElement && editable(active)));
+}
+
 /**
  * The creation frame starts writing a record (`useTitleCreation`, `useDraftCreation`): where the
  * focus is now (the title, the field just given, Create) is the gesture's own place, which the
- * cursor may leave for the record created. A field the person goes to while the record is written
- * is theirs: the cursor stays there.
+ * cursor leaves for the record created. Until then the characters typed are kept for its
+ * description (Enter as a new line, after a first character), and Tab, Shift+Tab and Enter move
+ * nothing: the field the write started from takes none of them. This holds while the focus is
+ * there or nowhere yet (`atStart`); elsewhere the keys are the person's. The person takes a field
+ * of their own by a press, or by typing in another field than that one: the cursor stays there.
+ * Shortcuts and the keys of a composition (accents, input methods) are left alone; a composition
+ * cannot start in the read-only origin.
  */
 export function noteCreationWrite(): void {
   endWrite();
-  const current: NonNullable<typeof write> = { origin: document.activeElement, acted: false, stop: () => undefined };
-  const act = (event: Event) => {
-    // A key typed while the focus is nowhere yet (the title the write closed) chooses nothing.
-    if (event.type === 'keydown' && atStart(document, document.activeElement)) return;
-    current.acted = true;
+  const origin = document.activeElement;
+  const locked = (origin instanceof HTMLInputElement || origin instanceof HTMLTextAreaElement) && !origin.readOnly ? origin : null;
+  if (locked) locked.readOnly = true;
+  const current: Write = { origin, locked, typed: '', acted: false, shown: false, placed: null, stop: () => undefined };
+  const release = () => {
+    if (current.locked) current.locked.readOnly = false;
+    current.locked = null;
   };
-  const events = ['keydown', 'pointerdown', 'mousedown'] as const;
-  events.forEach((name) => document.addEventListener(name, act, true));
-  current.stop = () => events.forEach((name) => document.removeEventListener(name, act, true));
+  const takeOver = () => {
+    current.acted = true;
+    current.typed = '';
+    release();
+  };
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (current.acted || event.defaultPrevented) return;
+    const active = document.activeElement;
+    if (active !== origin && active !== current.placed && !atStart(document, active)) {
+      // The focus is elsewhere, moved there by the person or the page: the keys are theirs, and a
+      // character typed in a field makes it theirs.
+      const text = typedBy(event);
+      if (text !== null && text !== '\n' && ownField(active, current)) takeOver();
+      return;
+    }
+    if (event.isComposing || event.keyCode === 229 || event.key === 'Process' || event.key === 'Dead') return;
+    const text = typedBy(event);
+    if (event.key === 'Tab' && !MODIFIERS(event)) {
+      // Tab and Shift+Tab: the cursor goes to the description all the same.
+    } else if (event.key === 'Backspace' && !MODIFIERS(event)) {
+      current.typed = Array.from(current.typed).slice(0, -1).join('');
+    } else if (text === '\n') {
+      if (current.typed && !event.repeat) current.typed += text;
+    } else if (text !== null) {
+      current.typed += text;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const onPress = () => {
+    if (!current.acted) takeOver();
+  };
+  document.addEventListener('keydown', onKeyDown, true);
+  document.addEventListener('pointerdown', onPress, true);
+  document.addEventListener('mousedown', onPress, true);
+  current.stop = () => {
+    document.removeEventListener('keydown', onKeyDown, true);
+    document.removeEventListener('pointerdown', onPress, true);
+    document.removeEventListener('mousedown', onPress, true);
+    release();
+  };
   write = current;
 }
 
 /**
  * The record is written and the person is on it (`useRecordCreation`): its page places the
- * cursor, unless the person used the page while it was written (a press, a key typed in a field):
- * the cursor then stays where they put it.
+ * cursor, unless the person took a field of their own while it was written: the cursor then stays
+ * there. What was typed meanwhile waits for the field the cursor goes to.
  */
 export function armCreatedRecordFocus(): void {
   const done = write;
+  if (!done || done.acted) {
+    armed = null;
+    endWrite();
+    return;
+  }
+  done.shown = true;
+  armed = { kind: 'created', until: Date.now() + 8000, origin: done.origin };
+  // A page that never shows the record lets the keys go.
+  window.setTimeout(() => {
+    if (write === done && armed?.kind === 'created') clearCreationFieldFocus();
+  }, 8000);
+}
+
+/** A field that takes text: a text area, a text input, or an editor that says how (`registerTypedTextInsertion`). */
+const TEXT_INPUTS = ['text', 'search', 'url', 'tel', ''];
+const insertions = new WeakMap<Element, (text: string) => void>();
+
+/** A rich text editor tells the creation frame how text typed while its record was written goes into it. */
+export function registerTypedTextInsertion(field: Element, insert: (text: string) => void): () => void {
+  insertions.set(field, insert);
+  return () => {
+    if (insertions.get(field) === insert) insertions.delete(field);
+  };
+}
+
+/** Puts `text` where the field's caret is, as typing would: false when the field takes no text. */
+function insertTyped(field: HTMLElement, text: string): boolean {
+  const insert = insertions.get(field);
+  if (insert) {
+    if (text) insert(text);
+    return true;
+  }
+  const isArea = field instanceof HTMLTextAreaElement;
+  if (!isArea && !(field instanceof HTMLInputElement && TEXT_INPUTS.includes(field.getAttribute('type') ?? ''))) return false;
+  const input = field as HTMLInputElement | HTMLTextAreaElement;
+  const value = isArea ? text : text.replace(/\n/g, '');
+  if (!value) return true;
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? start;
+  // The prototype's setter: React reads the change from the input event as from typing.
+  Object.getOwnPropertyDescriptor(Object.getPrototypeOf(input), 'value')?.set?.call(input, input.value.slice(0, start) + value + input.value.slice(end));
+  input.setSelectionRange(start + value.length, start + value.length);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
+  return true;
+}
+
+/**
+ * The cursor is in `field`, placed by the page of the record just written: what was typed
+ * meanwhile goes into it, and the keys are let go. A text that takes nothing yet (an integrated
+ * document opening its editor on focus, an editor still starting) waits; any other field drops
+ * what was typed.
+ */
+function enterPlaced(field: HTMLElement): void {
+  const current = write;
+  if (!current?.shown || document.activeElement !== field) return;
+  current.placed = field;
+  if (!insertTyped(field, current.typed) && field.matches(FREE_TEXT)) return;
   endWrite();
-  armed = done?.acted ? null : { kind: 'created', until: Date.now() + 8000, origin: done?.origin ?? null };
 }
 
 /**
@@ -255,15 +393,17 @@ function atStart(root: ParentNode, active: Element | null): boolean {
  * the focus to the page scroller. The focus somewhere else (the page's choice, or a field the
  * person went to while the record was written) ends it too; `origin` is where the gesture that
  * wrote the record left it. A key typed while the focus is nowhere yet chooses nothing: the field
- * it was meant for still gets the cursor.
+ * it was meant for still gets the cursor. A record just written (`created`) gets what was typed
+ * while it was written in that field.
  */
-function placeField(root: HTMLElement, find: (root: HTMLElement) => HTMLElement | null | undefined, origin: Element | null = null): void {
+function placeField(root: HTMLElement, find: (root: HTMLElement) => HTMLElement | null | undefined, origin: Element | null = null, created = false): void {
   const started = Date.now();
   let placed: HTMLElement | null = null;
   let acted = false;
   const atRest = (active: Element | null) => atStart(root, active) || (!!origin && active === origin);
   const act = (event: Event) => {
-    if (event.type === 'keydown' && atRest(document.activeElement)) return;
+    // A key the write kept for the record moved nothing.
+    if (event.defaultPrevented || (event.type === 'keydown' && atRest(document.activeElement))) return;
     acted = true;
   };
   document.addEventListener('keydown', act, true);
@@ -271,17 +411,20 @@ function placeField(root: HTMLElement, find: (root: HTMLElement) => HTMLElement 
   const stop = () => {
     document.removeEventListener('keydown', act, true);
     document.removeEventListener('pointerdown', act, true);
+    if (created && write?.shown) endWrite();
   };
   const attempt = () => {
     const active = document.activeElement;
-    if (acted || !root.isConnected || (active !== placed && !atRest(active))) {
+    // An editor that opens on focus may take the focus into its text itself: the field found.
+    const field = root.isConnected ? find(root) : null;
+    if (acted || (created && write?.acted) || !root.isConnected || (active !== placed && active !== field && !atRest(active))) {
       stop();
       return;
     }
-    const field = find(root);
-    if (field && field !== active) {
-      field.focus();
+    if (field) {
+      if (field !== active) field.focus();
       placed = field;
+      if (created) enterPlaced(field);
     }
     if (Date.now() - started < 3000) window.setTimeout(attempt, 50);
     else stop();
@@ -355,9 +498,12 @@ export function useCreationFieldFocus(rootRef: React.RefObject<HTMLElement | nul
     shown.current = page;
     if (!changed || !armed) return;
     const { kind, until, origin } = armed;
-    clearCreationFieldFocus();
-    if (Date.now() >= until) return;
-    if (kind === 'created') placeField(root, createdRecordTarget, origin);
+    armed = null;
+    if (Date.now() >= until) {
+      if (kind === 'created') endWrite();
+      return;
+    }
+    if (kind === 'created') placeField(root, createdRecordTarget, origin, true);
     else placeField(root, findFirstCreationField);
   });
   React.useLayoutEffect(() => () => {

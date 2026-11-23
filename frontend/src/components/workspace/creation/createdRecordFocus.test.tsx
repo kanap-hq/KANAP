@@ -17,6 +17,8 @@ import useRecordCreation from './useRecordCreation';
 import useTitleCreation from './useTitleCreation';
 import useDraftCreation from './useDraftCreation';
 import useCreationTitle from './useCreationTitle';
+import MarkdownEditor from '../../MarkdownEditor';
+import '../../markdownEditorTestSupport';
 
 const stableT = vi.hoisted(() => (key: string) => key);
 vi.mock('react-i18next', () => ({
@@ -26,6 +28,9 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 
+// jsdom measures no range: the rich text editor scrolls its caret into view with one.
+if (!Range.prototype.getBoundingClientRect) Range.prototype.getBoundingClientRect = () => new DOMRect();
+
 const ID = '5f1d7a2e-0000-4000-8000-000000000007';
 const TITLE_FIELD = 'Untitled';
 
@@ -33,15 +38,36 @@ type Post = (name: string) => Promise<{ id: string; creation_token: string }>;
 
 /**
  * What the record shows once created. `description`: the description is declared and may be
- * changed (`editable`), declared and shown read only (`readonly`), or on another tab (`elsewhere`).
+ * changed (`editable`), declared and shown read only (`readonly`), on another tab (`elsewhere`),
+ * declared once the record has loaded, 400 ms after its properties (`late`), or a rich text editor
+ * (`rich`).
  */
-type Shape = { description?: 'editable' | 'readonly' | 'elsewhere' };
+type Shape = { description?: 'editable' | 'readonly' | 'elsewhere' | 'late' | 'rich' };
 
-function RecordBody({ description = 'editable' }: Shape) {
-  if (description === 'elsewhere') return <input aria-label="budget amount" />;
+function RichDescription() {
+  const [value, setValue] = React.useState('');
   return (
     <div data-creation-description="">
-      <textarea aria-label="description" readOnly={description === 'readonly'} />
+      <MarkdownEditor value={value} onChange={setValue} minRows={3} maxRows={6} />
+      <output data-testid="rich-value">{value}</output>
+    </div>
+  );
+}
+
+function RecordBody({ description = 'editable', live = false }: Shape & { live?: boolean }) {
+  const [text, setText] = React.useState('');
+  const [loaded, setLoaded] = React.useState(!(description === 'late' && live));
+  React.useEffect(() => {
+    if (loaded) return undefined;
+    const timer = window.setTimeout(() => setLoaded(true), 400);
+    return () => window.clearTimeout(timer);
+  }, [loaded]);
+  if (description === 'elsewhere') return <input aria-label="budget amount" />;
+  if (description === 'rich') return <RichDescription />;
+  if (!loaded) return <div>loading</div>;
+  return (
+    <div data-creation-description="">
+      <textarea aria-label="description" readOnly={description === 'readonly'} value={text} onChange={(event) => setText(event.target.value)} />
     </div>
   );
 }
@@ -54,7 +80,7 @@ const properties = (
 );
 
 /** A record created at its title, on the shared shell, as the seven title families are. */
-function TitlePage({ post, shape }: { post: Post; shape: Shape }) {
+function TitlePage({ post, shape }: { post: Post; shape: Shape; pick?: 'list' | 'typed' }) {
   const { id = 'new' } = useParams();
   const isCreate = id === 'new';
   const navigate = useNavigate();
@@ -97,13 +123,13 @@ function TitlePage({ post, shape }: { post: Post; shape: Shape }) {
       ) : null}
       properties={isCreate ? <CreationPreview>{properties}</CreationPreview> : properties}
     >
-      {isCreate ? <CreationPreview><RecordBody {...shape} /></CreationPreview> : <RecordBody {...shape} />}
+      {isCreate ? <CreationPreview><RecordBody {...shape} /></CreationPreview> : <RecordBody {...shape} live />}
     </PortfolioDetailWorkspaceShell>
   );
 }
 
 /** A record written from its draft once its owner is chosen, as every other family is. */
-function DraftPage({ post, shape }: { post: Post; shape: Shape }) {
+function DraftPage({ post, shape, pick = 'list' }: { post: Post; shape: Shape; pick?: 'list' | 'typed' }) {
   const { id = 'new' } = useParams();
   const isCreate = id === 'new';
   const navigate = useNavigate();
@@ -151,17 +177,35 @@ function DraftPage({ post, shape }: { post: Post; shape: Shape }) {
       properties={(
         <div>
           <PropertyRow label="Owner" required>
-            <select aria-label="owner" value={isCreate ? owner : 'ana'} onChange={(event) => setOwner(event.target.value)}>
-              <option value="">-</option>
-              <option value="ana">Ana</option>
-            </select>
+            {pick === 'list' ? (
+              <select aria-label="owner" value={isCreate ? owner : 'ana'} onChange={(event) => setOwner(event.target.value)}>
+                <option value="">-</option>
+                <option value="ana">Ana</option>
+              </select>
+            ) : (
+              // A name typed, then chosen by Enter, as a list that completes what is typed.
+              <TypedChoice onChoose={setOwner} />
+            )}
           </PropertyRow>
           <PropertyRow label="Category"><input aria-label="category" /></PropertyRow>
         </div>
       )}
     >
-      <RecordBody {...shape} />
+      {/* The record's page is another page than its draft's: its fields are new. */}
+      <RecordBody key={isCreate ? 'draft' : 'record'} {...shape} />
     </PortfolioDetailWorkspaceShell>
+  );
+}
+
+function TypedChoice({ onChoose }: { onChoose: (value: string) => void }) {
+  const [typed, setTyped] = React.useState('');
+  return (
+    <input
+      aria-label="owner"
+      value={typed}
+      onChange={(event) => setTyped(event.target.value)}
+      onKeyDown={(event) => { if (event.key === 'Enter') onChoose(typed); }}
+    />
   );
 }
 
@@ -176,7 +220,7 @@ function Where() {
   );
 }
 
-function renderPage(Page: typeof TitlePage, { post, shape = {}, at = '/things/new' }: { post: Post; shape?: Shape; at?: string }) {
+function renderPage(Page: typeof TitlePage, { post, shape = {}, at = '/things/new', pick }: { post: Post; shape?: Shape; at?: string; pick?: 'list' | 'typed' }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
@@ -187,7 +231,7 @@ function renderPage(Page: typeof TitlePage, { post, shape = {}, at = '/things/ne
             <input aria-label="search" />
             <Routes>
               <Route path="/things" element={<div>list</div>} />
-              <Route path="/things/:id" element={<Page post={post} shape={shape} />} />
+              <Route path="/things/:id" element={<Page post={post} shape={shape} pick={pick} />} />
             </Routes>
             <Where />
           </MemoryRouter>
@@ -316,3 +360,123 @@ describe('the cursor once the creation frame has written a record', () => {
   });
 });
 
+/** A write held open: `answer` creates the record, `refuse` refuses it. */
+function heldWrite() {
+  const calls: string[] = [];
+  let answer: () => Promise<void> = async () => undefined;
+  let refuse: () => Promise<void> = async () => undefined;
+  const post: Post = (name) => {
+    calls.push(name);
+    return new Promise((resolve, reject) => {
+      answer = async () => { await act(async () => resolve({ id: ID, creation_token: 'token-1' })); };
+      refuse = async () => { await act(async () => reject(new Error('taken'))); };
+    });
+  };
+  return { post, calls, answer: () => answer(), refuse: () => refuse() };
+}
+
+describe('what the person does while the record is written', () => {
+  beforeEach(() => resetCreationStore());
+  afterEach(() => clearCreationFieldFocus());
+
+  it('keeps the title as given and puts the characters typed meanwhile in the description, in order', async () => {
+    const user = userEvent.setup();
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post });
+    const title = typeTitle('Billing');
+    fireEvent.keyDown(title, { key: 'Enter' });
+    await user.keyboard('abcde');
+    expect(title).toHaveValue('Billing');
+    await write.answer();
+    await onRecord();
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+    expect(screen.getByLabelText('description')).toHaveValue('abcde');
+    expect(write.calls).toEqual(['Billing']);
+  });
+
+  it('puts the characters typed after a choice made from the keyboard in the description, the field chosen left as it was', async () => {
+    const user = userEvent.setup();
+    const write = heldWrite();
+    renderPage(DraftPage, { post: write.post, pick: 'typed' });
+    fireEvent.keyDown(typeTitle('Billing'), { key: 'Enter' });
+    const owner = screen.getByLabelText('owner');
+    await user.click(owner);
+    await user.keyboard('ana{Enter}');
+    await waitFor(() => expect(write.calls).toEqual(['Billing']));
+    await user.keyboard('abcde');
+    expect(owner).toHaveValue('ana');
+    await write.answer();
+    await onRecord();
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+    expect(screen.getByLabelText('description')).toHaveValue('abcde');
+  });
+
+  it('goes to the description after a Tab pressed while the record is written', async () => {
+    const user = userEvent.setup();
+    const write = heldWrite();
+    renderPage(DraftPage, { post: write.post });
+    fireEvent.keyDown(typeTitle('Billing'), { key: 'Enter' });
+    await user.selectOptions(screen.getByLabelText('owner'), 'ana');
+    await user.tab();
+    await write.answer();
+    await onRecord();
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+  });
+
+  it('replays nothing and leaves the cursor in a field the person clicked while the record was written', async () => {
+    const user = userEvent.setup();
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post });
+    fireEvent.keyDown(typeTitle('Billing'), { key: 'Enter' });
+    await user.keyboard('ab');
+    const search = screen.getByLabelText('search');
+    await user.click(search);
+    await write.answer();
+    await onRecord();
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(search).toHaveFocus();
+    expect(screen.getByLabelText('description')).toHaveValue('');
+  });
+
+  it('replays nothing when the write is refused: the title keeps the name given and the cursor', async () => {
+    const user = userEvent.setup();
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post });
+    const title = typeTitle('Billing');
+    fireEvent.keyDown(title, { key: 'Enter' });
+    await user.keyboard('abc');
+    await write.refuse();
+    expect(await screen.findByText('refused')).toBeTruthy();
+    expect(title).toHaveValue('Billing');
+    expect(title).toHaveFocus();
+    // Typing again goes to the title, as before the write.
+    await user.keyboard('s');
+    expect(title).toHaveValue('Billings');
+  });
+
+  it('leaves shortcuts and the keys of a composition alone', async () => {
+    const user = userEvent.setup();
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post });
+    const title = typeTitle('Billing');
+    fireEvent.keyDown(title, { key: 'Enter' });
+    expect(fireEvent.keyDown(title, { key: 'a', ctrlKey: true })).toBe(true);
+    expect(fireEvent.keyDown(title, { key: 'Process', keyCode: 229, isComposing: true })).toBe(true);
+    await user.keyboard('xy');
+    await write.answer();
+    await onRecord();
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveValue('xy'));
+  });
+
+  it('puts the characters typed meanwhile in a rich text description, through the editor', async () => {
+    const user = userEvent.setup();
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post, shape: { description: 'rich' } });
+    fireEvent.keyDown(typeTitle('Billing'), { key: 'Enter' });
+    await user.keyboard('abc{Enter}de');
+    await write.answer();
+    await onRecord();
+    await waitFor(() => expect(screen.getByTestId('rich-value').textContent).toBe('abc\n\nde'));
+    expect(document.activeElement?.getAttribute('contenteditable')).toBe('true');
+  });
+});
