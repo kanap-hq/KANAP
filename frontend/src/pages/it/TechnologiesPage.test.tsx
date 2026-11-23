@@ -5,6 +5,10 @@ import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import TechnologiesPage from './TechnologiesPage';
+import en from '../../locales/en/it.json';
+import fr from '../../locales/fr/it.json';
+import de from '../../locales/de/it.json';
+import es from '../../locales/es/it.json';
 
 const grid = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
 const deleteButton = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
@@ -89,6 +93,19 @@ describe('TechnologiesPage', () => {
     expect(column('family').valueFormatter({ value: 'database' })).toBe('Database');
     expect(column('it_owner_names').valueFormatter({ value: ['Ada Lovelace', 'Alan Turing'] })).toBe('Ada Lovelace +1');
     expect(column('hosting_type').valueFormatter({ value: 'saas' })).toBe('SaaS');
+  });
+
+  it('heads the end of support column with a short label in the four languages, the full one in its tooltip', () => {
+    renderPage();
+    const col = column('next_support_end');
+    expect(col.headerName).toBe('pages.technologies.columns.nextSupportEndShort');
+    expect(col.headerTooltip).toBe('pages.technologies.columns.nextSupportEnd');
+    for (const locale of [en, fr, de, es]) {
+      const columns = (locale as any).pages.technologies.columns;
+      expect(columns.nextSupportEnd).toBeTruthy();
+      // 130 px leaves about 106 px of text at 11 px: 15 characters at most read in full.
+      expect(columns.nextSupportEndShort.length).toBeLessThanOrEqual(15);
+    }
   });
 
   it('filters by hosting type from the catalog, with its localized names', async () => {

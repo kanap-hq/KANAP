@@ -270,6 +270,7 @@
         "applications": "Anwendungen",
         "itOwner": "IT-Verantwortlicher",
         "nextSupportEnd": "Nächstes Supportende",
+        "nextSupportEndShort": "Supportende",
         "vulnerabilities": "Zu prüfende Schwachstellen",
         "vulnerabilitiesShort": "Schwachstellen"
       },
