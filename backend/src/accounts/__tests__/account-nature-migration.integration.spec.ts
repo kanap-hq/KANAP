@@ -50,6 +50,9 @@ async function inRolledBackTransaction(fn: (runner: QueryRunner) => Promise<void
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
+  // The database of this migration's time: the modification date trigger (1856270000000) came later.
+  await runner.query(`ALTER TABLE accounts DISABLE TRIGGER accounts_updated_at`);
+  await runner.query(`ALTER TABLE spend_items DISABLE TRIGGER spend_items_updated_at`);
   try {
     await fn(runner);
   } finally {
