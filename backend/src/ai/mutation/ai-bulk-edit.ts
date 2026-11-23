@@ -1,12 +1,12 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { z } from 'zod';
 import type { EntityManager } from 'typeorm';
 import { bulkListChanged } from '../../common/bulk-edit/bulk-edit';
 import { UUID_RE } from '../../common/relations/relation-target';
 import { BULK_WRITE_TIMEOUTS } from '../../common/request-db-timeouts';
-import { BULK_EDIT_EMPTIED, BULK_EDIT_HIDDEN } from '../ai-bulk-edit-texts';
-import type { AiWriteLanguage } from '../ai-write-texts';
-import type { AiBulkEditPreviewDto } from '../ai.types';
+import { BULK_EDIT_EMPTIED, BULK_EDIT_HIDDEN, bulkEditListGrewText } from '../ai-bulk-edit-texts';
+import { personWriteLanguage, type AiWriteLanguage } from '../ai-write-texts';
+import type { AiBulkEditPreviewDto, AiExecutionContextWithManager } from '../ai.types';
 
 /**
  * What Kad's changes in bulk share (lot K1 of 26.11.9), whatever the list: the tools, the bounded
@@ -160,6 +160,17 @@ export function effectiveBulkSelection(mutation: Record<string, unknown>): Recor
   const left = new Set(excluded);
   const ids = (Array.isArray(selection.ids) ? selection.ids as string[] : []).filter((id) => !left.has(String(id).toLowerCase()));
   return ids.length > 0 ? { ...selection, ids } : null;
+}
+
+/**
+ * The 409 of a card recounted past `AI_BULK_EDIT_LIST_MAX` records (review of lot K2e): records
+ * entered the selection since the count. A card beyond the bound lists nothing, so its records left
+ * out could no longer be seen nor ticked again: the recount is refused, the card stays as it was
+ * (its approval then meets the list changed since its count) and the person asks for a new one.
+ */
+export async function bulkListGrew(context: AiExecutionContextWithManager): Promise<ConflictException> {
+  const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
+  return new ConflictException({ code: 'bulk_list_grew', message: bulkEditListGrewText(language, AI_BULK_EDIT_LIST_MAX) });
 }
 
 /** `excluded` of the route: ids, lower case, without repeats, sorted, at most `AI_BULK_EDIT_LIST_MAX`. */

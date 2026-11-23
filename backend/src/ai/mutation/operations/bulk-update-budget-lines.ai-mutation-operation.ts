@@ -33,6 +33,7 @@ import {
   AI_BULK_EDIT_LIST_MAX,
   AI_BULK_FILTER_VALUE,
   assertBulkWriteKept,
+  bulkListGrew,
   bulkEditPreviewDto,
   bulkExcluded,
   bulkListApplied,
@@ -313,6 +314,8 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
       { manager: context.manager, access: await aiBudgetListAccess(this.policy, context), options: { changedIds: true, changedRows: true } },
     ) as BulkEditResult<BudgetLineBulkRow>;
     const changed = dry.changed_rows ?? [];
+    // A recount past the bound would drop the list and the records left out with it: refused.
+    if (previous && changed.length + excluded.length > AI_BULK_EDIT_LIST_MAX) throw await bulkListGrew(context);
     let list: AiBulkList | null = null;
     let examples: Array<{ ref: string; title: string }>;
     if (changed.length <= AI_BULK_EDIT_LIST_MAX) {

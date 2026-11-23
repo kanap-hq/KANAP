@@ -738,7 +738,17 @@ async function testListUpTo200(harness: Harness) {
     assert.match(counted.changes.budget_line_bulk_edit.to, /\n\n201 lines to change\n\n- BL-6 Line 6\n- BL-1001 Mass 1\n/);
     assert.match(counted.assistant_note, /^This card changes 201 budget lines: more than 200, so it counts them without listing them.*narrow/);
     await rejects(() => exclude(harness, ctx, counted, [seed.lines[6]]), 'This card does not list its lines: none can be left out.');
-    console.log('  200 lines listed, 201 counted with five examples and a note to narrow: OK');
+
+    // A card of 200 recounted past 200 (a line entered the filter since): refused, the card as it was (review of lot K2e).
+    await runner.query(`UPDATE ai_mutation_previews SET status = 'rejected' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, counted.preview_id]);
+    await runner.query(`UPDATE spend_items SET disabled_at = '2000-01-01' WHERE tenant_id = $1 AND item_number = 1200`, [seed.tenantId]);
+    const two = await card(harness, ctx, { field: 'run_build', value: 'run', filters: { supplier: ['Beta'] } });
+    assert.equal(two.bulk_edit.rows.length, 200);
+    await runner.query(`UPDATE spend_items SET disabled_at = NULL WHERE tenant_id = $1 AND item_number = 1200`, [seed.tenantId]);
+    const grown = await rejects(() => exclude(harness, ctx, two, [seed.lines[6]]), /^The selection grew past 200 records since the count: ask for a new card\.$/);
+    assert.deepEqual([grown.getStatus(), grown.getResponse().code], [409, 'bulk_list_grew']);
+    assert.equal((await previewRow(runner.manager, seed.tenantId, two.preview_id)).status, 'pending', 'the card stays as it was');
+    console.log('  200 lines listed, 201 counted with five examples and a note to narrow, a recount past 200 refused: OK');
   });
 }
 

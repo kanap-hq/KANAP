@@ -659,6 +659,7 @@ async function previewRow(runner: QueryRunner, seed: Seed, id: string) {
 async function httpStatus(fn: () => Promise<unknown>, status: number, pattern?: RegExp) {
   const thrown = await rejects(fn, pattern ?? /./);
   assert.equal(thrown?.getStatus?.(), status, `expected a ${status}, got ${thrown?.getStatus?.()}: ${thrown?.message}`);
+  return thrown;
 }
 
 /**
@@ -856,7 +857,18 @@ async function testListUpTo200(harness: Harness) {
     assert.equal((counted.changes[CARD].to.match(/\n- /g) ?? []).length, 6, 'five examples and "and n more"');
     assert.match(counted.assistant_note, /^This card changes 201 applications: more than 200, so it counts them without listing them.*narrow/);
     await httpStatus(() => exclude(harness, ctx, counted, [seed.apps[1]]), 400, /does not list its applications/);
-    console.log('  200 applications listed, 201 counted with five examples and a note to narrow: OK');
+
+    // A card of 200 recounted past 200 (records entered the filter since): refused, the card as it was (review of lot K2e).
+    const leftOut = listedCard.bulk_edit.rows[0].id;
+    const grown = await httpStatus(() => exclude(harness, ctx, listedCard, [leftOut]), 409, /^The selection grew past 200 records since the count: ask for a new card\.$/);
+    assert.equal(grown.getResponse().code, 'bulk_list_grew');
+    const stored = await previewRow(runner, seed, listedCard.preview_id);
+    assert.equal(stored.status, 'pending', 'the card stays as it was');
+    assert.equal(stored.mutation_input.excluded, undefined, 'nothing left out');
+    const refused = await harness.previews.executePreview(ctx, listedCard.preview_id) as any;
+    assert.equal(refused.status, 'failed', 'its approval meets the list changed since the count');
+    assert.equal(refused.error_message, LIST_CHANGED);
+    console.log('  200 applications listed, 201 counted with five examples and a note to narrow, a recount past 200 refused: OK');
   });
 }
 

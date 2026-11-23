@@ -114,8 +114,11 @@ export default function BulkEditList({
           // Another budget operation runs: the boxes come back, the card stays to approve.
           setMessage({ text: t('ai:previewCard.bulkEdit.busy'), error: false });
         } else if (response?.status === 409) {
+          // The card can no longer be changed: no longer pending, or its selection grew past the
+          // records a card lists (the server says so in the person's language).
           setStale(true);
-          setMessage({ text: t('ai:previewCard.importChoices.stale'), error: true });
+          const grew = response.data?.code === 'bulk_list_grew' && typeof response.data.message === 'string';
+          setMessage({ text: grew ? String(response.data!.message) : t('ai:previewCard.importChoices.stale'), error: true });
         } else {
           setMessage({
             text: t('ai:previewCard.notApplied'),

@@ -84,6 +84,19 @@ export const BULK_EDIT_ALL_LEFT_OUT: Words = {
 };
 
 /**
+ * The refusal of a recount that would list more than `max` records (review of lot K2e): records
+ * entered the selection since the card; the card stays as it was and the person asks for a new one.
+ */
+export function bulkEditListGrewText(language: AiWriteLanguage, max: number): string {
+  return {
+    en: `The selection grew past ${max} records since the count: ask for a new card.`,
+    fr: `La sélection a dépassé ${max} fiches depuis le comptage : demandez une nouvelle carte.`,
+    de: `Die Auswahl umfasst seit der Zählung mehr als ${max} Datensätze: Fordern Sie eine neue Karte an.`,
+    es: `La selección ha superado los ${max} registros desde el recuento: pida una nueva tarjeta.`,
+  }[language];
+}
+
+/**
  * The fields of the budget lines Kad's filter accepts, labelled as the columns of the list
  * (`ops:opex.columns.*`, `ops:budget.type`, `ops:opex.metadata.status`). The dimensions
  * (`analytics_category`, `analytics:<code>`) are named by the tenant's own dimension name.

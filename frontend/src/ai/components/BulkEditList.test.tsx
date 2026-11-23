@@ -236,6 +236,16 @@ describe('the records of a change in bulk on its card', () => {
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
+  it('turns stale with the server\'s words when the selection grew past what a card lists', async () => {
+    const grew = 'La sélection a dépassé 200 fiches depuis le comptage : demandez une nouvelle carte.';
+    post.mockRejectedValueOnce(httpError(409, { code: 'bulk_list_grew', message: grew }));
+    renderHost(bulkCard([row(1), row(2)]));
+    fireEvent.click(box('Garder APP-1 App 1'));
+    await act(async () => undefined);
+    expect(screen.getByText(grew)).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
   it('puts the box back and says to try again when another budget operation runs; the card stays to approve', async () => {
     post.mockRejectedValueOnce(httpError(409, { code: 'operation_running', message: 'Another budget operation is running.' }));
     renderHost(bulkCard([row(1), row(2)]));

@@ -14,6 +14,7 @@ import {
   BULK_EDIT_ALL_LEFT_OUT,
   BULK_EDIT_EMPTIED,
   BULK_EDIT_HIDDEN,
+  bulkEditListGrewText,
   BULK_EDIT_REFUSAL_WORDS,
   bulkEditCardText,
   bulkEditTooLongNote,
@@ -220,6 +221,9 @@ function testTheCardListsItsRecords() {
     assert.ok(BULK_EDIT_ALL_LEFT_OUT[language].length > 20, `the refusal of a card with every record left out, in ${language}`);
   }
   assert.equal(new Set(LANGUAGES.map((language) => BULK_EDIT_HIDDEN[language])).size, 4);
+  // A recount past the bound is refused in the person's language (review of lot K2e).
+  assert.equal(bulkEditListGrewText('fr', 200), 'La sélection a dépassé 200 fiches depuis le comptage : demandez une nouvelle carte.');
+  assert.equal(new Set(LANGUAGES.map((language) => bulkEditListGrewText(language, 200))).size, 4);
   // Once approved, each kept record marked changed or not; a left out one never.
   assert.deepEqual(bulkListApplied(list, ['A', 'c']).rows.map((row) => row.changed), [true, false, false]);
   // A recount: the counted records kept, the left out ones as the previous card listed them, by reference.
