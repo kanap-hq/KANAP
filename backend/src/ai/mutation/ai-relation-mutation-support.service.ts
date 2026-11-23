@@ -356,6 +356,15 @@ function objectValue(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+/**
+ * A relation writer that wrote fewer rows than it had to refuses: the card never says "done" for a
+ * write that did not happen (a data-access policy hid the row, or it changed since it was read).
+ * The approval's transaction is rolled back with it.
+ */
+function assertWritten(label: string, written: number, expected = 1): void {
+  if (written < expected) throw new ConflictException(`${label} could not be changed: nothing was written.`);
+}
+
 @Injectable()
 export class AiRelationMutationSupportService {
   constructor(
@@ -406,6 +415,7 @@ export class AiRelationMutationSupportService {
     if (relationItemSignature(currentItems) === relationItemSignature(askedItems)) {
       throw new BadRequestException(`${config.label} already has the requested links.`);
     }
+    await this.assertWritable(context, config, target.id, currentItems, askedItems);
     await this.assertClusterMemberAdds(context, config, target.id, currentItems, askedItems);
     const nextItems = await this.applyAssignmentRules(context, config, currentItems, askedItems);
     const replaced = await this.applyPlacementRules(context, config, target.id, currentItems, nextItems);
@@ -442,6 +452,7 @@ export class AiRelationMutationSupportService {
     if (relationItemSignature(currentItems) === relationItemSignature(originalItems)) {
       throw new BadRequestException(`${config.label} already matches the original values.`);
     }
+    await this.assertWritable(context, config, target.id, currentItems, originalItems);
     const previousItems = await this.applyAssignmentRules(context, config, currentItems, originalItems);
     const replaced = await this.applyPlacementRules(context, config, target.id, currentItems, previousItems);
     return {
@@ -540,6 +551,8 @@ export class AiRelationMutationSupportService {
     await this.assertLinkedModuleRead(context, config);
     const expectedItems = this.coerceRelationItems(preview.current_values?.items, 'current_values.items');
     const nextItems = this.coerceRelationItems(preview.mutation_input?.next_items, 'mutation_input.next_items');
+    // The screen's checks again, in the approver's access at the approval, before any lock or write.
+    await this.assertWritable(context, config, preview.target_entity_id, expectedItems, nextItems);
     // A budget line is locked, by its stored nature, before its relations are compared and
     // replaced (lock order, `spend/budget-locks.ts`): no writer of the line changes them in between.
     let sourceNature: BudgetNature | null = null;
@@ -597,6 +610,38 @@ export class AiRelationMutationSupportService {
         { source: audit.source, sourceRef: audit.sourceRef },
       );
     }
+  }
+
+  /**
+   * The checks the screen runs before it writes, at the preview (the card is not proposed) and at
+   * the approval (in the approver's access then), for a person in limited data access:
+   * - a contract's contacts, links and lines need the contract modifiable, as its panels and its
+   *   Budget tab check (`assertContractsEditable`: 403 "This contract is read only in your
+   *   access."). The policies of `contract_contacts` and `contract_links` would otherwise turn a
+   *   removal or a change into a write of no row;
+   * - the lines a contract gains or loses need to be modifiable (the link trigger of
+   *   `contract_spend_items`, `replaceSimpleRelation`).
+   * A budget line's own relations are checked by the preview (`assertTargetLineEditable`) and its
+   * lock (`lockBudgetLine`). The links written from an application, an asset, a project or a
+   * request need the line or the contract readable only, as their Relations tabs: the reference
+   * resolves under the policies.
+   */
+  private async assertWritable(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    sourceId: string,
+    currentItems: RelationItem[],
+    nextItems: RelationItem[],
+  ): Promise<void> {
+    if (config.sourceEntity !== 'contracts') return;
+    await assertContractsEditable(context.manager, [sourceId]);
+    if (config.relation !== 'budget_lines') return;
+    const current = new Set(currentItems.map((item) => item.key.toLowerCase()));
+    const next = new Set(nextItems.map((item) => item.key.toLowerCase()));
+    await assertLinesEditable(context.manager, [
+      ...Array.from(next).filter((id) => !current.has(id)),
+      ...Array.from(current).filter((id) => !next.has(id)),
+    ]);
   }
 
   /**
@@ -1458,13 +1503,15 @@ export class AiRelationMutationSupportService {
           context.manager,
           existing.map((row) => row.id).filter((id) => !targetIds.includes(id)),
         );
-        await context.manager.query(
-          `DELETE FROM contract_spend_items l USING spend_items i
+        const [{ n }]: Array<{ n: number }> = await context.manager.query(
+          `WITH gone AS (DELETE FROM contract_spend_items l USING spend_items i
             WHERE l.tenant_id = $1 AND l.contract_id = $2
               AND i.tenant_id = l.tenant_id AND i.id = l.spend_item_id${naturesAnd('i', BUDGET_NATURES)}
-              AND NOT (l.spend_item_id = ANY($3::uuid[]))`,
+              AND NOT (l.spend_item_id = ANY($3::uuid[]))
+            RETURNING 1) SELECT count(*)::int AS n FROM gone`,
           [context.tenantId, sourceId, targetIds],
         );
+        assertWritten(config.label, Number(n), existing.filter((row) => !targetIds.includes(row.id)).length);
       } else {
         await assertLinesEditable(context.manager, [sourceId]);
         const existing: Array<{ id: string }> = await context.manager.query(
@@ -1476,19 +1523,22 @@ export class AiRelationMutationSupportService {
         const existingSet = new Set(existing.map((row) => row.id));
         added = targetIds.filter((id) => !existingSet.has(id));
         for (const targetId of added) await assertContractReadable(context.manager, targetId);
-        await context.manager.query(
-          `DELETE FROM contract_spend_items l USING contracts c
+        const [{ n }]: Array<{ n: number }> = await context.manager.query(
+          `WITH gone AS (DELETE FROM contract_spend_items l USING contracts c
             WHERE l.tenant_id = $1 AND l.spend_item_id = $2
               AND c.tenant_id = l.tenant_id AND c.id = l.contract_id
-              AND NOT (l.contract_id = ANY($3::uuid[]))`,
+              AND NOT (l.contract_id = ANY($3::uuid[]))
+            RETURNING 1) SELECT count(*)::int AS n FROM gone`,
           [context.tenantId, sourceId, targetIds],
         );
+        assertWritten(config.label, Number(n), existing.filter((row) => !targetIds.includes(row.id)).length);
       }
       for (const targetId of added) {
-        await context.manager.query(
-          `INSERT INTO contract_spend_items (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+        const inserted: unknown[] = await context.manager.query(
+          `INSERT INTO contract_spend_items (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING 1`,
           [context.tenantId, sourceId, targetId],
         );
+        assertWritten(config.label, inserted.length);
       }
       return;
     }
@@ -1499,16 +1549,19 @@ export class AiRelationMutationSupportService {
     const removed = Array.from(visible).filter((id) => !targetIds.includes(id));
     const added = targetIds.filter((id) => !visible.has(id));
     if (removed.length > 0) {
-      await context.manager.query(
-        `DELETE FROM ${config.table} WHERE tenant_id = $1 AND ${config.sourceColumn} = $2 AND ${config.targetColumn} = ANY($3::uuid[])`,
+      const [{ n }]: Array<{ n: number }> = await context.manager.query(
+        `WITH gone AS (DELETE FROM ${config.table} WHERE tenant_id = $1 AND ${config.sourceColumn} = $2 AND ${config.targetColumn} = ANY($3::uuid[]) RETURNING 1)
+         SELECT count(*)::int AS n FROM gone`,
         [context.tenantId, sourceId, removed],
       );
+      assertWritten(config.label, Number(n), removed.length);
     }
     for (const targetId of added) {
-      await context.manager.query(
-        `INSERT INTO ${config.table} (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+      const inserted: unknown[] = await context.manager.query(
+        `INSERT INTO ${config.table} (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING 1`,
         [context.tenantId, sourceId, targetId],
       );
+      assertWritten(config.label, inserted.length);
     }
   }
 
@@ -1516,9 +1569,9 @@ export class AiRelationMutationSupportService {
     await context.manager.query(`DELETE FROM application_owners WHERE tenant_id = $1 AND application_id = $2`, [context.tenantId, applicationId]);
     for (const item of nextItems) {
       await context.manager.query(
-        `INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+        `INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING RETURNING 1`,
         [context.tenantId, applicationId, item.payload.user_id, item.payload.owner_type],
-      );
+      ).then((rows: unknown[]) => assertWritten('Owners', rows.length));
     }
   }
 
@@ -1552,6 +1605,7 @@ export class AiRelationMutationSupportService {
         `WITH gone AS (DELETE FROM ${table.table} WHERE tenant_id = $1 AND ${table.sourceColumn} = $2 AND id = ANY($3::uuid[]) RETURNING *) SELECT * FROM gone`,
         [context.tenantId, sourceId, removed],
       );
+      assertWritten(config.label, gone.length, removed.length);
       if (rowAudit) for (const row of gone) await this.logRow(context, rowAudit, label, String(row.id), 'delete', shown(row), null);
     }
     const currentKeys = new Set(current.map(keyOf));
@@ -1568,6 +1622,7 @@ export class AiRelationMutationSupportService {
         `WITH added AS (INSERT INTO ${table.table} ${columns} VALUES ${values} ON CONFLICT DO NOTHING RETURNING *) SELECT * FROM added`,
         params,
       );
+      assertWritten(config.label, added.length);
       if (rowAudit) for (const row of added) await this.logRow(context, rowAudit, label, String(row.id), 'create', null, shown(row));
     }
   }
@@ -1601,6 +1656,7 @@ export class AiRelationMutationSupportService {
             `UPDATE supplier_contacts SET is_primary = $1, updated_at = now() WHERE tenant_id = $2 AND id = $3 RETURNING *`,
             [item.payload.is_primary === true, context.tenantId, currentItem.payload.id],
           ));
+          assertWritten('Contacts', after ? 1 : 0);
           // The link change is audited like the links attach and detach write, with the preview's source.
           if (before && after) {
             await this.audit.log(
@@ -1638,9 +1694,9 @@ export class AiRelationMutationSupportService {
     for (const item of nextItems) {
       if (item.payload.related_asset_id === assetId) throw new BadRequestException('Asset cannot have a relation to itself.');
       await context.manager.query(
-        `INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type, notes) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+        `INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type, notes) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING RETURNING 1`,
         [context.tenantId, assetId, item.payload.related_asset_id, item.payload.relation_type, item.payload.notes ?? null],
-      );
+      ).then((rows: unknown[]) => assertWritten('Asset Relations', rows.length));
     }
   }
 
@@ -1674,6 +1730,7 @@ export class AiRelationMutationSupportService {
         `WITH gone AS (DELETE FROM ${table.table} l WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2 AND l.id = $3${table.scope} RETURNING l.*) SELECT * FROM gone`,
         [context.tenantId, sourceId, id],
       );
+      assertWritten(config.label, gone.length);
       for (const row of gone) await logRow(String(row.id), 'delete', row, null);
     }
     for (const item of nextItems) {
@@ -1696,6 +1753,7 @@ export class AiRelationMutationSupportService {
           WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2 AND l.id = $3${table.scope} RETURNING l.*`,
         [context.tenantId, sourceId, id, item.payload.url, item.payload.description ?? null],
       ));
+      assertWritten(config.label, after ? 1 : 0);
       if (after) await logRow(id, 'update', before, after);
     }
   }
@@ -1728,6 +1786,7 @@ export class AiRelationMutationSupportService {
         `WITH gone AS (DELETE FROM ${tableName} WHERE tenant_id = $1 AND location_id = $2 AND id = ANY($3::uuid[]) RETURNING *) SELECT * FROM gone`,
         [context.tenantId, locationId, removed],
       );
+      assertWritten(tableName, gone.length, removed.length);
       for (const row of gone) await log(String(row.id), 'delete', row, null);
     }
     const currentByKey = new Map(current.map((row) => [String(row[targetColumn]), row]));
@@ -1740,6 +1799,7 @@ export class AiRelationMutationSupportService {
           `UPDATE ${tableName} SET role = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2 RETURNING *`,
           [context.tenantId, stored.id, role],
         ));
+        assertWritten(tableName, after ? 1 : 0);
         if (after) await log(String(after.id), 'update', stored, after);
         continue;
       }
@@ -1749,6 +1809,7 @@ export class AiRelationMutationSupportService {
          ) SELECT * FROM added`,
         [context.tenantId, locationId, key, role],
       );
+      assertWritten(tableName, added.length);
       for (const row of added) await log(String(row.id), 'create', null, row);
     }
   }
@@ -1783,6 +1844,7 @@ export class AiRelationMutationSupportService {
         `WITH gone AS (DELETE FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2 AND id = $3 RETURNING *) SELECT * FROM gone`,
         [context.tenantId, locationId, item.payload.id],
       );
+      assertWritten('Sub-locations', gone.length);
       for (const row of gone) await log(String(row.id), 'delete', row, null);
     }
     const repo = context.manager.getRepository(LocationSubItem);
@@ -1801,6 +1863,7 @@ export class AiRelationMutationSupportService {
           `UPDATE location_sub_items SET name = $4, description = $5, updated_at = now() WHERE tenant_id = $1 AND location_id = $2 AND id = $3 RETURNING *`,
           [context.tenantId, locationId, id, name, description],
         ));
+        assertWritten('Sub-locations', after ? 1 : 0);
         if (after) await log(id, 'update', before, after);
         continue;
       }
@@ -1834,6 +1897,7 @@ export class AiRelationMutationSupportService {
           `WITH gone AS (DELETE FROM app_asset_assignments WHERE tenant_id = $1 AND id = $2 RETURNING *) SELECT * FROM gone`,
           [context.tenantId, item.payload.id],
         );
+        assertWritten('Asset Assignments', deleted.length);
         for (const row of deleted) {
           await this.audit.log(
             {
@@ -1879,6 +1943,7 @@ export class AiRelationMutationSupportService {
            ) SELECT * FROM added`,
           [...slot, item.payload.since_date ?? null, item.payload.notes ?? null],
         );
+        assertWritten('Asset Assignments', added.length);
         for (const row of added) await log(String(row.id), 'create', null, row);
       }
     }

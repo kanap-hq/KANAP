@@ -178,8 +178,9 @@ async function runRelation(input: {
     query: async (sql: string) => {
       const text = sql.replace(/\s+/g, ' ').trim();
       queries.push(text);
-      if (/INSERT INTO application_spend_items \(tenant_id, application_id/.test(text)) lineLinked = true;
-      if (/INSERT INTO application_spend_items \(tenant_id, spend_item_id/.test(text)) applicationLinked = true;
+      // An insert answers the row it wrote: the writer refuses a write of no row.
+      if (/INSERT INTO application_spend_items \(tenant_id, application_id/.test(text)) { lineLinked = true; return [{ ok: 1 }]; }
+      if (/INSERT INTO application_spend_items \(tenant_id, spend_item_id/.test(text)) { applicationLinked = true; return [{ ok: 1 }]; }
       if (/SELECT l\.application_id AS id FROM application_spend_items/.test(text)) return applicationLinked ? [{ id: APP_ID }] : [];
       if (/SELECT l\.spend_item_id AS id FROM application_spend_items/.test(text)) {
         return lineLinked && /nature = 'opex'/.test(text) ? [{ id: LINE_ID }] : [];

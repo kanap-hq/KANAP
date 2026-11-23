@@ -1009,6 +1009,123 @@ async function run() {
         await runner.query('ROLLBACK TO SAVEPOINT limited_access');
       }
     }
+
+    // A person in limited data access reads a contract of their company without the right to modify
+    // it: every change of its contacts or its links is refused when the card is asked, and a card
+    // asked while they could still modify it is refused at its approval. Nothing is written, no audit
+    // row is left, as the contract's own panels answer (403 "This contract is read only in your access.").
+    if (limitedRole) {
+      await runner.query('SAVEPOINT read_only_contract');
+      try {
+        const companyId = await insertId(runner, `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, $2, 'FR', 'Morlaix')`, [tenantId, unique('Lecture')]);
+        const supplier = await insertId(runner, `INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2)`, [tenantId, unique('Fournisseur')]);
+        const reader = await insertId(runner,
+          `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status, data_access_mode) VALUES ($1, $2, 'Léa', 'Lectrice', $3, 'enabled', 'limited')`,
+          [tenantId, `reader-${tenantId.slice(0, 8)}@example.test`, roleId]);
+        await runner.query(`INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary) VALUES ($1, $2, $3, true)`, [tenantId, reader, roleId]);
+        await runner.query(
+          `INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, access) VALUES ($1, $2, 'company', $3, 'read')`,
+          [tenantId, reader, companyId]);
+        const readerCtx = { ...ctx, userId: reader };
+        // The access of the person, taken again as the approval takes it.
+        const access = async (level: 'read' | 'edit') => {
+          await runner.query('RESET ROLE');
+          await runner.query(`UPDATE user_data_access_nodes SET access = $3 WHERE tenant_id = $1 AND user_id = $2`, [tenantId, reader, level]);
+          await runner.query(`SELECT data_access_apply($1)`, [reader]);
+        };
+        // Seeded outside the person's access.
+        const contract = async () => {
+          await runner.query('RESET ROLE');
+          const name = unique('Contrat lu');
+          const id = await insertId(runner,
+            `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES ($1, $2, $3, $4, '2026-01-01')`,
+            [tenantId, name, companyId, supplier]);
+          for (const t of [anne, brieuc]) {
+            await runner.query(`INSERT INTO contract_contacts (tenant_id, contract_id, contact_id, role, origin) VALUES ($1, $2, $3, $4, 'manual')`, [tenantId, id, t.id, t.extra?.role]);
+          }
+          for (const t of [portail, annexe]) {
+            await runner.query(`INSERT INTO contract_links (tenant_id, contract_id, url, description) VALUES ($1, $2, $3, $4)`, [tenantId, id, t.extra?.url, t.name]);
+          }
+          return { id, ref: name };
+        };
+        const anne = await contactTarget(env, 'Anne', 'commercial');
+        const brieuc = await contactTarget(env, 'Brieuc', 'technical');
+        const corentin = await contactTarget(env, 'Corentin', 'support');
+        const portail = webLink('Portail');
+        const annexe = webLink('Annexe');
+        const email = (t: Target) => (t.input as { contact_ref: string }).contact_ref;
+        const gestures: Array<{ name: string; relation: 'contacts' | 'links'; add?: unknown[]; remove?: unknown[] }> = [
+          { name: 'contracts.contacts add', relation: 'contacts', add: [corentin.input] },
+          { name: 'contracts.contacts remove', relation: 'contacts', remove: [brieuc.input] },
+          { name: 'contracts.contacts role', relation: 'contacts', remove: [anne.input], add: [{ contact_ref: email(anne), role: 'support' }] },
+          { name: 'contracts.links add', relation: 'links', add: [{ url: 'https://example.test/avenant', description: 'Avenant' }] },
+          { name: 'contracts.links remove', relation: 'links', remove: [{ url: annexe.extra?.url }] },
+          { name: 'contracts.links label', relation: 'links', add: [{ url: portail.extra?.url, description: 'Portail renommé' }] },
+        ];
+        const stored = async (contractId: string) => JSON.stringify([
+          await runner.query(`SELECT contact_id, role, origin FROM contract_contacts WHERE tenant_id = $1 AND contract_id = $2 ORDER BY contact_id, role`, [tenantId, contractId]),
+          await runner.query(`SELECT url, description FROM contract_links WHERE tenant_id = $1 AND contract_id = $2 ORDER BY url`, [tenantId, contractId]),
+        ]);
+        for (const gesture of gestures) {
+          const input = {
+            entity_type: 'contracts', relation: gesture.relation,
+            ...(gesture.add ? { add: gesture.add } : {}), ...(gesture.remove ? { remove: gesture.remove } : {}),
+          };
+          // Read only: the card is not proposed.
+          let cell = `${gesture.name} read only, preview`;
+          await runner.query('SAVEPOINT read_only_cell');
+          try {
+            const rec = await contract();
+            await access('read');
+            const before = await stored(rec.id);
+            const marker = await now();
+            await runner.query('SAVEPOINT read_only_preview');
+            let refusal = '';
+            try {
+              await previews.createPreview(readerCtx, 'update_entity_relations', { ...input, ref: rec.ref });
+            } catch (error: any) {
+              refusal = String(error?.message ?? error);
+            }
+            await runner.query('ROLLBACK TO SAVEPOINT read_only_preview');
+            assert.match(refusal, /read only in your access/, `${cell}: the card is refused (${refusal || 'proposed'})`);
+            assert.equal(await stored(rec.id), before, `${cell}: nothing is written`);
+            assert.deepEqual(await auditSince(marker), [], `${cell}: no audit row`);
+            passed += 1;
+            console.log(`  ${cell}: OK`);
+          } catch (error: any) {
+            failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 20).join('\n')}`);
+            console.log(`  ${cell}: FAILED`);
+          } finally {
+            await runner.query('ROLLBACK TO SAVEPOINT read_only_cell');
+          }
+          // A card asked while the person could modify the contract, approved once they cannot.
+          cell = `${gesture.name} read only, approval`;
+          await runner.query('SAVEPOINT read_only_cell');
+          try {
+            const rec = await contract();
+            await access('edit');
+            const preview = await previews.createPreview(readerCtx, 'update_entity_relations', { ...input, ref: rec.ref });
+            await access('read');
+            const before = await stored(rec.id);
+            const marker = await now();
+            const executed = await previews.executePreview(readerCtx, preview.preview_id);
+            assert.equal(executed.status, 'failed', `${cell}: the card is refused (${executed.status})`);
+            assert.match(String(executed.error_message), /read only in your access/, `${cell}: the refusal says why`);
+            assert.equal(await stored(rec.id), before, `${cell}: nothing is written`);
+            assert.deepEqual((await auditSince(marker)).map((row) => row.table_name), [], `${cell}: no audit row`);
+            passed += 1;
+            console.log(`  ${cell}: OK`);
+          } catch (error: any) {
+            failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 20).join('\n')}`);
+            console.log(`  ${cell}: FAILED`);
+          } finally {
+            await runner.query('ROLLBACK TO SAVEPOINT read_only_cell');
+          }
+        }
+      } finally {
+        await runner.query('ROLLBACK TO SAVEPOINT read_only_contract');
+      }
+    }
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
