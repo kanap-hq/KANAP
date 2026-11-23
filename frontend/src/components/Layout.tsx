@@ -152,7 +152,7 @@ export default function Layout() {
   // A page with edits it could not save yet asks before a link of the app takes the user away.
   useInAppLinkGuard(navigate);
   const guardedLeave = useGuardedLeave();
-  const { logout, token, hasLevel, claims, profile } = useAuth();
+  const { logout, token, hasLevel, claims, profile, subscription } = useAuth();
   // Same fallback as the users list: an account with no name is shown by its email.
   // That email is the display name, so the line under it stays hidden.
   const accountLabel = formatUserName(profile);
@@ -174,7 +174,9 @@ export default function Layout() {
   const agentBadgesQuery = useQuery({
     queryKey: ['ai-agent-control-badges'],
     queryFn: () => aiAgentControlApi.getBadges(),
-    enabled: canShowAgents,
+    // A frozen workspace refuses this route. Skip the request and its minute poll.
+    // Without a subscription summary the request stays, as on-premise.
+    enabled: canShowAgents && subscription?.access_allowed !== false,
     refetchInterval: 60_000,
   });
   const applicationVisibility = useBusinessContributorApplicationVisibility();
