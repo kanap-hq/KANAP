@@ -36,6 +36,14 @@ function fieldsOf(scope: HTMLElement): HTMLElement[] {
   return Array.from(scope.querySelectorAll<HTMLElement>(ENTRY_FIELDS)).filter(reachable);
 }
 
+/**
+ * The fields of a description, its text first: an editor's toolbar (a block style list, hidden
+ * until the text has the focus) comes before its text on screen.
+ */
+function textFirst(fields: HTMLElement[]): HTMLElement[] {
+  return [...fields.filter((el) => el.matches(FREE_TEXT)), ...fields.filter((el) => !el.matches(FREE_TEXT))];
+}
+
 /** The field shows a value: typed text, a choice, or the chips of a list of several values. */
 function hasValue(field: HTMLElement): boolean {
   if (field.isContentEditable) return !!field.textContent?.trim();
@@ -95,6 +103,12 @@ function nextStop(stops: Stop[], index: number): Stop | null {
   return null;
 }
 
+/** The field a stop is entered by: the first, the text first in a description. */
+function entryOf(stop: Stop): HTMLElement | undefined {
+  const fields = fieldsOf(stop.el);
+  return (stop.kind === 'description' ? textFirst(fields) : fields)[0];
+}
+
 /** On the way back: every required field, filled or not, then the title. */
 function previousStop(stops: Stop[], index: number): Stop | null {
   for (let i = index - 1; i >= 0; i -= 1) {
@@ -107,7 +121,7 @@ function previousStop(stops: Stop[], index: number): Stop | null {
 function findFirstCreationField(root: ParentNode): HTMLElement | null {
   const stops = creationStops(root);
   const stop = nextStop(stops, stops.findIndex((s) => s.kind === 'title'));
-  return stop ? fieldsOf(stop.el)[0] ?? null : null;
+  return stop ? entryOf(stop) ?? null : null;
 }
 
 /**
@@ -143,7 +157,7 @@ function editable(el: HTMLElement): boolean {
 function createdRecordTarget(root: ParentNode): HTMLElement | null | undefined {
   for (const declared of root.querySelectorAll<HTMLElement>('[data-creation-description]')) {
     if (!reachable(declared) || declared.closest('[hidden], [aria-hidden="true"]')) continue;
-    const field = fieldsOf(declared).find(editable);
+    const field = textFirst(fieldsOf(declared)).find(editable);
     if (field) return field;
     // A description shown read only has its field, closed: the next field is the target.
     if (!declared.querySelector(FIELD_LIKE)) return undefined;
@@ -317,7 +331,7 @@ export function followCreationFields(event: React.KeyboardEvent<HTMLElement>, on
     return;
   }
   const next = nextStop(stops, index);
-  const field = next ? fieldsOf(next.el)[0] : undefined;
+  const field = next ? entryOf(next) : undefined;
   if (!field && !titleToCommit) return;
   event.preventDefault();
   // A record this Tab gives is written by the creation frame, which places the cursor on it.
