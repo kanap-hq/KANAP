@@ -1,6 +1,6 @@
 ---
-title: "Kadratis 26.11.9: ohne Dubletten importieren, in großer Zahl ändern"
-description: "Seit 26.11.1 sind acht Versionen erschienen. Importe finden, was bereits existiert, bevor sie etwas anlegen, ein Feld lässt sich auf einer ganzen Auswahl ändern, aus der Liste oder über Kad, Lieferanten und Verträge haben eine Referenz, und ein neuer Datensatz wird erst beim Erstellen gespeichert. Ein Rundgang durch die Neuerungen."
+title: "Kadratis 26.11.9: die Neuerungen seit 26.11.1"
+description: "Seit 26.11.1 sind acht Versionen erschienen, mit wichtigen Neuerungen: Importe führen eine erweiterte Dublettensuche durch, die Listen erlauben Änderungen in großer Zahl (auch über Kad), und eine feinere Verwaltung der Zugriffsrechte auf das Budget verbessert die Zusammenarbeit im Budgetprozess. Ein Rundgang durch die Neuerungen."
 date: 2026-11-22
 topic: release
 features: [budget, ai]
@@ -10,31 +10,31 @@ draft: false
 translationKey: kadratis-26-11-9
 ---
 
-Seit 26.11.1 sind acht Versionen erschienen, darunter die, mit der das Produkt seinen Namen erhielt: [Kadratis](/de/blog/aus-kanap-wird-kadratis). Dieser Artikel zeigt, was sie in der täglichen Arbeit ändern, bis zu 26.11.9, veröffentlicht am 22. November:
+Seit 26.11.1 sind acht Versionen erschienen. Dieser Artikel zeigt die wichtigsten Änderungen, bis zu 26.11.9, veröffentlicht am 22. November:
 
-- Ein Import, über die Oberfläche oder über Kad, findet die vorhandenen Datensätze, bevor er auch nur einen neuen anlegt.
+- Ein Import, über die Oberfläche oder über Kad, findet die vorhandenen Datensätze, bevor er neue anlegt.
 - Ein Feld lässt sich auf einer ganzen Auswahl von Budgetzeilen oder Anwendungen ändern, aus der Liste oder auf Bitte an Kad.
 - Lieferanten, Unternehmen, Kontakte, Abteilungen und Verträge haben eine Referenz, etwa `SUP-12` oder `CTR-5`.
-- Ein neuer Datensatz wird erst in dem Moment gespeichert, in dem Sie ihn erstellen.
-- Rechte lassen sich feiner delegieren, und Support-Agenten finden das richtige Dokument, unabhängig von der Sprache des Tickets.
+- Zugriffsrechte lassen sich feiner verwalten.
+- Support-Agenten finden das richtige Dokument, unabhängig von der Sprache des Tickets.
 
-## Importe, die finden, was bereits existiert
+## Dublettensuche bei Importen
 
 ![In Kad die Vorschau des Imports einer Budget-Arbeitsmappe: Werte der Datei, die vorhandenen Werten zugeordnet sind, jeweils mit der Schaltfläche Rückgängig, und die Zeilen, die einer vorhandenen Zeile ähneln.](/screenshots/blog/kad-import-matches-2026-11-22.png)
 
-Eine Tabelle schreibt Namen nie so wie die Stammdaten: „Dell“ für „Dell Technologies“, ein Lieferant ohne seinen Akzent, eine Kostenart in einer anderen Sprache. Jede Abweichung wurde zu einem Fehler, den man korrigieren musste, oder zu einem doppelten Datensatz.
+Menschen nehmen es oft nicht so genau: „Dell“ für „Dell Technologies“, ein Lieferant ohne seinen Akzent, eine Kostenart in einer anderen Sprache. Beim Import von Daten wird dann jede Abweichung zu einem Fehler, den man erkennen und korrigieren muss, oder zu einem doppelten Datensatz.
 
-**Zuordnen vor dem Anlegen.** Alle Importe finden einen Datensatz über seinen Namen, ohne Rücksicht auf Groß- und Kleinschreibung oder Akzente. Die Budgetdatei ordnet so ihre Lieferanten, ihre Unternehmen und ihre Dimensionswerte zu; bei den empfohlenen Dimensionen erkennt sie auch einen Wert, der in einer anderen Sprache geschrieben ist, `Matériel` für `Hardware`. Kad geht weiter: Für einen anders geschriebenen Namen, eine Übersetzung oder eine Kurzform schlägt er den vorhandenen Datensatz vor. Jede Zuordnung wird bei der Prüfung aufgeführt, und **Rückgängig** nimmt sie zurück.
+**Zuordnen vor dem Anlegen.** Alle Importe finden jetzt einen Datensatz über seinen Namen, ohne Rücksicht auf Groß- und Kleinschreibung oder Akzente. Die Budgetdatei ordnet so ihre Lieferanten, ihre Unternehmen und ihre Dimensionswerte zu; bei den empfohlenen Dimensionen erkennt sie auch einen Wert, der in einer anderen Sprache geschrieben ist, `Matériel` für `Hardware`. Kad geht weiter: Für einen anders geschriebenen Namen, eine Übersetzung oder eine Kurzform schlägt er den vorhandenen Datensatz vor. Jede Zuordnung wird bei der Prüfung aufgeführt und lässt sich vor dem Import zurücknehmen.
 
-**Eine bereits erfasste Zeile wird keine zweite Zeile.** Eine Budgetzeile oder eine Anwendung der Datei, die einem vorhandenen Datensatz ähnelt, wird standardmäßig zurückgestellt. Für jede entscheiden Sie, ob Sie sie trotzdem anlegen oder den Datensatz aktualisieren, dem sie ähnelt. Eine zweimal geladene Datei legt nichts mehr an.
+**Eine bereits erfasste Zeile wird keine zweite Zeile.** Eine Budgetzeile oder eine Anwendung der Datei, die einem vorhandenen Datensatz ähnelt, wird standardmäßig zurückgestellt. Für jede entscheiden Sie, ob Sie sie trotzdem anlegen oder den Datensatz aktualisieren, dem sie ähnelt.
 
 **Warnungen bei Ungewöhnlichem.** Die Prüfung der Budgetdatei meldet, ohne zu blockieren, einen Betrag, der zehnmal höher oder niedriger ist als der vergleichbarer Zeilen, Daten außerhalb der Jahre der Beträge und eine andere Währung als die des zahlenden Unternehmens.
 
 **Eine einzige Regel für leere Zellen.** In allen Importen behält eine leere Zelle den gespeicherten Wert, `-` löscht ihn, und eine Spalte, die in der Datei fehlt, bleibt unberührt. Die Prüfung zählt die Werte, die gelöscht werden. Eine Datei kann also nur die Referenz der Datensätze und die zu ändernden Spalten enthalten, und eine exportierte und unverändert wieder importierte Datei ändert nichts.
 
-**Ein Budget, von Kad in einer einzigen Karte importiert.** Sie hängen die Arbeitsmappe an. Kad zeigt die Zuordnung der Spalten, die Zuordnungen der Werte, die ähnlichen Zeilen und die Lieferanten, die er anlegen wird. Vor Ihrer Genehmigung wird nichts geschrieben.
+**Ein Budget, von Kad in einer einzigen Karte importiert.** Sie hängen die Arbeitsmappe an die Konversation an und sagen „Importiere diese Daten“, und Kad zeigt die Zuordnung der Spalten, die Zuordnungen der Werte, die ähnlichen Zeilen und die Lieferanten, die er anlegen wird. Vor Ihrer Genehmigung wird nichts geschrieben.
 
-**Eine Spur für jeden Import.** Das Audit-Log verzeichnet alle Importe, ob über eine Oberfläche oder über Kad. Der Reiter **Verlauf** jedes angelegten oder geänderten Datensatzes nennt die Person, oder Kad in ihrem Auftrag.
+**Eine Spur für jeden Import.** Das Audit-Log verzeichnet alle Importe, ob über eine Oberfläche oder über Kad. Der Reiter **Verlauf** jedes angelegten oder geänderten Datensatzes nennt die Person (oder Kad).
 
 Siehe die Seiten [CSV- und Excel-Dateien](https://doc.kadratis.com/de/csv-files/) und [Ein Budget aus einer Tabellenkalkulation laden](https://doc.kadratis.com/de/budget-file/) im Handbuch.
 
@@ -48,6 +48,8 @@ Eine Umorganisation, ein Verantwortlicher, der das Team wechselt, ein übernomme
 
 - Bei Budgetzeilen: die Kostenstelle, das Konto, das zahlende Unternehmen, der Lieferant, die Verantwortlichen, ein Dimensionswert, Run oder Build. Beträge lassen sich so nicht ändern.
 - Bei Anwendungen: die Verantwortlichen, die Kategorie, der Lebenszyklus, die Geschäftskritikalität und die Cyberkritikalität.
+
+Dieser Umfang wird schrittweise erweitert.
 
 ![In Kad dieselbe Änderung, in einem Satz verlangt: Die Karte zeigt den Filter, das Feld, seinen neuen Wert und dieselbe Zählung der Zeilen.](/screenshots/blog/kad-bulk-change-2026-11-22.png)
 
@@ -66,22 +68,6 @@ Projekte, Anwendungen und Budgetzeilen hatten bereits ihre (`PRJ-3`, `APP-7`, `B
 **Ein Schlüssel für Importe.** Eine Zeile der Datei, die die Referenz trägt, aktualisiert diesen Datensatz, auch wenn sich sein Name geändert hat: Einen Lieferanten per Import umzubenennen, erzeugt keine Dublette. Die Prüfung meldet jeden Datensatz, der umbenannt wird.
 
 Die Mitwirkenden des Portfolios, die das Präfix `CTR` trugen, werden zu `MEM-n`. Adressen, die vor dieser Version gespeichert wurden, öffnen weiterhin den richtigen Mitwirkenden.
-
-## Einen Datensatz anlegen: Vor dem Erstellen wird nichts gespeichert
-
-![Eine neue Budgetzeile nach einem Klick auf Erstellen: Die Bezeichnungen der noch leeren Pflichtfelder sind rot, mit einem Warnsymbol.](/screenshots/blog/create-required-fields-2026-11-22.png)
-
-26.11.1 hatte allen Datensätzen dieselbe Anlage gegeben. Die folgenden Versionen haben sie sicherer gemacht.
-
-**Verlassen schreibt nichts.** Ein Datensatz wird mit **Erstellen**, der Eingabetaste oder Tab angelegt. Wer seine Seite vorher verlässt, speichert nichts und erhält keine Rückfrage. Eine Budgetzeile, ein Asset oder eine Verbindung wird angelegt, sobald ihre Pflichtfelder ausgefüllt sind, in beliebiger Reihenfolge.
-
-**Fehlende Felder sind sichtbar.** **Erstellen** markiert jedes noch leere Pflichtfeld mit einer roten Bezeichnung und einem Warnsymbol und setzt den Cursor in das erste. Ein Pflichtfeld, das nur einen möglichen Wert hat, ist bereits ausgefüllt, und ein Datensatz, der aus einer gefilterten Liste angelegt wird, übernimmt die Filter, die nur einen Wert zulassen.
-
-**Erstellen, dann Fertig.** Sobald der Datensatz angelegt ist, wird **Erstellen** zu **Fertig**, das Sie zu Ihrem Ausgangspunkt zurückbringt.
-
-**OPEX oder CAPEX ab der Anlage.** Eine neue Budgetzeile wählt ihren Typ in einem Menü **Typ**. Sie hat jetzt immer ein Konto, in der Oberfläche, über Kad, in der Budgetdatei und über die API.
-
-**Ohne den Datensatz zu verlassen.** Ein Kontakt lässt sich aus jedem Kontaktfeld anlegen, und die Lieferantenliste eines Vertrags oder einer Budgetzeile endet mit **+ Neuer Lieferant**.
 
 ## Feinere Rechte
 
@@ -106,20 +92,20 @@ Die Mitwirkenden des Portfolios, die das Präfix `CTR` trugen, werden zu `MEM-n`
 ## Weitere Verbesserungen
 
 - **Die ersten Schritte folgen Ihren Daten.** Mit Ihren eigenen Daten wird ein Schritt abgehakt, sobald das Element im Arbeitsbereich existiert. Der Hinweis zu einem Schritt steht in einer Blase unten links im Fenster, und der Pfad lässt sich jederzeit über die Kachel wechseln. Während der Testphase kann ein Administrator wieder mit dem vollständigen Beispiel beginnen.
+- **Anlegen von Datensätzen.** Ein neuer Datensatz wird erst in dem Moment gespeichert, in dem Sie ihn erstellen: Wer die Seite vorher verlässt, schreibt nichts. **Erstellen** markiert die noch leeren Pflichtfelder rot.
+- **Kontakte aus der Liste anlegen.** Überall, wo Sie einen Kontakt auswählen, endet die Liste mit **+ Neuer Kontakt**; die Lieferantenliste eines Vertrags oder einer Budgetzeile mit **+ Neuer Lieferant**.
 - **Leere Listen bieten das Anlegen an.** Eine leere Liste von Standorten, Assets, Unternehmen oder Kontakten zeigt in ihrer Mitte eine Schaltfläche zum Anlegen.
 - **Supportende.** Die Liste der Technologien zeigt das nächste Supportende, Standard oder erweitert. Bei einer Anwendung ist das Supportende jeder Technologie das des Berichts, farbig nach seinem Status.
 - **Standard-Budgetspalte.** Die Liste der Budgetzeilen folgt einer Änderung der Standardspalte, und der Reiter Budget einer Zeile öffnet sich mit ihr.
-- **Eingabe.** Eine neue Budgetzeile beginnt am 1. Januar des angezeigten Jahres. Dezimalzahlen folgen der Sprache der Oberfläche (6,5 T/Monat). Ein ohne Trennzeichen getipptes Datum behält seinen Monat: `01012026` wird zu 01.01.2026.
+- **Eingabe.** Eine neue Budgetzeile beginnt am 1. Januar des angezeigten Jahres. Dezimalzahlen folgen der Sprache der Oberfläche. Ein ohne Trennzeichen getipptes Datum behält seinen Monat: `01012026` wird zu 01.01.2026.
 - **Integrationen.** Wer die Adresse einer Integration (GLPI, PRTG, Netbox) oder den Server eines KI-Modells ändert, wird erneut nach dem Token oder Schlüssel gefragt.
-- **Abonnement des gehosteten Dienstes.** Nach einer abgelehnten Zahlung bleibt der Arbeitsbereich 14 Tage nutzbar, mit einem Banner, das den fälligen Betrag und die Frist nennt. Die Abrechnungsseite begleicht die Rechnung, sobald die Karte aktualisiert ist.
 
 ## Für On-Premise-Installationen
 
 - **Jede Nacht eine verschlüsselte Sicherung.** Ein Skript (`infra/backup/`) verschlüsselt die Datenbank, die Dateien und die Konfiguration mit `age` und legt sie in einem S3-Bucket ab, in dem der Server nur schreiben und auflisten kann. Der [Betriebsleitfaden](https://doc.kadratis.com/de/on-premise/operations/#nachtliche-verschlusselte-sicherung-in-einen-s3-bucket) erklärt Einrichtung, Kontrolle und Wiederherstellung.
-- **Images `kadratis-*`.** Seit 26.11.4 heißen die veröffentlichten Images `kadratis-api`, `kadratis-web` und `kadratis-api-tools`. Die Compose-Datei der Version nennt sie: Das übliche Update übernimmt sie.
+- **Images `kadratis-*`.** Seit 26.11.4 heißen die veröffentlichten Images `kadratis-api`, `kadratis-web` und `kadratis-api-tools`. Die Compose-Datei der Version nennt sie ausdrücklich, und sie werden automatisch aktualisiert.
 - **Lange Importe kommen ans Ziel.** Der Proxy des Web-Containers wartet 300 Sekunden auf die Antworten der API: Ein langer Import oder eine lange Synchronisierung endet nicht mehr auf einer 504-Seite.
 - **Integrationen ohne Weiterleitung.** Aufrufe an GLPI, PRTG, Netbox oder den Server eines KI-Modells folgen keiner Weiterleitung auf eine andere Adresse mehr, zum Beispiel von `http://` auf `https://`. Prüfen Sie, dass die gespeicherten Adressen die endgültigen Adressen sind.
-- **API für Ihre Skripte.** Die Routen `POST …/creation` der Budgetzeilen, Assets und Verbindungen sind entfernt, `POST /budget-lines` lehnt eine Zeile ohne Konto ab, und ein mit `mode=replace` aufgerufener Import führt zusammen.
 
 ## Aktualisieren
 

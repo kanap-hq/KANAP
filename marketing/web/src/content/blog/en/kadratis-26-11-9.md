@@ -1,6 +1,6 @@
 ---
-title: "Kadratis 26.11.9: import without duplicates, change in bulk"
-description: "Eight releases have shipped since 26.11.1. Imports find what exists before creating anything, one field can be changed on a whole selection from the list or through Kad, suppliers and contracts have a reference, and a new record is saved only when you create it. A tour of what is new."
+title: "Kadratis 26.11.9: what's new since 26.11.1"
+description: "Eight releases have shipped since 26.11.1, with notable new features: imports run advanced duplicate detection, lists allow bulk changes (Kad too), and finer management of budget access rights improves collaboration in the budgeting process. A tour of what is new."
 date: 2026-11-22
 topic: release
 features: [budget, ai]
@@ -10,31 +10,31 @@ draft: false
 translationKey: kadratis-26-11-9
 ---
 
-Eight releases have shipped since 26.11.1, including the one that gave the product [its name, Kadratis](/blog/kanap-is-now-kadratis). This article goes through what they change in everyday work, up to 26.11.9, released on November 22:
+Eight releases have shipped since 26.11.1. This article goes through the main changes, up to 26.11.9, released on November 22:
 
-- An import, from the screen or through Kad, finds the records that exist before it creates a single one.
+- An import, from the screen or through Kad, finds the records that exist before creating any.
 - One field can be changed on a whole selection of budget lines or applications, from the list or by asking Kad.
 - Suppliers, companies, contacts, departments and contracts have a reference, such as `SUP-12` or `CTR-5`.
-- A new record is saved only when you create it.
-- Rights can be delegated more finely, and support agents find the right document whatever the language of the ticket.
+- Access rights can be managed more finely.
+- Support agents find the right document whatever the language of the ticket.
 
-## Imports that find what already exists
+## Duplicate detection in imports
 
 ![In Kad, the preview of a budget workbook import: file values matched to existing values, each with the Undo button, and the lines that look like an existing line.](/screenshots/blog/kad-import-matches-2026-11-22.png)
 
-A spreadsheet never writes names the way the reference data does: “Dell” for “Dell Technologies”, a supplier without its accent, a cost type in another language. Each difference became an error to fix, or a duplicate record.
+People are often less than rigorous: “Dell” for “Dell Technologies”, a supplier without its accent, a cost type in another language. In a data import, each difference then becomes an error to identify and fix, or a duplicate record.
 
-**Match before creating.** Every import finds a record by its name, ignoring case and accents. The budget file thus matches its suppliers, its companies and its dimension values; on the recommended dimensions, it also recognizes a value written in another language, `Matériel` for `Hardware`. Kad goes further: for a name written differently, a translation or a short form, it suggests the existing record. Each match is listed in the review, and **Undo** removes it.
+**Match before creating.** Every import now finds a record by its name, ignoring case and accents. The budget file thus matches its suppliers, its companies and its dimension values; on the recommended dimensions, it also recognizes a value written in another language, `Matériel` for `Hardware`. Kad goes further: for a name written differently, a translation or a short form, it suggests the existing record. Each match is listed in the review and can be undone before the import.
 
-**A line already entered does not become a second line.** A budget line or an application in the file that looks like an existing record is set aside by default. For each one, you choose to create it anyway or to update the record it resembles. A file loaded twice no longer creates anything.
+**A line already entered does not become a second line.** A budget line or an application in the file that looks like an existing record is set aside by default. For each one, you choose to create it anyway or to update the record it resembles.
 
 **Warnings on what is out of the ordinary.** The review of the budget file flags, without blocking, an amount ten times higher or lower than that of comparable lines, dates outside the years of the amounts, and a currency other than that of the paying company.
 
 **One rule for empty cells.** In every import, an empty cell keeps the saved value, `-` clears it, and a column missing from the file is left untouched. The review counts the values that will be cleared. A file can therefore carry only the reference of the records and the columns to change, and a file exported then imported as is changes nothing.
 
-**A budget imported by Kad in a single card.** You attach the workbook. Kad shows the column mapping, the matches, the look-alike lines and the suppliers it will create. Nothing is written before you approve.
+**A budget imported by Kad in a single card.** You attach the workbook to the conversation, saying “Import this data”, and Kad shows the column mapping, the matches, the look-alike lines and the suppliers it will create. Nothing is written before you approve.
 
-**A trace for every import.** The audit log records every import, made from a screen or through Kad. The **History** tab of each record created or changed names the person, or Kad on their behalf.
+**A trace for every import.** The audit log records every import, made from a screen or through Kad. The **History** tab of each record created or changed names the person (or Kad).
 
 See the [CSV and Excel files](https://doc.kadratis.com/csv-files/) and [Load a budget from a spreadsheet](https://doc.kadratis.com/budget-file/) pages of the manual.
 
@@ -48,6 +48,8 @@ A reorganization, an owner who moves to another team, a supplier that has been a
 
 - On budget lines: the cost center, the account, the paying company, the supplier, the owners, a dimension value, run or build. Amounts cannot be changed this way.
 - On applications: the owners, the category, the lifecycle, the business criticality and the cyber criticality.
+
+This scope will be extended gradually.
 
 ![In Kad, the same change asked in one sentence: the card shows the filter, the field, its new value and the same count of lines.](/screenshots/blog/kad-bulk-change-2026-11-22.png)
 
@@ -66,22 +68,6 @@ Projects, applications and budget lines already had theirs (`PRJ-3`, `APP-7`, `B
 **A key for imports.** A file row that carries the reference updates that record, even if its name has changed: renaming a supplier through an import does not create a duplicate. The review flags each record that will be renamed.
 
 Portfolio contributors, which carried the `CTR` prefix, become `MEM-n`. Addresses saved before this release still open the right contributor.
-
-## Creating a record: nothing is saved before creation
-
-![A new budget line after a click on Create: the labels of the required fields still empty are in red, with a warning icon.](/screenshots/blog/create-required-fields-2026-11-22.png)
-
-26.11.1 had given every record the same creation. The following releases made it safer.
-
-**Leaving writes nothing.** A record is created by **Create**, Enter or Tab. Leaving its page before that saves nothing and asks no question. A budget line, an asset or a connection is created as soon as its required fields are filled in, in any order.
-
-**Missing fields show.** **Create** marks each required field still empty with a red label and a warning icon, and puts the cursor in the first one. A required field that has only one possible value is already filled in, and a record created from a filtered list takes over the filters that keep a single value.
-
-**Create, then Done.** Once the record is created, **Create** becomes **Done**, which takes you back to where you started.
-
-**OPEX or CAPEX from creation.** A new budget line chooses its type in a **Type** menu. It now always has an account, on screen, through Kad, in the budget file and through the API.
-
-**Without leaving the record.** A contact can be created from any contact field, and the supplier list of a contract or a budget line ends with **+ New supplier**.
 
 ## Finer rights
 
@@ -106,20 +92,20 @@ Portfolio contributors, which carried the `CTR` prefix, become `MEM-n`. Addresse
 ## Other improvements
 
 - **The first steps follow your data.** With your own data, a step is ticked as soon as the item exists in the workspace. The hint for a step sits in a bubble at the bottom left of the window, and the path can be changed at any time from the tile. During the trial, an administrator can start again from the complete example.
+- **Record creation.** A new record is saved only when you create it: leaving the page before that writes nothing. **Create** marks the required fields still empty in red.
+- **Contacts created from the list.** Wherever you choose a contact, the list ends with **+ New contact**; the supplier list of a contract or a budget line ends with **+ New supplier**.
 - **Empty lists offer to create.** An empty list of locations, assets, companies or contacts shows a create button in its middle.
 - **End of support.** The technology list shows the next end of support, standard or extended. On an application, the end of support of each technology is the one from the report, coloured by its status.
 - **Default budget column.** The line list follows a change of the default column, and the Budget tab of a line opens on it.
-- **Data entry.** A new budget line starts on January 1 of the year shown. Decimal numbers follow the interface language (6,5 j/mois in French). A date typed without separators keeps its month: `01012026` becomes 01/01/2026.
+- **Data entry.** A new budget line starts on January 1 of the year shown. Decimal numbers follow the interface language. A date typed without separators keeps its month: `01012026` becomes 01/01/2026.
 - **Integrations.** Changing the address of an integration (GLPI, PRTG, Netbox) or the server of an AI model asks again for its token or key.
-- **Hosted service subscription.** After a declined payment, the workspace stays usable for 14 days, with a banner that gives the amount due and the deadline. The billing page settles the invoice as soon as the card is updated.
 
 ## For on-premise installations
 
 - **An encrypted backup every night.** A script (`infra/backup/`) encrypts the database, the files and the configuration with `age`, and puts them in an S3 bucket where the server can only write and list. The [operations guide](https://doc.kadratis.com/on-premise/operations/#nightly-encrypted-backup-to-an-s3-bucket) explains the setup, the check and the restore.
-- **`kadratis-*` images.** Since 26.11.4, the published images are called `kadratis-api`, `kadratis-web` and `kadratis-api-tools`. The compose file of the release names them: the usual upgrade picks them up.
+- **`kadratis-*` images.** Since 26.11.4, the published images are called `kadratis-api`, `kadratis-web` and `kadratis-api-tools`. The compose file of the release names them explicitly, and they are updated automatically.
 - **Long imports complete.** The proxy of the web container waits 300 seconds for API responses: a long import or synchronization no longer ends on a 504 page.
 - **Integrations without redirects.** Calls to GLPI, PRTG, Netbox or the server of an AI model no longer follow a redirect to another address, for example from `http://` to `https://`. Check that the saved addresses are the final addresses.
-- **API for your scripts.** The `POST …/creation` routes of budget lines, assets and connections are removed, `POST /budget-lines` refuses a line without an account, and an import called with `mode=replace` merges.
 
 ## Upgrading
 

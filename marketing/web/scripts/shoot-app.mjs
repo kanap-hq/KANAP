@@ -1754,24 +1754,6 @@ const PAGES = {
       await sleep(800);
     },
   },
-  // Release 26.11.9: a new budget line, Create clicked with the required fields empty: their labels turn red with an alert
-  // icon. Nothing is saved (the form refuses); the page is left without confirming anything.
-  'create-required-fields-2026-11-22': {
-    frame: 1280,
-    path: '/ops/budget/new?nature=opex&list=budget',
-    waitFor: 'main',
-    async prepare(page) {
-      await sleep(2500);
-      await page.keyboard.type('Cheese cave sensors, maintenance');
-      await sleep(600);
-      const [create] = await page.$$('xpath/.//main//button[normalize-space(.)="Create"]');
-      await create.click();
-      await page.waitForFunction(() => document.querySelectorAll('aside .kanap-field-label svg, main svg[data-testid="ErrorOutlineIcon"]').length > 0, { timeout: 15000 }).catch(() => console.warn('no alert icon seen'));
-      await hideDevBadge(page);
-      await page.mouse.move(5, 900);
-      await sleep(1000);
-    },
-  },
   // Release 26.11.9: a contract page, its reference (CTR-n) in the header; read-only.
   'contract-reference-2026-11-22': {
     frame: 1280,

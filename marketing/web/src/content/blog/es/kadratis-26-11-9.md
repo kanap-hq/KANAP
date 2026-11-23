@@ -1,6 +1,6 @@
 ---
-title: "Kadratis 26.11.9: importar sin duplicados, modificar en bloque"
-description: "Desde 26.11.1 se han publicado ocho versiones. Las importaciones encuentran lo que existe antes de crear, un campo se modifica en toda una selección desde la lista o a través de Kad, los proveedores y los contratos tienen una referencia, y un registro nuevo solo se guarda al crearlo. Un recorrido por las novedades."
+title: "Kadratis 26.11.9: las novedades desde 26.11.1"
+description: "Desde 26.11.1 se han publicado ocho versiones, con novedades destacadas: las importaciones realizan una búsqueda avanzada de duplicados, las listas permiten la modificación en bloque (también con Kad), y una gestión más precisa de los derechos de acceso al presupuesto mejora la colaboración en el proceso presupuestario. Un recorrido por las novedades."
 date: 2026-11-22
 topic: release
 features: [budget, ai]
@@ -10,31 +10,31 @@ draft: false
 translationKey: kadratis-26-11-9
 ---
 
-Desde 26.11.1 se han publicado ocho versiones, entre ellas la que dio al producto [su nombre, Kadratis](/es/blog/kanap-pasa-a-llamarse-kadratis). Este artículo repasa lo que cambian en el trabajo diario, hasta 26.11.9, publicada el 22 de noviembre:
+Desde 26.11.1 se han publicado ocho versiones. Este artículo repasa los principales cambios, hasta 26.11.9, publicada el 22 de noviembre:
 
-- Una importación, desde la pantalla o a través de Kad, encuentra los registros que existen antes de crear uno solo.
+- Una importación, desde la pantalla o a través de Kad, encuentra los registros que existen antes de crear otros nuevos.
 - Un campo se modifica en toda una selección de líneas presupuestarias o de aplicaciones, desde la lista o pidiéndoselo a Kad.
 - Los proveedores, las empresas, los contactos, los departamentos y los contratos tienen una referencia, como `SUP-12` o `CTR-5`.
-- Un registro nuevo solo se guarda en el momento en que usted lo crea.
-- Los derechos se delegan con más precisión, y los agentes de soporte encuentran el documento adecuado sea cual sea el idioma del ticket.
+- Los derechos de acceso se gestionan con más precisión.
+- Los agentes de soporte encuentran el documento adecuado sea cual sea el idioma del ticket.
 
-## Importaciones que encuentran lo que ya existe
+## Búsqueda de duplicados en las importaciones
 
 ![En Kad, la vista previa de la importación de un libro de presupuesto: los valores del archivo emparejados con valores existentes, cada uno con el botón Deshacer, y las líneas que se parecen a una línea existente.](/screenshots/blog/kad-import-matches-2026-11-22.png)
 
-Una hoja de cálculo nunca escribe los nombres como los datos maestros: «Dell» por «Dell Technologies», un proveedor sin su acento, un tipo de coste en otro idioma. Cada diferencia se convertía en un error que corregir, o en un registro duplicado.
+Las personas pecan a menudo de falta de rigor: «Dell» por «Dell Technologies», un proveedor sin su acento, un tipo de coste en otro idioma. En una importación de datos, cada diferencia se convierte entonces en un error que detectar y corregir, o en un registro duplicado.
 
-**Emparejar antes de crear.** Todas las importaciones encuentran un registro por su nombre sin tener en cuenta mayúsculas ni acentos. El archivo de presupuesto empareja así sus proveedores, sus empresas y sus valores de dimensión; en las dimensiones recomendadas, reconoce también un valor escrito en otro idioma, `Matériel` por `Hardware`. Kad va más allá: para un nombre escrito de otra forma, una traducción o una forma corta, propone el registro existente. Cada emparejamiento aparece en la verificación, y **Deshacer** lo retira.
+**Emparejar antes de crear.** Todas las importaciones encuentran ahora un registro por su nombre sin tener en cuenta mayúsculas ni acentos. El archivo de presupuesto empareja así sus proveedores, sus empresas y sus valores de dimensión; en las dimensiones recomendadas, reconoce también un valor escrito en otro idioma, `Matériel` por `Hardware`. Kad va más allá: para un nombre escrito de otra forma, una traducción o una forma corta, propone el registro existente. Cada emparejamiento aparece en la verificación y puede anularse antes de la importación.
 
-**Una línea ya introducida no se convierte en una segunda línea.** Una línea presupuestaria o una aplicación del archivo que se parece a un registro existente se descarta por defecto. Para cada una, usted elige crearla de todos modos o actualizar el registro al que se parece. Un archivo cargado dos veces ya no crea nada.
+**Una línea ya introducida no se convierte en una segunda línea.** Una línea presupuestaria o una aplicación del archivo que se parece a un registro existente se descarta por defecto. Para cada una, usted elige crearla de todos modos o actualizar el registro al que se parece.
 
 **Avisos sobre lo que se sale de lo normal.** La verificación del archivo de presupuesto señala, sin bloquear, un importe diez veces superior o inferior al de las líneas comparables, fechas fuera de los años de los importes y una moneda distinta de la de la empresa pagadora.
 
 **Una sola regla para las celdas vacías.** En todas las importaciones, una celda vacía conserva el valor guardado, `-` lo borra, y una columna ausente del archivo no se toca. La verificación cuenta los valores que se borrarán. Un archivo puede llevar, por tanto, solo la referencia de los registros y las columnas que cambian, y un archivo exportado e importado tal cual no cambia nada.
 
-**Un presupuesto importado por Kad en una sola tarjeta.** Usted adjunta el libro. Kad muestra la correspondencia de las columnas, los emparejamientos, las líneas parecidas y los proveedores que creará. No se escribe nada antes de su aprobación.
+**Un presupuesto importado por Kad en una sola tarjeta.** Usted adjunta el libro a la conversación diciendo «Importa estos datos», y Kad muestra la correspondencia de las columnas, los emparejamientos, las líneas parecidas y los proveedores que creará. No se escribe nada antes de su aprobación.
 
-**Un rastro de cada importación.** El registro de auditoría anota todas las importaciones, hechas desde una pantalla o por Kad. La pestaña **Historial** de cada registro creado o modificado nombra a la persona, o a Kad en su nombre.
+**Un rastro de cada importación.** El registro de auditoría anota todas las importaciones, hechas desde una pantalla o por Kad. La pestaña **Historial** de cada registro creado o modificado nombra a la persona (o a Kad).
 
 Consulte las páginas [Archivos CSV y Excel](https://doc.kadratis.com/es/csv-files/) y [Cargar un presupuesto desde una hoja de cálculo](https://doc.kadratis.com/es/budget-file/) del manual.
 
@@ -48,6 +48,8 @@ Una reorganización, un responsable que cambia de equipo, un proveedor adquirido
 
 - En las líneas presupuestarias: el centro de coste, la cuenta, la empresa pagadora, el proveedor, los responsables, un valor de dimensión, run o build. Los importes no se modifican de esta forma.
 - En las aplicaciones: los responsables, la categoría, el ciclo de vida, la criticidad de negocio y la criticidad cibernética.
+
+Este alcance se ampliará progresivamente.
 
 ![En Kad, la misma modificación pedida en una frase: la tarjeta muestra el filtro, el campo, su nuevo valor y el mismo recuento de líneas.](/screenshots/blog/kad-bulk-change-2026-11-22.png)
 
@@ -66,22 +68,6 @@ Los proyectos, las aplicaciones y las líneas presupuestarias ya tenían la suya
 **Una clave para las importaciones.** Una fila del archivo que lleva la referencia actualiza ese registro, aunque su nombre haya cambiado: renombrar un proveedor mediante una importación no crea un duplicado. La verificación señala cada registro que se renombrará.
 
 Los colaboradores del portafolio, que llevaban el prefijo `CTR`, pasan a `MEM-n`. Las direcciones guardadas antes de esta versión siguen abriendo el colaborador correcto.
-
-## Crear un registro: nada se guarda antes de la creación
-
-![Una línea presupuestaria nueva tras un clic en Crear: las etiquetas de los campos obligatorios aún vacíos están en rojo, con un icono de alerta.](/screenshots/blog/create-required-fields-2026-11-22.png)
-
-26.11.1 había dado la misma creación a todos los registros. Las versiones siguientes la han hecho más segura.
-
-**Salir no escribe nada.** Un registro se crea con **Crear**, Intro o Tab. Salir de su página antes no guarda nada ni hace ninguna pregunta. Una línea presupuestaria, un activo o una conexión se crea en cuanto sus campos obligatorios están completos, en cualquier orden.
-
-**Los campos que faltan se ven.** **Crear** marca cada campo obligatorio aún vacío con una etiqueta roja y un icono de alerta, y coloca el cursor en el primero. Un campo obligatorio que solo tiene un valor posible ya está rellenado, y un registro creado desde una lista filtrada retoma los filtros que dejan un solo valor.
-
-**Crear, y después Listo.** Una vez creado el registro, **Crear** pasa a ser **Listo**, que le devuelve a su punto de partida.
-
-**OPEX o CAPEX desde la creación.** Una línea presupuestaria nueva elige su tipo en un menú **Tipo**. Ahora siempre tiene una cuenta, en pantalla, a través de Kad, en el archivo de presupuesto y por la API.
-
-**Sin salir del registro.** Un contacto se crea desde cualquier campo de contacto, y la lista de proveedores de un contrato o de una línea presupuestaria termina con **+ Nuevo proveedor**.
 
 ## Derechos más precisos
 
@@ -106,20 +92,20 @@ Los colaboradores del portafolio, que llevaban el prefijo `CTR`, pasan a `MEM-n`
 ## Otras mejoras
 
 - **Los primeros pasos siguen sus datos.** Con sus propios datos, una etapa se marca en cuanto el elemento existe en el espacio de trabajo. La indicación de una etapa aparece en una burbuja abajo a la izquierda de la ventana, y el recorrido se cambia en cualquier momento desde el mosaico. Durante la prueba, un administrador puede volver a empezar desde el ejemplo completo.
+- **Creación de registros.** Un registro nuevo solo se guarda en el momento en que usted lo crea: salir de la página antes no escribe nada. **Crear** marca en rojo los campos obligatorios aún vacíos.
+- **Contactos creados desde la lista.** Allí donde usted elige un contacto, la lista termina con **+ Nuevo contacto**; la de proveedores de un contrato o de una línea presupuestaria, con **+ Nuevo proveedor**.
 - **Las listas vacías proponen crear.** Una lista vacía de ubicaciones, activos, empresas o contactos muestra un botón de creación en su centro.
 - **Fin de soporte.** La lista de tecnologías muestra el próximo fin de soporte, estándar o extendido. En una aplicación, el fin de soporte de cada tecnología es el del informe, coloreado según su estado.
 - **Columna de presupuesto por defecto.** La lista de líneas sigue un cambio de la columna por defecto, y la pestaña Presupuesto de una línea se abre en ella.
-- **Introducción de datos.** Una línea presupuestaria nueva empieza el 1 de enero del año mostrado. Los números decimales siguen el idioma de la interfaz (6,5 d/mes). Una fecha escrita sin separadores conserva su mes: `01012026` pasa a 01/01/2026.
+- **Introducción de datos.** Una línea presupuestaria nueva empieza el 1 de enero del año mostrado. Los números decimales siguen el idioma de la interfaz. Una fecha escrita sin separadores conserva su mes: `01012026` pasa a 01/01/2026.
 - **Integraciones.** Cambiar la dirección de una integración (GLPI, PRTG, Netbox) o el servidor de un modelo de IA vuelve a pedir su token o su clave.
-- **Suscripción al servicio alojado.** Tras un pago rechazado, el espacio de trabajo sigue siendo utilizable 14 días, con un banner que indica el importe adeudado y la fecha límite. La página de facturación liquida la factura en cuanto se actualiza la tarjeta.
 
 ## Para las instalaciones on-premise
 
 - **Una copia de seguridad cifrada cada noche.** Un script (`infra/backup/`) cifra la base de datos, los archivos y la configuración con `age`, y los deposita en un bucket S3 donde el servidor solo puede escribir y listar. La [guía de operaciones](https://doc.kadratis.com/es/on-premise/operations/#copia-de-seguridad-nocturna-cifrada-en-un-bucket-s3) explica la puesta en marcha, el control y la restauración.
-- **Imágenes `kadratis-*`.** Desde 26.11.4, las imágenes publicadas se llaman `kadratis-api`, `kadratis-web` y `kadratis-api-tools`. El archivo compose de la versión las nombra: la actualización habitual las toma.
+- **Imágenes `kadratis-*`.** Desde 26.11.4, las imágenes publicadas se llaman `kadratis-api`, `kadratis-web` y `kadratis-api-tools`. El archivo compose de la versión las nombra explícitamente y se actualizan automáticamente.
 - **Las importaciones largas terminan.** El proxy del contenedor web espera 300 segundos las respuestas de la API: una importación o una sincronización larga ya no termina en una página 504.
 - **Integraciones sin redirección.** Las llamadas a GLPI, PRTG, Netbox o al servidor de un modelo de IA ya no siguen una redirección a otra dirección, por ejemplo de `http://` a `https://`. Compruebe que las direcciones guardadas son las direcciones finales.
-- **API para sus scripts.** Las rutas `POST …/creation` de las líneas presupuestarias, los activos y las conexiones se retiran, `POST /budget-lines` rechaza una línea sin cuenta, y una importación llamada con `mode=replace` fusiona.
 
 ## Actualizar
 
