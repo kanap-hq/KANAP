@@ -399,7 +399,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         purpose: purposeContent,
       },
       userId,
-      { manager: mg },
+      { manager: mg, audit: opts?.audit },
     );
 
     await this.audit.log({
@@ -409,6 +409,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       before: null,
       after: saved,
       userId,
+      ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
     }, { manager: mg });
 
     return saved;
@@ -693,11 +694,11 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         'purpose',
         nextPurpose,
         userId,
-        { manager: mg, logSourceActivity: true },
+        { manager: mg, logSourceActivity: true, audit: opts?.audit },
       );
     }
     if (before.name !== saved.name) {
-      await this.integratedDocuments.syncTitles('projects', sourceDescriptor, userId, { manager: mg });
+      await this.integratedDocuments.syncTitles('projects', sourceDescriptor, userId, { manager: mg, audit: opts?.audit });
     }
 
     // Log status change as activity (optionally as decision)
@@ -799,6 +800,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       before,
       after: saved,
       userId,
+      ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
     }, { manager: mg });
 
     return saved;
