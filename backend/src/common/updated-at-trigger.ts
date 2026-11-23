@@ -1,4 +1,4 @@
-import type { QueryRunner } from 'typeorm';
+import type { EntityManager, QueryRunner } from 'typeorm';
 import { UPDATED_AT_TABLES } from './updated-at.inventory';
 
 /**
@@ -10,6 +10,10 @@ import { UPDATED_AT_TABLES } from './updated-at.inventory';
  * copy the long texts stored apart (TOAST) on every update. The list of the columns is read from
  * the catalog when the trigger is placed: a migration that adds a column to one of these tables
  * calls `syncUpdatedAtTrigger` again (the inventory spec fails until it does).
+ *
+ * The application never writes the date through TypeORM (`update: false` on the entities'
+ * column): a date it sets on purpose (a child changed, the record is dated) goes through
+ * `touchUpdatedAt`.
  */
 
 type Executor = Pick<QueryRunner, 'query'>;
@@ -21,12 +25,11 @@ const quoteIdent = (name: string) => `"${name.replace(/"/g, '""')}"`;
 /**
  * The columns of a table whose change dates the row: every column but `updated_at`, the generated
  * ones (a `BEFORE` trigger's `WHEN` cannot read them, and they follow other columns) and the
- * technical ones of the inventory. A type without an equality is compared through a cast: `json`
- * as `jsonb`, any other as `text`.
+ * technical ones of the inventory (none for a table outside it). A type without an equality is
+ * compared through a cast: `json` as `jsonb`, any other as `text`.
  */
 export async function updatedAtColumns(executor: Executor, table: string): Promise<UpdatedAtColumn[]> {
-  const technical = UPDATED_AT_TABLES[table];
-  if (!technical) throw new Error(`${table} is not in common/updated-at.inventory.ts`);
+  const technical = UPDATED_AT_TABLES[table] ?? [];
   const rows: Array<{ name: string; is_json: boolean; is_array: boolean; has_equality: boolean }> = await executor.query(
     `WITH cols AS (
        SELECT a.attnum, a.attname::text AS name,
@@ -63,15 +66,20 @@ export function updatedAtCondition(columns: UpdatedAtColumn[]): string {
   return `NEW.updated_at IS NOT DISTINCT FROM OLD.updated_at AND ROW(${side('NEW')}) IS DISTINCT FROM ROW(${side('OLD')})`;
 }
 
-export type UpdatedAtTriggerOutcome = 'placed' | 'table missing' | 'no updated_at column';
+export type UpdatedAtTriggerOutcome = 'placed' | 'not in the inventory' | 'table missing' | 'no updated_at column';
 
 /**
  * (Re)places the trigger of a table of the inventory from the catalog of today, without a lock
  * that blocks the readers (`CREATE OR REPLACE TRIGGER`). A table missing, or without its
  * `updated_at` column, gets no trigger: the column is never added in silence, the inventory spec
- * names the table.
+ * names the table. A table that left the inventory since the migration that names it gets none
+ * either, with a log line: a migration keeps its own list of tables.
  */
 export async function syncUpdatedAtTrigger(executor: Executor, table: string): Promise<UpdatedAtTriggerOutcome> {
+  if (!UPDATED_AT_TABLES[table]) {
+    console.log(`[updated-at] ${table} is not in common/updated-at.inventory.ts: no trigger placed`);
+    return 'not in the inventory';
+  }
   const [found] = await executor.query(
     `SELECT c.oid IS NOT NULL AS has_table,
             EXISTS (SELECT 1 FROM pg_attribute a
@@ -112,7 +120,15 @@ export async function setUpdatedAtTriggers(executor: Executor, tables: readonly 
  */
 export async function withUpdatedAtTriggersDisabled<T>(executor: Executor, tables: readonly string[], fn: () => Promise<T>): Promise<T> {
   const disabled = await setUpdatedAtTriggers(executor, tables, 'disable');
-  const result = await fn();
+  let result: T;
+  try {
+    result = await fn();
+  } catch (error) {
+    // Enabled again when the transaction still runs; an aborted one rolls the disable back with it.
+    // The error of `fn` is the one thrown, never the refusal of an aborted transaction.
+    await setUpdatedAtTriggers(executor, disabled, 'enable').catch(() => undefined);
+    throw error;
+  }
   await setUpdatedAtTriggers(executor, disabled, 'enable');
   return result;
 }
@@ -120,8 +136,9 @@ export async function withUpdatedAtTriggersDisabled<T>(executor: Executor, table
 /**
  * Drops the trigger of each table that has it, and returns those tables. The trigger's `WHEN`
  * names every column it compares: PostgreSQL refuses to drop or retype such a column while the
- * trigger stands. A migration that drops or retypes a column of these tables drops the trigger
- * first, then calls `syncUpdatedAtTrigger` for the table; a spec that replays an older migration
+ * trigger stands ("cannot drop column ... because other objects depend on it"): do not follow the
+ * hint to use `CASCADE`, which drops the trigger for good. A migration that drops or retypes a
+ * column of these tables drops the trigger first, then calls `syncUpdatedAtTrigger` for the table; a spec that replays an older migration
  * drops it inside its rolled-back transaction (the database of that migration's time). Without
  * `tables`: every table of the inventory.
  */
@@ -138,4 +155,25 @@ export async function dropUpdatedAtTriggers(executor: Executor, tables: readonly
     await executor.query(`DROP TRIGGER ${quoteIdent(`${table}_updated_at`)} ON public.${quoteIdent(table)}`);
   }
   return present.map((row) => row.table);
+}
+
+/**
+ * Dates a record of the inventory on purpose, in the caller's transaction and tenant: a child of
+ * the record changed (its purpose, its members, its analytics values), which its own columns do
+ * not show. Called after the save, and only when the child really changed. The only place the
+ * application writes the date; returns the number of rows dated (0: no such record in the
+ * tenant, or one the person may not write).
+ */
+export async function touchUpdatedAt(manager: Pick<EntityManager, 'query'>, table: string, id: string): Promise<number> {
+  if (!UPDATED_AT_TABLES[table]) throw new Error(`${table} is not in common/updated-at.inventory.ts`);
+  const [row] = await manager.query(
+    `WITH touched AS (
+       UPDATE public.${quoteIdent(table)} SET updated_at = now()
+        WHERE tenant_id = app_current_tenant() AND id = $1
+        RETURNING 1
+     )
+     SELECT count(*)::int AS count FROM touched`,
+    [id],
+  );
+  return row.count;
 }

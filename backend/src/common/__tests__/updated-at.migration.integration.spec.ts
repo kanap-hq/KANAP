@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { QueryRunner } from 'typeorm';
 import { RecordUpdatedAt1856270000000 as Migration } from '../../migrations/1856270000000-record-updated-at';
 import { UPDATED_AT_TABLES } from '../updated-at.inventory';
-import { syncUpdatedAtTrigger } from '../updated-at-trigger';
+import { syncUpdatedAtTrigger, withUpdatedAtTriggersDisabled } from '../updated-at-trigger';
 import { assert, inRolledBackTransaction, runSpecs } from '../../spend/__tests__/round-inputs.fixtures';
 
 // Migration 1856270000000 (the modification date the database keeps), against a real database,
@@ -109,8 +109,26 @@ async function testColumnWithoutEquality() {
   });
 }
 
+/** A table outside the inventory gets no trigger; the triggers disabled around a failing update come back. */
+async function testOutsideTheInventoryAndFailingUpdate() {
+  await inRolledBackTransaction(async (runner) => {
+    assert.equal(await syncUpdatedAtTrigger(runner, 'tenants'), 'not in the inventory');
+    const [{ count }] = await runner.query(`SELECT count(*)::int AS count FROM pg_trigger WHERE tgname = 'tenants_updated_at'`);
+    assert.equal(count, 0, 'no trigger on a table outside the inventory');
+    await assert.rejects(
+      withUpdatedAtTriggersDisabled(runner, ['roles'], async () => {
+        throw new Error('the update failed');
+      }),
+      /the update failed/,
+    );
+    const [trigger] = await runner.query(`SELECT tgenabled FROM pg_trigger WHERE tgname = 'roles_updated_at'`);
+    assert.equal(trigger.tgenabled, 'O', 'the trigger is enabled again after a failing update');
+  });
+}
+
 void runSpecs('updated-at.migration.integration.spec', [
   ['down then up, twice', testDownThenUpTwice],
   ['a column without equality', testColumnWithoutEquality],
   ['a missing column is named, not added', testMissingColumnIsNamedNotAdded],
+  ['outside the inventory, failing update', testOutsideTheInventoryAndFailingUpdate],
 ]);

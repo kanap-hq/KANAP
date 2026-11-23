@@ -170,7 +170,9 @@ async function testInventoryMatchesTheDatabase() {
         { missing: [], extra: [] },
         `${row.table}: the trigger does not compare exactly the columns of today. A migration that adds or drops a column of ${row.table} `
           + `calls syncUpdatedAtTrigger(queryRunner, '${row.table}') (common/updated-at-trigger.ts); a column whose change alone is no edit `
-          + `goes to the technical columns of ${row.table} in common/updated-at.inventory.ts, with its reason, and the trigger is synced again.`,
+          + `goes to the technical columns of ${row.table} in common/updated-at.inventory.ts, with its reason, and the trigger is synced again. `
+          + `Faced with "cannot drop column ... because other objects depend on it", do not follow the CASCADE hint (it drops the trigger): `
+          + `call dropUpdatedAtTriggers(queryRunner, ['${row.table}']) before the change and syncUpdatedAtTrigger after it.`,
       );
     }
     const [fn] = await runner.query(
@@ -210,7 +212,9 @@ async function testEveryTableKeepsItsDate() {
       assert.equal(await dateOf(table), 'now', `${table}: a changed column dates the row`);
 
       await update(table, `${spec.edit} = 'Edited again', updated_at = '${OLD_DATE}'`);
-      assert.equal(await dateOf(table), OLD_DATE, `${table}: a change dated by its statement keeps that date`);
+      // Raw SQL only (a statement that writes `tasks.owner_ids` and its own date, for instance): the
+      // entities never write the date (`update: false`), the application dates on purpose through touchUpdatedAt.
+      assert.equal(await dateOf(table), OLD_DATE, `${table}: a raw SQL change dated by its own statement keeps that date`);
     }
   });
 }

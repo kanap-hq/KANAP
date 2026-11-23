@@ -55,7 +55,7 @@ export class RecordUpdatedAt1856270000000 implements MigrationInterface {
       const outcome = await syncUpdatedAtTrigger(queryRunner, table);
       if (outcome !== 'placed') {
         // Left without a trigger rather than given a column: the spec of the inventory names it.
-        console.warn(`${LOG} ${table}: ${outcome === 'table missing' ? 'table missing' : 'no updated_at column'}, no trigger placed`);
+        console.warn(`${LOG} ${table}: ${outcome}, no trigger placed`);
         continue;
       }
       placed += 1;
