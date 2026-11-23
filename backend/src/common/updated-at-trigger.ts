@@ -116,3 +116,25 @@ export async function withUpdatedAtTriggersDisabled<T>(executor: Executor, table
   await setUpdatedAtTriggers(executor, disabled, 'enable');
   return result;
 }
+
+/**
+ * Drops the trigger of each table that has it, and returns those tables. The trigger's `WHEN`
+ * names every column it compares: PostgreSQL refuses to drop or retype such a column while the
+ * trigger stands. A migration that drops or retypes a column of these tables drops the trigger
+ * first, then calls `syncUpdatedAtTrigger` for the table; a spec that replays an older migration
+ * drops it inside its rolled-back transaction (the database of that migration's time).
+ */
+export async function dropUpdatedAtTriggers(executor: Executor, tables: readonly string[]): Promise<string[]> {
+  const present: Array<{ table: string }> = await executor.query(
+    `SELECT c.relname::text AS table
+       FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+      WHERE NOT t.tgisinternal AND c.relnamespace = 'public'::regnamespace
+        AND c.relname = ANY($1::text[]) AND t.tgname = c.relname || '_updated_at'
+      ORDER BY 1`,
+    [tables],
+  );
+  for (const { table } of present) {
+    await executor.query(`DROP TRIGGER ${quoteIdent(`${table}_updated_at`)} ON public.${quoteIdent(table)}`);
+  }
+  return present.map((row) => row.table);
+}

@@ -265,9 +265,9 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
 - Migrations run with **no** `app.current_tenant`. `FORCE ROW LEVEL SECURITY` also applies to the
   table owner, so a backfill must disable RLS around itself or it silently touches 0 rows
   (precedent: `1824000000000-audit-log-viewer-metadata-indexes.ts`).
-- A migration that adds or drops a column of a table of `backend/src/common/updated-at.inventory.ts`
-  calls `syncUpdatedAtTrigger` (`backend/src/common/updated-at-trigger.ts`) for that table: the
-  modification date trigger compares the columns it found when it was placed.
+- A migration that adds, drops or retypes a column of a table of `backend/src/common/updated-at.inventory.ts`
+  calls `syncUpdatedAtTrigger` (`backend/src/common/updated-at-trigger.ts`) for that table, after
+  `dropUpdatedAtTriggers` for a drop or a new type: the trigger's `WHEN` names the columns it compares.
 - A migration that writes a budget line's analytics values (`*_item_analytics_values`) fires
   triggers that read the lines and write `search_index` (`1853940000000`): run it per tenant with
   `app.current_tenant` set. Updates of the values or dimensions themselves do not fire them.

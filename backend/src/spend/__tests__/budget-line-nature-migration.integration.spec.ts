@@ -6,6 +6,7 @@ import dataSource from '../../data-source';
 import { BudgetLineNature1853950000000 as Migration } from '../../migrations/1853950000000-budget-line-nature';
 import { SearchIndexAnalyticsValues1853940000000 as SearchIndexMigration } from '../../migrations/1853940000000-search-index-analytics-values';
 import { undoLotZ1 as undoLotZ1Migrations } from './undo-lot-z1.fixtures';
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1853950000000 (the nature of a budget line, lot Z0 of plan
 // planning/budget-unifie.md), against a real database, each test in a
@@ -57,7 +58,7 @@ async function inRolledBackTransaction(fn: (runner: QueryRunner) => Promise<void
   await runner.connect();
   await runner.startTransaction();
   // The database of this migration's time: the modification date trigger (1856270000000) came later.
-  await runner.query(`ALTER TABLE spend_items DISABLE TRIGGER spend_items_updated_at`);
+  await dropUpdatedAtTriggers(runner, ['spend_items']);
   try {
     await fn(runner);
   } finally {

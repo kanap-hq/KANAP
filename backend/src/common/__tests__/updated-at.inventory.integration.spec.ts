@@ -26,6 +26,9 @@ type Case = {
   technical?: Record<string, string>;
 };
 
+/** A person of the row's tenant, for the author columns. */
+const PERSON = (table: string) => `(SELECT id FROM users WHERE tenant_id = ${table}.tenant_id LIMIT 1)`;
+
 const STATUS_FLIP = `CASE WHEN status = 'enabled' THEN 'disabled' ELSE 'enabled' END::status_state`;
 
 const CASES: Record<string, Case> = {
@@ -47,21 +50,22 @@ const CASES: Record<string, Case> = {
       search_vector: `to_tsvector('simple', 'reindexed')`,
       revision: 'revision + 1',
       current_version_number: 'current_version_number + 1',
-      updated_by: `(SELECT id FROM users WHERE tenant_id = documents.tenant_id LIMIT 1)`,
+      created_by: PERSON('documents'),
+      updated_by: PERSON('documents'),
     },
   },
-  incidents: { edit: 'description' },
+  incidents: { edit: 'description', technical: { created_by: PERSON('incidents'), updated_by: PERSON('incidents') } },
   interfaces: { edit: 'overview_notes' },
   locations: { edit: 'additional_info' },
   portfolio_projects: { edit: 'purpose', technical: { priority_score: '42' } },
-  portfolio_requests: { edit: 'purpose', technical: { priority_score: '42' } },
+  portfolio_requests: { edit: 'purpose', technical: { priority_score: '42', created_by_id: PERSON('portfolio_requests') } },
   roles: { edit: 'role_description' },
   spend_items: { edit: 'description', technical: { status: STATUS_FLIP, row_version: 'row_version + 1' } },
   suppliers: { edit: 'notes', technical: { status: STATUS_FLIP } },
-  tasks: { edit: 'description' },
-  technologies: { edit: 'notes' },
+  tasks: { edit: 'description', technical: { creator_id: PERSON('tasks') } },
+  technologies: { edit: 'notes', technical: { catalog_state: `'{"synced": true}'::jsonb` } },
   technology_versions: { edit: 'notes' },
-  technology_vulnerabilities: { edit: 'note' },
+  technology_vulnerabilities: { edit: 'note', technical: { state_changed_by: PERSON('technology_vulnerabilities') } },
   users: {
     edit: 'job_title',
     technical: {

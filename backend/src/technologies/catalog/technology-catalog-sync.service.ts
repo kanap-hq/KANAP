@@ -985,13 +985,7 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
                      ORDER BY 1)
                   END,
                 description = CASE WHEN u.description_applied THEN u.description ELSE t.description END,
-                cve_names = CASE WHEN u.cve_names IS NULL THEN t.cve_names ELSE u.cve_names END,
-                updated_at = CASE
-                  WHEN jsonb_array_length(u.cpe_added) = 0 AND jsonb_array_length(u.cpe_removed) = 0
-                   AND u.cve_names IS NULL
-                   AND NOT u.description_applied AND u.state = t.catalog_state THEN t.updated_at
-                  ELSE now()
-                  END
+                cve_names = CASE WHEN u.cve_names IS NULL THEN t.cve_names ELSE u.cve_names END
            FROM (
              SELECT u.*,
                     (u.description IS NOT NULL AND (
