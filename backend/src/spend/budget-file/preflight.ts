@@ -908,8 +908,10 @@ function resolveCompany(
     }
     // Listed before the disabled check, as the supplier's: the person may undo a match to a disabled company.
     noteMatch(bag, row.line, found);
+    // A person who does not read the companies is told of the name the file writes only (P10 of 26.12.1).
+    const named = input.canReadCompanies ? found.row.name : cell.text.trim();
     if (!isActiveAt(found.row.disabledAt) && found.row.id !== (live?.companyId ?? null)) {
-      fail('company_name', `Company '${found.row.name}' is disabled.`, 'BUDGET_FILE_DISABLED', { value: found.row.name });
+      fail('company_name', `Company '${named}' is disabled.`, 'BUDGET_FILE_DISABLED', { value: named });
       return { id: null, known: false };
     }
     const changed = !!(live && found.row.id !== live.companyId);
@@ -919,7 +921,15 @@ function resolveCompany(
     if (costCenter?.companyId && costCenter.companyId !== found.row.id) {
       const center = input.catalog.costCenters.find((node) => node.id === costCenter.id);
       const owner = input.catalog.companies.find((company) => company.id === costCenter.companyId);
-      if (center && owner) {
+      if (center && owner && !input.canReadCompanies) {
+        bag.costCenterCompanies.push({
+          line: row.line,
+          code: 'BUDGET_FILE_COST_CENTER_OTHER_COMPANY_UNREAD',
+          costCenter: center.code,
+          company: named,
+          message: `Cost center ${center.code} belongs to another company. The line is paid by ${named}.`,
+        });
+      } else if (center && owner) {
         bag.costCenterCompanies.push({
           line: row.line,
           code: 'BUDGET_FILE_COST_CENTER_OTHER_COMPANY',
@@ -1060,18 +1070,26 @@ function resolveSupplier(
       'BUDGET_FILE_SUPPLIER_CONFLICT', { name: nameText, erp: erpText });
     return { id: null, createKey: null };
   }
+  // A person who does not read the suppliers is told of the values the file writes only (P10 of 26.12.1).
+  const reads = !!input.canReadSuppliers;
   if (byErp?.kind === 'one') {
     const supplier = byErp.row;
     if (nameText && supplier.name.trim().toLowerCase() !== nameText.toLowerCase()) {
-      bag.supplierNames.push({
+      bag.supplierNames.push(reads ? {
         line: row.line,
         message: `supplier_name '${nameText}' does not match the supplier for ERP id '${erpText}' (${supplier.name}).`,
         code: 'BUDGET_FILE_SUPPLIER_NAME_DIFFERS',
         params: { name: nameText, erp: erpText, supplier: supplier.name },
+      } : {
+        line: row.line,
+        message: `supplier_name '${nameText}' does not match the supplier for ERP id '${erpText}'.`,
+        code: 'BUDGET_FILE_SUPPLIER_NAME_DIFFERS_UNREAD',
+        params: { name: nameText, erp: erpText },
       });
     }
     if (!isActiveAt(supplier.disabledAt) && supplier.id !== (live?.supplierId ?? null)) {
-      fail('supplier_name', `Supplier '${supplier.name}' is disabled.`, 'BUDGET_FILE_DISABLED', { value: supplier.name });
+      if (reads) fail('supplier_name', `Supplier '${supplier.name}' is disabled.`, 'BUDGET_FILE_DISABLED', { value: supplier.name });
+      else fail('supplier_erp_id', `The supplier for ERP id '${erpText}' is disabled.`, 'BUDGET_FILE_SUPPLIER_ERP_DISABLED', { erp: erpText });
       return { id: null, createKey: null };
     }
     const changed = !!(live && supplier.id !== live.supplierId);
@@ -1080,8 +1098,9 @@ function resolveSupplier(
     return { id: supplier.id, createKey: null };
   }
   if (erpText && byName?.kind === 'one') {
-    fail('supplier_erp_id', `ERP id '${erpText}' is unknown and '${byName.row.name}' is already a supplier. Add the ERP id in Master data > Suppliers or leave it empty.`,
-      'BUDGET_FILE_SUPPLIER_ERP_UNKNOWN', { erp: erpText, name: byName.row.name });
+    const named = reads ? byName.row.name : nameText;
+    fail('supplier_erp_id', `ERP id '${erpText}' is unknown and '${named}' is already a supplier. Add the ERP id in Master data > Suppliers or leave it empty.`,
+      'BUDGET_FILE_SUPPLIER_ERP_UNKNOWN', { erp: erpText, name: named });
     return { id: null, createKey: null };
   }
   if (!erpText && byName?.kind === 'one') {
@@ -1089,7 +1108,8 @@ function resolveSupplier(
     // Listed before the disabled check, as a dimension value's: the person may undo a match to a disabled supplier.
     noteMatch(bag, row.line, byName);
     if (!isActiveAt(supplier.disabledAt) && supplier.id !== (live?.supplierId ?? null)) {
-      fail('supplier_name', `Supplier '${supplier.name}' is disabled.`, 'BUDGET_FILE_DISABLED', { value: supplier.name });
+      const named = reads ? supplier.name : nameText;
+      fail('supplier_name', `Supplier '${named}' is disabled.`, 'BUDGET_FILE_DISABLED', { value: named });
       return { id: null, createKey: null };
     }
     const changed = !!(live && supplier.id !== live.supplierId);
@@ -1586,6 +1606,15 @@ function checkConsistency(
     if (!supplierId || !currency) break;
     const median = bag.index.median(nature, supplierId, currency, key, live?.id ?? null);
     if (!median || !unusual(cents, median.cents)) continue;
+    // A person who does not read the suppliers is not told the supplier's name (P10 of 26.12.1).
+    if (!input.canReadSuppliers) {
+      warn({
+        message: `${label} ${year} at ${amount}, against a median of ${wholeUnits(median.cents)} on ${median.count} lines of the same supplier.`,
+        code: 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER_UNREAD',
+        params: { label, year: Number(year), amount, median: wholeUnits(median.cents), count: median.count },
+      });
+      break;
+    }
     const supplier = input.catalog.suppliers.find((item) => item.id === supplierId)?.name ?? '';
     warn({
       message: `${label} ${year} at ${amount}, against a median of ${wholeUnits(median.cents)} on ${median.count} lines of ${supplier}.`,
@@ -1612,7 +1641,13 @@ function checkConsistency(
   const company = companyId ? input.catalog.companies.find((item) => item.id === companyId) : undefined;
   if (cell?.kind === 'value' && company?.baseCurrency) {
     const code = cell.text.trim().toUpperCase();
-    if (code !== company.baseCurrency) {
+    if (code !== company.baseCurrency && !input.canReadCompanies) {
+      // The paying company is not named to a person who does not read the companies (P10 of 26.12.1).
+      warn({
+        message: `${code} is not the currency of the paying company (${company.baseCurrency}).`,
+        code: 'BUDGET_FILE_CURRENCY_NOT_COMPANY_UNREAD', params: { currency: code, base: company.baseCurrency },
+      });
+    } else if (code !== company.baseCurrency) {
       warn({
         message: `${code} is not the currency of ${company.name} (${company.baseCurrency}).`,
         code: 'BUDGET_FILE_CURRENCY_NOT_COMPANY', params: { currency: code, company: company.name, base: company.baseCurrency },

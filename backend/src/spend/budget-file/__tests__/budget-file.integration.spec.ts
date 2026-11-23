@@ -1322,7 +1322,9 @@ async function testMedianOnUpdateOnlyFile(runner: { query: Function; manager: En
   await loadBudgetFile(runner.manager, 'opex', tenantId, csvOf(newLineColumns('opex', ['supplier_name', 'budget_2026']),
     amounts.map((amount, index) => newLine('opex', `Fibre ${index + 1}`, { supplier_name: 'Orange', budget_2026: amount }))));
   const fourth = (await linesByName(runner, 'opex', tenantId)).get('Fibre 4');
-  const report = await preflightBudgetFile(runner.manager, 'opex', tenantId, csvOf(['item_number', 'budget_2026'], [{ item_number: `BL-${fourth.n}`, budget_2026: '500000' }]));
+  const report = await preflightBudgetFile(runner.manager, 'opex', tenantId, csvOf(['item_number', 'budget_2026'], [{ item_number: `BL-${fourth.n}`, budget_2026: '500000' }]), {
+    canReadSuppliers: true, canReadCompanies: true,
+  });
   assert.equal(report.ok, true, rowErrors(report).join('; '));
   assert.deepEqual(report.warnings.consistency?.map((warning) => [warning.line, warning.code, warning.params?.median]), [
     [2, 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER', '11 000'],

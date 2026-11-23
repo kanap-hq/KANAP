@@ -4,7 +4,7 @@ const errors = import.meta.glob<{ default: Record<string, string> }>('./*/errors
 
 // The budget file's warnings of a line read after "Line n:" (lot I2 of 26.11.9): a second colon in the
 // sentence would read "Line 2: Budget 2026: …".
-const AFTER_LINE = ['BUDGET_FILE_AMOUNT_FAR_FROM_LINE', 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER', 'BUDGET_FILE_LOOKALIKE_SAME_LINE'];
+const AFTER_LINE = ['BUDGET_FILE_AMOUNT_FAR_FROM_LINE', 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER', 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER_UNREAD', 'BUDGET_FILE_LOOKALIKE_SAME_LINE'];
 
 describe('budget file warnings of a line', () => {
   it('hold no colon of their own, in every language', () => {

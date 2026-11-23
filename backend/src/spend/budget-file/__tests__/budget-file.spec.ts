@@ -104,6 +104,8 @@ async function preflight(
     canCreateSuppliers?: boolean;
     labels?: Record<string, string>;
     dimensions?: string[];
+    /** The person reads the suppliers and the companies (P10 of 26.12.1: the messages name their records). */
+    reads?: boolean;
   } = {},
 ) {
   const read = await readBudgetCsv(text, {
@@ -122,6 +124,7 @@ async function preflight(
     canCreateSuppliers: options.canCreateSuppliers ?? false,
     currentYear: YEAR,
     labels: options.labels ?? { budget: 'Budget' },
+    ...(options.reads ? { canReadSuppliers: true, canReadCompanies: true } : {}),
   });
 }
 
@@ -935,13 +938,18 @@ function lookFixture(patch: { stored?: StoredLine[]; cat?: Partial<BudgetCatalog
 
 async function lookPlan(
   rows: string[],
-  options: { header?: string; stored?: StoredLine[]; cat?: BudgetCatalog; choices?: BudgetFileChoice[]; access?: BudgetFileAccess; createSuppliers?: boolean } = {},
+  options: {
+    header?: string; stored?: StoredLine[]; cat?: BudgetCatalog; choices?: BudgetFileChoice[]; access?: BudgetFileAccess; createSuppliers?: boolean;
+    /** The person reads the suppliers and the companies (P10 of 26.12.1: the messages name their records). */
+    reads?: boolean;
+  } = {},
 ) {
   const fixture = lookFixture({ stored: options.stored });
   const read = await readBudgetCsv([options.header ?? LOOK_HEADER, ...rows].join('\n'), { language: 'en', dimensionCodes: [] });
   return planBudgetFile({
     scope: 'opex', read, catalog: options.cat ?? fixture.cat, stored: fixture.stored, names: hintsOf(fixture.stored),
     createSuppliers: options.createSuppliers ?? false, canCreateSuppliers: options.createSuppliers ?? false,
+    ...(options.reads ? { canReadSuppliers: true, canReadCompanies: true } : {}),
     currentYear: YEAR, labels: { budget: 'Budget' },
     ...(options.access ? { access: options.access } : {}),
     ...(options.choices ? { matching: { choices: options.choices } } : {}),
@@ -1212,7 +1220,7 @@ async function testConsistency() {
   });
   const { stored } = lookFixture();
   const three = [...stored, orange(1, 1000000n), orange(2, 1200000n), orange(3, 1100000n)];
-  const far = await lookPlan(['opex,,Fibre,Acme,6100,EUR,Orange,500000', 'opex,,Fibre 2,Acme,6100,EUR,Orange,11000'], { stored: three });
+  const far = await lookPlan(['opex,,Fibre,Acme,6100,EUR,Orange,500000', 'opex,,Fibre 2,Acme,6100,EUR,Orange,11000'], { stored: three, reads: true });
   assert.equal(far.report.ok, true);
   assert.deepEqual(far.report.warnings.consistency?.map((warning) => [warning.line, warning.code, warning.params]), [
     [2, 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER', { label: 'Budget', year: 2026, amount: '500 000', median: '11 000', count: 3, supplier: 'Orange' }],
@@ -1228,7 +1236,7 @@ async function testConsistency() {
   ]);
   // Dates outside the years of the amounts, and a currency other than the company's.
   const dates = await lookPlan(['opex,,Fibre,Acme,6100,EUR,Orange,10500,2028-01-01,', 'opex,,Fibre 2,Acme,6100,USD,Orange,10500,,2025-06-30'],
-    { header: `${LOOK_HEADER},effective_start,end_of_validity`, stored: three });
+    { header: `${LOOK_HEADER},effective_start,end_of_validity`, stored: three, reads: true });
   assert.equal(dates.report.ok, true, JSON.stringify(dates.report.errors));
   assert.deepEqual(dates.report.warnings.consistency?.map((warning) => [warning.line, warning.code, warning.params]), [
     [2, 'BUDGET_FILE_START_AFTER_AMOUNTS', { start: '2028-01-01', year: 2026 }],
@@ -1272,7 +1280,7 @@ async function testCostCenterOfAnotherCompany() {
     costCenters: [{ id: 'cc1', code: 'IT-100', kind: 'cost_center', companyId: 'c1', disabledAt: null }],
   });
   const header = 'item_number,name,company_name,cost_center_code,account_number,currency\n';
-  const other = await preflight('opex', `${header},Widget,Globex,IT-100,6100,EUR\n`, [], { cat });
+  const other = await preflight('opex', `${header},Widget,Globex,IT-100,6100,EUR\n`, [], { cat, reads: true });
   assert.equal(other.ok, true, JSON.stringify(other.errors));
   assert.deepEqual(other.warnings.costCenterCompanies, [{
     line: 2,
@@ -1282,14 +1290,14 @@ async function testCostCenterOfAnotherCompany() {
     costCenterCompany: 'Acme',
     message: 'Cost center IT-100 belongs to Acme. The line is paid by Globex.',
   }]);
-  const same = await preflight('opex', `${header},Widget,Acme,IT-100,6100,EUR\n`, [], { cat });
+  const same = await preflight('opex', `${header},Widget,Acme,IT-100,6100,EUR\n`, [], { cat, reads: true });
   assert.deepEqual(same.warnings.costCenterCompanies, [], 'the cost center\'s own company');
-  const fromCenter = await preflight('opex', `${header},Widget,,IT-100,6100,EUR\n`, [], { cat });
+  const fromCenter = await preflight('opex', `${header},Widget,,IT-100,6100,EUR\n`, [], { cat, reads: true });
   assert.equal(fromCenter.ok, true, JSON.stringify(fromCenter.errors));
   assert.deepEqual(fromCenter.warnings.costCenterCompanies, [], 'an empty company_name takes the cost center\'s');
   // A stored line's cost center counts too when the file leaves the column out.
   const stored = line({ costCenterId: 'cc1', costCenterCode: 'IT-100' });
-  const kept = await preflight('opex', 'item_number,name,company_name\nBL-3,Widget,Globex\n', [stored], { cat });
+  const kept = await preflight('opex', 'item_number,name,company_name\nBL-3,Widget,Globex\n', [stored], { cat, reads: true });
   assert.deepEqual(kept.warnings.costCenterCompanies.map((warning) => warning.line), [2]);
 }
 
