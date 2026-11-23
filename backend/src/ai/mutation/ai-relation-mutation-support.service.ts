@@ -840,6 +840,16 @@ export class AiRelationMutationSupportService {
     const kept = new Set(nextItems.map((item) => textOrNull(item.payload.id)).filter(Boolean));
     const removed = currentItems.map((item) => String(item.payload.id)).filter((id) => !kept.has(id));
     if (removed.length === 0) return [];
+    // At the approval (`named` false), the removed sub-locations are locked before their assets are
+    // read. Placing an asset in a sub-location checks its foreign key with a KEY SHARE lock on the
+    // sub-location's row, which FOR UPDATE blocks: an asset placed before this lock is committed and
+    // read (the card differs, 409); one placed after waits, then finds the sub-location gone.
+    if (!named) {
+      await context.manager.query(
+        `SELECT id FROM location_sub_items WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR UPDATE`,
+        [context.tenantId, removed],
+      );
+    }
     const rows: Array<{ id: string; name: string }> = await context.manager.query(
       `SELECT id, name FROM assets WHERE tenant_id = $1 AND sub_location_id = ANY($2::uuid[]) ORDER BY lower(name), id`,
       [context.tenantId, removed],

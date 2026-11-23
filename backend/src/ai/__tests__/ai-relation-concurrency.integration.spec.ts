@@ -9,7 +9,8 @@ import { DataSource, EntityManager } from 'typeorm';
 // on the same row, before it reads the links (lot K2b): a person who links A on the screen while a
 // card "link A", asked before, is approved makes the card wait, then find the links changed since
 // its preview. It is refused (409) and leaves no audit row; the screen's row is the only one.
-// Two connections: the screen's transaction holds its lock while the approval starts.
+// Two connections: the screen's transaction holds its lock while the approval starts. The last two
+// cells place an asset in a sub-location a card removes, before and during the approval.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret-of-at-least-32-characters';
@@ -21,7 +22,7 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
 const FULL = {
   applications: 'admin', infrastructure: 'admin', budget: 'admin', contracts: 'admin', portfolio_projects: 'admin',
-  portfolio_requests: 'admin', ai_chat: 'member',
+  portfolio_requests: 'admin', locations: 'admin', ai_chat: 'member',
 } as const;
 
 async function main() {
@@ -154,6 +155,54 @@ async function main() {
       const links = await inTenant((m) => m.query(`SELECT 1 FROM contract_spend_items WHERE tenant_id = $1 AND contract_id = $2`, [tenantId, contractId]));
       assert.equal(links.length, 1, `${cell}: one link`);
       assert.deepEqual(await assistantRows(), [], `${cell}: no audit row by the assistant`);
+      console.log(`  ${cell}: OK`);
+    }
+    // A card that removes a site's sub-location names the assets it leaves without one. Placing an
+    // asset in the sub-location checks the foreign key with a KEY SHARE lock on its row; the
+    // approval locks the removed sub-locations FOR UPDATE before it reads their assets.
+    const site = await inTenant((m) => id(m,
+      `INSERT INTO locations (tenant_id, location_reference, name, hosting_type) VALUES ($1, 'LOC-1', 'Brest', 'cloud')`, [tenantId]));
+    const room = (name: string) => inTenant((m) => id(m, `INSERT INTO location_sub_items (tenant_id, location_id, name) VALUES ($1, $2, $3)`, [tenantId, site, name]));
+    const server = (name: string) => inTenant((m) => id(m,
+      `INSERT INTO assets (tenant_id, name, kind, environment, location_id) VALUES ($1, $2, 'server', 'prod', $3)`, [tenantId, name, site]));
+    const place = (m: EntityManager, assetId: string, roomId: string) => m.query(
+      `UPDATE assets SET sub_location_id = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, assetId, roomId]);
+    const rooms = (roomId: string) => inTenant(async (m) => (await m.query(`SELECT 1 FROM location_sub_items WHERE tenant_id = $1 AND id = $2`, [tenantId, roomId])).length);
+
+    // The asset is placed first: the approval waits, then reads it and refuses (the card named none).
+    {
+      const cell = 'locations.sub_locations, asset placed before the approval';
+      const roomId = await room('Salle 1');
+      const assetId = await server('srv-1');
+      const preview = await card({ entity_type: 'locations', ref: 'LOC-1', relation: 'sub_locations', remove: [{ name: 'Salle 1' }] });
+      const outcome = await race((m) => place(m, assetId, roomId), preview);
+      refused(cell, outcome);
+      assert.equal(await rooms(roomId), 1, `${cell}: the sub-location stays`);
+      assert.deepEqual(await assistantRows(), [], `${cell}: no audit row by the assistant`);
+      console.log(`  ${cell}: OK`);
+    }
+
+    // The approval runs first: the placement waits, then finds the sub-location gone.
+    {
+      const cell = 'locations.sub_locations, asset placed during the approval';
+      const roomId = await room('Salle 2');
+      const assetId = await server('srv-2');
+      const preview = await card({ entity_type: 'locations', ref: 'LOC-1', relation: 'sub_locations', remove: [{ name: 'Salle 2' }] });
+      let settled = false;
+      let placement: Promise<{ ok: boolean; error?: any }> | null = null;
+      await inTenant(async (m) => {
+        await assistant.executePreview(ctx(m), preview);
+        placement = inTenant((other) => place(other, assetId, roomId)).then(() => ({ ok: true }), (error: any) => ({ ok: false, error }));
+        placement.then(() => { settled = true; });
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        assert.equal(settled, false, `${cell}: the placement waits for the approval to commit`);
+      });
+      const outcome = await (placement as unknown as Promise<{ ok: boolean; error?: any }>);
+      assert.equal(outcome.ok, false, `${cell}: the placement fails`);
+      assert.equal(outcome.error?.code, '23503', `${cell}: the sub-location is gone (${outcome.error?.message})`);
+      assert.equal(await rooms(roomId), 0, `${cell}: the sub-location is removed`);
+      const [asset] = await inTenant((m) => m.query(`SELECT sub_location_id FROM assets WHERE tenant_id = $1 AND id = $2`, [tenantId, assetId]));
+      assert.equal(asset.sub_location_id, null, `${cell}: the asset has no sub-location`);
       console.log(`  ${cell}: OK`);
     }
     console.log('ai-relation-concurrency.integration.spec: ok');
