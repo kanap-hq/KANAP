@@ -114,4 +114,11 @@ describe('IncidentsPage CSV', () => {
       }
     }
   });
+
+  it('words an invalid incident reference in each language', async () => {
+    for (const lang of ['en', 'fr', 'de', 'es']) {
+      const errors = (await import(`../../locales/${lang}/errors.json`)).default as Record<string, string>;
+      expect(errors.CSV_INCIDENT_REFERENCE_INVALID, lang).toContain('{{value}}');
+    }
+  });
 });
