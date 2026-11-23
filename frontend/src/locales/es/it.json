@@ -270,6 +270,7 @@
         "applications": "Aplicaciones",
         "itOwner": "Responsable de TI",
         "nextSupportEnd": "Próximo fin de soporte",
+        "nextSupportEndShort": "Fin de soporte",
         "vulnerabilities": "Vulnerabilidades por revisar",
         "vulnerabilitiesShort": "Vulnerabilidades"
       },

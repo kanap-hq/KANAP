@@ -2,7 +2,7 @@
   "conversationList": {
     "delete": "Eliminar",
     "deleteConfirmMessage": "La conversación y sus mensajes se eliminan. Esta acción no se puede deshacer.",
-    "deleteConfirmTitle": "¿Eliminar esta conversación?",
+    "deleteConfirmTitle": "¿Eliminar {{name}}?",
     "dateGroups": {
       "lastWeek": "Últimos 7 días",
       "older": "Más antiguo",
@@ -437,10 +437,10 @@
     "aliases": "Alias: {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Volumen procesado",
-    "input": "Tokens de entrada",
-    "output": "Tokens de salida",
-    "lastInput": "Contexto de la última solicitud"
+    "total": "Volumen procesado:",
+    "input": "Tokens de entrada:",
+    "output": "Tokens de salida:",
+    "lastInput": "Contexto de la última solicitud:"
   },
   "usageIndicator": {
     "limitReached": "Límite mensual alcanzado. Se restablece el {{resetDate}}.",

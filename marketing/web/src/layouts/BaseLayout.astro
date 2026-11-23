@@ -73,7 +73,10 @@ const siteTitle = t('site.title');
 const siteDescription = t('site.description');
 const finalTitle = title ? `${title} · Kadratis` : siteTitle;
 const finalDescription = description ?? siteDescription;
-const finalCanonical = canonical ?? Astro.url.href;
+// One address per page: no trailing slash except on the root, the form the
+// internal links, the hreflang links and the sitemap use.
+const finalCanonical =
+  canonical ?? (Astro.url.pathname === '/' ? Astro.url.href : Astro.url.href.replace(/\/$/, ''));
 const site = Astro.site ?? new URL('https://kadratis.com');
 const ogImageUrl = new URL(ogImage ?? '/og-image.png', site).href;
 
@@ -121,6 +124,7 @@ const xDefault = alternateOverride
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#134E5A" />
 
+    <meta property="og:site_name" content="Kadratis" />
     <meta property="og:type" content={ogType} />
     <meta property="og:url" content={finalCanonical} />
     <meta property="og:title" content={finalTitle} />

@@ -143,7 +143,10 @@ vi.mock('../../auth/AuthContext', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    // Surface the interpolated name so the delete dialog can be read in the test.
+    t: (key: string, options?: { name?: unknown }) => (
+      typeof options?.name === 'string' ? `${key} ${options.name}` : key
+    ),
     i18n: {
       language: 'en',
       resolvedLanguage: 'en',
@@ -574,7 +577,7 @@ describe('AiWorkspacePage', () => {
     fireEvent.click(screen.getByText('Delete conversation'));
 
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('conversationList.deleteConfirmTitle');
+    expect(dialog).toHaveTextContent('conversationList.deleteConfirmTitle Active conversation');
     expect(dialog).toHaveTextContent('conversationList.deleteConfirmMessage');
     expect(aiConversationsApi.remove).not.toHaveBeenCalled();
     fireEvent.click(within(dialog).getByRole('button', { name: 'conversationList.delete' }));
@@ -631,5 +634,67 @@ describe('AiWorkspacePage', () => {
     expect(chatState.newConversation).not.toHaveBeenCalled();
     expect(aiConversationsApi.remove).not.toHaveBeenCalled();
     expect(client.getQueryData<ChatConversation[]>(['ai-conversations'])).toEqual(conversations);
+  });
+
+  it('names an untitled conversation with the untitled label in the delete dialog', async () => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    client.setQueryData(['ai-conversations'], [
+      {
+        id: 'conv-1',
+        title: null,
+        provider: 'openai',
+        model: 'gpt-4o',
+        created_at: '2026-03-23T10:00:00.000Z',
+        updated_at: '2026-03-23T10:00:00.000Z',
+      },
+    ]);
+
+    renderPage(client);
+
+    fireEvent.click(screen.getByText('Delete conversation'));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('conversationList.deleteConfirmTitle conversationList.untitled');
+    expect(dialog).toHaveTextContent('conversationList.deleteConfirmMessage');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(aiConversationsApi.remove).not.toHaveBeenCalled();
+  });
+
+  it('names the delete dialog with the title shown in the conversation list', async () => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    client.setQueryData(['ai-conversations'], [
+      {
+        id: 'conv-1',
+        title: 'Summarise [Formaggio Supremo SRL](/master-data/companies/5835dd12)',
+        provider: 'openai',
+        model: 'gpt-4o',
+        created_at: '2026-03-23T10:00:00.000Z',
+        updated_at: '2026-03-23T10:00:00.000Z',
+      },
+    ]);
+
+    renderPage(client);
+
+    fireEvent.click(screen.getByText('Delete conversation'));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('conversationList.deleteConfirmTitle Summarise Formaggio Supremo SRL');
+    expect(dialog).not.toHaveTextContent('/master-data/companies/');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+    expect(aiConversationsApi.remove).not.toHaveBeenCalled();
   });
 });

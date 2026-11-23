@@ -2,7 +2,7 @@
   "conversationList": {
     "delete": "Löschen",
     "deleteConfirmMessage": "Die Konversation und ihre Nachrichten werden gelöscht. Dies kann nicht rückgängig gemacht werden.",
-    "deleteConfirmTitle": "Diese Konversation löschen?",
+    "deleteConfirmTitle": "{{name}} löschen?",
     "dateGroups": {
       "lastWeek": "Letzte 7 Tage",
       "older": "Älter",
@@ -437,10 +437,10 @@
     "aliases": "Aliasse: {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Verarbeitetes Volumen",
-    "input": "Eingabe-Tokens",
-    "output": "Ausgabe-Tokens",
-    "lastInput": "Kontext der letzten Anfrage"
+    "total": "Verarbeitetes Volumen:",
+    "input": "Eingabe-Tokens:",
+    "output": "Ausgabe-Tokens:",
+    "lastInput": "Kontext der letzten Anfrage:"
   },
   "usageIndicator": {
     "limitReached": "Monatliches Limit erreicht. Wird am {{resetDate}} zurückgesetzt.",
