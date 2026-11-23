@@ -765,6 +765,14 @@ function roundInputLine(change: RecordHistoryChange, context: HistoryTextContext
     }
     return { label, before, after };
   }
+  // The full-time equivalent is a stored decimal: it takes the decimal mark of the language.
+  if (change.field === 'fte' && (has(change, 'before') || has(change, 'after'))) {
+    return {
+      label: historyFieldLabel('fte', context.t, context.table),
+      ...(has(change, 'before') ? { before: decimalText(change.before, context.locale) } : {}),
+      ...(has(change, 'after') ? { after: decimalText(change.after, context.locale) } : {}),
+    };
+  }
   return fieldLine(change, context);
 }
 

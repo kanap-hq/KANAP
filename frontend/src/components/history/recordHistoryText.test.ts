@@ -584,6 +584,15 @@ describe('costed line causes of a budget input (H1)', () => {
     ]);
   });
 
+  it('writes the full-time equivalent of the input with the decimal mark of the language', () => {
+    const changes: RecordHistoryChange[] = [{ field: 'fte', before: '0.86', after: '2.36' }];
+    expect(historyLines(input(changes), frContext)).toEqual([{ label: 'ETP', before: '0,86', after: '2,36' }]);
+    expect(historyLines(input(changes), context)).toEqual([{ label: 'FTE', before: '0.86', after: '2.36' }]);
+    expect(historyLines(input([{ field: 'fte', before: null, after: '2.00' }]), frContext)).toEqual([
+      { label: 'ETP', before: '—', after: '2,00' },
+    ]);
+  });
+
   it('says which calendar a column copy replaced, with the words of the copy preview', () => {
     const changes: RecordHistoryChange[] = [
       { field: 'planned', before: 1000, after: 1200, year: 2027, sourceYear: 2026, sourceColumn: 'planned', percentageIncrease: '0' },
