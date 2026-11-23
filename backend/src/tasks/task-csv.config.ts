@@ -443,6 +443,27 @@ function importedObjectType(row: CsvImportRow): string {
 }
 
 /**
+ * A row whose task would keep a related object type and no object is refused on its own row.
+ * Names are already resolved (`resolveRelatedObjects`): a name nothing finds has its own error.
+ * A blank id and a blank name on an existing task keep the stored object (`importedValue`).
+ * A row the operation skips is not checked. The commit still refuses the same case.
+ */
+function requireRelatedObject(rows: CsvImportRow[], operation: string): void {
+  for (const row of rows) {
+    if (row.errors.length > 0 || skippedByOperation(row, operation)) continue;
+    if (!importedObjectType(row)) continue;
+    const id = importedValue(row, 'related_object_id');
+    if (id != null && String(id).trim() !== '') continue;
+    row.errors.push({
+      row: row.rowNumber,
+      column: 'related_object_type',
+      message: 'Give related_object_id or related_object_name to link the task.',
+      code: 'CSV_TASK_OBJECT_REQUIRED',
+    });
+  }
+}
+
+/**
  * A row that gives an incident by its id (lot I3 of 26.11.9, fixes E): the incident must be one the
  * person sees, as by its `INC-n` (`relatedObjectsByName`). A restricted incident the `viewer` does not
  * see (neither incidents:admin, its reporter nor its owner) is refused as not found, like an id that
@@ -1063,6 +1084,7 @@ export const taskCsvConfig: CsvEntityConfig = {
     keepObjectsOutsideAccess(rows, context.params.operation);
     await checkIncidentIds(rows, context);
     await resolveRelatedObjects(rows, context);
+    requireRelatedObject(rows, context.params.operation);
     await anchorPhases(rows, context);
     await followTaskObjects(rows, context);
     await importPeople(rows, context);
@@ -1245,7 +1267,8 @@ export const taskCsvConfig: CsvEntityConfig = {
       }
     }
 
-    // Final validation: linked tasks require related_object_id
+    // Linked tasks require related_object_id. The check refuses this on the row
+    // (`requireRelatedObject`); this throw stays as a safeguard.
     // Standalone tasks (no related_object_type) are allowed
     for (const entity of entities) {
       const hasType = !!entity.related_object_type;

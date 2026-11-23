@@ -153,6 +153,7 @@
   "CSV_TASK_PHASE_CLEARED_OUTSIDE_PROJECT": "« {{value}} » est retiré : seule une tâche de projet a une phase.",
   "CSV_TASK_CLASSIFICATION_CLEARED": "« {{value}} » est retiré : seule une tâche autonome ou de projet a une classification.",
   "CSV_TASK_DETACH_CONFLICT": "« - » dans {{column}} rend la tâche autonome, alors que {{other}} nomme son objet. Écrivez « - » dans les deux, ou laissez l’une des deux cellules vide.",
+  "CSV_TASK_OBJECT_REQUIRED": "Indiquez related_object_id ou related_object_name pour lier la tâche.",
   "CSV_JSON_INVALID": "Cette cellule ne contient pas de JSON valide.",
   "CSV_JSON_OBJECT_REQUIRED": "Cette cellule doit contenir un objet JSON.",
   "CSV_JSON_ARRAY_REQUIRED": "Cette cellule doit contenir une liste JSON.",
