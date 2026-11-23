@@ -290,12 +290,12 @@ export const de: EmailStrings = {
     angleChosen: {
       budget: 'die Verwaltung des IT-Budgets',
       cartography: 'die IT-Landkarte',
-      portfolio: 'die Steuerung der Projekte und Anfragen',
+      portfolio: 'die Steuerung des Portfolios',
     },
     pathNames: {
       budget: 'das IT-Budget',
       cartography: 'die IT-Landkarte',
-      portfolio: 'die Projekte und Anfragen',
+      portfolio: 'das Portfolio',
     },
     billingPath: 'Administration › Abrechnung',
     installGuide: 'Installationsanleitung',
