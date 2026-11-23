@@ -112,6 +112,20 @@ export const budgetLinesRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: true,
     },
+    entry_check: {
+      ai: 'entry_check',
+      grid: 'entry_check',
+      type: 'set',
+      description: 'Whether the line is to check against its account\'s "quantity and price entry" setting: `to_check` when the line\'s account, '
+        + 'or else its consolidation account, expects the amounts to be built as quantity × price and at least one of the line\'s columns is not '
+        + '(a column shown in the budget settings, not frozen, with a non-zero total for a year the line has a version). null is every other line: '
+        + 'its account expects nothing, or every such column is built as quantity × price. The same lines as the "to check" control of the Budget '
+        + 'home tile. get_entity_detail says, in `quantity_price_entry`, the level that expects it and the columns to check.',
+      values: ['to_check', null],
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
     owner_it: {
       ai: 'owner_it',
       grid: 'owner_it_name',
@@ -268,6 +282,7 @@ export const budgetLinesRegistry: AiEntityFilterRegistry = {
     paying_company: 'paying_company_name',
     account: 'account_display',
     consolidation_account: 'account_consolidation_label',
+    entry_check: 'entry_check',
     owner_it: 'owner_it_name',
     owner_business: 'owner_business_name',
     analytics_category: 'analytics_category_name',

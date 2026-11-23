@@ -71,6 +71,7 @@ import { aiAmountsCurrency } from './ai-amounts-currency.util';
 import { aiLinkedReadNotes, mergeFieldNotes } from './ai-linked-read-notes.util';
 import { aiDataAccessCountsNote, aiDataAccessNote } from './ai-data-access-note.util';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
+import { readEntryChecks } from '../../spend/budget-line-entry-check';
 import { compareNullableText } from '../../common/list-engine/sql-fragments';
 import type { BudgetListAccess } from '../../spend/budget-list/budget-list.runtime';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
@@ -466,6 +467,7 @@ function budgetItemMetadata(row: any, registry: AiEntityFilterRegistry, consolid
     paying_company: scalar(row.paying_company_name ?? row.company_name),
     account: scalar(row.account_display),
     ...(registry.fields.consolidation_account ? { consolidation_account: consolidation?.get(row.id) ?? null } : {}),
+    entry_check: scalar(row.entry_check),
     owner_it: scalar(row.owner_it_name),
     owner_business: scalar(row.owner_business_name),
     analytics_category: registry.fields.analytics_category?.nature && registry.fields.analytics_category.nature !== row.nature
@@ -3381,6 +3383,19 @@ export class AiQueryExecutor {
       : null;
     const links = await this.budgetLines.listLinks(lineId, nature, { manager: context.manager }).catch(() => []);
     const attachments = await this.budgetLines.listAttachments(lineId, nature, { manager: context.manager }).catch(() => []);
+    // Quantity and price expected: the level that expects it and the columns to check, as the line's
+    // route gives them; the consolidation account named for a reader of the accounts only.
+    const access = await aiBudgetListAccess(this.policy, context);
+    const check = (await readEntryChecks(context.manager, context.tenantId, [lineId], { accounts: access.accounts })).get(lineId) ?? null;
+    // Without the right on accounts the consolidation account is not named: the detail says why, so
+    // that a missing read never reads as "no consolidation account".
+    const entryCheck = check && check.level === 'consolidation' && !access.accounts
+      ? {
+        ...check,
+        consolidation_account_withheld: 'The consolidation account is named with the right on accounts (Accounts, reader level), which this person does not have. '
+          + 'Tell them the setting comes from the consolidation account of the line\'s account, without naming it.',
+      }
+      : check;
 
     return {
       ...(summary ?? {}),
@@ -3393,6 +3408,7 @@ export class AiQueryExecutor {
       // The native child names: both natures carry `spend_item_id`, never the CAPEX alias.
       links: nativeLineChildren(links),
       attachments: nativeLineChildren(attachments),
+      quantity_price_entry: entryCheck,
     };
   }
 
