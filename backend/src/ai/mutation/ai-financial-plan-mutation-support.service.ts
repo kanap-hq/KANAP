@@ -118,15 +118,33 @@ type AmountPayload =
 type AllocationInput = {
   company_id: string;
   department_id: string | null;
+  /** The percentage given, for the manual percentages method (`manual_pct`) only. */
+  allocation_pct?: number;
 };
 
 const INPUT_GRAINS = ['annual', 'quarterly', 'monthly'] as const;
-const ALLOCATION_METHODS = ['default', 'headcount', 'it_users', 'turnover', 'manual_company', 'manual_department'] as const;
+const ALLOCATION_METHODS = ['default', 'headcount', 'it_users', 'turnover', 'manual_company', 'manual_department', 'manual_pct'] as const;
 const ALLOCATION_DRIVERS = ['headcount', 'it_users', 'turnover'] as const;
 /** The methods whose split is the companies or departments picked by hand. */
 const MANUAL_SELECTION_METHODS: ReadonlySet<string> = new Set(['manual_company', 'manual_department']);
 /** Every method whose split is stored rows, which an automatic method drops. */
 const MANUAL_METHODS: ReadonlySet<string> = new Set([...MANUAL_SELECTION_METHODS, 'manual_pct']);
+/** The keys a model may give a percentage under. */
+const PERCENT_KEYS = ['allocation_pct', 'pct', 'percentage', 'percent', 'share'] as const;
+
+/** Where the shares of a method come from: its driver, or none (manual percentages, the tenant's default rule). */
+function allocationBasis(method: string, driver: unknown): AllocationBasis | null {
+  if (method === 'manual_department') return 'department_headcount';
+  if (method === 'manual_company') return (ALLOCATION_DRIVERS as readonly unknown[]).includes(driver) ? driver as AllocationBasis : 'headcount';
+  return (ALLOCATION_DRIVERS as readonly string[]).includes(method) ? method as AllocationBasis : null;
+}
+
+/** A percentage as a model may write it (60, "60", "60 %", "60,5"). */
+function percentValue(value: unknown, label: string): number {
+  const parsed = typeof value === 'number' ? value : Number(String(value).replace('%', '').replace(',', '.').trim());
+  if (!Number.isFinite(parsed)) throw new BadRequestException(`${label} must be a number.`);
+  return parsed;
+}
 
 const VERSION_FIELD_CONFIG: Record<string, {
   label: string;
@@ -370,11 +388,12 @@ function storedColumnInputs(value: unknown): ColumnInput[] {
 }
 
 function allocationInputsFromRows(rows: unknown[], method: string | null): AllocationInput[] {
-  if (method !== 'manual_company' && method !== 'manual_department') return [];
+  if (!method || !MANUAL_METHODS.has(method)) return [];
   return (rows as any[])
     .map((row) => ({
       company_id: String(row.company_id || ''),
       department_id: method === 'manual_department' ? textOrNull(row.department_id) : null,
+      ...(method === 'manual_pct' ? { allocation_pct: Number(row.allocation_pct ?? 0) } : {}),
     }))
     .filter((row) => row.company_id && (method !== 'manual_department' || row.department_id));
 }
@@ -396,7 +415,7 @@ export class AiFinancialPlanMutationSupportService {
       'budget_lines action=create_version: fields version_name, input_grain, as_of_date, budget_year, allocation_method, allocation_driver, notes, reporting_currency',
       'budget_lines action=update_version: version_ref plus fields version_name, input_grain, as_of_date, allocation_method, allocation_driver, notes, reporting_currency; budget_year is immutable',
       'budget_lines action=upsert_amounts: version_ref plus amounts with kind annual, quarterly, or monthly',
-      'budget_lines action=replace_allocations: version_ref plus allocations for manual_company/manual_department methods, or an empty list for automatic methods',
+      'budget_lines action=replace_allocations: version_ref plus allocations, read with the version\'s allocation_method: manual_company takes companies only (their shares follow allocation_driver), manual_department departments only (shares follow their headcount), manual_pct companies each with allocation_pct (summing to 100); automatic methods take an empty list. To split by given percentages, set allocation_method manual_pct with update_version first',
     ];
   }
 
@@ -476,10 +495,15 @@ export class AiFinancialPlanMutationSupportService {
     }
     if (action === 'replace_allocations') {
       const before = await this.listAllocations(context, item.nature, version.id);
-      const allocations = await this.normalizeAllocations(context, input.allocations ?? [], String(version.row.allocation_method || 'default'));
+      const method = String(version.row.allocation_method || 'default');
+      const allocations = await this.normalizeAllocations(context, input.allocations ?? [], method, version.row.allocation_driver);
       const beforeItems = Array.isArray(before.items) ? before.items as Array<Record<string, unknown>> : [];
-      const fromSplit = beforeItems.length === 0 ? { kind: 'none' as const } : await this.splitView(context, beforeItems, null);
-      const toSplit = allocations.length === 0 ? { kind: 'automatic' as const } : await this.splitView(context, allocations, null);
+      const fromSplit = beforeItems.length === 0
+        ? { kind: 'none' as const }
+        : await this.splitView(context, beforeItems, allocationBasis(String(before.method ?? method), before.driver));
+      // The shares the approval stores, computed as the save computes them (the driver's, or the percentages given).
+      const planned = allocations.length === 0 ? null : await this.planAllocations(context, item.nature, version.id, allocations);
+      const toSplit = planned ? await this.splitView(context, planned, allocationBasis(method, version.row.allocation_driver)) : { kind: 'automatic' as const };
       return {
         targetEntityType: entityType,
         targetEntityId: item.id,
@@ -1008,9 +1032,11 @@ export class AiFinancialPlanMutationSupportService {
       const row = objectValue(entry, `mutation_input.allocations[${index}]`);
       const companyId = textOrNull(row.company_id);
       if (!companyId) throw new BadRequestException(`mutation_input.allocations[${index}].company_id is required.`);
+      const pct = row.allocation_pct == null ? NaN : Number(row.allocation_pct);
       return {
         company_id: companyId,
         department_id: textOrNull(row.department_id),
+        ...(Number.isFinite(pct) ? { allocation_pct: pct } : {}),
       };
     });
   }
@@ -1019,11 +1045,13 @@ export class AiFinancialPlanMutationSupportService {
     context: AiExecutionContextWithManager,
     raw: unknown,
     method: string,
+    driver: unknown,
   ): Promise<AllocationInput[]> {
     if (!Array.isArray(raw)) throw new BadRequestException('allocations must be an array.');
     const isManualCompany = method === 'manual_company';
     const isManualDepartment = method === 'manual_department';
-    if (!isManualCompany && !isManualDepartment) {
+    const isManualPct = method === 'manual_pct';
+    if (!isManualCompany && !isManualDepartment && !isManualPct) {
       if (raw.length > 0) {
         throw new BadRequestException('Automatic allocation methods require an empty allocations array.');
       }
@@ -1034,6 +1062,25 @@ export class AiFinancialPlanMutationSupportService {
     for (let index = 0; index < raw.length; index += 1) {
       const entry = raw[index];
       const row = typeof entry === 'string' ? { ref: entry } : objectValue(entry, `allocations[${index}]`);
+      const pctKey = PERCENT_KEYS.find((key) => row[key] != null && row[key] !== '');
+      if (isManualPct) {
+        const companyRef = textOrNull(row.company_id) || textOrNull(row.company_ref) || textOrNull(row.company) || textOrNull(row.ref);
+        if (!companyRef) throw new BadRequestException(`allocations[${index}] must identify a company.`);
+        if (!pctKey) {
+          throw new BadRequestException(`allocations[${index}] must give allocation_pct: the manual_pct method stores the percentages given, which must sum to 100.`);
+        }
+        const company = await this.resolveCompany(context, companyRef);
+        normalized.push({ company_id: company.id, department_id: null, allocation_pct: percentValue(row[pctKey], `allocations[${index}].${pctKey}`) });
+        continue;
+      }
+      // The shares of a split by company or by department are computed: a percentage would be dropped.
+      if (pctKey) {
+        throw new BadRequestException(isManualCompany
+          ? `The manual_company method computes each company's share: its shares follow the driver (${allocationBasis(method, driver)}), so ${pctKey} cannot be set. `
+            + 'Send the companies without allocation_pct, or set allocation_method to manual_pct with update_version to give the percentages yourself.'
+          : 'The manual_department method computes each department\'s share: its shares follow the departments\' headcount, so '
+            + `${pctKey} cannot be set. Send the departments without allocation_pct, or set allocation_method to manual_pct with update_version to give percentages by company.`);
+      }
       if (isManualCompany) {
         const companyRef = textOrNull(row.company_id) || textOrNull(row.company_ref) || textOrNull(row.company) || textOrNull(row.ref);
         if (!companyRef) throw new BadRequestException(`allocations[${index}] must identify a company.`);
@@ -1058,6 +1105,8 @@ export class AiFinancialPlanMutationSupportService {
         + 'that removes the stored manual rows, and no other step is needed.',
       );
     }
+    // Percentages are kept as given: a company named twice gets them added, as on the Allocations tab.
+    if (isManualPct) return normalized;
     return Array.from(
       new Map(normalized.map((item) => [`${item.company_id}:${item.department_id ?? ''}`, item])).values(),
     );
@@ -1354,6 +1403,11 @@ export class AiFinancialPlanMutationSupportService {
       return this.spendAmounts.listByYear(versionId, year, { manager: context.manager }) as any;
     }
     return this.capexAmounts.listByYear(versionId, year, { manager: context.manager }) as any;
+  }
+
+  private planAllocations(context: AiExecutionContextWithManager, nature: BudgetNature, versionId: string, allocations: AllocationInput[]) {
+    const service = nature === 'opex' ? this.spendAllocations : this.capexAllocations;
+    return service.plan(versionId, allocations, { manager: context.manager, tenantId: context.tenantId });
   }
 
   private listAllocations(

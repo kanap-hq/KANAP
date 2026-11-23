@@ -315,6 +315,7 @@
         "it_users": "IT-Benutzer",
         "manual_company": "Manuell nach Unternehmen",
         "manual_department": "Manuell nach Abteilung",
+        "manual_pct": "Manuelle Prozentsätze",
         "turnover": "Umsatz"
       },
       "allocationsRemoved": "Entfernt",

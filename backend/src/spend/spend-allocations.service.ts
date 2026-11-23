@@ -13,6 +13,7 @@ import {
   AllocationInput,
   allocationSignature,
   bulkUpsertAllocations,
+  plannedAllocationRows,
   putVersionAllocations,
   readAllocationState,
 } from './allocation-save';
@@ -48,6 +49,12 @@ export class SpendAllocationsService {
       { manager, audit: this.audit, calculator: this.calculator, ...(opts?.audit ? { auditSource: opts.audit } : {}) },
       this.nature, tenantId, versionId, items, userId,
     );
+  }
+
+  /** What the rows save would store for `items` (`plannedAllocationRows`), with nothing written: Kad's card shows it. */
+  async plan(versionId: string, items: AllocationInput[], opts: { manager: EntityManager; tenantId: string }) {
+    await budgetLineOfChild(opts.manager, this.nature, 'version', opts.tenantId, versionId, 'Version not found');
+    return plannedAllocationRows(opts.manager, this.nature, opts.tenantId, versionId, items, this.calculator.fxRates);
   }
 
   /**

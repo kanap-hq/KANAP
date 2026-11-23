@@ -315,6 +315,7 @@
         "it_users": "Utilisateurs IT",
         "manual_company": "Manuelle par société",
         "manual_department": "Manuelle par département",
+        "manual_pct": "Pourcentages manuels",
         "turnover": "Chiffre d'affaires"
       },
       "allocationsRemoved": "Supprimées",

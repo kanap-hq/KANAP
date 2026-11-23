@@ -349,6 +349,28 @@ export async function bulkUpsertAllocations(
   return storeRows(deps, scope, tenantId, version, plan, userId);
 }
 
+/**
+ * The rows the rows save (`bulkUpsertAllocations`) would store for `items`, validated and computed
+ * the same way, with nothing written: what Kad's card shows before its approval. Null for an
+ * automatic method, whose shares are computed when read.
+ */
+export async function plannedAllocationRows(
+  manager: EntityManager,
+  scope: AmountScope,
+  tenantId: string,
+  versionId: string,
+  items: AllocationInput[],
+  fxRates: TurnoverFxRates | undefined,
+): Promise<Array<{ company_id: string; department_id: string | null; allocation_pct: number }> | null> {
+  const version = await manager.getRepository<AllocationVersion>(SCOPES[scope].versionEntity).findOne({ where: { id: versionId, tenant_id: tenantId } as any });
+  if (!version) throw new BadRequestException('Invalid version');
+  const method = (version.allocation_method as string | null) ?? 'default';
+  const driver = (version.allocation_driver as string | null) ?? 'headcount';
+  const plan = await planRows(manager, scope, tenantId, version, method, driver, items, 'refuse', fxRates);
+  if (plan.kind !== 'manual') return null;
+  return plan.rows.map((row) => ({ company_id: row.company_id, department_id: row.department_id ?? null, allocation_pct: Number(row.allocation_pct) }));
+}
+
 /** The body of the PUT, validated. */
 function parsePutBody(body: unknown): { method: string; driver: string | null; rows: AllocationInput[]; baseSignature: string | null } {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {

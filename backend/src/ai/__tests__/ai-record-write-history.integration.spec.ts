@@ -1126,14 +1126,14 @@ async function run() {
     } catch (error) {
       failures.push(`budget_lines: empty manual split refused: ${(error as Error).message}`);
     }
-    for (const [name, check] of [['allocation cards name the records', allocationCardsName]] as const) {
+    for (const [name, check] of [['allocation cards name the records', allocationCardsName], ['allocation cards show the shares stored', allocationCardsShares]] as const) {
       try {
         await check(harness);
       } catch (error) {
         failures.push(`budget_lines: ${name}: ${(error as Error).message}`);
       }
     }
-    const total = CASES.length + SEQUENCES.length + 2;
+    const total = CASES.length + SEQUENCES.length + 3;
     if (failures.length) throw new Error(`${failures.length} of ${total} cases failed:\n${failures.join('\n\n')}`);
     console.log(`ai-record-write-history.integration.spec.ts passed (${total} cases)`);
   } finally {
