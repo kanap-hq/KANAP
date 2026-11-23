@@ -23,7 +23,7 @@ Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pou
 
 **Le projet issu de votre demande**, ouvert par l'étape
 
-**Le geste.** Complétez ses responsables et son équipe projet dans le panneau des propriétés, puis ouvrez les onglets **Chronologie** et **Charge**.
+**Le geste.** Complétez ses responsables et son équipe projet dans le panneau Propriétés, puis ouvrez les onglets **Chronologie** et **Charge**.
 
 **Ce que vous lisez.** Le projet garde sous **Relations** la demande dont il vient. **Chronologie** porte ses phases, que vous pouvez créer depuis un modèle de phase. **Charge** met son avancement face à la charge prévue et consommée.
 

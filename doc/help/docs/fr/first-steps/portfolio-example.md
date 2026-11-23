@@ -27,9 +27,9 @@ Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pou
 
 ![Le projet issu de la demande](images/portfolio-example-2.webp)
 
-**Le geste.** Lisez le panneau des propriétés, puis ouvrez les onglets **Chronologie**, **Charge** et **Relations**.
+**Le geste.** Lisez le panneau Propriétés, puis ouvrez les onglets **Chronologie**, **Charge** et **Relations**.
 
-**Ce que vous lisez.** Le panneau des propriétés donne les responsables et l'équipe projet. **Chronologie** place les phases. **Charge** met l'avancement face à la charge prévue et consommée. **Relations** montre la demande d'origine, les applications du projet et ses lignes budgétaires.
+**Ce que vous lisez.** Le panneau Propriétés donne les responsables et l'équipe projet. **Chronologie** place les phases. **Charge** met l'avancement face à la charge prévue et consommée. **Relations** montre la demande d'origine, les applications du projet et ses lignes budgétaires.
 
 ## 3. Les tâches
 

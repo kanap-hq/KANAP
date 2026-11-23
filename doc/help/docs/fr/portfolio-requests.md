@@ -72,11 +72,11 @@ La grille standard met en évidence les champs qui comptent pendant l'intake et 
 L'espace de travail utilise un modèle divisé :
 
 - La zone principale contient les onglets opérationnels : **Synthèse**, **Analyse**, **Évaluation**, **Relations**, **Connaissances** et **Historique** (les modifications de la demande, voir [Historique des fiches](record-history.md)).
-- Un tiroir **Propriétés** persistant sur le bord droit contient les métadonnées stables de la demande, l'assignation d'équipe et les projets résultants. Ouvrez ou fermez-le à l'aide de l'onglet vertical sur le bord droit.
+- Un panneau Propriétés persistant sur le bord droit contient les métadonnées stables de la demande, l'assignation d'équipe et les projets résultants. Ouvrez ou fermez-le à l'aide de l'onglet vertical sur le bord droit.
 
 Cela compte parce que tout n'est pas enregistré de la même manière :
 
-- Les modifications dans le **tiroir Propriétés** sont appliquées immédiatement.
+- Les modifications dans le **panneau Propriétés** sont appliquées immédiatement.
 - Les modifications dans **Synthèse**, **Analyse** et **Évaluation** sont des modifications d'espace de travail et utilisent **Enregistrer** / **Réinitialiser**.
 - Les documents managés **Objectif** et **Risques et atténuations** utilisent également le flux d'enregistrement de l'espace de travail.
 
@@ -96,7 +96,7 @@ L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quit
 2. Saisissez le nom de la demande.
 3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis crée la demande aussitôt, au statut **En attente de revue** et avec vous comme demandeur. Sa référence (`REQ-42`) apparaît et tous les onglets s'ouvrent.
 
-Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi.
+Complétez ensuite le panneau Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi.
 
 ### Créer ou annuler { #cancelling-a-creation }
 
@@ -108,9 +108,9 @@ Tant que la demande est en cours de création, son en-tête affiche **Créer** e
 
 Si vous quittez la demande autrement, elle reste. Un administrateur peut alors la supprimer avec **Supprimer**. La référence d'une demande annulée n'est pas réutilisée.
 
-### Tiroir des propriétés
+### Panneau Propriétés
 
-Traitez le tiroir comme la colonne vertébrale structurelle de la demande. Il contient trois groupes.
+Traitez le panneau comme la colonne vertébrale structurelle de la demande. Il contient trois groupes.
 
 #### Propriétés principales
 
@@ -145,7 +145,7 @@ Une liste en lecture seule des projets produits depuis cette demande après conv
 
 Les mêmes projets figurent aussi dans l'onglet **Relations**, avec les dépendances, les lignes budgétaires, applications, actifs et processus métier liés, et les liens et fichiers de la demande.
 
-D'anciens favoris peuvent encore pointer vers `overview`, `team` ou `relations`. L'espace de travail actuel place ce contenu sous **Synthèse**, le tiroir Propriétés et l'onglet **Relations**.
+D'anciens favoris peuvent encore pointer vers `overview`, `team` ou `relations`. L'espace de travail actuel place ce contenu sous **Synthèse**, le panneau Propriétés et l'onglet **Relations**.
 
 ## Synthèse
 
