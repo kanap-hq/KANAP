@@ -339,12 +339,16 @@ function endGuard(): void {
 
 /** The name of the description the page shows (in its preview or its draft): the waiting field takes it. */
 function descriptionName(): string | null {
-  const field = document.querySelector('[data-creation-description]')?.querySelector<HTMLElement>(FIELD_LIKE);
+  const marked = document.querySelector('[data-creation-description]');
+  // Its text, not its editor's toolbar.
+  const fields = Array.from(marked?.querySelectorAll<HTMLElement>(FIELD_LIKE) ?? []).filter((el) => !el.closest('[role="toolbar"]'));
+  const field = fields.find((el) => el.matches('textarea, [contenteditable], [role="textbox"]')) ?? fields[0];
   if (!field) return null;
   const labelledBy = field.getAttribute('aria-labelledby');
   const name = field.getAttribute('aria-label')
     ?? (labelledBy ? document.getElementById(labelledBy)?.textContent : null)
-    ?? ((field as HTMLInputElement).labels?.[0]?.textContent ?? null);
+    ?? ((field as HTMLInputElement).labels?.[0]?.textContent ?? null)
+    ?? field.getAttribute('placeholder');
   return name?.trim() || null;
 }
 
