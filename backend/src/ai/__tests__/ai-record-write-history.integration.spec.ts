@@ -497,6 +497,37 @@ const SEQUENCES: SequenceCase[] = [
     ],
     state: allocationState,
   },
+  // An amount set by Kad, then undone: the column is entered again as it was (method and lines).
+  {
+    name: 'budget_lines: amount undone on a spread column',
+    prepare: lineWithBudget({ kind: 'annual', year: 2026, totals: { planned: 12000 } }),
+    steps: [
+      { kad: (_s, id) => financialCard(id, { action: 'upsert_amounts', amounts: { kind: 'annual', year: 2026, totals: { planned: 18000 } } }), screen: budgetTab({ kind: 'annual', year: 2026, totals: { planned: 18000 } }) },
+      { kad: { undo: 0 }, screen: budgetTab({ kind: 'annual', year: 2026, totals: { planned: 12000 } }) },
+    ],
+    state: plannedColumn,
+    stateBefore: true,
+  },
+  {
+    name: 'budget_lines: amount undone on a column typed month by month',
+    prepare: lineWithBudget({ kind: 'monthly', year: 2026, months: TWELVE_HUNDREDS }),
+    steps: [
+      { kad: (_s, id) => financialCard(id, { action: 'upsert_amounts', amounts: { kind: 'annual', year: 2026, totals: { planned: 18000 } } }), screen: budgetTab({ kind: 'annual', year: 2026, totals: { planned: 18000 } }) },
+      { kad: { undo: 0 }, screen: budgetTab({ kind: 'monthly', year: 2026, months: TWELVE_HUNDREDS }) },
+    ],
+    state: plannedColumnByHand,
+    stateBefore: true,
+  },
+  {
+    name: 'budget_lines: amount undone on a column built from quantity and price',
+    prepare: lineWithBudget({ kind: 'lines', year: 2026, measure: 'planned', lines: LICENCE_LINES }),
+    steps: [
+      { kad: (_s, id) => financialCard(id, { action: 'upsert_amounts', amounts: { kind: 'annual', year: 2026, totals: { planned: 18000 } } }), screen: budgetTab({ kind: 'annual', year: 2026, totals: { planned: 18000 } }) },
+      { kad: { undo: 0 }, screen: budgetTab({ kind: 'lines', year: 2026, measure: 'planned', lines: LICENCE_LINES }) },
+    ],
+    state: plannedColumn,
+    stateBefore: true,
+  },
 ];
 
 async function one(runner: QueryRunner, sql: string, params: unknown[]): Promise<string> {

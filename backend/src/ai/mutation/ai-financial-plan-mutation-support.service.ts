@@ -10,6 +10,7 @@ import { BUDGET_LINE_PREFIX, BudgetNature, natureAnd } from '../../spend/budget-
 import { budgetLineReferenceNumbers, parseItemRef } from '../../common/resolve-item-id';
 import { presentChild } from '../../spend/budget-line-presentation';
 import { AMOUNT_MEASURES, AmountMeasure, assertSpreadProfile, validateAmountValue } from '../../spend/amounts-write.util';
+import { costLine, RoundInput } from '../../spend/round-inputs.util';
 import { formatAmount, formatCents } from '../../common/amount';
 import { budgetColumnName, BudgetColumnsSettings, readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
@@ -312,6 +313,57 @@ function completeAmountRowsForPeriods(rows: unknown[], periods: string[]): unkno
   });
 }
 
+/**
+ * How a column was entered before a write of amounts, kept on the card so that "Undo" enters it
+ * again the same way: a spread (its period and its yearly total and profile, or its quarters), or a
+ * column built from quantity and price (its lines stay on the column: the write keeps them as its
+ * reference). A column typed month by month, copied or never entered has none: its months are typed
+ * back.
+ */
+type ColumnInput = {
+  measure: AmountMeasure;
+  method: 'spread' | 'computed';
+  period_start?: string;
+  period_end?: string;
+  total?: string;
+  profile?: string;
+  quarters?: Record<'Q1' | 'Q2' | 'Q3' | 'Q4', string>;
+  distribution?: 'equal' | '445';
+};
+
+/** The columns a payload writes. */
+function amountMeasures(payload: AmountPayload): AmountMeasure[] {
+  if (payload.kind === 'annual') return AMOUNT_MEASURES.filter((measure) => payload.totals[measure] !== undefined);
+  if (payload.kind === 'quarterly') return [payload.measure];
+  return AMOUNT_MEASURES.filter((measure) => payload.months.some((row) => row[measure] !== undefined));
+}
+
+/** How each column of `measures` is entered now (`ColumnInput`), from the version's records. */
+function columnInputs(roundInputs: unknown, measures: readonly AmountMeasure[]): ColumnInput[] {
+  const records = Array.isArray(roundInputs) ? roundInputs as any[] : [];
+  const inputs: ColumnInput[] = [];
+  for (const measure of measures) {
+    const record = records.find((row) => row?.measure === measure);
+    const calculation = record?.last_calculation;
+    const period = { period_start: String(record?.period_start), period_end: String(record?.period_end) };
+    if (record?.method === 'computed' && Array.isArray(record.lines) && record.lines.length > 0) {
+      inputs.push({ measure, method: 'computed' });
+    } else if (record?.method === 'spread' && calculation?.kind === 'annual') {
+      inputs.push({ measure, method: 'spread', ...period, total: String(calculation.total), profile: String(calculation.profile) });
+    } else if (record?.method === 'spread' && calculation?.kind === 'quarterly') {
+      inputs.push({ measure, method: 'spread', ...period, quarters: calculation.quarters, distribution: calculation.distribution });
+    }
+  }
+  return inputs;
+}
+
+/** The `ColumnInput`s a card holds; anything else is left to the months typed back. */
+function storedColumnInputs(value: unknown): ColumnInput[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is ColumnInput => !!entry && typeof entry === 'object'
+    && AMOUNT_MEASURES.includes(entry.measure) && (entry.method === 'spread' || entry.method === 'computed'));
+}
+
 function allocationInputsFromRows(rows: unknown[], method: string | null): AllocationInput[] {
   if (method !== 'manual_company' && method !== 'manual_department') return [];
   return (rows as any[])
@@ -405,6 +457,7 @@ export class AiFinancialPlanMutationSupportService {
             items: reverseItems,
             totals: before.totals,
             signature: amountRowsSignature(beforeItems),
+            inputs: columnInputs(before.round_inputs, amountMeasures(amounts)),
           },
           display_values: {
             from: this.formatAmountSummary(before, columns),
@@ -477,13 +530,16 @@ export class AiFinancialPlanMutationSupportService {
       const previousValues = objectValue(preview.current_values?.values, 'current_values.values');
       const previousRows = Array.isArray(previousValues.items) ? previousValues.items : [];
       const year = normalizeYear(previousValues.year ?? version.row.budget_year, 'year');
-      return this.prepareCreatePreview(context, {
+      const prepared = await this.prepareCreatePreview(context, {
         entity_type: entityType,
         ref: item.id,
         action: 'upsert_amounts',
         version_ref: version.id,
         amounts: makeMonthlyPayloadFromRows(previousRows, year),
       });
+      // The months as they were, and how their columns were entered (`ColumnInput`).
+      const inputs = storedColumnInputs(previousValues.inputs);
+      return inputs.length === 0 ? prepared : { ...prepared, mutationInput: { ...prepared.mutationInput, restore_inputs: inputs } };
     }
     if (action === 'replace_allocations') {
       const versionId = textOrNull(mutation.version_id);
@@ -629,7 +685,9 @@ export class AiFinancialPlanMutationSupportService {
       if (amountRowsSignature(beforeItems) !== String(previous.signature || '')) {
         throw new ConflictException('Financial amounts changed after the preview was created.');
       }
-      await this.upsertAmounts(context, item.nature, version.id, amounts, audit);
+      const inputs = storedColumnInputs(mutation.restore_inputs);
+      if (inputs.length > 0) await this.enterColumnsAgain(context, item.nature, version.id, amounts, inputs, audit);
+      else await this.upsertAmounts(context, item.nature, version.id, amounts, audit);
       return;
     }
 
@@ -1171,11 +1229,53 @@ export class AiFinancialPlanMutationSupportService {
     );
   }
 
-  private async upsertAmounts(
+  /**
+   * "Undo" of a write of amounts: the months of the columns typed by hand typed back, then each other
+   * column entered again as it was, by the budget tab's own writes: a spread spread again from its
+   * total or quarters over its period, a column built from quantity and price computed again from
+   * its lines.
+   */
+  private async enterColumnsAgain(
     context: AiExecutionContextWithManager,
     nature: BudgetNature,
     versionId: string,
     amounts: AmountPayload,
+    inputs: ColumnInput[],
+    audit: AiMutationAuditOptions,
+  ): Promise<void> {
+    if (amounts.kind !== 'monthly') throw new BadRequestException('An undo of amounts writes months.');
+    const { year } = amounts;
+    const again = new Set(inputs.map((input) => input.measure));
+    const months = amounts.months
+      .map((row) => {
+        const typed: typeof row = { period: row.period };
+        for (const measure of AMOUNT_MEASURES) if (!again.has(measure) && row[measure] !== undefined) typed[measure] = row[measure];
+        return typed;
+      })
+      .filter((row) => AMOUNT_MEASURES.some((measure) => row[measure] !== undefined));
+    if (months.length > 0) await this.upsertAmounts(context, nature, versionId, { kind: 'monthly', year, months }, audit);
+    for (const input of inputs) {
+      const period = { period_start: input.period_start, period_end: input.period_end };
+      let payload: Record<string, unknown>;
+      if (input.method === 'computed') {
+        const listed = await this.listAmounts(context, nature, versionId, year);
+        const record = (Array.isArray(listed.round_inputs) ? listed.round_inputs as RoundInput[] : []).find((row) => row.measure === input.measure);
+        if (!record?.lines.length) throw new ConflictException('The quantity and price lines changed after the preview was created.');
+        payload = { kind: 'lines', year, measure: input.measure, lines: record.lines.map(costLine) };
+      } else if (input.quarters) {
+        payload = { kind: 'quarterly', year, measure: input.measure, ...input.quarters, spread_profile_name: input.distribution === '445' ? '4-4-5' : 'flat', ...period };
+      } else {
+        payload = { kind: 'annual', year, totals: { [input.measure]: input.total }, spread_profile_name: input.profile, ...period };
+      }
+      await this.upsertAmounts(context, nature, versionId, payload, audit);
+    }
+  }
+
+  private async upsertAmounts(
+    context: AiExecutionContextWithManager,
+    nature: BudgetNature,
+    versionId: string,
+    amounts: AmountPayload | Record<string, unknown>,
     audit: AiMutationAuditOptions,
   ): Promise<unknown> {
     if (nature === 'opex') {
