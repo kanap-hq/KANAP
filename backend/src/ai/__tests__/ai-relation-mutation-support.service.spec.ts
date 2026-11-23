@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { AiExecutionContextWithManager } from '../ai.types';
 import { AiRelationMutationSupportService } from '../mutation/ai-relation-mutation-support.service';
+import { ROW_AUDITED_RELATIONS, screenTraceOf } from '../mutation/ai-relation-screen-audit';
 
 const TENANT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const USER_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -131,6 +132,8 @@ async function testRelationAuditParentsTheBudgetLine() {
   assert.equal(line.audited[0].table, 'application_spend_items');
   assert.equal(line.audited[0].recordId, LINE_ID);
   assert.deepEqual(line.audited[0].parent, { table: 'spend_items', id: LINE_ID });
+  assert.deepEqual(line.audited[0].before, []);
+  assert.deepEqual(line.audited[0].after, [APP_ID]);
 
   const application = await runRelation({
     id: 'preview-app',
@@ -170,11 +173,14 @@ async function runRelation(input: {
   const audited: AuditedRelation[] = [];
   const queries: string[] = [];
   let lineLinked = false;
+  let applicationLinked = false;
   const manager = {
     query: async (sql: string) => {
       const text = sql.replace(/\s+/g, ' ').trim();
       queries.push(text);
-      if (/INSERT INTO application_spend_items/.test(text)) lineLinked = true;
+      if (/INSERT INTO application_spend_items \(tenant_id, application_id/.test(text)) lineLinked = true;
+      if (/INSERT INTO application_spend_items \(tenant_id, spend_item_id/.test(text)) applicationLinked = true;
+      if (/SELECT l\.application_id AS id FROM application_spend_items/.test(text)) return applicationLinked ? [{ id: APP_ID }] : [];
       if (/SELECT l\.spend_item_id AS id FROM application_spend_items/.test(text)) {
         return lineLinked && /nature = 'opex'/.test(text) ? [{ id: LINE_ID }] : [];
       }
@@ -221,9 +227,30 @@ async function runRelation(input: {
   return { audited };
 }
 
+/**
+ * Every relation of the writer leaves the screen's trace (lot K2b): a trace of the stored state
+ * (`screenTraceOf`) or a writer that audits each row (`ROW_AUDITED_RELATIONS`), never both, never
+ * neither.
+ */
+function testEveryRelationLeavesTheScreensTrace() {
+  const service = new AiRelationMutationSupportService(null as any, null as any, null as any, null as any);
+  const relations = service.getSupportedRelationDescriptions().flatMap((entry) => {
+    const [entity, list] = entry.split(': ');
+    return list.split(', ').map((relation) => `${entity}.${relation}`);
+  });
+  assert.equal(relations.length, 36);
+  for (const key of relations) {
+    const [entity, relation] = key.split('.');
+    assert.notEqual(!!screenTraceOf(entity, relation), ROW_AUDITED_RELATIONS.has(key), `${key}: one trace exactly`);
+  }
+  for (const key of ROW_AUDITED_RELATIONS) assert.ok(relations.includes(key), `${key}: a relation of the writer`);
+  console.log('  every relation leaves the screen trace: OK');
+}
+
 async function main(): Promise<void> {
   await testRelationTitleNamesTheReferenceOnce();
   await testRelationAuditParentsTheBudgetLine();
+  testEveryRelationLeavesTheScreensTrace();
 }
 
 main().catch((error) => {

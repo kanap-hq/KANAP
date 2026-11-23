@@ -9,7 +9,17 @@ import { assertContractReadable, assertContractsEditable } from '../../data-acce
 import { parseItemNumber } from '../../common/parse-item-number';
 import { budgetLineReferenceNumbers } from '../../common/resolve-item-id';
 import { AiPolicyService } from '../ai-policy.service';
-import { auditTableOf, BUDGET_LINE_PREFIX, BUDGET_NATURES, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
+import {
+  auditTableOf,
+  BUDGET_LINE_PREFIX,
+  BUDGET_NATURES,
+  linkedLineOf,
+  linkedLineOfAnyNature,
+  naturesAnd,
+  type BudgetNature,
+} from '../../spend/budget-nature';
+import { presentChild } from '../../spend/budget-line-presentation';
+import { LocationSubItem } from '../../locations/location-sub-item.entity';
 import {
   applicationParticipantCondition,
   resolveBusinessContributorScopeForUser,
@@ -150,7 +160,7 @@ type RelationItem = {
 // Both natures are one `budget_lines` relation family (`spend_items`, `spend/budget-nature.ts`):
 // a relation reads and replaces the links to the lines of both natures, naming the nature in its
 // SQL (`targetSql`), and a CAPEX line's own rows keep their CAPEX audit table names
-// (`auditTableName`).
+// (`ai-relation-screen-audit.ts`, `auditTableOf`).
 const SIMPLE_RELATIONS: SimpleRelationConfig[] = [
   { sourceEntity: 'applications', relation: 'companies', label: 'Companies', table: 'application_companies', sourceColumn: 'application_id', targetColumn: 'company_id', target: 'companies', businessResource: 'applications', kind: 'simple' },
   { sourceEntity: 'applications', relation: 'departments', label: 'Departments', table: 'application_departments', sourceColumn: 'application_id', targetColumn: 'department_id', target: 'departments', businessResource: 'applications', kind: 'simple' },
@@ -236,6 +246,16 @@ function textOrNull(value: unknown): string | null {
   if (value == null) return null;
   const text = String(value).trim();
   return text || null;
+}
+
+/**
+ * ` AND EXISTS (...)`: a line's child row (`<alias>.spend_item_id`) belongs to a line of `nature`,
+ * or of either nature when it is not known (the preview reads before the line is locked).
+ */
+function lineScope(alias: string, nature: BudgetNature | null): string {
+  return nature
+    ? linkedLineOf(`${alias}.tenant_id`, `${alias}.spend_item_id`, nature)
+    : linkedLineOfAnyNature(`${alias}.tenant_id`, `${alias}.spend_item_id`);
 }
 
 function coerceItemArray(value: unknown, label: string): unknown[] {
@@ -558,10 +578,11 @@ export class AiRelationMutationSupportService {
     await this.assertAddedTargetsReadable(context, config, expectedItems, nextItems);
     const audit = buildAiMutationAudit(preview);
     // The trace of the screen's gesture (`ai-relation-screen-audit.ts`): the stored state the
-    // screen reads, before the write and after it.
+    // screen reads, before the write and after it. The other relations audit each row in their
+    // writer, as the screen does (`ROW_AUDITED_RELATIONS`).
     const trace = screenTraceOf(config.sourceEntity, config.relation);
     const traceBefore = trace ? await trace.read(context, preview.target_entity_id) : null;
-    await this.replaceRelationItems(context, config, preview.target_entity_id, nextItems, audit);
+    await this.replaceRelationItems(context, config, preview.target_entity_id, nextItems, audit, sourceNature);
     if (trace) await trace.log(context, this.audit, audit, preview.target_entity_id, traceBefore);
     // R1: the host links the cluster replaces, removed after the cluster's own relations are in
     // place, with the preview's audit source.
@@ -576,78 +597,6 @@ export class AiRelationMutationSupportService {
         { source: audit.source, sourceRef: audit.sourceRef },
       );
     }
-    // The relations without the screen's trace yet keep the assistant's summary row.
-    if (!trace && !ROW_AUDITED_RELATIONS.has(`${config.sourceEntity}.${config.relation}`)) {
-      await this.logRelationAudit(context, config, preview, sourceNature, expectedItems, nextItems, audit);
-    }
-  }
-
-  /**
-   * The audit row(s) of a relation update. The screens log a line's links under the table of the
-   * line's nature (`application_capex_items` for a CAPEX line, `application_spend_items` for an
-   * OPEX one): one row per nature the update changes, with the same before/after sets the screen
-   * writes. A budget line's own relation keeps its source nature (`auditTableName`) and names the
-   * line as parent, as the screens do: the shared labels have no parent rule, so the line's
-   * History tab reads this parent. A relation whose source is the application carries no parent
-   * (a write may touch several lines).
-   */
-  private async logRelationAudit(
-    context: AiExecutionContextWithManager,
-    config: RelationConfig,
-    preview: AiMutationPreview,
-    sourceNature: BudgetNature | null,
-    before: RelationItem[],
-    after: RelationItem[],
-    audit: AiMutationAuditOptions,
-  ): Promise<void> {
-    const tables = config.kind === 'simple' && config.target === 'budget_lines' && config.sourceEntity !== 'budget_lines'
-      ? await this.changedLineAuditTables(context, config.table, before, after)
-      : [this.auditTableName(config, sourceNature)];
-    // From the budget line, the line names itself. The shared link labels have no parent rule,
-    // so the line's History tab reads this parent (`record-history/records/spend_items.ts`).
-    const parent = config.sourceEntity === 'budget_lines'
-      ? { table: 'spend_items' as const, id: preview.target_entity_id! }
-      : undefined;
-    for (const table of tables) {
-      await this.audit.log(
-        {
-          table,
-          recordId: preview.target_entity_id!,
-          action: 'update',
-          before,
-          after,
-          userId: context.userId,
-          source: audit.source,
-          sourceRef: audit.sourceRef,
-          parent,
-        },
-        { manager: context.manager },
-      );
-    }
-  }
-
-  /**
-   * The audit tables of the lines a relation adds or removes, one per nature (`auditTableOf`).
-   * Only the changed lines count: a line that stays linked is not a write on it.
-   */
-  private async changedLineAuditTables(
-    context: AiExecutionContextWithManager,
-    table: string,
-    before: RelationItem[],
-    after: RelationItem[],
-  ): Promise<string[]> {
-    const beforeKeys = new Set(before.map((item) => item.key.toLowerCase()));
-    const afterKeys = new Set(after.map((item) => item.key.toLowerCase()));
-    const changed = Array.from(new Set([...beforeKeys, ...afterKeys]))
-      .filter((key) => beforeKeys.has(key) !== afterKeys.has(key));
-    if (changed.length === 0) return [table];
-    const rows: Array<{ nature: BudgetNature }> = await context.manager.query(
-      `SELECT DISTINCT nature FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[])${naturesAnd(null, BUDGET_NATURES)}`,
-      [context.tenantId, changed],
-    );
-    const natures = new Set(rows.map((row) => row.nature));
-    const tables = BUDGET_NATURES.filter((nature) => natures.has(nature)).map((nature) => auditTableOf(nature, table));
-    return tables.length > 0 ? tables : [table];
   }
 
   /**
@@ -1202,11 +1151,17 @@ export class AiRelationMutationSupportService {
     }));
   }
 
-  private contactTable(config: RelationConfig): { table: string; sourceColumn: string; includeOrigin: boolean } {
-    if (config.sourceEntity === 'applications') return { table: 'application_support_contacts', sourceColumn: 'application_id', includeOrigin: false };
-    if (config.sourceEntity === 'assets') return { table: 'asset_support_contacts', sourceColumn: 'asset_id', includeOrigin: false };
-    if (config.sourceEntity === 'contracts') return { table: 'contract_contacts', sourceColumn: 'contract_id', includeOrigin: true };
-    if (config.sourceEntity === 'budget_lines') return { table: 'spend_item_contacts', sourceColumn: 'spend_item_id', includeOrigin: true };
+  /**
+   * The contact table of a source. `scope`: on a line's contacts, the line of the stored `nature`
+   * (both natures when it is not known yet, at the preview), on the link alias `l`.
+   */
+  private contactTable(config: RelationConfig, nature: BudgetNature | null = null): { table: string; sourceColumn: string; includeOrigin: boolean; scope: string } {
+    if (config.sourceEntity === 'applications') return { table: 'application_support_contacts', sourceColumn: 'application_id', includeOrigin: false, scope: '' };
+    if (config.sourceEntity === 'assets') return { table: 'asset_support_contacts', sourceColumn: 'asset_id', includeOrigin: false, scope: '' };
+    if (config.sourceEntity === 'contracts') return { table: 'contract_contacts', sourceColumn: 'contract_id', includeOrigin: true, scope: '' };
+    if (config.sourceEntity === 'budget_lines') {
+      return { table: 'spend_item_contacts', sourceColumn: 'spend_item_id', includeOrigin: true, scope: lineScope('l', nature) };
+    }
     // No silent fallback: another source would read and write `location_contacts` as its own.
     throw new BadRequestException(`No contact relation table for ${config.sourceEntity}.${config.relation}.`);
   }
@@ -1220,7 +1175,7 @@ export class AiRelationMutationSupportService {
              COALESCE(NULLIF(TRIM(CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, ''))), ''), c.email, l.contact_id::text) AS label
       FROM ${table.table} l
       JOIN contacts c ON c.id = l.contact_id AND c.tenant_id = $1
-      WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2
+      WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2${table.scope}
       ORDER BY label, l.role
       `,
       [context.tenantId, sourceId],
@@ -1270,22 +1225,47 @@ export class AiRelationMutationSupportService {
     }));
   }
 
-  private linkTable(config: RelationConfig): { table: string; sourceColumn: string } {
-    if (config.sourceEntity === 'applications') return { table: 'application_links', sourceColumn: 'application_id' };
-    if (config.sourceEntity === 'assets') return { table: 'asset_links', sourceColumn: 'asset_id' };
-    if (config.sourceEntity === 'contracts') return { table: 'contract_links', sourceColumn: 'contract_id' };
-    if (config.sourceEntity === 'budget_lines') return { table: 'spend_links', sourceColumn: 'spend_item_id' };
-    return { table: 'location_links', sourceColumn: 'location_id' };
+  /**
+   * The web link table of a source, and how its screen audits a row: `label` and `shown` (a line's
+   * link under the label and the line key of its nature, `presentChild`), `removal` (a contract's
+   * link removal is an `update` to nothing), `touch` (the table stamps `updated_at`). `scope`: on a
+   * line's links, the line of the stored `nature` (both natures at the preview), on the alias `l`.
+   */
+  private linkTable(config: RelationConfig, nature: BudgetNature | null = null): {
+    table: string;
+    sourceColumn: string;
+    scope: string;
+    label: string;
+    shown: (row: Record<string, unknown>) => unknown;
+    removal: 'delete' | 'update';
+    touch: boolean;
+  } {
+    const plain = { scope: '', shown: (row: Record<string, unknown>) => row, removal: 'delete' as const, touch: false };
+    if (config.sourceEntity === 'applications') return { ...plain, table: 'application_links', sourceColumn: 'application_id', label: 'application_links' };
+    if (config.sourceEntity === 'assets') return { ...plain, table: 'asset_links', sourceColumn: 'asset_id', label: 'asset_links' };
+    if (config.sourceEntity === 'contracts') return { ...plain, table: 'contract_links', sourceColumn: 'contract_id', label: 'contract_links', removal: 'update' };
+    if (config.sourceEntity === 'budget_lines') {
+      const lineNature = nature ?? 'opex';
+      return {
+        ...plain,
+        table: 'spend_links',
+        sourceColumn: 'spend_item_id',
+        scope: lineScope('l', nature),
+        label: auditTableOf(lineNature, 'spend_links'),
+        shown: (row) => presentChild(lineNature, row as any),
+      };
+    }
+    return { ...plain, table: 'location_links', sourceColumn: 'location_id', label: 'location_links', touch: true };
   }
 
-  private async loadLinks(context: AiExecutionContextWithManager, config: RelationConfig, sourceId: string): Promise<RelationItem[]> {
-    const table = this.linkTable(config);
+  private async loadLinks(context: AiExecutionContextWithManager, config: RelationConfig, sourceId: string, nature: BudgetNature | null = null): Promise<RelationItem[]> {
+    const table = this.linkTable(config, nature);
     const rows = await context.manager.query(
       `
-      SELECT id, url, description
-      FROM ${table.table}
-      WHERE tenant_id = $1 AND ${table.sourceColumn} = $2
-      ORDER BY created_at DESC
+      SELECT l.id, l.url, l.description
+      FROM ${table.table} l
+      WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2${table.scope}
+      ORDER BY l.created_at DESC
       `,
       [context.tenantId, sourceId],
     );
@@ -1379,23 +1359,29 @@ export class AiRelationMutationSupportService {
     }));
   }
 
+  /**
+   * `nature`: a budget line's stored nature, read under its lock, when the source is a line. The
+   * rows of the relations in `ROW_AUDITED_RELATIONS` are audited as the screen audits them.
+   */
   private async replaceRelationItems(
     context: AiExecutionContextWithManager,
     config: RelationConfig,
     sourceId: string,
     nextItems: RelationItem[],
     audit: AiMutationAuditOptions,
+    nature: BudgetNature | null,
   ): Promise<void> {
     if (config.kind === 'simple') {
       await this.replaceSimpleRelation(context, config, sourceId, nextItems);
       return;
     }
+    const rowAudit = ROW_AUDITED_RELATIONS.has(`${config.sourceEntity}.${config.relation}`) ? audit : null;
     switch (config.kind) {
       case 'owner_role':
         await this.replaceOwnerRoles(context, sourceId, nextItems);
         return;
       case 'contact_role':
-        await this.replaceContactRoles(context, config, sourceId, nextItems);
+        await this.replaceContactRoles(context, config, sourceId, nextItems, rowAudit, nature);
         return;
       case 'supplier_contacts':
         await this.replaceSupplierContacts(context, sourceId, nextItems, audit);
@@ -1404,16 +1390,16 @@ export class AiRelationMutationSupportService {
         await this.replaceAssetRelations(context, sourceId, nextItems);
         return;
       case 'link':
-        await this.replaceLinks(context, config, sourceId, nextItems, ROW_AUDITED_RELATIONS.has(`${config.sourceEntity}.${config.relation}`) ? audit : null);
+        await this.replaceLinks(context, config, sourceId, nextItems, rowAudit, nature);
         return;
       case 'location_internal_contacts':
-        await this.replaceLocationContacts(context, 'location_user_contacts', 'user_id', sourceId, nextItems);
+        await this.replaceLocationContacts(context, 'location_user_contacts', 'user_id', sourceId, nextItems, rowAudit);
         return;
       case 'location_external_contacts':
-        await this.replaceLocationContacts(context, 'location_contacts', 'contact_id', sourceId, nextItems);
+        await this.replaceLocationContacts(context, 'location_contacts', 'contact_id', sourceId, nextItems, rowAudit);
         return;
       case 'sub_locations':
-        await this.replaceSubLocations(context, sourceId, nextItems);
+        await this.replaceSubLocations(context, sourceId, nextItems, rowAudit);
         return;
       case 'app_asset_assignments':
         await this.replaceAppAssetAssignments(context, sourceId, nextItems, audit);
@@ -1421,6 +1407,22 @@ export class AiRelationMutationSupportService {
       default:
         throw new BadRequestException(`Unsupported relation kind ${(config as any).kind}.`);
     }
+  }
+
+  /** One audit row of a link row, as the screen writes it, with the card's source. */
+  private async logRow(
+    context: AiExecutionContextWithManager,
+    audit: AiMutationAuditOptions,
+    table: string,
+    recordId: string,
+    action: 'create' | 'update' | 'delete',
+    before: unknown,
+    after: unknown,
+  ): Promise<void> {
+    await this.audit.log(
+      { table, recordId, action, before, after, userId: context.userId, source: audit.source, sourceRef: audit.sourceRef },
+      { manager: context.manager },
+    );
   }
 
   private async replaceSimpleRelation(context: AiExecutionContextWithManager, config: SimpleRelationConfig, sourceId: string, nextItems: RelationItem[]): Promise<void> {
@@ -1520,10 +1522,41 @@ export class AiRelationMutationSupportService {
     }
   }
 
-  private async replaceContactRoles(context: AiExecutionContextWithManager, config: RelationConfig, sourceId: string, nextItems: RelationItem[]): Promise<void> {
-    const table = this.contactTable(config);
-    await context.manager.query(`DELETE FROM ${table.table} WHERE tenant_id = $1 AND ${table.sourceColumn} = $2`, [context.tenantId, sourceId]);
+  /**
+   * The contacts of an application, an asset, a contract or a line: a removed contact's row is
+   * deleted, a kept one keeps its row, a new one is inserted. With `rowAudit` (a contract, a line),
+   * each row is audited as the contact panel audits it (`ContractContactsService`,
+   * `SpendItemContactsService`: `create` and `delete`, the stored row, `recordId` the link; a line's
+   * under the label and the line key of its nature).
+   */
+  private async replaceContactRoles(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    sourceId: string,
+    nextItems: RelationItem[],
+    rowAudit: AiMutationAuditOptions | null,
+    nature: BudgetNature | null,
+  ): Promise<void> {
+    const table = this.contactTable(config, nature);
+    const label = config.sourceEntity === 'budget_lines' && nature ? auditTableOf(nature, table.table) : table.table;
+    const shown = (row: Record<string, unknown>) => (config.sourceEntity === 'budget_lines' && nature ? presentChild(nature, row as any) : row);
+    const keyOf = (row: Record<string, unknown>) => `${row.contact_id}:${row.role ?? ''}:${table.includeOrigin ? row.origin ?? '' : ''}`;
+    const current: Array<Record<string, unknown>> = await context.manager.query(
+      `SELECT l.* FROM ${table.table} l WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2${table.scope}`,
+      [context.tenantId, sourceId],
+    );
+    const nextKeys = new Set(nextItems.map((item) => item.key));
+    const removed = current.filter((row) => !nextKeys.has(keyOf(row))).map((row) => String(row.id));
+    if (removed.length > 0) {
+      const gone: Array<Record<string, unknown>> = await context.manager.query(
+        `WITH gone AS (DELETE FROM ${table.table} WHERE tenant_id = $1 AND ${table.sourceColumn} = $2 AND id = ANY($3::uuid[]) RETURNING *) SELECT * FROM gone`,
+        [context.tenantId, sourceId, removed],
+      );
+      if (rowAudit) for (const row of gone) await this.logRow(context, rowAudit, label, String(row.id), 'delete', shown(row), null);
+    }
+    const currentKeys = new Set(current.map(keyOf));
     for (const item of nextItems) {
+      if (currentKeys.has(item.key)) continue;
       const columns = table.includeOrigin
         ? `(tenant_id, ${table.sourceColumn}, contact_id, role, origin)`
         : `(tenant_id, ${table.sourceColumn}, contact_id, role)`;
@@ -1531,7 +1564,11 @@ export class AiRelationMutationSupportService {
       const params = table.includeOrigin
         ? [context.tenantId, sourceId, item.payload.contact_id, item.payload.role, item.payload.origin ?? 'manual']
         : [context.tenantId, sourceId, item.payload.contact_id, item.payload.role];
-      await context.manager.query(`INSERT INTO ${table.table} ${columns} VALUES ${values} ON CONFLICT DO NOTHING`, params);
+      const added: Array<Record<string, unknown>> = await context.manager.query(
+        `WITH added AS (INSERT INTO ${table.table} ${columns} VALUES ${values} ON CONFLICT DO NOTHING RETURNING *) SELECT * FROM added`,
+        params,
+      );
+      if (rowAudit) for (const row of added) await this.logRow(context, rowAudit, label, String(row.id), 'create', null, shown(row));
     }
   }
 
@@ -1610,7 +1647,9 @@ export class AiRelationMutationSupportService {
   /**
    * The web links: a removed link is deleted, a kept one keeps its row (its description updated when
    * it changed), a new one is inserted. With `rowAudit`, each row is audited as the screen audits a
-   * link (`create`, `update`, `delete`, the stored row before and after, `recordId` the link).
+   * link: `create`, `update`, `delete` (a contract's link removal is an `update` to nothing, as
+   * `ContractsService.deleteUrl` writes it), the stored row before and after, `recordId` the link;
+   * a line's link under the label and the line key of its nature.
    */
   private async replaceLinks(
     context: AiExecutionContextWithManager,
@@ -1618,22 +1657,21 @@ export class AiRelationMutationSupportService {
     sourceId: string,
     nextItems: RelationItem[],
     rowAudit: AiMutationAuditOptions | null,
+    nature: BudgetNature | null,
   ): Promise<void> {
-    const table = this.linkTable(config);
-    const logRow = async (recordId: string, action: 'create' | 'update' | 'delete', before: unknown, after: unknown) => {
+    const table = this.linkTable(config, nature);
+    const logRow = async (recordId: string, action: 'create' | 'update' | 'delete', before: Record<string, unknown> | null, after: Record<string, unknown> | null) => {
       if (!rowAudit) return;
-      await this.audit.log(
-        { table: table.table, recordId, action, before, after, userId: context.userId, source: rowAudit.source, sourceRef: rowAudit.sourceRef },
-        { manager: context.manager },
-      );
+      const removal = action === 'delete' ? table.removal : action;
+      await this.logRow(context, rowAudit, table.label, recordId, removal, before && table.shown(before), after && table.shown(after));
     };
-    const current = await this.loadLinks(context, config, sourceId);
+    const current = await this.loadLinks(context, config, sourceId, nature);
     const keptIds = new Set(nextItems.map((item) => textOrNull(item.payload.id)).filter((id): id is string => !!id));
     for (const item of current) {
       const id = String(item.payload.id);
       if (keptIds.has(id)) continue;
       const gone: Array<Record<string, unknown>> = await context.manager.query(
-        `WITH gone AS (DELETE FROM ${table.table} WHERE tenant_id = $1 AND ${table.sourceColumn} = $2 AND id = $3 RETURNING *) SELECT * FROM gone`,
+        `WITH gone AS (DELETE FROM ${table.table} l WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2 AND l.id = $3${table.scope} RETURNING l.*) SELECT * FROM gone`,
         [context.tenantId, sourceId, id],
       );
       for (const row of gone) await logRow(String(row.id), 'delete', row, null);
@@ -1649,35 +1687,87 @@ export class AiRelationMutationSupportService {
         continue;
       }
       const [before]: Array<Record<string, unknown>> = await context.manager.query(
-        `SELECT * FROM ${table.table} WHERE tenant_id = $1 AND ${table.sourceColumn} = $2 AND id = $3`,
+        `SELECT l.* FROM ${table.table} l WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2 AND l.id = $3${table.scope}`,
         [context.tenantId, sourceId, id],
       );
       if (!before || (before.url === item.payload.url && (before.description ?? null) === (item.payload.description ?? null))) continue;
       const after = firstReturnedRow<Record<string, unknown>>(await context.manager.query(
-        `UPDATE ${table.table} SET url = $4, description = $5 WHERE tenant_id = $1 AND ${table.sourceColumn} = $2 AND id = $3 RETURNING *`,
+        `UPDATE ${table.table} l SET url = $4, description = $5${table.touch ? ', updated_at = now()' : ''}
+          WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2 AND l.id = $3${table.scope} RETURNING l.*`,
         [context.tenantId, sourceId, id, item.payload.url, item.payload.description ?? null],
       ));
       if (after) await logRow(id, 'update', before, after);
     }
   }
 
+  /**
+   * A site's internal (users) or external contacts, one row per person: a removed one is deleted, a
+   * kept one keeps its row (its role updated when it changed), a new one is inserted. With
+   * `rowAudit`, each row is audited as `LocationsService` audits it (`create`, `update`, `delete`,
+   * the stored row, `recordId` the link; the site's history reads it by `location_id`).
+   */
   private async replaceLocationContacts(
     context: AiExecutionContextWithManager,
-    tableName: string,
+    tableName: 'location_user_contacts' | 'location_contacts',
     targetColumn: 'user_id' | 'contact_id',
     locationId: string,
     nextItems: RelationItem[],
+    rowAudit: AiMutationAuditOptions | null,
   ): Promise<void> {
-    await context.manager.query(`DELETE FROM ${tableName} WHERE tenant_id = $1 AND location_id = $2`, [context.tenantId, locationId]);
-    for (const item of nextItems) {
-      await context.manager.query(
-        `INSERT INTO ${tableName} (tenant_id, location_id, ${targetColumn}, role) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
-        [context.tenantId, locationId, item.payload[targetColumn], item.payload.role ?? null],
+    const log = async (recordId: string, action: 'create' | 'update' | 'delete', before: unknown, after: unknown) => {
+      if (rowAudit) await this.logRow(context, rowAudit, tableName, recordId, action, before, after);
+    };
+    const current: Array<Record<string, unknown>> = await context.manager.query(
+      `SELECT * FROM ${tableName} WHERE tenant_id = $1 AND location_id = $2`,
+      [context.tenantId, locationId],
+    );
+    const nextByKey = new Map(nextItems.map((item) => [String(item.payload[targetColumn]), item]));
+    const removed = current.filter((row) => !nextByKey.has(String(row[targetColumn]))).map((row) => String(row.id));
+    if (removed.length > 0) {
+      const gone: Array<Record<string, unknown>> = await context.manager.query(
+        `WITH gone AS (DELETE FROM ${tableName} WHERE tenant_id = $1 AND location_id = $2 AND id = ANY($3::uuid[]) RETURNING *) SELECT * FROM gone`,
+        [context.tenantId, locationId, removed],
       );
+      for (const row of gone) await log(String(row.id), 'delete', row, null);
+    }
+    const currentByKey = new Map(current.map((row) => [String(row[targetColumn]), row]));
+    for (const [key, item] of nextByKey) {
+      const role = textOrNull(item.payload.role);
+      const stored = currentByKey.get(key);
+      if (stored) {
+        if ((stored.role ?? null) === role) continue;
+        const after = firstReturnedRow<Record<string, unknown>>(await context.manager.query(
+          `UPDATE ${tableName} SET role = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2 RETURNING *`,
+          [context.tenantId, stored.id, role],
+        ));
+        if (after) await log(String(after.id), 'update', stored, after);
+        continue;
+      }
+      const added: Array<Record<string, unknown>> = await context.manager.query(
+        `WITH added AS (
+           INSERT INTO ${tableName} (tenant_id, location_id, ${targetColumn}, role) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING RETURNING *
+         ) SELECT * FROM added`,
+        [context.tenantId, locationId, key, role],
+      );
+      for (const row of added) await log(String(row.id), 'create', null, row);
     }
   }
 
-  private async replaceSubLocations(context: AiExecutionContextWithManager, locationId: string, nextItems: RelationItem[]): Promise<void> {
+  /**
+   * A site's sub-locations: a removed one is deleted (refused while assets sit in it), a kept one
+   * keeps its row (its name and description updated when they changed), a new one is created as
+   * `LocationsService.createSubItem` creates it (after the others, in display order). With
+   * `rowAudit`, each row is audited as that service audits it.
+   */
+  private async replaceSubLocations(
+    context: AiExecutionContextWithManager,
+    locationId: string,
+    nextItems: RelationItem[],
+    rowAudit: AiMutationAuditOptions | null,
+  ): Promise<void> {
+    const log = async (recordId: string, action: 'create' | 'update' | 'delete', before: unknown, after: unknown) => {
+      if (rowAudit) await this.logRow(context, rowAudit, 'location_sub_items', recordId, action, before, after);
+    };
     const current = await this.loadSubLocations(context, locationId);
     const nextExistingIds = new Set(nextItems.map((item) => textOrNull(item.payload.id)).filter(Boolean) as string[]);
     const toDelete = current.filter((item) => !nextExistingIds.has(String(item.payload.id)));
@@ -1689,26 +1779,38 @@ export class AiRelationMutationSupportService {
       if (Number(assetRows[0]?.c || '0') > 0) {
         throw new BadRequestException(`Cannot remove sub-location "${item.label}" because assets are assigned to it.`);
       }
-      await context.manager.query(`DELETE FROM location_sub_items WHERE tenant_id = $1 AND id = $2`, [context.tenantId, item.payload.id]);
+      const gone: Array<Record<string, unknown>> = await context.manager.query(
+        `WITH gone AS (DELETE FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2 AND id = $3 RETURNING *) SELECT * FROM gone`,
+        [context.tenantId, locationId, item.payload.id],
+      );
+      for (const row of gone) await log(String(row.id), 'delete', row, null);
     }
+    const repo = context.manager.getRepository(LocationSubItem);
     for (const item of nextItems) {
       const id = textOrNull(item.payload.id);
       const name = textOrNull(item.payload.name);
       if (!name) continue;
+      const description = textOrNull(item.payload.description);
       if (id) {
-        await context.manager.query(
-          `UPDATE location_sub_items SET name = $1, description = $2, updated_at = now() WHERE tenant_id = $3 AND location_id = $4 AND id = $5`,
-          [name, item.payload.description ?? null, context.tenantId, locationId, id],
+        const [before]: Array<Record<string, unknown>> = await context.manager.query(
+          `SELECT * FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2 AND id = $3`,
+          [context.tenantId, locationId, id],
         );
-      } else {
-        await context.manager.query(
-          `
-          INSERT INTO location_sub_items (tenant_id, location_id, name, description, display_order)
-          VALUES ($1, $2, $3, $4, COALESCE((SELECT MAX(display_order) + 1 FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2), 0))
-          `,
-          [context.tenantId, locationId, name, item.payload.description ?? null],
-        );
+        if (!before || (before.name === name && (before.description ?? null) === description)) continue;
+        const after = firstReturnedRow<Record<string, unknown>>(await context.manager.query(
+          `UPDATE location_sub_items SET name = $4, description = $5, updated_at = now() WHERE tenant_id = $1 AND location_id = $2 AND id = $3 RETURNING *`,
+          [context.tenantId, locationId, id, name, description],
+        ));
+        if (after) await log(id, 'update', before, after);
+        continue;
       }
+      const [{ next }]: Array<{ next: number }> = await context.manager.query(
+        `SELECT COALESCE(MAX(display_order) + 1, 0)::int AS next FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2`,
+        [context.tenantId, locationId],
+      );
+      // The entity as the service saves it, so the audit row holds the same fields.
+      const saved = await repo.save(repo.create({ tenant_id: context.tenantId, location_id: locationId, name, description, display_order: Number(next) }));
+      await log(saved.id, 'create', null, saved);
     }
   }
 
@@ -1779,24 +1881,6 @@ export class AiRelationMutationSupportService {
         );
         for (const row of added) await log(String(row.id), 'create', null, row);
       }
-    }
-  }
-
-  /** The table the audit log names: a CAPEX line's own relation keeps its CAPEX table name (`auditTableOf`). */
-  private auditTableName(config: RelationConfig, nature: BudgetNature | null): string {
-    const capex = config.sourceEntity === 'budget_lines' && nature === 'capex';
-    const label = (table: string) => (capex ? auditTableOf('capex', table) : table);
-    if (config.kind === 'simple') return label(config.table);
-    switch (config.kind) {
-      case 'owner_role': return 'application_owners';
-      case 'contact_role': return label(this.contactTable(config).table);
-      case 'supplier_contacts': return 'supplier_contacts';
-      case 'asset_relations': return 'asset_relations';
-      case 'link': return label(this.linkTable(config).table);
-      case 'location_internal_contacts': return 'location_user_contacts';
-      case 'location_external_contacts': return 'location_contacts';
-      case 'sub_locations': return 'location_sub_items';
-      case 'app_asset_assignments': return 'app_asset_assignments';
     }
   }
 
