@@ -15,7 +15,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **IT landscape > Locations**
 
-**What to do.** Click **Add location** and create your server rooms, data centers or clouds: a code, a name and a hosting type.
+**What to do.** Click **Add location** and create your server rooms, data centers or clouds: a name and a hosting type.
 
 **What you see.** Every asset belongs to a location, which gives it its provider, hosting type and country. A location missing later can also be created from the **Location** field of an asset.
 

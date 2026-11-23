@@ -292,12 +292,12 @@ export const fr: EmailStrings = {
     angleChosen: {
       budget: 'la gestion du budget IT',
       cartography: 'la cartographie du SI',
-      portfolio: 'le suivi des projets et des demandes',
+      portfolio: 'le pilotage du portefeuille',
     },
     pathNames: {
       budget: 'le budget IT',
       cartography: 'la cartographie du SI',
-      portfolio: 'les projets et les demandes',
+      portfolio: 'le portefeuille',
     },
     billingPath: 'Administration › Facturation',
     installGuide: "guide d'installation",

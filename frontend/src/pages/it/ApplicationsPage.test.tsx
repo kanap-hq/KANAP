@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,7 +8,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 
 const grid = vi.hoisted(() => ({ calls: [] as any[] }));
 const features = vi.hoisted(() => ({ vulnerabilityFeed: false, isLoading: false }));
-const auth = vi.hoisted(() => ({ write: true }));
+const auth = vi.hoisted(() => ({ write: true, reader: true }));
 const dialogs = vi.hoisted(() => ({ edit: null as any, delete: null as any }));
 
 vi.mock('react-i18next', () => {
@@ -17,7 +17,8 @@ vi.mock('react-i18next', () => {
 });
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
-    hasLevel: (_area: string, level: string) => level === 'reader' || auth.write,
+    // Reader is its own flag: a re-render can grant or remove it while the page stays mounted.
+    hasLevel: (_area: string, level: string) => (level === 'reader' ? auth.reader : auth.reader && auth.write),
     profile: { id: 'u-1' },
   }),
 }));
@@ -36,10 +37,11 @@ vi.mock('../../config/FeaturesContext', () => ({
 vi.mock('../../components/ServerDataGrid', () => ({
   default: (props: unknown) => {
     grid.calls.push(props);
-    return null;
+    return <div data-testid="applications-grid" />;
   },
 }));
 
+import api from '../../api';
 import ApplicationsPage from './ApplicationsPage';
 
 const lastProps = () => grid.calls[grid.calls.length - 1] as {
@@ -53,13 +55,18 @@ const lastProps = () => grid.calls[grid.calls.length - 1] as {
   onColumnStateChange: (state: Array<{ colId: string; hide?: boolean }>) => void;
 };
 
-function renderPage(search = '') {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
+function pageTree(client: QueryClient, search: string) {
+  return (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[`/it/applications${search}`]}><ApplicationsPage /></MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+}
+
+function renderPage(search = '') {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const view = render(pageTree(client, search));
+  return { ...view, rerenderPage: () => view.rerender(pageTree(client, search)) };
 }
 
 /** The columns of the list's data, without the selection column. */
@@ -84,6 +91,7 @@ describe('ApplicationsPage', () => {
     features.vulnerabilityFeed = false;
     features.isLoading = false;
     auth.write = true;
+    auth.reader = true;
     dialogs.edit = dialogs.delete = null;
   });
 
@@ -348,5 +356,74 @@ describe('ApplicationsPage', () => {
     expect(lastProps().onCellClicked).toBeUndefined();
     expect(editButton()).toBeNull();
     expect(dialogs.edit).toBeNull();
+  });
+
+  // The page's own useQuery stays real (the team read). A mocked query does not show a hook-count change.
+  it('shows the list then the access denied page when read access is granted and removed, and the reverse', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const teamUrl = '/portfolio/team-members/by-user/u-1';
+    const teamCalls = () => vi.mocked(api.get).mock.calls.filter((call) => call[0] === teamUrl).length;
+    try {
+      auth.write = false;
+      auth.reader = true;
+      vi.mocked(api.get).mockClear();
+      const granted = renderPage();
+      expect(screen.queryByRole('heading', { name: 'forbidden.title' })).not.toBeInTheDocument();
+      expect(screen.getByTestId('applications-grid')).toBeInTheDocument();
+      await waitFor(() => expect(teamCalls()).toBeGreaterThan(0));
+
+      auth.reader = false;
+      act(() => { granted.rerenderPage(); });
+      expect(screen.getByRole('heading', { name: 'forbidden.title' })).toBeInTheDocument();
+      expect(screen.queryByTestId('applications-grid')).not.toBeInTheDocument();
+      granted.unmount();
+
+      grid.calls = [];
+      vi.mocked(api.get).mockClear();
+      auth.reader = false;
+      const denied = renderPage();
+      expect(screen.getByRole('heading', { name: 'forbidden.title' })).toBeInTheDocument();
+      expect(screen.queryByTestId('applications-grid')).not.toBeInTheDocument();
+      expect(grid.calls).toHaveLength(0);
+      expect(teamCalls()).toBe(0);
+
+      auth.reader = true;
+      act(() => { denied.rerenderPage(); });
+      expect(screen.queryByRole('heading', { name: 'forbidden.title' })).not.toBeInTheDocument();
+      expect(screen.getByTestId('applications-grid')).toBeInTheDocument();
+      await waitFor(() => expect(teamCalls()).toBeGreaterThan(0));
+
+      expect(errors.mock.calls.flat().join(' ')).not.toMatch(/change in the order of Hooks|Rendered more hooks|Rendered fewer hooks/);
+    } finally {
+      errors.mockRestore();
+    }
+  });
+
+  it('shows an empty owners cell and an empty residency cell when the value is not a list', () => {
+    renderPage();
+    const columns = lastProps().columns;
+    const owners = columns.find((column) => column.field === 'owners_business')!.cellRenderer!;
+    const ownersIt = columns.find((column) => column.field === 'owners_it')!.cellRenderer!;
+    const residency = columns.find((column) => column.field === 'data_residency')!.cellRenderer!;
+    expect(ownersIt).toBe(owners);
+    const row = { id: 'a-1', name: 'Payroll' };
+    const draw = (Cell: React.FC<any>, value: unknown) => render(
+      <MemoryRouter><Cell value={value} data={row} /></MemoryRouter>,
+    );
+
+    for (const value of ['Ann', 4, { country: 'FR' }]) {
+      const drawnOwners = draw(owners, value);
+      expect(drawnOwners.getByText('—')).toBeInTheDocument();
+      drawnOwners.unmount();
+      const drawnResidency = draw(residency, value);
+      expect(drawnResidency.getByText('—')).toBeInTheDocument();
+      drawnResidency.unmount();
+    }
+
+    const listed = draw(owners, ['Ann', 'Bob']);
+    expect(listed.getByText('Ann +1')).toBeInTheDocument();
+    listed.unmount();
+    const countries = draw(residency, ['FR', 'DE', 'US']);
+    expect(countries.getByText('FR, DE +1')).toBeInTheDocument();
   });
 });

@@ -281,7 +281,10 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     // application under it, with the reference in its header.
     const [{ sequential_id }] = await mg.query(`SELECT sequential_id FROM applications WHERE id = $1 AND tenant_id = $2`, [saved.id, tenantId]);
     saved.sequential_id = sequential_id;
-    await this.audit.log({ table: 'applications', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
+    await this.audit.log({
+      table: 'applications', recordId: saved.id, action: 'create', before: null, after: saved, userId,
+      ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
+    }, { manager: mg });
     return Object.assign(saved, classificationReadState(saved));
   }
 

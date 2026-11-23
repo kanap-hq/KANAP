@@ -2,7 +2,7 @@
   "conversationList": {
     "delete": "Delete",
     "deleteConfirmMessage": "The conversation and its messages are deleted. This cannot be undone.",
-    "deleteConfirmTitle": "Delete this conversation?",
+    "deleteConfirmTitle": "Delete {{name}}?",
     "dateGroups": {
       "lastWeek": "Last 7 days",
       "older": "Older",
@@ -315,8 +315,10 @@
         "it_users": "IT users",
         "manual_company": "Manual by company",
         "manual_department": "Manual by department",
+        "manual_pct": "Manual percentages",
         "turnover": "Turnover"
       },
+      "allocationsRemoved": "Removed",
       "classificationReview": {
         "reviewed": "Reviewed",
         "stale": "Stale after this change"
@@ -436,10 +438,10 @@
     "aliases": "Aliases: {{aliases}}"
   },
   "tokenUsage": {
-    "total": "Volume processed",
-    "input": "Input tokens",
-    "output": "Output tokens",
-    "lastInput": "Context of the last request"
+    "total": "Volume processed:",
+    "input": "Input tokens:",
+    "output": "Output tokens:",
+    "lastInput": "Context of the last request:"
   },
   "usageIndicator": {
     "limitReached": "Monthly limit reached. Resets {{resetDate}}.",

@@ -29,6 +29,8 @@ The history lists one entry per change, the most recent at the top. Each entry s
 
 A change of amount names the year, the column and the values before and after.
 
+A change made by Kad leaves the same entries as the same change made on the screen, marked **Kad for** the person who approved it. When you ask Kad to undo a change, the undo leaves its entries in the same way.
+
 Long histories load in pages: click **Load more** at the bottom of the list to see older changes.
 
 ## Changes to the parts of a record
@@ -42,6 +44,14 @@ The history also lists the changes made to the parts of a record. On a budget li
 - contacts;
 - linked applications, technologies and assets;
 - tasks.
+
+On a budget column built with **Quantity and price**, the entry of a budget input also says what changed in the calculation, just above the change of amounts:
+
+- each property that changed on a costed line: calendar, quantity, unit, unit price, price per, how often, days per month or period. The line is named by its description, or by its number when it has none. For example: "Costed line Consultant, calendar: France → Germany";
+- the working days of a calendar, by calendar and year, when you use the lines again after a change to the calendar. For example: "Working days of France 2027: 218 → 217";
+- the calendars a column copy could not keep, in the words of the copy preview.
+
+A restored column lists them the same way. Older entries show them too.
 
 On the other records, the history lists in the same way the links and parts they hold: budget lines, applications, assets, contracts, team members, contacts, dependencies, web links, embedded documents, attachments, tasks, deployments and criteria scores.
 

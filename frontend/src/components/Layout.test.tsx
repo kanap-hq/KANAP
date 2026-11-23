@@ -4,6 +4,7 @@ import { Link, MemoryRouter, Route, Routes, createRoutesFromChildren } from 'rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Layout from './Layout';
+import { aiAgentControlApi } from '../ai/aiApi';
 import { registerLeaveGuard } from '../hooks/leaveGuard';
 import { DeferredPageLocation } from '../lib/deferredPage';
 
@@ -23,8 +24,19 @@ const access = vi.hoisted(() => ({
   sampleData: false,
   version: 'unknown',
   aiChat: false,
+  aiSettings: false,
   aiData: undefined as unknown,
   vulnerabilityFeed: false,
+  subscription: {
+    status: 'trialing',
+    is_subscription_healthy: false,
+    trial_days_remaining: 5,
+  } as null | {
+    status: string;
+    is_subscription_healthy: boolean;
+    trial_days_remaining: number | null;
+    access_allowed?: boolean;
+  },
   profile: { first_name: 'Ada' as string | null, last_name: 'Lovelace' as string | null, email: 'ada@example.com' as string | null },
 }));
 vi.mock('../auth/AuthContext', () => ({
@@ -38,8 +50,8 @@ vi.mock('../auth/AuthContext', () => ({
     },
     claims: { isGlobalAdmin: access.isGlobalAdmin, isPlatformAdmin: false, isBillingAdmin: false },
     profile: access.profile,
-    // A trial in progress: the subscription banner shows.
-    subscription: { status: 'trialing', is_subscription_healthy: false, trial_days_remaining: 5 },
+    // A trial in progress by default: the subscription banner shows. A test may replace it.
+    subscription: access.subscription,
   }),
 }));
 
@@ -53,7 +65,7 @@ vi.mock('../config/FeaturesContext', () => ({
   useFeatures: () => ({
     config: {
       deploymentMode: access.deploymentMode,
-      features: { billing: true, aiChat: access.aiChat, aiSettings: false, sso: false, email: false, sampleData: access.sampleData, vulnerabilityFeed: access.vulnerabilityFeed },
+      features: { billing: true, aiChat: access.aiChat, aiSettings: access.aiSettings, sso: false, email: false, sampleData: access.sampleData, vulnerabilityFeed: access.vulnerabilityFeed },
       version: access.version,
     },
     isLoading: false,
@@ -894,5 +906,54 @@ describe('Layout Plaid tab when chat is turned off', () => {
     };
     renderShell();
     expect(plaidTab()).not.toBeInTheDocument();
+  });
+});
+
+describe('Layout agent badges', () => {
+  const trialSubscription = {
+    status: 'trialing',
+    is_subscription_healthy: false,
+    trial_days_remaining: 5,
+  };
+
+  afterEach(() => {
+    access.aiSettings = false;
+    access.aiData = undefined;
+    access.subscription = trialSubscription;
+    vi.mocked(aiAgentControlApi.getBadges).mockClear();
+  });
+
+  // Agents are visible: the feature is on, the person may read them, and the instance allows it.
+  function readerOfAgents() {
+    access.aiSettings = true;
+    access.aiData = {
+      surfaces: { chat: { available: false }, settings: { available: false } },
+      instance_features: { ai_settings: true },
+    };
+  }
+
+  it('does not request agent badges when the subscription refuses access', async () => {
+    readerOfAgents();
+    access.subscription = { ...trialSubscription, access_allowed: false };
+    renderShell();
+    // The query starts in an effect. Give it the turn it would use, then check it stayed quiet.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(aiAgentControlApi.getBadges).not.toHaveBeenCalled();
+  });
+
+  it('requests agent badges when the subscription allows access', async () => {
+    readerOfAgents();
+    access.subscription = { ...trialSubscription, access_allowed: true };
+    renderShell();
+    await waitFor(() => expect(aiAgentControlApi.getBadges).toHaveBeenCalled());
+  });
+
+  it('requests agent badges when there is no subscription summary', async () => {
+    readerOfAgents();
+    access.subscription = null;
+    renderShell();
+    await waitFor(() => expect(aiAgentControlApi.getBadges).toHaveBeenCalled());
   });
 });

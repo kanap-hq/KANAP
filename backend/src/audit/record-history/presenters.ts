@@ -1,4 +1,5 @@
 import { formatCentsFixed, toCents } from '../../common/amount';
+import { Decimal } from '../../common/decimal';
 import type { FamilyKey, ReferenceRow } from './families';
 import { historyFields } from './fields';
 import {
@@ -66,6 +67,11 @@ export type RecordHistoryChange = {
   changed?: boolean;
   /** A fixed word standing for the change of a hidden value (a document body): `contentChanged`. */
   text?: string;
+  /** The costed line a change names: its description (absent when it has none) and its place, from 1. */
+  line?: string;
+  lineNumber?: number;
+  /** The working-day calendar whose days of the year changed (`calendar_days`). */
+  calendar?: string | null;
 };
 
 export type RecordHistorySubject = {
@@ -456,24 +462,175 @@ function roundInputLines(value: unknown): Array<{ label: string }> {
     .filter((line) => line.label.trim() !== '');
 }
 
+/** A costed line as the audit row of its budget input carries it (`RoundLine`). */
+type CalcLine = {
+  label: string;
+  quantity_unit: unknown;
+  quantity: unknown;
+  unit_price: unknown;
+  price_basis: unknown;
+  frequency: unknown;
+  days_per_month: unknown;
+  period_start: unknown;
+  period_end: unknown;
+  calendarId: string | null;
+  calendar: unknown;
+};
+
+/** A calendar as a line names it: its name, else its code; a calendar with neither is a nameless one. */
+function calendarValue(line: Record<string, unknown>): unknown {
+  for (const key of ['working_day_profile_name', 'working_day_profile_code']) {
+    const value = line[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return isUuid(line.working_day_profile_id) ? { hidden: true, kind: 'calendar' } : null;
+}
+
+function calcLines(value: unknown): CalcLine[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isPlainObject).map((line) => ({
+    label: typeof line.label === 'string' ? line.label : '',
+    quantity_unit: line.quantity_unit ?? null,
+    quantity: line.quantity ?? null,
+    unit_price: line.unit_price ?? null,
+    price_basis: line.price_basis ?? null,
+    frequency: line.frequency ?? null,
+    days_per_month: line.days_per_month ?? null,
+    period_start: line.period_start ?? null,
+    period_end: line.period_end ?? null,
+    calendarId: isUuid(line.working_day_profile_id) ? line.working_day_profile_id.toLowerCase() : null,
+    calendar: calendarValue(line),
+  }));
+}
+
+/** A stored decimal without its trailing zeros ('1.000' and '1' are one value); any other value as it is. */
+function decimalValue(value: unknown): unknown {
+  if (typeof value !== 'string' && typeof value !== 'number') return value ?? null;
+  try {
+    return Decimal.from(String(value).trim()).toString();
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * The lines before and after paired: by description, in their order when several share one (a
+ * unique description pairs whatever its place; lines without one pair by rank among themselves).
+ * The lines left on one side were added or removed.
+ */
+function pairCalcLines(before: CalcLine[], after: CalcLine[]) {
+  const waiting = new Map<string, number[]>();
+  before.forEach((line, index) => waiting.set(line.label, [...(waiting.get(line.label) ?? []), index]));
+  const pairs: Array<{ before: CalcLine; after: CalcLine; place: number }> = [];
+  const added: CalcLine[] = [];
+  after.forEach((line, index) => {
+    const match = waiting.get(line.label)?.shift();
+    if (match === undefined) added.push(line);
+    else pairs.push({ before: before[match], after: line, place: index + 1 });
+  });
+  const removed = Array.from(waiting.values()).flat().sort((a, b) => a - b).map((index) => before[index]);
+  return { pairs, added, removed };
+}
+
+/**
+ * Each property of a paired line that moved, named with the line: its calendar, quantity, unit,
+ * unit price, price basis, frequency, days per month (null: full time) and period.
+ */
+function calcLineChanges(before: CalcLine, after: CalcLine, place: number): RecordHistoryChange[] {
+  const name = after.label.trim();
+  const named = { ...(name ? { line: name } : {}), lineNumber: place };
+  const changes: RecordHistoryChange[] = [];
+  const sameCalendar = before.calendarId !== null || after.calendarId !== null
+    ? before.calendarId === after.calendarId
+    : deepEqual(before.calendar, after.calendar);
+  if (!sameCalendar) changes.push({ field: 'line_calendar', ...named, before: before.calendar, after: after.calendar });
+  const properties: Array<[string, keyof CalcLine, boolean]> = [
+    ['line_quantity', 'quantity', true],
+    ['line_unit', 'quantity_unit', false],
+    ['line_unit_price', 'unit_price', true],
+    ['line_price_basis', 'price_basis', false],
+    ['line_frequency', 'frequency', false],
+    ['line_days_per_month', 'days_per_month', true],
+  ];
+  for (const [field, key, decimal] of properties) {
+    const b = decimal ? decimalValue(before[key]) : before[key] ?? null;
+    const a = decimal ? decimalValue(after[key]) : after[key] ?? null;
+    if (!deepEqual(b, a)) changes.push({ field, ...named, before: b, after: a });
+  }
+  if (!deepEqual(before.period_start, after.period_start) || !deepEqual(before.period_end, after.period_end)) {
+    changes.push({
+      field: 'line_period',
+      ...named,
+      before: { start: before.period_start, end: before.period_end },
+      after: { start: after.period_start, end: after.period_end },
+    });
+  }
+  return changes;
+}
+
+/**
+ * The working days of the year of each calendar a calculation's per-day lines used, by calendar and
+ * year: the sum of the calendar's twelve months (`day_counts`), the same for every line on it. Read
+ * from a computed column, or from the result of the lines a spread or a copy carries.
+ */
+function calendarYearDays(calculation: unknown): Map<string, { calendar: string | null; year: number; days: string }> {
+  const out = new Map<string, { calendar: string | null; year: number; days: string }>();
+  if (!isPlainObject(calculation)) return out;
+  const result = calculation.kind === 'computed' ? calculation : isPlainObject(calculation.lines_result) ? calculation.lines_result : null;
+  if (!result || !Array.isArray(result.lines)) return out;
+  for (const line of result.lines) {
+    if (!isPlainObject(line) || !Array.isArray(line.day_counts) || line.day_counts.length !== 12) continue;
+    const year = typeof line.period_start === 'string' ? budgetYear(line.period_start.slice(0, 4)) : null;
+    const calendar = calendarValue(line);
+    const id = isUuid(line.working_day_profile_id) ? line.working_day_profile_id.toLowerCase() : typeof calendar === 'string' ? calendar : null;
+    if (year === null || id === null) continue;
+    const key = `${id}|${year}`;
+    if (out.has(key)) continue;
+    try {
+      const days = line.day_counts.reduce((total: Decimal, value: unknown) => total.add(String(value)), Decimal.ZERO).toString();
+      out.set(key, { calendar: typeof calendar === 'string' ? calendar : null, year, days });
+    } catch {
+      // A calculation that does not hold twelve decimals names no days.
+    }
+  }
+  return out;
+}
+
+/**
+ * A calendar whose working days changed since the lines were last computed, when the person uses
+ * the lines again: the lines are the same (the row carries none), the calculation holds the days.
+ */
+function calendarDaysChanges(before: Record<string, unknown>, after: Record<string, unknown>): RecordHistoryChange[] {
+  const previous = calendarYearDays(before.last_calculation);
+  const changes: RecordHistoryChange[] = [];
+  for (const [key, now] of calendarYearDays(after.last_calculation)) {
+    const was = previous.get(key);
+    if (!was || was.days === now.days) continue;
+    changes.push({ field: 'calendar_days', calendar: now.calendar ?? was.calendar, year: now.year, before: was.days, after: now.days });
+  }
+  return changes;
+}
+
 function roundInputChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   const before = isPlainObject(row.before_json) ? row.before_json : {};
   const after = isPlainObject(row.after_json) ? row.after_json : {};
   const changes = genericChanges(row, ctx, { label: row.table_name });
   const beforeLines = roundInputLines(before.lines);
   const afterLines = roundInputLines(after.lines);
-  const beforeLabels = new Set(beforeLines.map((line) => line.label));
-  const afterLabels = new Set(afterLines.map((line) => line.label));
-  for (const line of afterLines) {
-    if (!beforeLabels.has(line.label)) changes.push({ field: 'line', event: 'added', after: line.label });
+  const paired = pairCalcLines(calcLines(before.lines), calcLines(after.lines));
+  // A line without a description is neither added nor removed by name, as before.
+  for (const line of paired.added) {
+    if (line.label.trim() !== '') changes.push({ field: 'line', event: 'added', after: line.label });
   }
-  for (const line of beforeLines) {
-    if (!afterLabels.has(line.label)) changes.push({ field: 'line', event: 'removed', before: line.label });
+  for (const line of paired.removed) {
+    if (line.label.trim() !== '') changes.push({ field: 'line', event: 'removed', before: line.label });
   }
   if (beforeLines.length === afterLines.length && deepEqual(beforeLines, afterLines) === false
     && changes.every((change) => change.field !== 'line')) {
     changes.push({ field: 'lines', before: beforeLines.length, after: afterLines.length, changed: true });
   }
+  for (const pair of paired.pairs) changes.push(...calcLineChanges(pair.before, pair.after, pair.place));
+  changes.push(...calendarDaysChanges(before, after));
   return changes;
 }
 
@@ -1713,9 +1870,39 @@ function columnOperationChanges(row: AuditRow): RecordHistoryChange[] | null {
       ...(typeof after.sourceYear === 'number' ? { sourceYear: after.sourceYear } : {}),
       sourceColumn,
       ...(after.percentageIncrease !== undefined ? { percentageIncrease: String(after.percentageIncrease) } : {}),
-    }];
+    }, ...copyCalendarChanges(after)];
   }
   return null;
+}
+
+/**
+ * The calendars a column copy could not keep (`calendar_issues`): a calendar without working days
+ * in the destination year replaced by the company's standard one, a line copied as a reference
+ * because none had days, a disabled calendar still used. The copy names a line without a
+ * description "Line n": it reads as its place.
+ */
+function copyCalendarChanges(after: Record<string, unknown>): RecordHistoryChange[] {
+  if (!Array.isArray(after.calendar_issues)) return [];
+  const year = typeof after.destinationYear === 'number' ? { year: after.destinationYear } : {};
+  const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : null);
+  const changes: RecordHistoryChange[] = [];
+  for (const issue of after.calendar_issues) {
+    if (!isPlainObject(issue)) continue;
+    const lineNumber = typeof issue.lineNumber === 'number' ? issue.lineNumber : undefined;
+    const name = text(issue.line);
+    const named = {
+      ...(name && name !== `Line ${lineNumber}` ? { line: name } : {}),
+      ...(lineNumber === undefined ? {} : { lineNumber }),
+    };
+    if (issue.kind === 'fallback') {
+      changes.push({ field: 'line_calendar_replaced', ...named, ...year, before: text(issue.calendar), after: text(issue.fallback) });
+    } else if (issue.kind === 'missing') {
+      changes.push({ field: 'line_calendar_missing', ...named, ...year, before: text(issue.calendar) });
+    } else if (issue.kind === 'disabled') {
+      changes.push({ field: 'line_calendar_disabled', ...named, after: text(issue.calendar) });
+    }
+  }
+  return changes;
 }
 
 function taskPeople(value: unknown): string[] {

@@ -31,7 +31,7 @@ const WriteFinancialPlanInputSchema = z.object({
   amounts: z.unknown().optional()
     .describe('For upsert_amounts only. Use {kind:"annual", year, totals:{planned,forecast,committed,actual,expected_landing}}, {kind:"quarterly", year, measure, Q1..Q4}, or {kind:"monthly", year, months:[{period:"YYYY-MM-01", planned, forecast, committed, actual, expected_landing}]}.'),
   allocations: z.array(z.unknown()).optional()
-    .describe('For replace_allocations only. Manual company allocations accept company refs; manual department allocations accept department refs plus optional company refs. Automatic methods require an empty array.'),
+    .describe('For replace_allocations only, read with the version\'s allocation_method. manual_company: company refs only, their shares follow allocation_driver. manual_department: department refs plus optional company refs, shares follow the departments\' headcount. manual_pct: {company, allocation_pct} per company, summing to 100 (set allocation_method manual_pct with update_version first to split by given percentages). Automatic methods require an empty array.'),
 });
 
 @Injectable()
@@ -46,7 +46,7 @@ export class WriteFinancialPlanAiMutationOperation implements AiMutationOperatio
     version_ref: 'Required except for create_version. Use a version UUID, exact version name, or budget year when unique.',
     fields: 'Version fields for create_version/update_version. Unknown fields are rejected; budget_year is create-only.',
     amounts: 'Amount payload for upsert_amounts. Annual, quarterly, and monthly payload shapes are supported.',
-    allocations: 'Allocation entries for replace_allocations. Use empty array for automatic allocation methods.',
+    allocations: 'Allocation entries for replace_allocations: companies (manual_company, shares from the driver), departments (manual_department), or companies with allocation_pct (manual_pct). Use empty array for automatic allocation methods.',
   };
   readonly businessResource = 'budget';
   readonly businessResources = AI_FINANCIAL_PLAN_BUSINESS_RESOURCES;

@@ -1297,7 +1297,8 @@ export class CsvImportService {
    * (accents set aside, a shipped name in another language) when the person reads the family and has
    * not undone that value (`params.unmatched`). A match beyond case is noted for the result. Kad's
    * proposal for the value comes first (`params.proposals`): the record it names, exactly or case
-   * aside, in a family the person reads, is a match of origin model; otherwise the proposal is noted
+   * aside, in a family the person reads, is a match of origin model, unless the cell finds that very
+   * record by its own name (then the server's match, lot I6b of 26.12.1); otherwise the proposal is noted
    * as refused, naming nothing of the family, and the cell is found by its own name. `byConfig` (a
    * field the config matches itself, `nameMatchedByConfig`): case aside only, no proposal.
    */
@@ -1314,7 +1315,11 @@ export class CsvImportService {
     const proposal = undone ? undefined : proposalFor(context.params.proposals, column, value);
     if (proposal !== undefined) {
       const target = reads ? this.resolver.resolveName(fkEntity, proposal, context.resolverCache, { beyondCase: false }) : null;
-      if (target?.kind === 'one') {
+      // The server's own match first (lot I6b of 26.12.1): Kad naming the record the value finds alone
+      // is no proposal to list, taken or refused; the value follows its own rule below.
+      const own = target?.kind === 'one' ? this.resolver.resolveName(fkEntity, value, context.resolverCache, { beyondCase: true }) : null;
+      const same = target?.kind === 'one' && own?.kind === 'one' && own.entry.id === target.entry.id;
+      if (target?.kind === 'one' && !same) {
         if (context.nameMatches) {
           noteNameMatch(context.nameMatches, {
             column, name: null, value: value.trim(), target: target.target, ref: target.ref, origin: 'model', reason: 'model', undoable: true,
@@ -1322,7 +1327,7 @@ export class CsvImportService {
         }
         return { id: target.entry.id };
       }
-      if (context.refusedProposals) {
+      if (!same && context.refusedProposals) {
         noteRefusedProposal(context.refusedProposals, { column, name: null, value: value.trim(), target: proposal, reason: 'missing' }, row.rowNumber);
       }
     }

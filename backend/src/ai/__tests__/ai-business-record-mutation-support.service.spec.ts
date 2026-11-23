@@ -98,7 +98,6 @@ function createHarness() {
     {} as any,
     {} as any,
     {} as any,
-    {} as any,
     itOpsSettings,
     {} as any,
     {} as any,

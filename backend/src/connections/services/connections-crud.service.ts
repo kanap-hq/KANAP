@@ -145,7 +145,8 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
   /**
    * Create a new connection.
    */
-  async create(body: any, tenantId: string, userId: string | null, opts?: ServiceOpts) {
+  /** `audit`: the source of the connection's audit row when it is not the person on the screen (Kad's card). */
+  async create(body: any, tenantId: string, userId: string | null, opts?: ServiceOpts & { audit?: AuditSourceOptions }) {
     const tenant = this.ensureTenantId(tenantId);
     const mg = opts?.manager ?? this.connRepo.manager;
     if (!body || typeof body !== 'object') throw new BadRequestException('Body is required');
@@ -258,7 +259,10 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     }
 
     await this.audit.log(
-      { table: 'connections', recordId: saved.id, action: 'create', before: null, after: saved, userId },
+      {
+        table: 'connections', recordId: saved.id, action: 'create', before: null, after: saved, userId,
+        ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null } : {}),
+      },
       { manager: mg },
     );
 
@@ -268,7 +272,8 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
   /**
    * Update an existing connection.
    */
-  async update(id: string, body: any, tenantId: string, userId: string | null, opts?: ServiceOpts) {
+  /** `audit`: as for `create`. */
+  async update(id: string, body: any, tenantId: string, userId: string | null, opts?: ServiceOpts & { audit?: AuditSourceOptions }) {
     const tenant = this.ensureTenantId(tenantId);
     const mg = opts?.manager ?? this.connRepo.manager;
     if (!body || typeof body !== 'object') throw new BadRequestException('Body is required');
@@ -500,7 +505,10 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     }
 
     await this.audit.log(
-      { table: 'connections', recordId: id, action: 'update', before, after: saved, userId },
+      {
+        table: 'connections', recordId: id, action: 'update', before, after: saved, userId,
+        ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null } : {}),
+      },
       { manager: mg },
     );
 

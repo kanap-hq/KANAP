@@ -397,7 +397,11 @@ async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportCon
       const proposal = proposalOf(name);
       if (proposal !== undefined) {
         const target = proposed?.(proposal);
-        if (target?.kind === 'one') {
+        // The server's own match first (lot I6b of 26.12.1): Kad naming the record the name finds alone
+        // is no proposal to list, taken or refused; the name follows its own rule below.
+        const own = target?.kind === 'one' ? lookup(name) : null;
+        const same = target?.kind === 'one' && own?.kind === 'one' && own.id === target.id;
+        if (target?.kind === 'one' && !same) {
           row.parsed.related_object_id = target.id;
           delete row.parsed._related_object_name;
           if (context.nameMatches) {
@@ -408,7 +412,7 @@ async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportCon
           }
           continue;
         }
-        if (context.refusedProposals) {
+        if (!same && context.refusedProposals) {
           noteRefusedProposal(context.refusedProposals, { column: 'related_object_name', name: null, value: name, target: proposal, reason: 'missing' }, row.rowNumber);
         }
       }
@@ -436,6 +440,27 @@ async function resolveRelatedObjects(rows: CsvImportRow[], context: CsvImportCon
 function importedObjectType(row: CsvImportRow): string {
   const value = String(importedValue(row, 'related_object_type') ?? '').trim().toLowerCase();
   return objectTypeLookup.get(value) ?? value;
+}
+
+/**
+ * A row whose task would keep a related object type and no object is refused on its own row.
+ * Names are already resolved (`resolveRelatedObjects`): a name nothing finds has its own error.
+ * A blank id and a blank name on an existing task keep the stored object (`importedValue`).
+ * A row the operation skips is not checked. The commit still refuses the same case.
+ */
+function requireRelatedObject(rows: CsvImportRow[], operation: string): void {
+  for (const row of rows) {
+    if (row.errors.length > 0 || skippedByOperation(row, operation)) continue;
+    if (!importedObjectType(row)) continue;
+    const id = importedValue(row, 'related_object_id');
+    if (id != null && String(id).trim() !== '') continue;
+    row.errors.push({
+      row: row.rowNumber,
+      column: 'related_object_type',
+      message: 'Give related_object_id or related_object_name to link the task.',
+      code: 'CSV_TASK_OBJECT_REQUIRED',
+    });
+  }
 }
 
 /**
@@ -1059,6 +1084,7 @@ export const taskCsvConfig: CsvEntityConfig = {
     keepObjectsOutsideAccess(rows, context.params.operation);
     await checkIncidentIds(rows, context);
     await resolveRelatedObjects(rows, context);
+    requireRelatedObject(rows, context.params.operation);
     await anchorPhases(rows, context);
     await followTaskObjects(rows, context);
     await importPeople(rows, context);
@@ -1241,7 +1267,8 @@ export const taskCsvConfig: CsvEntityConfig = {
       }
     }
 
-    // Final validation: linked tasks require related_object_id
+    // Linked tasks require related_object_id. The check refuses this on the row
+    // (`requireRelatedObject`); this throw stays as a safeguard.
     // Standalone tasks (no related_object_type) are allowed
     for (const entity of entities) {
       const hasType = !!entity.related_object_type;

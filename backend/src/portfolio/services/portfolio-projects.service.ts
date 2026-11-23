@@ -22,6 +22,8 @@ import { ParticipationAccessScope } from '../../auth/business-contributor-scope'
  */
 export interface ServiceOpts {
   manager?: EntityManager;
+  /** The source of the write's audit rows when it is not the person on the screen (Kad's card: `ai_chat` and its reference). */
+  audit?: { source: string; sourceRef: string | null };
   userId?: string | null;
   tenantId?: string;
   accessScope?: ParticipationAccessScope;

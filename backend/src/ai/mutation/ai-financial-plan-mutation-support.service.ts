@@ -1,25 +1,29 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
-import { AuditService } from '../../audit/audit.service';
 import { CapexAllocationsService, SpendAllocationsService } from '../../spend/spend-allocations.service';
+import { defaultAllocationDriver } from '../../spend/allocation-save';
 import { lockBudgetLine, lockBudgetVersions } from '../../spend/budget-locks';
 import { CapexAmountsService, SpendAmountsService } from '../../spend/spend-amounts.service';
 import { CapexVersionsService, SpendVersionsService } from '../../spend/spend-versions.service';
-import { auditTableOf, BUDGET_LINE_PREFIX, BudgetNature, natureAnd } from '../../spend/budget-nature';
+import { BUDGET_LINE_PREFIX, BudgetNature, natureAnd } from '../../spend/budget-nature';
 import { budgetLineReferenceNumbers, parseItemRef } from '../../common/resolve-item-id';
 import { presentChild } from '../../spend/budget-line-presentation';
 import { AMOUNT_MEASURES, AmountMeasure, assertSpreadProfile, validateAmountValue } from '../../spend/amounts-write.util';
+import { costLine, RoundInput } from '../../spend/round-inputs.util';
 import { formatAmount, formatCents } from '../../common/amount';
 import { budgetColumnName, BudgetColumnsSettings, readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewAmounts } from '../ai.types';
-import { buildAiMutationAudit } from './ai-mutation-audit.util';
+import { AiMutationAuditOptions, buildAiMutationAudit } from './ai-mutation-audit.util';
 import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
-import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
+import { AiPolicyService } from '../ai-policy.service';
+import {
+  AiWriteLanguage, AllocationBasis, AllocationSplitView, allocationSplitText, manualAllocationRemovedText, previewSummaryText, quoted, writeActionText,
+} from '../ai-write-texts';
 
 export const AI_FINANCIAL_PLAN_ENTITY_TYPES = ['budget_lines'] as const;
 export type AiFinancialPlanEntityType = typeof AI_FINANCIAL_PLAN_ENTITY_TYPES[number];
@@ -114,11 +118,33 @@ type AmountPayload =
 type AllocationInput = {
   company_id: string;
   department_id: string | null;
+  /** The percentage given, for the manual percentages method (`manual_pct`) only. */
+  allocation_pct?: number;
 };
 
 const INPUT_GRAINS = ['annual', 'quarterly', 'monthly'] as const;
-const ALLOCATION_METHODS = ['default', 'headcount', 'it_users', 'turnover', 'manual_company', 'manual_department'] as const;
+const ALLOCATION_METHODS = ['default', 'headcount', 'it_users', 'turnover', 'manual_company', 'manual_department', 'manual_pct'] as const;
 const ALLOCATION_DRIVERS = ['headcount', 'it_users', 'turnover'] as const;
+/** The methods whose split is the companies or departments picked by hand. */
+const MANUAL_SELECTION_METHODS: ReadonlySet<string> = new Set(['manual_company', 'manual_department']);
+/** Every method whose split is stored rows, which an automatic method drops. */
+const MANUAL_METHODS: ReadonlySet<string> = new Set([...MANUAL_SELECTION_METHODS, 'manual_pct']);
+/** The keys a model may give a percentage under. */
+const PERCENT_KEYS = ['allocation_pct', 'pct', 'percentage', 'percent', 'share'] as const;
+
+/** Where the shares of a method come from: its driver, or none (manual percentages, the tenant's default rule). */
+function allocationBasis(method: string, driver: unknown): AllocationBasis | null {
+  if (method === 'manual_department') return 'department_headcount';
+  if (method === 'manual_company') return (ALLOCATION_DRIVERS as readonly unknown[]).includes(driver) ? driver as AllocationBasis : 'headcount';
+  return (ALLOCATION_DRIVERS as readonly string[]).includes(method) ? method as AllocationBasis : null;
+}
+
+/** A percentage as a model may write it (60, "60", "60 %", "60,5"). */
+function percentValue(value: unknown, label: string): number {
+  const parsed = typeof value === 'number' ? value : Number(String(value).replace('%', '').replace(',', '.').trim());
+  if (!Number.isFinite(parsed)) throw new BadRequestException(`${label} must be a number.`);
+  return parsed;
+}
 
 const VERSION_FIELD_CONFIG: Record<string, {
   label: string;
@@ -310,12 +336,64 @@ function completeAmountRowsForPeriods(rows: unknown[], periods: string[]): unkno
   });
 }
 
+/**
+ * How a column was entered before a write of amounts, kept on the card so that "Undo" enters it
+ * again the same way: a spread (its period and its yearly total and profile, or its quarters), or a
+ * column built from quantity and price (its lines stay on the column: the write keeps them as its
+ * reference). A column typed month by month, copied or never entered has none: its months are typed
+ * back.
+ */
+type ColumnInput = {
+  measure: AmountMeasure;
+  method: 'spread' | 'computed';
+  period_start?: string;
+  period_end?: string;
+  total?: string;
+  profile?: string;
+  quarters?: Record<'Q1' | 'Q2' | 'Q3' | 'Q4', string>;
+  distribution?: 'equal' | '445';
+};
+
+/** The columns a payload writes. */
+function amountMeasures(payload: AmountPayload): AmountMeasure[] {
+  if (payload.kind === 'annual') return AMOUNT_MEASURES.filter((measure) => payload.totals[measure] !== undefined);
+  if (payload.kind === 'quarterly') return [payload.measure];
+  return AMOUNT_MEASURES.filter((measure) => payload.months.some((row) => row[measure] !== undefined));
+}
+
+/** How each column of `measures` is entered now (`ColumnInput`), from the version's records. */
+function columnInputs(roundInputs: unknown, measures: readonly AmountMeasure[]): ColumnInput[] {
+  const records = Array.isArray(roundInputs) ? roundInputs as any[] : [];
+  const inputs: ColumnInput[] = [];
+  for (const measure of measures) {
+    const record = records.find((row) => row?.measure === measure);
+    const calculation = record?.last_calculation;
+    const period = { period_start: String(record?.period_start), period_end: String(record?.period_end) };
+    if (record?.method === 'computed' && Array.isArray(record.lines) && record.lines.length > 0) {
+      inputs.push({ measure, method: 'computed' });
+    } else if (record?.method === 'spread' && calculation?.kind === 'annual') {
+      inputs.push({ measure, method: 'spread', ...period, total: String(calculation.total), profile: String(calculation.profile) });
+    } else if (record?.method === 'spread' && calculation?.kind === 'quarterly') {
+      inputs.push({ measure, method: 'spread', ...period, quarters: calculation.quarters, distribution: calculation.distribution });
+    }
+  }
+  return inputs;
+}
+
+/** The `ColumnInput`s a card holds; anything else is left to the months typed back. */
+function storedColumnInputs(value: unknown): ColumnInput[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is ColumnInput => !!entry && typeof entry === 'object'
+    && AMOUNT_MEASURES.includes(entry.measure) && (entry.method === 'spread' || entry.method === 'computed'));
+}
+
 function allocationInputsFromRows(rows: unknown[], method: string | null): AllocationInput[] {
-  if (method !== 'manual_company' && method !== 'manual_department') return [];
+  if (!method || !MANUAL_METHODS.has(method)) return [];
   return (rows as any[])
     .map((row) => ({
       company_id: String(row.company_id || ''),
       department_id: method === 'manual_department' ? textOrNull(row.department_id) : null,
+      ...(method === 'manual_pct' ? { allocation_pct: Number(row.allocation_pct ?? 0) } : {}),
     }))
     .filter((row) => row.company_id && (method !== 'manual_department' || row.department_id));
 }
@@ -323,13 +401,13 @@ function allocationInputsFromRows(rows: unknown[], method: string | null): Alloc
 @Injectable()
 export class AiFinancialPlanMutationSupportService {
   constructor(
-    private readonly audit: AuditService,
     private readonly capexAllocations: CapexAllocationsService,
     private readonly capexAmounts: CapexAmountsService,
     private readonly capexVersions: CapexVersionsService,
     private readonly spendAllocations: SpendAllocationsService,
     private readonly spendAmounts: SpendAmountsService,
     private readonly spendVersions: SpendVersionsService,
+    private readonly policy: AiPolicyService,
   ) {}
 
   getWritableFieldDescriptions(): string[] {
@@ -337,7 +415,7 @@ export class AiFinancialPlanMutationSupportService {
       'budget_lines action=create_version: fields version_name, input_grain, as_of_date, budget_year, allocation_method, allocation_driver, notes, reporting_currency',
       'budget_lines action=update_version: version_ref plus fields version_name, input_grain, as_of_date, allocation_method, allocation_driver, notes, reporting_currency; budget_year is immutable',
       'budget_lines action=upsert_amounts: version_ref plus amounts with kind annual, quarterly, or monthly',
-      'budget_lines action=replace_allocations: version_ref plus allocations for manual_company/manual_department methods, or an empty list for automatic methods',
+      'budget_lines action=replace_allocations: version_ref plus allocations, read with the version\'s allocation_method: manual_company takes companies only (their shares follow allocation_driver), manual_department departments only (shares follow their headcount), manual_pct companies each with allocation_pct (summing to 100); automatic methods take an empty list. To split by given percentages, set allocation_method manual_pct with update_version first',
     ];
   }
 
@@ -373,7 +451,7 @@ export class AiFinancialPlanMutationSupportService {
 
     const version = await this.resolveVersion(context, item, input.version_ref);
     if (action === 'update_version') {
-      return this.prepareUpdateVersionPreview(item, version, input.fields, null);
+      return this.withManualAllocationRemoval(context, version, this.prepareUpdateVersionPreview(item, version, input.fields, null));
     }
     if (action === 'upsert_amounts') {
       const amounts = this.normalizeAmountPayload(input.amounts);
@@ -404,6 +482,7 @@ export class AiFinancialPlanMutationSupportService {
             items: reverseItems,
             totals: before.totals,
             signature: amountRowsSignature(beforeItems),
+            inputs: columnInputs(before.round_inputs, amountMeasures(amounts)),
           },
           display_values: {
             from: this.formatAmountSummary(before, columns),
@@ -416,7 +495,15 @@ export class AiFinancialPlanMutationSupportService {
     }
     if (action === 'replace_allocations') {
       const before = await this.listAllocations(context, item.nature, version.id);
-      const allocations = await this.normalizeAllocations(context, input.allocations ?? [], String(version.row.allocation_method || 'default'));
+      const method = String(version.row.allocation_method || 'default');
+      const allocations = await this.normalizeAllocations(context, input.allocations ?? [], method, version.row.allocation_driver);
+      const beforeItems = Array.isArray(before.items) ? before.items as Array<Record<string, unknown>> : [];
+      const fromSplit = beforeItems.length === 0
+        ? { kind: 'none' as const }
+        : await this.splitView(context, beforeItems, allocationBasis(String(before.method ?? method), before.driver));
+      // The shares the approval stores, computed as the save computes them (the driver's, or the percentages given).
+      const planned = allocations.length === 0 ? null : await this.planAllocations(context, item.nature, version.id, allocations);
+      const toSplit = planned ? await this.splitView(context, planned, allocationBasis(method, version.row.allocation_driver)) : { kind: 'automatic' as const };
       return {
         targetEntityType: entityType,
         targetEntityId: item.id,
@@ -437,10 +524,8 @@ export class AiFinancialPlanMutationSupportService {
             ...before,
             signature: allocationSignature(before),
           },
-          display_values: {
-            from: this.formatAllocationSummary(before),
-            to: this.formatAllocationInputs(allocations),
-          },
+          // The split before and after, by name (`splitView`), written in the person's language when shown.
+          display_values: { from_split: fromSplit, to_split: toSplit, from: allocationSplitText('en', fromSplit), to: allocationSplitText('en', toSplit) },
         },
       };
     }
@@ -467,7 +552,7 @@ export class AiFinancialPlanMutationSupportService {
       if (!versionId) throw new BadRequestException('Original preview is missing the financial version.');
       const version = await this.resolveVersionById(context, item, versionId);
       const previousValues = objectValue(preview.current_values?.values, 'current_values.values');
-      return this.prepareUpdateVersionPreview(item, version, previousValues, preview.id);
+      return this.withManualAllocationRemoval(context, version, this.prepareUpdateVersionPreview(item, version, previousValues, preview.id));
     }
     if (action === 'upsert_amounts') {
       const versionId = textOrNull(mutation.version_id);
@@ -476,13 +561,16 @@ export class AiFinancialPlanMutationSupportService {
       const previousValues = objectValue(preview.current_values?.values, 'current_values.values');
       const previousRows = Array.isArray(previousValues.items) ? previousValues.items : [];
       const year = normalizeYear(previousValues.year ?? version.row.budget_year, 'year');
-      return this.prepareCreatePreview(context, {
+      const prepared = await this.prepareCreatePreview(context, {
         entity_type: entityType,
         ref: item.id,
         action: 'upsert_amounts',
         version_ref: version.id,
         amounts: makeMonthlyPayloadFromRows(previousRows, year),
       });
+      // The months as they were, and how their columns were entered (`ColumnInput`).
+      const inputs = storedColumnInputs(previousValues.inputs);
+      return inputs.length === 0 ? prepared : { ...prepared, mutationInput: { ...prepared.mutationInput, restore_inputs: inputs } };
     }
     if (action === 'replace_allocations') {
       const versionId = textOrNull(mutation.version_id);
@@ -510,6 +598,9 @@ export class AiFinancialPlanMutationSupportService {
     const current = preview.current_values ?? {};
     const title = textOrNull(current.target_title) || textOrNull(mutation.version_title) || 'Financial plan';
     const changes: Record<string, AiMutationPreviewChangeDto> = {};
+    const removedAllocation = action === 'update_version' && Array.isArray(mutation.removes_manual_allocation)
+      ? mutation.removes_manual_allocation.map(String)
+      : [];
 
     if (action === 'create_version' || action === 'update_version') {
       const fields = objectValue(mutation.fields, 'mutation_input.fields');
@@ -524,6 +615,10 @@ export class AiFinancialPlanMutationSupportService {
           format: 'text',
         };
       }
+      // An automatic method drops the stored manual split: the card says so (`removed`, a code the card translates).
+      if (removedAllocation.length > 0) {
+        changes.allocations = { label: 'Allocations', from: removedAllocation.join(', '), to: 'removed', format: 'text' };
+      }
     } else if (action === 'upsert_amounts') {
       const display = current.display_values && typeof current.display_values === 'object' ? current.display_values as Record<string, unknown> : {};
       const fromAmounts = storedPreviewAmounts(display.from_amounts);
@@ -537,10 +632,12 @@ export class AiFinancialPlanMutationSupportService {
       };
     } else if (action === 'replace_allocations') {
       const display = current.display_values && typeof current.display_values === 'object' ? current.display_values as Record<string, unknown> : {};
+      // A card stored before the split was kept by name shows its texts as they were.
+      const side = (split: unknown, text: unknown) => (split && typeof split === 'object' ? allocationSplitText(language, split as AllocationSplitView) : formatValue(text));
       changes.allocations = {
         label: 'Allocations',
-        from: formatValue(display.from),
-        to: formatValue(display.to),
+        from: side(display.from_split, display.from),
+        to: side(display.to_split, display.to),
         format: 'text',
       };
     }
@@ -563,6 +660,7 @@ export class AiFinancialPlanMutationSupportService {
         errorMessage: preview.error_message,
       });
     }
+    if (preview.status === 'pending' && removedAllocation.length > 0) summary = `${summary} ${manualAllocationRemovedText(language)}`;
 
     return {
       target: {
@@ -589,10 +687,13 @@ export class AiFinancialPlanMutationSupportService {
     if (!(await lockBudgetLine(context.manager, scope, context.tenantId, item.id))) {
       throw new NotFoundException(`${this.itemLabelSingular()} not found.`);
     }
+    // The services write the audit rows the screen writes for the same gesture, attributed to the
+    // card (lot K2a): Kad adds none of its own.
+    const audit = buildAiMutationAudit(preview);
 
     if (action === 'create_version') {
       const fields = objectValue(mutation.fields, 'mutation_input.fields');
-      const saved = await this.createVersion(context, item.nature, item.id, fields);
+      const saved = await this.createVersion(context, item.nature, item.id, fields, audit);
       const version = await this.resolveVersionById(context, item, String((saved as any).id));
       preview.mutation_input = {
         ...mutation,
@@ -600,7 +701,6 @@ export class AiFinancialPlanMutationSupportService {
         version_ref: version.ref,
         version_title: version.label,
       };
-      await this.logAiAudit(context, preview, this.versionAuditTable(item.nature), version.id, 'create', null, version.row);
       return;
     }
 
@@ -613,9 +713,7 @@ export class AiFinancialPlanMutationSupportService {
       const fields = objectValue(mutation.fields, 'mutation_input.fields');
       const previous = objectValue(preview.current_values?.values, 'current_values.values');
       this.assertVersionFieldsUnchanged(version.row, previous);
-      await this.updateVersion(context, item.nature, item.id, version.id, fields);
-      const after = await this.resolveVersionById(context, item, version.id);
-      await this.logAiAudit(context, preview, this.versionAuditTable(item.nature), version.id, 'update', version.row, after.row);
+      await this.updateVersion(context, item.nature, item.id, version, fields, audit);
       return;
     }
 
@@ -628,9 +726,9 @@ export class AiFinancialPlanMutationSupportService {
       if (amountRowsSignature(beforeItems) !== String(previous.signature || '')) {
         throw new ConflictException('Financial amounts changed after the preview was created.');
       }
-      await this.upsertAmounts(context, item.nature, version.id, amounts);
-      const after = await this.listAmounts(context, item.nature, version.id, amounts.year);
-      await this.logAiAudit(context, preview, this.amountsAuditTable(item.nature), null, 'update', before, after);
+      const inputs = storedColumnInputs(mutation.restore_inputs);
+      if (inputs.length > 0) await this.enterColumnsAgain(context, item.nature, version.id, amounts, inputs, audit);
+      else await this.upsertAmounts(context, item.nature, version.id, amounts, audit);
       return;
     }
 
@@ -641,9 +739,7 @@ export class AiFinancialPlanMutationSupportService {
       if (allocationSignature(before) !== String(previous.signature || '')) {
         throw new ConflictException('Financial allocations changed after the preview was created.');
       }
-      await this.replaceAllocations(context, item.nature, version.id, allocations);
-      const after = await this.listAllocations(context, item.nature, version.id);
-      await this.logAiAudit(context, preview, this.allocationsAuditTable(item.nature), null, 'update', before, after);
+      await this.replaceAllocations(context, item.nature, version.id, allocations, audit);
       return;
     }
 
@@ -673,8 +769,8 @@ export class AiFinancialPlanMutationSupportService {
   /**
    * Writes the amounts of a line the same preview has just created: its budget version for the
    * amounts' year, named as the budget tab names it (`Y2026`), then the amounts. Same services,
-   * locks and audit rows as `create_version` then `upsert_amounts`; same transaction as the line,
-   * so a refusal leaves nothing behind.
+   * locks and audit rows as `create_version` then `upsert_amounts` (the budget tab's, attributed to
+   * the card); same transaction as the line, so a refusal leaves nothing behind.
    */
   async writeNewLineAmounts(
     context: AiExecutionContextWithManager,
@@ -688,19 +784,16 @@ export class AiFinancialPlanMutationSupportService {
     if (!(await lockBudgetLine(context.manager, scope, context.tenantId, item.id))) {
       throw new NotFoundException(`${this.itemLabelSingular()} not found.`);
     }
+    const audit = buildAiMutationAudit(preview);
     const saved = await this.createVersion(context, item.nature, item.id, {
       version_name: `Y${amounts.year}`,
       budget_year: amounts.year,
       as_of_date: `${amounts.year}-01-01`,
       input_grain: amounts.kind,
-    });
+    }, audit);
     const version = await this.resolveVersionById(context, item, String((saved as any).id));
-    await this.logAiAudit(context, preview, this.versionAuditTable(item.nature), version.id, 'create', null, version.row);
     await lockBudgetVersions(context.manager, scope, context.tenantId, [version.id]);
-    const before = await this.listAmounts(context, item.nature, version.id, amounts.year);
-    await this.upsertAmounts(context, item.nature, version.id, amounts);
-    const after = await this.listAmounts(context, item.nature, version.id, amounts.year);
-    await this.logAiAudit(context, preview, this.amountsAuditTable(item.nature), null, 'update', before, after);
+    await this.upsertAmounts(context, item.nature, version.id, amounts, audit);
   }
 
   private pendingSummary(action: AiFinancialPlanAction, title: string): string {
@@ -719,6 +812,30 @@ export class AiFinancialPlanMutationSupportService {
       case 'upsert_amounts': return `Updated financial amounts for "${title}".`;
       case 'replace_allocations': return `Replaced financial allocations for "${title}".`;
     }
+  }
+
+  /**
+   * A version leaving a manual split for an automatic method: its approval drops the stored rows (the
+   * Allocations tab's save), so the card names them (company, or company / department) and says that
+   * no other step is needed.
+   */
+  private async withManualAllocationRemoval(
+    context: AiExecutionContextWithManager,
+    version: FinancialVersionRef,
+    prepared: AiPreparedMutationPreview,
+  ): Promise<AiPreparedMutationPreview> {
+    const fields = (prepared.mutationInput.fields ?? {}) as Record<string, unknown>;
+    const nextMethod = fields.allocation_method;
+    if (typeof nextMethod !== 'string' || MANUAL_METHODS.has(nextMethod)) return prepared;
+    if (!MANUAL_METHODS.has(String(version.row.allocation_method || 'default'))) return prepared;
+    const rows: Array<Record<string, unknown>> = await context.manager.query(
+      `SELECT company_id, department_id FROM spend_allocations WHERE tenant_id = $1 AND version_id = $2 AND NOT is_system_generated`,
+      [context.tenantId, version.id],
+    );
+    if (rows.length === 0) return prepared;
+    const split = await this.splitView(context, rows, null);
+    const labels = split.kind === 'rows' ? split.rows.map((row) => row.label) : [];
+    return { ...prepared, mutationInput: { ...prepared.mutationInput, removes_manual_allocation: labels } };
   }
 
   private prepareUpdateVersionPreview(
@@ -743,6 +860,14 @@ export class AiFinancialPlanMutationSupportService {
     }
     if (Object.keys(nextFields).length === 0) {
       throw new BadRequestException('Financial version already has the requested values.');
+    }
+    // As on the Allocations tab: a driver is chosen for the manual split by company; every other
+    // method has its own, which the save stores whatever is sent.
+    if (nextFields.allocation_driver !== undefined) {
+      const method = String(nextFields.allocation_method ?? version.row.allocation_method ?? 'default');
+      if (method !== 'manual_company' && nextFields.allocation_driver !== defaultAllocationDriver(method)) {
+        throw new BadRequestException(`Allocation Driver applies to the manual_company method only; ${method} uses ${defaultAllocationDriver(method)}.`);
+      }
     }
     return {
       targetEntityType: 'budget_lines',
@@ -907,9 +1032,11 @@ export class AiFinancialPlanMutationSupportService {
       const row = objectValue(entry, `mutation_input.allocations[${index}]`);
       const companyId = textOrNull(row.company_id);
       if (!companyId) throw new BadRequestException(`mutation_input.allocations[${index}].company_id is required.`);
+      const pct = row.allocation_pct == null ? NaN : Number(row.allocation_pct);
       return {
         company_id: companyId,
         department_id: textOrNull(row.department_id),
+        ...(Number.isFinite(pct) ? { allocation_pct: pct } : {}),
       };
     });
   }
@@ -918,11 +1045,13 @@ export class AiFinancialPlanMutationSupportService {
     context: AiExecutionContextWithManager,
     raw: unknown,
     method: string,
+    driver: unknown,
   ): Promise<AllocationInput[]> {
     if (!Array.isArray(raw)) throw new BadRequestException('allocations must be an array.');
     const isManualCompany = method === 'manual_company';
     const isManualDepartment = method === 'manual_department';
-    if (!isManualCompany && !isManualDepartment) {
+    const isManualPct = method === 'manual_pct';
+    if (!isManualCompany && !isManualDepartment && !isManualPct) {
       if (raw.length > 0) {
         throw new BadRequestException('Automatic allocation methods require an empty allocations array.');
       }
@@ -933,6 +1062,25 @@ export class AiFinancialPlanMutationSupportService {
     for (let index = 0; index < raw.length; index += 1) {
       const entry = raw[index];
       const row = typeof entry === 'string' ? { ref: entry } : objectValue(entry, `allocations[${index}]`);
+      const pctKey = PERCENT_KEYS.find((key) => row[key] != null && row[key] !== '');
+      if (isManualPct) {
+        const companyRef = textOrNull(row.company_id) || textOrNull(row.company_ref) || textOrNull(row.company) || textOrNull(row.ref);
+        if (!companyRef) throw new BadRequestException(`allocations[${index}] must identify a company.`);
+        if (!pctKey) {
+          throw new BadRequestException(`allocations[${index}] must give allocation_pct: the manual_pct method stores the percentages given, which must sum to 100.`);
+        }
+        const company = await this.resolveCompany(context, companyRef);
+        normalized.push({ company_id: company.id, department_id: null, allocation_pct: percentValue(row[pctKey], `allocations[${index}].${pctKey}`) });
+        continue;
+      }
+      // The shares of a split by company or by department are computed: a percentage would be dropped.
+      if (pctKey) {
+        throw new BadRequestException(isManualCompany
+          ? `The manual_company method computes each company's share: its shares follow the driver (${allocationBasis(method, driver)}), so ${pctKey} cannot be set. `
+            + 'Send the companies without allocation_pct, or set allocation_method to manual_pct with update_version to give the percentages yourself.'
+          : 'The manual_department method computes each department\'s share: its shares follow the departments\' headcount, so '
+            + `${pctKey} cannot be set. Send the departments without allocation_pct, or set allocation_method to manual_pct with update_version to give percentages by company.`);
+      }
       if (isManualCompany) {
         const companyRef = textOrNull(row.company_id) || textOrNull(row.company_ref) || textOrNull(row.company) || textOrNull(row.ref);
         if (!companyRef) throw new BadRequestException(`allocations[${index}] must identify a company.`);
@@ -950,7 +1098,15 @@ export class AiFinancialPlanMutationSupportService {
       }
       normalized.push({ company_id: department.company_id, department_id: department.id });
     }
-    if (normalized.length === 0) throw new BadRequestException('Manual allocation methods require at least one allocation entry.');
+    if (normalized.length === 0) {
+      throw new BadRequestException(
+        'Manual allocation methods require at least one allocation entry. To remove a manual allocation, set the version to an '
+        + 'automatic allocation method with update_version (allocation_method default, headcount, it_users or turnover): '
+        + 'that removes the stored manual rows, and no other step is needed.',
+      );
+    }
+    // Percentages are kept as given: a company named twice gets them added, as on the Allocations tab.
+    if (isManualPct) return normalized;
     return Array.from(
       new Map(normalized.map((item) => [`${item.company_id}:${item.department_id ?? ''}`, item])).values(),
     );
@@ -1121,39 +1277,86 @@ export class AiFinancialPlanMutationSupportService {
     nature: BudgetNature,
     itemId: string,
     fields: Record<string, unknown>,
+    audit: AiMutationAuditOptions,
   ): Promise<unknown> {
     // A version created since the preview (a budget tab, an import) is refused,
     // not returned as if this action had created it (and audited as such).
     if (nature === 'opex') {
-      return this.spendVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true });
+      return this.spendVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true, audit });
     }
-    return this.capexVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true });
+    return this.capexVersions.createForItem(itemId, fields as any, context.userId, { manager: context.manager, refuseExisting: true, audit });
   }
 
-  private updateVersion(
+  /**
+   * The version's own fields as the budget tab writes them; its allocation method and driver as the
+   * Allocations tab saves them (`updateForItem`, `changeAllocationMethod`), so an automatic method
+   * drops the rows of a manual split with their audit row, and a driver change computes the split again.
+   */
+  private async updateVersion(
     context: AiExecutionContextWithManager,
     nature: BudgetNature,
     itemId: string,
-    versionId: string,
+    version: FinancialVersionRef,
     fields: Record<string, unknown>,
-  ): Promise<unknown> {
-    const body = { ...fields, id: versionId };
-    if (nature === 'opex') {
-      return this.spendVersions.updateForItem(itemId, body as any, context.userId, { manager: context.manager });
+    audit: AiMutationAuditOptions,
+  ): Promise<void> {
+    const versions = nature === 'opex' ? this.spendVersions : this.capexVersions;
+    await versions.updateForItem(itemId, { ...fields, id: version.id } as any, context.userId, { manager: context.manager, audit });
+  }
+
+  /**
+   * "Undo" of a write of amounts: the months of the columns typed by hand typed back, then each other
+   * column entered again as it was, by the budget tab's own writes: a spread spread again from its
+   * total or quarters over its period, a column built from quantity and price computed again from
+   * its lines.
+   */
+  private async enterColumnsAgain(
+    context: AiExecutionContextWithManager,
+    nature: BudgetNature,
+    versionId: string,
+    amounts: AmountPayload,
+    inputs: ColumnInput[],
+    audit: AiMutationAuditOptions,
+  ): Promise<void> {
+    if (amounts.kind !== 'monthly') throw new BadRequestException('An undo of amounts writes months.');
+    const { year } = amounts;
+    const again = new Set(inputs.map((input) => input.measure));
+    const months = amounts.months
+      .map((row) => {
+        const typed: typeof row = { period: row.period };
+        for (const measure of AMOUNT_MEASURES) if (!again.has(measure) && row[measure] !== undefined) typed[measure] = row[measure];
+        return typed;
+      })
+      .filter((row) => AMOUNT_MEASURES.some((measure) => row[measure] !== undefined));
+    if (months.length > 0) await this.upsertAmounts(context, nature, versionId, { kind: 'monthly', year, months }, audit);
+    for (const input of inputs) {
+      const period = { period_start: input.period_start, period_end: input.period_end };
+      let payload: Record<string, unknown>;
+      if (input.method === 'computed') {
+        const listed = await this.listAmounts(context, nature, versionId, year);
+        const record = (Array.isArray(listed.round_inputs) ? listed.round_inputs as RoundInput[] : []).find((row) => row.measure === input.measure);
+        if (!record?.lines.length) throw new ConflictException('The quantity and price lines changed after the preview was created.');
+        payload = { kind: 'lines', year, measure: input.measure, lines: record.lines.map(costLine) };
+      } else if (input.quarters) {
+        payload = { kind: 'quarterly', year, measure: input.measure, ...input.quarters, spread_profile_name: input.distribution === '445' ? '4-4-5' : 'flat', ...period };
+      } else {
+        payload = { kind: 'annual', year, totals: { [input.measure]: input.total }, spread_profile_name: input.profile, ...period };
+      }
+      await this.upsertAmounts(context, nature, versionId, payload, audit);
     }
-    return this.capexVersions.updateForItem(itemId, body as any, context.userId, { manager: context.manager });
   }
 
   private async upsertAmounts(
     context: AiExecutionContextWithManager,
     nature: BudgetNature,
     versionId: string,
-    amounts: AmountPayload,
+    amounts: AmountPayload | Record<string, unknown>,
+    audit: AiMutationAuditOptions,
   ): Promise<unknown> {
     if (nature === 'opex') {
-      return this.spendAmounts.bulkUpsert(versionId, amounts as any, context.userId, { manager: context.manager });
+      return this.spendAmounts.bulkUpsert(versionId, amounts as any, context.userId, { manager: context.manager, audit });
     }
-    return this.capexAmounts.bulkUpsert(versionId, amounts as any, context.userId, { manager: context.manager });
+    return this.capexAmounts.bulkUpsert(versionId, amounts as any, context.userId, { manager: context.manager, audit });
   }
 
   private async replaceAllocations(
@@ -1161,11 +1364,12 @@ export class AiFinancialPlanMutationSupportService {
     nature: BudgetNature,
     versionId: string,
     allocations: AllocationInput[],
+    audit: AiMutationAuditOptions,
   ): Promise<unknown> {
     if (nature === 'opex') {
-      return this.spendAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager, tenantId: context.tenantId });
+      return this.spendAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager, tenantId: context.tenantId, audit });
     }
-    return this.capexAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager, tenantId: context.tenantId });
+    return this.capexAllocations.bulkUpsert(versionId, allocations, context.userId, { manager: context.manager, tenantId: context.tenantId, audit });
   }
 
   private listAmounts(
@@ -1180,6 +1384,11 @@ export class AiFinancialPlanMutationSupportService {
     return this.capexAmounts.listByYear(versionId, year, { manager: context.manager }) as any;
   }
 
+  private planAllocations(context: AiExecutionContextWithManager, nature: BudgetNature, versionId: string, allocations: AllocationInput[]) {
+    const service = nature === 'opex' ? this.spendAllocations : this.capexAllocations;
+    return service.plan(versionId, allocations, { manager: context.manager, tenantId: context.tenantId });
+  }
+
   private listAllocations(
     context: AiExecutionContextWithManager,
     nature: BudgetNature,
@@ -1189,31 +1398,6 @@ export class AiFinancialPlanMutationSupportService {
       return this.spendAllocations.listForVersion(versionId, { manager: context.manager, tenantId: context.tenantId }) as any;
     }
     return this.capexAllocations.listForVersion(versionId, { manager: context.manager, tenantId: context.tenantId }) as any;
-  }
-
-  private async logAiAudit(
-    context: AiExecutionContextWithManager,
-    preview: AiMutationPreview,
-    table: string,
-    recordId: string | null,
-    action: 'create' | 'update',
-    before: unknown,
-    after: unknown,
-  ): Promise<void> {
-    const audit = buildAiMutationAudit(preview);
-    await this.audit.log(
-      {
-        table,
-        recordId,
-        action,
-        before,
-        after,
-        userId: context.userId,
-        source: audit.source,
-        sourceRef: audit.sourceRef,
-      },
-      { manager: context.manager },
-    );
   }
 
   // The approval card names columns as the tenant does, in the fixed column order.
@@ -1279,17 +1463,35 @@ export class AiFinancialPlanMutationSupportService {
     return { year, currency: /^[A-Z]{3}$/.test(code) ? code : null, column_names: columnNames };
   }
 
-  private formatAllocationSummary(value: Record<string, unknown>): string {
-    const items = Array.isArray(value.items) ? value.items : [];
-    if (items.length === 0) return 'No allocation rows';
-    return items
-      .map((row: any) => [row.company_id, row.department_id, row.allocation_pct == null ? null : `${row.allocation_pct}%`, row.source].map(textOrNull).filter(Boolean).join(' / '))
-      .join(', ');
-  }
-
-  private formatAllocationInputs(value: AllocationInput[]): string {
-    if (value.length === 0) return 'Automatic allocation';
-    return value.map((row) => [row.company_id, row.department_id].filter(Boolean).join(' / ')).join(', ');
+  /**
+   * Split rows as a card shows them, sorted by name: a company or department by its name, as the
+   * Allocations tab shows them to the person: a company they do not read shows as '—', a department
+   * they do not read is left out. Never an id.
+   */
+  private async splitView(
+    context: AiExecutionContextWithManager,
+    rows: ReadonlyArray<{ company_id?: unknown; department_id?: unknown; allocation_pct?: unknown }>,
+    basis: AllocationBasis | null,
+  ): Promise<AllocationSplitView> {
+    const readable = await this.policy.readableResources(context, ['companies', 'departments'], context.manager);
+    const namesOf = async (table: 'companies' | 'departments', key: 'company_id' | 'department_id') => {
+      const ids = Array.from(new Set(rows.map((row) => textOrNull(row[key])).filter((id): id is string => !!id)));
+      if (!readable.has(table) || ids.length === 0) return new Map<string, string>();
+      const found: Array<{ id: string; name: string }> = await context.manager.query(
+        `SELECT id::text AS id, name FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [context.tenantId, ids],
+      );
+      return new Map(found.map((row) => [row.id, row.name]));
+    };
+    const companies = await namesOf('companies', 'company_id');
+    const departments = await namesOf('departments', 'department_id');
+    const view = rows.map((row) => {
+      const department = departments.get(String(row.department_id ?? ''));
+      const label = [companies.get(String(row.company_id ?? '')) ?? '—', department].filter(Boolean).join(' / ');
+      const pct = row.allocation_pct == null || row.allocation_pct === '' ? null : Math.round(Number(row.allocation_pct) * 100) / 100;
+      return { label, pct: pct != null && Number.isFinite(pct) ? pct : null };
+    }).sort((a, b) => a.label.localeCompare(b.label));
+    return { kind: 'rows', rows: view, basis };
   }
 
   private itemLabelSingular(): string {
@@ -1298,19 +1500,6 @@ export class AiFinancialPlanMutationSupportService {
 
   private itemLabelPlural(): string {
     return 'budget lines';
-  }
-
-  // The audit labels: the rows of a CAPEX line keep their CAPEX table names (`auditTableOf`).
-  private versionAuditTable(nature: BudgetNature): string {
-    return auditTableOf(nature, 'spend_versions');
-  }
-
-  private amountsAuditTable(nature: BudgetNature): string {
-    return auditTableOf(nature, 'spend_amounts');
-  }
-
-  private allocationsAuditTable(nature: BudgetNature): string {
-    return auditTableOf(nature, 'spend_allocations');
   }
 
 }
