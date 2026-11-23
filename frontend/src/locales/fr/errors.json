@@ -176,6 +176,7 @@
   "CSV_PROJECT_ORIGIN_STANDARD": "Un nouveau projet ne peut pas avoir l'origine Demande. Convertissez une demande, ou utilisez fast_track ou legacy.",
   "CSV_PROJECT_ORIGIN_LOCKED": "Seul un projet Fast-track ou Historique peut changer d'origine, vers Fast-track ou Historique.",
   "CSV_INCIDENT_STATUS_RESERVED": "{{reference}} : le statut ne peut pas passer de « {{from}} » à « {{to}} » par import. Seul un administrateur du registre peut le faire ; utilisez Rouvrir ou Annuler l'incident dans l'application.",
+  "CSV_INCIDENT_REFERENCE_INVALID": "« {{value}} » n'est pas une référence d'incident. Utilisez la référence de l'incident (INC-12), ou laissez la colonne vide pour créer un incident.",
   "CSV_TECHNOLOGY_NOT_ADOPTED": "Technologie inconnue « {{value}} ». Adoptez-la d'abord depuis le catalogue.",
   "CSV_NAME_AMBIGUOUS": "Plusieurs enregistrements portent le nom « {{value}} ».",
   "CSV_LOOKALIKE_CHANGED": "{{ref}} a changé depuis la vérification.",
