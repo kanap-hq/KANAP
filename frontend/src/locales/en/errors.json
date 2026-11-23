@@ -182,6 +182,7 @@
   "CSV_PROJECT_ORIGIN_STANDARD": "A new project cannot have the origin Request. Convert a request, or use fast_track or legacy.",
   "CSV_PROJECT_ORIGIN_LOCKED": "Only a fast-track or legacy project can change its origin, to fast-track or legacy.",
   "CSV_INCIDENT_STATUS_RESERVED": "{{reference}}: status cannot change from \"{{from}}\" to \"{{to}}\" through import. Only a register administrator can do that; use Reopen or Cancel in the app instead.",
+  "CSV_INCIDENT_REFERENCE_INVALID": "\"{{value}}\" is not an incident reference. Use the incident reference (INC-12), or leave the column empty to create a new incident.",
   "CSV_TECHNOLOGY_NOT_ADOPTED": "Unknown technology \"{{value}}\". Adopt it from the catalog first.",
   "CSV_NAME_AMBIGUOUS": "Several records are named \"{{value}}\".",
   "CSV_LOOKALIKE_CHANGED": "{{ref}} changed since the check.",
