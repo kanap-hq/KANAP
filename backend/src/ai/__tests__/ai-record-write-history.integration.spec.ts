@@ -1,0 +1,426 @@
+import 'reflect-metadata';
+import * as assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { NestFactory } from '@nestjs/core';
+import { DataSource, QueryRunner } from 'typeorm';
+
+// Lot K2a of 26.12.1: a write of Kad leaves one history line per record it writes, attributed to
+// Kad for the person (source `ai_chat`, reference = the approved card), with the values the
+// screen writes for the same gesture. "Undo" writes one line too.
+//
+// Driven by a table (`CASES`): one entry per gesture of a family. Each entry plays Kad's card up to
+// its approval (the preview service, no model), then reads the audit log:
+// - the record's own audit rows written by the approval: exactly one, `ai_chat`, the card's id,
+//   the person who approved;
+// - every row the approval wrote, compared with the rows the screen's service writes for the same
+//   gesture (played first under a savepoint, then rolled back): same tables, actions and values,
+//   ids and dates set aside; only the attribution differs;
+// - the record's History tab (`RecordHistoryService.list`) shows one more entry, by Kad;
+// - "Undo" of a reversible change writes one row for the record, attributed the same way.
+//
+// To add a family: seed what it needs in `seed`, give its role the module right in `PERMISSIONS`,
+// then add its entries to `CASES` (`card`: the tool and input; `screen`: the screen's service call;
+// `prepare`: the record an update changes, created through the screen's service).
+
+process.env.AI_CHAT_ENABLED = 'true';
+process.env.AI_SETTINGS_ENABLED = 'true';
+process.env.AI_MCP_ENABLED = 'true';
+process.env.JWT_SECRET ||= 'test-jwt-secret';
+process.env.AI_SETTINGS_ENCRYPTION_SECRET ||= 'test-ai-secret';
+process.env.STRIPE_SECRET_KEY = '';
+process.env.S3_ENDPOINT ||= 'http://127.0.0.1:9000';
+process.env.S3_BUCKET ||= 'test-bucket';
+process.env.AWS_ACCESS_KEY_ID ||= 'test';
+process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
+
+type Harness = {
+  app: any;
+  dataSource: DataSource;
+  tools: any;
+  previews: any;
+  services: { applications: any; assets: any; contracts: any; budgetLines: any };
+};
+
+type Seed = {
+  tenantId: string;
+  userId: string;
+  userName: string;
+  companyId: string;
+  supplierId: string;
+  accountId: string;
+  locationId: string;
+};
+
+type AuditRow = {
+  id: string;
+  table_name: string;
+  record_id: string | null;
+  action: string;
+  before_json: unknown;
+  after_json: unknown;
+  user_id: string | null;
+  source: string | null;
+  source_ref: string | null;
+};
+
+type HistoryCase = {
+  /** `<family>: <gesture>`, as the failures name it. */
+  name: string;
+  /** The audit table of the record's own row, which is also its History tab's table. */
+  table: string;
+  /** The record an update changes, created through the screen's service. */
+  prepare?: (h: Harness, runner: QueryRunner, s: Seed) => Promise<string>;
+  /** Kad's card. */
+  card: (s: Seed, recordId: string | null) => { tool: string; input: Record<string, unknown> };
+  /** The same gesture by the screen's service, with the fields the card stored; returns the record id. */
+  screen: (h: Harness, runner: QueryRunner, s: Seed, fields: Record<string, unknown>, recordId: string | null) => Promise<string>;
+  /** The card is a reversible change: "Undo" is checked. */
+  undo?: boolean;
+};
+
+/** The module rights of the person who approves: one per family of `CASES`. */
+const PERMISSIONS: Record<string, string> = {
+  ai_chat: 'member',
+  applications: 'member',
+  infrastructure: 'member',
+  contracts: 'member',
+  budget: 'member',
+};
+
+const screenOpts = (runner: QueryRunner, s: Seed) => ({ manager: runner.manager, tenantId: s.tenantId });
+
+const CASES: HistoryCase[] = [
+  {
+    name: 'applications: create',
+    table: 'applications',
+    card: () => ({ tool: 'create_business_record', input: { entity_type: 'applications', fields: { name: 'History app', version: '1.0' } } }),
+    screen: async (h, runner, s, fields) => String((await h.services.applications.create(fields, s.userId, screenOpts(runner, s))).id),
+  },
+  {
+    name: 'applications: update',
+    table: 'applications',
+    prepare: async (h, runner, s) => String((await h.services.applications.create({ name: 'History app' }, s.userId, screenOpts(runner, s))).id),
+    card: (_s, id) => ({ tool: 'update_business_record', input: { entity_type: 'applications', ref: id, fields: { version: '2.0' } } }),
+    screen: async (h, runner, s, fields, id) => String((await h.services.applications.update(id, fields, s.userId, screenOpts(runner, s))).id),
+    undo: true,
+  },
+  {
+    name: 'assets: create',
+    table: 'assets',
+    card: (s) => ({
+      tool: 'create_business_record',
+      input: { entity_type: 'assets', fields: { name: 'srv-history', kind: 'virtual_machine', provider: 'other', environment: 'prod', location_id: s.locationId, operating_system: 'Ubuntu 24.04' } },
+    }),
+    screen: async (h, runner, s, fields) => String((await h.services.assets.create(fields, s.tenantId, s.userId, screenOpts(runner, s))).id),
+  },
+  {
+    name: 'assets: update',
+    table: 'assets',
+    prepare: async (h, runner, s) => String((await h.services.assets.create(
+      { name: 'srv-history', kind: 'virtual_machine', provider: 'other', environment: 'prod', location_id: s.locationId }, s.tenantId, s.userId, screenOpts(runner, s),
+    )).id),
+    card: (_s, id) => ({ tool: 'update_business_record', input: { entity_type: 'assets', ref: id, fields: { region: 'eu-west-3' } } }),
+    screen: async (h, runner, s, fields, id) => String((await h.services.assets.update(id, fields, s.tenantId, s.userId, screenOpts(runner, s))).id),
+    undo: true,
+  },
+  {
+    name: 'contracts: create',
+    table: 'contracts',
+    card: (s) => ({
+      tool: 'create_business_record',
+      input: { entity_type: 'contracts', fields: { name: 'History contract', company_id: s.companyId, supplier_id: s.supplierId, start_date: '2026-01-01' } },
+    }),
+    screen: async (h, runner, s, fields) => String((await h.services.contracts.create(fields, s.userId, { manager: runner.manager })).id),
+  },
+  {
+    name: 'contracts: update',
+    table: 'contracts',
+    prepare: async (h, runner, s) => String((await h.services.contracts.create(
+      { name: 'History contract', company_id: s.companyId, supplier_id: s.supplierId, start_date: '2026-01-01' }, s.userId, { manager: runner.manager },
+    )).id),
+    card: (_s, id) => ({ tool: 'update_business_record', input: { entity_type: 'contracts', ref: id, fields: { notice_period_months: 3 } } }),
+    screen: async (h, runner, s, fields, id) => String((await h.services.contracts.update(id, fields, s.userId, { manager: runner.manager })).id),
+    undo: true,
+  },
+  {
+    name: 'budget_lines: create',
+    table: 'spend_items',
+    card: (s) => ({
+      tool: 'create_business_record',
+      input: {
+        entity_type: 'budget_lines',
+        fields: { nature: 'opex', product_name: 'History line', paying_company_id: s.companyId, account_id: s.accountId, currency: 'EUR', effective_start: '2026-01-01' },
+      },
+    }),
+    screen: async (h, runner, s, fields) => String((await h.services.budgetLines.create(fields, s.userId, { manager: runner.manager })).id),
+  },
+  {
+    name: 'budget_lines: update',
+    table: 'spend_items',
+    prepare: async (h, runner, s) => String((await h.services.budgetLines.create(
+      { nature: 'opex', product_name: 'History line', paying_company_id: s.companyId, account_id: s.accountId, currency: 'EUR', effective_start: '2026-01-01' },
+      s.userId, { manager: runner.manager },
+    )).id),
+    card: (_s, id) => ({ tool: 'update_business_record', input: { entity_type: 'budget_lines', ref: id, fields: { description: 'Renewal' } } }),
+    screen: async (h, runner, s, fields, id) => String((await h.services.budgetLines.update(id, fields, s.userId, { manager: runner.manager })).id),
+    undo: true,
+  },
+];
+
+async function one(runner: QueryRunner, sql: string, params: unknown[]): Promise<string> {
+  return String((await runner.query(sql, params))[0].id);
+}
+
+async function seed(runner: QueryRunner): Promise<Seed> {
+  const tenantId = randomUUID();
+  const tag = tenantId.slice(0, 8);
+  await runner.query(
+    `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
+     VALUES ($1, $2, $3, 'active', '{"reporting_currency":"EUR","default_spend_currency":"EUR","default_capex_currency":"EUR"}'::jsonb,
+             '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
+    [tenantId, `ai-history-${tag}`, `AI history ${tag}`],
+  );
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+  const model = await one(runner,
+    `INSERT INTO ai_model_configs (tenant_id, name, provider, model, endpoint_url, api_key_encrypted, supports_vision, is_default, created_at, updated_at)
+     VALUES ($1, 'history-model', 'custom', 'history-model', 'https://llm.example.test/v1', 'test-secret', true, true, now(), now()) RETURNING id`, [tenantId]);
+  await runner.query(
+    `INSERT INTO ai_settings (tenant_id, chat_enabled, mcp_enabled, provider_source, llm_provider, llm_endpoint_url, llm_model,
+                              llm_api_key_encrypted, web_search_enabled, glpi_enabled, chat_model_config_id, created_at, updated_at)
+     VALUES ($1, true, true, 'custom', 'custom', 'https://llm.example.test/v1', 'history-model', 'test-secret', false, false, $2, now(), now())`,
+    [tenantId, model]);
+  const roleId = await one(runner,
+    `INSERT INTO roles (tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
+     VALUES ($1, 'History member', 'History member', false, false, now(), now()) RETURNING id`, [tenantId]);
+  for (const [resource, level] of Object.entries(PERMISSIONS)) {
+    await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level, created_at, updated_at) VALUES ($1, $2, $3, $4, now(), now())`,
+      [tenantId, roleId, resource, level]);
+  }
+  const userId = await one(runner,
+    `INSERT INTO users (tenant_id, first_name, last_name, email, role_id, mfa_enabled, status, locale, created_at, updated_at)
+     VALUES ($1, 'Member', 'Tester', $2, $3, false, 'enabled', 'en', now(), now()) RETURNING id`,
+    [tenantId, `member-${tag}@example.test`, roleId]);
+  const chart = await one(runner, `INSERT INTO chart_of_accounts (tenant_id, code, name, country_iso) VALUES ($1, $2, 'Chart', 'FR') RETURNING id`, [tenantId, `C${tag}`]);
+  const companyId = await one(runner, `INSERT INTO companies (tenant_id, name, country_iso, city, coa_id) VALUES ($1, 'History company', 'FR', 'Lyon', $2) RETURNING id`, [tenantId, chart]);
+  const accountId = await one(runner, `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name) VALUES ($1, $2, 6100, 'Software') RETURNING id`, [tenantId, chart]);
+  const supplierId = await one(runner, `INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'History supplier') RETURNING id`, [tenantId]);
+  const locationId = await one(runner,
+    `INSERT INTO locations (tenant_id, location_reference, name, hosting_type) VALUES ($1, 'LOC-1', 'Paris DC', 'cloud') RETURNING id`, [tenantId]);
+  return { tenantId, userId, userName: 'Member Tester', companyId, supplierId, accountId, locationId };
+}
+
+async function createHarness(): Promise<Harness> {
+  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for ai-record-write-history.integration.spec.ts.');
+  const { AppModule } = require('../../app.module');
+  const { AiToolRegistry } = require('../ai-tool.registry');
+  const { AiMutationPreviewService } = require('../ai-mutation-preview.service');
+  const { ApplicationsService } = require('../../applications/services/applications.service');
+  const { AssetsService } = require('../../assets/services/assets.service');
+  const { ContractsService } = require('../../contracts/contracts.service');
+  const { BudgetLinesService } = require('../../spend/budget-lines.service');
+  const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
+  return {
+    app,
+    dataSource: app.get(DataSource),
+    tools: app.get(AiToolRegistry),
+    previews: app.get(AiMutationPreviewService),
+    services: {
+      applications: app.get(ApplicationsService, { strict: false }),
+      assets: app.get(AssetsService, { strict: false }),
+      contracts: app.get(ContractsService, { strict: false }),
+      budgetLines: app.get(BudgetLinesService, { strict: false }),
+    },
+  };
+}
+
+function context(s: Seed, runner: QueryRunner, conversationId: string) {
+  return {
+    tenantId: s.tenantId, userId: s.userId, isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const,
+    conversationId, manager: runner.manager,
+  };
+}
+
+async function auditIds(runner: QueryRunner, s: Seed): Promise<Set<string>> {
+  const rows: Array<{ id: string }> = await runner.query(`SELECT id FROM audit_log WHERE tenant_id = $1`, [s.tenantId]);
+  return new Set(rows.map((row) => row.id));
+}
+
+/** The audit rows `write` adds. */
+async function rowsWrittenBy(runner: QueryRunner, s: Seed, write: () => Promise<unknown>): Promise<AuditRow[]> {
+  const known = await auditIds(runner, s);
+  await write();
+  const rows: AuditRow[] = await runner.query(
+    `SELECT id, table_name, record_id, action, before_json, after_json, user_id, source, source_ref
+     FROM audit_log WHERE tenant_id = $1 ORDER BY created_at, id`,
+    [s.tenantId],
+  );
+  return rows.filter((row) => !known.has(row.id));
+}
+
+/** Values that differ between two plays of one gesture by nature: ids and write times. */
+const VOLATILE_KEYS = new Set(['id', 'created_at', 'updated_at']);
+
+/**
+ * Fields that carry who wrote a row, beside its audit source: they belong to the attribution. An
+ * operating-system link Kad writes is marked `ai` (`osSource`), the screen's `manual`.
+ */
+const PROVENANCE_KEYS: Record<string, ReadonlySet<string>> = {
+  asset_technologies: new Set(['source']),
+};
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The ids the seed made stay as they are; the record becomes `<record>`, any id the gesture made `<new>`. */
+function neutralId(value: string, recordId: string, seedIds: ReadonlySet<string>): string {
+  const id = value.toLowerCase();
+  if (id === recordId) return '<record>';
+  return seedIds.has(id) ? id : '<new>';
+}
+
+function neutral(value: unknown, recordId: string, seedIds: ReadonlySet<string>, ignored: ReadonlySet<string>): unknown {
+  if (Array.isArray(value)) return value.map((item) => neutral(item, recordId, seedIds, ignored));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => !ignored.has(key))
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => [key, VOLATILE_KEYS.has(key) ? '<volatile>' : neutral(item, recordId, seedIds, ignored)]));
+  }
+  if (typeof value === 'string' && UUID.test(value)) return neutralId(value, recordId, seedIds);
+  return value;
+}
+
+/** What a list of audit rows says, attribution set aside. */
+function shapes(rows: AuditRow[], recordId: string, s: Seed): string[] {
+  const seedIds = new Set(Object.values(s).filter((value) => UUID.test(value)).map((value) => value.toLowerCase()));
+  return rows
+    .map((row) => {
+      const ignored = PROVENANCE_KEYS[row.table_name] ?? new Set<string>();
+      return JSON.stringify({
+        table: row.table_name,
+        action: row.action,
+        record: row.record_id ? neutralId(row.record_id, recordId, seedIds) : null,
+        before: neutral(row.before_json, recordId, seedIds, ignored),
+        after: neutral(row.after_json, recordId, seedIds, ignored),
+      });
+    })
+    .sort();
+}
+
+function assertKadRows(name: string, rows: AuditRow[], table: string, recordId: string, previewId: string, s: Seed) {
+  const own = rows.filter((row) => row.table_name === table && row.record_id === recordId);
+  assert.equal(own.length, 1, `${name}: one history line for the record (got ${own.length}: ${own.map((row) => row.source).join(', ')})`);
+  for (const row of rows) {
+    assert.deepEqual(
+      { table: row.table_name, source: row.source, sourceRef: row.source_ref, user: row.user_id },
+      { table: row.table_name, source: 'ai_chat', sourceRef: previewId, user: s.userId },
+      `${name}: every row of the approval is Kad's, for the person who approved`,
+    );
+  }
+}
+
+async function history(runner: QueryRunner, s: Seed, table: string, recordId: string) {
+  const { RecordHistoryService } = require('../../audit/record-history.service');
+  const permissions = Object.fromEntries(Object.keys(PERMISSIONS).map((module) => [module, 'reader']));
+  const page = await new RecordHistoryService().list(
+    { tenantId: s.tenantId, userId: s.userId, isAdmin: false, permissions, manager: runner.manager },
+    table,
+    recordId,
+    { limit: 100 },
+  );
+  return page.items as Array<{ id: string; action: string; actor: { kind: string; name: string | null }; subject: { kind: string }; changes: unknown[] }>;
+}
+
+async function runCase(harness: Harness, entry: HistoryCase) {
+  const runner = harness.dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    const s = await seed(runner);
+    const ctx = context(s, runner, randomUUID());
+    await runner.query(
+      `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+       VALUES ($1, $2, $3, 'AI record history', 'custom', 'history-model', 'custom', now(), now())`,
+      [ctx.conversationId, s.tenantId, s.userId],
+    );
+    const prepared = entry.prepare ? await entry.prepare(harness, runner, s) : null;
+    const { tool, input } = entry.card(s, prepared);
+    const preview = await harness.tools.execute(ctx, tool, input) as any;
+    assert.equal(preview.status, 'pending', `${entry.name}: ${JSON.stringify(preview)}`);
+    const [stored] = await runner.query(`SELECT mutation_input FROM ai_mutation_previews WHERE id = $1`, [preview.preview_id]);
+    const fields = { ...(stored.mutation_input.fields ?? {}) };
+
+    const historyBefore = prepared ? await history(runner, s, entry.table, prepared) : [];
+    const known = new Set(historyBefore.map((item) => item.id));
+
+    // The screen's gesture, under a savepoint rolled back: the same state for Kad's.
+    await runner.query('SAVEPOINT k2a_screen');
+    let screenId = '';
+    const screenRows = await rowsWrittenBy(runner, s, async () => {
+      screenId = (await entry.screen(harness, runner, s, fields, prepared)).toLowerCase();
+    });
+    const screenAdded = (await history(runner, s, entry.table, screenId)).filter((item) => !known.has(item.id));
+    await runner.query('ROLLBACK TO SAVEPOINT k2a_screen');
+    assert.ok(screenRows.length > 0, `${entry.name}: the screen writes its history`);
+
+    const kadRows = await rowsWrittenBy(runner, s, async () => {
+      const executed = await harness.previews.executePreview(ctx, preview.preview_id) as any;
+      assert.equal(executed.status, 'executed', `${entry.name}: ${executed.error_message || 'the card did not execute'}`);
+    });
+    const [target] = await runner.query(`SELECT target_entity_id FROM ai_mutation_previews WHERE id = $1`, [preview.preview_id]);
+    const recordId = String(target.target_entity_id).toLowerCase();
+
+    assertKadRows(entry.name, kadRows, entry.table, recordId, preview.preview_id, s);
+    assert.deepEqual(
+      shapes(kadRows, recordId, s),
+      shapes(screenRows, screenId, s),
+      `${entry.name}: Kad's rows carry what the screen writes for the same gesture`,
+    );
+
+    // The History tab: the entries the screen's gesture adds (one about the record, plus its
+    // children's, such as an asset's operating system), each one by Kad for the person.
+    const added = (await history(runner, s, entry.table, recordId)).filter((item) => !known.has(item.id));
+    const view = (items: typeof added) => items.map((item) => `${item.subject.kind}:${item.action}`).sort();
+    assert.deepEqual(view(added), view(screenAdded), `${entry.name}: the History tab gets the entries the screen's gesture gives`);
+    const own = added.filter((item) => item.subject.kind === 'record');
+    assert.equal(own.length, 1, `${entry.name}: one History entry about the record (got ${own.length})`);
+    assert.ok(own[0].changes.length > 0, `${entry.name}: the entry says what changed`);
+    for (const item of added) {
+      assert.deepEqual(item.actor, { kind: 'assistant', name: s.userName }, `${entry.name}: each entry is by Kad for the person`);
+    }
+
+    if (entry.undo) {
+      const reverse = await harness.previews.createReversePreview(ctx, preview.preview_id) as any;
+      const undoRows = await rowsWrittenBy(runner, s, async () => {
+        const executed = await harness.previews.executePreview(ctx, reverse.preview_id) as any;
+        assert.equal(executed.status, 'executed', `${entry.name} (undo): ${executed.error_message || 'the undo did not execute'}`);
+      });
+      assertKadRows(`${entry.name} (undo)`, undoRows, entry.table, recordId, reverse.preview_id, s);
+    }
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
+async function run() {
+  const harness = await createHarness();
+  try {
+    const failures: string[] = [];
+    for (const entry of CASES) {
+      try {
+        await runCase(harness, entry);
+      } catch (error) {
+        failures.push(`${entry.name}: ${(error as Error).message}`);
+      }
+    }
+    if (failures.length) throw new Error(`${failures.length} of ${CASES.length} cases failed:\n${failures.join('\n\n')}`);
+    console.log(`ai-record-write-history.integration.spec.ts passed (${CASES.length} cases)`);
+  } finally {
+    await harness.app.close();
+  }
+}
+
+run().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

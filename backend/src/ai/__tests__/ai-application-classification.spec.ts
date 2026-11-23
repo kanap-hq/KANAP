@@ -226,7 +226,9 @@ async function testExecutionControlsConflictsAndUndoInputs() {
   assert.equal(calls.update.length, 1);
   assert.deepEqual(calls.update[0].fields, { criticality: 'stop_now', cyber_criticality: null });
   assert.equal(calls.update[0].fields.classification_review, undefined);
-  assert.equal(calls.audit.length, 1);
+  // The service writes the one audit row, with the card's source; Kad adds none (lot K2a).
+  assert.deepEqual(calls.update[0].options.audit, { source: 'ai_chat', sourceRef: 'preview-update' });
+  assert.equal(calls.audit.length, 0);
 
   setLive(application({ cyber_criticality: 'custom_peak' }));
   await assert.rejects(() => service.executePreview(executionContext as any, preview), ConflictException);

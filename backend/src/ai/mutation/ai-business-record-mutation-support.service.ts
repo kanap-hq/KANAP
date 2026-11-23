@@ -2158,6 +2158,10 @@ export class AiBusinessRecordMutationSupportService {
     const fields = coerceRecord(mutation.fields, 'mutation_input.fields');
     const executionFields = this.executionFields(fields);
     const audit = buildAiMutationAudit(preview);
+    // The services of these families write the record's one audit row themselves, with the
+    // preview's source and reference: Kad adds none of its own (lots K1 and K2a).
+    const serviceWritesAudit = (['incidents', 'technologies', 'budget_lines', 'applications', 'assets', 'contracts'] as string[])
+      .includes(entityType);
     if (action === 'create') {
       const adoption = mutation.adopt && typeof mutation.adopt === 'object'
         ? mutation.adopt as Record<string, unknown>
@@ -2248,7 +2252,7 @@ export class AiBusinessRecordMutationSupportService {
         target_ref: ref.ref,
         target_title: ref.label,
       };
-      if (entityType !== 'incidents' && entityType !== 'technologies') {
+      if (!serviceWritesAudit) {
         await this.logAiAudit(context, preview, entityType, 'create', null, snapshot);
       }
       return;
@@ -2282,11 +2286,10 @@ export class AiBusinessRecordMutationSupportService {
       }
       throw error;
     }
-    // The incident, technology and budget line services write their own audit row, with the
-    // preview's source and reference (a budget line's contacts too, when a new supplier brings
-    // theirs); the detail they return stays the author's, even when the change makes the record
-    // invisible to them.
-    if (entityType === 'incidents' || entityType === 'technologies' || entityType === 'budget_lines') return;
+    // These services write their own audit row, with the preview's source and reference (a budget
+    // line's or a contract's contacts too, when a new supplier brings theirs); the detail they
+    // return stays the author's, even when the change makes the record invisible to them.
+    if (serviceWritesAudit) return;
     const after = await this.getRecordSnapshot(context, entityType, preview.target_entity_id);
     await this.logAiAudit(context, preview, entityType, 'update', before, after);
   }
@@ -2389,11 +2392,11 @@ export class AiBusinessRecordMutationSupportService {
   ): Promise<unknown> {
     switch (entityType) {
       case 'applications':
-        return this.applications.create(fields as any, context.userId, { manager: context.manager, tenantId: context.tenantId });
+        return this.applications.create(fields as any, context.userId, { manager: context.manager, tenantId: context.tenantId, audit });
       case 'assets':
-        return this.assets.create(fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, osSource: 'ai', audit });
+        return this.assets.create(fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, osSource: 'ai', ...audit, audit });
       case 'contracts':
-        return this.contracts.create(fields as any, context.userId, { manager: context.manager });
+        return this.contracts.create(fields as any, context.userId, { manager: context.manager, audit });
       case 'projects':
         return this.portfolioProjects.create(fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, userId: context.userId });
       case 'requests':
@@ -2403,7 +2406,7 @@ export class AiBusinessRecordMutationSupportService {
       case 'connections':
         return this.connections.create(fields as any, context.tenantId, context.userId, { manager: context.manager });
       case 'budget_lines':
-        return this.budgetLines.create(fields, context.userId, { manager: context.manager });
+        return this.budgetLines.create(fields, context.userId, { manager: context.manager, ...(audit ? { audit } : {}) });
       case 'incidents':
         return this.incidents.create(fields, context.userId, await this.incidentWriteOptions(context, audit));
       case 'technologies':
@@ -2425,11 +2428,11 @@ export class AiBusinessRecordMutationSupportService {
   ): Promise<unknown> {
     switch (entityType) {
       case 'applications':
-        return this.applications.update(id, fields as any, context.userId, { manager: context.manager, tenantId: context.tenantId });
+        return this.applications.update(id, fields as any, context.userId, { manager: context.manager, tenantId: context.tenantId, audit });
       case 'assets':
-        return this.assets.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, osSource: 'ai', audit });
+        return this.assets.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, osSource: 'ai', ...audit, audit });
       case 'contracts':
-        return this.contracts.update(id, fields as any, context.userId, { manager: context.manager });
+        return this.contracts.update(id, fields as any, context.userId, { manager: context.manager, audit });
       case 'projects':
         return this.portfolioProjects.update(id, fields as any, context.tenantId, context.userId, { manager: context.manager, tenantId: context.tenantId, userId: context.userId });
       case 'requests':
