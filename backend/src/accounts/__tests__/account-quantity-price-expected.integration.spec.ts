@@ -105,6 +105,17 @@ async function testApiWrites() {
       [plain.id],
     );
     assert.deepEqual(history.map((row: any) => [row.action, row.before, row.after]), [['create', null, null], ['update', null, true]], 'the history carries the setting');
+    // Cleared, by false then by null: the history goes from true to null each time.
+    const cleared = await runner.query(
+      `SELECT action, before_json->'quantity_price_expected' AS before, after_json->'quantity_price_expected' AS after
+         FROM audit_log WHERE table_name = 'accounts' AND record_id = $1 ORDER BY created_at, id`,
+      [set.id],
+    );
+    assert.deepEqual(
+      cleared.map((row: any) => [row.action, row.before, row.after]),
+      [['create', null, true], ['update', true, true], ['update', true, null], ['update', null, true], ['update', true, null]],
+      'the history carries the setting cleared',
+    );
     void tenantId;
   });
 }
