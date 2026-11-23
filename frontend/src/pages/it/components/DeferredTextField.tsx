@@ -26,8 +26,9 @@ export default function DeferredTextField({ value, onSave, resetKey, ...rest }: 
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const saved = React.useRef(value);
   saved.current = value;
-  const save = React.useRef(onSave);
-  save.current = onSave;
+  // The save of the record the typed value belongs to, taken at the keystroke: when another
+  // record opens, `onSave` is already the new record's.
+  const typedSave = React.useRef(onSave);
 
   const clearTimer = () => {
     if (timer.current) clearTimeout(timer.current);
@@ -43,6 +44,12 @@ export default function DeferredTextField({ value, onSave, resetKey, ...rest }: 
 
   React.useEffect(() => {
     clearTimer();
+    if (dirty.current) {
+      // A value typed on the record just left: saved there, never on the new one.
+      const send = typedSave.current;
+      const sending = typed.current;
+      void Promise.resolve().then(() => send(sending)).catch(() => undefined);
+    }
     dirty.current = false;
     typed.current = saved.current;
     setText(saved.current);
@@ -57,7 +64,7 @@ export default function DeferredTextField({ value, onSave, resetKey, ...rest }: 
         const sending = typed.current;
         dirty.current = false;
         try {
-          await save.current(sending);
+          await typedSave.current(sending);
         } catch {
           if (!dirty.current) {
             typed.current = saved.current;
@@ -78,6 +85,7 @@ export default function DeferredTextField({ value, onSave, resetKey, ...rest }: 
       value={text}
       onChange={(event) => {
         typed.current = event.target.value;
+        typedSave.current = onSave;
         dirty.current = true;
         setText(event.target.value);
         clearTimer();

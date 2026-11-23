@@ -323,7 +323,7 @@ function ApplicationProperties({
 }: {
   app: ApplicationDetail;
   canManage: boolean;
-  onPatch: (patch: Partial<ApplicationDetail>) => Promise<void>;
+  onPatch: (patch: Partial<ApplicationDetail>, applicationId?: string) => Promise<void>;
   onLocalUpdate: (updater: (prev: ApplicationDetail) => ApplicationDetail) => void;
 }) {
   const { t } = useTranslation(['it', 'common']);
@@ -497,7 +497,7 @@ function ApplicationProperties({
           <DeferredTextField
             value={app.editor || ''}
             resetKey={app.id}
-            onSave={(value) => onPatch({ editor: value })}
+            onSave={(value) => onPatch({ editor: value }, app.id)}
             variant="standard"
             size="small"
             fullWidth
@@ -513,7 +513,7 @@ function ApplicationProperties({
           <DeferredTextField
             value={app.version || ''}
             resetKey={app.id}
-            onSave={(value) => onPatch({ version: value || null })}
+            onSave={(value) => onPatch({ version: value || null }, app.id)}
             variant="standard"
             size="small"
             fullWidth
@@ -680,7 +680,7 @@ function ApplicationProperties({
             <DeferredTextField
               value={app.users_override == null ? '' : String(app.users_override)}
               resetKey={app.id}
-              onSave={(value) => onPatch({ users_override: value === '' ? null : Number(value) })}
+              onSave={(value) => onPatch({ users_override: value === '' ? null : Number(value) }, app.id)}
               type="number"
               variant="standard"
               size="small"
@@ -703,7 +703,7 @@ function ApplicationSupportSection({
 }: {
   app: ApplicationDetail;
   canManage: boolean;
-  onPatch: (patch: Partial<ApplicationDetail>) => Promise<void>;
+  onPatch: (patch: Partial<ApplicationDetail>, applicationId?: string) => Promise<void>;
   onRefresh: () => Promise<void>;
 }) {
   const { t } = useTranslation(['it', 'common']);
@@ -816,7 +816,7 @@ function ApplicationSupportSection({
           <DeferredTextField
             value={app.support_notes || ''}
             resetKey={app.id}
-            onSave={(value) => onPatch({ support_notes: value || null })}
+            onSave={(value) => onPatch({ support_notes: value || null }, app.id)}
             variant="standard"
             fullWidth
             multiline
@@ -896,7 +896,7 @@ export function OverviewTab({
   connections: ConnectionsResult;
   onOpenApplication: (appId: string) => void;
   onShowInterfaces: () => void;
-  onPatch: (patch: Partial<ApplicationDetail>) => Promise<void>;
+  onPatch: (patch: Partial<ApplicationDetail>, applicationId?: string) => Promise<void>;
   onRefresh: () => Promise<void>;
 }) {
   const { t } = useTranslation(['it', 'common']);
@@ -1268,7 +1268,7 @@ export function OperationsTab({
 }: {
   app: ApplicationDetail;
   canManage: boolean;
-  onPatch: (patch: Partial<ApplicationDetail>) => Promise<void>;
+  onPatch: (patch: Partial<ApplicationDetail>, applicationId?: string) => Promise<void>;
   /** The application's vulnerabilities; absent while the feed is off or the application is out of service. */
   vulnerabilities?: ReachVulnerabilities | null;
 }) {
@@ -1359,7 +1359,7 @@ function ComplianceTab({
 }: {
   app: ApplicationDetail;
   canManage: boolean;
-  onPatch: (patch: Partial<ApplicationDetail>) => Promise<void>;
+  onPatch: (patch: Partial<ApplicationDetail>, applicationId?: string) => Promise<void>;
   onRefresh: () => Promise<void>;
   onReview: () => Promise<void>;
   onOpenKnowledge: () => void;
@@ -1579,10 +1579,25 @@ export default function ApplicationWorkspacePage() {
   const currentApp = React.useRef(app);
   React.useEffect(() => { currentApp.current = app; }, [app]);
   const [classificationSaving, setClassificationSaving] = React.useState(false);
-  const patchApplication = React.useCallback(async (patch: Partial<ApplicationDetail>) => {
+  const patchApplication = React.useCallback(async (patch: Partial<ApplicationDetail>, applicationId?: string) => {
     const work = saveQueue.current.then(async () => {
       const current = currentApp.current;
       if (!current) return;
+      if (applicationId && applicationId !== current.id) {
+        // A value typed on the application the page has just left: saved there, the page stays on
+        // the one it shows.
+        try {
+          await api.patch(`/applications/${applicationId}`, patch);
+        } catch (err: any) {
+          setError(getApiErrorMessage(err, t, t('messages.saveClassificationFailed')));
+          throw err;
+        }
+        await queryClient.invalidateQueries({
+          predicate: (query) => (query.queryKey[0] === 'application-workspace' && (query.state.data as ApplicationDetail | undefined)?.id === applicationId)
+            || ['applications', 'app-filter-values', 'applications-filter-values', 'application-recovery-dependencies'].some((key) => String(query.queryKey[0]).startsWith(key)),
+        });
+        return;
+      }
       setClassificationSaving(true);
       classificationSaveFailed.current = false;
       setError(null);
