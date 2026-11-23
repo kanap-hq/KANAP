@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 import { AMOUNT_MEASURES, MEASURE_FREEZE_COLUMN, type AmountMeasure } from '../amounts-write.util';
-import { loadEntryCheckSettings, readEntryChecks, type LineEntryCheck } from '../budget-line-entry-check';
+import { loadEntryCheckSettings, readEntryChecks } from '../budget-line-entry-check';
 import { describeAiEntityFilters } from '../../ai/query/ai-filter-description.util';
 import { resolveAiEntityRegistry } from '../../ai/query/registries';
 
@@ -431,14 +431,61 @@ async function testKad(h: Harness, runner: QueryRunner, s: Seed) {
     }
     assert.equal(reads, 1, `${who}: the detail reads the rule once`);
     assert.equal(detail.data.entry_check, 'to_check', `${who}: the detail's row says it`);
-    const entry: LineEntryCheck = detail.data.quantity_price_entry as LineEntryCheck;
-    assert.deepEqual([entry.expected, entry.level, entry.to_check, entry.columns], [true, 'consolidation', true, [{ year: Y, measure: 'planned' }]], `${who}: the detail`);
-    assert.deepEqual(entry.consolidation_account, accounts ? { number: 2400, name: 'External services' } : null, `${who}: the consolidation account with the accounts only`);
-    const withheld = (detail.data.quantity_price_entry as any).consolidation_account_withheld;
-    if (accounts) assert.equal(withheld, undefined, `${who}: nothing withheld`);
-    else assert.match(withheld, /right on accounts/, `${who}: the detail says why it is not named`);
   }
   console.log('ok - Kad and the MCP server: the field filters, counts as the tile, lists the same lines, shows in the detail');
+}
+
+/**
+ * Kad's detail of a line says the fact in plain words (`quantity_price_entry`): who expects quantity
+ * and price, each column to check by its name on screen and year with how it is entered today, and
+ * that this is the whole cause of `to_check`; a conforming or unconcerned line says so. The column
+ * names come in the person's language (a profile in French), or in the four languages without one;
+ * never a storage key; no account number for a person who does not read the accounts.
+ */
+async function testKadDetailWords(h: Harness, runner: QueryRunner, s: Seed) {
+  await runner.query(`UPDATE users SET locale = 'fr' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.users.admin]);
+  const entryOf = async (userId: string, label: string) => {
+    const detail = await h.queries.executeDetail(aiContext(runner, s, userId), { entity_type: 'budget_lines', entity_id: s.lines[label].ref });
+    const entry = detail.data.quantity_price_entry as any;
+    assert.doesNotMatch(JSON.stringify(entry), /"(planned|committed|forecast|actual|expected_landing|level|measure)"/, `${label}: no storage key`);
+    return entry;
+  };
+
+  // The line's account expects it: two columns, each named in French, with how it is entered.
+  const account = await entryOf(s.users.admin, 'multi');
+  assert.equal(account.status, 'to_check', 'account: to check');
+  assert.match(account.expected_by, /line's account 621100 - Temporary staff/, 'account: names the line\'s account');
+  assert.deepEqual(account.columns_to_check.map((c: any) => c.column), [`Budget ${Y}`, `Réalisé ${Y + 2}`], 'account: the columns by their names on screen');
+  assert.match(account.columns_to_check[0].entered_as, /spread over the months/, 'account: the budget is an amount spread');
+  assert.match(account.columns_to_check[1].entered_as, /by month/, 'account: the actuals are entered by month');
+  assert.match(account.explanation, /not built as quantity × price/, 'account: why');
+  assert.match(account.explanation, /only cause/, 'account: the only cause');
+  assert.match(account.explanation, /Nothing is refused/, 'account: nothing refused');
+  assert.match(account.explanation, /Budget tab/, 'account: how to clear it');
+
+  // The consolidation account expects it, named for a reader of the accounts.
+  const consolidation = await entryOf(s.users.admin, 'cons');
+  assert.equal(consolidation.status, 'to_check', 'consolidation: to check');
+  assert.match(consolidation.expected_by, /consolidation account 2400 - External services/, 'consolidation: named');
+  assert.match(consolidation.expected_by, /622100 - Fees/, 'consolidation: the line\'s account mapped to it');
+  assert.deepEqual(consolidation.columns_to_check.map((c: any) => c.column), [`Budget ${Y}`], 'consolidation: the column');
+
+  // The same line for a reader of budget without the accounts: no account number, the columns in four languages.
+  const withheld = await entryOf(s.users.budgetOnly, 'cons');
+  assert.equal(withheld.status, 'to_check', 'withheld: to check');
+  assert.doesNotMatch(JSON.stringify(withheld), /2400|622100|External services|Fees/, 'withheld: no account named');
+  assert.match(withheld.consolidation_account_withheld, /right on accounts/, 'withheld: says why it is not named');
+  assert.deepEqual(withheld.columns_to_check[0].column, { en: `Budget ${Y}`, fr: `Budget ${Y}`, de: `Budget ${Y}`, es: `Presupuesto ${Y}` }, 'withheld: the four names without a profile language');
+
+  // A conforming line and a line its account does not concern.
+  const conforming = await entryOf(s.users.admin, 'qp');
+  assert.equal(conforming.status, 'conforms', 'conforming: conforms');
+  assert.equal(conforming.columns_to_check, undefined, 'conforming: no column to check');
+  assert.match(conforming.explanation, /every column .* built as quantity × price/, 'conforming: says it');
+  const unconcerned = await entryOf(s.users.admin, 'none');
+  assert.equal(unconcerned.status, 'not_expected', 'unconcerned: not expected');
+  assert.match(unconcerned.explanation, /expects no quantity and price entry/, 'unconcerned: says it');
+  console.log('ok - Kad\'s detail: who expects it, the columns by name and how they are entered, the only cause; conforming and unconcerned lines');
 }
 
 async function testLimitedPerson(h: Harness, runner: QueryRunner, s: Seed) {
@@ -538,6 +585,7 @@ async function run() {
       await testChanges(h, runner, s);
       await testRoute(h, runner, s);
       await testKad(h, runner, s);
+      await testKadDetailWords(h, runner, s);
     });
     // `data_access_apply` limits the rest of its transaction: a transaction of its own.
     await inTransaction(h, (runner, s) => testLimitedPerson(h, runner, s));

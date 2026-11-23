@@ -72,6 +72,7 @@ import { aiLinkedReadNotes, mergeFieldNotes } from './ai-linked-read-notes.util'
 import { aiDataAccessCountsNote, aiDataAccessNote } from './ai-data-access-note.util';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { readEntryChecks } from '../../spend/budget-line-entry-check';
+import { describeEntryCheckForAi } from './ai-entry-check-detail';
 import { compareNullableText } from '../../common/list-engine/sql-fragments';
 import type { BudgetListAccess } from '../../spend/budget-list/budget-list.runtime';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
@@ -3334,9 +3335,9 @@ export class AiQueryExecutor {
   ): Promise<Record<string, unknown>> {
     const anchorYear = new Date().getFullYear();
     const reads = await this.readableLinks(context);
-    // Quantity and price expected: the level that expects it and the columns to check, as the line's
-    // route gives them; the consolidation account named for a reader of the accounts only. Read
-    // once: the line's row (`entry_check`) takes it too.
+    // Quantity and price expected: the rule as the line's route reads it, the consolidation account
+    // named for a reader of the accounts only. Read once: the line's row (`entry_check`) takes it
+    // too, and `quantity_price_entry` says it in words.
     const access = await aiBudgetListAccess(this.policy, context);
     const checks = await readEntryChecks(context.manager, context.tenantId, [lineId], { accounts: access.accounts });
     const [row] = await this.budgetLines.summaryRowsByIds(
@@ -3389,16 +3390,15 @@ export class AiQueryExecutor {
       : null;
     const links = await this.budgetLines.listLinks(lineId, nature, { manager: context.manager }).catch(() => []);
     const attachments = await this.budgetLines.listAttachments(lineId, nature, { manager: context.manager }).catch(() => []);
-    const check = checks.get(lineId) ?? null;
-    // Without the right on accounts the consolidation account is not named: the detail says why, so
-    // that a missing read never reads as "no consolidation account".
-    const entryCheck = check && check.level === 'consolidation' && !access.accounts
-      ? {
-        ...check,
-        consolidation_account_withheld: 'The consolidation account is named with the right on accounts (Accounts, reader level), which this person does not have. '
-          + 'Tell them the setting comes from the consolidation account of the line\'s account, without naming it.',
-      }
-      : check;
+    // In plain words (`describeEntryCheckForAi`); without the right on accounts the consolidation
+    // account is not named, and the detail says why, so that a missing read never reads as "none".
+    const entryCheck = await describeEntryCheckForAi(context.manager, {
+      tenantId: context.tenantId,
+      userId: context.userId,
+      lineId,
+      lineAccount: typeof summary?.account_display === 'string' && summary.account_display ? summary.account_display : null,
+      accounts: access.accounts,
+    }, checks.get(lineId) ?? null);
 
     return {
       ...(summary ?? {}),

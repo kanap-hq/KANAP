@@ -53,7 +53,8 @@ export const accountsRegistry: AiEntityFilterRegistry = {
       type: 'set',
       description: 'Whether the budget lines of the account are expected to be entered as quantity and price: true when the account sets it, null when it does not. '
         + 'A local account without the setting takes it from its consolidation account (the account of the consolidation chart with its consolidation number): '
-        + 'setting a consolidation account applies to every account mapped to it. The budget lines to check against it are budget_lines with `entry_check` `to_check`.',
+        + 'setting a consolidation account applies to every account mapped to it. The budget lines to check against it are budget_lines with `entry_check` `to_check`; '
+        + 'a line\'s get_entity_detail says why in `quantity_price_entry` (`expected_by`, `columns_to_check`, `explanation`).',
       values: ['true', null],
       discoverable: true,
       sortable: true,

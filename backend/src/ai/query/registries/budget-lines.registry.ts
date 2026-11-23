@@ -120,7 +120,10 @@ export const budgetLinesRegistry: AiEntityFilterRegistry = {
         + 'or else its consolidation account, expects the amounts to be built as quantity × price and at least one of the line\'s columns is not '
         + '(a column shown in the budget settings, not frozen, with a non-zero total for a year the line has a version). null is every other line: '
         + 'its account expects nothing, or every such column is built as quantity × price. The same lines as the "to check" control of the Budget '
-        + 'home tile. get_entity_detail says, in `quantity_price_entry`, the level that expects it and the columns to check.',
+        + 'home tile. A line\'s get_entity_detail says why in `quantity_price_entry`: `expected_by` (the account that expects it), '
+        + '`columns_to_check` (each column by its name on screen and year, in four languages when the profile sets none: use the one of the conversation; '
+        + 'with how it is entered today) and `explanation`, the whole cause '
+        + 'of `to_check`; its `status` is also `conforms` or `not_expected` for the other lines. Answer "why is this line to check" from it.',
       values: ['to_check', null],
       discoverable: true,
       sortable: true,
