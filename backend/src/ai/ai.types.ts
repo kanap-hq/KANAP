@@ -689,6 +689,39 @@ export type AiImportRunDto = {
     | { kind: 'budget_file'; file: Record<string, unknown> | null };
 };
 
+/**
+ * A record the card of a change in bulk lists (lot K2e of 26.12.1): its reference and name, its
+ * value before in the person's language (`before_state` says whether it is a value, empty, or hidden
+ * from the person), and whether it is kept. A record left out stays listed, unticked.
+ */
+export type AiBulkEditRowDto = {
+  /** The record's id: the screen sends it back to leave the record out; never shown. */
+  id: string;
+  ref: string;
+  title: string;
+  before: string;
+  before_state: 'value' | 'empty' | 'hidden';
+  kept: boolean;
+  /** Once approved: whether the approval changed this record. */
+  changed?: boolean;
+};
+
+/**
+ * The list of a card of a change in bulk, for the screen only (the model reads the counts of the
+ * card's change, never this list: `MODEL_HIDDEN_OUTPUT_FIELDS`). Present when the card changes up
+ * to `AI_BULK_EDIT_LIST_MAX` records.
+ */
+export type AiBulkEditPreviewDto = {
+  /** The field changed and its new value, in the person's language. */
+  field: string;
+  after: string;
+  after_empty: boolean;
+  /** Every record the card changes, and those left out, by reference. */
+  rows: AiBulkEditRowDto[];
+  kept: number;
+  excluded: number;
+};
+
 export type AiMutationPreviewDto = {
   preview_id: string;
   tool_name: AiMutationWriteToolName;
@@ -702,6 +735,10 @@ export type AiMutationPreviewDto = {
   changes: Record<string, AiMutationPreviewChangeDto>;
   /** The column mapping of an import, for the `prepare_import_mapping` card. */
   import_mapping?: AiImportMappingPreviewDto;
+  /** The records a change in bulk lists, for the screen only. */
+  bulk_edit?: AiBulkEditPreviewDto;
+  /** What the model is told to do next about this card (a change in bulk too long to list); the screen ignores it. */
+  assistant_note?: string;
   requires_confirmation: boolean;
   actions: Array<'approve' | 'reject'>;
   summary: string;
@@ -710,8 +747,8 @@ export type AiMutationPreviewDto = {
   error_is_technical?: boolean;
   conversation_id: string | null;
   /**
-   * A card made by a choice of the person on an import card: the id of the card the conversation
-   * shows (the first of the chain), which this one stands in for.
+   * A card made by a choice of the person on an import card, or by a record left out of a change in
+   * bulk: the id of the card the conversation shows (the first of the chain), which this one stands in for.
    */
   replaces_preview_id?: string;
   created_at: string;
