@@ -152,16 +152,21 @@ function editable(el: HTMLElement): boolean {
  * it), else the first field this person may change, in reading order (the content, then the
  * properties panel; the title, in the header, comes before both). A description on a tab not shown
  * is not on screen: the first field shown is the target. `undefined` while the declared
- * description is still loading (its editor shows no field yet): the target is not known yet.
+ * description is still loading (its editor shows no field yet), or not on screen yet when the
+ * page showed one before the record was written (`expects`: the record's page declares it once
+ * its data has loaded): the target is not known yet.
  */
-function createdRecordTarget(root: ParentNode): HTMLElement | null | undefined {
+function createdRecordTarget(root: ParentNode, expects = false): HTMLElement | null | undefined {
+  let declaredShown = false;
   for (const declared of root.querySelectorAll<HTMLElement>('[data-creation-description]')) {
     if (!reachable(declared) || declared.closest('[hidden], [aria-hidden="true"]')) continue;
+    declaredShown = true;
     const field = textFirst(fieldsOf(declared)).find(editable);
     if (field) return field;
     // A description shown read only has its field, closed: the next field is the target.
     if (!declared.querySelector(FIELD_LIKE)) return undefined;
   }
+  if (expects && !declaredShown) return undefined;
   for (const name of ['main', 'properties'] as const) {
     for (const panel of root.querySelectorAll<HTMLElement>(`[data-creation-panel="${name}"]`)) {
       const field = Array.from(panel.querySelectorAll<HTMLElement>(ENTRY_FIELDS))
@@ -182,7 +187,9 @@ export function findCreatedRecordField(root: ParentNode): HTMLElement | null {
 // opens its Flow tab): the first field to fill there. `created`: the creation frame wrote the
 // record (`useRecordCreation`): its description, else its first field. Placed once, then cleared,
 // or after a few seconds.
-type Armed = { kind: 'follow' | 'created'; until: number; origin: Element | null };
+// `expects`: the page showed a description (`data-creation-description`, in its preview or its
+// draft) when the record was written: the record's page waits for it rather than for its first field.
+type Armed = { kind: 'follow' | 'created'; until: number; origin: Element | null; expects?: boolean };
 let armed: Armed | null = null;
 
 /**
@@ -321,7 +328,7 @@ export function armCreatedRecordFocus(): void {
     return;
   }
   done.shown = true;
-  armed = { kind: 'created', until: Date.now() + 8000, origin: done.origin };
+  armed = { kind: 'created', until: Date.now() + 8000, origin: done.origin, expects: !!document.querySelector('[data-creation-description]') };
   // A page that never shows the record lets the keys go.
   window.setTimeout(() => {
     if (write === done && armed?.kind === 'created') clearCreationFieldFocus();
@@ -396,7 +403,12 @@ function atStart(root: ParentNode, active: Element | null): boolean {
  * it was meant for still gets the cursor. A record just written (`created`) gets what was typed
  * while it was written in that field.
  */
-function placeField(root: HTMLElement, find: (root: HTMLElement) => HTMLElement | null | undefined, origin: Element | null = null, created = false): void {
+function placeField(
+  root: HTMLElement,
+  find: (root: HTMLElement, late: boolean) => HTMLElement | null | undefined,
+  origin: Element | null = null,
+  created = false,
+): void {
   const started = Date.now();
   let placed: HTMLElement | null = null;
   let acted = false;
@@ -415,8 +427,10 @@ function placeField(root: HTMLElement, find: (root: HTMLElement) => HTMLElement 
   };
   const attempt = () => {
     const active = document.activeElement;
+    // The last attempt takes what is on screen: a description still awaited gives way.
+    const late = Date.now() - started >= 3000;
     // An editor that opens on focus may take the focus into its text itself: the field found.
-    const field = root.isConnected ? find(root) : null;
+    const field = root.isConnected ? find(root, late) : null;
     if (acted || (created && write?.acted) || !root.isConnected || (active !== placed && active !== field && !atRest(active))) {
       stop();
       return;
@@ -426,7 +440,7 @@ function placeField(root: HTMLElement, find: (root: HTMLElement) => HTMLElement 
       placed = field;
       if (created) enterPlaced(field);
     }
-    if (Date.now() - started < 3000) window.setTimeout(attempt, 50);
+    if (!late) window.setTimeout(attempt, 50);
     else stop();
   };
   attempt();
@@ -497,13 +511,13 @@ export function useCreationFieldFocus(rootRef: React.RefObject<HTMLElement | nul
     const changed = shown.current !== page;
     shown.current = page;
     if (!changed || !armed) return;
-    const { kind, until, origin } = armed;
+    const { kind, until, origin, expects = false } = armed;
     armed = null;
     if (Date.now() >= until) {
       if (kind === 'created') endWrite();
       return;
     }
-    if (kind === 'created') placeField(root, createdRecordTarget, origin, true);
+    if (kind === 'created') placeField(root, (scope, late) => createdRecordTarget(scope, expects && !late), origin, true);
     else placeField(root, findFirstCreationField);
   });
   React.useLayoutEffect(() => () => {

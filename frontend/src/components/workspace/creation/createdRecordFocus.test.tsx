@@ -479,4 +479,23 @@ describe('what the person does while the record is written', () => {
     await waitFor(() => expect(screen.getByTestId('rich-value').textContent).toBe('abc\n\nde'));
     expect(document.activeElement?.getAttribute('contenteditable')).toBe('true');
   });
+
+  it('waits for a description that loads after the properties, the cursor going nowhere else', async () => {
+    const write = heldWrite();
+    renderPage(TitlePage, { post: write.post, shape: { description: 'late' } });
+    const title = typeTitle('Billing');
+    const visited: Element[] = [];
+    const onFocusIn = (event: FocusEvent) => { if (event.target instanceof Element) visited.push(event.target); };
+    document.addEventListener('focusin', onFocusIn);
+    try {
+      fireEvent.keyDown(title, { key: 'Enter' });
+      await write.answer();
+      await onRecord();
+      await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus(), { timeout: 2000 });
+      const elsewhere = visited.filter((el) => !el.closest('[data-creation-title], [data-creation-description]'));
+      expect(elsewhere).toEqual([]);
+    } finally {
+      document.removeEventListener('focusin', onFocusIn);
+    }
+  });
 });
