@@ -48,7 +48,9 @@ import { DEFAULT_BUDGET_TILES, useBudgetDashboardConfig } from './hooks/useBudge
 // Every tile on (My tasks is the home page's), so that each test reads the tile it is about; the defaults have their own test.
 const ALL_TILES = DEFAULT_BUDGET_TILES.map((tile) => ({ ...tile, enabled: tile.id !== 'my-tasks' }));
 let savedDashboard = { tiles: ALL_TILES };
-beforeEach(() => { savedDashboard = { tiles: ALL_TILES }; });
+// The lines to check against quantity and price, per type (the hygiene count of `entry_check`).
+let entryToCheck = { opex: 2, capex: 0 };
+beforeEach(() => { savedDashboard = { tiles: ALL_TILES }; entryToCheck = { opex: 2, capex: 0 }; });
 import { setBudgetColumns } from '../reports/budgetColumnsTestState';
 import { fakeAggregate } from '../../test/fakeBudgetAggregate';
 
@@ -379,8 +381,8 @@ function mockBudgetEndpoints() {
     // A hygiene count: one filter, no group, no sum.
     if (filters.length && body.spec.groupBy.length === 0 && body.spec.measures.length === 0) {
       const counts: Record<string, number> = scope === 'opex'
-        ? { owner_it_name: 1, owner_business_name: 2, paying_company_name: 0, cost_center_label: 3, yPlus1Budget: 5, yPlus1Forecast: 5, account_warning: 0 }
-        : { owner_it_name: 4, owner_business_name: 3, paying_company_name: 0, cost_center_label: 0, yPlus1Budget: 2, yPlus1Forecast: 2, account_warning: 1 };
+        ? { owner_it_name: 1, owner_business_name: 2, paying_company_name: 0, cost_center_label: 3, yPlus1Budget: 5, yPlus1Forecast: 5, account_warning: 0, entry_check: entryToCheck.opex }
+        : { owner_it_name: 4, owner_business_name: 3, paying_company_name: 0, cost_center_label: 0, yPlus1Budget: 2, yPlus1Forecast: 2, account_warning: 1, entry_check: entryToCheck.capex };
       const count = counts[filters[0]] ?? 0;
       return { data: { groups: [], others: null, total: { keys: [], count, values: {}, unknown: {} }, groupCount: count ? 1 : 0, reportingCurrency: null } };
     }
@@ -680,6 +682,28 @@ describe('BudgetSection budget tiles', () => {
     expect(countQueries).toContainEqual({ filters: { paying_company_name: { filterType: 'set', values: [null] } }, status: 'enabled' });
     // Long labels (German) wrap instead of being cut.
     expect(within(tile).getByText('dashboard.hygiene.accountOutsideChart')).not.toHaveClass('MuiTypography-noWrap');
+  });
+
+  it('counts the lines to check against quantity and price, and opens the list on them', async () => {
+    renderPage();
+    const tile = await screen.findByRole('region', { name: 'dashboard.dataHygiene' });
+    const filtersOf = (el: HTMLElement) => JSON.parse(new URLSearchParams(el.getAttribute('href')!.split('?')[1]).get('filters')!);
+    const opex = await within(tile).findByLabelText('dashboard.hygiene.entryToCheck, ops:operations.scope.opex: 2');
+    expect(opex.getAttribute('href')!.split('?')[0]).toBe('/ops/budget');
+    expect(filtersOf(opex)).toEqual({ entry_check: { filterType: 'set', values: ['to_check'] }, nature: { filterType: 'set', values: ['opex'] } });
+    expect(within(tile).getByLabelText('dashboard.hygiene.entryToCheck, ops:operations.scope.capex: 0')).not.toHaveAttribute('href');
+    // Counted by the list's aggregate on the same filter, on the lines the list shows by default.
+    const countQueries = aggregateCalls('/spend-items/summary/aggregate').filter((body) => body.query.filters).map((body) => body.query);
+    expect(countQueries).toContainEqual({ filters: { entry_check: { filterType: 'set', values: ['to_check'] } }, status: 'enabled' });
+  });
+
+  it('leaves the quantity and price check out of the tile while it counts no line', async () => {
+    entryToCheck = { opex: 0, capex: 0 };
+    renderPage();
+    const tile = await screen.findByRole('region', { name: 'dashboard.dataHygiene' });
+    await within(tile).findByLabelText('dashboard.hygiene.noItOwner, ops:operations.scope.capex: 4');
+    expect(within(tile).queryByText('dashboard.hygiene.entryToCheck')).not.toBeInTheDocument();
+    expect(within(tile).getByText('dashboard.hygiene.accountOutsideChart')).toBeInTheDocument();
   });
 
   it('mixes the recent updates of both types, newest first, each row opening its line', async () => {

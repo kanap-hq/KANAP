@@ -147,8 +147,9 @@ function useNextContractRenewal(enabled: boolean) {
  * The hygiene checks. One filter, keyed by column ids of the OPEX and CAPEX lists, drives both the
  * count and the link to the list, so the number on the tile is the number of rows the list shows.
  */
-type HygieneKey = 'noItOwner' | 'noBusinessOwner' | 'noPayingCompany' | 'noCostCenter' | 'noBudgetNextYear' | 'accountOutsideChart';
-type HygieneCheck = { key: HygieneKey; tone: 'warning' | 'error'; filter: ColumnFilters };
+type HygieneKey = 'noItOwner' | 'noBusinessOwner' | 'noPayingCompany' | 'noCostCenter' | 'noBudgetNextYear' | 'accountOutsideChart' | 'entryToCheck';
+/** `hideAtZero`: a check of an optional setting (quantity and price), shown only when it counts lines. */
+type HygieneCheck = { key: HygieneKey; tone: 'warning' | 'error'; filter: ColumnFilters; hideAtZero?: boolean };
 
 /**
  * Next year's default column is zero: a line without a version that year reads 0 (an amount is
@@ -164,6 +165,8 @@ function hygieneChecks(metric: AmountColumnKey): HygieneCheck[] {
     { key: 'noCostCenter', tone: 'warning', filter: { cost_center_label: keepValues([null]) } },
     { key: 'noBudgetNextYear', tone: 'warning', filter: { [nextYearField(metric)]: ZERO_AMOUNT } },
     { key: 'accountOutsideChart', tone: 'error', filter: { account_warning: keepValues(['coa_mismatch']) } },
+    // Lines whose account expects quantity and price, with a column not built so (lot B12a).
+    { key: 'entryToCheck', tone: 'warning', filter: { entry_check: keepValues(['to_check']) }, hideAtZero: true },
   ];
 }
 
@@ -600,6 +603,7 @@ export default function BudgetSection({ tiles: tilesConfig, loading = false, lea
                 <Typography key={scope} sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', textAlign: 'right' }}>{scopeLabel(scope)}</Typography>
               ))}
               {(checks ?? []).map((check) => {
+                if (check.hideAtZero && readableScopes.every((scope) => !hygieneByScope[scope].data?.[check.key])) return null;
                 // Next year's check names the tenant's default column.
                 const name = check.key === 'noBudgetNextYear'
                   ? t('dashboard.hygiene.noBudgetNextYear', { column: defaultColumn.label })
