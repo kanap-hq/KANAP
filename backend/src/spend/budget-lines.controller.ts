@@ -386,6 +386,19 @@ export class BudgetLinesController {
     });
   }
 
+  /**
+   * Whether the line's account, or its consolidation account, expects quantity and price, and the
+   * columns to check (`budget-line-entry-check.ts`). Same right and data access as the line's read:
+   * a line the caller cannot read is 404. The consolidation account is named for a reader of the
+   * accounts only. `:id` is a uuid or a line reference. Declared before the generic detail route.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'reader')
+  @Get(':id/entry-check')
+  entryCheck(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    return this.svc.entryCheck(id, { manager: ctx.manager as EntityManager, access: budgetListAccess(ctx) });
+  }
+
   // Keep the generic detail route after every static GET path.
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'reader')

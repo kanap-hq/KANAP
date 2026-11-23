@@ -26,6 +26,7 @@ import { assertCreationToken } from '../common/creation/creation-routes';
 import { BUDGET_LINE_CREATION, hasSuccessorLine } from './budget-line-creation';
 import { lockBudgetLine } from './budget-locks';
 import { bulkUpdateBudgetLines } from './budget-line-bulk-edit';
+import { readEntryChecks, type LineEntryCheck } from './budget-line-entry-check';
 import type { BulkEditOptions } from '../common/bulk-edit/bulk-edit';
 
 type ReadOptions = { manager: EntityManager; access?: BudgetListAccess };
@@ -317,6 +318,17 @@ export class BudgetLinesService {
    * The contract picker: mismatches a candidate would have once linked. Without the contracts
    * right the answer is empty and no contract is read. A missing line, or one outside data access, is 404.
    */
+  /**
+   * The quantity and price rule of one line (`readEntryChecks`), read under the request's tenant and
+   * data access: a line the caller cannot read is 404, as a missing one.
+   */
+  async entryCheck(ref: string, opts: { manager: EntityManager; access?: BudgetListAccess }): Promise<{ id: string; reference: string } & LineEntryCheck> {
+    const line = await resolveBudgetLine(ref, opts.manager);
+    const tenantId = await summaryTenantId(opts.manager);
+    const checks = await readEntryChecks(opts.manager, tenantId, [line.id], { accounts: opts.access?.accounts === true });
+    return { id: line.id, reference: line.reference, ...checks.get(line.id)! };
+  }
+
   contractConsistency(ref: string, rawIds: unknown, opts: { manager: EntityManager; contractsAccess: boolean }) {
     return budgetLineContractConsistency(opts.manager, ref, rawIds, opts.contractsAccess);
   }
