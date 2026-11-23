@@ -33,14 +33,21 @@ export class SpendAllocationsService {
   /**
    * The rows save (`POST …/allocations/bulk-upsert`, the AI): the rows are read with the method and
    * driver stored on the version. `opts.tenantId` is the request's tenant; without it, the tenant of
-   * the request transaction.
+   * the request transaction. `opts.audit`: the source of the audit row when it is not the person on
+   * the screen (Kad's card).
    */
-  async bulkUpsert(versionId: string, items: AllocationInput[], userId?: string | null, opts?: { manager?: EntityManager; tenantId?: string }) {
+  async bulkUpsert(
+    versionId: string, items: AllocationInput[], userId?: string | null,
+    opts?: { manager?: EntityManager; tenantId?: string; audit?: { source: string; sourceRef: string | null } },
+  ) {
     const manager = opts?.manager ?? this.repo.manager;
     const tenantId = opts?.tenantId ?? await currentTenantId(manager);
     // A version of a line of another nature is not found (`budget-nature.ts`); a missing one is refused as before.
     await budgetLineOfChild(manager, this.nature, 'version', tenantId, versionId, 'Version not found');
-    return bulkUpsertAllocations({ manager, audit: this.audit, calculator: this.calculator }, this.nature, tenantId, versionId, items, userId);
+    return bulkUpsertAllocations(
+      { manager, audit: this.audit, calculator: this.calculator, ...(opts?.audit ? { auditSource: opts.audit } : {}) },
+      this.nature, tenantId, versionId, items, userId,
+    );
   }
 
   /**

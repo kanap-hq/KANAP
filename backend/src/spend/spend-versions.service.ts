@@ -64,8 +64,12 @@ export class SpendVersionsService {
    * With `refuseExisting`, an existing version of the year is refused (409)
    * instead of returned: for a caller that asked to create one and would
    * otherwise report a creation that did not happen (the AI action).
+   * `audit`: the source of the audit row when it is not the person on the screen (Kad's card).
    */
-  async createForItem(itemId: string, body: Partial<SpendVersion>, userId?: string | null, opts?: { manager?: EntityManager; refuseExisting?: boolean }) {
+  async createForItem(
+    itemId: string, body: Partial<SpendVersion>, userId?: string | null,
+    opts?: { manager?: EntityManager; refuseExisting?: boolean; audit?: { source: string; sourceRef: string | null } },
+  ) {
     if (!body.version_name) throw new BadRequestException('version_name required');
     const asOf = body.as_of_date ?? new Date().toISOString().slice(0, 10);
     const yr = this.nature === 'capex'
@@ -103,18 +107,23 @@ export class SpendVersionsService {
       await this.audit.log({
         table: auditTableOf(this.nature, 'spend_versions'), recordId: ensured.version.id, action: 'create', before: null,
         after: presentChild(this.nature, ensured.version), userId,
+        ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
       }, { manager: mg });
     }
     return presentChild(this.nature, ensured.version) as SpendVersion;
   }
 
-  /** Only the fields the body supplies, under the line's and the version's locks; see `updateBudgetVersionUnderLock`. */
-  async updateForItem(itemId: string, body: Partial<SpendVersion> & { id: string }, userId?: string | null, opts?: { manager?: EntityManager }) {
+  /** Only the fields the body supplies, under the line's and the version's locks; see `updateBudgetVersionUnderLock`. `audit` as `createForItem`. */
+  async updateForItem(
+    itemId: string, body: Partial<SpendVersion> & { id: string }, userId?: string | null,
+    opts?: { manager?: EntityManager; audit?: { source: string; sourceRef: string | null } },
+  ) {
     const mg = opts?.manager ?? this.repo.manager;
     const { before, after } = await updateBudgetVersionUnderLock(mg, this.nature, itemId, body as any, this.contract.duplicateName);
     await this.audit.log({
       table: auditTableOf(this.nature, 'spend_versions'), recordId: after.id, action: 'update',
       before: presentChild(this.nature, before), after: presentChild(this.nature, after), userId,
+      ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
     }, { manager: mg });
     return presentChild(this.nature, after) as SpendVersion;
   }

@@ -53,6 +53,11 @@ export const ALLOCATION_METHODS = ['default', 'headcount', 'it_users', 'turnover
 export const ALLOCATION_DRIVERS = ['headcount', 'it_users', 'turnover'] as const;
 const MANUAL_METHODS = new Set<string>(['manual_company', 'manual_department', 'manual_pct']);
 
+/** The audit row's source and reference, when the save names them. */
+function auditSourceOf(deps: AllocationSaveDeps): { source?: string; sourceRef?: string | null } {
+  return deps.auditSource ? { source: deps.auditSource.source, sourceRef: deps.auditSource.sourceRef } : {};
+}
+
 /** The signature of an allocation nobody touched (the default method and driver, no row): known to the screen before a version exists. */
 export const UNTOUCHED_ALLOCATION_SIGNATURE = 'default';
 
@@ -70,6 +75,8 @@ type AllocationRow = SpendAllocation;
 export type AllocationSaveDeps = {
   manager: EntityManager;
   audit: Pick<AuditService, 'log'>;
+  /** The source of the save's audit rows when it is not the person on the screen (Kad's card). */
+  auditSource?: { source: string; sourceRef: string | null };
   /** The scope's calculator: the shares of an automatic method. */
   calculator: {
     computeForVersions(versions: any[], opts: { manager: EntityManager; tenantId: string }): Promise<Map<string, { shares: Array<{ allocation_pct: number | string }> }>>;
@@ -304,7 +311,7 @@ async function storeRows(
     const computation = await deps.calculator.computeForVersions([version], { manager, tenantId });
     const total = computation.get(version.id)?.shares.reduce((acc, share) => acc + Number(share.allocation_pct || 0), 0) ?? 0;
     // Keyed by the version: the Allocations tab's conflicts read who changed the allocation from here.
-    await deps.audit.log({ table: auditTableOf(scope, t.allocations), recordId: version.id, action: 'update', before, after: [], userId }, { manager });
+    await deps.audit.log({ table: auditTableOf(scope, t.allocations), recordId: version.id, action: 'update', before, after: [], userId, ...auditSourceOf(deps) }, { manager });
     return { updated: 0, total_pct: round(total) };
   }
 
@@ -312,7 +319,7 @@ async function storeRows(
   if (plan.kind === 'manual' && !sameAllocationRows(before, plan.rows)) {
     await repo.delete({ tenant_id: tenantId, version_id: version.id } as any);
     after = await repo.save(plan.rows);
-    await deps.audit.log({ table: auditTableOf(scope, t.allocations), recordId: version.id, action: 'update', before, after, userId }, { manager });
+    await deps.audit.log({ table: auditTableOf(scope, t.allocations), recordId: version.id, action: 'update', before, after, userId, ...auditSourceOf(deps) }, { manager });
   }
   return { updated: after.length, total_pct: round(after.reduce((acc, row) => acc + Number(row.allocation_pct || 0), 0)) };
 }
@@ -518,6 +525,7 @@ export async function putVersionAllocations(
       before: { allocation_method: state.method, allocation_driver: state.driver },
       after: { allocation_method: method, allocation_driver: driver },
       userId,
+      ...auditSourceOf(deps),
     }, { manager });
     (version as any).allocation_method = method;
     (version as any).allocation_driver = driver;
