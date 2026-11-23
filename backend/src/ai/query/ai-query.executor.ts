@@ -3334,6 +3334,11 @@ export class AiQueryExecutor {
   ): Promise<Record<string, unknown>> {
     const anchorYear = new Date().getFullYear();
     const reads = await this.readableLinks(context);
+    // Quantity and price expected: the level that expects it and the columns to check, as the line's
+    // route gives them; the consolidation account named for a reader of the accounts only. Read
+    // once: the line's row (`entry_check`) takes it too.
+    const access = await aiBudgetListAccess(this.policy, context);
+    const checks = await readEntryChecks(context.manager, context.tenantId, [lineId], { accounts: access.accounts });
     const [row] = await this.budgetLines.summaryRowsByIds(
       [lineId],
       {
@@ -3341,6 +3346,7 @@ export class AiQueryExecutor {
         includeRecipientDetails: true,
         includeLatestTask: true,
         includeNextYearAllocation: true,
+        entryChecks: checks,
       },
       { manager: context.manager },
     );
@@ -3383,10 +3389,7 @@ export class AiQueryExecutor {
       : null;
     const links = await this.budgetLines.listLinks(lineId, nature, { manager: context.manager }).catch(() => []);
     const attachments = await this.budgetLines.listAttachments(lineId, nature, { manager: context.manager }).catch(() => []);
-    // Quantity and price expected: the level that expects it and the columns to check, as the line's
-    // route gives them; the consolidation account named for a reader of the accounts only.
-    const access = await aiBudgetListAccess(this.policy, context);
-    const check = (await readEntryChecks(context.manager, context.tenantId, [lineId], { accounts: access.accounts })).get(lineId) ?? null;
+    const check = checks.get(lineId) ?? null;
     // Without the right on accounts the consolidation account is not named: the detail says why, so
     // that a missing read never reads as "no consolidation account".
     const entryCheck = check && check.level === 'consolidation' && !access.accounts

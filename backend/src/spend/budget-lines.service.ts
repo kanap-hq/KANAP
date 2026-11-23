@@ -248,6 +248,7 @@ export class BudgetLinesService {
       includeRecipientDetails?: boolean;
       includeLatestTask?: boolean;
       includeNextYearAllocation?: boolean;
+      entryChecks?: ReadonlyMap<string, LineEntryCheck>;
     } = {},
     opts: { manager: EntityManager },
   ) {

@@ -25,6 +25,7 @@ import {
   SUMMARY_COLUMNS,
   SummaryDeps,
   SummaryReadScopeConfig,
+  type BuildRowsOptions,
   summaryTenantId,
   yearsNamedByFields,
 } from '../spend-summary.builder';
@@ -78,6 +79,8 @@ export type BudgetListRowsByIdsQuery = BudgetListRowOptions & {
   /** Years added to the fixed window. */
   years?: unknown;
   includeLatestTask?: boolean;
+  /** The quantity and price rule, already read for these lines (`BuildRowsOptions.entryChecks`). */
+  entryChecks?: BuildRowsOptions['entryChecks'];
 };
 
 interface BudgetRequest {
@@ -755,6 +758,7 @@ export async function budgetListRowsByIds(
     includeLatestTask: query.includeLatestTask ?? false,
     includeRecipientDetails: query.includeRecipientDetails ?? false,
     includeNextYearAllocation: query.includeNextYearAllocation ?? false,
+    ...(query.entryChecks ? { entryChecks: query.entryChecks } : {}),
   });
   const byId = new Map(rows.map((row) => [row.id, row]));
   return requested.map((id) => byId.get(id)).filter((row): row is BudgetSummaryRow => !!row);

@@ -19,6 +19,8 @@ import { Decimal } from '../common/decimal';
 import { naturalCompare } from '../common/list-engine/sql-fragments';
 import { assertScopeNatures, natureAnd, BUDGET_NATURES, type BudgetNature } from './budget-nature';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
+// A type only: the module itself is imported where it is read (`buildBudgetSummaryRows`).
+import type { LineEntryCheck } from './budget-line-entry-check';
 
 /**
  * The summary rows of the OPEX and CAPEX lists, built once for both item types.
@@ -332,6 +334,8 @@ export type BudgetSummaryRow = Record<string, any> & {
 export type SpendSummaryRow = BudgetSummaryRow;
 
 export interface BuildRowsOptions {
+  /** The quantity and price rule, already read for these lines (Kad's detail): not read again. */
+  entryChecks?: ReadonlyMap<string, LineEntryCheck>;
   /** Every year to read; each gets a `y<year>` slot next to the fixed ones. */
   years: number[];
   currentYear: number;
@@ -934,7 +938,7 @@ export async function buildBudgetSummaryRows(
   // here: the rule reads the budget column settings, whose module reads this one's columns when it
   // loads (`BUDGET_COLUMN_ORDER`), so a static import would load it half-built.
   const { ENTRY_CHECK_TO_CHECK, readEntryChecks } = await import('./budget-line-entry-check');
-  const entryChecks = await readEntryChecks(manager, tenantId, itemIds);
+  const entryChecks = options.entryChecks ?? await readEntryChecks(manager, tenantId, itemIds);
 
   // Projects linked in the Relations panel, plus the legacy item field when set and not already linked.
   const projectRows: Array<{ item_id: string; name: string; stream_name: string | null; category_name: string | null }> = await manager.query(

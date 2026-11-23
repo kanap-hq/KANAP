@@ -415,7 +415,22 @@ async function testKad(h: Harness, runner: QueryRunner, s: Seed) {
     const listed = await h.queries.execute(ctx, { entity_type: 'budget_lines', filters: { entry_check: ['to_check'] }, limit: 50 });
     assert.deepEqual(listed.items.map((item: any) => item.label.replace(/^Line /, '')).sort(), expected, `${who}: query_entities lists the tile's lines`);
     assert.ok(listed.items.every((item: any) => item.metadata.entry_check === 'to_check'), `${who}: each line says it`);
-    const detail = await h.queries.executeDetail(ctx, { entity_type: 'budget_lines', entity_id: s.lines.cons.ref });
+    // One read of the rule for the detail: its row and `quantity_price_entry` share it.
+    const manager: any = runner.manager;
+    const query = manager.query;
+    let reads = 0;
+    manager.query = (sql: string, params?: unknown[]) => {
+      if (/SELECT li\.id, ea\.level/.test(sql)) reads += 1;
+      return query.call(manager, sql, params);
+    };
+    let detail: any;
+    try {
+      detail = await h.queries.executeDetail(ctx, { entity_type: 'budget_lines', entity_id: s.lines.cons.ref });
+    } finally {
+      manager.query = query;
+    }
+    assert.equal(reads, 1, `${who}: the detail reads the rule once`);
+    assert.equal(detail.data.entry_check, 'to_check', `${who}: the detail's row says it`);
     const entry: LineEntryCheck = detail.data.quantity_price_entry as LineEntryCheck;
     assert.deepEqual([entry.expected, entry.level, entry.to_check, entry.columns], [true, 'consolidation', true, [{ year: Y, measure: 'planned' }]], `${who}: the detail`);
     assert.deepEqual(entry.consolidation_account, accounts ? { number: 2400, name: 'External services' } : null, `${who}: the consolidation account with the accounts only`);
