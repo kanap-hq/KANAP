@@ -96,6 +96,8 @@ type SummaryRow = {
   paying_company_name?: string | null;
   account_display?: string | null;
   account_warning?: string | null;
+  /** 'to_check' when the account expects quantity and price and a column of the line is not built so. */
+  entry_check?: 'to_check' | null;
   owner_it_name?: string | null;
   owner_business_name?: string | null;
 };
@@ -460,6 +462,9 @@ function BudgetListPageView() {
     } else if (amountYear != null) {
       tab = 'budget';
       next.set('year', String(amountYear));
+    } else if (colId === 'entry_check') {
+      // The marks of the columns to check are on the Budget tab.
+      tab = 'budget';
     } else if (colId === 'latest_task_text') {
       tab = 'overview'; // tasks now live in the overview tab
     }
@@ -635,6 +640,26 @@ function BudgetListPageView() {
           {...params}
           linkType="internal"
           getHref={(row) => getBudgetHref(row, 'account_display')}
+          onNavigate={(href) => navigate(href)}
+        />
+      ),
+    },
+    // Lines whose account (or its consolidation account) expects quantity and price, with a column
+    // not built so: the filter the overview's data hygiene count opens the list with. Hidden by default.
+    {
+      colId: 'entry_check',
+      headerName: t('shared.entryCheck'),
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { values: [{ value: 'to_check', label: t('shared.entryToCheck') }, { value: null }], searchable: false },
+      valueGetter: (p) => (p.data?.entry_check === 'to_check' ? t('shared.entryToCheck') : ''),
+      width: 180,
+      defaultHidden: true,
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer
+          {...params}
+          linkType="internal"
+          getHref={(row) => getBudgetHref(row, 'entry_check')}
           onNavigate={(href) => navigate(href)}
         />
       ),

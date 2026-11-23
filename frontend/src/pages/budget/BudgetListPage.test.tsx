@@ -786,6 +786,20 @@ describe('BudgetListPage', () => {
     });
   });
 
+  it('offers a quantity and price check column after the account check, hidden by default, filtered on "To check" or blank, its cell opening the Budget tab', async () => {
+    await renderPage();
+    const ids = lastProps().columns.map((c) => c.colId ?? c.field ?? '');
+    expect(ids.indexOf('entry_check')).toBe(ids.indexOf('account_warning') + 1);
+    const check = column('entry_check');
+    expect(check).toMatchObject({ headerName: 'shared.entryCheck', defaultHidden: true, filter: CheckboxSetFilter });
+    expect(check!.filterParams).toEqual({ values: [{ value: 'to_check', label: 'shared.entryToCheck' }, { value: null }], searchable: false });
+    expect(check!.valueGetter!({ data: { entry_check: 'to_check' } })).toBe('shared.entryToCheck');
+    expect(check!.valueGetter!({ data: { entry_check: null } })).toBe('');
+    expect(check!.valueGetter!({ data: undefined })).toBe('');
+    const el = check!.cellRenderer!({ data: { id: 'c-1', nature: 'opex', item_number: 7 }, value: '', colDef: {} }) as React.ReactElement;
+    expect((el.props as { getHref: (row: unknown) => string | null }).getHref({ id: 'c-1', nature: 'opex', item_number: 7 })).toMatch(/^\/ops\/budget\/BL-7\/budget\?/);
+  });
+
   it('links the contract cell to the contract and an amount cell to the budget of its year', async () => {
     await renderPage();
     const hrefOf = (id: string, data: Record<string, unknown>) => {

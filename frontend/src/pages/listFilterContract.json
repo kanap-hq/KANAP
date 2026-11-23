@@ -655,6 +655,7 @@
       "account_display": "set",
       "account_id": "set",
       "account_warning": "set",
+      "entry_check": "set",
       "allocation_label": "set",
       "yMinus1Budget": "number",
       "yMinus1Revision": "number",
