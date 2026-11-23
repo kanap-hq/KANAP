@@ -759,6 +759,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
             role: change.role,
             addedUser: { userId: user[0].id, email: user[0].email, locale: user[0].locale },
             tenantId,
+            itemRef: `PRJ-${saved.item_number}`,
           });
           // Notify IT Lead about the team change
           const addedUserName = [user[0].first_name, user[0].last_name].filter(Boolean).join(' ') || 'Unknown';
@@ -1529,7 +1530,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
 
     const project = await mg.findOne(PortfolioProject, {
       where: { id: projectId },
-      select: ['id', 'name'],
+      select: ['id', 'name', 'item_number'],
     });
     if (!project) throw new NotFoundException('Project not found');
 
@@ -1561,6 +1562,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         recipients: recipientRows,
         rawEmails,
         tenantId,
+        itemRef: `PRJ-${project.item_number}`,
       });
     }
 

@@ -1280,7 +1280,7 @@ export class TasksUnifiedService {
 
     const manager = opts?.manager ?? this.repo.manager;
 
-    const task = await manager.findOne(Task, { where: { id: taskId }, select: ['id', 'title'] });
+    const task = await manager.findOne(Task, { where: { id: taskId }, select: ['id', 'title', 'item_number'] });
     if (!task) throw new NotFoundException('Task not found');
 
     const senderRows = await manager.query(
@@ -1311,6 +1311,7 @@ export class TasksUnifiedService {
         recipients: recipientRows,
         rawEmails,
         tenantId,
+        itemRef: `T-${task.item_number}`,
       });
     }
 

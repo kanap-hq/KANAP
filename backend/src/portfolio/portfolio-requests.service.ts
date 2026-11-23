@@ -1611,6 +1611,7 @@ export class PortfolioRequestsService {
             role: change.role,
             addedUser: { userId: user[0].id, email: user[0].email, locale: user[0].locale },
             tenantId,
+            itemRef: `REQ-${saved.item_number}`,
           });
           // Notify IT Lead about the team change
           const addedUserName = [user[0].first_name, user[0].last_name].filter(Boolean).join(' ') || 'Unknown';
@@ -3042,7 +3043,7 @@ export class PortfolioRequestsService {
 
     const request = await mg.findOne(PortfolioRequest, {
       where: { id: requestId },
-      select: ['id', 'name'],
+      select: ['id', 'name', 'item_number'],
     });
     if (!request) throw new NotFoundException('Request not found');
 
@@ -3074,6 +3075,7 @@ export class PortfolioRequestsService {
         recipients: recipientRows,
         rawEmails,
         tenantId,
+        itemRef: `REQ-${request.item_number}`,
       });
     }
 

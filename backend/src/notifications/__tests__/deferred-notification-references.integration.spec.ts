@@ -140,6 +140,11 @@ async function main() {
         gesture: (m) => app.get(TasksUnifiedService).updateById(seed.task, { status: 'in_progress' } as any, seed.author, { manager: m, tenantId }),
       },
       {
+        name: 'task share',
+        path: '/portfolio/tasks/T-4',
+        gesture: (m) => app.get(TasksUnifiedService).share(seed.task, { recipient_user_ids: [seed.owner], message: 'À voir' } as any, tenantId, seed.author, { manager: m }),
+      },
+      {
         name: 'application share',
         path: '/it/applications/APP-5/overview',
         gesture: (m) => app.get(ApplicationsCrudService).shareApplication(seed.application, { recipient_user_ids: [seed.owner], message: 'À voir' } as any, tenantId, seed.author, { manager: m }),
