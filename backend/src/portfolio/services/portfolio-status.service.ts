@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PortfolioProject } from '../portfolio-project.entity';
 import { PortfolioActivity } from '../portfolio-activity.entity';
-import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
+import { captureBaselineOnce, PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { PortfolioAttachmentsService } from './portfolio-attachments.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { AuditService } from '../../audit/audit.service';
@@ -65,10 +65,7 @@ export class PortfolioStatusService extends PortfolioProjectsBaseService {
       if (newStatus === 'in_progress' && project.status !== 'in_progress') {
         this.validateInProgressRequirements(project, {});
 
-        project.baseline_start_date = project.planned_start;
-        project.baseline_end_date = project.planned_end;
-        project.baseline_effort_it = project.estimated_effort_it;
-        project.baseline_effort_business = project.estimated_effort_business;
+        captureBaselineOnce(project);
         // The actual start is set once, the first time the project moves to In progress.
         if (project.actual_start == null) {
           project.actual_start = new Date();
