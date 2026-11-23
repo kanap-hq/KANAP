@@ -29,6 +29,8 @@ The history lists one entry per change, the most recent at the top. Each entry s
 
 A change of amount names the year, the column and the values before and after.
 
+A change made by Kad leaves the same entries as the same change made on the screen, marked **Kad for** the person who approved it. When you ask Kad to undo a change, the undo leaves its entries in the same way.
+
 Long histories load in pages: click **Load more** at the bottom of the list to see older changes.
 
 ## Changes to the parts of a record

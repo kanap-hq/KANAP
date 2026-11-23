@@ -29,6 +29,8 @@ L'historique liste une entrée par modification, la plus récente en haut. Chaqu
 
 Une modification de montant indique l'année, la colonne et les valeurs avant et après.
 
+Une modification faite par Kad laisse les mêmes entrées que la même modification faite à l'écran, marquées **Kad pour** la personne qui l'a approuvée. Quand vous demandez à Kad d'annuler une modification, l'annulation laisse ses entrées de la même façon.
+
 Les historiques longs se chargent par pages : cliquez sur **Charger plus** en bas de la liste pour voir les modifications plus anciennes.
 
 ## Modifications des éléments d'une fiche
