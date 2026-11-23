@@ -86,7 +86,7 @@ async function testReorder() {
     assert.deepEqual(result, await svc.axes.list(ctx), 'the same as GET /analytics-axes');
     // A reorder writes each moved dimension's history entry (its position), which dates it
     // (audit/record-dating.ts); a dimension left in place keeps its date.
-    const moved = (await stamps()).filter((stamp) => !updatedBefore.includes(stamp)).length;
+    const moved = (await stamps()).filter((stamp: string) => !updatedBefore.includes(stamp)).length;
     assert.equal(moved, 4, 'the four renumbered dimensions are dated with their history entry');
 
     const sortOrderChange = (id: string, before: number, after: number) => ({
