@@ -27,8 +27,13 @@ import { isHistoryEntry, presentItem, type AuditRow, type PageContext } from './
  *
  * Without useless writes: a record's own creation (the row was just born) and deletion (it is gone)
  * are skipped; the statement only touches a row whose date is not already the transaction's `now()`
- * (the trigger or an earlier row of the same transaction dated it); one statement per table, its
- * ids sorted, so that two transactions dating the same records lock them in the same order.
+ * (the trigger or an earlier row of the same transaction dated it); one statement per table.
+ *
+ * Without waiting (`touchUpdatedAtMany`): the rows are locked `FOR NO KEY UPDATE SKIP LOCKED`, in
+ * id order (the lock is taken above the sort). A record another transaction holds at that instant
+ * is not dated by this one: the dating never adds a wait or a deadlock to the gesture. A record
+ * held without being changed (a lock before a write, a budget operation holding its lines) keeps
+ * its date while its history gains the entry: an accepted gap.
  *
  * Under data-scoped access the statement runs with the writer's rights: a record the person may
  * only read (a line linked from an application) is not touched, and nothing fails.

@@ -161,19 +161,31 @@ export async function dropUpdatedAtTriggers(executor: Executor, tables: readonly
  * Dates records of the inventory on purpose, in the caller's transaction and tenant, in one
  * statement: the history shows an entry of theirs (`audit/record-dating.ts`), or a child changed
  * that the history does not show (`touchUpdatedAt`). The only place the application writes the
- * date. The ids are sorted, so two transactions dating the same records lock them in the same
- * order; a row whose date is already the transaction's `now()` (the trigger or an earlier call
- * dated it) is not written again. Returns the number of rows written (0 also for a record missing
- * in the tenant, or one the person may only read under data-scoped access).
+ * date. A row whose date is already the transaction's `now()` (the trigger or an earlier call
+ * dated it) is not written again.
+ *
+ * The dating never waits: the rows are locked `FOR NO KEY UPDATE SKIP LOCKED`, in id order. A row
+ * another transaction holds at that instant is left: that transaction is writing it (its own
+ * change dates it), or holds it without changing it (a lock taken before a write, a budget
+ * operation holding its lines), and then the record keeps its date while its history gains the
+ * entry, an accepted gap. Waiting instead made the dating a new lock the gesture did not hold
+ * before: a deadlock against a gesture locking the same records in the other order, and the wait
+ * of a long operation. The locks this transaction holds itself never make a row skipped.
+ * Returns the number of rows written (0 also for a record missing in the tenant, one held
+ * elsewhere, or one the person may only read under data-scoped access: the lock passes the UPDATE
+ * policy, so such a row is not selected, without an error).
  */
 export async function touchUpdatedAtMany(manager: Pick<EntityManager, 'query'>, table: string, ids: readonly string[]): Promise<number> {
   if (!UPDATED_AT_TABLES[table]) throw new Error(`${table} is not in common/updated-at.inventory.ts`);
   const sorted = Array.from(new Set(ids.map((id) => id.toLowerCase()))).sort();
   if (sorted.length === 0) return 0;
+  const name = `public.${quoteIdent(table)}`;
   const [row] = await manager.query(
     `WITH touched AS (
-       UPDATE public.${quoteIdent(table)} SET updated_at = now()
-        WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[]) AND updated_at IS DISTINCT FROM now()
+       UPDATE ${name} SET updated_at = now()
+        WHERE id IN (SELECT id FROM ${name}
+                      WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[]) AND updated_at IS DISTINCT FROM now()
+                      ORDER BY id FOR NO KEY UPDATE SKIP LOCKED)
         RETURNING 1
      )
      SELECT count(*)::int AS count FROM touched`,
