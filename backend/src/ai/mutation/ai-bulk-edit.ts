@@ -27,10 +27,11 @@ export const MUTATION_PLAN_IS_NOT_BULK = 'A plan of cards that each change one r
 
 /**
  * The exception to "one card per record" of the write rules (lot K2e of 26.12.1, decision P6 of
- * Fried): one field a bulk tool changes, on two records or more of its family, named or described by
- * a filter, is one card of that tool. On QA (26.11.9), "the business criticality of APP-a and APP-b to
- * low" gave two cards to approve one by one, the rules asking one preview per record. Null when the
- * person is offered neither tool.
+ * Fried): one field a bulk tool changes, set to the same value on two records or more of its family,
+ * named or described by a filter, is one card of that tool; different values stay one card per
+ * record. On QA (26.11.9), "the business criticality of APP-a and APP-b to low" gave two cards to
+ * approve one by one, the rules asking one preview per record. Null when the person is offered
+ * neither tool.
  */
 export function bulkEditToolRule(toolNames: readonly string[]): string | null {
   const families = [
@@ -39,8 +40,9 @@ export function bulkEditToolRule(toolNames: readonly string[]): string | null {
   ].filter((family) => toolNames.includes(family.tool));
   if (families.length === 0) return null;
   const each = families.map((family) => `\`${family.tool}\` for ${family.rows} (${family.fields})`).join('; ');
-  return `Exception, the change in bulk: one of these fields on two records or more of the family, whether the person names them (references or names) or describes them, is one card of its bulk tool, never one card per record nor a plan: ${each}. `
-    + 'That card lists each record it changes with its value before, and the person leaves out the ones they do not want before approving.';
+  return `Exception, the change in bulk: one of these fields set to the same value on two records or more of the family, whether the person names them (references or names) or describes them, is one card of its bulk tool, never one card per record nor a plan: ${each}. `
+    + 'That card lists each record it changes with its value before, and the person leaves out the ones they do not want before approving. '
+    + 'Different values, several fields or a field outside these lists stay one card per record.';
 }
 
 export const BULK_EDIT_PLAN_REFUSAL = 'A change in bulk (bulk_update_budget_lines, bulk_update_applications) changes its rows in one card and cannot be part of a mutation plan: call it on its own.';

@@ -55,7 +55,9 @@ function testAnotherFieldIsSaidNotChangedInBulk() {
       );
     }
     // The tool replaces cards of one row each for its own fields only.
-    assert.match(operation.writePreview.prompt_hint, new RegExp(`For one of these fields on two ${row}s or more, named or described by a filter, use this tool: one card`), `${operation.toolName}: its own fields only`);
+    assert.match(operation.writePreview.prompt_hint, new RegExp(`For one of these fields set to the same value on two ${row}s or more, named or described by a filter, use this tool: one card`), `${operation.toolName}: its own fields only`);
+    // Two values or two fields stay a card per record (review of lot K2e).
+    assert.ok(operation.writePreview.prompt_hint.includes(`Different values, several fields or another field stay one card per ${row}. `), `${operation.toolName}: one value only`);
   }
   console.log('  the bulk edit tools say when a field is not changed in bulk: OK');
 }

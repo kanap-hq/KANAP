@@ -201,7 +201,8 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
       + 'A filter covers the enabled applications of the list, the retired ones left out unless it names the lifecycle. '
       + `${ONLY_NAMED_CRITERIA} A request on all the applications, with no other criterion, gets a question asking for one, and no card. `
       + `${OTHER_FIELD} `
-      + 'For one of these fields on two applications or more, named or described by a filter, use this tool: one card, never update_business_record application by application nor prepare_mutation_plan. '
+      + 'For one of these fields set to the same value on two applications or more, named or described by a filter, use this tool: one card, never update_business_record application by application nor prepare_mutation_plan. '
+      + 'Different values, several fields or another field stay one card per application. '
       + `The card lists each application it changes (up to ${AI_BULK_EDIT_LIST_MAX}) with its value before, and the person may leave any of them out before approving; it cannot be undone.`,
   };
 

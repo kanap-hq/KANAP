@@ -177,7 +177,8 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
       + `${ONLY_NAMED_CRITERIA} A request on all the lines, with no other criterion, gets a question asking for one, and no card. `
       + 'Give the new value by name, code or number; `null` empties a field, except the account and the paying company. An account number found in several charts of accounts needs `company`. '
       + `${OTHER_FIELD} `
-      + 'For one of these fields on two lines or more, named or described by a filter, use this tool: one card, never update_business_record line by line nor prepare_mutation_plan. '
+      + 'For one of these fields set to the same value on two lines or more, named or described by a filter, use this tool: one card, never update_business_record line by line nor prepare_mutation_plan. '
+      + 'Different values, several fields or another field stay one card per line. '
       + `The card lists each line it changes (up to ${AI_BULK_EDIT_LIST_MAX}) with its value before, counts the refused ones, and the person may leave any line out before approving; it cannot be undone.`,
   };
 

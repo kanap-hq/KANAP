@@ -371,10 +371,12 @@ async function testBulkToolsTakeTwoNamedRecords() {
     write_preview: { entity_type: entityType, fields: ['name'], reversible: false, prompt_hint: `Use \`${name}\`.` },
   });
   const prompt = service.build({ ...baseParams, availableTools: [tool('bulk_update_applications', 'applications'), tool('update_business_record', 'applications')] } as any);
-  const rule = 'Exception, the change in bulk: one of these fields on two records or more of the family, whether the person names them (references or names) or describes them, '
+  const rule = 'Exception, the change in bulk: one of these fields set to the same value on two records or more of the family, whether the person names them (references or names) or describes them, '
     + 'is one card of its bulk tool, never one card per record nor a plan: `bulk_update_applications` for applications (business owners, IT owners, category, lifecycle, business criticality, cyber criticality).';
   assert.equal(prompt.split(rule).length - 1, 2, 'the exception follows both rules of one preview per record');
   assert.match(prompt, /That card lists each record it changes with its value before, and the person leaves out the ones they do not want before approving\./);
+  // "APP-1 to high and APP-2 to low" is two values: one card per record (review of lot K2e).
+  assert.match(prompt, /approving\. Different values, several fields or a field outside these lists stay one card per record\./);
   assert.equal(prompt.includes('bulk_update_budget_lines'), false, 'only the bulk tools offered');
   const without = service.build({ ...baseParams, availableTools: [tool('update_business_record', 'applications')] } as any);
   assert.equal(without.includes('Exception, the change in bulk'), false, 'no exception without a bulk tool');
