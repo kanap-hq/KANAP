@@ -2129,6 +2129,16 @@ function unchangedValue(change: RecordHistoryChange): boolean {
   return deepEqual(comparableValue(change.before), comparableValue(change.after));
 }
 
+/**
+ * Whether a presented row is an entry of the history: a write the reader cannot see as a change is
+ * not one, an update that presents nothing (an import marker, a record saved unchanged) stays out.
+ * A creation and a deletion always stay, even when their title is all there is. The page
+ * (`record-history.service.ts`) and the modification date (`audit/record-dating.ts`) share it.
+ */
+export function isHistoryEntry(item: Pick<RecordHistoryItem, 'action' | 'changes'>): boolean {
+  return item.action !== 'update' || item.changes.length > 0;
+}
+
 export function presentItem(row: AuditRow, entry: RecordHistoryRecord, ctx: PageContext): RecordHistoryItem {
   const kind = entry.auditLabels.includes(row.table_name) ? null : recordHistoryChildKind(entry, row.table_name);
   // An update left with no visible change is dropped by the service.

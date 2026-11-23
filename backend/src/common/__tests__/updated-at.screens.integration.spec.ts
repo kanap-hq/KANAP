@@ -22,7 +22,7 @@ import { IncidentsService } from '../../incidents/services/incidents.service';
 import { Supplier } from '../../suppliers/supplier.entity';
 import { Task } from '../../tasks/task.entity';
 import { writeTaskColumns } from '../../tasks/task-column-write';
-import { updateItemUnderLock } from '../../spend/item-locked-update';
+import { SpendItemsService } from '../../spend/spend-items.service';
 import { UPDATED_AT_TABLES } from '../updated-at.inventory';
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -159,7 +159,9 @@ async function testScreensDateOnlyChanges() {
     console.log(outcome.map((line) => `  ${line}`).join('\n'));
     assert.deepEqual(
       outcome,
-      saves.map(([table]) => `${table}: unchanged keeps its date, changed dated`),
+      // A document's every save takes the next revision, which its history shows (`revision`): the
+      // date follows the history (audit/record-dating.ts), so a document saved unchanged is dated.
+      saves.map(([table]) => (table === 'documents' ? 'documents: unchanged dated now, changed dated' : `${table}: unchanged keeps its date, changed dated`)),
       'a record saved unchanged keeps its date, a changed field dates it',
     );
   });
@@ -263,7 +265,9 @@ async function testBudgetLineAndIncident() {
     const opts = { manager, tenantId } as any;
     const outcome: Record<string, string> = {};
     const reset = (table: string) => r.query(`UPDATE ${table} SET updated_at = $2 WHERE id = $1`, [ids[table], OLD]);
-    const line = (body: Record<string, unknown>) => updateItemUnderLock(manager, 'opex', tenantId, ids.spend_items, body);
+    // Through the service of the screen: its audit row carries the analytics values, and that history
+    // entry dates the line (audit/record-dating.ts).
+    const line = (body: Record<string, unknown>) => app.get(SpendItemsService, { strict: false }).update(ids.spend_items, body as any, ids.user, { manager, tenantId, userId: ids.user } as any);
 
     await line({ product_name: 'Line' });
     outcome['budget line unchanged'] = await dateOf(r, 'spend_items', ids.spend_items);
@@ -307,7 +311,8 @@ async function testBudgetLineAndIncident() {
         'budget line, same analytics value': 'keeps its date',
         'incident unchanged': 'keeps its date',
         'incident changed': 'dated',
-        'document, same contributors': 'keeps its date',
+        // The save takes the next revision, which the document's history shows.
+        'document, same contributors': 'dated',
         'document, a contributor added': 'dated',
       },
     );

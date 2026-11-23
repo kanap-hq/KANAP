@@ -12,8 +12,8 @@ import { UPDATED_AT_TABLES } from './updated-at.inventory';
  * calls `syncUpdatedAtTrigger` again (the inventory spec fails until it does).
  *
  * The application never writes the date through TypeORM (`update: false` on the entities'
- * column): a date it sets on purpose (a child changed, the record is dated) goes through
- * `touchUpdatedAt`.
+ * column): a date it sets on purpose goes through `touchUpdatedAtMany`, for the rows its history
+ * shows (`audit/record-dating.ts`), or `touchUpdatedAt`, for a child change the history does not show.
  */
 
 type Executor = Pick<QueryRunner, 'query'>;
@@ -158,22 +158,35 @@ export async function dropUpdatedAtTriggers(executor: Executor, tables: readonly
 }
 
 /**
- * Dates a record of the inventory on purpose, in the caller's transaction and tenant: a child of
- * the record changed (its purpose, its members, its analytics values), which its own columns do
- * not show. Called after the save, and only when the child really changed. The only place the
- * application writes the date; returns the number of rows dated (0: no such record in the
- * tenant, or one the person may not write).
+ * Dates records of the inventory on purpose, in the caller's transaction and tenant, in one
+ * statement: the history shows an entry of theirs (`audit/record-dating.ts`), or a child changed
+ * that the history does not show (`touchUpdatedAt`). The only place the application writes the
+ * date. The ids are sorted, so two transactions dating the same records lock them in the same
+ * order; a row whose date is already the transaction's `now()` (the trigger or an earlier call
+ * dated it) is not written again. Returns the number of rows written (0 also for a record missing
+ * in the tenant, or one the person may only read under data-scoped access).
  */
-export async function touchUpdatedAt(manager: Pick<EntityManager, 'query'>, table: string, id: string): Promise<number> {
+export async function touchUpdatedAtMany(manager: Pick<EntityManager, 'query'>, table: string, ids: readonly string[]): Promise<number> {
   if (!UPDATED_AT_TABLES[table]) throw new Error(`${table} is not in common/updated-at.inventory.ts`);
+  const sorted = Array.from(new Set(ids.map((id) => id.toLowerCase()))).sort();
+  if (sorted.length === 0) return 0;
   const [row] = await manager.query(
     `WITH touched AS (
        UPDATE public.${quoteIdent(table)} SET updated_at = now()
-        WHERE tenant_id = app_current_tenant() AND id = $1
+        WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[]) AND updated_at IS DISTINCT FROM now()
         RETURNING 1
      )
      SELECT count(*)::int AS count FROM touched`,
-    [id],
+    [sorted],
   );
   return row.count;
+}
+
+/**
+ * Dates one record whose child changed without an entry in its history (a document's
+ * contributors, a connection's protocols): called after the save, and only when the child really
+ * changed. A child with a history entry needs no call: the entry dates the record.
+ */
+export async function touchUpdatedAt(manager: Pick<EntityManager, 'query'>, table: string, id: string): Promise<number> {
+  return touchUpdatedAtMany(manager, table, [id]);
 }
