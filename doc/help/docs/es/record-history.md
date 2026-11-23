@@ -29,6 +29,8 @@ El historial lista una entrada por cambio, la más reciente arriba. Cada entrada
 
 Un cambio de importe indica el año, la columna y los valores antes y después.
 
+Un cambio hecho por Kad deja las mismas entradas que el mismo cambio hecho en la pantalla, marcadas **Kad para** la persona que lo aprobó. Cuando pide a Kad que deshaga un cambio, la reversión deja sus entradas de la misma manera.
+
 Los historiales largos se cargan por páginas: haga clic en **Cargar más** al final de la lista para ver los cambios más antiguos.
 
 ## Cambios en los elementos de un registro

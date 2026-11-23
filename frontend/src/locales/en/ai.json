@@ -315,8 +315,10 @@
         "it_users": "IT users",
         "manual_company": "Manual by company",
         "manual_department": "Manual by department",
+        "manual_pct": "Manual percentages",
         "turnover": "Turnover"
       },
+      "allocationsRemoved": "Removed",
       "classificationReview": {
         "reviewed": "Reviewed",
         "stale": "Stale after this change"
