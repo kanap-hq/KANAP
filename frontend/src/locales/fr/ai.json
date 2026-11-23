@@ -2,7 +2,7 @@
   "conversationList": {
     "delete": "Supprimer",
     "deleteConfirmMessage": "La conversation et ses messages sont supprimés. Cette action est irréversible.",
-    "deleteConfirmTitle": "Supprimer cette conversation ?",
+    "deleteConfirmTitle": "Supprimer {{name}} ?",
     "dateGroups": {
       "lastWeek": "7 derniers jours",
       "older": "Plus ancien",

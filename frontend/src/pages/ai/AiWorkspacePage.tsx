@@ -14,6 +14,7 @@ import { chatAwaitsIncludedModelConfirmation, chatTurnedOffByAdmin } from '../..
 import { useAiCapabilities } from '../../ai/useAiCapabilities';
 import { AiMutationPreview, ChatConversation, ChatMessage } from '../../ai/aiTypes';
 import { previewChainId } from '../../ai/previewChains';
+import { plainConversationTitle } from '../../ai/utils/conversationTitle';
 import ArtifactPanel from '../../ai/components/ArtifactPanel';
 import BuiltinUsageIndicator from '../../ai/components/BuiltinUsageIndicator';
 import ChatMessageList from '../../ai/components/ChatMessageList';
@@ -274,8 +275,11 @@ export default function AiWorkspacePage() {
 
   const handleDelete = useCallback(
     async (id: string) => {
+      const conversations = queryClient.getQueryData<ChatConversation[]>(['ai-conversations']);
+      const storedTitle = conversations?.find((conversation) => conversation.id === id)?.title ?? '';
+      const name = plainConversationTitle(storedTitle) || t('conversationList.untitled');
       const confirmed = await dialogs.confirm({
-        title: t('conversationList.deleteConfirmTitle'),
+        title: t('conversationList.deleteConfirmTitle', { name }),
         message: t('conversationList.deleteConfirmMessage'),
         confirmLabel: t('conversationList.delete'),
         intent: 'danger',
