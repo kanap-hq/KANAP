@@ -1330,6 +1330,71 @@ async function run() {
     } finally {
       await runner.query('ROLLBACK TO SAVEPOINT sub_location_assets');
     }
+
+    // A contact the supplier brought to a contract or a budget line (`origin` supplier), removed: the
+    // screen's panel deletes it like any other, the assistant removes it the same way.
+    await runner.query('SAVEPOINT supplier_contacts');
+    try {
+      const supplierName = unique('Fournisseur du contact');
+      const supplierOfLine = await insertId(runner, `INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2)`, [tenantId, supplierName]);
+      const brought = await contactTarget(env, 'Gwenn', 'technical');
+      const email = (brought.input as { contact_ref: string }).contact_ref;
+      const families = [
+        {
+          name: 'contracts.contacts', entity: 'contracts' as const, table: 'contract_contacts', column: 'contract_id',
+          record: async () => {
+            const rec = await contractRecord(env);
+            await runner.query(`UPDATE contracts SET supplier_id = $2 WHERE id = $1`, [rec.id, supplierOfLine]);
+            return rec;
+          },
+          detach: (rec: Rec, linkId: string) => env.services.contractContacts.detach(rec.id, linkId, writer, { manager: runner.manager, tenantId }),
+        },
+        {
+          name: 'budget_lines.contacts', entity: 'budget_lines' as const, table: 'spend_item_contacts', column: 'spend_item_id',
+          record: async () => {
+            const rec = await lineRecord(env, 'opex');
+            await runner.query(`UPDATE spend_items SET supplier_id = $2 WHERE id = $1`, [rec.id, supplierOfLine]);
+            return rec;
+          },
+          detach: (rec: Rec, linkId: string) => env.services.lineContacts.detach(rec.id, linkId, writer, { manager: runner.manager, tenantId }),
+        },
+      ];
+      for (const family of families) {
+        const seeded = async () => {
+          const rec = await family.record();
+          await runner.query(`INSERT INTO ${family.table} (tenant_id, ${family.column}, contact_id, role, origin) VALUES ($1, $2, $3, 'technical', 'supplier')`, [tenantId, rec.id, brought.id]);
+          return rec;
+        };
+        const links = async (rec: Rec) => runner.query(`SELECT role, origin FROM ${family.table} WHERE tenant_id = $1 AND ${family.column} = $2 ORDER BY role`, [tenantId, rec.id]);
+
+        const cell = `${family.name} from the supplier, removed`;
+        try {
+          const mine = await seeding(runner, seeded, (rec) => rec.id);
+          const twin = await seeding(runner, seeded, (rec) => rec.id);
+          const kadMarker = await now();
+          const preview = await previews.createPreview(ctx, 'update_entity_relations', {
+            entity_type: family.entity, ref: mine.ref, relation: 'contacts', remove: [{ contact_ref: email, role: 'technical' }],
+          });
+          const executed = await previews.executePreview(ctx, preview.preview_id);
+          assert.equal(executed.status, 'executed', `${cell}: the card runs (${executed.error_message ?? ''})`);
+          assert.deepEqual(await links(mine), [], `${cell}: the contact is removed`);
+          const kadRows = await auditSince(kadMarker);
+          assert.ok(kadRows.length > 0 && kadRows.every((row) => row.source === 'ai_chat' && row.source_ref === preview.preview_id), `${cell}: audited by the card`);
+          const screenMarker = await now();
+          await family.detach(twin, await rowId(env, family.table, family.column, twin.id, 'contact_id', brought.id));
+          const screenRows = await auditSince(screenMarker);
+          const roles = rolesOf([[brought.id, 'CONTACT'], [supplierOfLine, 'SUPPLIER'], [writer, 'WRITER'], [roleId, 'ROLE']]);
+          assert.deepEqual(shape(kadRows, namer(mine.id, roles, '')), shape(screenRows, namer(twin.id, roles, '')), `${cell}: the assistant's audit rows are the screen's`);
+          passed += 1;
+          console.log(`  ${cell}: OK`);
+        } catch (error: any) {
+          failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 40).join('\n')}`);
+          console.log(`  ${cell}: FAILED`);
+        }
+      }
+    } finally {
+      await runner.query('ROLLBACK TO SAVEPOINT supplier_contacts');
+    }
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

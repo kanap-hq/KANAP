@@ -933,7 +933,7 @@ export class AiRelationMutationSupportService {
       case 'owner_role':
         return this.resolveOwnerRoleInput(context, raw);
       case 'contact_role':
-        return this.resolveContactRoleInput(context, raw, config.sourceEntity === 'contracts' || config.sourceEntity === 'budget_lines');
+        return this.resolveContactRoleInput(context, config, sourceId, raw, mode, currentItems);
       case 'supplier_contacts':
         return this.resolveSupplierContactInput(context, raw);
       case 'asset_relations':
@@ -983,13 +983,30 @@ export class AiRelationMutationSupportService {
     };
   }
 
-  private async resolveContactRoleInput(context: AiExecutionContextWithManager, raw: unknown, supplierOriginCapable: boolean): Promise<RelationItem> {
+  /**
+   * A contact and its role. On a contract or a budget line a contact links once per role, whatever
+   * brought it (the supplier or a person, `origin`), as their Contacts panels:
+   * removing it names the stored link, from the supplier too: the panel removes any link.
+   */
+  private async resolveContactRoleInput(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    sourceId: string,
+    raw: unknown,
+    mode: 'add' | 'remove',
+    currentItems: RelationItem[],
+  ): Promise<RelationItem> {
+    const supplierOriginCapable = config.sourceEntity === 'contracts' || config.sourceEntity === 'budget_lines';
     const item = objectValue(raw);
     const ref = textOrNull(item.contact_ref ?? item.contact_id ?? item.email ?? item.ref ?? raw);
     if (!ref) throw new BadRequestException('Contact reference is required.');
     const contact = await this.resolveReference(context, 'contacts', ref);
     const role = textOrNull(item.role) ?? null;
     const origin = supplierOriginCapable ? textOrNull(item.origin) ?? 'manual' : null;
+    const stored = supplierOriginCapable
+      ? currentItems.find((current) => current.payload.contact_id === contact.id && (current.payload.role ?? null) === role)
+      : undefined;
+    if (stored && mode === 'remove') return stored;
     return {
       key: `${contact.id}:${role ?? ''}:${origin ?? ''}`,
       label: [contact.label, role].filter(Boolean).join(' - '),
