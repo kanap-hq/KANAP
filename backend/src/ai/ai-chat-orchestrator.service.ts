@@ -92,6 +92,7 @@ import {
   type AiWriteLanguage,
 } from './ai-write-texts';
 import { workspaceDisplayName } from '../config/product';
+import { replayLatestBulkCard } from './mutation/ai-bulk-edit';
 
 const MAX_TOOL_ITERATIONS = parsePositiveIntEnv(process.env.AI_CHAT_MAX_TOOL_ITERATIONS, 40);
 /**
@@ -2371,7 +2372,7 @@ export class AiChatOrchestratorService {
                 }
                 msgs.push({
                   role: 'tool',
-                  content: msg.content,
+                  content: replayLatestBulkCard(msg.content, existingPreviewsAfterApproval),
                   tool_call_id: toolCallId,
                 });
                 replayableToolCallIds.delete(toolCallId);
@@ -2601,7 +2602,8 @@ export class AiChatOrchestratorService {
             }
             msgs.push({
               role: 'tool',
-              content: msg.content,
+              // A bulk card's boxes replaced it without the model: it reads the newest card's counts.
+              content: replayLatestBulkCard(msg.content, existingPreviews),
               tool_call_id: toolCallId,
             });
             replayableToolCallIds.delete(toolCallId);

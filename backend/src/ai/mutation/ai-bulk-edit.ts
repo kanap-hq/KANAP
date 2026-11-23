@@ -6,7 +6,7 @@ import { UUID_RE } from '../../common/relations/relation-target';
 import { BULK_WRITE_TIMEOUTS } from '../../common/request-db-timeouts';
 import { BULK_EDIT_EMPTIED, BULK_EDIT_HIDDEN, bulkEditListGrewText } from '../ai-bulk-edit-texts';
 import { personWriteLanguage, type AiWriteLanguage } from '../ai-write-texts';
-import type { AiBulkEditPreviewDto, AiExecutionContextWithManager } from '../ai.types';
+import type { AiBulkEditPreviewDto, AiExecutionContextWithManager, AiMutationPreviewDto } from '../ai.types';
 
 /**
  * What Kad's changes in bulk share (lot K1 of 26.11.9), whatever the list: the tools, the bounded
@@ -16,6 +16,26 @@ import type { AiBulkEditPreviewDto, AiExecutionContextWithManager } from '../ai.
 
 /** Kad's tools of a change in bulk: one card for many rows, never a step of `prepare_mutation_plan`. */
 export const AI_BULK_EDIT_TOOLS: ReadonlySet<string> = new Set(['bulk_update_budget_lines', 'bulk_update_applications']);
+
+/**
+ * A stored tool message of a bulk card, replayed to the model with the counts of the newest card of
+ * its chain (review of lot K2e): the boxes replace the card without the model, which would otherwise
+ * answer "how many?" with the first card's counts. Only the card's text and summary change; the list
+ * stays the screen's (`bulk_edit` is never in the model's output). Any other message is left as it is.
+ */
+export function replayLatestBulkCard(content: string, previews: readonly AiMutationPreviewDto[]): string {
+  let parsed: { tool_name?: unknown; result?: Record<string, unknown> } | null = null;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return content;
+  }
+  const result = parsed?.result;
+  if (!parsed || !AI_BULK_EDIT_TOOLS.has(String(parsed.tool_name)) || !result || typeof result.preview_id !== 'string') return content;
+  const newest = [...previews].reverse().find((preview) => preview.replaces_preview_id === result.preview_id);
+  if (!newest) return content;
+  return JSON.stringify({ ...parsed, result: { ...result, changes: newest.changes, summary: newest.summary, error_message: newest.error_message } });
+}
 
 /**
  * What `prepare_mutation_plan` says of the changes in bulk (lot K1): on dev, "do it in bulk" on the category of

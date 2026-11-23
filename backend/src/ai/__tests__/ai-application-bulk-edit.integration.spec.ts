@@ -890,7 +890,26 @@ async function testTheModelReadsNoList(harness: Harness) {
     }
     assert.match(dispatched.output.changes[CARD].to, /3 applications to change$/, 'it reads the counts');
     assert.equal(dispatched.previews[0].bulk_edit.rows.length, 3, 'the card on the screen lists them');
-    console.log('  the list goes to the screen, never to the model: OK');
+
+    // Two boxes later, the next turn replays the tool message with the newest card's counts (review of
+    // lot K2e), still without a reference, a name or a value before.
+    const shown = dispatched.previews[0];
+    const second = await exclude(harness, ctx, shown, [seed.apps[1]]);
+    await exclude(harness, ctx, second, [seed.apps[1], seed.apps[6]]);
+    const { replayLatestBulkCard } = require('../mutation/ai-bulk-edit');
+    const stored = JSON.stringify({ tool_call_id: 'call-1', tool_name: TOOL, result: dispatched.output });
+    const replayed = JSON.parse(replayLatestBulkCard(stored, await harness.previews.listConversationPreviews(ctx, ctx.conversationId)));
+    assert.equal(replayed.tool_call_id, 'call-1');
+    assert.equal(replayed.result.preview_id, shown.preview_id, 'the card the model created');
+    assert.match(replayed.result.changes[CARD].to, /\n\n1 application to change, 2 left out$/);
+    assert.equal(replayed.result.summary, 'Change Business criticality on 1 application.');
+    assert.equal(replayed.result.bulk_edit, '[REDACTED]');
+    for (const word of ['APP-1', 'APP-2', 'APP-6', 'Alpha', 'Bravo', 'Foxtrot', 'Low', 'Empty', seed.apps[1], seed.apps[2], seed.apps[6]]) {
+      assert.equal(JSON.stringify(replayed).includes(word), false, `the model never reads ${word}`);
+    }
+    const other = JSON.stringify({ tool_call_id: 'call-2', tool_name: 'query_entities', result: { preview_id: shown.preview_id } });
+    assert.equal(replayLatestBulkCard(other, []), other, 'another tool is replayed as it is');
+    console.log('  the list goes to the screen, never to the model; the model reads the newest counts: OK');
   });
 }
 
