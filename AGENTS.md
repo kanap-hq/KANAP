@@ -268,6 +268,9 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
 - A migration that adds, drops or retypes a column of a table of `backend/src/common/updated-at.inventory.ts`
   calls `syncUpdatedAtTrigger` (`backend/src/common/updated-at-trigger.ts`) for that table, after
   `dropUpdatedAtTriggers` for a drop or a new type: the trigger's `WHEN` names the columns it compares.
+  Faced with "cannot drop column ... because other objects depend on it", do not follow the `CASCADE`
+  hint: it drops the trigger. The entities never write `updated_at` (`update: false`); a record
+  dated on purpose (a child row changed) goes through `touchUpdatedAt`, after the save.
 - A migration that writes a budget line's analytics values (`*_item_analytics_values`) fires
   triggers that read the lines and write `search_index` (`1853940000000`): run it per tenant with
   `app.current_tenant` set. Updates of the values or dimensions themselves do not fire them.
