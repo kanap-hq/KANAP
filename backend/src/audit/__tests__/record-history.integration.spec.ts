@@ -7,6 +7,8 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { createRaceTenant, dropRaceTenant, seed } from '../../spend/__tests__/race-harness';
 import { RecordHistoryService, type RecordHistoryContext, type RecordHistoryItem } from '../record-history.service';
+import { writeAuditLog, type AuditEntry } from '../audit.service';
+import { amountsService, FRANCE_218_2026, seedCalendar } from '../../spend/__tests__/round-inputs.fixtures';
 import {
   audit,
   linePayload,
@@ -469,6 +471,59 @@ async function testAuthors(seedRow: Seeded) {
   console.log('  authors: person, system, budget file import, assistant: OK');
 }
 
+/**
+ * H1 (26.12.1): the costed lines of a CAPEX line written by the amounts service, read back by the
+ * History tab. The calendar of a line changed, then the calendar's days edited in the settings and
+ * the lines used again: the budget input entry names the cause beside the amounts entry.
+ */
+async function testCalcCausesWrittenByTheService(seedRow: Seeded) {
+  const { tenantId, capexLine, capexVersion } = seedRow.seed;
+  const auditLog = {
+    log: async (entry: AuditEntry, opts?: { manager?: QueryRunner['manager'] }) => { await writeAuditLog(opts!.manager!, entry); },
+  };
+  const GERMANY_2026 = ['20', '20', '21', '20', '19', '21', '23', '21', '22', '21', '20', '20'];
+  const { france, germany } = await seed(tenantId, async (runner) => ({
+    france: await seedCalendar(runner, tenantId, { code: 'H1FR', name: 'France H1', days_by_year: { [YEAR]: FRANCE_218_2026 } }),
+    germany: await seedCalendar(runner, tenantId, { code: 'H1DE', name: 'Germany H1', days_by_year: { [YEAR]: GERMANY_2026 } }),
+  }));
+  const consultant = (calendar: string) => ({
+    label: 'Consultant', quantity_unit: 'people', quantity: '1', unit_price: '400', price_basis: 'per_day', frequency: 'per_month',
+    days_per_month: null, period_start: `${YEAR}-02-01`, period_end: `${YEAR}-10-30`, working_day_profile_id: calendar,
+  });
+  // One transaction per gesture, as the budget tab sends them.
+  const write = (calendar: string) => seed(tenantId, (runner) => amountsService('capex', auditLog).bulkUpsert(
+    capexVersion, { kind: 'lines', year: YEAR, measure: 'planned', lines: [consultant(calendar)] }, seedRow.reader.id, { manager: runner.manager },
+  ));
+  await write(france);
+  await write(germany);
+  // A working day of July removed in the settings; nothing is recomputed until the lines are used again.
+  const edited = [...GERMANY_2026];
+  edited[6] = '22';
+  await seed(tenantId, (runner) => runner.query(
+    `UPDATE working_day_profiles SET days_by_year = $3::jsonb WHERE tenant_id = $1 AND id = $2`,
+    [tenantId, germany, JSON.stringify({ [YEAR]: edited })],
+  ));
+  await write(germany);
+
+  const page = await readPage(seedRow.reader, seedRow.seed, 'spend_items', capexLine, { limit: '100' }, { budget: 'reader' });
+  const calendarEntry = page.items.findIndex((item) => item.subject.kind === 'round_input' && item.changes.some((change) => change.field === 'line_calendar'));
+  assert.ok(calendarEntry >= 0, 'the budget input entry of the calendar change is shown');
+  const calendarChange = page.items[calendarEntry].changes.find((change) => change.field === 'line_calendar');
+  assert.deepEqual(calendarChange, { field: 'line_calendar', line: 'Consultant', lineNumber: 1, before: 'France H1', after: 'Germany H1' });
+  assert.equal(page.items[calendarEntry].subject.label, 'planned');
+  const amountsEntry = page.items[calendarEntry + 1];
+  assert.equal(amountsEntry?.subject.kind, 'amounts', 'the amounts of the same gesture come right after (newest first)');
+  assert.ok(amountsEntry.changes.some((change) => change.field === 'planned' && change.year === YEAR), 'the amounts changed with it');
+
+  const daysEntry = page.items.findIndex((item) => item.subject.kind === 'round_input' && item.changes.some((change) => change.field === 'calendar_days'));
+  assert.ok(daysEntry >= 0 && daysEntry < calendarEntry, 'the lines used again are a newer entry');
+  assert.deepEqual(page.items[daysEntry].changes.filter((change) => change.field === 'calendar_days'), [
+    { field: 'calendar_days', calendar: 'Germany H1', year: YEAR, before: '248', after: '247' },
+  ], 'the calendar\'s working days of the year, before and after');
+  assert.equal(page.items[daysEntry + 1]?.subject.kind, 'amounts', 'with the amounts it changed');
+  console.log('  costed lines written by the service: the calendar change and the days used again name their cause: OK');
+}
+
 async function run() {
   await dataSource.initialize();
   const tenantId = await createRaceTenant('record-history');
@@ -751,6 +806,7 @@ async function run() {
     await testReferences(seeded);
     await testUnknownChildLabel(seeded);
     await testAuthors(seeded);
+    await testCalcCausesWrittenByTheService(seeded);
     console.log('record-history.integration.spec: ok');
   } finally {
     await dropRaceTenant(tenantId);
