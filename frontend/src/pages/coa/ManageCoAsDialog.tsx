@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -14,6 +14,7 @@ import type { Theme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import { KanapDialog, useKanapDialogs } from '../../components/design';
+import InfoHint from '../../components/workspace/InfoHint';
 import { useAuth } from '../../auth/AuthContext';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -268,6 +269,12 @@ export default function ManageCoAsDialog({
   };
 
   const hasRowMenu = canManage || canAdmin;
+  const rolesLabelId = useId();
+  const rolesHelp = [
+    t('coa.manageDialog.help.countryDefault'),
+    t('coa.manageDialog.help.globalDefault'),
+    t('coa.manageDialog.help.consolidation'),
+  ].join('\n');
 
   return (
     <>
@@ -313,7 +320,12 @@ export default function ManageCoAsDialog({
                   <th>{t('coa.manageDialog.columns.code')}</th>
                   <th>{t('coa.manageDialog.columns.name')}</th>
                   <th>{t('coa.manageDialog.columns.coverage')}</th>
-                  <th>{t('coa.manageDialog.columns.roles')}</th>
+                  <th aria-labelledby={rolesLabelId}>
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                      <Box component="span" id={rolesLabelId}>{t('coa.manageDialog.columns.roles')}</Box>
+                      <InfoHint text={rolesHelp} />
+                    </Box>
+                  </th>
                   <th className="r">{t('coa.manageDialog.columns.companies')}</th>
                   <th className="r">{t('coa.manageDialog.columns.accounts')}</th>
                   {hasRowMenu && <th aria-label={t('coa.manageDialog.columns.actions')} />}
@@ -367,13 +379,6 @@ export default function ManageCoAsDialog({
           </Box>
         )}
 
-        {coas.length > 0 && (
-          <Box sx={{ mt: 2, display: 'grid', gap: '2px', fontSize: 12, lineHeight: 1.45, color: 'kanap.text.tertiary' }}>
-            <Box>{t('coa.manageDialog.help.countryDefault')}</Box>
-            <Box>{t('coa.manageDialog.help.globalDefault')}</Box>
-            <Box>{t('coa.manageDialog.help.consolidation')}</Box>
-          </Box>
-        )}
       </KanapDialog>
 
       {/* Outside the dialog form: an Enter on a menu item must not submit (close) the dialog. */}

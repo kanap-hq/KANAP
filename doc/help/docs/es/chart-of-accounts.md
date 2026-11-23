@@ -278,7 +278,7 @@ Haga clic en **Gestionar planes** en la barra de chips para abrir el cuadro. Una
 - **Empresas**: el número de empresas asignadas al plan
 - **Cuentas**: el número de cuentas del plan
 
-Tres líneas breves bajo la tabla explican los roles. **Nuevo plan** (`accounts:member`), abajo a la izquierda, abre el diálogo de creación.
+Un icono de información junto a **Roles** explica los roles. **Nuevo plan** (`accounts:member`), abajo a la izquierda, abre el diálogo de creación.
 
 Cada fila tiene un menú **⋯** que solo ofrece las acciones aplicables a ese plan. La etiqueta sigue el estado actual.
 
