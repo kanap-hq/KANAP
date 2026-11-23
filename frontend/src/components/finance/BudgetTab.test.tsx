@@ -1908,7 +1908,7 @@ describe('BudgetTab keyboard run through the lines', () => {
     while (focusName() !== 'Add a line') { tab(); walked.push(focusName()); }
     expect(walked).toEqual([
       'Description', 'Quantity', 'Unit', 'Unit price', 'Price per', 'Full time', 'days per month',
-      'labels.datePlaceholder', 'labels.datePlaceholder', 'Calendar', 'Remove the line', 'Add a line',
+      'From', 'To', 'Calendar', 'Remove the line', 'Add a line',
     ]);
     // Enter on Add a line: the next line, its Description focused.
     fireEvent.click(document.activeElement as HTMLElement);

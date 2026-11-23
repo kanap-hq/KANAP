@@ -146,6 +146,7 @@ export default function ConnectionEndpointPicker({
               variant="standard"
               placeholder={value.entity_code ? t('it:workspace.connection.picker.entityPlaceholder', { code: labelFor('entity', value.entity_code) }) : t('it:workspace.connection.picker.serverPlaceholder')}
               sx={fieldSx}
+              inputProps={{ ...params.inputProps, 'aria-label': label }}
               InputProps={{
                 ...params.InputProps,
                 startAdornment: (
@@ -167,6 +168,7 @@ export default function ConnectionEndpointPicker({
           value={value.entity_code || ''}
           onChange={(e) => handleEntityPick(e.target.value)}
           sx={drawerSelectSx}
+          inputProps={{ 'aria-label': label }}
           SelectProps={{ displayEmpty: true }}
           helperText={
             entities.length === 0
