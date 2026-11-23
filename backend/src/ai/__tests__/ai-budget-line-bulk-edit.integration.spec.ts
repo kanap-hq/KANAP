@@ -18,6 +18,10 @@ import { DataSource, QueryRunner } from 'typeorm';
 // - Another budget operation running: the tool says so, the card stays to approve and passes the
 //   second time. A line held by another transaction gives up after the bounded wait.
 // - A change in bulk is never a step of a mutation plan.
+// - Lot K2e of 26.12.1: the card lists each line it changes (up to 200) with its value before; a
+//   box leaves one out (the card recounted and replaced, the exclusion signed by the approval), all
+//   left out refused, a limited person's own lines only, 409 operation_running on a box; the list
+//   never reaches the model.
 
 process.env.AI_CHAT_ENABLED = 'true';
 process.env.AI_SETTINGS_ENABLED = 'true';
@@ -215,6 +219,12 @@ async function inSeed(harness: Harness, test: (runner: QueryRunner, seed: Seed) 
   }
 }
 
+/** The card's list as the screen gets it: reference, name, value before, kept. */
+function listed(preview: any): Array<[string, string, string, boolean]> {
+  assert.ok(preview.bulk_edit, 'the card lists its lines');
+  return preview.bulk_edit.rows.map((row: any) => [row.ref, row.title, row.before, row.kept]);
+}
+
 async function column(runner: QueryRunner, seed: Seed, n: number, name: string): Promise<string | null> {
   const [row] = await runner.query(`SELECT ${name}::text AS v FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.lines[n]]);
   return row?.v ?? null;
@@ -233,18 +243,23 @@ async function testFilterAsTheList(harness: Harness) {
     assert.equal(preview.changes.budget_line_bulk_edit.format, 'markdown');
     assert.equal(
       preview.changes.budget_line_bulk_edit.to,
-      'Filter: Supplier "Acme"\n\nScope: enabled lines\n\nCost center → IT-01 · Informatique\n\n6 lines to change'
-      + '\n\n- BL-1 Line 1\n- BL-2 Line 2\n- BL-3 Line 3\n- BL-4 Line 4\n- BL-5 Line 5\n- and 1 more',
+      'Filter: Supplier "Acme"\n\nScope: enabled lines\n\nCost center → IT-01 · Informatique\n\n6 lines to change',
     );
+    // The card lists each line it changes, with its value before (lot K2e of 26.12.1).
+    assert.deepEqual(listed(preview), [
+      ['BL-1', 'Line 1', 'Empty', true], ['BL-2', 'Line 2', 'Empty', true], ['BL-3', 'Line 3', 'Empty', true],
+      ['BL-4', 'Line 4', 'Empty', true], ['BL-5', 'Line 5', 'Empty', true], ['BL-7', 'Line 7', 'Empty', true],
+    ]);
     assert.equal(preview.target.title, '6 budget lines');
-    assert.equal(JSON.stringify(preview).includes(seed.lines[1]), false, 'no line uuid on the card');
+    // The ids are the boxes' only (the list the model never reads): none elsewhere on the card.
+    assert.equal(JSON.stringify({ ...preview, bulk_edit: null }).includes(seed.lines[1]), false, 'no line uuid on the card');
     assert.equal(await column(runner, seed, 1, 'cost_center_id'), null, 'the card writes nothing');
     // The same filter on the screen's list: the grid model its column sends, its enabled lines.
-    const listed = await harness.budgetLines.summaryIds({ filters: { supplier_name: { filterType: 'set', values: ['Acme'] } } }, { manager: runner.manager });
+    const screen = await harness.budgetLines.summaryIds({ filters: { supplier_name: { filterType: 'set', values: ['Acme'] } } }, { manager: runner.manager });
     const executed = await approve(harness, ctx, preview);
     assert.equal(executed.summary, 'Cost center changed on 6 budget lines.');
     const written = await runner.query(`SELECT id::text AS id FROM spend_items WHERE tenant_id = $1 AND cost_center_id = $2`, [seed.tenantId, seed.costCenters.it]);
-    assert.deepEqual(written.map((row: { id: string }) => row.id).sort(), [...listed.ids].sort(), 'the lines of the screen list, no other');
+    assert.deepEqual(written.map((row: { id: string }) => row.id).sort(), [...screen.ids].sort(), 'the lines of the screen list, no other');
     assert.deepEqual(await changedLines(runner, seed, 'cost_center_id', seed.costCenters.it), [1, 2, 3, 4, 5, 7]);
     // One audit row per line, by Kad with the card's reference, the person as author.
     const audit = await runner.query(
@@ -270,7 +285,8 @@ async function testReferencesAndRefusals(harness: Harness) {
     await runner.query(`INSERT INTO supplier_contacts (tenant_id, supplier_id, contact_id, role) VALUES ($1, $2, $3, 'commercial')`, [seed.tenantId, seed.suppliers.beta, contact]);
     // A reference as typed (a bare number, lower case) is shown by its key.
     const preview = await card(harness, ctx, { field: 'supplier', value: 'Beta', rows: ['2', 'bl-6'] });
-    assert.equal(preview.changes.budget_line_bulk_edit.to, 'Chosen lines: BL-2, BL-6\n\nSupplier → SUP-2 - Beta\n\n1 line to change, 1 already has this value\n\n- BL-2 Line 2');
+    assert.equal(preview.changes.budget_line_bulk_edit.to, 'Chosen lines: BL-2, BL-6\n\nSupplier → SUP-2 - Beta\n\n1 line to change, 1 already has this value');
+    assert.deepEqual(listed(preview), [['BL-2', 'Line 2', 'SUP-1 - Acme', true]], 'the value before by its reference and name; the unchanged line not listed');
     await approve(harness, ctx, preview);
     assert.equal(await column(runner, seed, 2, 'supplier_id'), seed.suppliers.beta);
     const history = await runner.query(
@@ -351,7 +367,8 @@ async function testEveryField(harness: Harness) {
       /^The account "6100" is in several charts of accounts \(Chart Company A, Chart Company B\): name the company whose chart holds it \(company\)\.$/);
     // B's 6100 on a line paid by A is refused (account_chart) and counted; the line paid by B takes it.
     const account = await card(harness, ctx, { field: 'account', value: '6100', company: 'Company B', rows: ['BL-1', 'BL-7'] });
-    assert.match(account.changes.budget_line_bulk_edit.to, /Account → 6100 - Software B\n\n1 line to change, 1 refused: Account outside the company's chart of accounts \(1\)\n\n- BL-7 Line 7$/);
+    assert.match(account.changes.budget_line_bulk_edit.to, /Account → 6100 - Software B\n\n1 line to change, 1 refused: Account outside the company's chart of accounts \(1\)$/);
+    assert.deepEqual(listed(account), [['BL-7', 'Line 7', 'Empty', true]], 'the refused line counted, not listed');
     await approve(harness, ctx, account);
     assert.equal(await column(runner, seed, 7, 'account_id'), seed.accounts.b6100);
     assert.equal(await column(runner, seed, 1, 'account_id'), seed.accounts.a7100, 'the refused line is left as it is');
@@ -408,9 +425,11 @@ async function testLimitedPerson(harness: Harness) {
     const preview = await card(harness, ctx, { field: 'run_build', value: 'build', filters: { supplier: ['Acme'] } });
     assert.equal(
       preview.changes.budget_line_bulk_edit.to,
-      'Filter: Supplier "Acme"\n\nScope: enabled lines\n\nRun or build → Build\n\n4 lines to change, 1 refused: Read only for you (1)'
-      + '\n\n- BL-2 Line 2\n- BL-3 Line 3\n- BL-4 Line 4\n- BL-5 Line 5',
+      'Filter: Supplier "Acme"\n\nScope: enabled lines\n\nRun or build → Build\n\n4 lines to change, 1 refused: Read only for you (1)',
     );
+    // Its own lines only, listed; the read-only line counted with its reason, without a box.
+    assert.deepEqual(listed(preview), [['BL-2', 'Line 2', 'Empty', true], ['BL-3', 'Line 3', 'Empty', true], ['BL-4', 'Line 4', 'Empty', true], ['BL-5', 'Line 5', 'Empty', true]]);
+    for (const outside of ['Line 1', 'Line 7', seed.lines[1], seed.lines[7]]) assert.equal(JSON.stringify(preview).includes(outside), false, `${outside} never on the card`);
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'run_build', value: 'build', rows: ['BL-1'] }), 'No budget line BL-1 in this workspace.');
     await approve(harness, ctx, preview);
     // Read back as the person: the lines of the access changed, the read-only lines left as they are.
@@ -432,7 +451,7 @@ async function testRightsFreezeAndSubscription(harness: Harness) {
     // A frozen year changes nothing: no amount moves.
     await runner.query(`INSERT INTO freeze_states (tenant_id, budget_year, scope, column_key, is_frozen) VALUES ($1, $2, 'opex', 'budget', true), ($1, $2, 'capex', 'budget', true)`, [seed.tenantId, YEAR]);
     const frozen = await card(harness, ctx, { field: 'cost_center', value: 'IT-01', rows: ['BL-1', 'BL-7'] });
-    assert.match(frozen.changes.budget_line_bulk_edit.to, /\n\n2 lines to change\n\n/);
+    assert.match(frozen.changes.budget_line_bulk_edit.to, /\n\n2 lines to change$/);
     await approve(harness, ctx, frozen);
 
     // The right withdrawn before the approval.
@@ -521,6 +540,23 @@ async function testOperationRunningAndHeldLine(harness: Harness) {
     assert.equal(await committedColumn(harness, seed, 2, 'run_build'), 'build', 'the second approval passes');
     console.log('  another budget operation: the tool says so, the card passes the second time: OK');
 
+    // A box changed while another budget operation runs (lot K2e of 26.12.1): 409 operation_running,
+    // the card left as it was; once the operation ends, the same box passes.
+    const boxes = await step(harness, seed, 'running-boxes', (ctx) => card(harness, ctx, { field: 'run_build', value: 'build', rows: ['BL-3', 'BL-4'] }));
+    await other.query(`SELECT pg_advisory_lock($1::int, hashtext($2))`, [0x424f5053, `budget-ops:${seed.tenantId}`]);
+    const busy = await rejects(() => step(harness, seed, 'running-boxes', (ctx) => exclude(harness, ctx, boxes, [seed.lines[4]])), /^Another budget operation /);
+    assert.equal(busy.getStatus(), 409);
+    assert.equal(busy.getResponse().code, 'operation_running', 'the screen reads it as "try again"');
+    const unchanged = await step(harness, seed, 'running-boxes', (ctx) => previewRow(ctx.manager, seed.tenantId, boxes.preview_id));
+    assert.equal(unchanged.status, 'pending', 'the card stays as it was');
+    assert.equal(unchanged.mutation_input.excluded, undefined);
+    await other.query(`SELECT pg_advisory_unlock_all()`);
+    const left = await step(harness, seed, 'running-boxes', (ctx) => exclude(harness, ctx, boxes, [seed.lines[4]]));
+    await step(harness, seed, 'running-boxes', (ctx) => approve(harness, ctx, left));
+    assert.equal(await committedColumn(harness, seed, 3, 'run_build'), 'build');
+    assert.equal(await committedColumn(harness, seed, 4, 'run_build'), null, 'the line left out is left as it is');
+    console.log('  a box while another budget operation runs: 409 operation_running, the card as it was: OK');
+
     // A line held by another transaction: the tool and the approval give up after the bounded wait.
     harness.timeouts.lockTimeoutMs = 300;
     const second = await step(harness, seed, 'held', (ctx) => card(harness, ctx, { field: 'run_build', value: 'run', rows: ['BL-1'] }));
@@ -545,6 +581,131 @@ async function testOperationRunningAndHeldLine(harness: Harness) {
     await other.release();
     await dropTenant(harness, seed.tenantId);
   }
+}
+
+/** The route of the card's boxes (lot K2e of 26.12.1), as the screen calls it: the whole list of the ids left out. */
+async function exclude(harness: Harness, ctx: any, preview: any, excluded: unknown) {
+  const { AiImportFileController } = require('../import/ai-import-file.controller');
+  const controller = harness.app.get(AiImportFileController);
+  return controller.exclude(ctx.conversationId, preview.preview_id, { excluded }, { user: { sub: ctx.userId }, headers: {} }, { tenantId: ctx.tenantId, manager: ctx.manager }) as Promise<any>;
+}
+
+async function previewRow(manager: any, tenantId: string, id: string) {
+  const [row] = await manager.query(
+    `SELECT id::text AS id, status, mutation_input, current_values FROM ai_mutation_previews WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
+  return row;
+}
+
+/**
+ * The card lists each line it changes (lot K2e of 26.12.1): a box leaves one out, the card is
+ * recounted and replaced; the approval signs the lines left out and writes only those kept, each
+ * audited by Kad; the list stays, the changed lines marked. The list never reaches the model.
+ */
+async function testLeaveOutAndApprove(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'leave-out');
+    await ensureConversation(ctx);
+    const { AiCapabilityDispatcherService } = require('../control-plane/dispatcher/ai-capability-dispatcher.service');
+    const dispatched = await harness.app.get(AiCapabilityDispatcherService).execute(ctx, {
+      capabilityName: TOOL,
+      input: { field: 'supplier', value: 'Beta', rows: ['BL-1', 'BL-2', 'BL-3'] },
+      execution: { surface: 'chat', trigger_kind: 'human_user' },
+    }) as any;
+    // The tool message carries the counts; the list is the screen's.
+    assert.equal(dispatched.output.bulk_edit, '[REDACTED]');
+    for (const word of ['Line 1', 'Line 2', 'SUP-1', 'Acme', seed.lines[1], seed.lines[2]]) {
+      assert.equal(JSON.stringify(dispatched.output).includes(word), false, `the model never reads ${word}`);
+    }
+    const first = dispatched.previews[0];
+    assert.deepEqual(listed(first), [['BL-1', 'Line 1', 'SUP-1 - Acme', true], ['BL-2', 'Line 2', 'SUP-1 - Acme', true], ['BL-3', 'Line 3', 'SUP-1 - Acme', true]]);
+
+    const second = await exclude(harness, ctx, first, [seed.lines[2]]);
+    assert.equal(second.replaces_preview_id, first.preview_id);
+    assert.equal((await previewRow(runner.manager, seed.tenantId, first.preview_id)).status, 'expired');
+    assert.deepEqual(listed(second).map((row) => [row[0], row[3]]), [['BL-1', true], ['BL-2', false], ['BL-3', true]]);
+    assert.equal(second.changes.budget_line_bulk_edit.to, 'Chosen lines: BL-1, BL-2, BL-3\n\nSupplier → SUP-2 - Beta\n\n2 lines to change, 1 left out');
+    const stored = await previewRow(runner.manager, seed.tenantId, second.preview_id);
+    assert.deepEqual(stored.mutation_input.excluded, [seed.lines[2]]);
+    const { AiActionRequestService } = require('../control-plane/action-request/ai-action-request.service');
+    const actions = harness.app.get(AiActionRequestService);
+    const { excluded: _left, ...without } = stored.mutation_input;
+    assert.notEqual(actions.inputHashForPreview(stored), actions.inputHashForPreview({ ...stored, mutation_input: without }), 'the approval signs the exclusion');
+
+    const executed = await approve(harness, ctx, second);
+    assert.equal(executed.summary, 'Supplier changed on 2 budget lines.');
+    assert.equal(await column(runner, seed, 1, 'supplier_id'), seed.suppliers.beta);
+    assert.equal(await column(runner, seed, 2, 'supplier_id'), seed.suppliers.acme, 'the line left out is left as it is');
+    assert.equal(await column(runner, seed, 3, 'supplier_id'), seed.suppliers.beta);
+    const audit = await runner.query(
+      `SELECT record_id::text AS id, source_ref FROM audit_log WHERE tenant_id = $1 AND table_name = 'spend_items' AND action = 'update' AND record_id = ANY($2::uuid[])`,
+      [seed.tenantId, Object.values(seed.lines)],
+    );
+    assert.deepEqual(audit.map((row: any) => row.id).sort(), [seed.lines[1], seed.lines[3]].sort(), 'audited: the kept lines only');
+    assert.ok(audit.every((row: any) => row.source_ref === second.preview_id));
+    assert.deepEqual(executed.bulk_edit.rows.map((row: any) => [row.ref, row.kept, row.changed]), [['BL-1', true, true], ['BL-2', false, false], ['BL-3', true, true]]);
+    await rejects(() => exclude(harness, ctx, second, []), /no longer be changed/);
+
+    // Every line left out: the approval refused, nothing written; a foreign id refused.
+    const other = await card(harness, ctx, { field: 'run_build', value: 'run', rows: ['BL-4', 'BL-5'] });
+    await rejects(() => exclude(harness, ctx, other, [seed.lines[6]]), 'Only a line this card lists can be left out.');
+    const none = await exclude(harness, ctx, other, [seed.lines[4], seed.lines[5]]);
+    const refused = await harness.previews.executePreview(ctx, none.preview_id) as any;
+    assert.equal(refused.status, 'pending');
+    assert.equal(refused.error_message, 'Every record of this card is left out: there is nothing to approve.');
+    assert.deepEqual(await changedLines(runner, seed, 'run_build', 'run'), [], 'nothing written');
+    console.log('  a box leaves a line out, the approval writes the kept ones only, the model reads no list: OK');
+  });
+}
+
+/** A limited person leaves one of their lines out; a line outside the access (counted read only) has no box. */
+async function testLimitedPersonLeavesOut(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    if (!(await runner.query(`SELECT to_regrole('kanap_data_limited') IS NOT NULL AS present`))[0].present) {
+      if (process.env.CI) assert.fail('CI installs kanap_data_limited before the migrations');
+      console.log('  skip - kanap_data_limited not installed');
+      return;
+    }
+    await runner.query(`INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, access) VALUES ($1, $2, 'company', $3, 'edit'), ($1, $2, 'company', $4, 'read')`,
+      [seed.tenantId, seed.users.limited, seed.companies.a, seed.companies.b]);
+    const ctx = context(seed, runner, 'limited-leave-out', seed.users.limited);
+    await ensureConversation(ctx);
+    assert.equal((await runner.query(`SELECT data_access_apply($1) AS mode`, [seed.users.limited]))[0].mode, 'limited');
+    const preview = await card(harness, ctx, { field: 'run_build', value: 'build', filters: { supplier: ['Acme'] } });
+    assert.match(preview.changes.budget_line_bulk_edit.to, /\n\n5 lines to change, 1 refused: Read only for you \(1\)$/);
+    assert.deepEqual(listed(preview).map((row) => row[0]), ['BL-1', 'BL-2', 'BL-3', 'BL-4', 'BL-5'], 'its own lines only; the read-only line has no box');
+    await rejects(() => exclude(harness, ctx, preview, [seed.lines[7]]), 'Only a line this card lists can be left out.');
+    const kept = await exclude(harness, ctx, preview, [seed.lines[3]]);
+    assert.match(kept.changes.budget_line_bulk_edit.to, /\n\n4 lines to change, 1 left out, 1 refused: Read only for you \(1\)$/);
+    assert.deepEqual(listed(kept).map((row) => [row[0], row[3]]), [['BL-1', true], ['BL-2', true], ['BL-3', false], ['BL-4', true], ['BL-5', true]]);
+    assert.equal(JSON.stringify(kept).includes('Line 7'), false, 'the line outside the access is never named');
+    await approve(harness, ctx, kept);
+    assert.deepEqual(await changedLines(runner, seed, 'run_build', 'build'), [1, 2, 4, 5], 'the kept lines of the access only');
+    assert.equal(await column(runner, seed, 3, 'run_build'), null, 'the line left out is left as it is');
+    console.log('  a limited person: its own lines listed, one left out, the read-only line counted without a box: OK');
+  });
+}
+
+/** Up to 200 lines listed; beyond, the count and five examples, and the model is told to offer narrowing. */
+async function testListUpTo200(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    await runner.query(
+      `INSERT INTO spend_items (tenant_id, nature, product_name, currency, effective_start, item_number, supplier_id)
+       SELECT $1, 'opex', 'Mass ' || n, 'EUR', '2020-01-01', 1000 + n, $2 FROM generate_series(1, 199) AS n`,
+      [seed.tenantId, seed.suppliers.beta],
+    );
+    const ctx = context(seed, runner, 'two-hundred');
+    const listedCard = await card(harness, ctx, { field: 'run_build', value: 'run', filters: { supplier: ['Beta'] } });
+    assert.equal(listedCard.bulk_edit.rows.length, 200, '200 lines listed');
+    assert.equal(listedCard.assistant_note, undefined);
+    await runner.query(`INSERT INTO spend_items (tenant_id, nature, product_name, currency, effective_start, item_number, supplier_id) VALUES ($1, 'opex', 'Mass 200', 'EUR', '2020-01-01', 1200, $2)`,
+      [seed.tenantId, seed.suppliers.beta]);
+    const counted = await card(harness, ctx, { field: 'run_build', value: 'run', filters: { supplier: ['Beta'] } });
+    assert.equal(counted.bulk_edit, undefined, '201: counted, not listed');
+    assert.match(counted.changes.budget_line_bulk_edit.to, /\n\n201 lines to change\n\n- BL-6 Line 6\n- BL-1001 Mass 1\n/);
+    assert.match(counted.assistant_note, /^This card changes 201 budget lines: more than 200, so it counts them without listing them.*narrow/);
+    await rejects(() => exclude(harness, ctx, counted, [seed.lines[6]]), 'This card does not list its lines: none can be left out.');
+    console.log('  200 lines listed, 201 counted with five examples and a note to narrow: OK');
+  });
 }
 
 /** Deletes a committed test tenant: every table with a tenant_id, in passes until the keys allow it. */
@@ -592,6 +753,9 @@ async function run() {
     await testLimitedPerson(harness);
     await testRightsFreezeAndSubscription(harness);
     await testOperationRunningAndHeldLine(harness);
+    await testLeaveOutAndApprove(harness);
+    await testLimitedPersonLeavesOut(harness);
+    await testListUpTo200(harness);
   } finally {
     await harness.app.close();
   }

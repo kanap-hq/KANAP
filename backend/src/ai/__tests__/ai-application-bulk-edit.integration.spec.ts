@@ -18,6 +18,9 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   Contributor raised to member reaches the applications they own only, the others neither counted,
 //   named nor changed; a right withdrawn refuses the approval; a frozen subscription refuses both.
 // - An application held by another transaction: the bounded wait, the card stays to approve.
+// - Lot K2e of 26.12.1: the card lists each application it changes (up to 200) with its value
+//   before; a box leaves one out (the card recounted and replaced, the exclusion signed by the
+//   approval), ticked again, all left out refused; refusals of the route; the list never reaches the model.
 
 process.env.AI_CHAT_ENABLED = 'true';
 process.env.AI_SETTINGS_ENABLED = 'true';
@@ -205,6 +208,12 @@ async function inSeed(harness: Harness, test: (runner: QueryRunner, seed: Seed) 
   }
 }
 
+/** The card's list as the screen gets it: reference, name, value before, kept. */
+function listed(preview: any): Array<[string, string, string, boolean]> {
+  assert.ok(preview.bulk_edit, 'the card lists its applications');
+  return preview.bulk_edit.rows.map((row: any) => [row.ref, row.title, row.before, row.kept]);
+}
+
 async function column(runner: QueryRunner, seed: Seed, n: number, name: 'lifecycle' | 'criticality' | 'category' | 'cyber_criticality' | 'classification_revision'): Promise<string | null> {
   const [row] = await runner.query(`SELECT ${name}::text AS v FROM applications WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.apps[n]]);
   return row?.v ?? null;
@@ -229,21 +238,24 @@ async function testFilterAsTheList(harness: Harness) {
     assert.equal(preview.changes[CARD].format, 'markdown');
     assert.equal(
       preview.changes[CARD].to,
-      'Filter: Supplier "Acme"\n\nScope: enabled applications, retired ones left out\n\nBusiness criticality → High\n\n3 applications to change'
-      + '\n\n- APP-1 Alpha\n- APP-2 Bravo\n- APP-6 Foxtrot',
+      'Filter: Supplier "Acme"\n\nScope: enabled applications, retired ones left out\n\nBusiness criticality → High\n\n3 applications to change',
     );
+    // The card lists each application it changes, with its value before (lot K2e of 26.12.1).
+    assert.deepEqual(listed(preview), [['APP-1', 'Alpha', 'Empty', true], ['APP-2', 'Bravo', 'Low', true], ['APP-6', 'Foxtrot', 'Empty', true]]);
+    assert.deepEqual([preview.bulk_edit.field, preview.bulk_edit.after, preview.bulk_edit.kept, preview.bulk_edit.excluded], ['Business criticality', 'High', 3, 0]);
     assert.equal(preview.target.title, '3 applications');
-    assert.equal(JSON.stringify(preview).includes(seed.apps[1]), false, 'no application uuid on the card');
+    // The ids are the boxes' only (the list the model never reads): none elsewhere on the card.
+    assert.equal(JSON.stringify({ ...preview, bulk_edit: null }).includes(seed.apps[1]), false, 'no application uuid on the card');
     assert.equal(await column(runner, seed, 1, 'criticality'), null, 'the card writes nothing');
     // The same filter on the screen's list: the grid model its column sends, its scope.
-    const listed = await harness.applications.listIds(
+    const screen = await harness.applications.listIds(
       { filters: { supplier_name: { filterType: 'set', values: ['Acme'] } } },
       { manager: runner.manager, tenantId: seed.tenantId },
     );
     const executed = await approve(harness, ctx, preview);
     assert.equal(executed.summary, 'Business criticality changed on 3 applications.');
     const written = await runner.query(`SELECT id::text AS id FROM applications WHERE tenant_id = $1 AND criticality = 'high'`, [seed.tenantId]);
-    assert.deepEqual(written.map((row: { id: string }) => row.id).sort(), [...listed.ids].sort(), 'the applications of the screen list, no other');
+    assert.deepEqual(written.map((row: { id: string }) => row.id).sort(), [...screen.ids].sort(), 'the applications of the screen list, no other');
     assert.deepEqual(await appsWith(runner, seed, 'criticality', 'high'), ['APP-1', 'APP-2', 'APP-6']);
     // One audit row per application, by Kad with the card's reference, the person as author.
     const audit = await runner.query(
@@ -259,8 +271,9 @@ async function testFilterAsTheList(harness: Harness) {
     const it = await card(harness, retired, { field: 'owners_it', value: ['Julie Bernard'], filters: { lifecycle: ['Retired'], supplier: ['Acme'] } });
     assert.equal(
       it.changes[CARD].to,
-      'Filter: Lifecycle "Retired"; Supplier "Acme"\n\nScope: enabled applications\n\nIT owners → Julie Bernard\n\n1 application to change\n\n- APP-3 Charlie',
+      'Filter: Lifecycle "Retired"; Supplier "Acme"\n\nScope: enabled applications\n\nIT owners → Julie Bernard\n\n1 application to change',
     );
+    assert.deepEqual(listed(it), [['APP-3', 'Charlie', 'Empty', true]]);
     await approve(harness, retired, it);
     assert.deepEqual(await owners(runner, seed, 3, 'it'), [seed.users.julie]);
     const ownersAudit = await runner.query(
@@ -277,7 +290,8 @@ async function testReferencesAndRefusals(harness: Harness) {
     const ctx = context(seed, runner, 'rows');
     // A reference as typed (a bare number, lower case) is shown by its key.
     const preview = await card(harness, ctx, { field: 'lifecycle', value: 'deprecated', rows: ['2', 'app-5'] });
-    assert.equal(preview.changes[CARD].to, 'Chosen applications: APP-2, APP-5\n\nLifecycle → Deprecated\n\n2 applications to change\n\n- APP-2 Bravo\n- APP-5 Echo');
+    assert.equal(preview.changes[CARD].to, 'Chosen applications: APP-2, APP-5\n\nLifecycle → Deprecated\n\n2 applications to change');
+    assert.deepEqual(listed(preview), [['APP-2', 'Bravo', 'Active', true], ['APP-5', 'Echo', 'Active', true]]);
     await approve(harness, ctx, preview);
     assert.deepEqual(await appsWith(runner, seed, 'lifecycle', 'deprecated'), ['APP-2', 'APP-5']);
 
@@ -326,7 +340,7 @@ async function testCategoryAsACatalog(harness: Harness) {
       const preview = await card(harness, ctx, { field: 'criticality', value: 'High', filters: { category: [value] } });
       assert.equal(
         preview.changes[CARD].to,
-        'Filter: Category "Line of business"\n\nScope: enabled applications, retired ones left out\n\nBusiness criticality → High\n\n2 applications to change\n\n- APP-1 Alpha\n- APP-2 Bravo',
+        'Filter: Category "Line of business"\n\nScope: enabled applications, retired ones left out\n\nBusiness criticality → High\n\n2 applications to change',
         `the category given as ${value}`,
       );
     }
@@ -528,8 +542,9 @@ async function testRightsContributorAndSubscription(harness: Harness) {
     const own = await card(harness, contributorCtx, { field: 'criticality', value: 'Critical', filters: { lifecycle: ['Active'] } });
     assert.equal(
       own.changes[CARD].to,
-      'Filter: Lifecycle "Active"\n\nScope: enabled applications\n\nBusiness criticality → Critical\n\n2 applications to change\n\n- APP-1 Alpha\n- APP-5 Echo',
+      'Filter: Lifecycle "Active"\n\nScope: enabled applications\n\nBusiness criticality → Critical\n\n2 applications to change',
     );
+    assert.deepEqual(listed(own), [['APP-1', 'Alpha', 'Empty', true], ['APP-5', 'Echo', 'Empty', true]], 'its own applications only');
     assert.equal(JSON.stringify(own).includes('Bravo'), false, 'an application outside the scope is never named');
     await rejects(() => harness.tools.execute(contributorCtx, TOOL, { field: 'criticality', value: 'Critical', rows: ['APP-2'] }), 'No application APP-2 in this workspace.');
     await approve(harness, contributorCtx, own);
@@ -626,6 +641,214 @@ async function testHeldApplication(harness: Harness) {
   }
 }
 
+/** The route of the card's boxes (lot K2e of 26.12.1), as the screen calls it: the whole list of the ids left out. */
+async function exclude(harness: Harness, ctx: any, preview: any, excluded: unknown, userId = ctx.userId, conversationId = ctx.conversationId) {
+  const { AiImportFileController } = require('../import/ai-import-file.controller');
+  const controller = harness.app.get(AiImportFileController);
+  return controller.exclude(conversationId, preview.preview_id, { excluded }, { user: { sub: userId }, headers: {} }, { tenantId: ctx.tenantId, manager: ctx.manager }) as Promise<any>;
+}
+
+async function previewRow(runner: QueryRunner, seed: Seed, id: string) {
+  const [row] = await runner.query(
+    `SELECT id::text AS id, tool_name, status, mutation_input, current_values, error_message FROM ai_mutation_previews WHERE tenant_id = $1 AND id = $2`,
+    [seed.tenantId, id],
+  );
+  return row;
+}
+
+async function httpStatus(fn: () => Promise<unknown>, status: number, pattern?: RegExp) {
+  const thrown = await rejects(fn, pattern ?? /./);
+  assert.equal(thrown?.getStatus?.(), status, `expected a ${status}, got ${thrown?.getStatus?.()}: ${thrown?.message}`);
+}
+
+/**
+ * The card lists each application it changes (lot K2e of 26.12.1): a box leaves one out, the card is
+ * recounted and replaced, the application stays listed unticked and can be ticked again; the
+ * approval signs the applications left out and writes only those kept; the list stays on the card,
+ * each application changed marked.
+ */
+async function testLeaveOutAndApprove(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'leave-out');
+    const first = await card(harness, ctx, { field: 'criticality', value: 'High', rows: ['APP-1', 'APP-2', 'APP-6'] });
+    const second = await exclude(harness, ctx, first, [seed.apps[2].toUpperCase()]);
+    assert.equal(second.status, 'pending');
+    assert.notEqual(second.preview_id, first.preview_id, 'a new card');
+    assert.equal(second.replaces_preview_id, first.preview_id, 'it replaces the first one');
+    assert.equal((await previewRow(runner, seed, first.preview_id)).status, 'expired', 'the first card can no longer be approved');
+    assert.deepEqual(listed(second), [['APP-1', 'Alpha', 'Empty', true], ['APP-2', 'Bravo', 'Low', false], ['APP-6', 'Foxtrot', 'Empty', true]]);
+    assert.deepEqual([second.bulk_edit.kept, second.bulk_edit.excluded], [2, 1]);
+    assert.equal(second.changes[CARD].to, 'Chosen applications: APP-1, APP-2, APP-6\n\nBusiness criticality → High\n\n2 applications to change, 1 left out');
+    assert.equal(second.summary, 'Change Business criticality on 2 applications.');
+    assert.deepEqual((await previewRow(runner, seed, second.preview_id)).mutation_input.excluded, [seed.apps[2]], 'the card stores the application left out');
+
+    // What the approval signs: the hash of the card's input holds the applications left out.
+    const { AiActionRequestService } = require('../control-plane/action-request/ai-action-request.service');
+    const actions = harness.app.get(AiActionRequestService);
+    const stored = await previewRow(runner, seed, second.preview_id);
+    const { excluded: _left, ...without } = stored.mutation_input;
+    assert.notEqual(actions.inputHashForPreview(stored), actions.inputHashForPreview({ ...stored, mutation_input: without }), 'removing the exclusion changes the hash');
+    assert.notEqual(
+      actions.inputHashForPreview(stored),
+      actions.inputHashForPreview({ ...stored, mutation_input: { ...stored.mutation_input, excluded: [seed.apps[1], seed.apps[2]].sort() } }),
+      'adding one changes it too',
+    );
+
+    // Ticked again: the whole list kept, the chain's root still the first card.
+    const third = await exclude(harness, ctx, second, []);
+    assert.equal(third.replaces_preview_id, first.preview_id);
+    assert.deepEqual(listed(third).map((row) => row[3]), [true, true, true]);
+    assert.equal(third.changes[CARD].to, 'Chosen applications: APP-1, APP-2, APP-6\n\nBusiness criticality → High\n\n3 applications to change');
+    assert.equal((await previewRow(runner, seed, third.preview_id)).mutation_input.excluded, undefined);
+    const fourth = await exclude(harness, ctx, third, [seed.apps[2]]);
+
+    // The approval goes through the durable approval: the action signs the hash of the card with its exclusion.
+    const { AiApprovalService } = require('../control-plane/approval/ai-approval.service');
+    const { action } = await harness.app.get(AiApprovalService).approvePreviewFromChat(ctx, fourth.preview_id);
+    assert.equal(action.input_hash, actions.inputHashForPreview(await previewRow(runner, seed, fourth.preview_id)));
+    const executed = await approve(harness, ctx, fourth);
+    assert.equal(executed.summary, 'Business criticality changed on 2 applications.');
+    assert.deepEqual(await appsWith(runner, seed, 'criticality', 'high'), ['APP-1', 'APP-6'], 'the kept applications only');
+    assert.equal(await column(runner, seed, 2, 'criticality'), 'low', 'the application left out is left as it is');
+    const audit = await runner.query(
+      `SELECT record_id::text AS id, source_ref FROM audit_log WHERE tenant_id = $1 AND table_name = 'applications' AND action = 'update' AND record_id = ANY($2::uuid[])`,
+      [seed.tenantId, Object.values(seed.apps)],
+    );
+    assert.deepEqual(audit.map((row: any) => row.id).sort(), [seed.apps[1], seed.apps[6]].sort(), 'audited: the kept applications only');
+    assert.ok(audit.every((row: any) => row.source_ref === fourth.preview_id));
+    assert.deepEqual(executed.bulk_edit.rows.map((row: any) => [row.ref, row.kept, row.changed]), [['APP-1', true, true], ['APP-2', false, false], ['APP-6', true, true]]);
+
+    // An approved, replaced or expired card is no longer changed; neither is another person's, nor one of another conversation.
+    await httpStatus(() => exclude(harness, ctx, fourth, []), 409, /no longer be changed/);
+    await httpStatus(() => exclude(harness, ctx, first, []), 409, /no longer be changed/);
+    const replaced = await harness.previews.executePreview(ctx, first.preview_id) as any;
+    assert.equal(replaced.status, 'expired', 'the replaced card is not approved');
+    console.log('  a box leaves an application out, ticked again, the approval writes the kept ones only: OK');
+  });
+}
+
+/** Refusals of the boxes: every application left out, an id the card does not list, someone else's card, an expired one. */
+async function testLeaveOutRefusals(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'leave-out-refusals');
+    const preview = await card(harness, ctx, { field: 'lifecycle', value: 'deprecated', rows: ['APP-1', 'APP-2'] });
+    // Every application left out: listed unticked, the approval refused, the card stays pending.
+    const none = await exclude(harness, ctx, preview, [seed.apps[1], seed.apps[2]]);
+    assert.deepEqual(listed(none), [['APP-1', 'Alpha', 'Active', false], ['APP-2', 'Bravo', 'Active', false]]);
+    assert.equal(none.changes[CARD].to, 'Chosen applications: APP-1, APP-2\n\nLifecycle → Deprecated\n\n0 applications to change, 2 left out');
+    const refused = await harness.previews.executePreview(ctx, none.preview_id) as any;
+    assert.equal(refused.status, 'pending');
+    assert.equal(refused.error_message, 'Every record of this card is left out: there is nothing to approve.');
+    assert.deepEqual(await appsWith(runner, seed, 'lifecycle', 'deprecated'), [], 'nothing written');
+    await runner.query(`UPDATE users SET locale = 'fr' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.users.member]);
+    // The person's language is read once per context (one request): a new request reads French.
+    const french = await harness.previews.executePreview({ ...ctx }, none.preview_id) as any;
+    assert.equal(french.error_message, "Toutes les fiches de cette carte sont écartées : il n'y a rien à approuver.");
+    await runner.query(`UPDATE users SET locale = 'en' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.users.member]);
+    // One ticked again: approvable.
+    const one = await exclude(harness, ctx, none, [seed.apps[2]]);
+    assert.equal(one.bulk_edit.kept, 1);
+
+    await httpStatus(() => exclude(harness, ctx, one, [randomUUID()]), 400, /^Only an application this card lists can be left out\.$/);
+    await httpStatus(() => exclude(harness, ctx, one, [seed.apps[5]]), 400, /^Only an application this card lists can be left out\.$/);
+    await httpStatus(() => exclude(harness, ctx, one, ['APP-1']), 400, /record ids/);
+    await httpStatus(() => exclude(harness, ctx, one, 'APP-1'), 400, /list of record ids/);
+    await httpStatus(() => exclude(harness, ctx, one, Array.from({ length: 201 }, () => randomUUID())), 400, /At most 200/);
+    // Someone else's card, or the card under another conversation: not found.
+    await httpStatus(() => exclude(harness, ctx, one, [], seed.users.reader), 404);
+    await httpStatus(() => exclude(harness, ctx, one, [], ctx.userId, randomUUID()), 404);
+    // An expired card.
+    await runner.query(`UPDATE ai_mutation_previews SET expires_at = now() - interval '1 minute' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, one.preview_id]);
+    await httpStatus(() => exclude(harness, ctx, one, []), 409, /no longer be changed/);
+    assert.equal((await previewRow(runner, seed, one.preview_id)).status, 'pending', 'a refused change leaves the card as it was');
+    console.log('  every application left out refused, foreign id, someone else\'s card, expired card: OK');
+  });
+}
+
+/**
+ * A filter, its applications left out by `exclude_ids`; the list changed after the exclusion; the
+ * exclusion taken off the stored card behind the approval's back: refused, nothing written.
+ */
+async function testLeaveOutOfAFilter(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'leave-out-filter');
+    const preview = await card(harness, ctx, { field: 'criticality', value: 'Critical', filters: { supplier: ['Acme'] } });
+    const kept = await exclude(harness, ctx, preview, [seed.apps[6]]);
+    const stored = await previewRow(runner, seed, kept.preview_id);
+    assert.equal(stored.mutation_input.selection.all, true, 'the filter stays the selection');
+    assert.deepEqual(stored.mutation_input.excluded, [seed.apps[6]]);
+    assert.equal(kept.changes[CARD].to, 'Filter: Supplier "Acme"\n\nScope: enabled applications, retired ones left out\n\nBusiness criticality → Critical\n\n2 applications to change, 1 left out');
+
+    // The exclusion taken off the stored card: the approval reaches APP-6 again and refuses the list.
+    const { excluded: _left, ...without } = stored.mutation_input;
+    await runner.query(`UPDATE ai_mutation_previews SET mutation_input = $3::jsonb WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, kept.preview_id, JSON.stringify(without)]);
+    const tampered = await harness.previews.executePreview(ctx, kept.preview_id) as any;
+    assert.equal(tampered.status, 'failed');
+    assert.equal(tampered.error_message, LIST_CHANGED);
+    assert.deepEqual(await appsWith(runner, seed, 'criticality', 'business_critical'), [], 'nothing written');
+
+    // The list changed between the exclusion and the approval: an application leaves the filter.
+    const again = await exclude(harness, ctx, await card(harness, ctx, { field: 'criticality', value: 'Critical', filters: { supplier: ['Acme'] } }), [seed.apps[6]]);
+    await runner.query(`UPDATE applications SET supplier_id = $2 WHERE tenant_id = $1 AND id = $3`, [seed.tenantId, seed.suppliers.beta, seed.apps[2]]);
+    const changed = await harness.previews.executePreview(ctx, again.preview_id) as any;
+    assert.equal(changed.status, 'failed');
+    assert.equal(changed.error_message, LIST_CHANGED);
+    assert.deepEqual(await appsWith(runner, seed, 'criticality', 'business_critical'), [], 'nothing written');
+
+    // Counted again on a fresh card: the filter's applications less the one left out.
+    const fresh = await exclude(harness, ctx, await card(harness, ctx, { field: 'criticality', value: 'Critical', filters: { supplier: ['Acme'] } }), [seed.apps[6]]);
+    await approve(harness, ctx, fresh);
+    assert.deepEqual(await appsWith(runner, seed, 'criticality', 'business_critical'), ['APP-1']);
+    console.log('  a filter less the applications left out; the list changed or the exclusion taken off: refused: OK');
+  });
+}
+
+/** Up to 200 applications listed; beyond, the count and five examples, and the model is told to offer narrowing. */
+async function testListUpTo200(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    const gamma = await one(runner, `INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Gamma') RETURNING id`, [seed.tenantId]);
+    await runner.query(
+      `INSERT INTO applications (tenant_id, name, supplier_id, lifecycle) SELECT $1, 'Mass ' || n, $2, 'active' FROM generate_series(1, 200) AS n`,
+      [seed.tenantId, gamma],
+    );
+    const ctx = context(seed, runner, 'two-hundred');
+    const listedCard = await card(harness, ctx, { field: 'criticality', value: 'Low', filters: { supplier: ['Gamma'] } });
+    assert.equal(listedCard.bulk_edit.rows.length, 200, '200 applications listed');
+    assert.equal(listedCard.assistant_note, undefined);
+    assert.ok(listedCard.changes[CARD].to.endsWith('\n\n200 applications to change'));
+    await runner.query(`INSERT INTO applications (tenant_id, name, supplier_id, lifecycle) VALUES ($1, 'Mass 201', $2, 'active')`, [seed.tenantId, gamma]);
+    const counted = await card(harness, ctx, { field: 'criticality', value: 'Low', filters: { supplier: ['Gamma'] } });
+    assert.equal(counted.bulk_edit, undefined, '201: counted, not listed');
+    assert.match(counted.changes[CARD].to, /\n\n201 applications to change\n\n- APP-\d+ Mass 1\n/);
+    assert.equal((counted.changes[CARD].to.match(/\n- /g) ?? []).length, 6, 'five examples and "and n more"');
+    assert.match(counted.assistant_note, /^This card changes 201 applications: more than 200, so it counts them without listing them.*narrow/);
+    await httpStatus(() => exclude(harness, ctx, counted, [seed.apps[1]]), 400, /does not list its applications/);
+    console.log('  200 applications listed, 201 counted with five examples and a note to narrow: OK');
+  });
+}
+
+/** The list never reaches the model: the dispatcher's output, which the tool message carries, holds the counts only. */
+async function testTheModelReadsNoList(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'model-view');
+    await ensureConversation(ctx);
+    const { AiCapabilityDispatcherService } = require('../control-plane/dispatcher/ai-capability-dispatcher.service');
+    const dispatched = await harness.app.get(AiCapabilityDispatcherService).execute(ctx, {
+      capabilityName: TOOL,
+      input: { field: 'criticality', value: 'High', filters: { supplier: ['Acme'] } },
+      execution: { surface: 'chat', trigger_kind: 'human_user' },
+    }) as any;
+    const forModel = JSON.stringify(dispatched.output);
+    assert.equal(dispatched.output.bulk_edit, '[REDACTED]', 'the list is taken out of the tool message');
+    for (const word of ['Alpha', 'Bravo', 'Foxtrot', seed.apps[1], seed.apps[2], seed.apps[6]]) {
+      assert.equal(forModel.includes(word), false, `the model never reads ${word}`);
+    }
+    assert.match(dispatched.output.changes[CARD].to, /3 applications to change$/, 'it reads the counts');
+    assert.equal(dispatched.previews[0].bulk_edit.rows.length, 3, 'the card on the screen lists them');
+    console.log('  the list goes to the screen, never to the model: OK');
+  });
+}
+
 /** Deletes a committed test tenant: every table with a tenant_id, in passes until the keys allow it. */
 async function dropTenant(harness: Harness, tenantId: string) {
   const tables: string[] = (await harness.dataSource.query(
@@ -673,6 +896,11 @@ async function run() {
     await testCapAndListChanged(harness);
     await testRightsContributorAndSubscription(harness);
     await testHeldApplication(harness);
+    await testLeaveOutAndApprove(harness);
+    await testLeaveOutRefusals(harness);
+    await testLeaveOutOfAFilter(harness);
+    await testListUpTo200(harness);
+    await testTheModelReadsNoList(harness);
   } finally {
     await harness.app.close();
   }

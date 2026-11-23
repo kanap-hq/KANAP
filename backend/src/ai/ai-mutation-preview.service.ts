@@ -239,12 +239,14 @@ export class AiMutationPreviewService {
       target: presentation.target,
       changes: presentation.changes,
       ...(presentation.importMapping ? { import_mapping: presentation.importMapping } : {}),
+      ...(presentation.bulkEdit ? { bulk_edit: presentation.bulkEdit } : {}),
+      ...(presentation.assistantNote ? { assistant_note: presentation.assistantNote } : {}),
       requires_confirmation: preview.status === 'pending',
       actions: preview.status === 'pending'
         ? ['approve', 'reject'] as Array<'approve' | 'reject'>
         : [],
       summary: presentation.summary,
-      error_message: previewErrorText(language, preview.error_message ?? null),
+      error_message: presentation.errorMessage ?? previewErrorText(language, preview.error_message ?? null),
       // A failure the card shows as a translated sentence, the message being its technical detail; a refusal
       // of a right and the errors the backend writes itself show as they are.
       error_is_technical: preview.status === 'failed'
@@ -716,15 +718,25 @@ export class AiMutationPreviewService {
     }
     await this.assertNoOtherPendingDelete(context, operation.toolName, prepared);
 
+    const preview = await this.savePendingPreview(context, operation.toolName, prepared);
+    await this.expireReplacedPreviews(context, operation, preview);
+
+    return this.toPreviewDto(preview, await this.languageOf(context));
+  }
+
+  /** A new pending preview of the person in the conversation, alive for `PREVIEW_TTL_MS`. */
+  private savePendingPreview(
+    context: AiExecutionContextWithManager,
+    toolName: string,
+    prepared: AiPreparedMutationPreview,
+  ): Promise<AiMutationPreview> {
     const repo = this.getRepo(context.manager);
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + PREVIEW_TTL_MS);
-
-    const preview = await repo.save(repo.create({
+    return repo.save(repo.create({
       tenant_id: context.tenantId,
       conversation_id: context.conversationId ?? null,
       user_id: context.userId,
-      tool_name: operation.toolName,
+      tool_name: toolName,
       target_entity_type: prepared.targetEntityType,
       target_entity_id: prepared.targetEntityId,
       mutation_input: prepared.mutationInput,
@@ -733,13 +745,10 @@ export class AiMutationPreviewService {
       approved_at: null,
       rejected_at: null,
       executed_at: null,
-      expires_at: expiresAt,
+      expires_at: new Date(now.getTime() + PREVIEW_TTL_MS),
       error_message: null,
       created_at: now,
     }));
-    await this.expireReplacedPreviews(context, operation, preview);
-
-    return this.toPreviewDto(preview, await this.languageOf(context));
   }
 
   /**
@@ -1423,6 +1432,51 @@ export class AiMutationPreviewService {
       [context.tenantId, created.preview_id, root],
     );
     return { ...created, replaces_preview_id: root };
+  }
+
+  /**
+   * The records the person leaves out of a card of a change in bulk (lot K2e of 26.12.1): `excluded`,
+   * the whole list of the ids left out (each one listed by the card), recounted by the operation from
+   * the card's stored selection and change, without the model. The new card replaces this one as an
+   * import card's choices do (`replaceImportChoices`): the card locked, the person's and the
+   * conversation's, pending and alive, the rights of the write checked again; this one expires, the
+   * new one names the chain's first card (`replaces_preview_id`). The ids left out are in the new
+   * card's `mutation_input`, which the approval signs (`inputHashForPreview`) and the write reads.
+   */
+  async replaceBulkExclusions(
+    context: AiExecutionContextWithManager,
+    previewId: string,
+    excluded: string[],
+  ): Promise<AiMutationPreviewDto> {
+    const preview = await this.lockPreviewForUser(context, previewId);
+    if (!AI_BULK_EDIT_TOOLS.has(preview.tool_name) || preview.conversation_id !== (context.conversationId ?? null)) {
+      throw new NotFoundException('AI preview not found.');
+    }
+    const operation = this.operations.getOperation(preview.tool_name);
+    if (!operation.prepareExclusions) throw new NotFoundException('AI preview not found.');
+    await this.assertWriteRights(context, operation, { preview });
+    await this.assertNotReservedForPerson(context, preview.tool_name, preview.target_entity_type);
+    if (preview.status !== 'pending' || preview.expires_at.getTime() < Date.now()) {
+      throw new ConflictException('This card can no longer be changed: ask for a new one.');
+    }
+    await this.assertPreviewWriteRights(context, operation, preview);
+    const prepared = await operation.prepareExclusions(context, preview, excluded);
+    await this.assertWriteRights(context, operation, { preview }, {
+      targetEntityType: prepared.targetEntityType,
+      targetId: prepared.targetEntityId,
+      mutationInput: prepared.mutationInput,
+    });
+    await this.assertTargetLineEditable(context, prepared);
+    const root = typeof preview.current_values?.replaces_preview_id === 'string'
+      ? preview.current_values.replaces_preview_id as string
+      : preview.id;
+    // Expired first: the pending cards of the conversation stay within their number.
+    await this.getRepo(context.manager).update({ tenant_id: context.tenantId, id: preview.id, status: 'pending' }, { status: 'expired' });
+    const created = await this.savePendingPreview(context, preview.tool_name, {
+      ...prepared,
+      currentValues: { ...(prepared.currentValues ?? {}), replaces_preview_id: root },
+    });
+    return this.toPreviewDto(created, await this.languageOf(context));
   }
 
   async executePreview(
