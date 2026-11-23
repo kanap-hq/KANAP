@@ -302,6 +302,54 @@ describe('LinesPanel', () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
+  it('Full time unticked on a stored line saves nothing until its days are typed, then once', async () => {
+    // Another line in the column: before, the save left the unticked line out (read as removed, then added).
+    const fullTime = storedLine({ days_per_month: null });
+    const second = storedLine({ ...PIECES, id: 'l2', sort: 1, label: 'Licences', quantity: '3.000', unit_price: '10.0000' });
+    const { onSave } = renderPanel({ record: roundWith([fullTime, second]) });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Full time' }));
+    expect(notes()).toHaveTextContent('Line 1: Enter the days per month, or tick Full time.');
+    await settle();
+    // The stored line stays full time: nothing is written while its days are missing.
+    expect(onSave).not.toHaveBeenCalled();
+
+    typeAndLeave(screen.getByLabelText('days per month'), '5');
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ label: 'Project manager', days_per_month: '5' }),
+      expect.objectContaining({ label: 'Licences' }),
+    ]);
+    await settle();
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('Full time ticked on a line with days saves it once, without them', async () => {
+    const { onSave } = renderPanel({ record: roundWith([storedLine()]) });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Full time' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0]).toEqual([expect.objectContaining({ label: 'Project manager', days_per_month: null })]);
+    await settle();
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('a stored line not complete again keeps its stored version in the saves of the other lines', async () => {
+    const fullTime = storedLine({ days_per_month: null });
+    const second = storedLine({ ...PIECES, id: 'l2', sort: 1, label: 'Licences', quantity: '3.000', unit_price: '10.0000' });
+    const { onSave } = renderPanel({ record: roundWith([fullTime, second]) });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Full time' }));
+    typeAndLeave(screen.getAllByLabelText('Description')[1], 'Licences, yearly');
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ label: 'Project manager', days_per_month: null }),
+      expect.objectContaining({ label: 'Licences, yearly' }),
+    ]);
+    // The line being edited stays as typed, its note shown.
+    expect(screen.getByRole('checkbox', { name: 'Full time' })).not.toBeChecked();
+    expect(notes()).toHaveTextContent('Line 1: Enter the days per month, or tick Full time.');
+  });
+
   it('a stored line opens ticked when full time, with its days otherwise', () => {
     renderPanel({ record: roundWith([storedLine({ days_per_month: null }), storedLine({ id: 'l2', sort: 1, label: 'Second' })]) });
     const boxes = screen.getAllByRole('checkbox', { name: 'Full time' });
@@ -433,20 +481,28 @@ describe('LinesPanel', () => {
       },
     ]);
 
-    // Line 1 loses its quantity: the other line is sent alone, line 1 stays here with the reason.
+    // Line 1 loses its quantity: nothing is written, line 1 stays here with the reason.
     typeAndLeave(screen.getAllByLabelText('Quantity')[0], '');
-    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
-    expect(onSave.mock.calls[1][0]).toHaveLength(1);
-    expect(onSave.mock.calls[1][0][0]).toMatchObject({ label: 'Licences, yearly' });
     expect(notes()).toHaveTextContent('Line 1: Enter a quantity and a unit price to save this line.');
     expect(rows()).toHaveLength(2);
+    await settle();
+    expect(onSave).toHaveBeenCalledTimes(1);
 
-    // Enter commits like leaving the field.
+    // Enter commits like leaving the field: line 1 goes as it was last saved.
     const price = screen.getAllByLabelText('Unit price')[1];
     fireEvent.change(price, { target: { value: '12' } });
     fireEvent.keyDown(price, { key: 'Enter' });
-    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(3));
-    expect(onSave.mock.calls[2][0][0]).toMatchObject({ unit_price: '12' });
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(onSave.mock.calls[1][0]).toEqual([
+      expect.objectContaining({ label: 'Project manager', quantity: '1' }),
+      expect.objectContaining({ label: 'Licences, yearly', unit_price: '12' }),
+    ]);
+
+    // A new line stays here until complete.
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    typeAndLeave(screen.getAllByLabelText('Description')[2], 'Not priced yet');
+    await settle();
+    expect(onSave).toHaveBeenCalledTimes(2);
   });
 
   it('tells the budget tab what is pending: a line changed and not sent, a line not complete; nothing once sent (lot 3G)', async () => {
@@ -463,7 +519,8 @@ describe('LinesPanel', () => {
     await waitFor(() => expect(pendingRef.current?.()).toBe(false));
 
     typeAndLeave(screen.getAllByLabelText('Quantity')[0], '');
-    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    await settle();
+    expect(onSave).toHaveBeenCalledTimes(1);
     expect(pendingRef.current?.()).toBe(true);
   });
 
@@ -661,15 +718,16 @@ describe('LinesPanel', () => {
   });
 
   it('a refusal names the line by its row in the table, incomplete rows included', async () => {
-    const first = storedLine();
-    const second = storedLine({ id: 'l2', sort: 1, label: 'Second', working_day_profile_id: 'us', working_day_profile_code: 'US', working_day_profile_name: 'United States' });
     const onSave = vi.fn().mockResolvedValue({ ok: false, error: 'Line 1: United States has no working days for 2026.' });
-    renderPanel({ record: roundWith([first, second]), onSave });
+    renderPanel({ onSave });
 
-    // Row 1 loses its quantity: row 2 is sent alone, and the server calls it line 1.
-    typeAndLeave(screen.getAllByLabelText('Quantity')[0], '');
+    // Row 1 never complete: row 2 is sent alone, and the server calls it line 1.
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    fireEvent.click(screen.getAllByRole('checkbox', { name: 'Full time' })[1]);
+    typeAndLeave(screen.getAllByLabelText('Unit price')[1], '400');
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
-    expect(onSave.mock.calls[0][0]).toEqual([expect.objectContaining({ label: 'Second' })]);
+    expect(onSave.mock.calls[0][0]).toEqual([expect.objectContaining({ unit_price: '400' })]);
     expect(await screen.findByText('Line 2: United States has no working days for 2026.')).toBeInTheDocument();
     expect(screen.queryByText('Line 1: United States has no working days for 2026.')).not.toBeInTheDocument();
   });
