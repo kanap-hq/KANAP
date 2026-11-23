@@ -258,6 +258,7 @@ export default function RequestWorkspacePage() {
   const canManage = hasLevel('portfolio_requests', 'manager');
   const canEditManagedDocs = hasLevel('portfolio_requests', 'member');
   const canAdmin = hasLevel('portfolio_requests', 'admin');
+  const canCreateProject = hasLevel('portfolio_projects', 'member');
   const [tabDirty, setTabDirty] = React.useState(false);
   const [scoringDirty, setScoringDirty] = React.useState(false);
   const [purposeDirty, setPurposeDirty] = React.useState(false);
@@ -1126,7 +1127,7 @@ export default function RequestWorkspacePage() {
                 itemNumber={form?.item_number}
               />
             )}
-            {!isCreate && (form?.status === 'approved' || form?.status === 'converted') && (
+            {!isCreate && form?.status === 'approved' && canCreateProject && (
               <Button
                 variant="action"
                 startIcon={<TransformIcon sx={{ fontSize: '14px !important' }} />}

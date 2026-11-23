@@ -85,7 +85,7 @@ L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quit
 - une référence de demande copiable telle que `REQ-42`
 - une bande de métadonnées avec **Statut**, **Score**, **Demandeur**, **Responsable IT**, **Date de livraison cible** et (lorsque applicable) la **Tâche source** depuis laquelle la demande a été créée
 - **Partager** pour envoyer un lien vers la demande
-- **Convertir en projet** lorsque la demande est **Approuvée** ou **Convertie**
+- **Convertir en projet** lorsque la demande est **Approuvée**, pour une personne qui peut créer des projets
 - **Créer** (puis **Terminé**) et **Annuler**, tant que la demande est en cours de création. Voir [Créer ou annuler](#cancelling-a-creation)
 - **Supprimer**, une icône corbeille, pour les administrateurs (lorsque la demande n'est pas encore convertie). Une demande convertie reste l'origine de son projet et ne peut pas être supprimée
 - navigation précédent/suivant basée sur le contexte exact de la liste d'où vous venez
@@ -334,7 +334,9 @@ Utilisez les documents managés pour le récit de demande de base qui doit toujo
 
 ## Convertir une demande en projet
 
-Une fois qu'une demande atteint **Approuvée**, l'espace de travail propose **Convertir en projet** dans l'en-tête.
+Une fois qu'une demande atteint **Approuvée**, l'espace de travail propose **Convertir en projet** dans l'en-tête, pour une personne qui peut créer des projets.
+
+Une demande déjà **Convertie** affiche ses projets sous **Projets résultants**. L'en-tête n'a pas le bouton **Convertir en projet**. Un autre projet pour le même besoin se crée depuis le portefeuille et se lie à la demande.
 
 Le flux de conversion vous permet de :
 
