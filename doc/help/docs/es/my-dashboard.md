@@ -297,7 +297,7 @@ Las cinco líneas presupuestarias modificadas más recientemente, OPEX y CAPEX j
 
 ### Calidad de datos { #data-hygiene }
 
-Controles que le ayudan a detectar líneas incompletas de un vistazo. El mosaico muestra una columna de recuentos por tipo: **OPEX** y **CAPEX** una junto a la otra. Los recuentos cubren las líneas que la lista muestra por defecto (**Mostrar: Activos**).
+Controles que le ayudan a detectar líneas incompletas de un vistazo. El mosaico está desactivado por defecto: añádalo en el [modo de personalización](#customizing-the-budget-section). Muestra una columna de recuentos por tipo: **OPEX** y **CAPEX** una junto a la otra. Los recuentos cubren las líneas que la lista muestra por defecto (**Mostrar: Activos**).
 
 - **Sin responsable IT**: líneas sin responsable IT
 - **Sin responsable de negocio**: líneas sin responsable de negocio

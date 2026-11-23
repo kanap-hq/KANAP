@@ -538,7 +538,7 @@ En una línea así, la pestaña **Presupuesto**:
 
 Una columna está por verificar cuando se muestra, no está congelada, tiene un total distinto de cero para el año y no está construida a partir de líneas de cantidad y precio. Cuentan todos los años. Una columna repartida, introducida por mes o editada a mano, y una columna que conserva sus líneas solo como referencia están por verificar. Una columna copiada de una columna construida a partir de líneas también está construida a partir de líneas: no está por verificar.
 
-Para encontrar estas líneas, muestre la columna **Control de cantidad y precio** de la lista y fíltrela por **Por verificar**, o haga clic en **Cantidad y precio por verificar** en el mosaico [Calidad de datos](my-dashboard.md#data-hygiene).
+Para encontrar estas líneas, muestre la columna **Control de cantidad y precio** de la lista y fíltrela por **Por verificar**, o haga clic en **Cantidad y precio por verificar** en el mosaico [Calidad de datos](my-dashboard.md#data-hygiene). Ese mosaico está desactivado hasta que lo añada: **Personalizar la página de inicio** y luego **Añadir un mosaico** (+) en la sección **Gestión presupuestaria**.
 
 #### ETC
 

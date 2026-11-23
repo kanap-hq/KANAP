@@ -297,7 +297,7 @@ Les cinq lignes budgétaires modifiées le plus récemment, OPEX et CAPEX confon
 
 ### Hygiène des données { #data-hygiene }
 
-Des contrôles qui vous aident à repérer les lignes incomplètes en un coup d'œil. La tuile affiche une colonne de compteurs par type : **OPEX** et **CAPEX** côte à côte. Les compteurs portent sur les lignes que la liste affiche par défaut (**Afficher : Activés**).
+Des contrôles qui vous aident à repérer les lignes incomplètes en un coup d'œil. La tuile est désactivée par défaut : ajoutez-la en [mode personnalisation](#customizing-the-budget-section). Elle affiche une colonne de compteurs par type : **OPEX** et **CAPEX** côte à côte. Les compteurs portent sur les lignes que la liste affiche par défaut (**Afficher : Activés**).
 
 - **Sans responsable IT** : lignes sans responsable IT
 - **Sans responsable métier** : lignes sans responsable métier

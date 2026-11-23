@@ -297,7 +297,7 @@ The five most recently edited budget lines, OPEX and CAPEX together. Each row sh
 
 ### Data hygiene { #data-hygiene }
 
-Checks that help you spot incomplete lines at a glance. The tile shows one column of counts per type: **OPEX** and **CAPEX** side by side. The counts cover the lines the list shows by default (**Show: Enabled**).
+Checks that help you spot incomplete lines at a glance. The tile is off by default: add it in the [customize mode](#customizing-the-budget-section). It shows one column of counts per type: **OPEX** and **CAPEX** side by side. The counts cover the lines the list shows by default (**Show: Enabled**).
 
 - **No IT owner**: lines missing an IT owner
 - **No business owner**: lines missing a business owner

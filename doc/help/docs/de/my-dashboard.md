@@ -297,7 +297,7 @@ Die fünf zuletzt bearbeiteten Budgetzeilen, OPEX und CAPEX zusammen. Jede Zeile
 
 ### Datenqualität { #data-hygiene }
 
-Prüfungen, die Ihnen helfen, unvollständige Zeilen auf einen Blick zu erkennen. Die Kachel zeigt eine Spalte mit Zählern pro Typ: **OPEX** und **CAPEX** nebeneinander. Die Zähler umfassen die Zeilen, die die Liste standardmäßig zeigt (**Anzeigen: Aktiv**).
+Prüfungen, die Ihnen helfen, unvollständige Zeilen auf einen Blick zu erkennen. Die Kachel ist standardmäßig ausgeschaltet: Fügen Sie sie im [Anpassungsmodus](#customizing-the-budget-section) hinzu. Sie zeigt eine Spalte mit Zählern pro Typ: **OPEX** und **CAPEX** nebeneinander. Die Zähler umfassen die Zeilen, die die Liste standardmäßig zeigt (**Anzeigen: Aktiv**).
 
 - **Ohne IT-Verantwortlichen**: Zeilen ohne IT-Verantwortlichen
 - **Ohne Fachbereichsverantwortlichen**: Zeilen ohne Fachbereichsverantwortlichen

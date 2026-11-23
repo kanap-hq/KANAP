@@ -538,7 +538,7 @@ Sur une telle ligne, l'onglet **Budget** :
 
 Une colonne est à vérifier quand elle est affichée, n'est pas gelée, a un total non nul pour l'année et n'est pas construite à partir de lignes en quantité et prix. Toutes les années comptent. Une colonne répartie, saisie par mois ou modifiée à la main, et une colonne qui ne garde ses lignes qu'en référence sont à vérifier. Une colonne copiée d'une colonne construite à partir de lignes est elle aussi construite à partir de lignes : elle n'est pas à vérifier.
 
-Pour retrouver ces lignes, affichez la colonne **Contrôle quantité et prix** de la liste et filtrez-la sur **À vérifier**, ou cliquez sur **Quantité et prix à vérifier** dans la tuile [Hygiène des données](my-dashboard.md#data-hygiene).
+Pour retrouver ces lignes, affichez la colonne **Contrôle quantité et prix** de la liste et filtrez-la sur **À vérifier**, ou cliquez sur **Quantité et prix à vérifier** dans la tuile [Hygiène des données](my-dashboard.md#data-hygiene). Cette tuile est désactivée tant que vous ne l'ajoutez pas : **Personnaliser l'accueil**, puis **Ajouter une tuile** (+) dans la section **Gestion budgétaire**.
 
 #### ETP
 

@@ -534,12 +534,12 @@ An account can expect its budget lines to be built as quantity and price (see [Q
 On such a line, the **Budget** tab:
 
 - Opens an empty column on **Quantity and price**
-- Shows an info icon next to the editor title. Hover it to read which account expects it, for example "The consolidation account 2400 - IT services expects an entry in quantity and price." Without the right to read accounts, the sentence says "The consolidation account" with no number or name
+- Shows an info icon next to the editor title. Hover it to read which account expects it, for example "The consolidation account 2400 - IT services expects quantity and price entry." Without the right to read accounts, the sentence says "The consolidation account" with no number or name
 - Shows an orange dot on the card of each column to check, and on the tab of each year that holds one. Hover the dot to read the columns to check. With a single shown column, the dot sits next to the editor title
 
 A column is to check when it is shown, is not frozen, has a total other than zero for the year, and is not built from quantity and price lines. Every year counts. A spread, a column entered by month or edited by hand, and a column that keeps its lines only as a reference are to check. A column copied from a column built from lines is built from lines too, so it is not.
 
-To find these lines, show the **Quantity and price check** column of the list and filter it on **To check**, or click **Quantity and price to check** in the [Data hygiene](my-dashboard.md#data-hygiene) tile.
+To find these lines, show the **Quantity and price check** column of the list and filter it on **To check**, or click **Quantity and price to check** in the [Data hygiene](my-dashboard.md#data-hygiene) tile. That tile is off until you add it: **Customize the home page**, then **Add a tile** (+) in the **Budget management** section.
 
 #### FTE
 

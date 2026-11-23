@@ -538,7 +538,7 @@ Auf einer solchen Zeile gilt im Tab **Budget**:
 
 Eine Spalte ist zu prüfen, wenn sie angezeigt wird, nicht eingefroren ist, für das Jahr eine Summe ungleich null hat und nicht aus Zeilen nach Menge und Preis aufgebaut ist. Jedes Jahr zählt. Eine verteilte, monatlich erfasste oder von Hand geänderte Spalte und eine Spalte, die ihre Zeilen nur als Referenz behält, sind zu prüfen. Eine Spalte, die aus einer aus Zeilen aufgebauten Spalte kopiert wurde, ist ebenfalls aus Zeilen aufgebaut: Sie ist nicht zu prüfen.
 
-Um diese Zeilen zu finden, blenden Sie die Spalte **Prüfung Menge und Preis** der Liste ein und filtern Sie sie auf **Zu prüfen**, oder klicken Sie in der Kachel [Datenqualität](my-dashboard.md#data-hygiene) auf **Menge und Preis zu prüfen**.
+Um diese Zeilen zu finden, blenden Sie die Spalte **Prüfung Menge und Preis** der Liste ein und filtern Sie sie auf **Zu prüfen**, oder klicken Sie in der Kachel [Datenqualität](my-dashboard.md#data-hygiene) auf **Menge und Preis zu prüfen**. Diese Kachel ist ausgeschaltet, bis Sie sie hinzufügen: **Startseite anpassen**, dann **Kachel hinzufügen** (+) im Bereich **Budgetverwaltung**.
 
 #### VZÄ
 
