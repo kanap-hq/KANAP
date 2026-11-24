@@ -11,6 +11,7 @@ import { unreferencedPaths } from '../common/storage-path-refs';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
+import { codedCatalogRefusal, resolveOfferedCatalogCode, type CatalogOptionLike } from '../it-ops-settings/catalog-resolve';
 import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
 import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, isCloudHostingType, resolveHostingType } from './hosting-type';
@@ -495,18 +496,20 @@ export class TechnologiesService {
       || has('hosting_type');
     if (needsSettings) {
       const settings = await this.itOps.getSettings(tenantId, { manager: mg });
-      const codeIn = (list: Array<{ code: string }> | undefined, value: unknown, field: string, nullable: boolean) => {
+      // Rule P7 (`resolveOfferedCatalogCode`): a code or a name of the catalog; a retired value only on
+      // the technology that already holds it.
+      const codeIn = (list: CatalogOptionLike[] | undefined, key: keyof TechnologyInput & keyof TechnologyRow, field: string, nullable: boolean, unknownCode?: string) => {
+        const value = body[key];
         if ((value === null || value === '') && nullable) return null;
-        const code = String(value ?? '').trim().toLowerCase();
-        if (!(list ?? []).some((item) => item.code === code)) throw new BadRequestException(`Unknown ${field}: ${code || '(empty)'}.`);
-        return code;
+        if (String(value ?? '').trim() === '') throw new BadRequestException(`Unknown ${field}: (empty).`);
+        return resolveOfferedCatalogCode(value, list ?? [], { held: current?.[key], what: field, refuse: codedCatalogRefusal(unknownCode) });
       };
-      if (has('family')) out.family = codeIn(settings.technologyFamilies, body.family, 'family', false);
-      if (has('lifecycle')) out.lifecycle = codeIn(settings.lifecycleStates, body.lifecycle, 'lifecycle', false);
-      if (has('cyber_criticality')) out.cyber_criticality = codeIn((settings as any).cyberCriticalityLevels, body.cyber_criticality, 'cyber criticality', true);
-      if (has('recovery_wave')) out.recovery_wave = codeIn((settings as any).recoveryWaves, body.recovery_wave, 'recovery wave', true);
-      if (has('admin_zone')) out.admin_zone = codeIn(settings.adminZones, body.admin_zone, 'administration zone', true);
-      if (has('hosting_type')) out.hosting_type = codeIn(settings.hostingTypes, body.hosting_type, 'hosting type', false);
+      if (has('family')) out.family = codeIn(settings.technologyFamilies, 'family', 'family', false);
+      if (has('lifecycle')) out.lifecycle = codeIn(settings.lifecycleStates, 'lifecycle', 'lifecycle', false, 'lifecycle_invalid');
+      if (has('cyber_criticality')) out.cyber_criticality = codeIn((settings as any).cyberCriticalityLevels, 'cyber_criticality', 'cyber criticality', true);
+      if (has('recovery_wave')) out.recovery_wave = codeIn((settings as any).recoveryWaves, 'recovery_wave', 'recovery wave', true);
+      if (has('admin_zone')) out.admin_zone = codeIn(settings.adminZones, 'admin_zone', 'administration zone', true);
+      if (has('hosting_type')) out.hosting_type = codeIn(settings.hostingTypes, 'hosting_type', 'hosting type', false);
     }
     return out;
   }

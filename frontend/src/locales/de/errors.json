@@ -330,6 +330,7 @@
   "lifecycle_invalid": "Unbekannter Lebenszyklus: {{value}}. Verwenden Sie einen Lebenszyklus aus der Liste, mit Namen oder Code. Mögliche Werte: {{allowed}}.",
   "category_invalid": "Unbekannte Kategorie: {{value}}. Verwenden Sie eine Kategorie aus der Liste, mit Namen oder Code. Mögliche Werte: {{allowed}}.",
   "catalog_value_retired": "{{value}} wird nicht mehr angeboten: Nur ein Datensatz, der den Wert bereits trägt, behält ihn. Mögliche Werte: {{allowed}}.",
+  "catalog_value_unknown": "Unbekannter Wert: {{value}}. Mögliche Werte: {{allowed}}.",
   "access_method_invalid": "Unbekannte Zugriffsmethode: {{value}}. Verwenden Sie eine Zugriffsmethode aus der Liste, mit Namen oder Code. Mögliche Werte: {{allowed}}.",
   "classification_unknown": "Unbekannter Wert: {{value}}. Verwenden Sie eine Stufe aus den Klassifizierungseinstellungen, mit Namen oder Code.",
   "duration_invalid": "{{field}} muss eine ganze Zahl von Minuten sein.",

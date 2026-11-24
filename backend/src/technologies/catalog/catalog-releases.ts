@@ -441,15 +441,16 @@ export function validCatalogVersion(value: unknown): value is CatalogVersion {
 }
 
 /**
- * The family an adoption writes. The catalog family when the tenant lists it. A catalog family
- * `network` falls back to `network_security` when the tenant still has that code (a list saved
- * before `network` existed). Any other family missing from the tenant list is `other`.
+ * The family an adoption writes. The catalog family when the tenant offers it. A catalog family
+ * `network` falls back to `network_security` when the tenant still offers that code (a list saved
+ * before `network` existed). Any other family missing from the tenant list, or retired there (rule
+ * P7: a new technology takes no retired value), is `other`.
  */
 export function catalogFamilyForTenant(
   catalogFamily: string,
-  tenantFamilies: readonly { code: string }[] | null | undefined,
+  tenantFamilies: readonly { code: string; deprecated?: boolean }[] | null | undefined,
 ): string {
-  const codes = new Set((tenantFamilies ?? []).map((item) => item.code));
+  const codes = new Set((tenantFamilies ?? []).filter((item) => !item.deprecated).map((item) => item.code));
   if (codes.has(catalogFamily)) return catalogFamily;
   if (catalogFamily === 'network' && codes.has('network_security')) return 'network_security';
   return 'other';

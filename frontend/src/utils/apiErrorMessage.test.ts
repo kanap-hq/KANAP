@@ -427,6 +427,8 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(inherited, fr, 'fallback')).toBe('Déjà hébergée par ce serveur via ESX Paris.');
     const role = { response: { status: 400, data: { code: 'assignment_role_invalid', message: 'server words', params: { value: 'Citrix', allowed: 'app (Application server), db (Database server)' } } } };
     expect(getApiErrorMessage(role, fr, 'fallback')).toBe('Rôle inconnu\u00a0: Citrix. Valeurs possibles\u00a0: app (Application server), db (Database server).');
+    const unknownValue = { response: { status: 400, data: { code: 'catalog_value_unknown', message: 'server words', params: { value: 'Mainframe room', allowed: 'on_prem (On-prem), public_cloud (Public Cloud)' } } } };
+    expect(getApiErrorMessage(unknownValue, fr, 'fallback')).toBe('Valeur inconnue\u00a0: Mainframe room. Valeurs possibles\u00a0: on_prem (On-prem), public_cloud (Public Cloud).');
     const lifecycle = { response: { status: 400, data: { code: 'deployment_lifecycle_invalid', message: 'server words', params: { value: 'Bogus', allowed: 'active (Active)' } } } };
     expect(getApiErrorMessage(lifecycle, t, 'fallback')).toBe('Unknown lifecycle: Bogus. Use one of: active (Active).');
     for (const code of ['assignment_duplicate', 'assignment_inherited', 'assignment_role_invalid', 'deployment_environment_taken', 'deployment_lifecycle_invalid', 'date_invalid', 'asset_location_required']) {

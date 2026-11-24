@@ -10,6 +10,7 @@ import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
 import { compileAgFilterCondition, createParamNameGenerator, assertSetFilterModes } from '../common/ag-grid-filtering';
 import { AuditService, AuditSourceOptions, writeAuditLogs } from '../audit/audit.service';
 import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
+import { codedCatalogRefusal, resolveOfferedCatalogCode } from '../it-ops-settings/catalog-resolve';
 import { Company } from '../companies/company.entity';
 import { User } from '../users/user.entity';
 import { ExternalContact } from '../contacts/external-contact.entity';
@@ -141,22 +142,26 @@ export class LocationsService {
     if (rows && rows.length > 0) throw duplicateNameException('Another location already has this name.');
   }
 
+  /**
+   * The hosting type and the provider of a site follow rule P7 (`resolveOfferedCatalogCode`): a code or
+   * a name of the catalog; a retired value only on the site that already holds it (`held`).
+   */
   private async resolveHostingType(
     value: unknown,
     tenantId: string,
-    opts?: { manager?: EntityManager; settings?: ItOpsSettings },
+    opts?: { manager?: EntityManager; settings?: ItOpsSettings; held?: string | null },
   ): Promise<string> {
-    const normalized = String(value ?? '').trim().toLowerCase();
+    const normalized = String(value ?? '').trim();
     if (!normalized) {
       throw new BadRequestException('hosting_type is required');
     }
     const settings =
       opts?.settings ?? (await this.itOpsSettings.getSettingsForWrite(tenantId, opts?.manager));
-    const allowed = new Set((settings.hostingTypes || []).map((item) => item.code));
-    if (!allowed.has(normalized)) {
-      throw new BadRequestException(`Invalid hosting_type "${value}"`);
-    }
-    return normalized;
+    return resolveOfferedCatalogCode(normalized, settings.hostingTypes || [], {
+      held: opts?.held,
+      what: 'hosting type',
+      refuse: codedCatalogRefusal(),
+    });
   }
 
   private async getHostingCategory(
@@ -173,19 +178,18 @@ export class LocationsService {
   private async resolveProvider(
     value: unknown,
     tenantId: string,
-    opts?: { manager?: EntityManager; settings?: ItOpsSettings },
+    opts?: { manager?: EntityManager; settings?: ItOpsSettings; held?: string | null },
   ): Promise<string | null> {
     if (value === null || value === undefined) return null;
     const text = String(value).trim();
     if (!text) return null;
-    const normalized = text.toLowerCase();
     const settings =
       opts?.settings ?? (await this.itOpsSettings.getSettingsForWrite(tenantId, opts?.manager));
-    const allowed = new Set((settings.serverProviders || []).map((item) => item.code));
-    if (!allowed.has(normalized)) {
-      throw new BadRequestException(`Invalid provider "${value}"`);
-    }
-    return normalized;
+    return resolveOfferedCatalogCode(text, settings.serverProviders || [], {
+      held: opts?.held,
+      what: 'provider',
+      refuse: codedCatalogRefusal(),
+    });
   }
 
   private async resolveOperatingCompany(
@@ -450,7 +454,7 @@ export class LocationsService {
     const settings = await this.itOpsSettings.getSettingsForWrite(tenant, mg);
     let category = await this.getHostingCategory(existing.hosting_type, tenant, { manager: mg, settings });
     if (has('hosting_type')) {
-      const nextType = await this.resolveHostingType(body.hosting_type, tenant, { manager: mg, settings });
+      const nextType = await this.resolveHostingType(body.hosting_type, tenant, { manager: mg, settings, held: existing.hosting_type });
       if (nextType !== existing.hosting_type) {
         existing.hosting_type = nextType;
         const nextCategory = await this.getHostingCategory(nextType, tenant, { manager: mg, settings });
@@ -485,7 +489,7 @@ export class LocationsService {
 
     if (category === 'cloud') {
       if (has('provider')) {
-        existing.provider = await this.resolveProvider(body.provider, tenant, { manager: mg, settings });
+        existing.provider = await this.resolveProvider(body.provider, tenant, { manager: mg, settings, held: existing.provider });
       }
       if (has('region')) {
         existing.region = this.normalizeNullable(body.region);

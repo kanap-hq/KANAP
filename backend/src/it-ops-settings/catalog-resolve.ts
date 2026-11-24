@@ -89,6 +89,19 @@ export function resolveOfferedCatalogCode(
   throw opts.refuse ? opts.refuse(message, refusal) : new BadRequestException(message);
 }
 
+/**
+ * The coded refusal of `resolveOfferedCatalogCode` the screens translate: `catalog_value_retired` for a
+ * retired value, `unknownCode` for a value the catalog does not know, both with the value and the
+ * values the record may take.
+ */
+export function codedCatalogRefusal(unknownCode = 'catalog_value_unknown') {
+  return (message: string, refusal: CatalogRefusal) => new BadRequestException({
+    code: refusal.retired ? 'catalog_value_retired' : unknownCode,
+    message,
+    params: { value: refusal.value, allowed: refusal.allowed },
+  });
+}
+
 /** `resolveOfferedCatalogCode` for each value of a list field (access methods, protocols), duplicates dropped. */
 export function resolveOfferedCatalogCodes(
   inputs: unknown,

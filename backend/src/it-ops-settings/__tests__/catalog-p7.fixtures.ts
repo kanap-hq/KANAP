@@ -21,6 +21,7 @@ export { assert };
 export const RETIRED_LISTS = [
   'serverKinds', 'serverProviders', 'domains', 'adminZones', 'lifecycleStates', 'ipAddressTypes', 'connectionTypes', 'entities',
   'pathHopFunctions', 'interfaceDataCategories', 'interfaceTriggerTypes', 'interfacePatterns', 'interfaceFormats', 'interfaceAuthModes', 'serverRoles',
+  'hostingTypes', 'technologyFamilies', 'incidentCategories', 'networkSegments',
 ] as const;
 export const retiredCode = (list: (typeof RETIRED_LISTS)[number]) => `old_${list.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)}`;
 
@@ -50,7 +51,7 @@ export async function inP7Tenant(harness: P7Harness, test: (seed: P7Seed) => Pro
     );
     await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
     const [{ id: locationId }] = await runner.query(
-      `INSERT INTO locations (tenant_id, location_reference, name, hosting_type) VALUES ($1, 'LOC-1', 'Paris DC', 'cloud') RETURNING id`, [tenantId]);
+      `INSERT INTO locations (tenant_id, name, hosting_type) VALUES ($1, 'Paris DC', 'cloud') RETURNING id`, [tenantId]);
     const settings = harness.get(ItOpsSettingsService);
     const current = await settings.getSettings(tenantId, { manager: runner.manager });
     const patch: Record<string, unknown[]> = {};

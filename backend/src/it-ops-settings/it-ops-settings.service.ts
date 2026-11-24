@@ -135,6 +135,9 @@ export const DEFAULT_ADMIN_ZONES: AdminZoneOption[] = [
   },
 ];
 
+/** What a saved subnet list checks its network zones against (rule P7): the retired zones, each stored subnet's zone, the zones offered. */
+type SubnetZoneRule = { retired: Set<string>; held: Map<string, string>; offered: string };
+
 export type SubnetOption = {
   location_id: string;    // Mandatory, references locations table
   cidr: string;           // e.g., "192.168.1.0/24" (mandatory)
@@ -804,7 +807,7 @@ export class ItOpsSettingsService {
     defaults: SubnetOption[],
     networkZoneCodes: Set<string>,
     validLocationIds: Set<string>,
-    opts?: { strict?: boolean },
+    opts?: { strict?: boolean; zones?: SubnetZoneRule },
   ): SubnetOption[] {
     const strict = opts?.strict ?? false;
     // Key: location_id:cidr for uniqueness within a location
@@ -849,6 +852,16 @@ export class ItOpsSettingsService {
             throw new BadRequestException(`Invalid network_zone "${raw?.network_zone}" for subnet ${cidr}`);
           }
           continue; // Skip subnets with invalid network_zone when reading
+        }
+        // Rule P7 on a saved list: a retired network zone only on the subnet that already has it.
+        if (strict && opts?.zones?.retired.has(network_zone)
+          && opts.zones.held.get(`${location_id}:${cidr}`) !== network_zone) {
+          const allowed = opts.zones.offered;
+          throw new BadRequestException({
+            code: 'catalog_value_retired',
+            message: `The network zone "${network_zone}" of subnet ${cidr} is retired: only a subnet that already has it keeps it. Use one of: ${allowed}.`,
+            params: { value: network_zone, allowed },
+          });
         }
 
         const vlan_number =
@@ -1303,12 +1316,17 @@ export class ItOpsSettingsService {
     if (patch.subnets) {
       const networkZoneCodes = new Set(next.networkSegments.map((n) => n.code));
       const validLocationIds = await this.getValidLocationIds(tenantId, opts?.manager);
+      const zones: SubnetZoneRule = {
+        retired: new Set(next.networkSegments.filter((n) => n.deprecated).map((n) => n.code)),
+        held: new Map((current.subnets || []).map((subnet) => [`${subnet.location_id}:${subnet.cidr}`, subnet.network_zone])),
+        offered: offeredCatalogList(next.networkSegments),
+      };
       next.subnets = this.normalizeSubnets(
         patch.subnets,
         this.defaultSubnets,
         networkZoneCodes,
         validLocationIds,
-        { strict: true },
+        { strict: true, zones },
       );
     }
     if (patch.domains) {
