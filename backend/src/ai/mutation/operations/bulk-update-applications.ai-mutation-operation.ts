@@ -20,6 +20,7 @@ import {
   bulkEditCardText,
   bulkEditCardTitleText,
   bulkEditTitleText,
+  bulkEditLeftOutNote,
   bulkEditTooLongNote,
   type BulkFilterPart,
 } from '../../ai-bulk-edit-texts';
@@ -37,6 +38,7 @@ import {
   bulkEditPreviewDto,
   bulkExcluded,
   bulkListApplied,
+  bulkListLeftOutRefs,
   bulkListLeftOut,
   effectiveBulkSelection,
   isEmptyAiBulkFilterValue,
@@ -442,6 +444,8 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
     const filterParts = Array.isArray(mutation.filter_parts) ? (mutation.filter_parts as StoredFilterPart[]) : null;
     const refs = filterParts ? null : Array.isArray(mutation.refs) ? (mutation.refs as unknown[]).map(text) : [];
     const list = storedBulkList(preview.current_values);
+    // An approved card tells the model which records the person left out: their choice, not a change left to make.
+    const leftOut = preview.status === 'executed' ? bulkListLeftOutRefs(list) : [];
     const card = bulkEditCardText({
       family: 'applications',
       selection: filterParts
@@ -485,6 +489,7 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
       ...(!list && preview.status === 'pending' && changes > AI_BULK_EDIT_LIST_MAX
         ? { assistantNote: bulkEditTooLongNote('applications', changes, AI_BULK_EDIT_LIST_MAX) }
         : {}),
+      ...(leftOut.length > 0 ? { assistantNote: bulkEditLeftOutNote('applications', leftOut) } : {}),
       // A pending card with every record left out says why it cannot be approved, before any approval.
       ...(preview.error_message === BULK_EDIT_ALL_LEFT_OUT_MESSAGE || (preview.status === 'pending' && this.approvalRefusal(preview) !== null)
         ? { errorMessage: BULK_EDIT_ALL_LEFT_OUT[language] }

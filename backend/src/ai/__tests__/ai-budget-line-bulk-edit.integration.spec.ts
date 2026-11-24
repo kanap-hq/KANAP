@@ -258,6 +258,7 @@ async function testFilterAsTheList(harness: Harness) {
     const screen = await harness.budgetLines.summaryIds({ filters: { supplier_name: { filterType: 'set', values: ['Acme'] } } }, { manager: runner.manager });
     const executed = await approve(harness, ctx, preview);
     assert.equal(executed.summary, 'Cost center changed on 6 budget lines.');
+    assert.equal(executed.assistant_note, undefined, 'nothing left out: nothing said of it');
     const written = await runner.query(`SELECT id::text AS id FROM spend_items WHERE tenant_id = $1 AND cost_center_id = $2`, [seed.tenantId, seed.costCenters.it]);
     assert.deepEqual(written.map((row: { id: string }) => row.id).sort(), [...screen.ids].sort(), 'the lines of the screen list, no other');
     assert.deepEqual(await changedLines(runner, seed, 'cost_center_id', seed.costCenters.it), [1, 2, 3, 4, 5, 7]);
@@ -643,6 +644,12 @@ async function testLeaveOutAndApprove(harness: Harness) {
     assert.deepEqual(audit.map((row: any) => row.id).sort(), [seed.lines[1], seed.lines[3]].sort(), 'audited: the kept lines only');
     assert.ok(audit.every((row: any) => row.source_ref === second.preview_id));
     assert.deepEqual(executed.bulk_edit.rows.map((row: any) => [row.ref, row.kept, row.changed]), [['BL-1', true, true], ['BL-2', false, false], ['BL-3', true, true]]);
+    // The turn after the approval reads the line left out as the person's choice (lot K2e, the maintainer's test of 24/11).
+    assert.equal(
+      executed.assistant_note,
+      'Before approving, the person left out 1 budget line of this card: BL-2. That is their choice, not a remaining change: it stayed as it was. '
+        + 'Prepare no card for it unless the person asks for it; the answer may say so in half a sentence.',
+    );
     await rejects(() => exclude(harness, ctx, second, []), /no longer be changed/);
 
     // Every line left out: the approval refused, nothing written; a foreign id refused.
@@ -680,8 +687,11 @@ async function testLimitedPersonLeavesOut(harness: Harness) {
     assert.match(kept.changes.budget_line_bulk_edit.to, /\n\n4 lines to change, 1 left out, 1 refused: Read only for you \(1\)$/);
     assert.deepEqual(listed(kept).map((row) => [row[0], row[3]]), [['BL-1', true], ['BL-2', true], ['BL-3', false], ['BL-4', true], ['BL-5', true]]);
     assert.equal(JSON.stringify(kept).includes('Line 7'), false, 'the line outside the access is never named');
-    await approve(harness, ctx, kept);
+    const done = await approve(harness, ctx, kept);
     assert.deepEqual(await changedLines(runner, seed, 'run_build', 'build'), [1, 2, 4, 5], 'the kept lines of the access only');
+    // Only the line the person left out is named: the refused one is the server's, never named.
+    assert.match(done.assistant_note, /^Before approving, the person left out 1 budget line of this card: BL-3\. /);
+    assert.equal(done.assistant_note.includes('BL-7'), false);
     assert.equal(await column(runner, seed, 3, 'run_build'), null, 'the line left out is left as it is');
     console.log('  a limited person: its own lines listed, one left out, the read-only line counted without a box: OK');
   });

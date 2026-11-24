@@ -737,7 +737,7 @@ export type AiMutationPreviewDto = {
   import_mapping?: AiImportMappingPreviewDto;
   /** The records a change in bulk lists, for the screen only. */
   bulk_edit?: AiBulkEditPreviewDto;
-  /** What the model is told to do next about this card (a change in bulk too long to list); the screen ignores it. */
+  /** What the model is told to do next about this card (a change in bulk too long to list, the records left out of an approved one); the screen ignores it. */
   assistant_note?: string;
   requires_confirmation: boolean;
   actions: Array<'approve' | 'reject'>;

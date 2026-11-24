@@ -719,6 +719,14 @@ async function testLeaveOutAndApprove(harness: Harness) {
     assert.deepEqual(audit.map((row: any) => row.id).sort(), [seed.apps[1], seed.apps[6]].sort(), 'audited: the kept applications only');
     assert.ok(audit.every((row: any) => row.source_ref === fourth.preview_id));
     assert.deepEqual(executed.bulk_edit.rows.map((row: any) => [row.ref, row.kept, row.changed]), [['APP-1', true, true], ['APP-2', false, false], ['APP-6', true, true]]);
+    // The turn after the approval reads the application left out as the person's choice (the
+    // maintainer's test of 24/11: Kad prepared a new card for those unticked).
+    assert.equal(
+      executed.assistant_note,
+      'Before approving, the person left out 1 application of this card: APP-2. That is their choice, not a remaining change: it stayed as it was. '
+        + 'Prepare no card for it unless the person asks for it; the answer may say so in half a sentence.',
+    );
+    assert.equal(second.assistant_note, undefined, 'a pending card says nothing of it');
 
     // An approved, replaced or expired card is no longer changed; neither is another person's, nor one of another conversation.
     await httpStatus(() => exclude(harness, ctx, fourth, []), 409, /no longer be changed/);
@@ -836,6 +844,7 @@ async function testUnlistedApplicationNeverWritten(harness: Harness) {
     assert.doesNotMatch(executed.changes.application_bulk_edit.to, /to change|already has/);
     assert.match(executed.changes.application_bulk_edit.to, /Business criticality → Critical$/);
     assert.deepEqual(executed.bulk_edit.rows.map((row: any) => [row.ref, row.kept, row.changed]), [['APP-1', true, false], ['APP-6', true, true]]);
+    assert.equal(executed.assistant_note, undefined, 'one already at the value is not left out by the person');
     console.log('  an application never listed refuses the approval; a kept one already at the value does not: OK');
   });
 }

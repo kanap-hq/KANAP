@@ -1508,7 +1508,9 @@ export class AiChatOrchestratorService {
       const label = this.previewResultLabel(preview);
       const summary = String(preview.summary || '').trim();
       const error = String(preview.error_message || '').trim();
-      return `- ${label}: status=${preview.status}${summary ? `; summary=${summary}` : ''}${error ? `; error=${error}` : ''}`;
+      // The card's note: an approved bulk card names the records the person left out (lot K2e).
+      const note = String(preview.assistant_note || '').trim();
+      return `- ${label}: status=${preview.status}${summary ? `; summary=${summary}` : ''}${error ? `; error=${error}` : ''}${note ? `; note=${note}` : ''}`;
     });
     const recentContext = params.history
       .filter((message) => message.role === 'user' || message.role === 'assistant')
@@ -1530,6 +1532,7 @@ export class AiChatOrchestratorService {
         ]
         : [
           'Continue from this exact state. If the original user request or the previous assistant plan implies remaining changes, prepare the remaining backend previews now without asking the user to type continue.',
+          'Records the person left out of an approved card are not remaining changes.',
           'For multiple remaining related changes, mixed object changes, or dependency chains, use prepare_mutation_plan. If there are no remaining changes, answer concisely with the final state.',
         ]),
       'Do not re-create previews for changes already executed or rejected. Do not claim execution for any remaining change until its backend preview is explicitly approved and executed.',

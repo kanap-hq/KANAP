@@ -20,7 +20,8 @@ export const AI_BULK_EDIT_TOOLS: ReadonlySet<string> = new Set(['bulk_update_bud
 /**
  * A stored tool message of a bulk card, replayed to the model with the counts of the newest card of
  * its chain (review of lot K2e): the boxes replace the card without the model, which would otherwise
- * answer "how many?" with the first card's counts. Only the card's text and summary change; the list
+ * answer "how many?" with the first card's counts. Only the card's text, summary and note change (the
+ * note of an approved card names the records the person left out, `bulkEditLeftOutNote`); the list
  * stays the screen's (`bulk_edit` is never in the model's output). Any other message is left as it is.
  */
 export function replayLatestBulkCard(content: string, previews: readonly AiMutationPreviewDto[]): string {
@@ -34,7 +35,10 @@ export function replayLatestBulkCard(content: string, previews: readonly AiMutat
   if (!parsed || !AI_BULK_EDIT_TOOLS.has(String(parsed.tool_name)) || !result || typeof result.preview_id !== 'string') return content;
   const newest = [...previews].reverse().find((preview) => preview.replaces_preview_id === result.preview_id);
   if (!newest) return content;
-  return JSON.stringify({ ...parsed, result: { ...result, changes: newest.changes, summary: newest.summary, error_message: newest.error_message } });
+  return JSON.stringify({
+    ...parsed,
+    result: { ...result, changes: newest.changes, summary: newest.summary, error_message: newest.error_message, assistant_note: newest.assistant_note },
+  });
 }
 
 /**
@@ -72,7 +76,8 @@ export function bulkEditToolRule(toolNames: readonly string[]): string | null {
   return `Exception, the change in bulk: one of these fields set to the same value on two records or more of the family, whether the person names them (references or names) or describes them, is one card of its bulk tool, never one card per record nor a plan: ${each}. `
     + 'That card lists each record it changes with its value before, and the person leaves out the ones they do not want before approving. '
     + 'Different values, several fields or a field outside these lists stay one card per record. '
-    + BULK_EDIT_ANSWER;
+    + BULK_EDIT_ANSWER
+    + ' The records the person left out of an approved card are their choice: prepare no card for them unless the person asks for it.';
 }
 
 export const BULK_EDIT_PLAN_REFUSAL = 'A change in bulk (bulk_update_budget_lines, bulk_update_applications) changes its rows in one card and cannot be part of a mutation plan: call it on its own.';
@@ -224,6 +229,11 @@ function byReference(a: { ref: string }, b: { ref: string }): number {
 export function bulkListLeftOut(list: AiBulkList, excluded: readonly string[]): AiBulkList {
   const left = new Set(excluded);
   return { ...list, rows: list.rows.map((row) => ({ ...row, kept: !left.has(row.id) })) };
+}
+
+/** The references of the records the person left out of a card's list (none without a list). */
+export function bulkListLeftOutRefs(list: AiBulkList | null): string[] {
+  return list ? list.rows.filter((row) => !row.kept).map((row) => row.ref || row.title) : [];
 }
 
 /** The list of a card once approved: each kept record marked changed, or not. */

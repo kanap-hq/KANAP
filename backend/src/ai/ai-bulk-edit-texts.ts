@@ -439,6 +439,20 @@ export function bulkEditTooLongNote(family: BulkEditFamily, rows: number, max: n
     + `Tell the person, and offer to narrow the selection (a more precise filter, or fewer references) so that the card lists each one.`;
 }
 
+/**
+ * What the model is told of an approved card whose records the person left out (lot K2e of
+ * 26.12.1, the maintainer's test of 24/11): reading the request (five applications) and one change,
+ * Kad prepared a new card for the four unticked ones. A record left out is the person's choice; one
+ * already at the value or refused by the server is not in the card's list and is not named here.
+ */
+export function bulkEditLeftOutNote(family: BulkEditFamily, refs: readonly string[]): string {
+  const one = refs.length === 1;
+  const what = family === 'applications' ? (one ? 'application' : 'applications') : (one ? 'budget line' : 'budget lines');
+  return `Before approving, the person left out ${refs.length} ${what} of this card: ${refs.join(', ')}. `
+    + `That is their choice, not a remaining change: ${one ? 'it stayed as it was' : 'they stayed as they were'}. `
+    + `Prepare no card for ${one ? 'it' : 'them'} unless the person asks for it; the answer may say so in half a sentence.`;
+}
+
 /** The action of a change in bulk, for the summaries in fr, de and es: the field and the rows. */
 export function bulkEditActionText(language: AiTranslatedWriteLanguage, family: BulkEditFamily, field: string, rows: number): string {
   const title = bulkEditTitleText(family, language, rows);

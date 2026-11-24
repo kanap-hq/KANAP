@@ -379,6 +379,8 @@ async function testBulkToolsTakeTwoNamedRecords() {
   assert.match(prompt, /approving\. Different values, several fields or a field outside these lists stay one card per record\./);
   // The card lists the records: the answer gives no table of them (browser pass of lot K2e).
   assert.match(prompt, /one card per record\. With a bulk card, the answer repeats none of the records it changes, in a table or a list: the card lists them\. One or two sentences give the field, the value, the number of records that change, the ones left out and why/);
+  // The records left out of an approved card are the person's choice (the maintainer's test of 24/11).
+  assert.match(prompt, /a useful warning may stay\. The records the person left out of an approved card are their choice: prepare no card for them unless the person asks for it\./);
   assert.equal(prompt.includes('bulk_update_budget_lines'), false, 'only the bulk tools offered');
   const without = service.build({ ...baseParams, availableTools: [tool('update_business_record', 'applications')] } as any);
   assert.equal(without.includes('Exception, the change in bulk'), false, 'no exception without a bulk tool');
