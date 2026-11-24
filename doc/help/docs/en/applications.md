@@ -156,7 +156,7 @@ A cell with no value shows a dash.
 - One change covers up to 5,000 applications. Above that, narrow the filters or select fewer applications
 - If the list changes between the count and your confirmation, the dialog shows the new count. Check it, then confirm again
 - If the count fails, click **Retry** beside the message to count again
-- **Category**, **Business criticality** and **Cyber criticality** list only the values still offered in **IT Landscape > Settings**
+- **Category**, **Lifecycle**, **Business criticality** and **Cyber criticality** list only the values still offered in **IT Landscape > Settings**
 - A new business or cyber criticality marks a reviewed application **Review needed**, as on the application page
 - Each changed application gets its own entry in its **History** tab
 - [Kad](ai-assistant.md#changing-records-in-bulk) makes the same change when you ask for it in a conversation, with the same rights. You approve its preview
@@ -168,6 +168,8 @@ A cell with no value shows a dash.
 Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties panel** on the right (the application's identity card, always visible), and a **content area** in the centre that switches with each tab.
 
 The tabs are **Overview**, **Deployments**, **Interfaces**, **Operations**, **Compliance**, **Relations** and **History** (the changes made to the application, see [Record history](record-history.md)).
+
+**Values no longer offered**: The category, the lifecycle, the access methods and the lifecycle of a deployment list the values still offered in [IT Landscape Settings](it-ops-settings.md). A value marked **No longer offered** stays on the applications that already have it, which keep it when they are saved. The other applications cannot take it, on this page, in bulk, in a CSV import or through Kad.
 
 ### Header
 
@@ -712,6 +714,8 @@ For fields configured in **IT Landscape > Settings**, you can use either the int
 
 The system automatically normalizes values during import, so `Line-of-business`, `line-of-business`, and `lob` all resolve to the same category. The labels the screen shows are accepted in English, French, German and Spanish: `Active`, `Actif`, `Aktiv` and `Activo` all name the same lifecycle. A file exported in one language therefore imports in another.
 
+A category, a lifecycle or an access method marked **No longer offered** is refused on a row whose application does not already have it. The row error lists the values allowed.
+
 ### Matching and updates
 
 Applications are matched by **name**, ignoring upper and lower case and the spaces at the start and end. When a match is found, an empty cell keeps the stored value, and `-` clears it. Columns left out of the file keep their values. The name, the `id`, the lifecycle, the category, `is_suite`, `external_facing`, `etl_enabled`, `contains_pii` and other required fields cannot be cleared: `-` there refuses the row, and the message names the column. A new application gets the default values.
@@ -781,6 +785,8 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 [Kad](ai-assistant.md) reads the version, go-live date, end of support date and retirement date of each application. It filters, sorts and groups the applications by these dates. Its list keeps the retired applications, while the [End of support](end-of-support.md) report keeps only those in service.
 
 Kad also declares a technology on an application, or removes it, with its version and, if you ask, on the application's deployment servers. This needs the right to read applications and the Member level on infrastructure. A Business Contributor does it only on the applications they take part in. Kad does not link an operating system: set it on the server's page. Every change comes as a preview that you approve. When you ask Kad to undo it, it puts back exactly what it changed. A version created along the way stays on the technology.
+
+Kad sets the category, the lifecycle and the access methods of an application by their name or their code. It refuses a value no longer offered, unless the application already has it, and lists the values allowed.
 
 Ask, for example: "Add PostgreSQL 16 to CheeseTrack and its servers", "Remove PostgreSQL 14 from CheeseTrack", "Which applications reach their end of support in the next six months?" or "Which applications declare PostgreSQL 14?"
 

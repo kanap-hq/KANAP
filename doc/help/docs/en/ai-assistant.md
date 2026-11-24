@@ -213,6 +213,8 @@ When Kad tries a filter value that a field does not take, for example "active" f
 
 When you ask for a change your role does not allow, Kad names the right you are missing, for example "you need the right to modify projects". An administrator adds it to your role.
 
+For the values of the lists of [IT Landscape Settings](it-ops-settings.md), such as the category or the access methods of an application, the type of a server or the protocol of a connection, Kad refuses a value marked **No longer offered**, unless the record already has it, as its page does. It refuses an unknown value too, and lists the values allowed.
+
 Kad makes only the changes your screens let you make, on the records you can reach there. With the right to contribute to projects, you can have Kad change the purpose of a project and its links to applications, assets and budget lines. The right to contribute to requests covers the same links on requests. A Business Contributor makes these changes only on the projects and requests they take part in. Linking a record needs the right to read its module. Renaming a project or changing its other fields needs the right to modify projects, as on the project page.
 
 With the Contributor level on incidents, Kad logs an incident, changes its fields, moves its status forward up to Closed, adds notes to the journal and links assets, applications and technologies. With the Member level on tasks, it creates a follow-up task on an incident. With the Administrator level on incidents, it reopens or cancels an incident, with a reason, and turns its restriction on or off. Closing freezes the incident. Deleting it stays on its screen. See [Ask the assistant](incidents.md#ask-the-assistant).

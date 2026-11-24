@@ -156,7 +156,7 @@ Une cellule sans valeur affiche un tiret.
 - Une modification porte sur 5 000 applications au plus. Au-delà, resserrez les filtres ou sélectionnez moins d'applications
 - Si la liste change entre le comptage et votre confirmation, la boîte de dialogue affiche le nouveau comptage. Vérifiez-le, puis confirmez à nouveau
 - Si le comptage échoue, cliquez sur **Réessayer** à côté du message pour compter à nouveau
-- **Catégorie**, **Criticité business** et **Criticité cyber** ne listent que les valeurs encore proposées dans **Cartographie SI > Paramètres**
+- **Catégorie**, **Cycle de vie**, **Criticité business** et **Criticité cyber** ne listent que les valeurs encore proposées dans **Cartographie SI > Paramètres**
 - Une nouvelle criticité business ou cyber fait passer une application revue à **À revoir**, comme sur la page de l'application
 - Chaque application modifiée a sa propre entrée dans son onglet **Historique**
 - [Kad](ai-assistant.md#changing-records-in-bulk) fait la même modification quand vous la lui demandez dans une conversation, avec les mêmes droits. Vous approuvez son aperçu
@@ -168,6 +168,8 @@ Une cellule sans valeur affiche un tiret.
 Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **panneau Propriétés** sur la droite (la carte d'identité de l'application, toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
 
 Les onglets sont **Vue d'ensemble**, **Déploiements**, **Interfaces**, **Exploitation**, **Conformité**, **Relations** et **Historique** (les modifications de l'application, voir [Historique des fiches](record-history.md)).
+
+**Valeurs qui ne sont plus proposées** : la catégorie, le cycle de vie, les méthodes d'accès et le cycle de vie d'un déploiement listent les valeurs encore proposées dans les [Paramètres de la Cartographie SI](it-ops-settings.md). Une valeur marquée **Ne plus proposer** reste sur les applications qui l'ont déjà, et elles la gardent quand elles sont enregistrées. Les autres applications ne peuvent pas la prendre, sur cette page, en masse, dans un import CSV ou par Kad.
 
 ### En-tête
 
@@ -712,6 +714,8 @@ Pour les champs configurés dans **Cartographie SI > Paramètres**, vous pouvez 
 
 Le système normalise automatiquement les valeurs lors de l'import, donc `Métier`, `metier` et `lob` se résolvent tous vers la même catégorie. Les libellés affichés à l'écran sont acceptés en anglais, en français, en allemand et en espagnol : `Active`, `Actif`, `Aktiv` et `Activo` désignent le même cycle de vie. Un fichier exporté dans une langue s'importe donc dans une autre.
 
+Une catégorie, un cycle de vie ou une méthode d'accès marqué **Ne plus proposer** est refusé sur une ligne dont l'application ne l'a pas déjà. L'erreur de la ligne liste les valeurs autorisées.
+
 ### Correspondance et mises à jour
 
 Les applications sont identifiées par **nom**, sans tenir compte des majuscules et des minuscules ni des espaces au début et à la fin. Lorsqu'une correspondance est trouvée, une cellule vide garde la valeur enregistrée, et `-` l'efface. Les colonnes absentes du fichier gardent leurs valeurs. Le nom, l'`id`, le cycle de vie, la catégorie, `is_suite`, `external_facing`, `etl_enabled`, `contains_pii` et les autres champs obligatoires ne peuvent pas être effacés : `-` y fait refuser la ligne, et le message nomme la colonne. Une nouvelle application reçoit les valeurs par défaut.
@@ -781,6 +785,8 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 [Kad](ai-assistant.md) lit la version, la date de mise en service, la date de fin de support et la date de retrait de chaque application. Il filtre, trie et regroupe les applications selon ces dates. Sa liste garde les applications retirées, alors que le rapport [Fins de support](end-of-support.md) ne garde que celles en service.
 
 Kad déclare aussi une technologie sur une application, ou la retire, avec sa version et, si vous le demandez, sur les serveurs de déploiement de l'application. Il faut pour cela le droit de lire les applications et le niveau Membre sur l'infrastructure. Un Business Contributor ne le fait que sur les applications auxquelles il participe. Kad ne lie pas un système d'exploitation : renseignez-le sur la page du serveur. Chaque modification arrive sous forme d'aperçu que vous approuvez. Quand vous demandez à Kad de l'annuler, il remet exactement ce qu'il a changé. Une version créée au passage reste sur la technologie.
+
+Kad définit la catégorie, le cycle de vie et les méthodes d'accès d'une application par leur nom ou leur code. Il refuse une valeur qui n'est plus proposée, sauf si l'application l'a déjà, et liste les valeurs autorisées.
 
 Demandez par exemple : « Ajoute PostgreSQL 16 à CheeseTrack et à ses serveurs », « Retire PostgreSQL 14 de CheeseTrack », « Quelles applications arrivent en fin de support dans les six mois ? » ou « Quelles applications déclarent PostgreSQL 14 ? »
 
