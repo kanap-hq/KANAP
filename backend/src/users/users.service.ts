@@ -1101,8 +1101,15 @@ export class UsersService {
       return d ?? null;
     };
 
-    // The departments of a name in every company, with their company's name (a row without a company).
+    // The departments of a name in every company, with their company's name (a row without a company),
+    // read once per name whatever its case.
+    const departmentsByName = new Map<string, Array<Department & { company_name: string }>>();
     const findDepartmentsByName = async (name: string): Promise<Array<Department & { company_name: string }>> => {
+      const key = name.toLowerCase();
+      if (!departmentsByName.has(key)) departmentsByName.set(key, await readDepartmentsByName(name));
+      return departmentsByName.get(key)!;
+    };
+    const readDepartmentsByName = async (name: string): Promise<Array<Department & { company_name: string }>> => {
       const rows: Array<{ id: string; company_name: string }> = await (opts?.manager ?? repo.manager).query(
         `SELECT d.id, c.name AS company_name
            FROM departments d JOIN companies c ON c.id = d.company_id AND c.tenant_id = d.tenant_id

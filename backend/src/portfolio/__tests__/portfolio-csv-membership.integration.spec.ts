@@ -245,6 +245,26 @@ async function testUsers() {
     await runner.query(`UPDATE users SET company_id = $2 WHERE id = $1`, [data.creatorId, ids.companyA]);
     const stored = await check(`email;department_name\n${person.email};Finance`);
     assert.deepEqual(stored.errors, [], 'the department of the stored company');
+    // A department named without a company is read once per name, whatever its case, not per row.
+    let reads = 0;
+    const counting = new Proxy(manager, {
+      get(target, prop) {
+        const value = Reflect.get(target, prop, target);
+        if (prop === 'query') {
+          return (sql: string, params?: unknown[]) => {
+            if (/FROM departments d JOIN companies c/.test(sql)) reads += 1;
+            return target.query(sql, params);
+          };
+        }
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    const csv = 'email;department_name\nann@example.com;Finance\nbob@example.com;FINANCE\ncid@example.com;finance';
+    const file = { buffer: Buffer.from(csv, 'utf8'), originalname: 'users.csv', mimetype: 'text/csv', size: csv.length } as Express.Multer.File;
+    const withRoles = new UsersService(manager.getRepository(User), {} as any, {} as any, { findByNameOrSystemName: async () => ({ id: randomUUID() }) } as any, {} as any, {} as any, undefined, undefined);
+    const many: any = await withRoles.importCsv({ file, dryRun: true, userId: data.creatorId }, { manager: counting });
+    assert.equal(many.errors.length, 3, JSON.stringify(many.errors));
+    assert.equal(reads, 1, 'one read for the three rows');
   });
 }
 
