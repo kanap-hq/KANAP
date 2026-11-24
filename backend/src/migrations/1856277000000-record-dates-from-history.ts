@@ -1,12 +1,15 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
+// The live presenter on purpose: an update dates its record when the History tab shows it as a
+// change, and the date follows what the page shows on the day of the installation. Only which rows
+// a record reads is frozen below.
 import { historyShowsRow } from '../audit/record-dating';
 
 const LOG = '[migration 1856277000000 record-dates-from-history]';
 
 /**
  * Which audit rows date which record: the correspondence of `audit/record-dating.ts`
- * (`historyRecordsReading`) for the tables of `common/updated-at.inventory.ts` that have a history,
- * as it stood when this migration was written. A migration keeps its own copy:
+ * (`historyRecordsReading`) for the tables of `common/updated-at.inventory.ts` that have a history
+ * (22 of its 27 tables), as it stood when this migration was written. A migration keeps its own copy:
  * `__tests__/record-dates-from-history.integration.spec.ts` compares it with the code.
  * - `own`: the record's own labels, read by `record_id` (its own creation and deletion date nothing);
  * - `byRecord`: child labels whose `record_id` is the record;
