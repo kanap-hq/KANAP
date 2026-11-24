@@ -9,8 +9,10 @@ import { KanapDialog, PropertyRow } from '../../../components/design';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { OPTION_HINT_DELAY_MS } from '../../../components/fields/OptionWithHint';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
+import type { ItOpsEnumOption } from '../../../services/itOpsSettings';
 import { drawerAutocompleteListboxSx, drawerMenuItemSx } from '../../../theme/formSx';
 import { getApiErrorMessage, isDuplicateError } from '../../../utils/apiErrorMessage';
+import { isHeldUnknown, offeredCatalogOptions } from '../../../utils/catalogOffered';
 
 type CatalogEntry = {
   key: string;
@@ -247,7 +249,8 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
   const debouncedSearch = useDebounced(search.trim(), SEARCH_DEBOUNCE_MS);
   const adoptedHeadingId = React.useId();
   // Types in use; on premises by default, as the server does (`backend/src/technologies/hosting-type.ts`).
-  const hostingTypes = (byField.hostingType || []).filter((option) => !option.deprecated);
+  // Rule P7: a new technology holds nothing, so only the types still offered.
+  const hostingTypes = offeredCatalogOptions(byField.hostingType).filter((option) => !isHeldUnknown(option)) as ItOpsEnumOption[];
   const defaultHostingType = (hostingTypes.find((option) => option.code === 'on_prem')
     ?? hostingTypes.find((option) => option.category === 'on_prem')
     ?? hostingTypes[0])?.code ?? '';
@@ -483,7 +486,7 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
                 fullWidth
               >
                 <MenuItem value="" sx={drawerMenuItemSx}>{t('common:selects.notSet')}</MenuItem>
-                {(byField.technologyFamily || []).map((option) => (
+                {offeredCatalogOptions(byField.technologyFamily).map((option) => (
                   <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.label}</MenuItem>
                 ))}
               </Select>

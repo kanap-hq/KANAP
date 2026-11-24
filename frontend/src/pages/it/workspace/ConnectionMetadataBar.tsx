@@ -7,6 +7,7 @@ import { drawerMenuItemSx } from '../../../theme/formSx';
 import { StatusDot } from '../../../components/design';
 import { CreationPreview } from '../../../components/workspace/creation';
 import { classificationText } from '../../../utils/applicationClassification';
+import { offeredCatalogOptions } from '../../../utils/catalogOffered';
 import { useTranslation } from 'react-i18next';
 
 type Props = {
@@ -55,10 +56,11 @@ export default function ConnectionMetadataBar({
   const { data: classificationCatalog } = useApplicationClassificationCatalog();
   const CRITICALITIES = [{ code: '', label: classificationText('Not set') }, ...(classificationCatalog?.businessCriticalityLevels || [])];
   const { byField, labelFor, settings } = useItOpsEnumOptions();
-  const lifecycleOptions = byField.lifecycleStatus || [];
   const connectionTypes = settings?.connectionTypes || [];
-
   const safeProtocolCodes = protocolCodes || [];
+  // Rule P7: the lifecycles and protocols still offered, plus those the connection holds.
+  const lifecycleOptions = offeredCatalogOptions(byField.lifecycleStatus, lifecycle);
+  const offeredProtocols = offeredCatalogOptions(connectionTypes, safeProtocolCodes);
   // Each protocol by its name in the reader's language; a value that is no known code is shown as given.
   const safeProtocolLabels = (protocolLabels && protocolLabels.length > 0 ? protocolLabels : safeProtocolCodes)
     .map((value) => connectionTypes.find((ct: any) => ct.code === value)?.label || value);
@@ -244,7 +246,7 @@ export default function ConnectionMetadataBar({
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
         <Box sx={{ minWidth: 240, maxHeight: 360, overflowY: 'auto', py: 0.5 }}>
-          {connectionTypes.map((ct: any) => {
+          {offeredProtocols.map((ct: any) => {
             const isChecked = safeProtocolCodes.includes(ct.code);
             return (
               <MenuItem

@@ -8,7 +8,7 @@ import ConnectionEndpointPicker from './ConnectionEndpointPicker';
 import type { ServerOption } from '../../../components/fields/serverOptionRender';
 
 const apiGet = vi.hoisted(() => vi.fn());
-const settings = vi.hoisted(() => ({ entities: [] as Array<{ code: string; label: string }> }));
+const settings = vi.hoisted(() => ({ entities: [] as Array<{ code: string; label: string; deprecated?: boolean }> }));
 vi.mock('../../../api', () => ({ default: { get: apiGet } }));
 vi.mock('../../../hooks/useItOpsEnumOptions', () => ({
   default: () => ({ settings: { entities: settings.entities }, labelFor: (_field: string, code: string) => code }),
@@ -80,6 +80,18 @@ describe('ConnectionEndpointPicker', () => {
     settings.entities = [{ code: 'hq', label: 'Headquarters' }];
     renderPicker({ asset_id: null, entity_code: 'hq' }, null, vi.fn(), 'Source');
     expect(screen.getByRole('combobox', { name: 'Source' })).toHaveTextContent('Headquarters');
+  });
+
+  it('offers a retired entity only to the end that holds it (rule P7)', async () => {
+    settings.entities = [{ code: 'hq', label: 'Headquarters' }, { code: 'old_dc', label: 'Old data centre', deprecated: true }];
+    const view = renderPicker({ asset_id: null, entity_code: 'old_dc' }, null, vi.fn(), 'Source');
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Source' }));
+    expect(await screen.findByRole('option', { name: 'Old data centre' })).toBeInTheDocument();
+    view.unmount();
+    renderPicker({ asset_id: null, entity_code: 'hq' }, null, vi.fn(), 'Source');
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Source' }));
+    expect(await screen.findByRole('option', { name: 'Headquarters' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Old data centre' })).toBeNull();
   });
 
   it('hands the chosen option to onChange', async () => {

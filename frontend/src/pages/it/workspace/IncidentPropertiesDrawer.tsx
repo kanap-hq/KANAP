@@ -6,6 +6,7 @@ import { INCIDENT_SEVERITIES, type IncidentSeverity, type IncidentStatus } from 
 import { PropertyGroup, PropertyRow, StatusDot } from '../../../components/design';
 import UserSelect from '../../../components/fields/UserSelect';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
+import { offeredCatalogOptions } from '../../../utils/catalogOffered';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDateTime } from '../../../lib/dateFormat';
 import {
@@ -97,9 +98,8 @@ export default function IncidentPropertiesDrawer({
   const theme = useTheme();
   const locale = useLocale();
   const { byField } = useItOpsEnumOptions();
-  const categoryOptions = (byField.incidentCategories || []).filter(
-    (option) => !option.deprecated || option.code === values.category,
-  );
+  // Rule P7: the categories still offered, plus the one the incident holds.
+  const categoryOptions = offeredCatalogOptions(byField.incidentCategories, values.category);
   const statusOptions: IncidentStatus[] = values.status === 'cancelled'
     ? [...INCIDENT_STATUS_FLOW, 'cancelled']
     : INCIDENT_STATUS_FLOW;

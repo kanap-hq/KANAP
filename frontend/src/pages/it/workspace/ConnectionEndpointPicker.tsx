@@ -2,6 +2,7 @@ import React from 'react';
 import { Autocomplete, Box, MenuItem, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
+import { offeredCatalogOptions } from '../../../utils/catalogOffered';
 import ClusterMark from '../../../components/workspace/ClusterMark';
 import { FieldLabel } from '../../../components/design';
 import { renderServerOption, type ServerOption } from '../../../components/fields/serverOptionRender';
@@ -43,7 +44,8 @@ export default function ConnectionEndpointPicker({
 }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { settings, labelFor } = useItOpsEnumOptions();
-  const entities = settings?.entities || [];
+  // Rule P7: the entities still offered, plus the one this end holds.
+  const entities = offeredCatalogOptions(settings?.entities, value.entity_code);
 
   // Mode follows the value when it has data; otherwise stays at the user's last choice.
   const [mode, setMode] = React.useState<'server' | 'entity'>(

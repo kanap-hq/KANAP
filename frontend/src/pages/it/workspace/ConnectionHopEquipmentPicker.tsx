@@ -2,6 +2,7 @@ import React from 'react';
 import { Autocomplete, Box, MenuItem, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
+import { offeredCatalogOptions } from '../../../utils/catalogOffered';
 import ClusterMark from '../../../components/workspace/ClusterMark';
 import { renderServerOption, type ServerOption } from '../../../components/fields/serverOptionRender';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
@@ -40,7 +41,8 @@ export default function ConnectionHopEquipmentPicker({
   const { t } = useTranslation(['it', 'common']);
   const label = labelProp ?? t('it:workspace.connection.picker.equipment');
   const { settings, labelFor } = useItOpsEnumOptions();
-  const entities = settings?.entities || [];
+  // Rule P7: the entities still offered, plus the one this end holds.
+  const entities = offeredCatalogOptions(settings?.entities, value.entity_code);
 
   const [mode, setMode] = React.useState<'server' | 'entity'>(
     value.entity_code ? 'entity' : 'server',

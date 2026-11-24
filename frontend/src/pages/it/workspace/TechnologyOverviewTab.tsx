@@ -42,6 +42,7 @@ import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { useLocale } from '../../../i18n/useLocale';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx, tealLinkSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { offeredCatalogOptions } from '../../../utils/catalogOffered';
 import { formatSupportDate, supportStateColor, supportStateOf, type SupportState } from '../../../utils/supportState';
 import { EditorField } from '../components/TechnologyCreateDialog';
 import TechnologyCveNames, { type TechnologyCveName } from './TechnologyCveNames';
@@ -251,20 +252,12 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
   const [editor, setEditor] = React.useState(technology.editor ?? '');
   const [savingOwners, setSavingOwners] = React.useState(false);
   React.useEffect(() => { setEditor(technology.editor ?? ''); }, [technology.editor]);
-  const families = byField.technologyFamily || [];
-  const familyOptions = technology.family && !families.some((option) => option.code === technology.family)
-    ? [{ code: technology.family, label: t('common.legacyOption', { label: technology.family }) }, ...families]
-    : families;
-  // A retired zone stays offered while the technology is in it; an unknown code shows as is.
-  const zones = (byField.adminZone || []).filter((option) => !option.deprecated || option.code === technology.admin_zone);
-  const zoneOptions = technology.admin_zone && !zones.some((option) => option.code === technology.admin_zone)
-    ? [{ code: technology.admin_zone, label: t('common.legacyOption', { label: technology.admin_zone }) }, ...zones]
-    : zones;
-  // Same rule for the hosting type: a retired type stays offered while the technology has it.
-  const hostingTypes = (byField.hostingType || []).filter((option) => !option.deprecated || option.code === technology.hosting_type);
-  const hostingTypeOptions = technology.hosting_type && !hostingTypes.some((option) => option.code === technology.hosting_type)
-    ? [{ code: technology.hosting_type, label: t('common.legacyOption', { label: technology.hosting_type }) }, ...hostingTypes]
-    : hostingTypes;
+  // Rule P7: the family, the zone and the hosting type offer the values still offered, plus the one
+  // the technology holds; an unknown code shows as is.
+  const legacy = (code: string) => t('common.legacyOption', { label: code });
+  const familyOptions = offeredCatalogOptions(byField.technologyFamily, technology.family, legacy);
+  const zoneOptions = offeredCatalogOptions(byField.adminZone, technology.admin_zone, legacy);
+  const hostingTypeOptions = offeredCatalogOptions(byField.hostingType, technology.hosting_type, legacy);
 
   const saveEditor = () => {
     const next = editor.trim() || null;

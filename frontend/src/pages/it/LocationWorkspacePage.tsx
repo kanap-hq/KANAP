@@ -25,6 +25,7 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useLocationItemNav } from '../../hooks/useModuleItemNav';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { deleteFailureReason } from '../../utils/deleteRefusal';
+import { offeredCatalogOptions } from '../../utils/catalogOffered';
 import { useLocale } from '../../i18n/useLocale';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
@@ -105,7 +106,8 @@ function LocationEditor({ onDraftWritten }: { onDraftWritten: (address: string) 
   const canDelete = hasLevel('locations', 'member');
 
   const { settings, byField } = useItOpsEnumOptions();
-  const hostingOptions = byField.hostingType || [];
+  // A new location takes the first hosting type still offered (rule P7).
+  const hostingOptions = React.useMemo(() => offeredCatalogOptions(byField.hostingType), [byField.hostingType]);
 
   const [data, setData] = React.useState<LocationRecord | null>(isCreate ? NEW_LOCATION : null);
   const [loading, setLoading] = React.useState(!isCreate);

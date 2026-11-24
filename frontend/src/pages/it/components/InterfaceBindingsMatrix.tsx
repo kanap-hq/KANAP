@@ -38,6 +38,7 @@ import { getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { isHeldUnknown, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import { environmentLabel } from '../../../utils/applicationEnvironments';
 import { legTypeLabel } from '../../../utils/interfaceLegType';
 const ENVIRONMENTS = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'] as const;
@@ -295,14 +296,6 @@ export default function InterfaceBindingsMatrix({
   const { t } = useTranslation(['it', 'common']);
   const theme = useTheme();
   const { byField, labelFor } = useItOpsEnumOptions();
-  const lifecycleOptions = React.useMemo(() => {
-    const list = byField.lifecycleStatus || [];
-    if (list.length === 0) return [{ label: t('common:statuses.active'), value: 'active' }];
-    return list.map((item) => ({
-      value: item.code,
-      label: item.deprecated ? t('it:common.deprecatedOption', { label: item.label }) : item.label,
-    }));
-  }, [byField.lifecycleStatus, t]);
   const [bindings, setBindings] = React.useState<BindingRow[]>([]);
   const [instancesByAppId, setInstancesByAppId] = React.useState<Record<string, AppInstanceOption[]>>({});
   const [loading, setLoading] = React.useState(false);
@@ -316,6 +309,16 @@ export default function InterfaceBindingsMatrix({
   const [bindingConnectionDirty, setBindingConnectionDirty] = React.useState(false);
   const [bindingPanelOpen, setBindingPanelOpen] = React.useState(false);
   const [dialogState, setDialogState] = React.useState<BindingDialogState | null>(null);
+  // Rule P7: the states still offered, plus the one the binding shown holds.
+  const heldStatus = dialogState?.status;
+  const lifecycleOptions = React.useMemo(() => {
+    const list = byField.lifecycleStatus || [];
+    if (list.length === 0) return [{ label: t('common:statuses.active'), value: 'active' }];
+    return offeredCatalogOptions(list, heldStatus).map((item) => ({
+      value: item.code,
+      label: item.deprecated && !isHeldUnknown(item) ? t('it:common.deprecatedOption', { label: item.label }) : String(item.label),
+    }));
+  }, [byField.lifecycleStatus, heldStatus, t]);
   const [bindingSaving, setBindingSaving] = React.useState(false);
   const [autosaveStatus, setAutosaveStatus] = React.useState<AutosaveStatus>('idle');
   const [manualEnvs, setManualEnvs] = React.useState<string[]>([]);
@@ -811,16 +814,11 @@ export default function InterfaceBindingsMatrix({
     const source: Array<{ code: string; label: string; deprecated?: boolean }> = (byField.interfaceAuthMode || []).length > 0
       ? byField.interfaceAuthMode
       : DEFAULT_AUTH_OPTIONS.map((item) => ({ code: item.code, label: t(`it:workspace.interface.bindings.auth.${item.labelKey}`) }));
-    const options = source
-      .filter((item) => !item.deprecated || item.code === current)
-      .map((item) => ({
-        code: item.code,
-        label: item.deprecated ? t('it:common.deprecatedOption', { label: item.label }) : item.label,
-      }));
-    if (current && !options.some((item) => item.code === current)) {
-      options.push({ code: current, label: labelFor('interfaceAuthMode', current) || current });
-    }
-    return options;
+    // Rule P7: the modes still offered, plus the one the binding shown holds.
+    return offeredCatalogOptions(source, current, (code) => labelFor('interfaceAuthMode', code) || code).map((item) => ({
+      code: item.code,
+      label: item.deprecated && !isHeldUnknown(item) ? t('it:common.deprecatedOption', { label: item.label }) : String(item.label),
+    }));
   }, [byField.interfaceAuthMode, dialogState?.authentication_mode, labelFor, t]);
 
   const dialogSourceInstanceOptions = React.useMemo(() => (

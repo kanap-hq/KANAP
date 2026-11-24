@@ -22,6 +22,7 @@ import { filterCountryOptions, useCountryOptions } from '../../../i18n/countries
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerFieldValueSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { isHeldUnknown, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { useLocale } from '../../../i18n/useLocale';
 import type {
@@ -142,39 +143,26 @@ export default function InterfacePropertyPanel({
       });
   };
 
-  const dataClassOptions = React.useMemo(() => {
-    const list = classificationCatalog?.dataClasses || [];
-    const base = list.filter((item) => !item.deprecated).map((item) => ({ label: item.label, value: item.code }));
-    const current = data?.data_class || '';
-    return list.some((item) => item.code === current) || !current
-      ? base
-      : [...base, { label: current, value: current }];
-  }, [classificationCatalog?.dataClasses, data?.data_class]);
+  // Rule P7: each list offers the values still offered, plus the one the interface holds.
+  const dataClassOptions = React.useMemo(
+    () => offeredCatalogOptions(classificationCatalog?.dataClasses, data?.data_class).map((item) => ({ label: String(item.label), value: item.code })),
+    [classificationCatalog?.dataClasses, data?.data_class],
+  );
 
-  const dataCategoryOptions = React.useMemo(() => {
-    const list = byField.interfaceDataCategory || [];
-    const base = list.filter((item) => !item.deprecated).map((item) => ({ label: item.label, value: item.code }));
-    const current = data?.data_category || '';
-    return list.some((item) => item.code === current) || !current
-      ? base
-      : [...base, { label: current, value: current }];
-  }, [byField.interfaceDataCategory, data?.data_category]);
+  const dataCategoryOptions = React.useMemo(
+    () => offeredCatalogOptions(byField.interfaceDataCategory, data?.data_category).map((item) => ({ label: String(item.label), value: item.code })),
+    [byField.interfaceDataCategory, data?.data_category],
+  );
 
-  const lifecycleOptions = React.useMemo(() => {
-    const list = byField.lifecycleStatus || [];
-    const current = data?.lifecycle;
-    const options = list.map((item) => ({
-      label: item.deprecated ? `${item.label} (${t('common:enumEditor.retiredSuffix')})` : item.label,
+  const lifecycleOptions = React.useMemo(
+    () => offeredCatalogOptions(byField.lifecycleStatus, data?.lifecycle).map((item) => ({
+      label: item.deprecated && !isHeldUnknown(item) ? `${item.label} (${t('common:enumEditor.retiredSuffix')})` : String(item.label),
       value: item.code,
-      deprecated: !!item.deprecated,
-    }));
-    if (current && !options.some((item) => item.value === current)) {
-      options.push({ label: current, value: current, deprecated: false });
-    }
-    return options.filter((item) => !item.deprecated || item.value === current);
-  }, [byField.lifecycleStatus, data?.lifecycle, t]);
+    })),
+    [byField.lifecycleStatus, data?.lifecycle, t],
+  );
 
-  const criticalityOptions = [{ value: '', label: classificationText('Not set') }, ...(classificationCatalog?.businessCriticalityLevels || []).filter((item) => !item.deprecated || item.code === data?.criticality).map((item) => ({ value: item.code, label: item.label }))];
+  const criticalityOptions = [{ value: '', label: classificationText('Not set') }, ...offeredCatalogOptions(classificationCatalog?.businessCriticalityLevels, data?.criticality).map((item) => ({ value: item.code, label: String(item.label) }))];
 
   const residencyCodes = React.useMemo(
     () => residency.map((item) => String(item.country_iso || '').toUpperCase()).filter((item) => item.length === 2),
