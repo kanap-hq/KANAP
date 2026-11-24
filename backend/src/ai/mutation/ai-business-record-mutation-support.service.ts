@@ -70,6 +70,7 @@ import {
   resolveIncidentViewer,
 } from '../../incidents/incident-visibility';
 import { IncidentsService } from '../../incidents/services/incidents.service';
+import { givenMembership, pickMemberByParent, PORTFOLIO_PAIRS, settleRecordMembership } from '../../common/record-membership';
 import {
   AiWriteLanguage,
   PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE,
@@ -222,6 +223,12 @@ function assertConnectionEnds(fields: Record<string, unknown>): void {
   if (sourceAsset && sourceAsset === text(fields.destination_asset_id)) throw connectionSameEndpointRefusal();
 }
 const RISK_MODES = ['manual', 'derived'] as const;
+
+/** The relations whose names several records share, and the record's field of their parent (lot I7a of 26.12.1). */
+const MEMBER_PARENT_FIELDS: Partial<Record<string, { kind: 'stream' | 'department'; parent: string }>> = {
+  portfolio_streams: { kind: 'stream', parent: 'category_id' },
+  departments: { kind: 'department', parent: 'company_id' },
+};
 
 const COMMON_PORTFOLIO_FIELDS = {
   source_id: { label: 'Source', kind: 'relation', nullable: true, relationTarget: 'portfolio_sources' as RelationTarget },
@@ -769,6 +776,7 @@ export class AiBusinessRecordMutationSupportService {
           displayValue: refs.map((ref) => ref.label).join(', '),
         };
       }
+      if (MEMBER_PARENT_FIELDS[field.relationTarget!]) return this.normalizeMemberRelation(context, field, rawValue, fieldsSoFar, existing);
       const relation = await this.resolveRelation(context, field.relationTarget!, rawValue, field.label, fieldsSoFar);
       if (!relation && !field.nullable) throw new BadRequestException(`${field.label} cannot be empty.`);
       if (field.relationTarget === 'cost_centers' && relation && relation.id !== (existing?.[fieldName] ?? null)) {
@@ -1007,7 +1015,7 @@ export class AiBusinessRecordMutationSupportService {
     let axes: AnalyticsAxisInfo[] | null = null;
     const tenantAxes = async () => (axes ??= await loadAnalyticsAxes(context.manager, context.tenantId));
 
-    for (const [rawName, rawValue] of Object.entries(rawFields)) {
+    for (const [rawName, rawValue] of this.parentsBeforeMembers(entityType, rawFields)) {
       if (rawValue === undefined) continue;
       if (entityType === 'technologies') {
         const refused = Object.entries(TECHNOLOGY_REFUSED_FIELDS)
@@ -1087,6 +1095,9 @@ export class AiBusinessRecordMutationSupportService {
 
     if (Object.keys(fields).length === 0) {
       throw new BadRequestException('At least one writable field is required.');
+    }
+    if (entityType === 'requests' || entityType === 'projects') {
+      await this.settlePortfolioMembership(context, entityType, fields, displayValues, fieldLabels, existing);
     }
     if (entityType === 'incidents') {
       this.assertIncidentTransition(fields, mode, existing);
@@ -1192,6 +1203,71 @@ export class AiBusinessRecordMutationSupportService {
         [context.tenantId, axisId, ref],
       );
     return rows.find((row) => row.id.toLowerCase() === ref.toLowerCase()) ?? rows[0] ?? null;
+  }
+
+  /**
+   * A request's or a project's fields, the category and the company before the stream and the
+   * department, which are looked up in them (lot I7a of 26.12.1). The others keep their order.
+   */
+  private parentsBeforeMembers(entityType: AiBusinessRecordEntityType, rawFields: Record<string, unknown>): Array<[string, unknown]> {
+    const entries = Object.entries(rawFields);
+    if (entityType !== 'requests' && entityType !== 'projects') return entries;
+    const member = (rawName: string) => {
+      const target = this.getFieldConfig(entityType, rawName)?.config.relationTarget;
+      return !!target && !!MEMBER_PARENT_FIELDS[target];
+    };
+    return [...entries.filter(([name]) => !member(name)), ...entries.filter(([name]) => member(name))];
+  }
+
+  /**
+   * A stream or a department named by Kad (P12 of 26.12.1): a name several records share is looked up
+   * in the parent the write leaves on the record (the one it gives, else the stored one); with no
+   * parent, or none of them there, Kad is told the parents that have one (`pickMemberByParent`).
+   */
+  private async normalizeMemberRelation(
+    context: AiExecutionContextWithManager,
+    field: FieldConfig,
+    rawValue: unknown,
+    fieldsSoFar: Record<string, unknown>,
+    existing?: Record<string, unknown> | null,
+  ): Promise<{ value: unknown; displayValue: string | null }> {
+    const ref = textOrNull(rawValue);
+    if (!ref) return { value: null, displayValue: null };
+    const target = field.relationTarget!;
+    const { kind, parent } = MEMBER_PARENT_FIELDS[target]!;
+    const rows = await this.queryReferenceCandidates(context, target, ref);
+    if (rows.length === 0) throw new NotFoundException(`${field.label} not found.`);
+    const exact = rows.filter((row) => String(row.id).toLowerCase() === ref.toLowerCase());
+    const parentId = Object.prototype.hasOwnProperty.call(fieldsSoFar, parent) ? fieldsSoFar[parent] : existing?.[parent];
+    const row = exact.length === 1
+      ? exact[0]
+      : await pickMemberByParent(context.manager, kind, rows, ref, textOrNull(parentId), context.tenantId);
+    const resolved = this.referenceFromRow(target, row);
+    return { value: resolved.id, displayValue: resolved.label };
+  }
+
+  /**
+   * A request's or a project's pairs (`common/record-membership.ts`), before the card: a pair that
+   * contradicts itself is refused, and the parent a child gives or the child a parent's change drops
+   * joins the card, so that it shows everything the write changes.
+   */
+  private async settlePortfolioMembership(
+    context: AiExecutionContextWithManager,
+    entityType: 'requests' | 'projects',
+    fields: Record<string, unknown>,
+    displayValues: Record<string, string | null>,
+    fieldLabels: Record<string, string>,
+    existing?: Record<string, unknown> | null,
+  ): Promise<void> {
+    const values = await settleRecordMembership(context.manager, PORTFOLIO_PAIRS, givenMembership(PORTFOLIO_PAIRS, fields), existing ?? null, context.tenantId);
+    const config = this.getConfig(entityType);
+    for (const [key, value] of Object.entries(values)) {
+      if (Object.prototype.hasOwnProperty.call(fields, key)) continue;
+      const field = config.fields[key];
+      fields[key] = value;
+      fieldLabels[key] = field.label;
+      displayValues[key] = value ? (await this.resolveRelation(context, field.relationTarget!, value, field.label, fields))?.label ?? null : null;
+    }
   }
 
   private async resolveRelation(

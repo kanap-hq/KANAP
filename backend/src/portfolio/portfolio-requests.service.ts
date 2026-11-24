@@ -58,6 +58,7 @@ import { fixMulterFilename } from '../common/upload';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { isInlineAttachmentShownInContent, isStoragePathReferencedInAnyTable, lockStoragePaths, unreferencedPaths } from '../common/storage-path-refs';
 import { detectChanges, REQUEST_TRACKED_FIELDS, resolveDisplayNames } from '../common/change-detection';
+import { givenMembership, PORTFOLIO_PAIRS, settleRecordMembership } from '../common/record-membership';
 import { MarkdownWorkBudget, markdownWorkBudget, normalizeMarkdownRichText } from '../common/markdown-worker';
 import { RemoteInlineImageImportService } from '../common/remote-inline-image-import.service';
 import { loadSlotBodies } from '../knowledge/integrated-document-bodies';
@@ -1175,16 +1176,18 @@ export class PortfolioRequestsService {
     const markdownBudget = markdownWorkBudget();
     const purposeContent = await this.normalizeNullable(body.purpose, 'purpose', markdownBudget);
     const risksContent = await this.normalizeNullable(body.risks, 'risks', markdownBudget);
+    // A stream in its category, a department in its company (`common/record-membership.ts`).
+    const membership = await settleRecordMembership(mg, PORTFOLIO_PAIRS, givenMembership(PORTFOLIO_PAIRS, body as Record<string, unknown>), null, tenantId);
 
     const entity = repo.create({
       tenant_id: tenantId,
       name,
       requestor_id: body.requestor_id || userId,
       source_id: body.source_id || null,
-      category_id: body.category_id || null,
-      stream_id: body.stream_id || null,
-      company_id: body.company_id || null,
-      department_id: body.department_id || null,
+      category_id: membership.category_id ?? null,
+      stream_id: membership.stream_id ?? null,
+      company_id: membership.company_id ?? null,
+      department_id: membership.department_id ?? null,
       target_delivery_date: body.target_delivery_date || null,
       status: 'pending_review' as RequestStatus,
 
@@ -1472,16 +1475,10 @@ export class PortfolioRequestsService {
       existing.name = name;
     }
     if (has('source_id')) existing.source_id = body.source_id || null;
-    if (has('category_id')) {
-      existing.category_id = body.category_id || null;
-      // Reset stream if category changed (stream must match category)
-      if (existing.stream_id && body.category_id !== existing.category_id) {
-        existing.stream_id = null;
-      }
-    }
-    if (has('stream_id')) existing.stream_id = body.stream_id || null;
-    if (has('company_id')) existing.company_id = body.company_id || null;
-    if (has('department_id')) existing.department_id = body.department_id || null;
+    // A stream in its category, a department in its company: a category changed alone drops a stream
+    // of another category (`common/record-membership.ts`).
+    const membership = await settleRecordMembership(mg, PORTFOLIO_PAIRS, givenMembership(PORTFOLIO_PAIRS, body as Record<string, unknown>), existing, existing.tenant_id);
+    Object.assign(existing, membership);
     if (has('requestor_id')) existing.requestor_id = body.requestor_id || null;
     if (has('target_delivery_date')) existing.target_delivery_date = body.target_delivery_date || null;
 

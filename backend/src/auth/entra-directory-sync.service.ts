@@ -19,6 +19,7 @@ import {
 } from './entra-directory-sync.util';
 import { TeamMemberConfigService } from '../portfolio/team-member-config.service';
 import { lastActiveAdministratorsLeaving } from '../roles/role-grant-ceiling';
+import { DEPARTMENT_PAIR, settleRecordMembership } from '../common/record-membership';
 
 export const ENTRA_DIRECTORY_SYNC_TASK = 'entra-directory-sync';
 
@@ -327,6 +328,11 @@ export class EntraDirectorySyncService implements OnModuleInit {
   ): Promise<void> {
     mergeScalarFields(user, profile, resolveDirectoryNames(profile, claims));
 
+    // A department belongs to its company (P12 and P13 of 26.12.1, `common/record-membership.ts`): the
+    // directory's department is looked up in the person's company; without a company, the one
+    // department of that name gives it. A name that settles nothing leaves the department as it is.
+    const stored = { company_id: user.company_id ?? null, department_id: user.department_id ?? null };
+    const given: Record<string, string | null> = {};
     const companyName = (profile.companyName ?? '').trim();
     if (companyName) {
       const company = await manager
@@ -334,7 +340,7 @@ export class EntraDirectorySyncService implements OnModuleInit {
         .createQueryBuilder('c')
         .where('LOWER(c.name) = LOWER(:name)', { name: companyName })
         .getOne();
-      if (company) user.company_id = company.id;
+      if (company) given.company_id = company.id;
     }
 
     const departmentName = (profile.department ?? '').trim();
@@ -344,10 +350,13 @@ export class EntraDirectorySyncService implements OnModuleInit {
         .createQueryBuilder('d')
         .where('LOWER(d.name) = LOWER(:name)', { name: departmentName })
         .getMany();
-      const match =
-        candidates.find((d) => !!user.company_id && (d as any).company_id === user.company_id) ?? candidates[0];
-      if (match) user.department_id = match.id;
+      const companyId = given.company_id ?? stored.company_id;
+      const match = companyId
+        ? candidates.find((d) => d.company_id === companyId)
+        : (candidates.length === 1 ? candidates[0] : undefined);
+      if (match) given.department_id = match.id;
     }
+    Object.assign(user, await settleRecordMembership(manager, [DEPARTMENT_PAIR], given, stored, user.tenant_id ?? null));
 
     user.external_synced_at = new Date();
   }

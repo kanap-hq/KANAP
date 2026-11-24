@@ -21,6 +21,7 @@ import { BUDGET_NATURES, naturesAnd } from '../../../spend/budget-nature';
 import { linkedModuleNotReadable, linkedParticipationScope, loadLinkedReads } from '../../../common/relations/linked-reads';
 import { idsInScope } from '../../../portfolio/portfolio-linked-reads';
 import { AiWriteLanguage, previewSummaryText, writeActionText } from '../../ai-write-texts';
+import { givenMembership, pickMemberByParent, settleRecordMembership, STREAM_PAIR } from '../../../common/record-membership';
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const PRIORITIES = ['blocker', 'high', 'normal', 'low', 'optional'] as const;
@@ -372,7 +373,10 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     const fieldLabels: Record<string, string> = {};
     const relationPatch: { relation_type?: unknown; relation_ref?: unknown } = {};
 
-    for (const [rawName, rawValue] of Object.entries(rawFields)) {
+    // The category before the stream, which is looked up in it (lot I7a of 26.12.1).
+    const isStream = ([rawName]: [string, unknown]) => FIELD_CONFIG[normalizeKey(rawName)]?.relationTarget === 'portfolio_streams';
+    const entries = Object.entries(rawFields);
+    for (const [rawName, rawValue] of [...entries.filter((entry) => !isStream(entry)), ...entries.filter(isStream)]) {
       const inputName = normalizeKey(rawName);
       const config = FIELD_CONFIG[inputName];
       if (!config) throw new BadRequestException(`${rawName} is not writable for tasks.`);
@@ -382,7 +386,9 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
       }
       const fieldName = config.targetField ?? inputName;
       if (fields[fieldName] !== undefined) throw new BadRequestException(`Field ${fieldName} was provided more than once.`);
-      const normalized = await this.normalizeFieldValue(context, task, fieldName, config, rawValue);
+      const normalized = fieldName === 'stream_id'
+        ? await this.normalizeTaskStream(context, task, rawValue, fields)
+        : await this.normalizeFieldValue(context, task, fieldName, config, rawValue);
       fields[fieldName] = normalized.value;
       displayValues[fieldName] = normalized.display;
       fieldLabels[fieldName] = config.label;
@@ -408,7 +414,70 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     }
 
     if (Object.keys(fields).length === 0) throw new BadRequestException('At least one task field is required.');
+    await this.settleTaskMembership(context, task, fields, displayValues, fieldLabels);
     return { fields, displayValues, fieldLabels };
+  }
+
+  /**
+   * The category and stream a task shows: its own, else its project's where it has none
+   * (`TasksUnifiedService`, lot I7a of 26.12.1).
+   */
+  private async shownClassification(context: AiExecutionContextWithManager, task: TaskSnapshot): Promise<{ category_id: unknown; stream_id: unknown }> {
+    let project: { category_id: unknown; stream_id: unknown } | undefined;
+    if (task.related_object_type === 'project' && task.related_object_id && (task.category_id == null || task.stream_id == null)) {
+      [project] = await context.manager.query(
+        'SELECT category_id, stream_id FROM portfolio_projects WHERE tenant_id = $1 AND id = $2',
+        [context.tenantId, task.related_object_id],
+      );
+    }
+    return { category_id: task.category_id ?? project?.category_id ?? null, stream_id: task.stream_id ?? project?.stream_id ?? null };
+  }
+
+  /** A stream named by Kad: a name several streams share is looked up in the category the task keeps or gets (P12). */
+  private async normalizeTaskStream(
+    context: AiExecutionContextWithManager,
+    task: TaskSnapshot,
+    rawValue: unknown,
+    fieldsSoFar: Record<string, unknown>,
+  ): Promise<{ value: unknown; display: string | null }> {
+    const ref = textOrNull(rawValue);
+    if (!ref) return { value: null, display: null };
+    const rows: Array<{ id: string; label: string; category_id: string }> = await context.manager.query(
+      `SELECT id, name AS label, category_id FROM portfolio_streams WHERE tenant_id = $1 AND (${isUuid(ref) ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`,
+      [context.tenantId, ref],
+    );
+    if (rows.length === 0) throw new NotFoundException(`portfolio streams "${ref}" not found.`);
+    const category = Object.prototype.hasOwnProperty.call(fieldsSoFar, 'category_id')
+      ? fieldsSoFar.category_id
+      : (await this.shownClassification(context, task)).category_id;
+    const exact = rows.filter((row) => String(row.id).toLowerCase() === ref.toLowerCase());
+    const row = exact.length === 1 ? exact[0] : await pickMemberByParent(context.manager, 'stream', rows, ref, textOrNull(category), context.tenantId);
+    return { value: String(row.id), display: String(row.label || row.id) };
+  }
+
+  /**
+   * The task's stream in its category (`common/record-membership.ts`), before the card: a pair that
+   * contradicts itself is refused; the category a stream gives, or the stream a category change drops,
+   * joins the card.
+   */
+  private async settleTaskMembership(
+    context: AiExecutionContextWithManager,
+    task: TaskSnapshot,
+    fields: Record<string, unknown>,
+    displayValues: Record<string, string | null>,
+    fieldLabels: Record<string, string>,
+  ): Promise<void> {
+    const given = givenMembership([STREAM_PAIR], fields);
+    if (Object.keys(given).length === 0) return;
+    const values = await settleRecordMembership(context.manager, [STREAM_PAIR], given, await this.shownClassification(context, task), context.tenantId);
+    for (const [key, value] of Object.entries(values)) {
+      if (Object.prototype.hasOwnProperty.call(fields, key)) continue;
+      const config = FIELD_CONFIG[key];
+      const target = config.relationTarget!;
+      fields[key] = value;
+      fieldLabels[key] = config.label;
+      displayValues[key] = value ? (await this.resolvePortfolioReference(context, target, value)).label : null;
+    }
   }
 
   private async normalizeFieldValue(

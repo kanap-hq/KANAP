@@ -63,6 +63,7 @@ import { uploadedBytes } from '../common/upload';
 import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
 import { mapDatabaseError, sqlStateOf } from '../common/filters/database-error.mapping';
+import { DEPARTMENT_PAIR, givenMembership, settleRecordMembership } from '../common/record-membership';
 import {
   assertKeepsAnActiveAdministrator,
   assertPersonWithinActorRights,
@@ -830,6 +831,10 @@ export class UsersService {
     const status = (params.status && typeof params.status === 'string'
       ? params.status
       : 'enabled') as any;
+    // A department belongs to its company (`common/record-membership.ts`).
+    const membership = await settleRecordMembership(
+      opts?.manager ?? repo.manager, [DEPARTMENT_PAIR], givenMembership([DEPARTMENT_PAIR], params as Record<string, unknown>), null, params.tenant_id ?? null,
+    );
     const user = repo.create({
       email: params.email,
       password_hash,
@@ -840,8 +845,8 @@ export class UsersService {
       job_title: params.job_title ?? null,
       business_phone: params.business_phone ?? null,
       mobile_phone: params.mobile_phone ?? null,
-      company_id: params.company_id ?? null,
-      department_id: params.department_id ?? null,
+      company_id: membership.company_id ?? null,
+      department_id: membership.department_id ?? null,
       status,
     });
     let saved: User;
@@ -932,6 +937,11 @@ export class UsersService {
       (safeFields as Record<string, unknown>)[field] = value;
     }
 
+    // A department belongs to its company: a company changed alone drops a department of another one
+    // (`common/record-membership.ts`).
+    Object.assign(safeFields, await settleRecordMembership(
+      opts?.manager ?? repo.manager, [DEPARTMENT_PAIR], givenMembership([DEPARTMENT_PAIR], safeFields as Record<string, unknown>), existing as unknown as Record<string, unknown>, existing.tenant_id,
+    ));
     const next = { ...existing, ...safeFields } as User;
     if (body.password) {
       if (!isInternalUpdate) {
@@ -1091,6 +1101,20 @@ export class UsersService {
       return d ?? null;
     };
 
+    // The departments of a name in every company, with their company's name (a row without a company).
+    const findDepartmentsByName = async (name: string): Promise<Array<Department & { company_name: string }>> => {
+      const rows: Array<{ id: string; company_name: string }> = await (opts?.manager ?? repo.manager).query(
+        `SELECT d.id, c.name AS company_name
+           FROM departments d JOIN companies c ON c.id = d.company_id AND c.tenant_id = d.tenant_id
+          WHERE d.tenant_id = app_current_tenant() AND lower(d.name) = lower($1)
+          ORDER BY c.name`,
+        [name],
+      );
+      if (rows.length === 0) return [];
+      const found = await departmentsRepo.findBy({ id: In(rows.map((row) => row.id)) } as any);
+      return rows.map((row) => Object.assign(found.find((d) => d.id === row.id)!, { company_name: row.company_name }));
+    };
+
     // The rows of the people the file names are locked before they are read (see lockPeople).
     const fileEmails = [...new Set(read.rows.map((row) => cellText(row, 'email', 'enrich')).filter((email) => email !== ''))];
     const named: Array<{ id: string }> = fileEmails.length > 0
@@ -1165,7 +1189,23 @@ export class UsersService {
         ?? (keepsCompany && existing!.company_id ? await companiesRepo.findOne({ where: { id: existing!.company_id } }) : null);
 
       let department: Department | null = null;
-      if (departmentName) {
+      // A department named without any company gives its company (P13 of 26.12.1): the one department
+      // of that name, else the row names the companies that have one.
+      let companyOfDepartment: string | null = null;
+      if (departmentName && !departmentCompany && !companyName) {
+        const found = await findDepartmentsByName(departmentName);
+        if (found.length === 1) {
+          department = found[0];
+          companyOfDepartment = found[0].company_id;
+        } else if (found.length > 1) {
+          const parents = found.map((d) => d.company_name).join(', ');
+          errors.push(rowError(line, 'department_name', 'CSV_DEPARTMENT_IN_SEVERAL_COMPANIES',
+            `"${departmentName}" names a department in each of the companies ${parents}: give one of them in company_name.`,
+            { value: departmentName, parents, columns: 'company_name' }));
+        } else {
+          errors.push(rowError(line, 'department_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown department '${departmentName}'`, { value: departmentName }));
+        }
+      } else if (departmentName) {
         if (!departmentCompany) {
           errors.push(rowError(line, 'department_name', 'CSV_DEPARTMENT_COMPANY_REQUIRED', 'department_name provided but company_name is missing or invalid'));
         } else {
@@ -1177,13 +1217,14 @@ export class UsersService {
       const fileValues: UserValues = {
         first_name,
         last_name,
-        company_id: company ? company.id : null,
+        company_id: company ? company.id : companyOfDepartment,
         department_id: department ? department.id : null,
         status: (['enabled','disabled','contact','invited'].includes(statusRaw) ? (statusRaw as any) : 'contact'),
       };
       const values: Partial<UserValues> = existing
         ? storedRecordValues(fileValues, row, read.present, 'enrich', { company_id: 'company_name', department_id: 'department_name' })
         : fileValues;
+      if (companyOfDepartment) values.company_id = companyOfDepartment;
       // A department belongs to its company: another company drops the stored department the row keeps.
       if (existing && 'company_id' in values && values.company_id !== existing.company_id && !('department_id' in values) && existing.department_id) {
         values.department_id = null;

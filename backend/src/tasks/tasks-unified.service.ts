@@ -25,6 +25,7 @@ import { assertContractsEditable } from '../data-access/contract-write-checks';
 import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
+import { givenMembership, settleRecordMembership, STREAM_PAIR } from '../common/record-membership';
 import {
   IncidentViewer,
   taskIncidentVisibilityQueryBuilderClause,
@@ -97,6 +98,37 @@ export class TasksUnifiedService {
 
   private hasOwn(payload: Partial<Task>, key: keyof Task): boolean {
     return Object.prototype.hasOwnProperty.call(payload, key);
+  }
+
+  /**
+   * A task's stream belongs to its category (`common/record-membership.ts`): the values of the pair to
+   * write, or a 400. On a task of a project, the project's category and stream stand where the task has
+   * none of its own (they are the ones it shows), so the project's values written again change nothing.
+   */
+  private async settleTaskMembership(
+    manager: EntityManager,
+    payload: Record<string, unknown>,
+    existing: Partial<Task> | null,
+    project: ProjectDefaults | null | undefined,
+    tenantId?: string | null,
+  ): Promise<Record<string, string | null>> {
+    const given = givenMembership([STREAM_PAIR], payload);
+    if (Object.keys(given).length === 0) return {};
+    const stored = {
+      category_id: existing?.category_id ?? project?.category_id ?? null,
+      stream_id: existing?.stream_id ?? project?.stream_id ?? null,
+    };
+    return settleRecordMembership(manager, [STREAM_PAIR], given, stored, tenantId);
+  }
+
+  /** The classification of the project a task belongs to, none for another task. */
+  private async taskProjectDefaults(manager: EntityManager, task: Partial<Task>): Promise<ProjectDefaults | null> {
+    if (task.related_object_type !== 'project' || !task.related_object_id) return null;
+    const [project] = await manager.query(
+      'SELECT source_id, category_id, stream_id, company_id FROM portfolio_projects WHERE id = $1 AND tenant_id = $2 LIMIT 1',
+      [task.related_object_id, task.tenant_id],
+    );
+    return project ?? null;
   }
 
   private hasPayloadKey(payload: Record<string, unknown>, key: string): boolean {
@@ -865,6 +897,12 @@ export class TasksUnifiedService {
       );
       if (project) defaults = project;
     }
+    const membership = canEditClassification
+      ? await this.settleTaskMembership(manager, payload as Record<string, unknown>, null, defaults, opts?.tenantId)
+      : {};
+    const classified = (key: 'category_id' | 'stream_id') => (key in membership
+      ? membership[key]
+      : (payload[key] !== undefined ? payload[key] : defaults[key]));
 
     // Build entity with new fields
     const entity = repo.create({
@@ -884,8 +922,8 @@ export class TasksUnifiedService {
       labels: payload.labels ?? [],
       // Classification fields (populated for standalone and project tasks)
       source_id: canEditClassification ? (payload.source_id !== undefined ? payload.source_id : defaults.source_id) as any : null,
-      category_id: canEditClassification ? (payload.category_id !== undefined ? payload.category_id : defaults.category_id) as any : null,
-      stream_id: canEditClassification ? (payload.stream_id !== undefined ? payload.stream_id : defaults.stream_id) as any : null,
+      category_id: canEditClassification ? classified('category_id') as any : null,
+      stream_id: canEditClassification ? classified('stream_id') as any : null,
       company_id: canEditClassification ? (payload.company_id !== undefined ? payload.company_id : defaults.company_id) as any : null,
       creator_id: (payload.creator_id ?? userId ?? null) as any,
       owner_ids: payload.owner_ids ?? [],
@@ -991,6 +1029,9 @@ export class TasksUnifiedService {
     const { id: _id, related_object_type: _type, related_object_id: _relatedId, ...fields } = payload as Record<string, unknown>;
     void _id; void _type; void _relatedId;
     if (this.hasOwn(payload, 'description')) fields.description = normalizedDescription;
+    if (canEditClassification && Object.keys(givenMembership([STREAM_PAIR], fields)).length > 0) {
+      Object.assign(fields, await this.settleTaskMembership(manager, fields, existing, await this.taskProjectDefaults(manager, existing), tenantId));
+    }
     // Data-scoped access (`task-data-access.ts`): a read-only task refused, a handover keeps the person as observer.
     const write = await prepareTaskWrite(manager, existing, fields);
     const saved = await writeTaskColumns(repo, existing, write.changes);
@@ -1164,6 +1205,14 @@ export class TasksUnifiedService {
           }
         }
       }
+    }
+
+    // A stream in its category: on a project task, the target project's values stand where the task has none.
+    if (canEditClassification && Object.keys(givenMembership([STREAM_PAIR], nextPayload as Record<string, unknown>)).length > 0) {
+      const project = relationChanged
+        ? resolvedTarget.projectDefaults ?? null
+        : await this.taskProjectDefaults(manager, existing);
+      Object.assign(nextPayload, await this.settleTaskMembership(manager, nextPayload as Record<string, unknown>, existing, project, tenantId));
     }
 
     // Validate phase if updating project task
