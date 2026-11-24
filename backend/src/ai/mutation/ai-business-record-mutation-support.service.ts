@@ -144,7 +144,9 @@ type FieldKind =
   | 'upper3';
 
 /** The tenant's IT settings lists a `it_catalog` field takes its code and label from. */
-type ItCatalogList = 'technologyFamilies' | 'lifecycleStates' | 'hostingTypes' | 'cyberCriticalityLevels' | 'recoveryWaves' | 'adminZones' | 'accessMethods';
+type ItCatalogList =
+  | 'technologyFamilies' | 'lifecycleStates' | 'hostingTypes' | 'cyberCriticalityLevels' | 'recoveryWaves' | 'adminZones' | 'accessMethods'
+  | 'serverKinds' | 'serverProviders' | 'domains' | 'entities' | 'connectionTypes' | 'interfaceDataCategories';
 
 type FieldConfig = {
   label: string;
@@ -297,14 +299,16 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     fields: {
       name: { label: 'Name', kind: 'text', requiredOnCreate: true },
       asset_reference: { label: 'Asset Reference', kind: 'text', nullable: true, aliases: ['reference'] },
-      kind: { label: 'Kind', kind: 'text', requiredOnCreate: true },
-      provider: { label: 'Provider', kind: 'text', requiredOnCreate: true },
+      // The catalog fields of an asset take a code or a name the app shows, in any language (rule P7:
+      // a retired value only on the asset that holds it), as the asset's page offers them.
+      kind: { label: 'Kind', kind: 'it_catalog', itCatalog: 'serverKinds', requiredOnCreate: true },
+      provider: { label: 'Provider', kind: 'it_catalog', itCatalog: 'serverProviders', requiredOnCreate: true },
       environment: { label: 'Environment', kind: 'enum', enumValues: ENVIRONMENTS, requiredOnCreate: true },
       region: { label: 'Region', kind: 'text', nullable: true },
       zone: { label: 'Zone', kind: 'text', nullable: true },
       hostname: { label: 'Hostname', kind: 'text', nullable: true },
-      domain: { label: 'Domain', kind: 'text', nullable: true },
-      admin_zone: { label: 'Administration Zone', kind: 'text', nullable: true },
+      domain: { label: 'Domain', kind: 'it_catalog', itCatalog: 'domains', nullable: true },
+      admin_zone: { label: 'Administration Zone', kind: 'it_catalog', itCatalog: 'adminZones', nullable: true },
       aliases: { label: 'Aliases', kind: 'array_text', nullable: true },
       ip_addresses: { label: 'IP Addresses', kind: 'json', nullable: true },
       cluster: { label: 'Cluster', kind: 'text', nullable: true },
@@ -313,7 +317,7 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       // Every asset has a site: required at creation, and an update cannot clear it.
       location_id: { label: 'Location', kind: 'relation', requiredOnCreate: true, relationTarget: 'locations' as RelationTarget, aliases: ['location'] },
       sub_location_id: { label: 'Sub-location', kind: 'relation', nullable: true, relationTarget: 'location_sub_items' as RelationTarget, aliases: ['sub_location'] },
-      status: { label: 'Status', kind: 'text' },
+      status: { label: 'Status', kind: 'it_catalog', itCatalog: 'lifecycleStates' },
       go_live_date: { label: 'Go-Live Date', kind: 'date', nullable: true },
       end_of_life_date: { label: 'End of Life Date', kind: 'date', nullable: true },
       notes: { label: 'Notes', kind: 'text', nullable: true },
@@ -390,9 +394,10 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       business_purpose: { label: 'Business Purpose', kind: 'text', requiredOnCreate: true },
       source_application_id: { label: 'Source Application', kind: 'relation', requiredOnCreate: true, relationTarget: 'applications', aliases: ['source_application'] },
       target_application_id: { label: 'Target Application', kind: 'relation', requiredOnCreate: true, relationTarget: 'applications', aliases: ['target_application'] },
-      data_category: { label: 'Data Category', kind: 'text', requiredOnCreate: true },
+      // The catalog fields take a code or a name the app shows, in any language (rule P7).
+      data_category: { label: 'Data Category', kind: 'it_catalog', itCatalog: 'interfaceDataCategories', requiredOnCreate: true },
       integration_route_type: { label: 'Integration Route Type', kind: 'enum', enumValues: INTERFACE_ROUTES },
-      lifecycle: { label: 'Lifecycle', kind: 'text' },
+      lifecycle: { label: 'Lifecycle', kind: 'it_catalog', itCatalog: 'lifecycleStates' },
       overview_notes: { label: 'Overview Notes', kind: 'text', nullable: true },
       criticality: { label: 'Operational criticality', kind: 'application_classification', classificationAxis: 'business', nullable: true },
       impact_of_failure: { label: 'Impact of Failure', kind: 'text', nullable: true },
@@ -426,12 +431,13 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       description: { label: 'Description', kind: 'text', nullable: true, aliases: ['purpose', 'notes'] },
       topology: { label: 'Topology', kind: 'enum', enumValues: CONNECTION_TOPOLOGIES },
       source_asset_id: { label: 'Source Asset', kind: 'relation', nullable: true, relationTarget: 'assets', aliases: ['source_asset', 'source_server_id', 'source_server'] },
-      source_entity_code: { label: 'Source Entity Code', kind: 'text', nullable: true },
+      // The catalog fields take a code or a name the app shows, in any language (rule P7).
+      source_entity_code: { label: 'Source Entity Code', kind: 'it_catalog', itCatalog: 'entities', nullable: true },
       destination_asset_id: { label: 'Destination Asset', kind: 'relation', nullable: true, relationTarget: 'assets', aliases: ['destination_asset', 'destination_server_id', 'destination_server'] },
-      destination_entity_code: { label: 'Destination Entity Code', kind: 'text', nullable: true },
+      destination_entity_code: { label: 'Destination Entity Code', kind: 'it_catalog', itCatalog: 'entities', nullable: true },
       servers: { label: 'Servers', kind: 'relation', nullable: true, relationTarget: 'assets' },
-      protocol_codes: { label: 'Protocol Codes', kind: 'array_text', requiredOnCreate: true, aliases: ['protocols'] },
-      lifecycle: { label: 'Lifecycle', kind: 'text' },
+      protocol_codes: { label: 'Protocol Codes', kind: 'it_catalog_list', itCatalog: 'connectionTypes', requiredOnCreate: true, aliases: ['protocols'] },
+      lifecycle: { label: 'Lifecycle', kind: 'it_catalog', itCatalog: 'lifecycleStates' },
       criticality: { label: 'Operational criticality', kind: 'application_classification', classificationAxis: 'business', nullable: true },
       data_class: { label: 'Data confidentiality', kind: 'application_classification', classificationAxis: 'confidentiality', nullable: true },
       contains_pii: { label: 'Contains PII', kind: 'boolean' },

@@ -275,6 +275,63 @@ async function testInterfaceMiddleware(harness: Harness) {
 }
 
 /**
+ * Lot K2c, second pass: the catalog fields of an asset, a connection and an interface take a code or
+ * a name the app shows in any language, and follow rule P7; a server role too (by its code or name;
+ * a retired role only on the assignment that holds it).
+ */
+async function testCatalogFieldsByName(harness: Harness) {
+  await inSeed(harness, async (runner, s) => {
+    const ctx = context(s, runner);
+    const current = await harness.settings.getSettings(s.tenantId, { manager: runner.manager });
+    await harness.settings.updateSettings(s.tenantId, {
+      serverKinds: [...current.serverKinds, { code: 'mainframe', label: 'Mainframe', deprecated: true }],
+      connectionTypes: current.connectionTypes.map((option: any) => (option.code === 'tcp' ? { ...option, deprecated: true } : option)),
+      serverRoles: current.serverRoles.map((option: any) => (option.code === 'backup' ? { ...option, deprecated: true } : option)),
+    }, { manager: runner.manager });
+    // An asset's type by its French name, written as its code.
+    const kind = await card(harness, ctx, 'update_business_record', { entity_type: 'assets', ref: s.sourceAssetId, fields: { kind: 'Serveur physique' } });
+    assert.equal(kind.changes.kind.to, 'physical_server');
+    await approve(harness, ctx, kind);
+    await refused(() => card(harness, ctx, 'update_business_record', { entity_type: 'assets', ref: s.sourceAssetId, fields: { kind: 'Mainframe' } }), /retired/);
+    // A connection's protocol by its name; a retired one only on the connection that holds it.
+    const connection = await approve(harness, ctx, await card(harness, ctx, 'create_business_record', {
+      entity_type: 'connections', fields: { name: 'Names link', topology: 'server_to_server', source_asset_id: s.sourceAssetId, destination_asset_id: s.targetAssetId, protocol_codes: ['Agent Zabbix'] },
+    }));
+    const [protocols] = await runner.query(`SELECT array_agg(connection_type_code) AS codes FROM connection_protocols WHERE tenant_id = $1 AND connection_id = $2`, [s.tenantId, connection]);
+    assert.deepEqual(protocols.codes, ['zabbix']);
+    await refused(() => card(harness, ctx, 'update_business_record', { entity_type: 'connections', ref: connection, fields: { protocol_codes: ['tcp'] } }), /retired/);
+    const lifecycle = await card(harness, ctx, 'update_business_record', { entity_type: 'connections', ref: connection, fields: { lifecycle: 'Obsolète' } });
+    assert.equal(lifecycle.changes.lifecycle.to, 'deprecated');
+    // An interface's data category by its German name.
+    const intf = await approve(harness, ctx, await card(harness, ctx, 'create_business_record', {
+      entity_type: 'interfaces',
+      fields: { name: 'Names interface', business_purpose: 'Names', data_category: 'Transaktionsdaten', source_application_id: s.sourceAppId, target_application_id: s.targetAppId },
+    }));
+    const [intfRow] = await runner.query(`SELECT data_category FROM interfaces WHERE tenant_id = $1 AND id = $2`, [s.tenantId, intf]);
+    assert.equal(intfRow.data_category, 'transactional');
+
+    // Server roles: by the French name; a retired role refused on a new assignment, kept on the one that holds it.
+    await runner.query(`INSERT INTO app_instances (tenant_id, application_id, environment) VALUES ($1, $2, 'prod')`, [s.tenantId, s.appId]);
+    const assign = (add: unknown[]) => card(harness, ctx, 'update_entity_relations', { entity_type: 'applications', ref: s.appId, relation: 'asset_assignments', add });
+    await approve(harness, ctx, await assign([{ environment: 'prod', asset_ref: 'srv-orders', role: "Serveur d'applications" }]));
+    const roles = async () => (await runner.query(
+      `SELECT role FROM app_asset_assignments WHERE tenant_id = $1 ORDER BY role`, [s.tenantId])).map((row: any) => row.role);
+    assert.deepEqual(await roles(), ['app']);
+    await refused(() => assign([{ environment: 'prod', asset_ref: 'srv-billing', role: 'backup' }]), /retired/);
+    await runner.query(
+      `INSERT INTO app_asset_assignments (tenant_id, app_instance_id, asset_id, role)
+       SELECT $1, id, $3, 'backup' FROM app_instances WHERE tenant_id = $1 AND application_id = $2`, [s.tenantId, s.appId, s.targetAssetId]);
+    // Named again with another row: the assignment that holds the retired role keeps it.
+    await approve(harness, ctx, await assign([
+      { environment: 'prod', asset_ref: 'srv-billing', role: 'backup', notes: 'kept' },
+      { environment: 'prod', asset_ref: 'srv-billing', role: 'app' },
+    ]));
+    assert.deepEqual(await roles(), ['app', 'app', 'backup']);
+    await refused(() => assign([{ environment: 'prod', asset_ref: 'srv-orders', role: 'Citrix' }]), /Unknown role "Citrix"\. Use one of: .*app \(Application server\)/);
+  });
+}
+
+/**
  * Every field Kad writes on an update is in the read it compares with (`getRecordSnapshot`, the
  * screen's read): one record of each family, created through Kad's cards.
  */
@@ -312,7 +369,7 @@ async function run() {
   const harness = await createHarness();
   try {
     const failures: string[] = [];
-    for (const test of [testAccessMethods, testRetiredValues, testOperatingSystem, testConnectionProtocol, testInterfaceMiddleware, testEveryWritableFieldIsRead]) {
+    for (const test of [testAccessMethods, testRetiredValues, testOperatingSystem, testConnectionProtocol, testInterfaceMiddleware, testCatalogFieldsByName, testEveryWritableFieldIsRead]) {
       try {
         await test(harness);
       } catch (error) {

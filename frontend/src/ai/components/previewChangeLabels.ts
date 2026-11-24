@@ -83,6 +83,16 @@ const VALUE_RULES: ValueRule[] = [
   { fields: ['status'], key: (code) => `common:statuses.${code}` },
 ];
 
+/**
+ * The catalog fields Kad writes by code on the assets, the connections and the interfaces (rule P7 of
+ * 26.12.1): the card names the code from the tenant's list, in the person's language.
+ */
+const CATALOG_FIELDS: Record<string, Record<string, Parameters<ReturnType<typeof useItOpsEnumOptions>['labelFor']>[0]>> = {
+  assets: { kind: 'serverKind', provider: 'serverProvider', domain: 'domain', admin_zone: 'adminZone', status: 'lifecycleStatus' },
+  connections: { lifecycle: 'lifecycleStatus', source_entity_code: 'entity', destination_entity_code: 'entity' },
+  interfaces: { lifecycle: 'lifecycleStatus', data_category: 'interfaceDataCategory' },
+};
+
 /** The label key of each field on the screen of its record: the card names a field as that screen does. */
 const portfolioRecordFields = (kind: 'project' | 'request'): Record<string, string> => ({
   purpose: `portfolio:workspace.${kind}.summary.cards.purpose`,
@@ -411,7 +421,7 @@ const CLASSIFICATION_REVIEW: Record<string, string> = {
 /** The labels of one preview's card; the tenant's catalogs load only when the card shows one of their values. */
 export function usePreviewChangeLabels(preview?: AiMutationPreview) {
   const { t, i18n } = useTranslation(['ai', 'portfolio', 'knowledge', 'it', 'ops', 'master-data', 'common']);
-  const { labelFor } = useItOpsEnumOptions();
+  const { labelFor, settings: itOpsSettings } = useItOpsEnumOptions();
   const locale = useLocale();
   const changes = Object.values(preview?.changes ?? {});
   const { data: classificationCatalog = undefined } = useApplicationClassificationCatalog({
@@ -477,6 +487,11 @@ export function usePreviewChangeLabels(preview?: AiMutationPreview) {
       if (field === 'access_methods' && entity === 'applications') {
         return value.split(', ').map((code) => labelFor('accessMethod', code) || code).join(', ');
       }
+      const catalogField = CATALOG_FIELDS[entity]?.[field];
+      if (catalogField) return labelFor(catalogField, value) || value;
+      if (field === 'protocol_codes' && entity === 'connections') {
+        return value.split(', ').map((code) => itOpsSettings?.connectionTypes?.find((type) => type.code === code)?.label || code).join(', ');
+      }
       if (RECORD_TOOLS.has(preview.tool_name) && (value === 'Yes' || value === 'No')) {
         return known([`it:enums.yesNo.${value.toLowerCase()}`]) ?? value;
       }
@@ -486,7 +501,7 @@ export function usePreviewChangeLabels(preview?: AiMutationPreview) {
         && (!rule.entities || rule.entities.includes(entity)));
       return known(rules.map((rule) => rule.key(code))) ?? value;
     },
-    [known, labelFor, locale, taskTypeLabels],
+    [itOpsSettings, known, labelFor, locale, taskTypeLabels],
   );
 
   /** A classification level as the application screens name it: the tenant's catalog in the person's language. */
