@@ -4,10 +4,13 @@ import {
   buildParentPath,
   buildTaskBreadcrumbs,
   buildTaskOriginSearchParams,
+  originAddressIsUuid,
+  originMatchesParent,
   parseTaskOrigin,
   remapProjectListContext,
   sanitizeOriginTab,
   stripOriginParams,
+  withOriginAddress,
 } from './taskWorkspaceOrigin';
 
 const labels = {
@@ -304,10 +307,10 @@ describe('buildTaskBreadcrumbs', () => {
     }]);
   });
 
-  it('dedups a project display ref against the parent UUID when names match', () => {
+  it('dedups a project reference against the parent named by the same reference', () => {
     const crumbs = buildTaskBreadcrumbs({
       origin: { kind: 'project', id: 'PRJ-6', tab: 'tasks' },
-      parent: { type: 'project', id: '990b0739-942a-4eeb-b93d-d36cb1a84975', name: 'SAP Cheddar Migration' },
+      parent: { type: 'project', id: '990b0739-942a-4eeb-b93d-d36cb1a84975', name: 'SAP Cheddar Migration', address: 'PRJ-6' },
       originName: 'SAP Cheddar Migration',
       labels,
     });
@@ -317,6 +320,16 @@ describe('buildTaskBreadcrumbs', () => {
       label: 'SAP Cheddar Migration',
       href: '/portfolio/projects/PRJ-6/tasks',
     });
+  });
+
+  it('does not collapse two projects that share a name', () => {
+    const crumbs = buildTaskBreadcrumbs({
+      origin: { kind: 'project', id: 'PRJ-6', tab: 'tasks' },
+      parent: { type: 'project', id: '990b0739-942a-4eeb-b93d-d36cb1a84975', name: 'SAP Cheddar Migration', address: 'PRJ-7' },
+      originName: 'SAP Cheddar Migration',
+      labels,
+    });
+    expect(crumbs).toHaveLength(2);
   });
 
   it('does not collapse two different project UUIDs that share a name', () => {
@@ -406,5 +419,40 @@ describe('project addresses on the way back', () => {
     const crumbsOf = (address?: string) => buildTaskBreadcrumbs({ origin: { kind: 'tasks' }, parent: { ...parent, address }, labels });
     expect(crumbsOf('PRJ-3')[1]).toMatchObject({ key: 'parent', href: '/portfolio/projects/PRJ-3/summary' });
     expect(crumbsOf()[1]).toMatchObject({ key: 'parent', href: `/portfolio/projects/${projectUuid}/summary` });
+  });
+});
+
+describe('origin records named by their reference', () => {
+  const contractUuid = 'c0b1c2d3-0000-4000-8000-000000000002';
+
+  it.each([
+    ['contract', 'CTR-2', '/ops/contracts/CTR-2/overview'],
+    ['incident', 'INC-3', '/it/incidents/INC-3/relations'],
+    ['spend_item', 'BL-8', '/ops/budget/BL-8/overview'],
+  ] as const)('goes back to the %s by the reference its address names', (kind, reference, path) => {
+    const search = buildTaskOriginSearchParams(kind, reference, { pathname: path, search: '' });
+    const origin = parseTaskOrigin(search);
+    expect(origin).toMatchObject({ kind, id: reference });
+    expect(buildOriginPath(origin, search)).toBe(path);
+  });
+
+  it('goes back by the reference the page knows when the address names the record by uuid', () => {
+    const search = new URLSearchParams(`contractId=${contractUuid}&originTab=budget`);
+    const origin = parseTaskOrigin(search);
+    expect(originAddressIsUuid(origin)).toBe(true);
+    expect(buildOriginPath(origin, search, 'CTR-2')).toBe('/ops/contracts/CTR-2/budget');
+  });
+
+  it('names the origin by its reference in the address, every other key kept', () => {
+    const search = new URLSearchParams(`contractId=${contractUuid}&originTab=budget&taskStatus=active`);
+    expect(withOriginAddress(search, 'contract', 'CTR-2').toString()).toBe('contractId=CTR-2&originTab=budget&taskStatus=active');
+  });
+
+  it('matches the origin with the parent by uuid or by reference', () => {
+    const parent = { type: 'contract' as const, id: contractUuid, name: 'CTR-2 · Cellar lease', address: 'CTR-2' };
+    expect(originMatchesParent({ kind: 'contract', id: contractUuid }, parent)).toBe(true);
+    expect(originMatchesParent({ kind: 'contract', id: 'CTR-2' }, parent)).toBe(true);
+    expect(originMatchesParent({ kind: 'contract', id: 'CTR-3' }, parent)).toBe(false);
+    expect(originMatchesParent({ kind: 'incident', id: 'CTR-2' }, parent)).toBe(false);
   });
 });

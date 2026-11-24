@@ -93,9 +93,10 @@ function BackButton() {
   return <button type="button" onClick={() => navigate(-1)}>step back</button>;
 }
 
-function renderPage(entries: string[], task: Record<string, unknown> = TASK) {
+function renderPage(entries: string[], task: Record<string, unknown> = TASK, reads: Record<string, unknown> = {}) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === `/tasks/${TASK.id}` || url === '/tasks/T-9') return { data: task } as never;
+    if (url in reads) return { data: reads[url] } as never;
     if (url.endsWith('/attachments') || url.endsWith('/tasks')) return { data: [] } as never;
     if (url.endsWith('/time-entries/sum')) return { data: { total: 0 } } as never;
     return { data: {} } as never;
@@ -112,6 +113,9 @@ function renderPage(entries: string[], task: Record<string, unknown> = TASK) {
               <Route path="/start" element={<div data-testid="start" />} />
               <Route path="/portfolio/tasks" element={<div data-testid="task-list" />} />
               <Route path="/portfolio/projects/:id/:tab" element={<div data-testid="project-page" />} />
+              <Route path="/ops/contracts/:id/:tab" element={<div data-testid="contract-page" />} />
+              <Route path="/ops/budget/:ref/:tab" element={<div data-testid="budget-page" />} />
+              <Route path="/it/incidents/:id/:tab" element={<div data-testid="incident-page" />} />
               <Route path="/portfolio/tasks/:id" element={<TaskWorkspacePage />} />
               <Route path="/portfolio/tasks/:id/:tab" element={<TaskWorkspacePage />} />
             </Routes>
@@ -187,5 +191,59 @@ describe('TaskWorkspacePage address', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'move to another project' }));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalled());
     await waitFor(() => expect(client.getQueryState(['portfolio-project', 'PRJ-3', 'summary'])?.isInvalidated).toBe(true));
+  });
+
+  it('names the record it was opened from by its reference, and moves an address by uuid to it', async () => {
+    const contractId = 'c0b1c2d3-0000-4000-8000-000000000002';
+    const contractTask = { ...TASK, related_object_type: 'contract', related_object_id: contractId, related_object_name: 'CTR-2 · Cellar lease', project_item_number: null };
+    renderPage([`/portfolio/tasks/${TASK.id}/overview?contractId=${contractId}&originTab=overview`], contractTask);
+    // The task and the contract it was opened from move to their references in one step.
+    await waitFor(() => expect(location()).toBe('/portfolio/tasks/T-9/overview?contractId=CTR-2&originTab=overview'));
+    // The contract is known from the task: no read of its own, and its tasks are read by its uuid.
+    expect(mocked.get).not.toHaveBeenCalledWith(`/contracts/${contractId}`);
+    expect(mocked.get).not.toHaveBeenCalledWith('/contracts/CTR-2');
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/contracts/${contractId}/tasks`));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    await waitFor(() => expect(location()).toBe('/ops/contracts/CTR-2/overview'));
+  });
+
+  it('reads another record it was opened from by its reference, and goes back to it by its reference', async () => {
+    renderPage(['/portfolio/tasks/T-9/overview?incidentId=INC-3&originTab=relations'], TASK, {
+      '/incidents/INC-3': { id: 'i0b1c2d3-0000-4000-8000-000000000003', item_number: 3, title: 'Cellar flood' },
+    });
+    expect(await screen.findByRole('link', { name: /INC-3 · Cellar flood/ })).toHaveAttribute('href', '/it/incidents/INC-3/relations');
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/incidents/i0b1c2d3-0000-4000-8000-000000000003/tasks'));
+    expect(location()).toBe('/portfolio/tasks/T-9/overview?incidentId=INC-3&originTab=relations');
+  });
+
+  it('moves the uuid of another record it was opened from to its reference once read', async () => {
+    const lineId = 'd0b1c2d3-0000-4000-8000-000000000008';
+    renderPage([`/portfolio/tasks/T-9/overview?spendItemId=${lineId}&originTab=budget`], TASK, {
+      [`/budget-lines/${lineId}`]: { id: lineId, item_number: 8, product_name: 'Cheese wax' },
+    });
+    await waitFor(() => expect(location()).toBe('/portfolio/tasks/T-9/overview?spendItemId=BL-8&originTab=budget'));
+    expect(await screen.findByRole('link', { name: /BL-8 · Cheese wax/ })).toHaveAttribute('href', '/ops/budget/BL-8/budget');
+  });
+
+  it('names the parent record by its reference in the breadcrumb, whatever its family', async () => {
+    const incidentTask = { ...TASK, related_object_type: 'incident', related_object_id: 'i0b1c2d3-0000-4000-8000-000000000003', related_object_name: 'INC-3 · Cellar flood', project_item_number: null };
+    renderPage(['/portfolio/tasks/T-9/overview'], incidentTask);
+    expect(await screen.findByTitle('INC-3 · Cellar flood')).toHaveAttribute('href', '/it/incidents/INC-3/overview');
+  });
+
+  it('goes back to the project it was opened from by its reference once the task moved to another project', async () => {
+    mocked.patch.mockResolvedValue({ data: {} } as never);
+    renderPage([`/portfolio/tasks/T-9/overview?projectId=${TASK.related_object_id}&projectTab=tasks`], TASK, {
+      '/portfolio/projects/PRJ-3': { id: TASK.related_object_id, item_number: 3, name: 'Cheese cellar' },
+    });
+    await waitFor(() => expect(location()).toBe('/portfolio/tasks/T-9/overview?projectId=PRJ-3&projectTab=tasks'));
+    fireEvent.click(screen.getByRole('button', { name: 'portfolio:workspace.openProperties' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'move to another project' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`/tasks/${TASK.id}/move`, expect.anything()));
+    // The way back still names the project the task left, by its reference.
+    await waitFor(() => expect(screen.getByRole('link', { name: /Cheese cellar/ })).toHaveAttribute('href', '/portfolio/projects/PRJ-3/tasks'));
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href')).filter((href) => href?.includes(TASK.related_object_id))).toEqual([]);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    await waitFor(() => expect(location()).toBe('/portfolio/projects/PRJ-3/tasks'));
   });
 });

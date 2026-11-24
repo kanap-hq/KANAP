@@ -37,14 +37,16 @@ export const CLOSED_TASK_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>
 /**
  * The tasks of one entity, with the paths that open one or create one from the entity's page
  * (the task's page then offers the way back). Shared by the full tasks panel and the compact
- * section of a workspace overview.
+ * section of a workspace overview. `entityId` reads the tasks; `entityAddress` names the entity in
+ * the task's address: its reference (`CTR-2`), the id when it has none.
  */
-export function useEntityTasks(entityType: EntityType, entityId: string) {
+export function useEntityTasks(entityType: EntityType, entityId: string, entityAddress?: string | null) {
   const navigate = useNavigate();
   const location = useLocation();
+  const originAddress = entityAddress || entityId;
   const originSearchParams = React.useMemo(
-    () => buildTaskOriginSearchParams(entityType, entityId, { pathname: location.pathname, search: location.search }),
-    [entityId, entityType, location.pathname, location.search],
+    () => buildTaskOriginSearchParams(entityType, originAddress, { pathname: location.pathname, search: location.search }),
+    [entityType, location.pathname, location.search, originAddress],
   );
   // A task's address names it by its reference (`T-4`), by its uuid only when it has no number.
   const taskPath = React.useCallback(

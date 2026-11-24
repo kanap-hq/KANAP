@@ -49,9 +49,11 @@ import {
   PROJECT_ORIGIN_TABS,
   buildOriginPath,
   buildTaskBreadcrumbs,
+  originAddressIsUuid,
   originMatchesParent,
   parseTaskOrigin,
   remapProjectListContext,
+  withOriginAddress,
   type RelatedKind,
   type TaskParent,
 } from './taskWorkspaceOrigin';
@@ -118,26 +120,38 @@ interface TaskData {
   updated_at: string;
 }
 
-async function fetchRelatedObjectName(kind: RelatedKind, id: string): Promise<string | null> {
+/** The record a task was opened from, as read: its uuid, its reference and the name the breadcrumb shows. */
+type OriginRecord = { id: string | null; reference: string | null; name: string | null };
+
+type NumberedRecord = { id?: string | null; item_number?: number | null };
+
+/** Reads the origin record by its address value: every read route takes the reference and the uuid. */
+async function fetchOriginRecord(kind: RelatedKind, address: string): Promise<OriginRecord> {
   switch (kind) {
     case 'project': {
-      const res = await api.get<{ name?: string | null }>(`/portfolio/projects/${id}`);
-      return res.data?.name?.trim() || null;
+      const { data } = await api.get<NumberedRecord & { name?: string | null }>(`/portfolio/projects/${address}`);
+      return { id: data?.id ?? null, reference: data?.item_number ? formatItemRef('project', data.item_number) : null, name: data?.name?.trim() || null };
     }
     case 'spend_item':
     case 'capex_item': {
-      const res = await api.get<BudgetLineLabel>(`/budget-lines/${id}`);
-      return budgetLineLabel(res.data);
+      const { data } = await api.get<NumberedRecord & BudgetLineLabel>(`/budget-lines/${address}`);
+      return { id: data?.id ?? null, reference: data?.item_number ? formatItemRef('budget', data.item_number) : null, name: budgetLineLabel(data ?? {}) };
     }
     case 'contract': {
-      const res = await api.get<{ item_number?: number | null; name?: string | null }>(`/contracts/${id}`);
-      return formatContractName(res.data?.item_number, res.data?.name);
+      const { data } = await api.get<NumberedRecord & { name?: string | null }>(`/contracts/${address}`);
+      return { id: data?.id ?? null, reference: data?.item_number ? formatItemRef('contract', data.item_number) : null, name: formatContractName(data?.item_number, data?.name) };
     }
     case 'incident': {
-      const res = await api.get<{ item_number?: number | null; title?: string | null }>(`/incidents/${id}`);
-      return formatIncidentName(res.data?.item_number, res.data?.title);
+      const { data } = await api.get<NumberedRecord & { title?: string | null }>(`/incidents/${address}`);
+      return { id: data?.id ?? null, reference: data?.item_number ? formatItemRef('incident', data.item_number) : null, name: formatIncidentName(data?.item_number, data?.title) };
     }
   }
+}
+
+/** The reference a contract or an incident task's related name starts with (`CTR-2 · Name`, `INC-3`). */
+function referenceInRelatedName(type: 'contract' | 'incident', name: string | null | undefined): string | null {
+  const prefix = type === 'contract' ? 'CTR' : 'INC';
+  return (name || '').match(new RegExp(`^${prefix}-\\d+(?= · |$)`))?.[0] ?? null;
 }
 
 // Same shape as the backend's related_object_name for incident tasks ("INC-12 · title").
@@ -305,22 +319,6 @@ export default function TaskWorkspacePage() {
   const taskMatchesCurrentRoute = React.useMemo(() => taskMatchesRoute(task, id), [task, id]);
   // The editors are keyed by task: the same key through the move from a legacy address to the reference.
   const editorKey = useRecordEditorKey('tasks', id);
-  // The address of the task's stored project: its reference when the task names its number.
-  const storedProjectAddress = taskMatchesCurrentRoute && task?.related_object_type === 'project' && task.related_object_id
-    ? (task.project_item_number ? formatItemRef('project', task.project_item_number) : task.related_object_id)
-    : null;
-  /** A project's address segment: its reference when it is the task's stored project, else the id given. */
-  const projectAddressOf = React.useCallback((projectId: string) => (
-    storedProjectAddress && task?.related_object_id && projectId.toLowerCase() === task.related_object_id.toLowerCase()
-      ? storedProjectAddress
-      : projectId
-  ), [storedProjectAddress, task?.related_object_id]);
-  // The way back to the project the task was opened from, at its reference when it is the task's project.
-  const originAddress = origin.kind === 'project' ? projectAddressOf(origin.id) : undefined;
-  const originPath = React.useMemo(
-    () => buildOriginPath(origin, cleanedSearchParams, originAddress),
-    [origin, cleanedSearchParams, originAddress],
-  );
   const isShowingPreviousTask = Boolean(task && !taskMatchesCurrentRoute);
   const canManageCurrentTask = canManage && !isShowingPreviousTask;
   const canDeleteCurrentTask = canDelete && !isShowingPreviousTask;
@@ -334,17 +332,6 @@ export default function TaskWorkspacePage() {
 
   // Browser tab title
   useRecordTitle(taskMatchesCurrentRoute && task?.item_number && task?.title ? `T-${task.item_number} ${task.title}` : null);
-
-  // A legacy address (a uuid, `t-4`, `4`) becomes the task's reference through the router, tab, query
-  // and hash kept: the task read is put under the reference's entry first, so the page shows it at once
-  // (one quiet refresh follows) and the editors stay mounted (`editorKey`). Back and reload then show the reference.
-  React.useEffect(() => {
-    if (isCreate || !task?.item_number || !taskMatchesCurrentRoute) return;
-    const reference = formatItemRef('task', task.item_number);
-    if (id === reference) return;
-    queryClient.setQueryData(['tasks', reference], task);
-    navigate(`${buildItemPath('task', reference)}${params.tab ? `/${params.tab}` : ''}${location.search}${location.hash}`, { replace: true });
-  }, [id, isCreate, location.hash, location.search, navigate, params.tab, queryClient, task, taskMatchesCurrentRoute]);
 
   const { data: totalTimeHours = 0 } = useQuery({
     queryKey: ['task-time-entries-sum', task?.id],
@@ -426,13 +413,40 @@ export default function TaskWorkspacePage() {
   const linkedBudgetId = linkedTask && ['spend_item', 'capex_item'].includes(linkedTask.related_object_type ?? '')
     && !linkedTask.related_object_hidden
     ? linkedTask.related_object_id : null;
-  const { data: linkedBudgetLine } = useQuery({
+  const { data: linkedBudgetLine, isPending: linkedBudgetLinePending } = useQuery({
     ...budgetLineDetailQuery(linkedBudgetId ?? ''),
     enabled: !isCreate && !!linkedBudgetId,
   });
   const displayedTask = React.useMemo(() => linkedTask && linkedBudgetLine && linkedBudgetId === linkedBudgetLine.id
     ? { ...linkedTask, related_object_name: budgetLineLabel(linkedBudgetLine) }
     : linkedTask, [linkedTask, linkedBudgetLine, linkedBudgetId]);
+
+  // The reference of the task's stored record, from the task as read: its project's number, the
+  // reference its contract or incident is named by, its budget line's number once the line is read.
+  const storedRelatedReference = React.useMemo(() => {
+    if (!taskMatchesCurrentRoute || !task?.related_object_id) return null;
+    switch (task.related_object_type) {
+      case 'project':
+        return task.project_item_number ? formatItemRef('project', task.project_item_number) : null;
+      case 'contract':
+      case 'incident':
+        return referenceInRelatedName(task.related_object_type, task.related_object_name);
+      case 'spend_item':
+      case 'capex_item':
+        return linkedBudgetLine?.id === task.related_object_id && linkedBudgetLine?.item_number
+          ? formatItemRef('budget', linkedBudgetLine.item_number)
+          : null;
+      default:
+        return null;
+    }
+  }, [linkedBudgetLine, task, taskMatchesCurrentRoute]);
+  /** A record's address segment: its reference when it is the task's stored record, else the id given. */
+  const relatedAddressOf = React.useCallback((type: RelatedKind, relatedId: string) => (
+    storedRelatedReference && task?.related_object_type === type && task.related_object_id
+      && relatedId.toLowerCase() === task.related_object_id.toLowerCase()
+      ? storedRelatedReference
+      : relatedId
+  ), [storedRelatedReference, task?.related_object_id, task?.related_object_type]);
 
   // Attachments
   const attachmentTaskId = !isCreate && task ? task.id : null;
@@ -460,14 +474,59 @@ export default function TaskWorkspacePage() {
     const relatedName = (source?.related_object_name ?? '').trim();
     // A line the person cannot read has no page to go back to.
     if (!type || !relatedId || !relatedName || source?.related_object_hidden) return null;
-    return { type, id: relatedId, name: relatedName, address: type === 'project' ? projectAddressOf(relatedId) : undefined };
-  }, [displayedTask, projectAddressOf]);
+    return { type, id: relatedId, name: relatedName, address: relatedAddressOf(type, relatedId) };
+  }, [displayedTask, relatedAddressOf]);
   const originMatchesRelated = originMatchesParent(origin, breadcrumbParent);
-  const { data: fetchedOriginName = null } = useQuery({
-    queryKey: ['task-origin-name', origin.kind, origin.kind === 'tasks' ? '' : origin.id],
-    queryFn: () => (origin.kind === 'tasks' ? null : fetchRelatedObjectName(origin.kind, origin.id)),
-    enabled: origin.kind !== 'tasks' && !originMatchesRelated,
+  // The origin record is read when the task does not name it (opened from another record, moved since,
+  // a new task): its uuid for the reads and the creation, its reference for the address, its name.
+  // A task's own budget line is known once its detail is read.
+  const originRecordQuery = useQuery({
+    queryKey: ['task-origin', origin.kind, origin.kind === 'tasks' ? '' : origin.id],
+    queryFn: () => fetchOriginRecord(origin.kind as RelatedKind, origin.kind === 'tasks' ? '' : origin.id),
+    enabled: origin.kind !== 'tasks'
+      && (isCreate || taskMatchesCurrentRoute)
+      && !originMatchesRelated
+      && !(linkedBudgetId && linkedBudgetLinePending),
   });
+  const originRecord = originRecordQuery.data ?? null;
+  const fetchedOriginName = originRecord?.name ?? null;
+  // The origin's uuid: the address value when it is one, else the task's record or the origin read.
+  const originUuid = origin.kind === 'tasks'
+    ? null
+    : originAddressIsUuid(origin)
+      ? origin.id
+      : originMatchesRelated && breadcrumbParent ? breadcrumbParent.id : originRecord?.id ?? null;
+  // The origin's reference while the address names it by uuid (an address written before).
+  const originReference = !originAddressIsUuid(origin)
+    ? null
+    : originMatchesRelated && breadcrumbParent
+      ? (breadcrumbParent.address && breadcrumbParent.address !== breadcrumbParent.id ? breadcrumbParent.address : null)
+      : originRecord?.reference ?? null;
+  const originPath = React.useMemo(
+    () => buildOriginPath(origin, cleanedSearchParams, originReference ?? undefined),
+    [origin, cleanedSearchParams, originReference],
+  );
+
+  // A legacy address becomes the references through the router, tab, query and hash kept: the task
+  // (a uuid, `t-4`, `4`) once read, the record it was opened from (`?projectId=<uuid>`) once its
+  // reference is known. The reads are put under the references' entries first, so the page shows them at
+  // once and the editors stay mounted (`editorKey`). Back and reload then show the references.
+  React.useEffect(() => {
+    if (isCreate) return;
+    const taskReference = task?.item_number && taskMatchesCurrentRoute ? formatItemRef('task', task.item_number) : null;
+    const moveTask = Boolean(taskReference && id !== taskReference);
+    const moveOrigin = origin.kind !== 'tasks' && Boolean(originReference && origin.id !== originReference);
+    if (!moveTask && !moveOrigin) return;
+    if (moveTask && taskReference) queryClient.setQueryData(['tasks', taskReference], task);
+    if (moveOrigin && originRecord) queryClient.setQueryData(['task-origin', origin.kind, originReference], originRecord);
+    const pathname = moveTask && taskReference
+      ? `${buildItemPath('task', taskReference)}${params.tab ? `/${params.tab}` : ''}`
+      : location.pathname;
+    const search = moveOrigin && originReference
+      ? `?${withOriginAddress(new URLSearchParams(location.search), origin.kind as RelatedKind, originReference).toString()}`
+      : location.search;
+    navigate(`${pathname}${search}${location.hash}`, { replace: true });
+  }, [id, isCreate, location.hash, location.pathname, location.search, navigate, origin, originRecord, originReference, params.tab, queryClient, task, taskMatchesCurrentRoute]);
   const breadcrumbOriginName = originMatchesRelated
     ? breadcrumbParent?.name ?? fetchedOriginName
     : (fetchedOriginName || (isCreate ? createRelation.name : null));
@@ -479,10 +538,10 @@ export default function TaskWorkspacePage() {
     origin,
     parent: isCreate ? null : breadcrumbParent,
     originName: breadcrumbOriginName,
-    originAddress,
+    originAddress: originReference ?? undefined,
     search: cleanedSearchParams,
     labels: breadcrumbLabels,
-  }), [breadcrumbLabels, breadcrumbOriginName, breadcrumbParent, cleanedSearchParams, isCreate, origin, originAddress]);
+  }), [breadcrumbLabels, breadcrumbOriginName, breadcrumbParent, cleanedSearchParams, isCreate, origin, originReference]);
 
   React.useEffect(() => {
     if (!location.search.includes('action=') && !location.search.includes('status=')) return;
@@ -702,11 +761,15 @@ export default function TaskWorkspacePage() {
   }, [classificationDefaults, createProject, createRelation.type, isCreate]);
 
   // A title committed before these defaults are read creates the task once they are.
+  // The record it is created on, by its uuid once the origin read gives it (the address names it by its
+  // reference); a read that gives none leaves the address value, and the server answers.
+  const createTargetId = createRelation.type ? (originUuid ?? createRelation.id) : null;
   const createDefaultsReady = isCreate
     && !!profile?.id
     && taskTypesStatus !== 'pending'
     && !classificationDefaultsLoading
-    && (!originProjectId || createProjectStatus !== 'pending');
+    && (!originProjectId || createProjectStatus !== 'pending')
+    && (!createRelation.type || !!originUuid || !originRecordQuery.isPending);
 
   const applyFormPatch = React.useCallback((patch: Record<string, any>) => {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -1150,16 +1213,17 @@ export default function TaskWorkspacePage() {
   }, [involvedUserId, applicationId, assetId, teamId]);
   const navCurrentId = taskMatchesCurrentRoute ? task?.id || '' : '';
   const entityOrigin = origin.kind === 'tasks' ? null : origin;
+  // The origin's tasks, read by its uuid: the same entry as the panel of its page.
   const entityListQuery = useQuery({
-    queryKey: entityOrigin ? entityTasksQueryKey(entityOrigin.kind, entityOrigin.id) : ['entity-tasks', 'idle'],
+    queryKey: entityOrigin && originUuid ? entityTasksQueryKey(entityOrigin.kind, originUuid) : ['entity-tasks', 'idle'],
     queryFn: async () => {
-      if (!entityOrigin) return [] as Array<{ id: string; item_number?: number | null; status: string; phase_id?: string | null }>;
+      if (!entityOrigin || !originUuid) return [] as Array<{ id: string; item_number?: number | null; status: string; phase_id?: string | null }>;
       const res = await api.get<Array<{ id: string; item_number?: number | null; status: string; phase_id?: string | null }>>(
-        entityTasksEndpoint(entityOrigin.kind, entityOrigin.id),
+        entityTasksEndpoint(entityOrigin.kind, originUuid),
       );
       return res.data || [];
     },
-    enabled: Boolean(entityOrigin) && !isCreate,
+    enabled: Boolean(entityOrigin && originUuid) && !isCreate,
   });
   const entityListFilters = React.useMemo(
     () => parseEntityTaskListFilters(cleanedSearchParams),
@@ -1278,7 +1342,7 @@ export default function TaskWorkspacePage() {
     applications: canReadApplications ? [] : null,
     assets: canReadAssets ? [] : null,
     related_object_type: createRelation.type as TaskData['related_object_type'],
-    related_object_id: createRelation.id,
+    related_object_id: createTargetId,
     related_object_name: createRelationPreviewName,
     phase_id: form.phase_id ?? null,
     phase_name: null,
@@ -1292,7 +1356,7 @@ export default function TaskWorkspacePage() {
     company_name: null,
     created_at: '',
     updated_at: '',
-  } : null), [canReadApplications, canReadAssets, createClassification, createRelation, createRelationPreviewName, defaultTaskTypeId, form, isCreate]);
+  } : null), [canReadApplications, canReadAssets, createClassification, createRelation, createRelationPreviewName, createTargetId, defaultTaskTypeId, form, isCreate]);
 
   // The title creates the task through the route of its relation, with the defaults the creation
   // form sent with only a title; the page moves to it, every tab open, with Done and Cancel. A title
@@ -1322,13 +1386,13 @@ export default function TaskWorkspacePage() {
         ...(withClassification ? createClassification : {}),
       };
       let endpoint = '/tasks/standalone';
-      if (relation.type && relation.id) {
+      if (relation.type && createTargetId) {
         const routes: Record<string, string> = {
-          project: `/portfolio/projects/${relation.id}/tasks`,
-          spend_item: `/spend-items/${relation.id}/tasks`,
-          capex_item: `/capex-items/${relation.id}/tasks`,
-          contract: `/contracts/${relation.id}/tasks`,
-          incident: `/incidents/${relation.id}/tasks`,
+          project: `/portfolio/projects/${createTargetId}/tasks`,
+          spend_item: `/spend-items/${createTargetId}/tasks`,
+          capex_item: `/capex-items/${createTargetId}/tasks`,
+          contract: `/contracts/${createTargetId}/tasks`,
+          incident: `/incidents/${createTargetId}/tasks`,
         };
         endpoint = routes[relation.type];
       }
@@ -1337,8 +1401,8 @@ export default function TaskWorkspacePage() {
     onCreated: async (created, token, stillHere) => {
       const relation = createRelation;
       void queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      if (relation.type === 'project' && relation.id) {
-        void queryClient.invalidateQueries({ queryKey: ['project-tasks', relation.id] });
+      if (relation.type === 'project' && createTargetId) {
+        void queryClient.invalidateQueries({ queryKey: ['project-tasks', createTargetId] });
       }
       const reference = created.item_number ? formatItemRef('task', created.item_number) : created.id;
       // The create answers with the row alone (no names of its linked records): the page opens on
@@ -1513,7 +1577,7 @@ export default function TaskWorkspacePage() {
   const canConvertToRequest = canManageCurrentTask && canCreateRequest;
   const headerRelatedType = effectiveTask.related_object_type;
   const headerRelatedId = effectiveTask.related_object_id;
-  const headerProjectAddress = headerRelatedType === 'project' && headerRelatedId ? projectAddressOf(headerRelatedId) : null;
+  const headerProjectAddress = headerRelatedType === 'project' && headerRelatedId ? relatedAddressOf('project', headerRelatedId) : null;
   const sidebarProjectWorkspaceLink = (
     headerProjectAddress
       ? buildProjectWorkspacePath(headerProjectAddress, 'overview')

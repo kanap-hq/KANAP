@@ -745,7 +745,8 @@ export default function ProjectWorkspacePage() {
     const projectScope = searchParams.get('projectScope');
     const involvedUserId = searchParams.get('involvedUserId');
     const involvedTeamId = searchParams.get('involvedTeamId');
-    sp.set('projectId', form?.id || id);
+    // The project by its reference (`PRJ-3`), as its own address names it.
+    sp.set('projectId', projectMatchesCurrentRoute && data?.item_number ? formatItemRef('project', data.item_number) : (form?.id || id));
     if (sort) sp.set('projectSort', sort);
     if (q) sp.set('projectQ', q);
     if (filters) sp.set('projectFilters', filters);
@@ -754,7 +755,7 @@ export default function ProjectWorkspacePage() {
     if (involvedTeamId) sp.set('projectInvolvedTeamId', involvedTeamId);
     sp.set('projectTab', routeTab || 'tasks');
     return sp;
-  }, [form?.id, id, routeTab, searchParams]);
+  }, [data?.item_number, form?.id, id, projectMatchesCurrentRoute, routeTab, searchParams]);
 
   const navigateWithTaskWorkspaceContext = React.useCallback((path: string) => {
     if (!path.startsWith('/portfolio/tasks/')) {
@@ -1231,6 +1232,7 @@ export default function ProjectWorkspacePage() {
           <React.Suspense fallback={<WorkspaceTabLoadingFallback label={t('portfolio:workspace.project.loadingTabs.tasks')} />}>
             <ProjectTasksPanel
               projectId={form?.id || id}
+              projectAddress={projectMatchesCurrentRoute && data?.item_number ? formatItemRef('project', data.item_number) : null}
               phases={form?.phases || []}
               disabled={!canContributeToProject}
               onTasksChange={() => {

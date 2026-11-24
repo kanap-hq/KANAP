@@ -140,6 +140,7 @@ function renderPage(
       return { data: { ...(options.projectRead ? await options.projectRead : PROJECT), ...options.projectExtra } } as never;
     }
     if (url === '/budget-lines/line-1') return { data: { id: 'line-1', item_number: 4, product_name: 'Cheese cellar' } } as never;
+    if (url === '/contracts/CTR-2') return { data: { id: 'contract-2', item_number: 2, name: 'Cellar lease' } } as never;
     if (url === '/tasks/T-9' || url === '/tasks/task-new') return { data: detail(relation) } as never;
     if (url.endsWith('/task-new/creation')) return { data: { changes } } as never;
     if (url.endsWith('/attachments') || url.endsWith('/tasks')) return { data: [] } as never;
@@ -356,6 +357,15 @@ describe('Task creation at the title', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
     expect(mocked.post.mock.calls[0][0]).toBe('/spend-items/line-1/tasks');
     expect(mocked.post.mock.calls[0][1]).not.toHaveProperty('source_id');
+  });
+
+  it('creates a task of a contract named by its reference on the contract read by its uuid', async () => {
+    renderPage(['/portfolio/tasks/new/overview?contractId=CTR-2&originTab=overview'], { relation: { type: 'contract', id: 'contract-2', name: 'CTR-2 · Cellar lease' } });
+    await commitTitle();
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    expect(mocked.post.mock.calls[0][0]).toBe('/contracts/contract-2/tasks');
+    // The new task keeps the contract's reference in its address.
+    await waitFor(() => expect(location()).toBe('/portfolio/tasks/T-9/overview?contractId=CTR-2&originTab=overview'));
   });
 
   it('cancels a creation with only its title at once, and goes back where it started', async () => {

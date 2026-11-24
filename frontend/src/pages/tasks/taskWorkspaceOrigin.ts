@@ -6,6 +6,10 @@ import {
 
 export type RelatedKind = 'project' | 'spend_item' | 'capex_item' | 'contract' | 'incident';
 
+/**
+ * Where the task was opened. `id`: the origin record as its address names it, its reference
+ * (`PRJ-3`, `BL-8`, `CTR-2`, `INC-3`), or its uuid in an address written before (bookmarks, mails).
+ */
 export type TaskOrigin =
   | { kind: 'tasks' }
   | { kind: RelatedKind; id: string; tab?: string };
@@ -14,7 +18,7 @@ export type TaskParent = {
   type: RelatedKind;
   id: string;
   name: string;
-  /** The parent's address segment when it differs from its id: a project's reference (`PRJ-3`). */
+  /** The parent's reference (`PRJ-3`, `BL-8`, `CTR-2`, `INC-3`), when the page knows it: its address. */
   address?: string;
 } | null;
 
@@ -78,7 +82,8 @@ const ORIGIN_TAB_DEFAULTS: Record<RelatedKind, string> = {
   incident: 'relations',
 };
 
-const ORIGIN_ID_PARAMS: Record<RelatedKind, string> = {
+/** The address key that names each kind of origin record. */
+export const ORIGIN_ID_PARAMS: Record<RelatedKind, string> = {
   project: 'projectId',
   spend_item: 'spendItemId',
   capex_item: 'capexItemId',
@@ -156,8 +161,8 @@ export function remapProjectListContext(search: URLSearchParams): URLSearchParam
 }
 
 /**
- * The way back to where the task was opened. `originAddress`: the origin's address segment when the
- * page knows it (a project's reference, `PRJ-3`); the origin's id otherwise.
+ * The way back to where the task was opened. `originAddress`: the origin's reference when the page
+ * knows it and the address still names the origin by its uuid; the origin's address value otherwise.
  */
 export function buildOriginPath(origin: TaskOrigin, search: URLSearchParams, originAddress?: string): string {
   if (origin.kind === 'tasks') {
@@ -171,10 +176,11 @@ export function buildOriginPath(origin: TaskOrigin, search: URLSearchParams, ori
     return `/portfolio/projects/${originAddress || origin.id}/${tab}${qs ? `?${qs}` : ''}`;
   }
   const filterQs = entityTaskListFiltersSearch(search);
-  if (origin.kind === 'spend_item') return `/ops/budget/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
-  if (origin.kind === 'capex_item') return `/ops/budget/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
-  if (origin.kind === 'incident') return `/it/incidents/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
-  return `/ops/contracts/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
+  const address = originAddress || origin.id;
+  if (origin.kind === 'spend_item') return `/ops/budget/${address}/${tab}${filterQs ? `?${filterQs}` : ''}`;
+  if (origin.kind === 'capex_item') return `/ops/budget/${address}/${tab}${filterQs ? `?${filterQs}` : ''}`;
+  if (origin.kind === 'incident') return `/it/incidents/${address}/${tab}${filterQs ? `?${filterQs}` : ''}`;
+  return `/ops/contracts/${address}/${tab}${filterQs ? `?${filterQs}` : ''}`;
 }
 
 export function buildParentPath(type: RelatedKind, id: string): string {
@@ -202,30 +208,39 @@ function sameEntityId(left: string, right: string): boolean {
   return left === right || left.toLowerCase() === right.toLowerCase();
 }
 
-export function originMatchesParent(
-  origin: TaskOrigin,
-  parent: TaskParent,
-  originName?: string | null,
-): boolean {
+/** The origin is the task's own record: named by its uuid (an older address) or by its reference. */
+export function originMatchesParent(origin: TaskOrigin, parent: TaskParent): boolean {
   if (!parent || origin.kind === 'tasks' || origin.kind !== parent.type) return false;
   if (sameEntityId(origin.id, parent.id)) return true;
-  // Route refs (PRJ-6) vs stored UUIDs: same entity when the resolved names agree.
-  if (looksLikeUuid(origin.id) === looksLikeUuid(parent.id)) return false;
-  const originLabel = (originName || '').trim();
-  const parentLabel = parent.name.trim();
-  return Boolean(originLabel && parentLabel && originLabel === parentLabel);
+  return Boolean(parent.address && sameEntityId(origin.id, parent.address));
 }
 
+/** Whether an origin address names its record by uuid: an address written before the references. */
+export function originAddressIsUuid(origin: TaskOrigin): boolean {
+  return origin.kind !== 'tasks' && looksLikeUuid(origin.id);
+}
+
+/** The address query with the origin named by `address` (its reference), every other key kept. */
+export function withOriginAddress(search: URLSearchParams, kind: RelatedKind, address: string): URLSearchParams {
+  const next = new URLSearchParams(search);
+  next.set(ORIGIN_ID_PARAMS[kind], address);
+  return next;
+}
+
+/**
+ * The query that opens a task from a record's page. `entityAddress`: the record as its page's
+ * address names it, its reference (`CTR-2`), its uuid only when it has no number.
+ */
 export function buildTaskOriginSearchParams(
   entityType: RelatedKind,
-  entityId: string,
+  entityAddress: string,
   location: { pathname: string; search: string },
 ): URLSearchParams {
   const current = new URLSearchParams(location.search);
   const sp = new URLSearchParams();
 
   if (entityType === 'project') {
-    sp.set('projectId', entityId);
+    sp.set('projectId', entityAddress);
     const routeTab = location.pathname.match(ORIGIN_PATH_TAB_PATTERNS.project)?.[1];
     sp.set('projectTab', sanitizeOriginTab('project', routeTab || current.get('projectTab')));
     const sort = current.get('sort');
@@ -247,7 +262,7 @@ export function buildTaskOriginSearchParams(
     return sp;
   }
 
-  sp.set(ORIGIN_ID_PARAMS[entityType], entityId);
+  sp.set(ORIGIN_ID_PARAMS[entityType], entityAddress);
   const routeTab = location.pathname.match(ORIGIN_PATH_TAB_PATTERNS[entityType])?.[1];
   sp.set('originTab', sanitizeOriginTab(entityType, routeTab || current.get('originTab')));
   copyEntityTaskListFilters(current, sp);
@@ -267,7 +282,7 @@ export function buildTaskBreadcrumbs(args: {
   origin: TaskOrigin;
   parent: TaskParent;
   originName?: string | null;
-  /** The origin's address segment, when the page knows it (`buildOriginPath`). */
+  /** The origin's reference, when the page knows it and the address names the origin by uuid (`buildOriginPath`). */
   originAddress?: string;
   search?: URLSearchParams;
   labels: {
@@ -288,7 +303,7 @@ export function buildTaskBreadcrumbs(args: {
     variant: 'back',
   }];
 
-  if (!args.parent || originMatchesParent(args.origin, args.parent, args.originName)) return crumbs;
+  if (!args.parent || originMatchesParent(args.origin, args.parent)) return crumbs;
 
   crumbs.push({
     key: 'parent',
