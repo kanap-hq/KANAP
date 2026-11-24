@@ -534,8 +534,9 @@ An account can expect its budget lines to be built as quantity and price (see [Q
 On such a line, the **Budget** tab:
 
 - Opens an empty column on **Quantity and price**
-- Shows an info icon next to the editor title. Hover it to read which account expects it, for example "The consolidation account 2400 - IT services expects quantity and price entry." Without the right to read accounts, the sentence says "The consolidation account" with no number or name
-- Shows an orange dot on the card of each column to check, and on the tab of each year that holds one. Hover the dot to read the columns to check. With a single shown column, the dot sits next to the editor title
+- Shows an orange dot on the card of each column to check. Hover the dot to read which account expects it, for example "The consolidation account 2400 - IT services expects quantity and price entry." Without the right to read accounts, the sentence says "The consolidation account" with no number or name. With a single shown column, the dot sits next to the editor title
+- Shows an orange dot on the tab of each year that holds a column to check. Its sentence ends with the columns to check, for example "The line's account expects quantity and price entry: Budget and Expected landing."
+- Shows an info icon next to the editor title when the column in the editor is not to check. It gives the same sentence, which says why the column opens on **Quantity and price**
 
 A column is to check when it is shown, is not frozen, has a total other than zero for the year, and is not built from quantity and price lines. Every year counts. A spread, a column entered by month or edited by hand, and a column that keeps its lines only as a reference are to check. A column copied from a column built from lines is built from lines too, so it is not.
 

@@ -1789,11 +1789,11 @@
       "waiting": "Wartet auf Ihre Wahl"
     },
     "entryCheck": {
-      "account": "Das Konto der Zeile erwartet eine Erfassung nach Menge und Preis.",
-      "consolidationNamed": "Das Konsolidierungskonto {{account}} erwartet eine Erfassung nach Menge und Preis.",
-      "consolidation": "Das Konsolidierungskonto erwartet eine Erfassung nach Menge und Preis.",
-      "column": "{{column}} {{year}} zu prüfen.",
-      "year": "Zu prüfen in {{year}}: {{columns}}."
+      "account": "Das Konto der Zeile erwartet eine Erfassung nach Menge und Preis",
+      "consolidationNamed": "Das Konsolidierungskonto {{account}} erwartet eine Erfassung nach Menge und Preis",
+      "consolidation": "Das Konsolidierungskonto erwartet eine Erfassung nach Menge und Preis",
+      "sentence": "{{reason}}.",
+      "withColumns": "{{reason}}: {{columns}}."
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "Aufbau der Spalte",

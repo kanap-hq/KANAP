@@ -124,14 +124,14 @@ export default function ColumnEditor({ tab, i18nPrefix, effectiveStart, endOfVal
   const title = t('budgetTab.editorTitle', { column: label, year });
   const record = recordFor(col);
 
-  // The account expects quantity and price: an icon beside the title says which one. With one column
-  // (no cards), the column's own mark when it is to check sits there too.
-  const columnCheck = single ? tab.entryColumnText(col) : null;
-  const entryMarks = (tab.entryExpected || columnCheck) && (
-    <>
-      {tab.entryExpected && <InfoHint text={tab.entryExpected} />}
-      {columnCheck && <EntryCheckDot text={columnCheck} testId={`entry-check-${col}`} />}
-    </>
+  // The account expects quantity and price: an icon beside the title says which one, for a column that
+  // conforms (why it opens in quantity and price). A column to check has its orange dot instead, which
+  // says the same sentence: on its card, or here with one column (no cards). Never both (D13).
+  const columnToCheck = tab.entryColumnText(col);
+  const entryMarks = tab.entryExpected && (
+    columnToCheck
+      ? (single ? <EntryCheckDot text={columnToCheck} testId={`entry-check-${col}`} /> : null)
+      : <InfoHint text={tab.entryExpected} />
   );
   const titleRowSx = { display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 } as const;
 

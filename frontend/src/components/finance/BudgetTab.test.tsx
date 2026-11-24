@@ -3452,20 +3452,23 @@ describe('BudgetTab: the account expects quantity and price (lot B12a)', () => {
       entryCheck: expected([{ year: YEAR, measure: 'planned' }, { year: YEAR, measure: 'forecast' }, { year: YEAR + 1, measure: 'committed' }]),
     });
     await waitForAmounts();
-    // The reason once, on the icon beside the title; the dots say the column or the year only.
-    const planned = within(card('planned')).getByRole('img', { name: `${label('planned')} ${YEAR} to check.` });
+    // The dot of a column says the problem and what is expected, the reason itself (D13).
+    const planned = within(card('planned')).getByRole('img', { name: ACCOUNT });
     expect(planned).toHaveAttribute('data-testid', 'entry-check-planned');
-    expect(within(card('forecast')).getByTestId('entry-check-forecast')).toBeInTheDocument();
+    expect(within(card('forecast')).getByRole('img', { name: ACCOUNT })).toHaveAttribute('data-testid', 'entry-check-forecast');
     // A column of another year is marked on that year only.
     expect(within(card('committed')).queryByTestId('entry-check-committed')).not.toBeInTheDocument();
-    expect(within(editor()).getByRole('img', { name: ACCOUNT })).toBeInTheDocument();
-    // A year tab keeps the year as its name, the columns to check as its description.
+    // The active column has its dot: no icon beside the title saying the same sentence.
+    expect(within(editor()).queryByRole('img', { name: ACCOUNT })).not.toBeInTheDocument();
+    // A year tab keeps the year as its name, the reason and its columns to check as its description.
     expect(screen.getByTestId(`year-mark-${YEAR}`)).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: String(YEAR) })).toHaveAccessibleDescription(`To check in ${YEAR}: ${label('planned')} and ${label('forecast')}.`);
-    expect(screen.getByRole('tab', { name: String(YEAR + 1) })).toHaveAccessibleDescription(`To check in ${YEAR + 1}: ${label('committed')}.`);
-    // Read again after a save: the column built as quantity and price leaves the list, its mark goes.
+    expect(screen.getByRole('tab', { name: String(YEAR) })).toHaveAccessibleDescription(`The line's account expects quantity and price entry: ${label('planned')} and ${label('forecast')}.`);
+    expect(screen.getByRole('tab', { name: String(YEAR + 1) })).toHaveAccessibleDescription(`The line's account expects quantity and price entry: ${label('committed')}.`);
+    // Read again after a save: the column built as quantity and price leaves the list, its mark goes,
+    // and the icon beside the title says why the column (now conforming) opens in quantity and price.
     view.rerenderEntryCheck(expected([{ year: YEAR, measure: 'forecast' }]));
     expect(within(card('planned')).queryByTestId('entry-check-planned')).not.toBeInTheDocument();
+    expect(within(editor()).getByRole('img', { name: ACCOUNT })).toBeInTheDocument();
     expect(within(card('forecast')).getByTestId('entry-check-forecast')).toBeInTheDocument();
     expect(screen.queryByTestId(`year-mark-${YEAR + 1}`)).not.toBeInTheDocument();
     view.rerenderEntryCheck(expected([]));
@@ -3490,8 +3493,28 @@ describe('BudgetTab: the account expects quantity and price (lot B12a)', () => {
     renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: expected([{ year: YEAR, measure: 'planned' }]) });
     await waitForAmounts();
     expect(editor()).toHaveAttribute('data-read-only', 'true');
+    expect(within(card('planned')).getByRole('img', { name: ACCOUNT })).toHaveAttribute('data-testid', 'entry-check-planned');
+    pick('forecast');
     expect(within(editor()).getByRole('img', { name: ACCOUNT })).toBeInTheDocument();
-    expect(within(card('planned')).getByTestId('entry-check-planned')).toBeInTheDocument();
+  });
+
+  it('with one shown column, puts its dot beside the editor title in place of the icon, naming the consolidation account only for a reader of the accounts', async () => {
+    columnsSetting.current = { ...DEFAULT_BUDGET_COLUMNS, enabled: { planned: true, committed: false, forecast: false, actual: false, expected_landing: false } };
+    setupApi();
+    const named = expected([{ year: YEAR, measure: 'planned' }], 'consolidation', { number: 2400, name: 'Services extérieurs' });
+    const view = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: named });
+    await waitForAmounts();
+    const sentence = 'The consolidation account 2400 - Services extérieurs expects quantity and price entry.';
+    expect(within(editor()).getByRole('img', { name: sentence })).toHaveAttribute('data-testid', 'entry-check-planned');
+    expect(within(editor()).getAllByRole('img', { name: /quantity and price/ })).toHaveLength(1);
+    expect(screen.getByRole('tab', { name: String(YEAR) })).toHaveAccessibleDescription(
+      `The consolidation account 2400 - Services extérieurs expects quantity and price entry: Budget.`,
+    );
+    // Without the right to read the accounts: neither number nor name, in the dot or on the year.
+    view.rerenderEntryCheck({ ...named, consolidation_account: null });
+    expect(within(editor()).getByRole('img', { name: 'The consolidation account expects quantity and price entry.' })).toHaveAttribute('data-testid', 'entry-check-planned');
+    expect(screen.getByRole('tab', { name: String(YEAR) })).toHaveAccessibleDescription('The consolidation account expects quantity and price entry: Budget.');
+    expect(document.body.textContent).not.toMatch(/2400|Services extérieurs/);
   });
 
   it('shows nothing of it when the account expects nothing: an empty column opens on an amount', async () => {

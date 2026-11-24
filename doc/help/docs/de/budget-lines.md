@@ -533,8 +533,9 @@ Ein Konto kann erwarten, dass seine Budgetzeilen nach Menge und Preis aufgebaut 
 Auf einer solchen Zeile gilt im Tab **Budget**:
 
 - Eine leere Spalte öffnet sich auf **Menge und Preis**
-- Neben dem Titel des Editors steht ein Infosymbol. Fahren Sie mit der Maus darüber, um zu lesen, welches Konto sie erwartet, zum Beispiel „Das Konsolidierungskonto 2400 - IT-Dienstleistungen erwartet eine Erfassung nach Menge und Preis.“ Ohne das Recht, Konten zu lesen, sagt der Satz „Das Konsolidierungskonto“, ohne Nummer und Namen
-- Ein orangefarbener Punkt steht auf der Karte jeder zu prüfenden Spalte und auf dem Tab jedes Jahres, das eine enthält. Fahren Sie mit der Maus über den Punkt, um die zu prüfenden Spalten zu lesen. Bei einer einzigen angezeigten Spalte steht der Punkt neben dem Titel des Editors
+- Ein orangefarbener Punkt steht auf der Karte jeder zu prüfenden Spalte. Fahren Sie mit der Maus über den Punkt, um zu lesen, welches Konto sie erwartet, zum Beispiel „Das Konsolidierungskonto 2400 - IT-Dienstleistungen erwartet eine Erfassung nach Menge und Preis.“ Ohne das Recht, Konten zu lesen, sagt der Satz „Das Konsolidierungskonto“, ohne Nummer und Namen. Bei einer einzigen angezeigten Spalte steht der Punkt neben dem Titel des Editors
+- Ein orangefarbener Punkt steht auf dem Tab jedes Jahres, das eine zu prüfende Spalte enthält. Sein Satz endet mit den zu prüfenden Spalten, zum Beispiel „Das Konto der Zeile erwartet eine Erfassung nach Menge und Preis: Budget und Erwarteter Endwert.“
+- Neben dem Titel des Editors steht ein Infosymbol, wenn die Spalte im Editor nicht zu prüfen ist. Es zeigt denselben Satz, der sagt, warum sich die Spalte auf **Menge und Preis** öffnet
 
 Eine Spalte ist zu prüfen, wenn sie angezeigt wird, nicht eingefroren ist, für das Jahr eine Summe ungleich null hat und nicht aus Zeilen nach Menge und Preis aufgebaut ist. Jedes Jahr zählt. Eine verteilte, monatlich erfasste oder von Hand geänderte Spalte und eine Spalte, die ihre Zeilen nur als Referenz behält, sind zu prüfen. Eine Spalte, die aus einer aus Zeilen aufgebauten Spalte kopiert wurde, ist ebenfalls aus Zeilen aufgebaut: Sie ist nicht zu prüfen.
 

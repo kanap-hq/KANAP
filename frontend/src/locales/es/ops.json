@@ -1789,11 +1789,11 @@
       "waiting": "Pendiente de su elección"
     },
     "entryCheck": {
-      "account": "La cuenta de la línea espera una introducción por cantidad y precio.",
-      "consolidationNamed": "La cuenta de consolidación {{account}} espera una introducción por cantidad y precio.",
-      "consolidation": "La cuenta de consolidación espera una introducción por cantidad y precio.",
-      "column": "{{column}} {{year}} por verificar.",
-      "year": "Por verificar en {{year}}: {{columns}}."
+      "account": "La cuenta de la línea espera una introducción por cantidad y precio",
+      "consolidationNamed": "La cuenta de consolidación {{account}} espera una introducción por cantidad y precio",
+      "consolidation": "La cuenta de consolidación espera una introducción por cantidad y precio",
+      "sentence": "{{reason}}.",
+      "withColumns": "{{reason}}: {{columns}}."
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "Construcción de la columna",

@@ -533,8 +533,9 @@ Un compte peut attendre que ses lignes budgétaires soient construites en quanti
 Sur une telle ligne, l'onglet **Budget** :
 
 - Ouvre une colonne vide sur **Quantité et prix**
-- Affiche une icône d'information à côté du titre de l'éditeur. Survolez-la pour lire quel compte l'attend, par exemple « Le compte de consolidation 2400 - Services informatiques attend une saisie en quantité et prix. » Sans le droit de lire les comptes, la phrase dit « Le compte de consolidation », sans numéro ni nom
-- Affiche un point orange sur la carte de chaque colonne à vérifier, et sur l'onglet de chaque année qui en contient une. Survolez le point pour lire les colonnes à vérifier. Avec une seule colonne affichée, le point se place à côté du titre de l'éditeur
+- Affiche un point orange sur la carte de chaque colonne à vérifier. Survolez le point pour lire quel compte l'attend, par exemple « Le compte de consolidation 2400 - Services informatiques attend une saisie en quantité et prix. » Sans le droit de lire les comptes, la phrase dit « Le compte de consolidation », sans numéro ni nom. Avec une seule colonne affichée, le point se place à côté du titre de l'éditeur
+- Affiche un point orange sur l'onglet de chaque année qui contient une colonne à vérifier. Sa phrase se termine par les colonnes à vérifier, par exemple « Le compte de la ligne attend une saisie en quantité et prix : Budget et Atterrissage prévu. »
+- Affiche une icône d'information à côté du titre de l'éditeur quand la colonne de l'éditeur n'est pas à vérifier. Elle donne la même phrase, qui dit pourquoi la colonne s'ouvre sur **Quantité et prix**
 
 Une colonne est à vérifier quand elle est affichée, n'est pas gelée, a un total non nul pour l'année et n'est pas construite à partir de lignes en quantité et prix. Toutes les années comptent. Une colonne répartie, saisie par mois ou modifiée à la main, et une colonne qui ne garde ses lignes qu'en référence sont à vérifier. Une colonne copiée d'une colonne construite à partir de lignes est elle aussi construite à partir de lignes : elle n'est pas à vérifier.
 

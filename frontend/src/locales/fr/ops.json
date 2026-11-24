@@ -1790,11 +1790,11 @@
       "waiting": "En attente de votre choix"
     },
     "entryCheck": {
-      "account": "Le compte de la ligne attend une saisie en quantité et prix.",
-      "consolidationNamed": "Le compte de consolidation {{account}} attend une saisie en quantité et prix.",
-      "consolidation": "Le compte de consolidation attend une saisie en quantité et prix.",
-      "column": "{{column}} {{year}} à vérifier.",
-      "year": "À vérifier en {{year}} : {{columns}}."
+      "account": "Le compte de la ligne attend une saisie en quantité et prix",
+      "consolidationNamed": "Le compte de consolidation {{account}} attend une saisie en quantité et prix",
+      "consolidation": "Le compte de consolidation attend une saisie en quantité et prix",
+      "sentence": "{{reason}}.",
+      "withColumns": "{{reason}} : {{columns}}."
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "Construction de la colonne",

@@ -533,8 +533,9 @@ Una cuenta puede esperar que sus líneas presupuestarias se construyan por canti
 En una línea así, la pestaña **Presupuesto**:
 
 - Abre una columna vacía en **Cantidad y precio**
-- Muestra un icono de información junto al título del editor. Pase el cursor por encima para leer qué cuenta la espera, por ejemplo «La cuenta de consolidación 2400 - Servicios informáticos espera una introducción por cantidad y precio.» Sin el derecho de leer las cuentas, la frase dice «La cuenta de consolidación», sin número ni nombre
-- Muestra un punto naranja en la tarjeta de cada columna por verificar, y en la pestaña de cada año que contiene una. Pase el cursor por encima del punto para leer las columnas por verificar. Con una sola columna mostrada, el punto aparece junto al título del editor
+- Muestra un punto naranja en la tarjeta de cada columna por verificar. Pase el cursor por encima del punto para leer qué cuenta la espera, por ejemplo «La cuenta de consolidación 2400 - Servicios informáticos espera una introducción por cantidad y precio.» Sin el derecho de leer las cuentas, la frase dice «La cuenta de consolidación», sin número ni nombre. Con una sola columna mostrada, el punto aparece junto al título del editor
+- Muestra un punto naranja en la pestaña de cada año que contiene una columna por verificar. Su frase termina con las columnas por verificar, por ejemplo «La cuenta de la línea espera una introducción por cantidad y precio: Presupuesto y Aterrizaje previsto.»
+- Muestra un icono de información junto al título del editor cuando la columna del editor no está por verificar. Da la misma frase, que dice por qué la columna se abre en **Cantidad y precio**
 
 Una columna está por verificar cuando se muestra, no está congelada, tiene un total distinto de cero para el año y no está construida a partir de líneas de cantidad y precio. Cuentan todos los años. Una columna repartida, introducida por mes o editada a mano, y una columna que conserva sus líneas solo como referencia están por verificar. Una columna copiada de una columna construida a partir de líneas también está construida a partir de líneas: no está por verificar.
 
