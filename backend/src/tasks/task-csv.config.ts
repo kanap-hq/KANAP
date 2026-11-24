@@ -607,6 +607,8 @@ async function followTaskObjects(rows: CsvImportRow[], context: CsvImportContext
       const cell = given.kind === 'value' ? given.text : '';
       if (!allowed && cell) {
         row.warnings = row.warnings.filter((warning) => warning.column !== column || !LOOKUP_MISSES.has(String(warning.code)));
+        // A name several records share is not looked up either (lot I7a of 26.12.1).
+        if (row.pendingNames) row.pendingNames = row.pendingNames.filter((pending) => pending.column !== column);
         row.warnings.push(key === 'phase_id'
           ? { row: row.rowNumber, column, message: `"${cell}" is not imported: only a project task has a phase.`, code: 'CSV_TASK_PHASE_OUTSIDE_PROJECT', params: { value: cell } }
           : { row: row.rowNumber, column, message: `"${cell}" is not imported: only a standalone or project task has a classification.`, code: 'CSV_TASK_CLASSIFICATION_NOT_ALLOWED', params: { value: cell } });
@@ -1103,6 +1105,28 @@ export const taskCsvConfig: CsvEntityConfig = {
         if (String(value).toLowerCase() === project[key]!.toLowerCase()) delete row.parsed[key];
       }
     }
+  },
+
+  /**
+   * A task of a project shows its project's category and stream where it has none of its own: a stream
+   * name several streams share is looked up in that category, and the pair check compares with them
+   * (lot I7a of 26.12.1).
+   */
+  inheritedValues: async (rows, context) => {
+    const pick = (row: CsvImportRow, key: string) => (Object.prototype.hasOwnProperty.call(row.parsed, key) ? row.parsed[key] : row.existingEntity?.[key]);
+    const projectOf = new Map<CsvImportRow, string>();
+    for (const row of rows) {
+      if (String(pick(row, 'related_object_type') ?? '').trim().toLowerCase() !== 'project') continue;
+      const id = String(pick(row, 'related_object_id') ?? '').trim().toLowerCase();
+      if (TASK_UUID_RE.test(id)) projectOf.set(row, id);
+    }
+    const projects = await taskProjectClassifications(context.manager, context.tenantId, [...projectOf.values()]);
+    const inherited = new Map<CsvImportRow, Record<string, string | null>>();
+    for (const [row, id] of projectOf) {
+      const project = projects.get(id);
+      if (project) inherited.set(row, { category_id: project.category_id, stream_id: project.stream_id });
+    }
+    return inherited;
   },
 
   /**

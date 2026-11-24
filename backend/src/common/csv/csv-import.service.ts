@@ -27,7 +27,8 @@ import {
   CsvImportRow,
   CsvImportWarning,
 } from './csv-field.types';
-import { CsvResolverService } from './csv-resolver.service';
+import { CsvResolverService, type FkNameLookup } from './csv-resolver.service';
+import { checkImportMembership, settlePendingNames } from './csv-membership';
 import { listedMatches, listedRefusedProposals, noteNameMatch, noteRefusedProposal, proposalFor, undoneMatch } from '../name-matching';
 import { denormalizeCsvFormulaValue } from './csv-export.service';
 import { CsvJsonValidators } from './csv-json-validators';
@@ -81,7 +82,7 @@ export interface CsvImportOptions {
 }
 
 /** A reference cell nothing finds, or that may name several records: what parseFk and the lists do with it. */
-type ReferenceLookup = { id: string } | { many: string[] } | null;
+type ReferenceLookup = { id: string } | { many: string[]; scoped?: Extract<FkNameLookup, { kind: 'many' }>['scoped'] } | null;
 
 /** What the import needs to know of a stored column to clear it. */
 interface StoredColumn {
@@ -229,9 +230,16 @@ export class CsvImportService {
 
     // The rows the config left out (`settleRows`) are neither read nor written.
     const readRows = parsedRows.filter((row) => !row.leftOut);
+    // A name several records share, in the row's parent (lot I7a of 26.12.1): before the hooks when
+    // the row or its record gives the parent, after them from what the record inherits.
+    settlePendingNames(readRows, importFields, context, this.resolver, { inherited: null, final: false, waits: !!config.inheritedValues });
     if (config.afterValidate) await config.afterValidate(readRows, context);
+    const inherited = config.inheritedValues ? await config.inheritedValues(readRows, context) : null;
+    settlePendingNames(readRows, importFields, context, this.resolver, { inherited, final: true, waits: false });
     if (rules) this.checkClearedColumns(readRows, rules, params.operation);
     this.clearKeptReferencesOfChangedOwners(readRows, importFields);
+    // A stream in its category, a department in its company (`common/record-membership.ts`).
+    checkImportMembership(readRows, importFields, context, this.resolver, inherited);
 
     // Collect all errors
     const allErrors: CsvImportError[] = [];
@@ -1262,12 +1270,20 @@ export class CsvImportService {
     field: CsvFieldDefinition,
     row: CsvImportRow,
     context: CsvImportContext,
-  ): string | null {
+  ): string | null | undefined {
     if (!field.fkEntity) {
       return value;
     }
 
     const found = this.findReference(field.fkEntity, field.csvColumn, value, row, context, field.nameMatchedByConfig === true);
+    if (found && 'many' in found && found.scoped) {
+      // Several records of the name, each in its parent: looked up in the row's parent once it is read.
+      (row.pendingNames ??= []).push({
+        column: field.csvColumn, property: field.entityProperty, fkEntity: field.fkEntity, value: value.trim(),
+        entries: found.scoped.entries, how: found.scoped.how,
+      });
+      return undefined;
+    }
     if (found && 'many' in found) {
       const { code, message, params } = this.ambiguity(field.fkEntity, value, found.many);
       throw new CsvCellError(code, message, params);
@@ -1334,7 +1350,7 @@ export class CsvImportService {
     const beyondCase = !undone && reads;
     const found = this.resolver.resolveName(fkEntity, value, context.resolverCache, { beyondCase });
     if (found.kind === 'none') return null;
-    if (found.kind === 'many') return { many: found.names };
+    if (found.kind === 'many') return { many: found.names, ...(found.scoped ? { scoped: found.scoped } : {}) };
     if (found.how === 'accents' || found.how === 'translation') {
       if (undone) return null;
       if (context.nameMatches) {
