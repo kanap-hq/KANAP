@@ -735,7 +735,7 @@
       "notified_parties": "Parties informées",
       "base_url": "URL de base",
       "capex_item_id": "Ligne CAPEX",
-      "department_id": "Direction",
+      "department_id": "Département",
       "server_role": "Rôle du serveur",
       "since_date": "Depuis",
       "suite_id": "Suite",
@@ -1251,8 +1251,8 @@
           "removed": "Serveur retiré : {{label}}"
         },
         "department": {
-          "added": "Direction ajoutée : {{label}}",
-          "removed": "Direction retirée : {{label}}"
+          "added": "Département ajouté : {{label}}",
+          "removed": "Département retiré : {{label}}"
         },
         "suite": {
           "added": "Suite ajoutée : {{label}}",
@@ -1320,7 +1320,7 @@
         "connection": "une connexion",
         "interface": "une interface",
         "incident": "un incident",
-        "department": "un service",
+        "department": "un département",
         "business_process": "un processus métier",
         "calendar": "un calendrier de jours ouvrés",
         "analytics_axis": "une dimension analytique",
@@ -1383,7 +1383,7 @@
         "connection": "une connexion supprimée",
         "interface": "une interface supprimée",
         "incident": "un incident supprimé",
-        "department": "un service supprimé",
+        "department": "un département supprimé",
         "business_process": "un processus métier supprimé",
         "calendar": "un calendrier de jours ouvrés supprimé",
         "analytics_axis": "une dimension analytique supprimée",
