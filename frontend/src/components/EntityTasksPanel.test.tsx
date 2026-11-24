@@ -1,8 +1,8 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../config/ThemeContext';
 import i18n from '../i18n';
@@ -108,5 +108,28 @@ describe('EntityTasksPanel task creation', () => {
     expect(frenchDate).toMatch(/avr/i);
     expect(await screen.findByText(frenchDate)).toBeInTheDocument();
     expect(screen.queryByText('4/30/2026')).toBeNull();
+  });
+
+  it('opens a task by its reference', async () => {
+    get.mockResolvedValue({ data: [TASK] });
+    function Location() {
+      const location = useLocation();
+      return <div data-testid="location">{location.pathname}</div>;
+    }
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={['/ops/contracts/contract-1/overview']}>
+            <Location />
+            <Routes>
+              <Route path="/ops/contracts/:id/:tab" element={<EntityTasksPanel entityType="contract" entityId="contract-1" />} />
+              <Route path="/portfolio/tasks/:id" element={null} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByText('Relire le contrat'));
+    expect(screen.getByTestId('location')).toHaveTextContent('/portfolio/tasks/T-4');
   });
 });

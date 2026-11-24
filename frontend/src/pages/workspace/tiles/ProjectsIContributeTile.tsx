@@ -11,6 +11,7 @@ import {
 import TaskIcon from '@mui/icons-material/Task';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../api';
+import { buildItemPath, itemAddress } from '../../../utils/item-ref';
 import { useTranslation } from 'react-i18next';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
 import { projectStatusLabel } from './tileLabels';
@@ -18,6 +19,7 @@ import { getDotColor, getPillBg, PROJECT_STATUS_COLORS } from '../../../utils/st
 
 interface MyContributionProject {
   id: string;
+  item_number?: number | null;
   name: string;
   status: string;
   team: 'it_team' | 'business_team';
@@ -76,7 +78,7 @@ export default function ProjectsIContributeTile({ config }: ProjectsIContributeT
           {projects.map((project) => (
             <ListItemButton
               key={project.id}
-              onClick={() => navigate(`/portfolio/projects/${project.id}`)}
+              onClick={() => navigate(buildItemPath('project', itemAddress('project', project)))}
               sx={{ py: 0.5 }}
             >
               <ListItemText

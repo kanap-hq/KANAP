@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api';
 import type { TaskStatus } from '../pages/tasks/task.constants';
 import { buildTaskOriginSearchParams } from '../pages/tasks/taskWorkspaceOrigin';
+import { itemAddress } from '../utils/item-ref';
 
 /** A task of a project, a budget line, a contract or an incident, as its owner's route lists it. */
 export type EntityTask = {
@@ -45,10 +46,11 @@ export function useEntityTasks(entityType: EntityType, entityId: string) {
     () => buildTaskOriginSearchParams(entityType, entityId, { pathname: location.pathname, search: location.search }),
     [entityId, entityType, location.pathname, location.search],
   );
+  // A task's address names it by its reference (`T-4`), by its uuid only when it has no number.
   const taskPath = React.useCallback(
-    (taskId: string) => {
+    (task: Pick<EntityTask, 'id' | 'item_number'>) => {
       const qs = originSearchParams.toString();
-      return `/portfolio/tasks/${taskId}${qs ? `?${qs}` : ''}`;
+      return `/portfolio/tasks/${itemAddress('task', task)}${qs ? `?${qs}` : ''}`;
     },
     [originSearchParams],
   );
@@ -72,7 +74,7 @@ export function useEntityTasks(entityType: EntityType, entityId: string) {
     isLoading: query.isLoading,
     refetch: query.refetch,
     taskPath,
-    openTask: (taskId: string) => navigate(taskPath(taskId)),
+    openTask: (task: Pick<EntityTask, 'id' | 'item_number'>) => navigate(taskPath(task)),
     createTask,
   };
 }

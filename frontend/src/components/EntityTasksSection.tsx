@@ -136,8 +136,8 @@ export default function EntityTasksSection({ entityType, entityId, disabled = fa
                     key={task.id}
                     className="clickable"
                     tabIndex={0}
-                    onClick={() => openTask(task.id)}
-                    onKeyDown={(event) => { if (event.key === 'Enter') openTask(task.id); }}
+                    onClick={() => openTask(task)}
+                    onKeyDown={(event) => { if (event.key === 'Enter') openTask(task); }}
                   >
                     <Box component="td" sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: '12px !important', color: 'kanap.text.tertiary !important' }}>
                       {task.item_number ? formatItemRef('task', task.item_number) : ''}

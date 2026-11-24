@@ -55,4 +55,12 @@ describe('ConvertToProjectDialog effort', () => {
     }));
     expect(onSuccess).toHaveBeenCalledWith('prj-1');
   });
+
+  it('hands back the created project by its reference, so the page opens at PRJ-n', async () => {
+    api.post.mockResolvedValue({ data: { id: 'prj-1', item_number: 12 } });
+    const { onSuccess } = renderDialog();
+    await screen.findByRole('textbox', { name: 'Charge IT (JH)' });
+    fireEvent.click(screen.getByRole('button', { name: 'Créer le projet' }));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('PRJ-12'));
+  });
 });

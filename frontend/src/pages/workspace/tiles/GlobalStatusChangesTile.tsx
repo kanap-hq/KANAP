@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDate } from '../../../lib/dateFormat';
 import api from '../../../api';
+import { buildItemPath, itemAddress } from '../../../utils/item-ref';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
 import { projectStatusLabel } from './tileLabels';
 import { getDotColor, getPillBg, PROJECT_STATUS_COLORS } from '../../../utils/statusColors';
@@ -19,6 +20,7 @@ import { getDotColor, getPillBg, PROJECT_STATUS_COLORS } from '../../../utils/st
 interface ProjectStatusChangeItem {
   id: string;
   projectId: string;
+  projectItemNumber?: number | null;
   projectName: string;
   previousStatus: string | null;
   nextStatus: string | null;
@@ -70,7 +72,7 @@ export default function GlobalStatusChangesTile({ config }: GlobalStatusChangesT
           {items.map((item) => (
             <ListItemButton
               key={item.id}
-              onClick={() => navigate(`/portfolio/projects/${item.projectId}/activity`)}
+              onClick={() => navigate(`${buildItemPath('project', itemAddress('project', { id: item.projectId, item_number: item.projectItemNumber }))}/activity`)}
               sx={{ py: 0.5, alignItems: 'flex-start' }}
             >
               <ListItemText

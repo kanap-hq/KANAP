@@ -214,7 +214,7 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
                     component="a"
                     noWrap
                     title={task.title}
-                    onClick={() => navigate(buildTaskWorkspacePath(task.id))}
+                    onClick={() => navigate(buildTaskWorkspacePath(task))}
                     sx={{
                       display: 'block',
                       maxWidth: 360,
@@ -267,7 +267,7 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
                   <IconButton
                     size="small"
                     title={t('portfolio:shared.entityTasksPanel.actions.openTask')}
-                    onClick={() => navigate(buildTaskWorkspacePath(task.id))}
+                    onClick={() => navigate(buildTaskWorkspacePath(task))}
                   >
                     <OpenInNewIcon fontSize="small" />
                   </IconButton>
