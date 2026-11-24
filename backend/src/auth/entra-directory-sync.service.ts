@@ -338,7 +338,7 @@ export class EntraDirectorySyncService implements OnModuleInit {
       const company = await manager
         .getRepository(Company)
         .createQueryBuilder('c')
-        .where('LOWER(c.name) = LOWER(:name)', { name: companyName })
+        .where('c.tenant_id = :tenantId AND LOWER(c.name) = LOWER(:name)', { tenantId: user.tenant_id, name: companyName })
         .getOne();
       if (company) given.company_id = company.id;
     }
@@ -348,7 +348,7 @@ export class EntraDirectorySyncService implements OnModuleInit {
       const candidates = await manager
         .getRepository(Department)
         .createQueryBuilder('d')
-        .where('LOWER(d.name) = LOWER(:name)', { name: departmentName })
+        .where('d.tenant_id = :tenantId AND LOWER(d.name) = LOWER(:name)', { tenantId: user.tenant_id, name: departmentName })
         .getMany();
       const companyId = given.company_id ?? stored.company_id;
       const match = companyId
