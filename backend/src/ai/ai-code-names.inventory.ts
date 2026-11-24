@@ -5,113 +5,18 @@
  */
 
 /**
- * Codes still read without their name, with where the screen takes the name (a locale object
- * `namespace:path` of the frontend, a catalog of the workspace, or the screen that holds the words).
- * Naming one is an entry of `AI_CODE_LISTS` (a copy checked against that object, or a catalog) and
- * of `AI_NAMED_FIELDS`, and its removal from here. An item's `status` that repeats a field is
- * named with that field.
+ * Codes read without their name because no screen names them: the screen shows the value another
+ * way (a row present or absent, a country column), and no locale key holds a word for each code in
+ * the four languages. A list is not invented for Kad alone; naming one of these needs the screen's
+ * words first, then an entry of `AI_CODE_LISTS` and of `AI_NAMED_FIELDS`, and its removal from here.
  */
 export const AI_CODE_NAMES_PENDING: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  applications: {
-    classification_review_state: 'frontend pages/it/ApplicationsPage.tsx and components/ApplicationClassificationPanel.tsx (review state words: incomplete, stale, reviewed)',
-    users_mode: 'admin:auditLogs.values.usersMode',
-    data_residency: 'country names: frontend/src/i18n/countries (countryNameFor)',
-    vulnerabilities: 'it:pages.technologies.vulnerabilityFilter (severe, any, none)',
-  },
-  assets: {
-    provider: 'catalog hostingTypes, else catalog serverProviders (it:catalogDefaults.hostingTypes / serverProviders)',
-    vulnerabilities: 'it:pages.technologies.vulnerabilityFilter (severe, any, none)',
-  },
-  chart_of_accounts: {
-    scope: 'frontend pages/coa/coaRoles.ts (GLOBAL, COUNTRY)',
-    country_iso: 'country names: frontend/src/i18n/countries (countryNameFor)',
-  },
-  companies: {
-    country: 'country names: frontend/src/i18n/countries (countryNameFor)',
-    country_iso: 'country names: frontend/src/i18n/countries (countryNameFor)',
-  },
-  contacts: {
-    country: 'country names: frontend/src/i18n/countries (countryNameFor)',
-  },
-  locations: {
-    provider: 'frontend pages/it location workspace: provider (catalog serverProviders, or an operating company name)',
-    country: 'country names: frontend/src/i18n/countries (countryNameFor)',
-    country_iso: 'country names: frontend/src/i18n/countries (countryNameFor)',
-  },
-  connections: {
-    topology: 'it:enums.topology (camel case keys)',
-    risk_mode: 'it:enums.riskMode',
-  },
-  interfaces: {
-    integration_route_type: 'it:enums.routeType (camel case keys)',
-  },
-  data_access: {
-    status: 'the item\'s access (same words as access)',
-    node_type: 'frontend pages/admin/DataAccessPage.tsx and components/dataAccess (all data, company, cost center)',
-    node_kind: 'admin:auditLogs.values.costCenterKind (group, cost_center)',
-    access: 'admin:dataAccess.access (read, edit)',
-  },
-  documents: {
-    status: 'knowledge:statuses',
-  },
-  roles: {
-    status: 'the role\'s type (same words as type)',
-    type: 'frontend pages/UsersPage.tsx and components/fields/MultiRoleSelect.tsx role badges (system, built_in, custom)',
-  },
-  role_permissions: {
-    role_type: 'frontend pages/UsersPage.tsx and components/fields/MultiRoleSelect.tsx role badges (system, built_in, custom)',
-  },
-  support_deadlines: {
-    status: 'the row\'s state (same words as state)',
-    subject_type: 'it:pages.endOfSupport.types',
-    state: 'it:pages.endOfSupport.states',
-    milestone: 'it:pages.endOfSupport.milestones',
-  },
-  support_gaps: {
-    status: 'the row\'s gap (same words as gap)',
-    gap: 'it:pages.endOfSupport.gaps',
-    subject_type: 'it:pages.endOfSupport (types of the records to complete: application, asset, technology)',
-    related_type: 'it:pages.endOfSupport (types of the records to complete: asset, application)',
-  },
-  tasks: {
-    related: 'common:relatedObject.types (camel case keys; budget_line is a line of either nature)',
-  },
-  technologies: {
-    support_status: 'frontend pages/it/TechnologiesPage.tsx and TechnologyWorkspacePage.tsx support state words (End of support report)',
-  },
-  technology_versions: {
-    status: 'the version\'s support state (same words as support_status)',
-    support_status: 'frontend pages/it/TechnologyWorkspacePage.tsx support state words (End of support report)',
-  },
   users: {
-    data_access: 'frontend components/dataAccess/dataAccess.ts (all data, limited)',
-    locale: 'settings:profile language names',
-    contributor_profile: 'frontend users list, contributor profile column (configured, not_configured)',
-  },
-  vulnerabilities: {
-    severity: 'it:pages.vulnerabilities.severities',
-    score_source: 'it:pages.vulnerabilities.feeds.badge',
-    sources: 'it:pages.vulnerabilities.feeds (nvd, cve_org)',
-  },
-  chargeback: {
-    status: 'the row\'s level (same words as level)',
-    column: 'the workspace\'s budget column names (localizedBudgetColumns, ops:operations.budgetColumns)',
-    level: 'frontend chargeback report rows (company total, department, common costs)',
-  },
-  chargeback_lines: {
-    column: 'the workspace\'s budget column names (localizedBudgetColumns, ops:operations.budgetColumns)',
+    contributor_profile: 'no screen word: the Contributors list shows a person with a profile, and nothing for one without',
   },
   working_day_calendars: {
-    kind: 'frontend working-day calendars screen (standard, custom)',
-    source: 'frontend working-day calendars screen, year source (edited, standard, none)',
-  },
-  analytics_axes: {
-    applies_to: 'frontend analytics dimensions settings, "applies to" (opex, capex)',
-    required_for: 'frontend analytics dimensions settings, "required for" (opex, capex)',
-  },
-  exchange_rates: {
-    status: 'the rate\'s source (same words as source)',
-    source: 'frontend pages/operations/CurrencySettingsPage.tsx rate sources',
+    kind: 'no screen word: the list shows a standard calendar by its country and a custom one by an empty country',
+    source: 'no screen word: the calendar shows the standard values of a year next to the days entered by hand',
   },
 };
 

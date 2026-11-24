@@ -1,4 +1,5 @@
 import { writeCsvHeader, type CsvLanguage } from '../common/csv-sheet';
+import { APPLICATION_FIXED_LABELS } from './application-fixed-labels';
 import { ApplicationsListService } from './services/applications-list.service';
 import { classificationReadState } from './services/application-classification';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
@@ -57,23 +58,9 @@ import {
 
 type ExportLanguage = 'en' | 'fr' | 'de' | 'es';
 
-/** The screen's names of the fixed values (not tenant catalogs), per export language. Both columns are export-only. */
-const FIXED_EXPORT_LABELS: Record<string, Record<string, Record<ExportLanguage, string>>> = {
-  classification_review_state: {
-    incomplete: { en: 'To complete', fr: 'À compléter', de: 'Zu vervollständigen', es: 'Por completar' },
-    stale: { en: 'Review needed', fr: 'À revoir', de: 'Erneut prüfen', es: 'Por revisar' },
-    reviewed: { en: 'Reviewed', fr: 'Revu', de: 'Geprüft', es: 'Revisado' },
-  },
-  users_mode: {
-    manual: { en: 'Manual', fr: 'Manuel', de: 'Manuell', es: 'Manual' },
-    // The screen offers "Derived" and "Manual" only; both derived modes read as "Derived".
-    it_users: { en: 'Derived', fr: 'Dérivé', de: 'Abgeleitet', es: 'Derivado' },
-    headcount: { en: 'Derived', fr: 'Dérivé', de: 'Abgeleitet', es: 'Derivado' },
-  },
-};
-
+/** The screen's names of the fixed values (not tenant catalogs), per export language (`APPLICATION_FIXED_LABELS`). */
 export function exportFixedLabelsIn(row: Record<string, any>, language: ExportLanguage): void {
-  for (const [field, labels] of Object.entries(FIXED_EXPORT_LABELS)) {
+  for (const [field, labels] of Object.entries(APPLICATION_FIXED_LABELS)) {
     const label = labels[String(row[field])]?.[language];
     if (label) row[field] = label;
   }

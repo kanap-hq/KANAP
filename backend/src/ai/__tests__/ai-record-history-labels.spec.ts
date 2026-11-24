@@ -61,6 +61,28 @@ function testCatalogAndChildListsInThePersonsWords() {
   console.log('  catalog values, statuses, a version\'s method, a contact\'s and an owner\'s type: OK');
 }
 
+/** The lists of the second pass of lot K2d, where the History tab shows their field. */
+function testSecondPassListsInThePersonsWords() {
+  const namer = new AiCodeNamer('es', {
+    serverProviders: [{ code: 'k2d_cloud', label: 'Nube K2d' }],
+    hostingTypes: [{ code: 'k2d_hosting', label: 'Alojamiento K2d' }],
+  } as any);
+  const label = (table: string, field: string, after: string, subject: any = record) => (withStateLabels({ field, before: null, after }, table, subject, namer) as any).after_label;
+  assert.equal(label('companies', 'country_iso', 'DE'), 'Alemania');
+  assert.equal(label('contacts', 'country', 'fr'), 'Francia');
+  assert.equal(label('locations', 'country_iso', 'XX'), undefined);
+  assert.equal(label('locations', 'provider', 'k2d_cloud'), 'Nube K2d');
+  assert.equal(label('assets', 'provider', 'k2d_hosting'), 'Alojamiento K2d');
+  assert.equal(label('applications', 'users_mode', 'it_users'), 'Derivado');
+  assert.equal(label('applications', 'country_iso', 'NL', { kind: 'set' }), 'Países Bajos');
+  assert.equal(label('interfaces', 'integration_route_type', 'via_middleware'), 'Vía middleware');
+  assert.equal(label('connections', 'topology', 'multi_server'), 'Multi-servidor');
+  assert.equal(label('connections', 'risk_mode', 'derived'), 'Derivado');
+  assert.equal(label('documents', 'status', 'in_review'), 'En revisión');
+  assert.equal(label('analytics_axes', 'applies_to', 'capex'), 'Solo CAPEX');
+  console.log('  countries, providers, users mode, route, topology, risk, document status, applies to: OK');
+}
+
 function testListsAreTheHistoryTabs() {
   for (const [table, fields] of Object.entries(RECORD_HISTORY_LISTS.records)) {
     assert.ok(table in RECORD_HISTORY, `${table} has a History tab`);
@@ -79,6 +101,7 @@ function run() {
   testPriorityInThePersonsWords();
   testOtherListsInThePersonsWords();
   testCatalogAndChildListsInThePersonsWords();
+  testSecondPassListsInThePersonsWords();
   testListsAreTheHistoryTabs();
   console.log('ai-record-history-labels.spec: ok');
 }

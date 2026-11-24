@@ -4,9 +4,16 @@ import { tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import type { CsvLanguage } from '../common/csv-sheet';
 import { shippedLabelIn } from '../it-ops-settings/catalog-shipped-labels';
 import type { CatalogLabel, ItOpsCatalogLabels } from '../it-ops-settings/it-ops-settings.service';
+import { APPLICATION_FIXED_LABELS } from '../applications/application-fixed-labels';
+import { BUDGET_COLUMN_LABELS, localizedBudgetColumnName } from '../budget-columns/budget-column-labels';
+import type { BudgetColumnsSettings } from '../budget-columns/budget-columns.util';
 import { formatAllocationMethodLabel } from '../spend/allocation-utils';
+import type { BudgetColumn } from '../spend/amounts-write.util';
+import { CHARGEBACK_EXPORT_LABELS } from '../spend/chargeback-report.export';
+import { END_OF_SUPPORT_EXPORT_LABELS } from '../technologies/reports/end-of-support-export-labels';
 import { aiScreenLanguage } from './ai-unread-families';
 import { VULNERABILITY_STATE_LABELS } from './ai-write-texts';
+import { countryNameIn } from './import/ai-import-countries';
 import {
   BILLING_FREQUENCY_LABELS,
   BUDGET_NATURE_LABELS,
@@ -60,7 +67,22 @@ export type AiFixedCodeList = {
  */
 export type AiCatalogCodeList = { kind: 'catalog'; list: AiCatalogListName };
 
-export type AiCodeList = AiFixedCodeList | AiCatalogCodeList;
+/** A country by its two-letter code, named in the reader's language as the screens name it (`countryNameFor`). */
+export type AiCountryCodeList = { kind: 'country' };
+
+/** A language of the profile (`en`, `fr-FR`), named as the Profile screen names it (`SUPPORTED_LANGUAGES`). */
+export type AiLanguageCodeList = { kind: 'language' };
+
+/**
+ * A budget column (`budget`, `review`, `forecast`, `actual`, `landing`), named as the screens name
+ * it: the workspace's name for the column, else the product name in the reader's language.
+ */
+export type AiBudgetColumnCodeList = { kind: 'budgetColumn'; aliases: Readonly<Record<string, BudgetColumn>> };
+
+/** The name from the first list that knows the code (an asset's provider: a server provider, else a hosting type). */
+export type AiFirstOfCodeList = { kind: 'firstOf'; lists: readonly AiCodeList[] };
+
+export type AiCodeList = AiFixedCodeList | AiCatalogCodeList | AiCountryCodeList | AiLanguageCodeList | AiBudgetColumnCodeList | AiFirstOfCodeList;
 
 /** A field holding a code, or several separated by ", " (`multi`). */
 export type AiCodeField = { list: AiCodeList; multi?: boolean };
@@ -69,6 +91,25 @@ const fixed = (screen: string, labels: AiImportCodeLabels, extra: Pick<AiFixedCo
   kind: 'fixed', screen, labels, ...extra,
 });
 const catalog = (list: AiCatalogListName): AiCatalogCodeList => ({ kind: 'catalog', list });
+
+/**
+ * A list copied from an export's words (`labels`, per language), taking for each code the export's
+ * key (`keys`): the server keeps one copy of a screen's words.
+ */
+function fromExport(labels: Readonly<Record<AiNamesLanguage, Readonly<Record<string, string>>>>, keys: Readonly<Record<string, string>>): AiImportCodeLabels {
+  const pick = (language: AiNamesLanguage) => Object.fromEntries(Object.entries(keys).map(([code, key]) => [code, labels[language][key]]));
+  return { en: pick('en'), fr: pick('fr'), de: pick('de'), es: pick('es') };
+}
+
+/** A list held by code, then language (`APPLICATION_FIXED_LABELS`). */
+function byCode(labels: Readonly<Record<string, Readonly<Record<AiNamesLanguage, string>>>>): AiImportCodeLabels {
+  return codeLabels(Object.fromEntries(Object.entries(labels).map(([code, words]) => [code, [words.en, words.fr, words.de, words.es] as const])));
+}
+
+/** The keys of an export's words with a prefix (`type_technology`), by code. */
+function prefixed(prefix: string, codes: readonly string[]): Record<string, string> {
+  return Object.fromEntries(codes.map((code) => [code, `${prefix}${code}`]));
+}
 
 /** A record's enabled or disabled status, as the lists name it. */
 export const ENABLED_STATUS_LABELS = codeLabels({
@@ -116,6 +157,133 @@ export const OWNER_TYPE_LABELS = codeLabels({
   business: ['Business', 'Métier', 'Fachbereich', 'Negocio'],
   it: ['IT', 'IT', 'IT', 'IT'],
 });
+
+/** Whether a record has vulnerabilities to review, as the Vulnerabilities filter of the lists names it. */
+export const VULNERABILITY_PRESENCE_LABELS = codeLabels({
+  severe: ['With severe vulnerabilities', 'Avec des vulnérabilités graves', 'Mit schwerwiegenden Schwachstellen', 'Con vulnerabilidades graves'],
+  any: ['With vulnerabilities', 'Avec des vulnérabilités', 'Mit Schwachstellen', 'Con vulnerabilidades'],
+  none: ['Without', 'Sans', 'Ohne', 'Sin'],
+});
+
+/** A chart of accounts' scope, as the chart dialog names its two choices. */
+export const CHART_SCOPE_LABELS = codeLabels({
+  COUNTRY: ['One country', 'Un pays', 'Ein Land', 'Un país'],
+  GLOBAL: ['All countries', 'Tous les pays', 'Alle Länder', 'Todos los países'],
+});
+
+/** A connection's topology. */
+export const TOPOLOGY_LABELS = codeLabels({
+  server_to_server: ['Server to server', 'Serveur à serveur', 'Server zu Server', 'Servidor a servidor'],
+  multi_server: ['Multi-server', 'Multi-serveur', 'Multi-Server', 'Multi-servidor'],
+});
+
+/** How a connection's risk is set. */
+export const RISK_MODE_LABELS = codeLabels({
+  manual: ['Manual', 'Manuel', 'Manuell', 'Manual'],
+  derived: ['Derived', 'Dérivé', 'Abgeleitet', 'Derivado'],
+});
+
+/** An interface's route type. */
+export const ROUTE_TYPE_LABELS = codeLabels({
+  direct: ['Direct', 'Direct', 'Direkt', 'Directo'],
+  via_middleware: ['Via middleware', 'Via middleware', 'Über Middleware', 'Vía middleware'],
+});
+
+/** A data access node's type, as the Type column of the data access dialog names it. */
+export const DATA_ACCESS_NODE_TYPE_LABELS = codeLabels({
+  all: ['Everything', 'Tout', 'Alles', 'Todo'],
+  company: ['Company', 'Société', 'Unternehmen', 'Empresa'],
+  cost_center: ['Cost center', 'Centre de coûts', 'Kostenstelle', 'Centro de coste'],
+});
+
+/** A cost center node's kind, as the same column names a group. */
+export const DATA_ACCESS_NODE_KIND_LABELS = codeLabels({
+  group: ['Cost center group', 'Groupe de centres', 'Kostenstellengruppe', 'Grupo de centros'],
+  cost_center: ['Cost center', 'Centre de coûts', 'Kostenstelle', 'Centro de coste'],
+});
+
+/** A data access node's level. */
+export const DATA_ACCESS_LEVEL_LABELS = codeLabels({
+  read: ['Read', 'Lecture', 'Lesen', 'Lectura'],
+  edit: ['Edit', 'Saisie', 'Bearbeiten', 'Edición'],
+});
+
+/** A person's data access, as the two choices of their Data access panel name it. */
+export const DATA_ACCESS_MODE_LABELS = codeLabels({
+  all: ['All data', 'Toutes les données', 'Alle Daten', 'Todos los datos'],
+  limited: ['Limited to', 'Limité à', 'Begrenzt auf', 'Limitado a'],
+});
+
+/** A knowledge document's status. */
+export const DOCUMENT_STATUS_LABELS = codeLabels({
+  archived: ['Archived', 'Archivé', 'Archiviert', 'Archivado'],
+  draft: ['Draft', 'Brouillon', 'Entwurf', 'Borrador'],
+  in_review: ['In review', 'En revue', 'In Prüfung', 'En revisión'],
+  obsolete: ['Obsolete', 'Obsolète', 'Veraltet', 'Obsoleto'],
+  published: ['Published', 'Publié', 'Veröffentlicht', 'Publicado'],
+});
+
+/** A role's badge on the Roles screen; a custom role shows none, and its code has no name. */
+export const ROLE_TYPE_LABELS = codeLabels({
+  built_in: ['Built-in', 'Intégré', 'Integriert', 'Integrado'],
+  system: ['System', 'Système', 'System', 'Sistema'],
+});
+
+/** The record a task belongs to, as the task's context names its family. */
+export const TASK_RELATED_LABELS = codeLabels({
+  standalone: ['Standalone', 'Autonome', 'Eigenständig', 'Independiente'],
+  project: ['Project', 'Projet', 'Projekt', 'Proyecto'],
+  budget_line: ['Budget', 'Budget', 'Budget', 'Presupuesto'],
+  contract: ['Contract', 'Contrat', 'Vertrag', 'Contrato'],
+  incident: ['Incident', 'Incident', 'Vorfall', 'Incidente'],
+});
+
+/** A technology's or a version's support state, as the versions of a technology name it. */
+export const SUPPORT_STATUS_LABELS = codeLabels({
+  supported: ['Supported', 'Supportée', 'Unterstützt', 'Con soporte'],
+  ending_soon: ['Ending soon', 'Fin proche', 'Endet bald', 'Finaliza pronto'],
+  extended_support: ['Extended support', 'Support étendu', 'Erweiterter Support', 'Soporte extendido'],
+  out_of_support: ['Out of support', 'Hors support', 'Kein Support', 'Sin soporte'],
+  unknown: ['Date unknown', 'Date inconnue', 'Datum unbekannt', 'Fecha desconocida'],
+});
+
+/** A CVE's severity, as the vulnerabilities page names it (`unknown`: not rated). */
+export const VULNERABILITY_SEVERITY_LABELS = codeLabels({
+  critical: ['Critical', 'Critique', 'Kritisch', 'Crítica'],
+  high: ['High', 'Élevée', 'Hoch', 'Alta'],
+  medium: ['Medium', 'Moyenne', 'Mittel', 'Media'],
+  low: ['Low', 'Faible', 'Niedrig', 'Baja'],
+  none: ['None', 'Aucune', 'Keine', 'Ninguna'],
+  unknown: ['Not rated', 'Non évaluée', 'Nicht bewertet', 'Sin evaluar'],
+});
+
+/** The feed of a CVE's score or match, as the Source badge names it. */
+export const VULNERABILITY_FEED_LABELS = codeLabels({
+  nvd: ['NVD', 'NVD', 'NVD', 'NVD'],
+  cve_org: ['Publisher', 'Éditeur', 'Hersteller', 'Editor'],
+});
+
+/**
+ * Where an exchange rate comes from, as the Currency settings name it: the source of a year's set
+ * under its year, the estimate mark and the manual footnote. The reporting currency's own rate
+ * (`identity`) shows no source and has no name.
+ */
+export const RATE_SOURCE_LABELS = codeLabels({
+  'world-bank-annual': ['Annual avg', 'Moyenne annuelle', 'Jahresdurchschnitt', 'Media anual'],
+  'world-bank-quarterly': ['Quarterly avg', 'Moyenne trimestrielle', 'Quartalsdurchschnitt', 'Media trimestral'],
+  'exchangerateapi-spot': ['Live spot', 'Spot en temps réel', 'Live-Spot', 'Spot en tiempo real'],
+  'world-bank-forward': ['Forward estimate', 'Estimation à terme', 'Terminschätzung', 'Estimación a futuro'],
+  estimate: ['estimate', 'estimation', 'Schätzung', 'estimación'],
+  manual: ['Rate entered manually', 'Taux saisi manuellement', 'Manuell erfasster Kurs', 'Tipo introducido manualmente'],
+});
+
+/** The languages of a profile, each in its own words, as the Profile screen lists them. */
+export const LANGUAGE_NATIVE_NAMES: Readonly<Record<AiNamesLanguage, string>> = {
+  en: 'English',
+  fr: 'Français',
+  de: 'Deutsch',
+  es: 'Español',
+};
 
 /** The state of a contract's current term, as the State column of the Contracts list names it. */
 export const CONTRACT_TERM_STATE_LABELS = codeLabels({
@@ -181,6 +349,74 @@ export const AI_CODE_LISTS = {
   costCenterKind: fixed('admin:auditLogs.values.costCenterKind', COST_CENTER_KIND_LABELS),
   processType: fixed('master-data:businessProcesses.types', PROCESS_TYPE_LABELS),
   vulnerabilityState: fixed('admin:auditLogs.values.vulnerabilityState', VULNERABILITY_STATE_LABELS as AiImportCodeLabels),
+  vulnerabilityPresence: fixed('it:pages.technologies.vulnerabilityFilter', VULNERABILITY_PRESENCE_LABELS),
+  classificationReview: fixed('it:classification', byCode(APPLICATION_FIXED_LABELS.classification_review_state), {
+    keys: { incomplete: 'to_complete', stale: 'review_needed', reviewed: 'reviewed' },
+  }),
+  usersMode: fixed('admin:auditLogs.values.usersMode', byCode(APPLICATION_FIXED_LABELS.users_mode), {
+    keys: camelKeys(byCode(APPLICATION_FIXED_LABELS.users_mode)),
+  }),
+  country: { kind: 'country' },
+  language: { kind: 'language' },
+  serverProvider: catalog('serverProviders'),
+  assetProvider: { kind: 'firstOf', lists: [catalog('serverProviders'), catalog('hostingTypes')] },
+  chartScope: fixed('master-data:coa.createDialog', CHART_SCOPE_LABELS, { keys: { COUNTRY: 'scopeCountry', GLOBAL: 'scopeGlobal' } }),
+  topology: fixed('it:enums.topology', TOPOLOGY_LABELS, { keys: camelKeys(TOPOLOGY_LABELS) }),
+  riskMode: fixed('it:enums.riskMode', RISK_MODE_LABELS),
+  routeType: fixed('it:enums.routeType', ROUTE_TYPE_LABELS, { keys: camelKeys(ROUTE_TYPE_LABELS) }),
+  dataAccessNodeType: fixed('admin:dataAccess.types', DATA_ACCESS_NODE_TYPE_LABELS, {
+    keys: { all: 'everything', company: 'company', cost_center: 'costCenter' },
+  }),
+  dataAccessNodeKind: fixed('admin:dataAccess.types', DATA_ACCESS_NODE_KIND_LABELS, {
+    keys: { group: 'costCenterGroup', cost_center: 'costCenter' },
+  }),
+  dataAccessLevel: fixed('admin:dataAccess.access', DATA_ACCESS_LEVEL_LABELS),
+  dataAccessMode: fixed('admin:dataAccess', DATA_ACCESS_MODE_LABELS, { keys: { all: 'allData', limited: 'limitedTo' } }),
+  documentStatus: fixed('knowledge:statuses', DOCUMENT_STATUS_LABELS),
+  roleType: fixed('admin:roles.badges', ROLE_TYPE_LABELS, { keys: camelKeys(ROLE_TYPE_LABELS) }),
+  endOfSupportType: fixed('it:pages.endOfSupport.types', fromExport(END_OF_SUPPORT_EXPORT_LABELS,
+    prefixed('type_', ['technology', 'operating_system', 'application', 'hardware']))),
+  endOfSupportState: fixed('it:pages.endOfSupport.states', fromExport(END_OF_SUPPORT_EXPORT_LABELS,
+    prefixed('state_', ['out_of_support', 'extended_support', 'upcoming']))),
+  endOfSupportMilestone: fixed('it:pages.endOfSupport.milestones', fromExport(END_OF_SUPPORT_EXPORT_LABELS,
+    prefixed('milestone_', ['end_of_life', 'support_contract']))),
+  supportGap: fixed('it:pages.endOfSupport.gaps', fromExport(END_OF_SUPPORT_EXPORT_LABELS, prefixed('gap_', [
+    'application_without_server', 'vm_without_host', 'technology_not_installed', 'technology_without_hosting_type',
+    'database_server_without_dbms', 'sso_application_without_identity', 'link_without_version', 'version_without_end_date',
+  ]))),
+  // The family of a record to complete, as the end of support report's export names it.
+  recordToComplete: fixed('it:', fromExport(END_OF_SUPPORT_EXPORT_LABELS, {
+    application: 'type_application', asset: 'record_asset', technology: 'type_technology',
+  }), {
+    keys: {
+      application: 'pages.endOfSupport.types.application',
+      asset: 'workspace.application.relations.types.asset',
+      technology: 'pages.endOfSupport.types.technology',
+    },
+  }),
+  taskRelated: fixed('common:relatedObject.types', TASK_RELATED_LABELS, { keys: camelKeys(TASK_RELATED_LABELS) }),
+  supportStatus: fixed('it:workspace.technology.versions.status', SUPPORT_STATUS_LABELS, {
+    keys: { supported: 'supported', ending_soon: 'ending_soon', extended_support: 'extended', out_of_support: 'ended', unknown: 'unknown' },
+  }),
+  vulnerabilitySeverity: fixed('it:pages.vulnerabilities.severities', VULNERABILITY_SEVERITY_LABELS),
+  vulnerabilityFeed: fixed('it:pages.vulnerabilities.feeds.badge', VULNERABILITY_FEED_LABELS),
+  budgetColumn: { kind: 'budgetColumn', aliases: { review: 'revision', actual: 'follow_up' } },
+  // A chargeback row's level, as the report's columns and its common costs row name it.
+  chargebackLevel: fixed('ops:reports', fromExport(CHARGEBACK_EXPORT_LABELS, {
+    company: 'company', department: 'department', common: 'commonCosts',
+  }), {
+    keys: { company: 'columns.company', department: 'columns.department', common: 'globalChargeback.commonCosts' },
+  }),
+  rateSource: fixed('ops:operations.currency', RATE_SOURCE_LABELS, {
+    keys: {
+      'world-bank-annual': 'annualAvg',
+      'world-bank-quarterly': 'quarterlyAvg',
+      'exchangerateapi-spot': 'liveSpot',
+      'world-bank-forward': 'forwardEstimate',
+      estimate: 'estimateMark',
+      manual: 'manualFootnote',
+    },
+  }),
 } as const satisfies Record<string, AiCodeList>;
 
 const L = AI_CODE_LISTS;
@@ -205,6 +441,10 @@ export const AI_NAMED_FIELDS: Readonly<Record<string, Readonly<Record<string, Ai
     environments: many(L.environment),
     hosting_model: one(L.hostingModel),
     hosting_types: many(L.hostingType),
+    classification_review_state: one(L.classificationReview),
+    users_mode: one(L.usersMode),
+    data_residency: many(L.country),
+    vulnerabilities: one(L.vulnerabilityPresence),
   },
   assets: {
     status: one(L.lifecycle),
@@ -213,6 +453,8 @@ export const AI_NAMED_FIELDS: Readonly<Record<string, Readonly<Record<string, Ai
     hosting_type: one(L.hostingType),
     admin_zone: one(L.adminZone),
     network_segment: one(L.networkSegment),
+    provider: one(L.assetProvider),
+    vulnerabilities: one(L.vulnerabilityPresence),
   },
   interfaces: {
     // An interface's `status` is its lifecycle.
@@ -222,12 +464,15 @@ export const AI_NAMED_FIELDS: Readonly<Record<string, Readonly<Record<string, Ai
     data_class: one(L.dataClass),
     data_category: one(L.interfaceDataCategory),
     binding_environments: many(L.environment),
+    integration_route_type: one(L.routeType),
   },
   connections: {
     status: one(L.lifecycle),
     lifecycle: one(L.lifecycle),
     criticality: one(L.businessCriticality),
     data_class: one(L.dataClass),
+    topology: one(L.topology),
+    risk_mode: one(L.riskMode),
   },
   technologies: {
     status: one(L.lifecycle),
@@ -235,13 +480,21 @@ export const AI_NAMED_FIELDS: Readonly<Record<string, Readonly<Record<string, Ai
     family: one(L.technologyFamily),
     hosting_type: one(L.hostingType),
     admin_zone: one(L.adminZone),
+    support_status: one(L.supportStatus),
   },
   technology_versions: {
+    // A version's `status` is its support state.
+    status: one(L.supportStatus),
+    support_status: one(L.supportStatus),
     lifecycle: one(L.lifecycle),
     family: one(L.technologyFamily),
   },
   locations: {
     hosting_type: one(L.hostingType),
+    // A location on premises carries its operating company's name instead, which no list names.
+    provider: one(L.serverProvider),
+    country: one(L.country),
+    country_iso: one(L.country),
   },
   projects: {
     status: one(L.projectStatus),
@@ -254,6 +507,7 @@ export const AI_NAMED_FIELDS: Readonly<Record<string, Readonly<Record<string, Ai
     status: one(L.taskStatus),
     priority: one(L.taskPriority),
     priority_level: one(L.taskPriority),
+    related: one(L.taskRelated),
   },
   incidents: {
     status: one(L.incidentStatus),
@@ -268,6 +522,7 @@ export const AI_NAMED_FIELDS: Readonly<Record<string, Readonly<Record<string, Ai
   contacts: {
     status: one(L.contactStatus),
     supplier_role: one(L.contactRole),
+    country: one(L.country),
   },
   budget_lines: {
     status: one(L.enabled),
@@ -279,9 +534,14 @@ export const AI_NAMED_FIELDS: Readonly<Record<string, Readonly<Record<string, Ai
     next_year_allocation_method_label: one(L.allocationMethod),
   },
   chargeback: {
+    // A chargeback row's `status` is its level.
+    status: one(L.chargebackLevel),
+    level: one(L.chargebackLevel),
     nature: one(L.budgetNature),
+    column: one(L.budgetColumn),
   },
   chargeback_lines: {
+    column: one(L.budgetColumn),
     // A chargeback line's `status` is its allocation method.
     status: one(L.allocationMethod),
     allocation_method: one(L.allocationMethod),
@@ -303,16 +563,53 @@ export const AI_NAMED_FIELDS: Readonly<Record<string, Readonly<Record<string, Ai
     status: one(L.enabled),
     kind: one(L.costCenterKind),
   },
-  companies: { status: one(L.enabled) },
+  companies: { status: one(L.enabled), country: one(L.country), country_iso: one(L.country) },
+  chart_of_accounts: { scope: one(L.chartScope), country_iso: one(L.country) },
   suppliers: { status: one(L.enabled) },
   departments: { status: one(L.enabled) },
-  users: { status: one(L.enabled) },
-  analytics_axes: { status: one(L.enabled) },
+  users: { status: one(L.enabled), data_access: one(L.dataAccessMode), locale: one(L.language) },
+  analytics_axes: { status: one(L.enabled), applies_to: one(L.lineUsage), required_for: many(L.budgetNature) },
   working_day_calendars: { status: one(L.enabled) },
   vulnerabilities: {
     // A vulnerability row's `status` is its review state.
     status: one(L.vulnerabilityState),
     state: one(L.vulnerabilityState),
+    severity: one(L.vulnerabilitySeverity),
+    score_source: one(L.vulnerabilityFeed),
+    sources: many(L.vulnerabilityFeed),
+  },
+  data_access: {
+    // A data access row's `status` is its level.
+    status: one(L.dataAccessLevel),
+    access: one(L.dataAccessLevel),
+    node_type: one(L.dataAccessNodeType),
+    node_kind: one(L.dataAccessNodeKind),
+  },
+  documents: { status: one(L.documentStatus) },
+  roles: {
+    // A role's `status` is its type.
+    status: one(L.roleType),
+    type: one(L.roleType),
+  },
+  role_permissions: { role_type: one(L.roleType) },
+  support_deadlines: {
+    // A deadline's `status` is its state.
+    status: one(L.endOfSupportState),
+    state: one(L.endOfSupportState),
+    subject_type: one(L.endOfSupportType),
+    milestone: one(L.endOfSupportMilestone),
+  },
+  support_gaps: {
+    // A gap row's `status` is its gap.
+    status: one(L.supportGap),
+    gap: one(L.supportGap),
+    subject_type: one(L.recordToComplete),
+    related_type: one(L.recordToComplete),
+  },
+  exchange_rates: {
+    // A rate's `status` is its source.
+    status: one(L.rateSource),
+    source: one(L.rateSource),
   },
 };
 
@@ -346,13 +643,15 @@ export function catalogValueName(list: AiCatalogListName, option: CatalogLabel, 
 
 /**
  * Names codes in one language. The catalog lists come from the workspace (`getCatalogLabels`);
- * without them, a catalog value has no name. A code no list knows has no name either: it stays as
- * stored, without an error.
+ * without them, a catalog value has no name. The budget columns take the workspace's names
+ * (`readBudgetColumns`); without them, the product's. A code no list knows has no name either: it
+ * stays as stored, without an error.
  */
 export class AiCodeNamer {
   constructor(
     readonly language: AiNamesLanguage,
     private readonly catalogs: Partial<ItOpsCatalogLabels> | null = null,
+    private readonly budgetColumns: BudgetColumnsSettings | null = null,
   ) {}
 
   /** The name of one code, or null. */
@@ -362,6 +661,25 @@ export class AiCodeNamer {
       const words = list.labels[this.language];
       const key = list.aliases?.[code] ?? code;
       return Object.hasOwn(words, key) ? words[key] : null;
+    }
+    if (list.kind === 'country') return countryNameIn(code, this.language);
+    if (list.kind === 'language') {
+      const language = aiScreenLanguage(code);
+      return language ? LANGUAGE_NATIVE_NAMES[language] : null;
+    }
+    if (list.kind === 'budgetColumn') {
+      const column = (list.aliases[code] ?? code) as BudgetColumn;
+      if (!Object.hasOwn(BUDGET_COLUMN_LABELS.en, column)) return null;
+      return this.budgetColumns
+        ? localizedBudgetColumnName(this.budgetColumns, column, this.language)
+        : BUDGET_COLUMN_LABELS[this.language][column];
+    }
+    if (list.kind === 'firstOf') {
+      for (const each of list.lists) {
+        const name = this.name(each, code);
+        if (name !== null) return name;
+      }
+      return null;
     }
     const options = this.catalogs?.[list.list];
     if (!Array.isArray(options)) return null;
@@ -472,6 +790,16 @@ function nameDetailData(family: string, data: Json, namer: AiCodeNamer): Json {
     if (rows !== output[key]) output = { ...output, [key]: rows };
   }
   return output;
+}
+
+function usesBudgetColumns(list: AiCodeList): boolean {
+  return list.kind === 'budgetColumn' || (list.kind === 'firstOf' && list.lists.some(usesBudgetColumns));
+}
+
+/** Whether naming a family's codes needs the workspace's budget column names (`readBudgetColumns`). */
+export function aiFamilyNamesBudgetColumns(family: unknown): boolean {
+  if (typeof family !== 'string') return false;
+  return Object.values(AI_NAMED_FIELDS[family] ?? {}).some((field) => usesBudgetColumns(field.list));
 }
 
 /** The read tools whose results carry codes, and the MCP server's same tools. */

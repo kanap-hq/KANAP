@@ -34,7 +34,7 @@ import { AiHelpManualService, HELP_SECTION_MAX_CHARS } from './ai-help-manual.se
 import { AiImportMappingService } from './import/ai-import-mapping.service';
 import { AI_IMPORT_KEYS } from './import/ai-import-access';
 import { personWriteLanguage } from './ai-write-texts';
-import { AI_CODE_NAMED_TOOLS, AiCodeNamer, aiNamesLanguage, withCodeNames, type AiCodeNamedTool } from './ai-code-names';
+import { AI_CODE_NAMED_TOOLS, AiCodeNamer, aiFamilyNamesBudgetColumns, aiNamesLanguage, withCodeNames, type AiCodeNamedTool } from './ai-code-names';
 import { AI_BULK_EDIT_TOOLS, BULK_EDIT_PLAN_REFUSAL, MUTATION_PLAN_IS_NOT_BULK } from './mutation/ai-bulk-edit';
 import {
   AI_CONTEXT_ENTITY_TYPES,
@@ -1174,6 +1174,8 @@ export class AiToolRegistry {
     const catalogs = this.itOpsSettings
       ? await this.itOpsSettings.getCatalogLabels(context.tenantId, { manager: context.manager })
       : null;
-    return withCodeNames(tool, input, output, new AiCodeNamer(language, catalogs));
+    const family = input && typeof input === 'object' ? (input as { entity_type?: unknown }).entity_type : undefined;
+    const budgetColumns = aiFamilyNamesBudgetColumns(family) ? await readBudgetColumns(context.manager, context.tenantId) : null;
+    return withCodeNames(tool, input, output, new AiCodeNamer(language, catalogs, budgetColumns));
   }
 }

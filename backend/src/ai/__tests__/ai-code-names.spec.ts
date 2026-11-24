@@ -1,10 +1,15 @@
 import * as assert from 'node:assert/strict';
+import * as fs from 'node:fs';
+import { normalizeBudgetColumns } from '../../budget-columns/budget-columns.util';
+import { backendPath } from '../../common/__tests__/backend-root';
 import {
   AI_CODE_LISTS,
   AI_NAMED_CHILD_FIELDS,
   AI_NAMED_FIELDS,
   AiCodeNamer,
+  aiFamilyNamesBudgetColumns,
   aiNamesLanguage,
+  LANGUAGE_NATIVE_NAMES,
   withCodeNames,
 } from '../ai-code-names';
 import { AI_CODE_NAMES_PENDING, AI_NOT_CODE_FIELDS } from '../ai-code-names.inventory';
@@ -30,7 +35,8 @@ const CATALOGS: any = {
   businessCriticalityLevels: [
     { code: 'high', label: 'High', rank: 2, translations: { fr: { label: 'Haute' }, es: { label: 'Alta' } } },
   ],
-  hostingTypes: [{ code: 'public_cloud', label: 'Public cloud' }],
+  hostingTypes: [{ code: 'public_cloud', label: 'Public cloud' }, { code: 'k2d_hosting', label: 'K2d hosting' }],
+  serverProviders: [{ code: 'k2d_cloud', label: 'K2d cloud', translations: { fr: { label: 'Nuage K2d' } } }],
 };
 
 const namer = (language: 'en' | 'fr' | 'de' | 'es') => new AiCodeNamer(language, CATALOGS);
@@ -147,6 +153,108 @@ function testAggregateAndFilterValues() {
   console.log('  aggregate groups and filter values: OK');
 }
 
+/** The lists of the second pass: one row per family, in the four languages where it matters. */
+function testSecondPassFixedLists() {
+  const item = (family: string, status: string | null, metadata: Record<string, unknown>, language: 'en' | 'fr' | 'de' | 'es' = 'fr') =>
+    (withCodeNames('query_entities', { entity_type: family }, { items: [summary(family, status, metadata)] }, namer(language)) as any).items[0];
+  const deadline = (language: 'en' | 'fr' | 'de' | 'es') => {
+    const row = item('support_deadlines', 'extended_support', { state: 'extended_support', subject_type: 'operating_system', milestone: null }, language);
+    return [row.status_name, row.metadata.state_name, row.metadata.subject_type_name];
+  };
+  assert.deepEqual((['en', 'fr', 'de', 'es'] as const).map(deadline), [
+    ['Extended support', 'Extended support', 'Operating system'],
+    ['Support étendu', 'Support étendu', "Système d'exploitation"],
+    ['Erweiterter Support', 'Erweiterter Support', 'Betriebssystem'],
+    ['Soporte extendido', 'Soporte extendido', 'Sistema operativo'],
+  ]);
+  assert.equal(item('support_deadlines', 'upcoming', { milestone: 'support_contract' }).metadata.milestone_name, 'Contrat de support');
+  const gap = item('support_gaps', 'link_without_version', { gap: 'link_without_version', subject_type: 'technology', related_type: 'asset' }, 'de');
+  assert.deepEqual([gap.status_name, gap.metadata.subject_type_name, gap.metadata.related_type_name], ['Technologieverknüpfung ohne Version', 'Technologie', 'Asset']);
+  const version = item('technology_versions', 'out_of_support', { support_status: 'out_of_support' }, 'es');
+  assert.deepEqual([version.status_name, version.metadata.support_status_name], ['Sin soporte', 'Sin soporte']);
+  assert.equal(item('technologies', 'enabled', { support_status: 'unknown' }).metadata.support_status_name, 'Date inconnue');
+  const access = item('data_access', 'edit', { node_type: 'cost_center', node_kind: 'group', access: 'edit' });
+  assert.deepEqual([access.status_name, access.metadata.node_type_name, access.metadata.node_kind_name], ['Saisie', 'Centre de coûts', 'Groupe de centres']);
+  assert.equal(item('data_access', null, { node_type: 'all' }, 'de').metadata.node_type_name, 'Alles');
+  // A custom role shows no badge on the Roles screen: its code has no name.
+  const builtIn = item('roles', 'built_in', { type: 'built_in' });
+  assert.deepEqual([builtIn.status_name, builtIn.metadata.type_name], ['Intégré', 'Intégré']);
+  assert.equal('type_name' in item('roles', 'custom', { type: 'custom' }).metadata, false);
+  assert.equal(item('documents', 'in_review', {}, 'de').status_name, 'In Prüfung');
+  const connection = item('connections', 'active', { topology: 'server_to_server', risk_mode: 'manual' }, 'es');
+  assert.deepEqual([connection.metadata.topology_name, connection.metadata.risk_mode_name], ['Servidor a servidor', 'Manual']);
+  assert.equal(item('interfaces', null, { integration_route_type: 'via_middleware' }, 'de').metadata.integration_route_type_name, 'Über Middleware');
+  const app = item('applications', 'enabled', { classification_review_state: 'stale', users_mode: 'headcount', vulnerabilities: 'severe' });
+  assert.deepEqual(
+    [app.metadata.classification_review_state_name, app.metadata.users_mode_name, app.metadata.vulnerabilities_name],
+    ['À revoir', 'Dérivé', 'Avec des vulnérabilités graves'],
+  );
+  assert.equal(item('tasks', 'open', { related: 'budget_line' }, 'es').metadata.related_name, 'Presupuesto');
+  const cve = item('vulnerabilities', 'to_review', { severity: 'high', score_source: 'cve_org' });
+  assert.deepEqual([cve.metadata.severity_name, cve.metadata.score_source_name], ['Élevée', 'Éditeur']);
+  assert.deepEqual([item('chart_of_accounts', null, { scope: 'GLOBAL' }, 'de').metadata.scope_name], ['Alle Länder']);
+  const rate = item('exchange_rates', 'world-bank-annual', { source: 'manual' }, 'en');
+  assert.deepEqual([rate.status_name, rate.metadata.source_name], ['Annual avg', 'Rate entered manually']);
+  // The reporting currency's own rate shows no source on the screen.
+  assert.equal('status_name' in item('exchange_rates', 'identity', {}), false);
+  const chargeback = item('chargeback', 'common', { level: 'common' }, 'de');
+  assert.deepEqual([chargeback.status_name, chargeback.metadata.level_name], ['Gemeinkosten', 'Gemeinkosten']);
+  assert.equal(item('users', 'enabled', { data_access: 'limited' }).metadata.data_access_name, 'Limité à');
+  console.log('  end of support, gaps, support states, data access, roles, documents, connections, routes, applications, tasks, CVEs, charts, rates, chargeback, users: OK');
+}
+
+/** A country in the reader's language, a profile's language in its own words; several codes keep their shape. */
+function testCountriesLanguagesAndSeveralValues() {
+  const item = (family: string, metadata: Record<string, unknown>, language: 'en' | 'fr' | 'de' | 'es') =>
+    (withCodeNames('query_entities', { entity_type: family }, { items: [summary(family, 'enabled', metadata)] }, namer(language)) as any).items[0].metadata;
+  assert.deepEqual((['en', 'fr', 'de', 'es'] as const).map((language) => item('companies', { country_iso: 'DE' }, language).country_iso_name), [
+    'Germany', 'Allemagne', 'Deutschland', 'Alemania',
+  ]);
+  assert.equal(item('contacts', { country: 'nl' }, 'fr').country_name, 'Pays-Bas');
+  assert.equal(item('locations', { country: 'ES', country_iso: 'ES' }, 'de').country_iso_name, 'Spanien');
+  // A value that names no country has no name.
+  assert.equal('country_iso_name' in item('chart_of_accounts', { country_iso: 'XX' }, 'fr'), false);
+  // Several countries: one name per code, in the value's order; an unknown code stays as stored.
+  assert.equal(item('applications', { data_residency: 'FR, DE, XX' }, 'fr').data_residency_name, 'France, Allemagne, XX');
+  assert.equal(item('users', { locale: 'fr-FR' }, 'en').locale_name, 'Français');
+  assert.equal(item('users', { locale: 'de' }, 'es').locale_name, 'Deutsch');
+  assert.equal('locale_name' in item('users', { locale: 'it' }, 'en'), false);
+  assert.equal(item('vulnerabilities', { sources: 'nvd, cve_org' }, 'de').sources_name, 'NVD, Hersteller');
+  const axis = item('analytics_axes', { applies_to: 'opex', required_for: 'opex, capex' }, 'fr');
+  assert.deepEqual([axis.applies_to_name, axis.required_for_name], ['OPEX uniquement', 'OPEX, CAPEX']);
+  const values = withCodeNames('get_filter_values', { entity_type: 'applications' }, { values: { data_residency: ['FR', 'BE'] } }, namer('es')) as any;
+  assert.deepEqual(values.names, { data_residency: { FR: 'Francia', BE: 'Bélgica' } });
+  console.log('  countries in four languages, residencies, profile languages, feeds, natures: OK');
+}
+
+/** A provider from the IT settings; a budget column by the workspace's name, else the product's. */
+function testProvidersAndBudgetColumns() {
+  const meta = (family: string, metadata: Record<string, unknown>, language: 'en' | 'fr' | 'de' | 'es') =>
+    (withCodeNames('query_entities', { entity_type: family }, { items: [summary(family, null, metadata)] }, namer(language)) as any).items[0].metadata;
+  assert.equal(meta('locations', { provider: 'k2d_cloud' }, 'fr').provider_name, 'Nuage K2d');
+  // A location on premises carries its operating company's name, which no list names.
+  assert.equal('provider_name' in meta('locations', { provider: 'Fromagerie Durand SA' }, 'fr'), false);
+  // An asset's provider: a server provider, else a hosting type.
+  assert.equal(meta('assets', { provider: 'k2d_cloud' }, 'de').provider_name, 'K2d cloud');
+  assert.equal(meta('assets', { provider: 'k2d_hosting' }, 'de').provider_name, 'K2d hosting');
+  const settings = normalizeBudgetColumns({ labels: { actual: 'Réel comptable' } });
+  const filter = (budgetColumns: any) => (withCodeNames('get_filter_values', { entity_type: 'chargeback' }, {
+    values: { column: ['budget', 'review', 'actual', 'landing'] },
+  }, new AiCodeNamer('fr', CATALOGS, budgetColumns)) as any).names.column;
+  assert.deepEqual(filter(settings), { budget: 'Budget', review: 'Révision', actual: 'Réel comptable', landing: 'Atterrissage prévu' });
+  assert.equal(filter(null).actual, 'Réalisé');
+  assert.deepEqual([aiFamilyNamesBudgetColumns('chargeback'), aiFamilyNamesBudgetColumns('chargeback_lines'), aiFamilyNamesBudgetColumns('applications')], [true, true, false]);
+  console.log('  server providers and hosting types, budget columns by the workspace\'s names: OK');
+}
+
+/** The profile languages are the Profile screen's (`SUPPORTED_LANGUAGES` of `frontend/src/i18n/index.ts`). */
+function testLanguageNamesAreTheProfileScreens() {
+  const source = fs.readFileSync(backendPath('..', 'frontend', 'src', 'i18n', 'index.ts'), 'utf8');
+  const screen = Object.fromEntries(Array.from(source.matchAll(/\{ code: '(\w+)', nativeLabel: '([^']+)' \}/g), (match) => [match[1], match[2]]));
+  assert.deepEqual(screen, LANGUAGE_NATIVE_NAMES);
+  console.log('  profile languages as the Profile screen lists them: OK');
+}
+
 function testEveryFixedListIsTheScreens() {
   for (const [name, list] of Object.entries(AI_CODE_LISTS)) assertCodeListIsTheScreens(name, list);
   for (const fields of Object.values(AI_NAMED_CHILD_FIELDS)) {
@@ -185,6 +293,10 @@ function testEveryCodeFieldIsNamedOrListed() {
         assert.ok(key === 'status' || registry.fields[key]?.type === 'set', `${list}: ${family}.${key} is a set field`);
       }
     }
+  }
+  // A code is left without a name only when no screen names it.
+  for (const [family, fields] of Object.entries(AI_CODE_NAMES_PENDING)) {
+    for (const [key, reason] of Object.entries(fields)) assert.match(reason, /^no screen word: /, `${family}.${key}: pending without a screen word`);
   }
   console.log('  every set field of a read registry is named, yes or no, or listed: OK');
 }
@@ -248,6 +360,10 @@ async function run() {
   testAllocationMethodAndContactRole();
   testDetailAndChildRows();
   testAggregateAndFilterValues();
+  testSecondPassFixedLists();
+  testCountriesLanguagesAndSeveralValues();
+  testProvidersAndBudgetColumns();
+  testLanguageNamesAreTheProfileScreens();
   testEveryFixedListIsTheScreens();
   testEveryCodeFieldIsNamedOrListed();
   await testMcpLanguage();
