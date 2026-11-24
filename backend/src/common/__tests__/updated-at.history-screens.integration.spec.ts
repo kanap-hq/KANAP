@@ -175,7 +175,6 @@ async function main() {
       {
         name: 'asset: a support contact',
         table: 'assets', record: ids.assets,
-        noHistory: 'the screen writes no audit row for the support contacts (only the assistant does)',
         change: () => get(AssetsSupportService).bulkReplaceSupportContacts(ids.assets, [{ contact_id: ids.contact, role: 'support' }], tenantId, userId, opts),
         same: () => get(AssetsSupportService).bulkReplaceSupportContacts(ids.assets, [{ contact_id: ids.contact, role: 'support' }], tenantId, userId, opts),
       },
