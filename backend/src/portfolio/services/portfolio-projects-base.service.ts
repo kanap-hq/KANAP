@@ -5,14 +5,13 @@ import { PortfolioProject, ProjectStatus, ProjectOrigin } from '../portfolio-pro
 import { PortfolioActivity } from '../portfolio-activity.entity';
 import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 import { ParticipationAccessScope } from '../../auth/business-contributor-scope';
+import type { AuditSourceOptions } from '../../audit/audit.service';
 
 /**
  * Common options for service methods.
  */
 export interface ServiceOpts {
   manager?: EntityManager;
-  /** The source of the write's audit rows when it is not the person on the screen (Kad's card: `ai_chat` and its reference). */
-  audit?: { source: string; sourceRef: string | null };
   userId?: string | null;
   tenantId?: string;
   accessScope?: ParticipationAccessScope;
@@ -26,6 +25,11 @@ export interface ServiceOpts {
    * inside a Business Contributor's participation. Absent names none of them.
    */
   linked?: PortfolioLinkedReads;
+  /**
+   * The source of the write's audit rows when it is not the person on the screen (Kad's card:
+   * `ai_chat` and its preview); the person's own when absent.
+   */
+  audit?: AuditSourceOptions;
 }
 
 /**

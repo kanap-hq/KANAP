@@ -52,7 +52,7 @@ import {
 } from '../common/name-matching';
 import type { CsvCallerAccess } from '../common/csv/csv-field.types';
 import { hasLevel } from '../common/relations/relations-access';
-import { SUPPLIER_CONTACT_ROLE_LABELS } from '../ai/import/ai-import-code-labels';
+import { SUPPLIER_CONTACT_ROLE_LABELS, supplierContactRoleOf } from '../ai/import/ai-import-code-labels';
 import { uploadedBytes } from '../common/upload';
 import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
@@ -135,14 +135,9 @@ const DEFAULT_SUPPLIER_ROLE = SupplierContactRole.COMMERCIAL;
 
 const SUPPLIER_ROLE_CODES = Object.values(SupplierContactRole) as SupplierContactRole[];
 
-/**
- * A contact's type as a file writes it: its code, or the word the contact's page shows in any of the
- * four languages (`Technique`), case and accents aside. Null for anything else.
- */
+/** A contact's type as a file writes it (`supplierContactRoleOf`). Null for anything else. */
 function supplierRoleOf(cell: string): SupplierContactRole | null {
-  const key = accentFreeKey(cell);
-  return SUPPLIER_ROLE_CODES.find((code) => [code, ...Object.values(SUPPLIER_CONTACT_ROLE_LABELS).map((labels) => labels[code])]
-    .some((word) => !!word && accentFreeKey(word) === key)) ?? null;
+  return supplierContactRoleOf(cell) as SupplierContactRole | null;
 }
 
 /** The values `-` clears on a stored contact (D21 of 26.11.9); the keys and `active` refuse it. */

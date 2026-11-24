@@ -44,7 +44,9 @@ function connection() {
     query: (sql: string, params: unknown[] = []) => occupy(sql, () => {
       if (/current_setting\('app\.da_mode'/.test(sql)) return [{ limited: false }];
       if (/FOR NO KEY UPDATE/.test(sql)) return [1];
-      if (/\bDELETE FROM\b|\bINSERT INTO\b/i.test(sql)) return [];
+      // A removal returns the ids it deleted (the replacements count what they wrote).
+      if (/\bDELETE FROM\b/i.test(sql)) return /RETURNING/i.test(sql) ? idList(params).map((id) => ({ id })) : [];
+      if (/\bINSERT INTO\b/i.test(sql)) return [];
       if (/FROM portfolio_request_applications/i.test(sql) && !/JOIN/i.test(sql)) {
         return [{ id: '1', application_id: APP_A }, { id: '2', application_id: APP_B }];
       }
@@ -75,9 +77,10 @@ function connection() {
             ];
           }
           if (name === 'PortfolioRequestOpex' || name === 'PortfolioProjectOpex') {
+            // The row id is the line id here, so a removal by row id returns the line it unlinked.
             return [
-              { opex_id: LINE_A, request_id: REQ, project_id: PRJ },
-              { opex_id: LINE_B, request_id: REQ, project_id: PRJ },
+              { id: LINE_A, opex_id: LINE_A, request_id: REQ, project_id: PRJ },
+              { id: LINE_B, opex_id: LINE_B, request_id: REQ, project_id: PRJ },
             ];
           }
           return [];
@@ -150,11 +153,11 @@ async function testRequestLinkReadsRunOneAfterTheOther() {
   assert.equal(queries.filter((sql) => /FROM users/i.test(sql)).length, 2);
 
   const beforeApps = queries.length;
-  assert.deepEqual(await requests.bulkReplaceApplications(REQ, [APP_A], opts), { ok: true, count: 1 });
+  assert.deepEqual(await requests.bulkReplaceApplications(REQ, [APP_A], opts), { ok: true, count: 1, added: 0, removed: 1 });
   assert.equal(names(queries.slice(beforeApps), 'applications').length, 2);
 
   const beforeAssets = queries.length;
-  assert.deepEqual(await requests.bulkReplaceAssets(REQ, [ASSET_A], opts), { ok: true, count: 1 });
+  assert.deepEqual(await requests.bulkReplaceAssets(REQ, [ASSET_A], opts), { ok: true, count: 1, added: 0, removed: 1 });
   assert.equal(names(queries.slice(beforeAssets), 'assets').length, 2);
 
   for (const [kind, call] of [
