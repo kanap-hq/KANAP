@@ -1178,7 +1178,8 @@
     "total": "Total",
     "yes": "sí",
     "no": "no",
-    "accountCheck": "Control de la cuenta",
+    "toCheck": "Por verificar",
+    "quantityPrice": "Cantidad y precio",
     "accountOutsideChart": "Cuenta fuera del plan de la empresa",
     "amountColumnHeader": "{{column}} {{slot}} ({{year}})",
     "fteColumnHeader": "ETC {{column}} ({{year}})",
@@ -1189,8 +1190,6 @@
     "fteDeclared": "ETC declarados",
     "fteDeclaredYes": "Sí",
     "fteDeclaredNo": "No",
-    "entryCheck": "Control de cantidad y precio",
-    "entryToCheck": "Por verificar",
     "yearSlotWithYear": "{{slot}} ({{year}})",
     "yearSlots": {
       "yMinus2": "A-2",

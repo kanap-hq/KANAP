@@ -120,7 +120,7 @@ Die Liste (unter **Budgetverwaltung > Budgetzeilen**) enthält die OPEX- und CAP
 - **Betragsspalten**: Jede angezeigte Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat. Die Überschrift nennt die Spalte, das Jahr relativ zu heute und das Kalenderjahr, zum Beispiel **Revision J+1 (2027)**. Ausgeblendete Spalten werden nicht angeboten
 - **VZÄ-Spalten**: Die VZÄ jeder angezeigten Budgetspalte für J-1, J, J+1 und J+2, unter den Namen, die Ihre Organisation gewählt hat, in der Spaltenauswahl direkt nach den Betragsspalten. Die Überschrift nennt die Spalte und das Kalenderjahr, zum Beispiel **VZÄ Budget (2026)**. Die VZÄ einer Zeile sind die Summe der VZÄ ihrer Zeilen unter Menge und Preis in dieser Spalte. Siehe [VZÄ](#vza). Die Zelle ist leer, wenn die Spalte keine solchen Zeilen hat
 - **VZÄ gemeldet**: **Ja**, wenn die Zeile in mindestens einer Budgetspalte eines beliebigen Jahres VZÄ meldet, sonst leer. Das sind die Zeilen, die der Filter **Zeilen mit VZÄ** der Berichte behält
-- **Prüfung Menge und Preis**: **Zu prüfen**, wenn das Konto der Zeile eine Erfassung nach Menge und Preis erwartet und eine Spalte der Zeile anders erfasst ist, sonst leer. Siehe [Wenn das Konto eine Erfassung nach Menge und Preis erwartet](#quantity-and-price-expected)
+- **Zu prüfen**: was an der Zeile nicht stimmt, sonst leer. **Menge und Preis**: Das Konto der Zeile erwartet eine Erfassung nach Menge und Preis und eine Spalte der Zeile ist anders erfasst, siehe [Wenn das Konto eine Erfassung nach Menge und Preis erwartet](#quantity-and-price-expected). **Konto nicht im Kontenplan des Unternehmens**: Das Konto der Zeile gehört zu einem anderen Kontenplan als dem ihres zahlenden Unternehmens. Eine Zeile kann beides zeigen
 - **Aktiviert**: Status der Zeile (aktiviert oder deaktiviert)
 - **Beschreibung**: Die Beschreibung der Zeile
 - **Währung**: ISO-Währungscode
@@ -146,7 +146,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 **Filtern**:
 
 - **Schnellsuche**: Durchsucht Referenz (`BL-12` und die früheren `OPX-12` oder `CPX-3`), Produktname, Beschreibung, Lieferant, zahlendes Unternehmen, Konto, Vertrag, Projektnamen, Zuordnung, Verantwortliche, Analysewerte, Kostenstelle (Code, Name und Pfad), Budgetverantwortlicher, Notizen, Währung und Status. Filtert die Liste in Echtzeit während der Eingabe, unabhängig von Akzenten und Groß-/Kleinschreibung
-- **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Typ**, **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build**, **VZÄ gemeldet** und **Prüfung Menge und Preis** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl). Der Filter **VZÄ gemeldet** bietet **Ja** und **Nein**. Der Filter **Aktiviert** zeigt die Auswahl von **Anzeigen** (**Alle**, **Aktiv** oder **Deaktiviert**): Eine Änderung an einem ändert auch das andere
+- **Spaltenfilter**: Klicken Sie auf das Filtersymbol in einer Spaltenüberschrift. **Typ**, **Lieferant**, **Zahlendes Unternehmen**, **Konto**, **Zuordnung**, **Währung**, **IT-Verantwortlicher**, **Fachbereichsverantwortlicher**, jede Analysedimension, **Kostenstelle**, **Budgetverantwortlicher**, **Run oder Build**, **VZÄ gemeldet** und **Zu prüfen** verwenden Kontrollkästchen-Set-Filter (Mehrfachauswahl). Der Filter **Zu prüfen** bietet ein Kästchen pro Prüfung: Eine Zeile bleibt, wenn sie eine angekreuzte Prüfung nicht besteht, unabhängig von ihren anderen Prüfungen. Der Filter **VZÄ gemeldet** bietet **Ja** und **Nein**. Der Filter **Aktiviert** zeigt die Auswahl von **Anzeigen** (**Alle**, **Aktiv** oder **Deaktiviert**): Eine Änderung an einem ändert auch das andere
 - **Alle außer einigen**: Aktivieren Sie **Alle** und deaktivieren Sie dann die Werte, die Sie ausschließen möchten: Der Filter behält alles außer diesen (die Überschrift zeigt dann zum Beispiel **Alle außer 3**), und ein später angelegter Wert wird automatisch einbezogen
 - **Betragsfilter**: Jede Betragsspalte hat einen Zahlenfilter. Eine Zahl im Feld unter der Überschrift behält die Zeilen mit mindestens diesem Betrag. Öffnen Sie das Filtermenü für die anderen Bedingungen: größer als, kleiner als, gleich, ungleich oder zwischen zwei Beträgen
 - **VZÄ-Filter**: Jede VZÄ-Spalte hat einen Zahlenfilter mit denselben Bedingungen, dazu leer und nicht leer. **Leer** behält die Zeilen, deren Spalte keine Zeilen unter Menge und Preis hat
@@ -182,7 +182,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 - Das Anklicken einer beliebigen Zelle öffnet den Arbeitsbereich auf dem relevantesten Tab:
     - **Ref**, **Produktname**, **Lieferant**, **Zahlendes Unternehmen**, **Konto**, die Dimensionsspalten und andere allgemeine Spalten: Öffnet den Tab **Übersicht**
     - **Betragsspalten** (Budget J, Erwarteter Endwert J, Revision J+1 usw.) und **VZÄ-Spalten**: Öffnet den Tab **Budget**, voreingestellt auf das Jahr der Spalte
-    - **Prüfung Menge und Preis**: Öffnet den Tab **Budget**
+    - **Zu prüfen**: **Menge und Preis** öffnet den Tab **Budget**, **Konto nicht im Kontenplan des Unternehmens** öffnet den Tab **Übersicht**
     - **Zuordnung**: Öffnet den Tab **Zuordnungen** für das aktuelle Jahr
     - **Aufgabe**: Öffnet den Tab **Übersicht**, in dem sich der Aufgabenbereich befindet
     - **Vertrag**: Öffnet den verknüpften Vertrags-Arbeitsbereich direkt
@@ -538,7 +538,7 @@ Auf einer solchen Zeile gilt im Tab **Budget**:
 
 Eine Spalte ist zu prüfen, wenn sie angezeigt wird, nicht eingefroren ist, für das Jahr eine Summe ungleich null hat und nicht aus Zeilen nach Menge und Preis aufgebaut ist. Jedes Jahr zählt. Eine verteilte, monatlich erfasste oder von Hand geänderte Spalte und eine Spalte, die ihre Zeilen nur als Referenz behält, sind zu prüfen. Eine Spalte, die aus einer aus Zeilen aufgebauten Spalte kopiert wurde, ist ebenfalls aus Zeilen aufgebaut: Sie ist nicht zu prüfen.
 
-Um diese Zeilen zu finden, blenden Sie die Spalte **Prüfung Menge und Preis** der Liste ein und filtern Sie sie auf **Zu prüfen**, oder klicken Sie in der Kachel [Datenqualität](my-dashboard.md#data-hygiene) auf **Menge und Preis zu prüfen**. Diese Kachel ist ausgeschaltet, bis Sie sie hinzufügen: **Startseite anpassen**, dann **Kachel hinzufügen** (+) im Bereich **Budgetverwaltung**.
+Um diese Zeilen zu finden, blenden Sie die Spalte **Zu prüfen** der Liste ein und filtern Sie sie auf **Menge und Preis**, oder klicken Sie in der Kachel [Datenqualität](my-dashboard.md#data-hygiene) auf **Menge und Preis zu prüfen**. Diese Kachel ist ausgeschaltet, bis Sie sie hinzufügen: **Startseite anpassen**, dann **Kachel hinzufügen** (+) im Bereich **Budgetverwaltung**.
 
 #### VZÄ
 

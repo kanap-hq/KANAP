@@ -307,7 +307,7 @@ Prüfungen, die Ihnen helfen, unvollständige Zeilen auf einen Blick zu erkennen
 - **Konto nicht im Kontenplan des Unternehmens**: Zeilen, deren Konto nicht zum Kontenplan des zahlenden Unternehmens gehört
 - **Menge und Preis zu prüfen**: Zeilen, deren Konto eine Erfassung nach Menge und Preis erwartet, mit einer anders erfassten Spalte. Diese Prüfung erscheint nur, wenn sie mindestens eine Zeile zählt. Siehe [Wenn das Konto eine Erfassung nach Menge und Preis erwartet](budget-lines.md#quantity-and-price-expected)
 
-Ein Zähler wird orange (rot bei der Kontenplan-Prüfung), wenn er über null liegt. Klicken Sie auf einen Zähler, um die Liste genau mit den Zeilen zu öffnen, die er zählt.
+Ein Zähler wird orange (rot bei der Kontenplan-Prüfung), wenn er über null liegt. Klicken Sie auf einen Zähler, um die Liste genau mit den Zeilen zu öffnen, die er zählt. Die beiden Kontoprüfungen öffnen sie mit eingeblendeter Spalte **Zu prüfen**, gefiltert auf diese eine Prüfung.
 
 ### Mein Budget
 

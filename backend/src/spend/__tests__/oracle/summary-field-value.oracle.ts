@@ -60,8 +60,10 @@ export function getSummaryFieldValue(row: any, field: string): any {
     case 'project_stream_name':
     case 'project_category_name':
     case 'account_warning':
-    case 'entry_check':
       return blankToNull(row?.[field]);
+    // The checks the line fails: their joined text, as the engine sorts and groups them.
+    case 'to_check':
+      return Array.isArray(row?.to_check) && row.to_check.length ? row.to_check.join(', ') : null;
     case 'contract_name':
       return blankToNull(row?.latest_contract_name);
     case 'allocation_label':
@@ -78,7 +80,13 @@ export function getSummaryFieldValue(row: any, field: string): any {
   }
 }
 
-/** Every value a row holds for `field`: each linked name for the project fields, else the one field value. */
+/** Fields with several names per line: the project fields and the checks the line fails (`to_check`). */
+export function isMultiListField(field: string): boolean {
+  return PROJECT_LIST_FIELDS.includes(field) || field === 'to_check';
+}
+
+/** Every value a row holds for `field`: each linked name for the project fields, each check for `to_check`, else the one field value. */
 export function summaryFieldValues(row: any, field: string): unknown[] {
+  if (field === 'to_check') return Array.isArray(row?.to_check) ? row.to_check : [];
   return PROJECT_LIST_FIELDS.includes(field) ? summaryRowProjectNames(row, field) : [getSummaryFieldValue(row, field)];
 }

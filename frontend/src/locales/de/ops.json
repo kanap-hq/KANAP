@@ -1178,7 +1178,8 @@
     "total": "Gesamt",
     "yes": "ja",
     "no": "nein",
-    "accountCheck": "Kontoprüfung",
+    "toCheck": "Zu prüfen",
+    "quantityPrice": "Menge und Preis",
     "accountOutsideChart": "Konto nicht im Kontenplan des Unternehmens",
     "amountColumnHeader": "{{column}} {{slot}} ({{year}})",
     "fteColumnHeader": "VZÄ {{column}} ({{year}})",
@@ -1189,8 +1190,6 @@
     "fteDeclared": "VZÄ gemeldet",
     "fteDeclaredYes": "Ja",
     "fteDeclaredNo": "Nein",
-    "entryCheck": "Prüfung Menge und Preis",
-    "entryToCheck": "Zu prüfen",
     "yearSlotWithYear": "{{slot}} ({{year}})",
     "yearSlots": {
       "yMinus2": "J-2",

@@ -1178,7 +1178,8 @@
     "total": "Total",
     "yes": "yes",
     "no": "no",
-    "accountCheck": "Account check",
+    "toCheck": "To check",
+    "quantityPrice": "Quantity and price",
     "accountOutsideChart": "Account not in the company's chart",
     "amountColumnHeader": "{{column}} {{slot}} ({{year}})",
     "fteColumnHeader": "{{column}} FTE ({{year}})",
@@ -1189,8 +1190,6 @@
     "fteDeclared": "FTE declared",
     "fteDeclaredYes": "Yes",
     "fteDeclaredNo": "No",
-    "entryCheck": "Quantity and price check",
-    "entryToCheck": "To check",
     "yearSlotWithYear": "{{slot}} ({{year}})",
     "yearSlots": {
       "yMinus2": "Y-2",

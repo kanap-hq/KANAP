@@ -468,7 +468,7 @@ function budgetItemMetadata(row: any, registry: AiEntityFilterRegistry, consolid
     paying_company: scalar(row.paying_company_name ?? row.company_name),
     account: scalar(row.account_display),
     ...(registry.fields.consolidation_account ? { consolidation_account: consolidation?.get(row.id) ?? null } : {}),
-    entry_check: scalar(row.entry_check),
+    to_check: Array.isArray(row.to_check) && row.to_check.length ? row.to_check.map(String) : null,
     owner_it: scalar(row.owner_it_name),
     owner_business: scalar(row.owner_business_name),
     analytics_category: registry.fields.analytics_category?.nature && registry.fields.analytics_category.nature !== row.nature
@@ -3336,7 +3336,7 @@ export class AiQueryExecutor {
     const anchorYear = new Date().getFullYear();
     const reads = await this.readableLinks(context);
     // Quantity and price expected: the rule as the line's route reads it, the consolidation account
-    // named for a reader of the accounts only. Read once: the line's row (`entry_check`) takes it
+    // named for a reader of the accounts only. Read once: the line's row (`to_check`) takes it
     // too, and `quantity_price_entry` says it in words.
     const access = await aiBudgetListAccess(this.policy, context);
     const checks = await readEntryChecks(context.manager, context.tenantId, [lineId], { accounts: access.accounts });

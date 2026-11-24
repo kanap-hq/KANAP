@@ -381,9 +381,11 @@ function mockBudgetEndpoints() {
     // A hygiene count: one filter, no group, no sum.
     if (filters.length && body.spec.groupBy.length === 0 && body.spec.measures.length === 0) {
       const counts: Record<string, number> = scope === 'opex'
-        ? { owner_it_name: 1, owner_business_name: 2, paying_company_name: 0, cost_center_label: 3, yPlus1Budget: 5, yPlus1Forecast: 5, account_warning: 0, entry_check: entryToCheck.opex }
-        : { owner_it_name: 4, owner_business_name: 3, paying_company_name: 0, cost_center_label: 0, yPlus1Budget: 2, yPlus1Forecast: 2, account_warning: 1, entry_check: entryToCheck.capex };
-      const count = counts[filters[0]] ?? 0;
+        ? { owner_it_name: 1, owner_business_name: 2, paying_company_name: 0, cost_center_label: 3, yPlus1Budget: 5, yPlus1Forecast: 5, 'to_check:coa_mismatch': 0, 'to_check:quantity_price': entryToCheck.opex }
+        : { owner_it_name: 4, owner_business_name: 3, paying_company_name: 0, cost_center_label: 0, yPlus1Budget: 2, yPlus1Forecast: 2, 'to_check:coa_mismatch': 1, 'to_check:quantity_price': entryToCheck.capex };
+      // The checks of "To check" share one field: a count is keyed by its check.
+      const key = filters[0] === 'to_check' ? `to_check:${body.query.filters.to_check.values.join(',')}` : filters[0];
+      const count = counts[key] ?? 0;
       return { data: { groups: [], others: null, total: { keys: [], count, values: {}, unknown: {} }, groupCount: count ? 1 : 0, reportingCurrency: null } };
     }
     // Names as the list shows them: Thomas Berger is IT owner of o1, business owner of o2 and holds
@@ -673,7 +675,7 @@ describe('BudgetSection budget tiles', () => {
     expect(opexNoBusinessOwner.getAttribute('href')!.split('?')[0]).toBe('/ops/budget');
     expect(filtersOf(opexNoBusinessOwner)).toEqual({ owner_business_name: { filterType: 'set', values: [null] } , nature: { filterType: 'set', values: ['opex'] } });
     expect(filtersOf(within(tile).getByLabelText('dashboard.hygiene.accountOutsideChart, ops:operations.scope.capex: 1')))
-      .toEqual({ account_warning: { filterType: 'set', values: ['coa_mismatch'] }, nature: { filterType: 'set', values: ['capex'] } });
+      .toEqual({ to_check: { filterType: 'set', values: ['coa_mismatch'] }, nature: { filterType: 'set', values: ['capex'] } });
     // A count of zero opens nothing.
     expect(within(tile).getByLabelText('dashboard.hygiene.noPayingCompany, ops:operations.scope.opex: 0')).not.toHaveAttribute('href');
     // The count and the link use the same filter, on the lines the list shows by default (enabled).
@@ -690,11 +692,13 @@ describe('BudgetSection budget tiles', () => {
     const filtersOf = (el: HTMLElement) => JSON.parse(new URLSearchParams(el.getAttribute('href')!.split('?')[1]).get('filters')!);
     const opex = await within(tile).findByLabelText('dashboard.hygiene.entryToCheck, ops:operations.scope.opex: 2');
     expect(opex.getAttribute('href')!.split('?')[0]).toBe('/ops/budget');
-    expect(filtersOf(opex)).toEqual({ entry_check: { filterType: 'set', values: ['to_check'] }, nature: { filterType: 'set', values: ['opex'] } });
+    // The list's one "To check" column, narrowed to this check alone.
+    expect(filtersOf(opex)).toEqual({ to_check: { filterType: 'set', values: ['quantity_price'] }, nature: { filterType: 'set', values: ['opex'] } });
     expect(within(tile).getByLabelText('dashboard.hygiene.entryToCheck, ops:operations.scope.capex: 0')).not.toHaveAttribute('href');
     // Counted by the list's aggregate on the same filter, on the lines the list shows by default.
     const countQueries = aggregateCalls('/spend-items/summary/aggregate').filter((body) => body.query.filters).map((body) => body.query);
-    expect(countQueries).toContainEqual({ filters: { entry_check: { filterType: 'set', values: ['to_check'] } }, status: 'enabled' });
+    expect(countQueries).toContainEqual({ filters: { to_check: { filterType: 'set', values: ['quantity_price'] } }, status: 'enabled' });
+    expect(countQueries).toContainEqual({ filters: { to_check: { filterType: 'set', values: ['coa_mismatch'] } }, status: 'enabled' });
   });
 
   it('leaves the quantity and price check out of the tile while it counts no line', async () => {

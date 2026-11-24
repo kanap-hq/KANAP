@@ -307,7 +307,7 @@ Des contrôles qui vous aident à repérer les lignes incomplètes en un coup d'
 - **Compte hors du plan de la société** : lignes dont le compte n'appartient pas au plan comptable de la société payeuse
 - **Quantité et prix à vérifier** : lignes dont le compte attend une saisie en quantité et prix, avec une colonne saisie autrement. Elle n'apparaît que lorsqu'elle compte au moins une ligne. Voir [Quand le compte attend une saisie en quantité et prix](budget-lines.md#quantity-and-price-expected)
 
-Un compteur devient orange (rouge pour le contrôle du plan comptable) lorsqu'il est supérieur à zéro. Cliquez sur un compteur pour ouvrir la liste sur exactement les lignes qu'il compte.
+Un compteur devient orange (rouge pour le contrôle du plan comptable) lorsqu'il est supérieur à zéro. Cliquez sur un compteur pour ouvrir la liste sur exactement les lignes qu'il compte. Les deux contrôles de compte l'ouvrent avec sa colonne **À vérifier** affichée et filtrée sur ce seul contrôle.
 
 ### Mon budget
 

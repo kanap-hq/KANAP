@@ -22,13 +22,10 @@ import { isLimitedTransaction } from '../data-access/line-write-checks';
  * Such a column is to check unless it conforms (`columnConformsSql`). A line is `to_check` when
  * at least one of its columns is.
  *
- * Both readers build their SQL here: the list's field (`budget-list.config.ts`, `entry_check`) and
- * the per-line reader (`readEntryChecks`, the line's route, the list rows, Kad's detail).
+ * Both readers build their SQL here: the list's check `quantity_price` of the field `to_check`
+ * (`budget-line-checks.ts`, `budget-list.config.ts`) and the per-line reader (`readEntryChecks`,
+ * the line's route, the list rows, Kad's detail).
  */
-
-/** The list field and its one value; any other line reads null. */
-export const ENTRY_CHECK_FIELD = 'entry_check';
-export const ENTRY_CHECK_TO_CHECK = 'to_check';
 
 export type EntryCheckLevel = 'account' | 'consolidation';
 

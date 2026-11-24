@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ColDef, type ColumnState } from 'ag-grid-community';
 import ServerDataGrid, { DATE_COLUMN_FILTER, DATE_COLUMN_FILTER_TWO_CONDITIONS, EnhancedColDef, StatusScope, gridSortModel } from '../../components/ServerDataGrid';
 import PageHeader from '../../components/PageHeader';
-import { Box, Button, Chip, Stack, Typography } from '@mui/material';
+import { Box, Button, Chip, Link, Stack, Typography } from '@mui/material';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import { withCostCenterGroups } from '../../components/grid/costCenterFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
@@ -19,7 +19,7 @@ import BulkEditDialog from '../../components/bulk-edit/BulkEditDialog';
 import { BulkSelectionScope, bulkSelectionGridSx, useBulkSelection } from '../../components/bulk-edit/bulkSelection';
 import { useBudgetLineBulkFields } from './budgetLineBulkFields';
 import { recordsInUseCheck } from '../../utils/deleteCheck';
-import { LinkCellRenderer } from '../../components/grid/renderers';
+import { LinkCellRenderer, aboveCellLinkSx, wholeCellLinkSx } from '../../components/grid/renderers';
 import { formatItemRef } from '../../utils/item-ref';
 import { budgetTypeChipSx } from './budgetTypeChipSx';
 import {
@@ -95,9 +95,8 @@ type SummaryRow = {
   allocation_method_label?: string | null;
   paying_company_name?: string | null;
   account_display?: string | null;
-  account_warning?: string | null;
-  /** 'to_check' when the account expects quantity and price and a column of the line is not built so. */
-  entry_check?: 'to_check' | null;
+  /** The checks the line fails (`LINE_CHECKS`), null when none. */
+  to_check?: LineCheck[] | null;
   owner_it_name?: string | null;
   owner_business_name?: string | null;
 };
@@ -136,6 +135,64 @@ function useListTotals(query: TotalsQuery | null) {
  * (showing or hiding one reloads the rows).
  */
 const pageParams = (state: Parameters<typeof visibleFteFields>[0]) => ({ shape: 'grid', fte: visibleFteFields(state).join(',') });
+
+/**
+ * The checks of the "To check" column, the server's `to_check` (`budget-line-checks.ts`), in its
+ * order: one entry per check, never a column of its own. `opens`: the cell its link stands for
+ * (`getBudgetHref`), where the line is put right.
+ */
+const LINE_CHECKS = [
+  // The Budget tab, where the columns to check are marked.
+  { value: 'quantity_price', label: 'shared.quantityPrice', opens: 'to_check' },
+  // The line on its account.
+  { value: 'coa_mismatch', label: 'shared.accountOutsideChart', opens: 'account_display' },
+] as const;
+type LineCheck = (typeof LINE_CHECKS)[number]['value'];
+
+/** The checks a row fails, as entries of `LINE_CHECKS`, in its order. */
+function lineChecksOf(row: SummaryRow | undefined): Array<(typeof LINE_CHECKS)[number]> {
+  const failed = row?.to_check ?? [];
+  return LINE_CHECKS.filter((check) => failed.includes(check.value));
+}
+
+/** A plain left click, which the page navigates itself; any other click is the browser's. */
+const isPlainLeftClick = (event: React.MouseEvent) => event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+
+/**
+ * The "To check" cell: each check the line fails, a link to where it is put right. A click
+ * elsewhere in the cell opens the first one, as a link cell does.
+ */
+function LineChecksCell({ checks, label, hrefOf, onNavigate }: {
+  checks: Array<(typeof LINE_CHECKS)[number]>;
+  label: (check: (typeof LINE_CHECKS)[number]) => string;
+  hrefOf: (check: (typeof LINE_CHECKS)[number]) => string | null;
+  onNavigate: (href: string) => void;
+}) {
+  if (!checks.length) return null;
+  return (
+    <Box component="span" sx={{ display: 'block', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      {checks.map((check, index) => {
+        const href = hrefOf(check);
+        return (
+          <React.Fragment key={check.value}>
+            {index > 0 && ', '}
+            {href ? (
+              <Link
+                href={href}
+                onClick={(event) => { if (isPlainLeftClick(event)) { event.preventDefault(); onNavigate(href); } }}
+                underline="none"
+                color="inherit"
+                sx={{ cursor: 'pointer', ...(index === 0 ? wholeCellLinkSx : aboveCellLinkSx) }}
+              >
+                {label(check)}
+              </Link>
+            ) : label(check)}
+          </React.Fragment>
+        );
+      })}
+    </Box>
+  );
+}
 
 /**
  * The list, mounted afresh when the address enters or leaves a one-off view opened from a report
@@ -462,8 +519,8 @@ function BudgetListPageView() {
     } else if (amountYear != null) {
       tab = 'budget';
       next.set('year', String(amountYear));
-    } else if (colId === 'entry_check') {
-      // The marks of the columns to check are on the Budget tab.
+    } else if (colId === 'to_check') {
+      // The quantity and price check: the marks of the columns to check are on the Budget tab.
       tab = 'budget';
     } else if (colId === 'latest_task_text') {
       tab = 'overview'; // tasks now live in the overview tab
@@ -623,43 +680,22 @@ function BudgetListPageView() {
       filterParams: { values: [] },
       sortable: false,
     },
-    // Lines whose account belongs to another chart of accounts than the paying company's: the
-    // filter the overview's data hygiene count opens the list with. Hidden by default.
+    // The data quality checks the line fails, one value per check (`LINE_CHECKS`): the filter the
+    // overview's data hygiene counts open the list with, on one check each. Hidden by default.
     {
-      colId: 'account_warning',
-      headerName: t('shared.accountCheck'),
+      colId: 'to_check',
+      headerName: t('shared.toCheck'),
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
-      filterParams: { values: [{ value: 'coa_mismatch', label: t('shared.accountOutsideChart') }], searchable: false },
-      valueGetter: (p) => (p.data?.account_warning === 'coa_mismatch' ? t('shared.accountOutsideChart') : ''),
+      filterParams: { values: [...LINE_CHECKS.map((check) => ({ value: check.value, label: t(check.label) })), { value: null }], searchable: false },
+      valueGetter: (p) => lineChecksOf(p.data).map((check) => t(check.label)).join(', '),
       width: 220,
       defaultHidden: true,
-      sortable: false,
       cellRenderer: (params: any) => (
-        <LinkCellRenderer
-          {...params}
-          linkType="internal"
-          getHref={(row) => getBudgetHref(row, 'account_display')}
-          onNavigate={(href) => navigate(href)}
-        />
-      ),
-    },
-    // Lines whose account (or its consolidation account) expects quantity and price, with a column
-    // not built so: the filter the overview's data hygiene count opens the list with. Hidden by default.
-    {
-      colId: 'entry_check',
-      headerName: t('shared.entryCheck'),
-      filter: CheckboxSetFilter,
-      floatingFilterComponent: CheckboxSetFloatingFilter,
-      filterParams: { values: [{ value: 'to_check', label: t('shared.entryToCheck') }, { value: null }], searchable: false },
-      valueGetter: (p) => (p.data?.entry_check === 'to_check' ? t('shared.entryToCheck') : ''),
-      width: 180,
-      defaultHidden: true,
-      cellRenderer: (params: any) => (
-        <LinkCellRenderer
-          {...params}
-          linkType="internal"
-          getHref={(row) => getBudgetHref(row, 'entry_check')}
+        <LineChecksCell
+          checks={lineChecksOf(params.data)}
+          label={(check) => t(check.label)}
+          hrefOf={(check) => getBudgetHref(params.data, check.opens)}
           onNavigate={(href) => navigate(href)}
         />
       ),

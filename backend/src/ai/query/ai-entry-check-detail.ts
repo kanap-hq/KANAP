@@ -8,7 +8,7 @@ import { readAiScreenLanguage } from '../ai-unread-families';
  * The "quantity and price entry" of one budget line as Kad reads it (`quantity_price_entry` of the
  * line's detail), in plain words rather than the rule's keys: who expects it, each column to check
  * by its name on screen and its year with how it is entered today, and that this is the whole cause
- * of the line's `entry_check` `to_check`. A conforming or unconcerned line says so too.
+ * of `quantity_price` in the line's `to_check`. A conforming or unconcerned line says so too.
  */
 
 /** How a column to check is entered today, after its round (`spend_round_inputs.method`). */
@@ -34,7 +34,7 @@ export async function describeEntryCheckForAi(
     return {
       status: 'not_expected',
       explanation: 'The line\'s account, and its consolidation account if it has one, expects no quantity and price entry: '
-        + 'nothing on this line is to check for it (`entry_check` is null for this reason).',
+        + 'nothing on this line is to check for it (`to_check` holds no `quantity_price` for this reason).',
     };
   }
   const cons = check.consolidation_account;
@@ -79,7 +79,7 @@ export async function describeEntryCheckForAi(
     ...withheld,
     columns_to_check: columns,
     explanation: `${expectedBy} expects quantity and price entry. These columns are to check because they are not built as quantity × price. `
-      + 'This is the only cause of the line\'s `entry_check` "to_check": nothing else on the line (supplier, contract, dimensions, amounts) causes it. '
+      + 'This is the only cause of `quantity_price` in the line\'s `to_check`: nothing else on the line (supplier, contract, dimensions, amounts) causes it. '
       + 'Nothing is refused: the amounts stay as entered. To clear the mark, rebuild each of these columns in quantity and price on the line\'s Budget tab.',
   };
 }

@@ -10,7 +10,8 @@ import { resolveAiEntityRegistry } from '../../ai/query/registries';
 
 // "Quantity and price expected" read on the budget lines (lot B12a, pass 2), against the database,
 // on one seeded tenant in a rolled-back transaction:
-// - parity: the per-line reader (`readEntryChecks`), the list's field `entry_check` (each line,
+// - parity: the per-line reader (`readEntryChecks`), the list's check `quantity_price` of the field
+//   `to_check` (each line,
 //   the filter, its values, a page with it, the rows the list draws) and a written truth table
 //   agree, on an account that sets it, a consolidation account that sets it, both, neither; no
 //   consolidation chart; a consolidation number missing or only in another chart; a column built
@@ -22,7 +23,9 @@ import { resolveAiEntityRegistry } from '../../ai/query/registries';
 //   column rebuilt as quantity × price, the column unfrozen;
 // - the route `GET /budget-lines/:id/entry-check`: the expectation, its level and the columns to
 //   check; the consolidation account named for a reader of the accounts only;
-// - Kad and the MCP server: `entry_check` filters, counts as the hygiene tile's aggregate, lists
+// - the one field `to_check` (D12): a line failing both checks holds both names; a filter on one
+//   check keeps the lines failing it, and evaluates that check alone (the statement reads no other);
+// - Kad and the MCP server: `to_check` filters, counts as the hygiene tile's aggregate, lists
 //   the same lines, shows on each line and in the detail, for a reader of budget without accounts too;
 // - a person limited to one company reads, counts and lists the lines of that company only, with the
 //   same answers on them as with every row readable (the reader, the field, its filter, sort and
@@ -264,17 +267,17 @@ async function readerTable(runner: QueryRunner, s: Seed): Promise<Map<string, Ex
   return new Map([...checks].map(([id, check]) => [labels.get(id)!, { level: check.level, columns: check.columns.map((c) => [c.year, c.measure] as [number, AmountMeasure]) }]));
 }
 
-/** The list's field on every line (one aggregate grouped by line), label → value. */
+/** The list's field on every line (one aggregate grouped by line), label → value (the names joined). */
 async function listField(h: Harness, runner: QueryRunner, s: Seed, access = { accounts: true }): Promise<Map<string, string | null>> {
-  const result = await h.budgetLines.summaryAggregate(ALL_LINES, { groupBy: ['id', 'entry_check'], measures: [] }, { manager: runner.manager, access });
+  const result = await h.budgetLines.summaryAggregate(ALL_LINES, { groupBy: ['id', 'to_check'], measures: [] }, { manager: runner.manager, access });
   const labels = labelOf(s);
   return new Map(result.groups.map((group: any) => [labels.get(group.keys[0])!, group.keys[1] ?? null]));
 }
 
-/** The tile's count: the list's aggregate with the filter, Enabled lines (the list's default), one statement. */
-async function tileCount(h: Harness, runner: QueryRunner, access = { accounts: true }): Promise<number> {
+/** The tile's count of one check: the list's aggregate with the filter, Enabled lines (the list's default), one statement. */
+async function tileCount(h: Harness, runner: QueryRunner, access = { accounts: true }, check = 'quantity_price'): Promise<number> {
   const result = await h.budgetLines.summaryAggregate(
-    { filters: { entry_check: { filterType: 'set', values: ['to_check'] } }, status: 'enabled' },
+    { filters: { to_check: { filterType: 'set', values: [check] } }, status: 'enabled' },
     { groupBy: [], measures: [] },
     { manager: runner.manager, access },
   );
@@ -287,7 +290,7 @@ async function assertAgree(h: Harness, runner: QueryRunner, s: Seed, expected: M
   assert.deepEqual(Object.fromEntries(await readerTable(runner, s)), Object.fromEntries(expected), `${what}: the reader follows the truth table`);
   const field = await listField(h, runner, s);
   const fromList = Object.fromEntries([...field].map(([label, value]) => [label, value]));
-  const fromTruth = Object.fromEntries([...expected].map(([label, e]) => [label, e.columns.length > 0 ? 'to_check' : null]));
+  const fromTruth = Object.fromEntries([...expected].map(([label, e]) => [label, e.columns.length > 0 ? 'quantity_price' : null]));
   assert.deepEqual(fromList, fromTruth, `${what}: the list's field agrees with the reader`);
 }
 
@@ -317,25 +320,113 @@ async function testParity(h: Harness, runner: QueryRunner, s: Seed) {
   const rows = await h.budgetLines.summaryRowsByIds(ids, { years: [Y - 1, Y, Y + 1, Y + 2] }, { manager: runner.manager });
   const labels = labelOf(s);
   assert.deepEqual(
-    Object.fromEntries(rows.map((row: any) => [labels.get(row.id), row.entry_check])),
-    Object.fromEntries([...expected].map(([label, e]) => [label, e.columns.length > 0 ? 'to_check' : null])),
+    Object.fromEntries(rows.map((row: any) => [labels.get(row.id), row.to_check])),
+    Object.fromEntries([...expected].map(([label, e]) => [label, e.columns.length > 0 ? ['quantity_price'] : null])),
     'the rows the list draws carry the field',
   );
 
-  const filtered = await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, filters: JSON.stringify({ entry_check: { filterType: 'set', values: ['to_check'] } }) },
+  const filtered = await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, filters: JSON.stringify({ to_check: { filterType: 'set', values: ['quantity_price'] } }) },
     { manager: runner.manager, access: { accounts: true } });
   assert.deepEqual(filtered.items.map((item: any) => labels.get(item.id)).sort(), toCheckLabels(expected), 'the filter keeps the lines to check');
-  assert.ok(filtered.items.every((item: any) => item.entry_check === 'to_check'), 'the grid rows carry the field');
-  const blank = await h.budgetLines.summaryAggregate({ ...ALL_LINES, filters: { entry_check: { filterType: 'set', values: [null] } } },
+  assert.ok(filtered.items.every((item: any) => item.to_check?.includes('quantity_price')), 'the grid rows carry the field');
+  const blank = await h.budgetLines.summaryAggregate({ ...ALL_LINES, filters: { to_check: { filterType: 'set', values: [null] } } },
     { groupBy: [], measures: [] }, { manager: runner.manager, access: { accounts: true } });
   assert.equal(blank.total.count, LINES.length - toCheckLabels(expected).length, 'the blank value keeps the others');
-  const sorted = await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, sort: 'entry_check:asc' }, { manager: runner.manager, access: { accounts: true } });
+  const sorted = await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, sort: 'to_check:asc' }, { manager: runner.manager, access: { accounts: true } });
   assert.deepEqual(sorted.items.slice(0, toCheckLabels(expected).length).map((item: any) => labels.get(item.id)).sort(), toCheckLabels(expected), 'the field sorts, blanks last');
-  const values = await h.budgetLines.summaryFilterValues({ ...ALL_LINES, fields: 'entry_check' }, { manager: runner.manager, access: { accounts: true } });
-  assert.deepEqual(values.entry_check, ['to_check', null], 'its values');
+  const values = await h.budgetLines.summaryFilterValues({ ...ALL_LINES, fields: 'to_check' }, { manager: runner.manager, access: { accounts: true } });
+  assert.deepEqual(values.to_check, ['quantity_price', null], 'its values');
   // Every line to check is Enabled this year but `cut` (not to check): the tile counts them all.
   assert.equal(await tileCount(h, runner), toCheckLabels(expected).length, 'the tile\'s aggregate counts the lines to check, in one statement');
   console.log('ok - the reader, the list\'s field, filter, values, sort, rows and the tile\'s count agree with the truth table');
+}
+
+/** The statements `fn` runs, to see which checks a statement evaluates. */
+async function statementsOf(runner: QueryRunner, fn: () => Promise<unknown>): Promise<string[]> {
+  const manager: any = runner.manager;
+  const query = manager.query;
+  const seen: string[] = [];
+  manager.query = (sql: string, params?: unknown[]) => {
+    seen.push(sql);
+    return query.call(manager, sql, params);
+  };
+  try {
+    await fn();
+  } finally {
+    manager.query = query;
+  }
+  return seen;
+}
+
+/**
+ * The one field `to_check` (D12): company B's chart of accounts differs from the lines' accounts',
+ * so its lines with an account also fail `coa_mismatch`. A line failing both holds both names, in
+ * the table's order; a filter on one check keeps the lines failing that one, and its statement
+ * evaluates that check alone (the tile's count of `coa_mismatch` costs what `account_warning` did).
+ */
+async function testToCheckField(h: Harness, runner: QueryRunner, s: Seed) {
+  await savepoint(runner, async () => {
+    const otherChart = (await runner.query(`SELECT id FROM chart_of_accounts WHERE tenant_id = $1 AND code LIKE 'OTHER-%'`, [s.tenantId]))[0].id;
+    await runner.query(`UPDATE companies SET coa_id = $2 WHERE tenant_id = $1 AND id = (SELECT paying_company_id FROM spend_items WHERE tenant_id = $1 AND id = $3)`,
+      [s.tenantId, otherChart, s.lines.spread.id]);
+    const expected = truth();
+    const qpLabels = toCheckLabels(expected);
+    const coaLabels = LINES.filter((line) => line.company === 'b' && line.account).map((line) => line.label).sort();
+    const names = (label: string) => [
+      ...(qpLabels.includes(label) ? ['quantity_price'] : []),
+      ...(coaLabels.includes(label) ? ['coa_mismatch'] : []),
+    ];
+    assert.ok(qpLabels.some((label) => coaLabels.includes(label)) && qpLabels.some((label) => !coaLabels.includes(label)), 'some lines fail both, some one');
+
+    const labels = labelOf(s);
+    const ids = Object.values(s.lines).map((line) => line.id);
+    const rows = await h.budgetLines.summaryRowsByIds(ids, { years: [Y - 1, Y, Y + 1, Y + 2] }, { manager: runner.manager });
+    assert.deepEqual(
+      Object.fromEntries(rows.map((row: any) => [labels.get(row.id), row.to_check])),
+      Object.fromEntries(LINES.map((line) => [line.label, names(line.label).length ? names(line.label) : null])),
+      'each row names the checks it fails, quantity and price first',
+    );
+    const field = await listField(h, runner, s);
+    assert.deepEqual(Object.fromEntries(field), Object.fromEntries(LINES.map((line) => [line.label, names(line.label).join(', ') || null])), 'the list\'s field, its names joined');
+
+    const access = { manager: runner.manager, access: { accounts: true } };
+    const listed = async (filter: unknown) => (await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, filters: JSON.stringify({ to_check: filter }) }, access))
+      .items.map((item: any) => labels.get(item.id)).sort();
+    assert.deepEqual(await listed({ filterType: 'set', values: ['coa_mismatch'] }), coaLabels, 'one check: the lines that fail it');
+    assert.deepEqual(await listed({ filterType: 'set', values: ['quantity_price'] }), qpLabels, 'the other check: its lines, whatever the first');
+    assert.deepEqual(await listed({ filterType: 'set', values: ['quantity_price', 'coa_mismatch'] }), [...new Set([...qpLabels, ...coaLabels])].sort(), 'both boxes');
+    assert.deepEqual(await listed({ filterType: 'set', values: [null] }), LINES.map((line) => line.label).filter((label) => !names(label).length).sort(), 'the blank box: the lines that fail none');
+    assert.deepEqual(await listed({ filterType: 'set', mode: 'exclude', values: ['quantity_price'] }), LINES.map((line) => line.label).filter((label) => names(label).join() !== 'quantity_price').sort(),
+      'the exclusion keeps a line failing another check too');
+    const accountWarning = await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, filters: JSON.stringify({ account_warning: { filterType: 'set', values: ['coa_mismatch'] } }) }, access);
+    assert.deepEqual(accountWarning.items.map((item: any) => labels.get(item.id)).sort(), coaLabels, 'account_warning still reads the same check');
+    const values = await h.budgetLines.summaryFilterValues({ ...ALL_LINES, fields: 'to_check' }, access);
+    assert.deepEqual(values.to_check, ['coa_mismatch', 'quantity_price', null], 'its values: one per check');
+    const sorted = await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, sort: 'to_check:asc' }, access);
+    assert.deepEqual(sorted.items.map((item: any) => names(labels.get(item.id)!).join(', ') || null).filter((text: string | null, i: number, all: Array<string | null>) => i === 0 || text !== all[i - 1]),
+      ['coa_mismatch', 'quantity_price', 'quantity_price, coa_mismatch', null], 'the sort: by the joined names, blanks last');
+
+    const coaEnabled = LINES.filter((line) => coaLabels.includes(line.label) && !line.disabledAt).length;
+    const qpEnabled = LINES.filter((line) => qpLabels.includes(line.label) && !line.disabledAt).length;
+    let coaCount = 0;
+    const coaStatements = await statementsOf(runner, async () => { coaCount = await tileCount(h, runner, { accounts: true }, 'coa_mismatch'); });
+    assert.equal(coaCount, coaEnabled, 'the tile counts the lines outside the chart');
+    assert.ok(coaStatements.some((sql) => sql.includes('coa_id <>')), 'that count reads the check');
+    assert.ok(!coaStatements.some((sql) => /ec_accounts|spend_round_inputs|freeze_states/.test(sql)), 'and nothing of the quantity and price check');
+    let qpCount = 0;
+    const qpStatements = await statementsOf(runner, async () => { qpCount = await tileCount(h, runner); });
+    assert.equal(qpCount, qpEnabled, 'the tile counts the lines to check for quantity and price');
+    assert.ok(!qpStatements.some((sql) => sql.includes('coa_id <>')), 'that count reads nothing of the chart check');
+    const both = await statementsOf(runner, () => h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, sort: 'to_check:asc' }, access));
+    assert.ok(both.some((sql) => sql.includes('coa_id <>') && sql.includes('ec_accounts')), 'a sort reads every check');
+
+    const ctx = aiContext(runner, s, s.users.admin);
+    const counted = await h.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'nature', filters: { to_check: ['coa_mismatch'] } });
+    assert.equal(counted.total, coaEnabled, 'Kad counts the lines outside the chart as the tile');
+    const kadListed = await h.queries.execute(ctx, { entity_type: 'budget_lines', filters: { to_check: ['coa_mismatch'] }, limit: 50 });
+    assert.ok(kadListed.items.length > 0 && kadListed.items.every((item: any) => item.metadata.to_check?.includes('coa_mismatch')), 'Kad lists them, each naming its checks');
+  });
+  console.log('ok - to_check: each line names the checks it fails; a filter on one check keeps its lines and evaluates it alone');
 }
 
 async function testChanges(h: Harness, runner: QueryRunner, s: Seed) {
@@ -407,14 +498,15 @@ async function testKad(h: Harness, runner: QueryRunner, s: Seed) {
   for (const [who, userId, accounts] of [['an administrator', s.users.admin, true], ['a reader of budget only', s.users.budgetOnly, false]] as const) {
     const ctx = aiContext(runner, s, userId);
     const registry = await resolveAiEntityRegistry(ctx, 'budget_lines', (entityType: any) => h.policy.canReadEntityType(ctx, entityType, runner.manager));
-    assert.ok(registry.fields.entry_check, `${who}: the field is in the registry`);
+    assert.ok(registry.fields.to_check, `${who}: the field is in the registry`);
+    assert.equal(registry.fields.entry_check, undefined, `${who}: the former field is gone`);
     const description = describeAiEntityFilters('budget_lines', registry);
-    assert.ok(description.fields.some((field) => field.field === 'entry_check'), `${who}: described`);
-    const counted = await h.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'nature', filters: { entry_check: ['to_check'] } });
+    assert.ok(description.fields.some((field) => field.field === 'to_check'), `${who}: described`);
+    const counted = await h.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'nature', filters: { to_check: ['quantity_price'] } });
     assert.equal(counted.total, await tileCount(h, runner, { accounts }), `${who}: aggregate_entities counts as the tile`);
-    const listed = await h.queries.execute(ctx, { entity_type: 'budget_lines', filters: { entry_check: ['to_check'] }, limit: 50 });
+    const listed = await h.queries.execute(ctx, { entity_type: 'budget_lines', filters: { to_check: ['quantity_price'] }, limit: 50 });
     assert.deepEqual(listed.items.map((item: any) => item.label.replace(/^Line /, '')).sort(), expected, `${who}: query_entities lists the tile's lines`);
-    assert.ok(listed.items.every((item: any) => item.metadata.entry_check === 'to_check'), `${who}: each line says it`);
+    assert.ok(listed.items.every((item: any) => item.metadata.to_check?.includes('quantity_price')), `${who}: each line says it`);
     // One read of the rule for the detail: its row and `quantity_price_entry` share it.
     const manager: any = runner.manager;
     const query = manager.query;
@@ -430,7 +522,7 @@ async function testKad(h: Harness, runner: QueryRunner, s: Seed) {
       manager.query = query;
     }
     assert.equal(reads, 1, `${who}: the detail reads the rule once`);
-    assert.equal(detail.data.entry_check, 'to_check', `${who}: the detail's row says it`);
+    assert.deepEqual(detail.data.to_check, ['quantity_price'], `${who}: the detail's row says it`);
   }
   console.log('ok - Kad and the MCP server: the field filters, counts as the tile, lists the same lines, shows in the detail');
 }
@@ -528,32 +620,32 @@ async function testLimitedPerson(h: Harness, runner: QueryRunner, s: Seed) {
       assert.deepEqual(ofA(reader), ofA(expected), `${what}: the reader on company A`);
       assert.ok([...reader].every(([label, e]) => s.lines[label].company === 'a' || (e.level === null && e.columns.length === 0)), `${what}: company B reads as not expected`);
       const field = await listField(h, runner, s);
-      const fromTruth = Object.fromEntries(Object.entries(ofA(expected)).map(([label, e]) => [label, e.columns.length > 0 ? 'to_check' : null]));
+      const fromTruth = Object.fromEntries(Object.entries(ofA(expected)).map(([label, e]) => [label, e.columns.length > 0 ? 'quantity_price' : null]));
       assert.deepEqual(Object.fromEntries(field), fromTruth, `${what}: the list's field on each line of company A`);
       const toCheck = toCheckLabels(new Map(Object.entries(ofA(expected))));
       assert.equal(await tileCount(h, runner), toCheck.filter((label) => !LINES.find((line) => line.label === label)!.disabledAt).length, `${what}: the tile`);
       const labels = labelOf(s);
-      const filtered = await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, filters: JSON.stringify({ entry_check: { filterType: 'set', values: ['to_check'] } }) },
+      const filtered = await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, filters: JSON.stringify({ to_check: { filterType: 'set', values: ['quantity_price'] } }) },
         { manager: runner.manager, access: { accounts: true } });
       assert.deepEqual(filtered.items.map((item: any) => labels.get(item.id)).sort(), toCheck, `${what}: the filter`);
-      const sorted = await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, sort: 'entry_check:asc' }, { manager: runner.manager, access: { accounts: true } });
+      const sorted = await h.budgetLines.summary({ ...ALL_LINES, shape: 'grid', limit: 100, sort: 'to_check:asc' }, { manager: runner.manager, access: { accounts: true } });
       assert.deepEqual(sorted.items.slice(0, toCheck.length).map((item: any) => labels.get(item.id)).sort(), toCheck, `${what}: the sort`);
-      const values = await h.budgetLines.summaryFilterValues({ ...ALL_LINES, fields: 'entry_check' }, { manager: runner.manager, access: { accounts: true } });
-      assert.deepEqual(values.entry_check, toCheck.length ? ['to_check', null] : [null], `${what}: the values`);
+      const values = await h.budgetLines.summaryFilterValues({ ...ALL_LINES, fields: 'to_check' }, { manager: runner.manager, access: { accounts: true } });
+      assert.deepEqual(values.to_check, toCheck.length ? ['quantity_price', null] : [null], `${what}: the values`);
     });
   }
   await apply();
   const labels = labelOf(s);
   assert.equal(await tileCount(h, runner), companyA.length, 'the tile counts their lines only');
   const field = await listField(h, runner, s);
-  assert.deepEqual([...field].filter(([, value]) => value === 'to_check').map(([label]) => label).sort(), companyA, 'the list');
+  assert.deepEqual([...field].filter(([, value]) => value === 'quantity_price').map(([label]) => label).sort(), companyA, 'the list');
   const checks = await readEntryChecks(runner.manager, s.tenantId, Object.values(s.lines).map((line) => line.id), { accounts: true });
   assert.deepEqual([...checks].filter(([, check]) => check.to_check).map(([id]) => labels.get(id)).sort(), companyA, 'the reader reads their lines only');
   const reader = routeContext(runner, { budget: 'reader', accounts: 'reader' });
   assert.equal((await h.controller.entryCheck(s.lines.monthly.ref, reader)).to_check, true, 'the route on a line of company A');
   await assert.rejects(h.controller.entryCheck(s.lines.spread.ref, reader), (error: any) => error?.status === 404, 'a line of company B is 404, as a missing one');
   const ctx = aiContext(runner, s, s.users.limited);
-  const counted = await h.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'nature', filters: { entry_check: ['to_check'] } });
+  const counted = await h.aggregates.execute(ctx, { entity_type: 'budget_lines', group_by: 'nature', filters: { to_check: ['quantity_price'] } });
   assert.equal(counted.total, companyA.length, 'Kad counts their lines only');
   assert.equal(counted.data_access, 'limited', 'said within their access');
   console.log('ok - a person limited to one company reads, counts and lists the lines of that company only, as with every row readable');
@@ -582,6 +674,7 @@ async function run() {
   try {
     await inTransaction(h, async (runner, s) => {
       await testParity(h, runner, s);
+      await testToCheckField(h, runner, s);
       await testChanges(h, runner, s);
       await testRoute(h, runner, s);
       await testKad(h, runner, s);

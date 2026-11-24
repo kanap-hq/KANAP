@@ -786,18 +786,32 @@ describe('BudgetListPage', () => {
     });
   });
 
-  it('offers a quantity and price check column after the account check, hidden by default, filtered on "To check" or blank, its cell opening the Budget tab', async () => {
+  it('offers one "To check" column, hidden by default, one filter box per check, each alert opening where it is put right', async () => {
     await renderPage();
     const ids = lastProps().columns.map((c) => c.colId ?? c.field ?? '');
-    expect(ids.indexOf('entry_check')).toBe(ids.indexOf('account_warning') + 1);
-    const check = column('entry_check');
-    expect(check).toMatchObject({ headerName: 'shared.entryCheck', defaultHidden: true, filter: CheckboxSetFilter });
-    expect(check!.filterParams).toEqual({ values: [{ value: 'to_check', label: 'shared.entryToCheck' }, { value: null }], searchable: false });
-    expect(check!.valueGetter!({ data: { entry_check: 'to_check' } })).toBe('shared.entryToCheck');
-    expect(check!.valueGetter!({ data: { entry_check: null } })).toBe('');
-    expect(check!.valueGetter!({ data: undefined })).toBe('');
-    const el = check!.cellRenderer!({ data: { id: 'c-1', nature: 'opex', item_number: 7 }, value: '', colDef: {} }) as React.ReactElement;
-    expect((el.props as { getHref: (row: unknown) => string | null }).getHref({ id: 'c-1', nature: 'opex', item_number: 7 })).toMatch(/^\/ops\/budget\/BL-7\/budget\?/);
+    for (const former of ['account_warning', 'entry_check']) expect(ids).not.toContain(former);
+    expect(ids.indexOf('to_check')).toBe(ids.indexOf('account_id') + 1);
+    const check = column('to_check') as Col & { suppressColumnsToolPanel?: boolean };
+    expect(check).toMatchObject({ headerName: 'shared.toCheck', defaultHidden: true, filter: CheckboxSetFilter });
+    // In the column chooser: the overview's links show it for their visit (`showFilteredColumns`), after the name.
+    expect(check.suppressColumnsToolPanel).toBeUndefined();
+    expect(lastProps()).toMatchObject({ showFilteredColumns: true, filteredColumnsAfter: 'product_name' });
+    expect(check.filterParams).toEqual({
+      values: [{ value: 'quantity_price', label: 'shared.quantityPrice' }, { value: 'coa_mismatch', label: 'shared.accountOutsideChart' }, { value: null }],
+      searchable: false,
+    });
+    expect(check.valueGetter!({ data: { to_check: ['quantity_price', 'coa_mismatch'] } })).toBe('shared.quantityPrice, shared.accountOutsideChart');
+    expect(check.valueGetter!({ data: { to_check: ['coa_mismatch'] } })).toBe('shared.accountOutsideChart');
+    expect(check.valueGetter!({ data: { to_check: null } })).toBe('');
+    expect(check.valueGetter!({ data: undefined })).toBe('');
+
+    const row = { id: 'c-1', nature: 'opex', item_number: 7, to_check: ['quantity_price', 'coa_mismatch'] };
+    const { unmount } = render(<MemoryRouter>{check.cellRenderer!({ data: row, value: '', colDef: {} })}</MemoryRouter>);
+    expect(screen.getByRole('link', { name: 'shared.quantityPrice' }).getAttribute('href')).toMatch(/^\/ops\/budget\/BL-7\/budget\?/);
+    expect(screen.getByRole('link', { name: 'shared.accountOutsideChart' }).getAttribute('href')).toMatch(/^\/ops\/budget\/BL-7\/overview\?/);
+    unmount();
+    const empty = render(<MemoryRouter>{check.cellRenderer!({ data: { ...row, to_check: null }, value: '', colDef: {} })}</MemoryRouter>);
+    expect(empty.container.textContent).toBe('');
   });
 
   it('links the contract cell to the contract and an amount cell to the budget of its year', async () => {
@@ -901,6 +915,27 @@ describe('BudgetListPage', () => {
         priority: { filterType: 'set', values: ['high'] },
         ppe_type: { filterType: 'set', values: ['hardware'] },
         investment_type: { filterType: 'set', values: ['replacement'] },
+      }),
+      statusScope: 'enabled',
+    }));
+    await renderPage();
+    expect(grid.mock.calls.map(([props]) => props.testSearch).length).toBeGreaterThan(0);
+    for (const search of grid.mock.calls.map(([props]) => props.testSearch)) {
+      const params = new URLSearchParams(search);
+      expect(params.get('sort')).toBeNull();
+      expect(JSON.parse(params.get('filters') ?? '{}')).toEqual(kept);
+    }
+  });
+
+  it('drops a stored filter or sort on the former account and quantity and price check columns', async () => {
+    const kept = { to_check: { filterType: 'set', values: ['coa_mismatch'] } };
+    window.sessionStorage.setItem('budget-list-context', JSON.stringify({
+      sort: 'entry_check:ASC',
+      q: '',
+      filters: JSON.stringify({
+        ...kept,
+        account_warning: { filterType: 'set', values: ['coa_mismatch'] },
+        entry_check: { filterType: 'set', values: ['to_check'] },
       }),
       statusScope: 'enabled',
     }));

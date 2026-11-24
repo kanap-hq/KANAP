@@ -164,9 +164,10 @@ function hygieneChecks(metric: AmountColumnKey): HygieneCheck[] {
     { key: 'noPayingCompany', tone: 'warning', filter: { paying_company_name: keepValues([null]) } },
     { key: 'noCostCenter', tone: 'warning', filter: { cost_center_label: keepValues([null]) } },
     { key: 'noBudgetNextYear', tone: 'warning', filter: { [nextYearField(metric)]: ZERO_AMOUNT } },
-    { key: 'accountOutsideChart', tone: 'error', filter: { account_warning: keepValues(['coa_mismatch']) } },
+    // The checks of the list's "To check" column: each count opens the list on its own check only.
+    { key: 'accountOutsideChart', tone: 'error', filter: { to_check: keepValues(['coa_mismatch']) } },
     // Lines whose account expects quantity and price, with a column not built so (lot B12a).
-    { key: 'entryToCheck', tone: 'warning', filter: { entry_check: keepValues(['to_check']) }, hideAtZero: true },
+    { key: 'entryToCheck', tone: 'warning', filter: { to_check: keepValues(['quantity_price']) }, hideAtZero: true },
   ];
 }
 

@@ -112,19 +112,20 @@ export const budgetLinesRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: true,
     },
-    entry_check: {
-      ai: 'entry_check',
-      grid: 'entry_check',
+    to_check: {
+      ai: 'to_check',
+      grid: 'to_check',
       type: 'set',
-      description: 'Whether the line is to check against its account\'s "quantity and price entry" setting: `to_check` when the line\'s account, '
-        + 'or else its consolidation account, expects the amounts to be built as quantity × price and at least one of the line\'s columns is not '
-        + '(a column shown in the budget settings, not frozen, with a non-zero total for a year the line has a version). null is every other line: '
-        + 'its account expects nothing, or every such column is built as quantity × price. The same lines as the "to check" control of the Budget '
-        + 'home tile. A line\'s get_entity_detail says why in `quantity_price_entry`: `expected_by` (the account that expects it), '
+      description: 'The data quality checks the line fails, the "To check" column of the budget list: a list of check names, null when it fails none. '
+        + '`quantity_price`: the line\'s account, or else its consolidation account, expects the amounts to be built as quantity × price and at least '
+        + 'one of the line\'s columns is not (a column shown in the budget settings, not frozen, with a non-zero total for a year the line has a version). '
+        + '`coa_mismatch`: the line\'s account belongs to another chart of accounts than its paying company\'s. A line may fail both. '
+        + 'Filter on one name to get the lines that fail that check (the same lines as that control of the Budget home tile\'s data hygiene); null keeps the lines that fail none. '
+        + 'For `quantity_price`, a line\'s get_entity_detail says why in `quantity_price_entry`: `expected_by` (the account that expects it), '
         + '`columns_to_check` (each column by its name on screen and year, in four languages when the profile sets none: use the one of the conversation; '
         + 'with how it is entered today) and `explanation`, the whole cause '
-        + 'of `to_check`; its `status` is also `conforms` or `not_expected` for the other lines. Answer "why is this line to check" from it.',
-      values: ['to_check', null],
+        + 'of `quantity_price`; its `status` is also `conforms` or `not_expected` for the other lines. Answer "why is this line to check" from it.',
+      values: ['quantity_price', 'coa_mismatch', null],
       discoverable: true,
       sortable: true,
       groupable: true,
@@ -285,7 +286,7 @@ export const budgetLinesRegistry: AiEntityFilterRegistry = {
     paying_company: 'paying_company_name',
     account: 'account_display',
     consolidation_account: 'account_consolidation_label',
-    entry_check: 'entry_check',
+    to_check: 'to_check',
     owner_it: 'owner_it_name',
     owner_business: 'owner_business_name',
     analytics_category: 'analytics_category_name',

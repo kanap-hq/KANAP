@@ -535,7 +535,7 @@ export async function seedListFixture(
 
   // "Quantity and price expected" (lot B12a): six accounts set it, and part of the computed columns
   // keep a line (picked from their version and column, so the same ones every run): the list's
-  // `entry_check` holds both of its values. Nothing is drawn from the streams.
+  // `to_check` holds `quantity_price` on some lines and not on others. Nothing is drawn from the streams.
   await runner.query(`UPDATE accounts SET quantity_price_expected = true WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [t, accountIds.slice(0, 6)]);
   await runner.query(
     `INSERT INTO spend_round_input_lines (tenant_id, round_input_id, sort, label, quantity_unit, quantity, unit_price, price_basis, frequency, period_start, period_end)

@@ -120,7 +120,7 @@ The list (at **Budget management > Budget lines**) holds the OPEX and CAPEX line
 - **Amount columns**: Every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organisation chose. The header gives the column, the year relative to today and the calendar year, for example **Revision Y+1 (2027)**. Hidden columns are not offered
 - **FTE columns**: The FTE of every shown budget column for Y-1, Y, Y+1 and Y+2, under the names your organisation chose, right after the amount columns in the column chooser. The header gives the column and the calendar year, for example **Budget FTE (2026)**. A line's FTE is the sum of the FTE of its quantity and price lines in that column. See [FTE](#fte). The cell is empty when the column has no lines
 - **FTE declared**: **Yes** when the line declares FTE in at least one budget column of any year, otherwise empty. These are the lines the **Lines with FTE** filter of the reports keeps
-- **Quantity and price check**: **To check** when the line's account expects quantity and price and a column of the line is entered another way, otherwise empty. See [When the account expects quantity and price](#quantity-and-price-expected)
+- **To check**: what is wrong with the line, otherwise empty. **Quantity and price**: the line's account expects quantity and price and a column of the line is entered another way, see [When the account expects quantity and price](#quantity-and-price-expected). **Account not in the company's chart**: the line's account belongs to another chart of accounts than its paying company's. A line can show both
 - **Enabled**: Line status (enabled or disabled)
 - **Description**: The line's description
 - **Currency**: ISO currency code
@@ -146,7 +146,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 **Filtering**:
 
 - **Quick search**: Searches the reference (`BL-12`, and the former `OPX-12` or `CPX-3`), product name, description, supplier, paying company, account, contract, project names, allocation, owners, analytics values, cost center (code, name and path), budget holder, notes, currency and status. Filters the list in real time as you type, ignoring accents and case
-- **Column filters**: Click the filter icon in any column header. **Type**, **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build**, **FTE declared** and **Quantity and price check** use checkbox set filters (multi-select). The **FTE declared** filter offers **Yes** and **No**. The **Enabled** filter shows the **Show** choice (**All**, **Enabled** or **Disabled**): changing one changes the other
+- **Column filters**: Click the filter icon in any column header. **Type**, **Supplier**, **Paying company**, **Account**, **Allocation**, **Currency**, **IT owner**, **Business owner**, each analytics dimension, **Cost center**, **Budget holder**, **Run or build**, **FTE declared** and **To check** use checkbox set filters (multi-select). The **To check** filter offers one box per check: a line stays when it fails a ticked check, whatever else it fails. The **FTE declared** filter offers **Yes** and **No**. The **Enabled** filter shows the **Show** choice (**All**, **Enabled** or **Disabled**): changing one changes the other
 - **All but a few**: Tick **All**, then untick the values you want to leave out: the filter keeps everything except those (the header reads, for example, **All but 3**), and a value created later is included automatically
 - **Amount filters**: Every amount column has a number filter. A number typed in the box under the header keeps the lines with at least that amount. Open the filter menu for the other conditions: greater than, less than, equal, not equal, or between two amounts
 - **FTE filters**: Every FTE column has a number filter with the same conditions, plus blank and not blank. **Blank** keeps the lines whose column has no quantity and price lines
@@ -182,7 +182,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 - Clicking any cell opens the workspace on the most relevant tab:
   - **Ref**, **Product name**, **Supplier**, **Paying company**, **Account**, the dimension columns and other general columns: Opens the **Overview** tab
   - **Amount columns** (Budget Y, Expected landing Y, Revision Y+1, etc.) and **FTE columns**: Opens the **Budget** tab pre-set to the column's year
-  - **Quantity and price check**: Opens the **Budget** tab
+  - **To check**: **Quantity and price** opens the **Budget** tab, **Account not in the company's chart** opens the **Overview** tab
   - **Allocation**: Opens the **Allocations** tab for the current year
   - **Task**: Opens the **Overview** tab, where the Tasks panel sits
   - **Contract**: Opens the linked Contract workspace directly
@@ -539,7 +539,7 @@ On such a line, the **Budget** tab:
 
 A column is to check when it is shown, is not frozen, has a total other than zero for the year, and is not built from quantity and price lines. Every year counts. A spread, a column entered by month or edited by hand, and a column that keeps its lines only as a reference are to check. A column copied from a column built from lines is built from lines too, so it is not.
 
-To find these lines, show the **Quantity and price check** column of the list and filter it on **To check**, or click **Quantity and price to check** in the [Data hygiene](my-dashboard.md#data-hygiene) tile. That tile is off until you add it: **Customize the home page**, then **Add a tile** (+) in the **Budget management** section.
+To find these lines, show the **To check** column of the list and filter it on **Quantity and price**, or click **Quantity and price to check** in the [Data hygiene](my-dashboard.md#data-hygiene) tile. That tile is off until you add it: **Customize the home page**, then **Add a tile** (+) in the **Budget management** section.
 
 #### FTE
 

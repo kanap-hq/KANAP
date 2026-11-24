@@ -120,7 +120,7 @@ La liste (dans **Gestion budgétaire > Lignes budgétaires**) contient les ligne
 - **Colonnes de montants** : Chaque colonne budgétaire affichée pour A-1, A, A+1 et A+2, sous les noms choisis par votre organisation. L'en-tête indique la colonne, l'année par rapport à aujourd'hui et l'année civile, par exemple **Révision A+1 (2027)**. Les colonnes masquées ne sont pas proposées
 - **Colonnes ETP** : L'ETP de chaque colonne budgétaire affichée pour A-1, A, A+1 et A+2, sous les noms choisis par votre organisation, juste après les colonnes de montants dans le sélecteur de colonnes. L'en-tête indique la colonne et l'année civile, par exemple **ETP Budget (2026)**. L'ETP d'une ligne est la somme des ETP de ses lignes de quantité et prix dans cette colonne. Voir [ETP](#etp). La cellule est vide lorsque la colonne n'a aucune ligne
 - **ETP déclarés** : **Oui** lorsque la ligne déclare des ETP dans au moins une colonne budgétaire, toutes années confondues, sinon vide. Ce sont les lignes que garde le filtre **Lignes avec ETP** des rapports
-- **Contrôle quantité et prix** : **À vérifier** lorsque le compte de la ligne attend une saisie en quantité et prix et qu'une colonne de la ligne est saisie autrement, sinon vide. Voir [Quand le compte attend une saisie en quantité et prix](#quantity-and-price-expected)
+- **À vérifier** : ce qui ne va pas sur la ligne, sinon vide. **Quantité et prix** : le compte de la ligne attend une saisie en quantité et prix et une colonne de la ligne est saisie autrement, voir [Quand le compte attend une saisie en quantité et prix](#quantity-and-price-expected). **Compte hors du plan de la société** : le compte de la ligne appartient à un autre plan comptable que celui de sa société payeuse. Une ligne peut afficher les deux
 - **Activé** : Statut de la ligne (activée ou désactivée)
 - **Description** : La description de la ligne
 - **Devise** : Code devise ISO
@@ -146,7 +146,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 **Filtrage** :
 
 - **Recherche rapide** : Recherche dans la référence (`BL-12`, et l'ancien `OPX-12` ou `CPX-3`), le nom du produit, la description, le fournisseur, la société payeuse, le compte, le contrat, les noms de projets, la ventilation, les responsables, les valeurs analytiques, le centre de coûts (code, nom et chemin), le responsable budgétaire, les notes, la devise et le statut. Filtre la liste en temps réel pendant la saisie, en ignorant les accents et la casse
-- **Filtres de colonnes** : Cliquez sur l'icône de filtre dans n'importe quel en-tête de colonne. **Type**, **Fournisseur**, **Société payeuse**, **Compte**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, chaque dimension analytique, **Centre de coûts**, **Responsable budgétaire**, **Run ou build**, **ETP déclarés** et **Contrôle quantité et prix** utilisent des filtres par jeu de cases à cocher (multi-sélection). Le filtre **ETP déclarés** propose **Oui** et **Non**. Le filtre **Activé** reprend le choix de **Afficher** (**Tous**, **Activés** ou **Désactivés**) : changer l'un change l'autre
+- **Filtres de colonnes** : Cliquez sur l'icône de filtre dans n'importe quel en-tête de colonne. **Type**, **Fournisseur**, **Société payeuse**, **Compte**, **Ventilation**, **Devise**, **Responsable IT**, **Responsable métier**, chaque dimension analytique, **Centre de coûts**, **Responsable budgétaire**, **Run ou build**, **ETP déclarés** et **À vérifier** utilisent des filtres par jeu de cases à cocher (multi-sélection). Le filtre **À vérifier** propose une case par contrôle : une ligne reste affichée lorsqu'elle échoue à un contrôle coché, quels que soient ses autres contrôles. Le filtre **ETP déclarés** propose **Oui** et **Non**. Le filtre **Activé** reprend le choix de **Afficher** (**Tous**, **Activés** ou **Désactivés**) : changer l'un change l'autre
 - **Tous sauf quelques valeurs** : Cochez **Tous**, puis décochez les valeurs à exclure : le filtre garde tout sauf celles-ci (l'en-tête affiche par exemple **Tous sauf 3**), et une valeur créée plus tard est incluse automatiquement
 - **Filtres de montants** : Chaque colonne de montant a un filtre numérique. Un nombre saisi dans la case sous l'en-tête garde les lignes d'au moins ce montant. Ouvrez le menu du filtre pour les autres conditions : supérieur à, inférieur à, égal, différent, ou entre deux montants
 - **Filtres ETP** : Chaque colonne ETP a un filtre numérique avec les mêmes conditions, plus vide et non vide. **Vide** garde les lignes dont la colonne n'a aucune ligne de quantité et prix
@@ -182,7 +182,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - Cliquer sur n'importe quelle cellule ouvre l'espace de travail sur l'onglet le plus pertinent :
     - **Réf**, **Nom du produit**, **Fournisseur**, **Société payeuse**, **Compte**, les colonnes de dimensions et les autres colonnes générales : Ouvre l'onglet **Vue d'ensemble**
     - **Colonnes de montants** (Budget A, Atterrissage prévu A, Révision A+1, etc.) et **Colonnes ETP** : Ouvre l'onglet **Budget** pré-positionné sur l'année de la colonne
-    - **Contrôle quantité et prix** : Ouvre l'onglet **Budget**
+    - **À vérifier** : **Quantité et prix** ouvre l'onglet **Budget**, **Compte hors du plan de la société** ouvre l'onglet **Vue d'ensemble**
     - **Ventilation** : Ouvre l'onglet **Ventilations** pour l'année en cours
     - **Tâche** : Ouvre l'onglet **Vue d'ensemble**, où se trouve le panneau des tâches
     - **Contrat** : Ouvre directement l'espace de travail du Contrat lié
@@ -538,7 +538,7 @@ Sur une telle ligne, l'onglet **Budget** :
 
 Une colonne est à vérifier quand elle est affichée, n'est pas gelée, a un total non nul pour l'année et n'est pas construite à partir de lignes en quantité et prix. Toutes les années comptent. Une colonne répartie, saisie par mois ou modifiée à la main, et une colonne qui ne garde ses lignes qu'en référence sont à vérifier. Une colonne copiée d'une colonne construite à partir de lignes est elle aussi construite à partir de lignes : elle n'est pas à vérifier.
 
-Pour retrouver ces lignes, affichez la colonne **Contrôle quantité et prix** de la liste et filtrez-la sur **À vérifier**, ou cliquez sur **Quantité et prix à vérifier** dans la tuile [Hygiène des données](my-dashboard.md#data-hygiene). Cette tuile est désactivée tant que vous ne l'ajoutez pas : **Personnaliser l'accueil**, puis **Ajouter une tuile** (+) dans la section **Gestion budgétaire**.
+Pour retrouver ces lignes, affichez la colonne **À vérifier** de la liste et filtrez-la sur **Quantité et prix**, ou cliquez sur **Quantité et prix à vérifier** dans la tuile [Hygiène des données](my-dashboard.md#data-hygiene). Cette tuile est désactivée tant que vous ne l'ajoutez pas : **Personnaliser l'accueil**, puis **Ajouter une tuile** (+) dans la section **Gestion budgétaire**.
 
 #### ETP
 

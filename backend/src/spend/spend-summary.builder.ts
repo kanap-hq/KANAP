@@ -21,6 +21,7 @@ import { assertScopeNatures, natureAnd, BUDGET_NATURES, type BudgetNature } from
 import { isLimitedTransaction } from '../data-access/line-write-checks';
 // A type only: the module itself is imported where it is read (`buildBudgetSummaryRows`).
 import type { LineEntryCheck } from './budget-line-entry-check';
+import { BUDGET_LINE_CHECKS, type BudgetLineCheck } from './budget-line-checks';
 
 /**
  * The summary rows of the OPEX and CAPEX lists, built once for both item types.
@@ -307,10 +308,11 @@ export type BudgetSummaryRow = Record<string, any> & {
   /** 'yes' when the line declares FTE in some version (any year, any column), else null. */
   has_fte: 'yes' | null;
   /**
-   * 'to_check' when the line's account, or its consolidation account, expects quantity and price
-   * and one of its columns is not built so (`budget-line-entry-check.ts`), else null.
+   * The checks the line fails (`budget-line-checks.ts`), in that table's order, null when none:
+   * `quantity_price` (its account, or its consolidation account, expects quantity and price and one
+   * of its columns is not built so, `budget-line-entry-check.ts`), `coa_mismatch` (`account_warning`).
    */
-  entry_check: 'to_check' | null;
+  to_check: BudgetLineCheck[] | null;
   latest_contract_id: string | null;
   latest_contract_name: string;
   /**
@@ -391,6 +393,12 @@ const zeroCents = (): Cents => Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.
  * number alone when the account has no name (never "6110 - "). The list
  * statement computes the same text (`budget-list.config.ts`).
  */
+/** A row's `to_check`: the checks the line fails, one entry per check of the table, in its order; null when none. */
+function lineChecks(failed: Record<BudgetLineCheck, boolean>): BudgetLineCheck[] | null {
+  const checks = BUDGET_LINE_CHECKS.filter((check) => failed[check]);
+  return checks.length ? checks : null;
+}
+
 export function accountDisplayText(accountNumber: unknown, accountName: unknown): string {
   const name = accountName == null ? '' : String(accountName);
   return name === '' ? String(accountNumber) : `${accountNumber} - ${name}`;
@@ -404,13 +412,13 @@ const GRID_VERSION_SLOTS = ['yMinus1', 'y', 'yPlus1', 'yPlus2'] as const;
  * and labels its cells, tooltips and links show, besides the item columns, the
  * default dimension's value name, the enabled other dimensions, the latest
  * task's title, the amounts, the requested FTE keys, whether the line
- * declares FTE (`has_fte`, the list's "FTE declared" column) and whether it is to check against
- * its account's quantity and price setting (`entry_check`).
+ * declares FTE (`has_fte`, the list's "FTE declared" column) and the checks it fails (`to_check`,
+ * the list's "To check" column).
  */
 const GRID_DERIVED_FIELDS = [
   'cost_center_id', 'run_build', 'latest_contract_id', 'latest_contract_name', 'supplier_name', 'paying_company_name',
   'account_display', 'allocation_method_label', 'owner_it_name', 'owner_business_name', 'cost_center_label',
-  'cost_center_path', 'budget_holder_name', 'project_name', 'analytics_category_name', 'has_fte', 'entry_check',
+  'cost_center_path', 'budget_holder_name', 'project_name', 'analytics_category_name', 'has_fte', 'to_check',
 ] as const;
 
 /**
@@ -933,11 +941,11 @@ export async function buildBudgetSummaryRows(
   );
   const staffItems = new Set(staffRows.map((row) => row.item_id));
 
-  // `entry_check`: the lines to check, as the list statement computes it: one statement for the
+  // `quantity_price` of `to_check`: the lines to check, as the list statement computes it: one statement for the
   // page, and the columns only when a line of the page is on an account that sets it. Imported
   // here: the rule reads the budget column settings, whose module reads this one's columns when it
   // loads (`BUDGET_COLUMN_ORDER`), so a static import would load it half-built.
-  const { ENTRY_CHECK_TO_CHECK, readEntryChecks } = await import('./budget-line-entry-check');
+  const { readEntryChecks } = await import('./budget-line-entry-check');
   const entryChecks = options.entryChecks ?? await readEntryChecks(manager, tenantId, itemIds);
 
   // Projects linked in the Relations panel, plus the legacy item field when set and not already linked.
@@ -1091,7 +1099,7 @@ export async function buildBudgetSummaryRows(
       budget_holder_name: costCenter?.owner_user_id ? costCenter.owner_name || null : null,
       run_build: item.run_build ?? null,
       has_fte: staffItems.has(item.id) ? 'yes' : null,
-      entry_check: entryChecks.get(item.id)?.to_check ? ENTRY_CHECK_TO_CHECK : null,
+      to_check: lineChecks({ quantity_price: !!entryChecks.get(item.id)?.to_check, coa_mismatch: accountWarning != null }),
       latest_contract_id: linkedContractIsHidden ? null : contract?.contract_id ?? null,
       latest_contract_name: linkedContractIsHidden ? '' : contract?.contract_name ?? '',
       project_name: joinNames(projectLists.project_name),

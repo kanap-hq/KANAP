@@ -63,7 +63,7 @@ export const FILTER_VALUE_FIELDS = [
   'supplier_name', 'paying_company_name', 'company_name', 'account_display', 'allocation_label', 'allocation_method_label',
   'contract_name', 'currency', 'owner_it_name', 'owner_business_name', 'analytics_category_name', 'project_name',
   'project_stream_name', 'project_category_name', 'cost_center_label', 'cost_center_code', 'cost_center_name', 'cost_center_path',
-  'budget_holder_name', 'run_build', 'has_fte', 'entry_check',
+  'budget_holder_name', 'run_build', 'has_fte', 'to_check',
 ];
 
 /** The neutral list adds nature; legacy callers and their oracle keep the existing field list. */
@@ -248,7 +248,7 @@ export async function budgetListPageIds(
   const req = await readRequest(query, manager);
   const fxRates = opts.fxRates ?? new RequestFxRates(deps.fxRates);
   const state = stateOf(req, windowScope(req));
-  const needs = budgetRuntimeNeeds(req.currentYear, requestKeys(req, true), !!state.q);
+  const needs = budgetRuntimeNeeds(req.currentYear, requestKeys(req, true), !!state.q, req.request.filters);
   if (opts.allocationLabels) needs.ruleYears = [...(needs.ruleYears ?? []), req.currentYear];
   // The row builder converts every year it reads: resolve those rates once, here, for both.
   if (opts.rowsFollow) needs.fxYears = Array.from(new Set([...(needs.fxYears ?? []), ...req.years]));
@@ -304,7 +304,7 @@ export async function budgetListIds(
 ): Promise<{ ids: string[]; item_numbers: number[]; total: number }> {
   const req = await readRequest(query, manager);
   const state = stateOf(req, 'active');
-  const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, budgetRuntimeNeeds(req.currentYear, requestKeys(req, true), !!state.q));
+  const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, budgetRuntimeNeeds(req.currentYear, requestKeys(req, true), !!state.q, req.request.filters));
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
   const rows = await run(manager, stmt, idsSql(stmt, config, state, ['id', 'item_number']));
@@ -327,7 +327,7 @@ export async function budgetListNeighbors(
 ): Promise<{ index: number | null; total: number; prev: BudgetListNeighbor; next: BudgetListNeighbor }> {
   const req = await readRequest(query, manager);
   const state = stateOf(req, 'active');
-  const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, budgetRuntimeNeeds(req.currentYear, requestKeys(req, true), !!state.q));
+  const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, budgetRuntimeNeeds(req.currentYear, requestKeys(req, true), !!state.q, req.request.filters));
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
   const rows = await run(manager, stmt, neighborsSql(stmt, config, state, id, ['id', 'item_number', ...(scope.allNatures ? ['nature'] : [])]));
@@ -363,7 +363,7 @@ export async function budgetListFilterValues(
   const req = await readRequest(query, manager);
   const state = stateOf(req, windowScope(req));
   const needs = mergeNeeds(
-    budgetRuntimeNeeds(req.currentYear, requestKeys(req, false), !!state.q),
+    budgetRuntimeNeeds(req.currentYear, requestKeys(req, false), !!state.q, req.request.filters),
     budgetRuntimeNeeds(req.currentYear, fields, false),
   );
   const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, needs);
@@ -490,7 +490,7 @@ export async function budgetListTotals(
   const columns = SUMMARY_COLUMNS.filter((column) => wanted.some((amount) => amount.measure === column.measure));
   const fteKeys = parseFteKeys(query?.fte, Y);
   // The FX pre-read also gives the reporting currency: one year at least, even without an amount.
-  const needs = mergeNeeds(budgetRuntimeNeeds(Y, requestKeys(req, false), !!state.q), { fxYears: slotYears.length ? slotYears : [Y] });
+  const needs = mergeNeeds(budgetRuntimeNeeds(Y, requestKeys(req, false), !!state.q, req.request.filters), { fxYears: slotYears.length ? slotYears : [Y] });
   const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, needs);
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
@@ -606,7 +606,7 @@ export async function budgetListAggregate(
   const specKeys = [...spec.groupBy, ...spec.measures.flatMap((measure) => [measure.field, ...(measure.minus ? [measure.minus] : [])])];
   assertBudgetYearsWithinBounds([...req.years, ...yearsNamedByFields(specKeys)], req.currentYear);
   const state = stateOf(req, windowScope(req));
-  const needs = budgetRuntimeNeeds(req.currentYear, [...requestKeys(req, false), ...specKeys], !!state.q);
+  const needs = budgetRuntimeNeeds(req.currentYear, [...requestKeys(req, false), ...specKeys], !!state.q, req.request.filters);
   const rt = await runtimeFor(scope, deps, new RequestFxRates(deps.fxRates), manager, req, needs);
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);

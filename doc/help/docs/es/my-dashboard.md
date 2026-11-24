@@ -307,7 +307,7 @@ Controles que le ayudan a detectar líneas incompletas de un vistazo. El mosaico
 - **Cuenta fuera del plan de la empresa**: líneas cuya cuenta no pertenece al plan de cuentas de la empresa pagadora
 - **Cantidad y precio por verificar**: líneas cuya cuenta espera una introducción por cantidad y precio, con una columna introducida de otro modo. Solo aparece cuando cuenta al menos una línea. Consulte [Cuando la cuenta espera una introducción por cantidad y precio](budget-lines.md#quantity-and-price-expected)
 
-Un recuento se vuelve naranja (rojo para el control del plan de cuentas) cuando es superior a cero. Haga clic en un recuento para abrir la lista exactamente en las líneas que cuenta.
+Un recuento se vuelve naranja (rojo para el control del plan de cuentas) cuando es superior a cero. Haga clic en un recuento para abrir la lista exactamente en las líneas que cuenta. Los dos controles de cuenta la abren con su columna **Por verificar** visible y filtrada solo por ese control.
 
 ### Mi presupuesto
 

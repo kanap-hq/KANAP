@@ -307,7 +307,7 @@ Checks that help you spot incomplete lines at a glance. The tile is off by defau
 - **Account not in the company's chart**: lines whose account does not belong to the paying company's chart of accounts
 - **Quantity and price to check**: lines whose account expects quantity and price, with a column entered another way. It shows only when it counts at least one line. See [When the account expects quantity and price](budget-lines.md#quantity-and-price-expected)
 
-A count turns orange (red for the chart check) when it is above zero. Click a count to open the list on exactly the lines it counts.
+A count turns orange (red for the chart check) when it is above zero. Click a count to open the list on exactly the lines it counts. The two account checks open it with its **To check** column shown and filtered on that check alone.
 
 ### My budget
 
