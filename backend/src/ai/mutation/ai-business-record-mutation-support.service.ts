@@ -70,7 +70,7 @@ import {
   resolveIncidentViewer,
 } from '../../incidents/incident-visibility';
 import { IncidentsService } from '../../incidents/services/incidents.service';
-import { givenMembership, pickMemberByParent, PORTFOLIO_PAIRS, settleRecordMembership } from '../../common/record-membership';
+import { givenMembership, memberLabel, pickMemberByParent, PORTFOLIO_PAIRS, settleRecordMembership } from '../../common/record-membership';
 import {
   AiWriteLanguage,
   PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE,
@@ -1243,7 +1243,8 @@ export class AiBusinessRecordMutationSupportService {
       ? exact[0]
       : await pickMemberByParent(context.manager, kind, rows, ref, textOrNull(parentId), context.tenantId);
     const resolved = this.referenceFromRow(target, row);
-    return { value: resolved.id, displayValue: resolved.label };
+    // A name other records share shows its parent on the card ("Ops (Infrastructure)").
+    return { value: resolved.id, displayValue: await memberLabel(context.manager, kind, row as Record<string, unknown>, context.tenantId) };
   }
 
   /**

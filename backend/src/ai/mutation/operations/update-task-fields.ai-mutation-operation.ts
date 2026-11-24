@@ -21,7 +21,7 @@ import { BUDGET_NATURES, naturesAnd } from '../../../spend/budget-nature';
 import { linkedModuleNotReadable, linkedParticipationScope, loadLinkedReads } from '../../../common/relations/linked-reads';
 import { idsInScope } from '../../../portfolio/portfolio-linked-reads';
 import { AiWriteLanguage, previewSummaryText, writeActionText } from '../../ai-write-texts';
-import { givenMembership, pickMemberByParent, settleRecordMembership, STREAM_PAIR } from '../../../common/record-membership';
+import { givenMembership, memberLabel, pickMemberByParent, settleRecordMembership, STREAM_PAIR } from '../../../common/record-membership';
 import { shownTaskClassification } from '../../../tasks/task-shown-classification';
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -454,7 +454,8 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
       : (await this.shownClassification(context, task)).category_id;
     const exact = rows.filter((row) => String(row.id).toLowerCase() === ref.toLowerCase());
     const row = exact.length === 1 ? exact[0] : await pickMemberByParent(context.manager, 'stream', rows, ref, textOrNull(category), context.tenantId);
-    return { value: String(row.id), display: String(row.name || row.id) };
+    // A name other streams share shows its category on the card ("Ops (Infrastructure)").
+    return { value: String(row.id), display: await memberLabel(context.manager, 'stream', row as Record<string, unknown>, context.tenantId) };
   }
 
   /**

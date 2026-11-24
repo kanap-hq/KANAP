@@ -81,6 +81,7 @@ async function testRequestsAndProjects() {
     // "Put the stream Ops on REQ-1": the Ops of the request's category.
     const business = await preview(await request(1, { category: ids.biz }), { stream_id: 'Ops' });
     assert.equal(business.mutationInput.fields.stream_id, ids.opsBiz, 'the Ops of the request category');
+    assert.equal(business.mutationInput.display_values.stream_id, 'Ops (Business)', 'a shared name shows its category on the card');
     // No category: Kad asks which, the categories named.
     await request(2, {});
     const ask = await refusal(runner, () => preview('REQ-2', { stream_id: 'Ops' }));
@@ -101,6 +102,7 @@ async function testRequestsAndProjects() {
     const given = await preview('REQ-2', { stream_id: 'Dev' });
     assert.deepEqual([given.mutationInput.fields.stream_id, given.mutationInput.fields.category_id], [ids.devIt, ids.it]);
     assert.equal(given.mutationInput.display_values.category_id, 'IT');
+    assert.equal(given.mutationInput.display_values.stream_id, 'Dev', 'a name of one stream alone');
     // The category changed alone drops the stream, on the card.
     await request(4, { category: ids.it, stream: ids.opsIt });
     const moved = await preview('REQ-4', { category_id: 'Business' });
@@ -108,7 +110,9 @@ async function testRequestsAndProjects() {
     assert.equal(moved.mutationInput.fields.stream_id, null);
     // Departments: by the request's company; with no company, Kad asks.
     await request(5, { company: ids.companyB });
-    assert.equal((await preview('REQ-5', { department_id: 'Finance' })).mutationInput.fields.department_id, ids.finB);
+    const finance = await preview('REQ-5', { department_id: 'Finance' });
+    assert.equal(finance.mutationInput.fields.department_id, ids.finB);
+    assert.equal(finance.mutationInput.display_values.department_id, 'Finance (Beta)', 'a shared name shows its company on the card');
     assert.equal((await refusal(runner, () => preview('REQ-2', { department_id: 'Finance' }))).code, 'DEPARTMENT_NAME_IN_SEVERAL_COMPANIES');
 
     // A project, by the same rule.
@@ -145,11 +149,13 @@ async function testTasks() {
 
     const shown = await preview('T-1', { stream: 'Ops' });
     assert.equal(shown.mutationInput.fields.stream_id, ids.opsBiz, 'the Ops of the category the task shows, its project one');
+    assert.equal(shown.mutationInput.display_values.stream_id, 'Ops (Business)', 'a shared name shows its category on the card');
     assert.equal((await refusal(runner, () => preview('T-1', { stream: 'Dev' }))).code, 'STREAM_OUTSIDE_CATEGORY');
     const ask = await refusal(runner, () => preview('T-2', { stream: 'Ops' }));
     assert.equal(ask.code, 'STREAM_NAME_IN_SEVERAL_CATEGORIES', ask.message);
     const given = await preview('T-2', { stream: 'Dev' });
     assert.deepEqual([given.mutationInput.fields.stream_id, given.mutationInput.fields.category_id], [ids.devIt, ids.it]);
+    assert.equal(given.mutationInput.display_values.stream_id, 'Dev', 'a name of one stream alone');
     const both = await preview('T-2', { stream: 'Ops', category: 'IT' });
     assert.equal(both.mutationInput.fields.stream_id, ids.opsIt, 'the category given in the same sentence');
   });

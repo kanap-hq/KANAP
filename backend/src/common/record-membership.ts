@@ -247,6 +247,28 @@ export function nameInOtherParents(
 }
 
 /**
+ * The name Kad's card shows for a stream or a department it picked: its name, followed by its parent's
+ * when other records of the family share that name ("Ops (Infrastructure)"), so the card says which one.
+ */
+export async function memberLabel(
+  manager: Queryable,
+  kind: MembershipKind,
+  row: Record<string, unknown>,
+  tenantId?: string | null,
+): Promise<string> {
+  const { table, parentColumn, parentTable } = KINDS[kind];
+  const name = String(row.name ?? row.id);
+  const parentId = valueOf(row[parentColumn]);
+  const tenant = tenantId ? '$3' : 'app_current_tenant()';
+  const [shared]: Array<{ sharing: number; parent: string | null }> = await manager.query(
+    `SELECT (SELECT count(*) FROM ${table} WHERE tenant_id = ${tenant} AND LOWER(name) = LOWER($1::text))::int AS sharing,
+            (SELECT name FROM ${parentTable} WHERE tenant_id = ${tenant} AND id = $2::uuid) AS parent`,
+    tenantId ? [name, parentId, tenantId] : [name, parentId],
+  );
+  return shared && shared.sharing > 1 && shared.parent ? `${name} (${shared.parent})` : name;
+}
+
+/**
  * A name several records share (two streams "Ops" of two categories), for Kad (P12 of 26.12.1): the
  * record of that name in `parentId`, the parent the write leaves on the record, looked up in the
  * database (`rows`, a page of candidates, may leave it out). None there, or no parent: a 400 that
