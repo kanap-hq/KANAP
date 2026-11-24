@@ -87,8 +87,6 @@ const DATING: Readonly<Record<string, Dating>> = {
   working_day_profiles: { own: ['working_day_profiles'] },
 };
 
-const UUID_TEXT = `'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'`;
-
 const quoteIdent = (name: string) => `"${name.replace(/"/g, '""')}"`;
 
 type Candidate = {
@@ -99,54 +97,67 @@ type Candidate = {
   table_name: string;
   before_json: unknown;
   after_json: unknown;
+  rn: number;
 };
 
+const sqlText = (value: string) => `'${value.replace(/'/g, "''")}'`;
+const sqlTextArray = (values: readonly string[]) => `ARRAY[${values.map(sqlText).join(', ')}]::text[]`;
+
 /**
- * The audit rows of one table's records in the tenant `$1` that could date them: the rows its
- * correspondence reads, later than the record's date. Of those, the latest row that is not an
- * update (a child added or removed: always an entry), and the updates later than it, which the
- * history may show as no change (`historyShowsRow` judges them). Newest first, by record.
+ * The audit rows that could date a batch of one table's records (`$2`, ids) in the tenant `$1`:
+ * the rows its correspondence reads, later than the record's date. Of those, the latest row that is
+ * not an update (a child added or removed: always an entry), and the updates later than it, which
+ * the history may show as no change (`historyShowsRow` judges them); newest first, by record, the
+ * rows `$3 < rn <= $3 + $4` of each record. Each branch starts from the records, so the read runs
+ * on the indexes of the history page: `(tenant_id, record_id, created_at)`, `(tenant_id,
+ * parent_table, parent_id, created_at)` and the partial index of each payload key (its labels are
+ * written out, so that the planner proves the index's predicate). The payloads are read last, for
+ * the rows returned only.
  */
-function candidatesSql(table: string, dating: Dating): { sql: string; params: unknown[] } {
-  const params: unknown[] = [null, [...dating.own, ...(dating.byRecord ?? [])], dating.own, table, dating.byParent ?? []];
-  const columns = 'a.id AS audit_id, a.record_id AS audit_record_id, a.created_at, a.action, a.table_name, a.before_json, a.after_json';
+function candidatesSql(table: string, dating: Dating): string {
+  const own = sqlTextArray(dating.own);
   const branches = [
-    `SELECT a.record_id AS record_id, ${columns}
-       FROM audit_log a
-      WHERE a.tenant_id = $1 AND a.table_name = ANY($2::text[]) AND a.record_id IS NOT NULL
-        AND NOT (a.table_name = ANY($3::text[]) AND a.action IN ('create', 'delete'))`,
-    `SELECT a.parent_id, ${columns}
-       FROM audit_log a
-      WHERE a.tenant_id = $1 AND a.parent_table = $4 AND a.parent_id IS NOT NULL AND a.table_name = ANY($5::text[])`,
+    `SELECT r.id AS record_id, a.id AS audit_id, a.created_at, a.action
+       FROM recs r
+       JOIN audit_log a ON a.tenant_id = $1 AND a.record_id = r.id AND a.created_at > r.updated_at
+      WHERE a.table_name = ANY(${sqlTextArray([...dating.own, ...(dating.byRecord ?? [])])})
+        AND NOT (a.table_name = ANY(${own}) AND a.action IN ('create', 'delete'))`,
   ];
-  for (const [key, labels] of Object.entries(dating.byPayload ?? {})) {
-    params.push(labels);
-    const named = `lower(COALESCE(a.after_json, a.before_json) ->> '${key.replace(/'/g, "''")}')`;
+  if (dating.byParent?.length) {
     branches.push(
-      `SELECT CASE WHEN ${named} ~ ${UUID_TEXT} THEN (${named})::uuid END, ${columns}
-         FROM audit_log a
-        WHERE a.tenant_id = $1 AND a.table_name = ANY($${params.length}::text[]) AND ${named} ~ ${UUID_TEXT}`,
+      `SELECT r.id, a.id, a.created_at, a.action
+         FROM recs r
+         JOIN audit_log a ON a.tenant_id = $1 AND a.parent_table = ${sqlText(table)} AND a.parent_id = r.id AND a.created_at > r.updated_at
+        WHERE a.table_name = ANY(${sqlTextArray(dating.byParent)})`,
     );
   }
-  return {
-    params,
-    sql: `WITH hits AS (
-            ${branches.join('\n            UNION ALL\n            ')}
+  for (const [key, labels] of Object.entries(dating.byPayload ?? {})) {
+    branches.push(
+      `SELECT r.id, a.id, a.created_at, a.action
+         FROM recs r
+         JOIN audit_log a ON a.tenant_id = $1 AND a.table_name = ANY(${sqlTextArray(labels)})
+          AND lower(COALESCE(a.after_json, a.before_json) ->> ${sqlText(key)}) = r.id::text AND a.created_at > r.updated_at`,
+    );
+  }
+  return `WITH recs AS (
+            SELECT t.id, t.updated_at FROM public.${quoteIdent(table)} t WHERE t.tenant_id = $1 AND t.id = ANY($2::uuid[])
           ), newer AS (
-            SELECT h.* FROM hits h
-              JOIN public.${quoteIdent(table)} t ON t.tenant_id = $1 AND t.id = h.record_id
-             WHERE h.created_at > t.updated_at
+            ${branches.join('\n            UNION ALL\n            ')}
           ), floor AS (
             SELECT record_id, max(created_at) AS at FROM newer WHERE action <> 'update' GROUP BY record_id
+          ), kept AS (
+            SELECT n.record_id, n.audit_id, n.created_at,
+                   row_number() OVER (PARTITION BY n.record_id ORDER BY n.created_at DESC, n.audit_id DESC)::int AS rn
+              FROM newer n LEFT JOIN floor f ON f.record_id = n.record_id
+             WHERE (n.action <> 'update' AND n.created_at = f.at)
+                OR (n.action = 'update' AND (f.at IS NULL OR n.created_at > f.at))
           )
-          SELECT n.record_id, n.audit_id, n.audit_record_id, n.action, n.table_name,
-                 CASE WHEN n.action = 'update' THEN n.before_json END AS before_json,
-                 CASE WHEN n.action = 'update' THEN n.after_json END AS after_json
-            FROM newer n LEFT JOIN floor f ON f.record_id = n.record_id
-           WHERE (n.action <> 'update' AND n.created_at = f.at)
-              OR (n.action = 'update' AND (f.at IS NULL OR n.created_at > f.at))
-           ORDER BY n.record_id, n.created_at DESC, n.audit_id DESC`,
-  };
+          SELECT k.record_id, k.audit_id, k.rn, a.record_id AS audit_record_id, a.action, a.table_name,
+                 CASE WHEN a.action = 'update' THEN a.before_json END AS before_json,
+                 CASE WHEN a.action = 'update' THEN a.after_json END AS after_json
+            FROM kept k JOIN audit_log a ON a.tenant_id = $1 AND a.id = k.audit_id
+           WHERE k.rn > $3 AND k.rn <= $3 + $4
+           ORDER BY k.record_id, k.rn`;
 }
 
 /**
@@ -160,8 +171,10 @@ function candidatesSql(table: string, dating: Dating): { sql: string; params: un
  * Tenant by tenant with `app.current_tenant` set (transaction-local), RLS left ENABLE + FORCE
  * everywhere: the date trigger of the search index (`search_index_stamp_source()`, migration
  * 1856275000000) writes `search_index`, also under FORCE RLS, and finds the entries only in the
- * record's tenant. Per table and tenant, one read (the candidates, each statement with its
- * `tenant_id` predicate) and one write; the write names `updated_at` alone, so the record's own
+ * record's tenant. Per table and tenant, the records go by batches of `batchSize` ids: one read of
+ * the ids, one read of their candidates (`perRecord` rows per record, a further read only for the
+ * records whose rows read are all hidden), one write; every statement carries its `tenant_id`
+ * predicate and memory stays bounded by the batch. The write names `updated_at` alone, so the record's own
  * date trigger (its WHEN compares the other columns, and the date moved) and the search index
  * sync stay still, and only the search entry's `source_updated_at` follows.
  *
@@ -173,6 +186,10 @@ export class RecordDatesFromHistory1856277000000 implements MigrationInterface {
   name = 'RecordDatesFromHistory1856277000000';
   /** The correspondence this migration applies; its spec compares it with the dating code. */
   readonly dating = DATING;
+  /** Records per read and write; the spec lowers it to run several batches on a few records. */
+  batchSize = 500;
+  /** Audit rows read per record at a time; a record whose rows read are all hidden reads the next ones. */
+  perRecord = 50;
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const started = Date.now();
@@ -203,37 +220,35 @@ export class RecordDatesFromHistory1856277000000 implements MigrationInterface {
       );
       if (!has_log) continue;
       for (const table of tables) {
-        const { sql, params } = candidatesSql(table, this.dating[table]);
-        params[0] = tenant.id;
-        const candidates: Candidate[] = await queryRunner.query(sql, params);
-        const picked = new Map<string, string>();
-        for (const row of candidates) {
-          if (picked.has(row.record_id)) continue;
-          const shown = row.action !== 'update' || historyShowsRow(table, {
-            table: row.table_name,
-            recordId: row.audit_record_id,
-            action: row.action,
-            before: row.before_json,
-            after: row.after_json,
-          }, row.record_id);
-          if (shown) picked.set(row.record_id, row.audit_id);
+        const sql = candidatesSql(table, this.dating[table]);
+        let after: string | null = null;
+        for (;;) {
+          const batch: Array<{ id: string }> = await queryRunner.query(
+            `SELECT id FROM public.${quoteIdent(table)} WHERE tenant_id = $1 AND ($2::uuid IS NULL OR id > $2::uuid) ORDER BY id LIMIT $3`,
+            [tenant.id, after, this.batchSize],
+          );
+          if (batch.length === 0) break;
+          after = batch[batch.length - 1].id;
+          const picked = await this.pick(queryRunner, sql, table, tenant.id, batch.map((row) => row.id));
+          if (picked.size > 0) {
+            const [{ count }]: Array<{ count: number }> = await queryRunner.query(
+              `WITH picked AS (
+                 SELECT p.record_id, LEAST(a.created_at, now()) AS at
+                   FROM unnest($2::uuid[], $3::uuid[]) AS p(record_id, audit_id)
+                   JOIN audit_log a ON a.tenant_id = $1 AND a.id = p.audit_id
+               ), changed AS (
+                 UPDATE public.${quoteIdent(table)} t SET updated_at = p.at
+                   FROM picked p
+                  WHERE t.tenant_id = $1 AND t.id = p.record_id AND t.updated_at < p.at
+                 RETURNING 1
+               )
+               SELECT count(*)::int AS count FROM changed`,
+              [tenant.id, Array.from(picked.keys()), Array.from(picked.values())],
+            );
+            dated.set(table, (dated.get(table) ?? 0) + count);
+          }
+          if (batch.length < this.batchSize) break;
         }
-        if (picked.size === 0) continue;
-        const [{ count }]: Array<{ count: number }> = await queryRunner.query(
-          `WITH picked AS (
-             SELECT p.record_id, LEAST(a.created_at, now()) AS at
-               FROM unnest($2::uuid[], $3::uuid[]) AS p(record_id, audit_id)
-               JOIN audit_log a ON a.tenant_id = $1 AND a.id = p.audit_id
-           ), changed AS (
-             UPDATE public.${quoteIdent(table)} t SET updated_at = p.at
-               FROM picked p
-              WHERE t.tenant_id = $1 AND t.id = p.record_id AND t.updated_at < p.at
-             RETURNING 1
-           )
-           SELECT count(*)::int AS count FROM changed`,
-          [tenant.id, Array.from(picked.keys()), Array.from(picked.values())],
-        );
-        dated.set(table, (dated.get(table) ?? 0) + count);
       }
     }
     await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [found ?? '']);
@@ -241,6 +256,34 @@ export class RecordDatesFromHistory1856277000000 implements MigrationInterface {
     for (const [table, count] of dated) console.log(`${LOG} ${table}: ${count} record(s) dated`);
     const total = Array.from(dated.values()).reduce((sum, count) => sum + count, 0);
     console.log(`${LOG} ${total} record(s) dated in ${tenants.length} tenant(s), ${Date.now() - started} ms`);
+  }
+
+  /**
+   * The audit row that dates each record of the batch: its latest row the history shows, read
+   * `perRecord` rows at a time; the next rows are read only for the records whose rows read so far
+   * are all hidden (updates shown as no change).
+   */
+  private async pick(queryRunner: QueryRunner, sql: string, table: string, tenantId: string, ids: string[]): Promise<Map<string, string>> {
+    const picked = new Map<string, string>();
+    let pending = ids;
+    for (let offset = 0; pending.length > 0; offset += this.perRecord) {
+      const candidates: Candidate[] = await queryRunner.query(sql, [tenantId, pending, offset, this.perRecord]);
+      const full = new Set<string>();
+      for (const row of candidates) {
+        if (row.rn === offset + this.perRecord) full.add(row.record_id);
+        if (picked.has(row.record_id)) continue;
+        const shown = row.action !== 'update' || historyShowsRow(table, {
+          table: row.table_name,
+          recordId: row.audit_record_id,
+          action: row.action,
+          before: row.before_json,
+          after: row.after_json,
+        }, row.record_id);
+        if (shown) picked.set(row.record_id, row.audit_id);
+      }
+      pending = Array.from(full).filter((id) => !picked.has(id));
+    }
+    return picked;
   }
 
   public async down(): Promise<void> {

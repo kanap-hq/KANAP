@@ -21,6 +21,14 @@ import { assert, inRolledBackTransaction, runSpecs, seedItem, seedTenant, setTen
 
 const migration = new Migration();
 
+/** The same migration with tiny bounds: several batches of records, several reads per record. */
+function smallBounds(): Migration {
+  const small = new Migration();
+  small.batchSize = 2;
+  small.perRecord = 2;
+  return small;
+}
+
 type Dating = { own: string[]; byRecord?: string[]; byParent?: string[]; byPayload?: Record<string, string[]> };
 
 /** The correspondence of the dating code today, in the migration's shape. */
@@ -162,20 +170,20 @@ async function searchIndex(runner: QueryRunner, tenantIds: string[]): Promise<Ma
 }
 
 /** Runs up() as a release does: no tenant set; returns its log lines. */
-async function up(runner: QueryRunner): Promise<string[]> {
+async function up(runner: QueryRunner, run: Migration = migration): Promise<string[]> {
   await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
   const lines: string[] = [];
   const log = console.log;
   console.log = (...args: unknown[]) => { lines.push(args.map(String).join(' ')); };
   try {
-    await migration.up(runner);
+    await run.up(runner);
   } finally {
     console.log = log;
   }
   return lines;
 }
 
-async function testDirtyDatabase() {
+async function testDirtyDatabase(run: Migration) {
   await inRolledBackTransaction(async (runner) => {
     const tenantB = await seedTenant(runner, 'dates-b');
     const contractB = await seedContract(runner, tenantB, 'B', T0);
@@ -189,6 +197,7 @@ async function testDirtyDatabase() {
     const future = await seedContract(runner, tenantA, 'future', T0);
     const hidden = await seedContract(runner, tenantA, 'hidden', T0);
     const earlier = await seedContract(runner, tenantA, 'earlier', T0);
+    const deep = await seedContract(runner, tenantA, 'deep', T0);
     const contact = await insertId(runner, `INSERT INTO contacts (tenant_id, email) VALUES ($1, $2)`, [tenantA, `dates-${tenantA.slice(0, 8)}@example.test`]);
     await setDate(runner, 'contacts', contact, T0);
     const line = await seedItem(runner, 'opex', tenantA, 1, 'Dated line');
@@ -218,6 +227,11 @@ async function testDirtyDatabase() {
     // The latest update shows no change, an earlier one does: the earlier one dates the record.
     await audit(runner, tenantA, { table: 'contracts', recordId: earlier, action: 'update', before: { name: 'A' }, after: { name: 'B' }, at: T_OWN });
     await audit(runner, tenantA, { table: 'contracts', recordId: earlier, action: 'update', before: { name: 'B' }, after: { name: 'B' }, at: T_HIDDEN });
+    // Three such updates over the shown one: past the rows a first read takes per record (2 with tiny bounds).
+    await audit(runner, tenantA, { table: 'contracts', recordId: deep, action: 'update', before: { name: 'A' }, after: { name: 'B' }, at: T_OWN });
+    for (const at of ['2025-06-01T00:00:01Z', '2025-06-01T00:00:02Z', '2025-06-01T00:00:03Z']) {
+      await audit(runner, tenantA, { table: 'contracts', recordId: deep, action: 'update', before: { name: 'B' }, after: { name: 'B' }, at });
+    }
     // Rows naming deleted records, and a row of tenant A naming tenant B's contract.
     await audit(runner, tenantA, { table: 'contracts', recordId: randomUUID(), action: 'update', before: { name: 'A' }, after: { name: 'B' }, at: T_HIDDEN });
     await audit(runner, tenantA, { table: 'contract_contacts', action: 'delete', before: { contract_id: randomUUID(), contact_id: randomUUID() }, parent: { table: 'contracts', id: randomUUID() }, at: T_HIDDEN });
@@ -226,7 +240,7 @@ async function testDirtyDatabase() {
     const indexBefore = await searchIndex(runner, [tenantA, tenantB]);
     assert.ok(indexBefore.has(`contracts:${child}`), 'the contract has a search entry to follow its date');
 
-    const first = await up(runner);
+    const first = await up(runner, run);
     const now = await nowText(runner);
     await setTenant(runner, tenantA);
     assert.equal(await dateOf(runner, 'contracts', child), T_CHILD, 'a child entry dates its contract, at its exact instant');
@@ -238,11 +252,12 @@ async function testDirtyDatabase() {
     assert.equal(await dateOf(runner, 'contracts', future), now, 'an entry in the future is capped at now()');
     assert.equal(await dateOf(runner, 'contracts', hidden), T0, 'a save that changed nothing and an export date nothing');
     assert.equal(await dateOf(runner, 'contracts', earlier), T_OWN, 'under a latest update that shows no change, an earlier one dates the record');
+    assert.equal(await dateOf(runner, 'contracts', deep), T_OWN, 'under more hidden updates than a first read takes, the shown one dates the record');
     await setTenant(runner, tenantB);
     assert.equal(await dateOf(runner, 'contracts', contractB), T_B, "a tenant's rows never date another tenant's record");
 
     const dated = new Map<string, string>([
-      [`contracts:${child}`, T_CHILD], [`contracts:${own}`, T_OWN], [`contracts:${future}`, now], [`contracts:${earlier}`, T_OWN],
+      [`contracts:${child}`, T_CHILD], [`contracts:${own}`, T_OWN], [`contracts:${future}`, now], [`contracts:${earlier}`, T_OWN], [`contracts:${deep}`, T_OWN],
       [`contacts:${contact}`, T_CHILD], [`spend_items:${line}`, T_AMOUNT], [`contracts:${contractB}`, T_B],
     ]);
     const indexAfter = await searchIndex(runner, [tenantA, tenantB]);
@@ -258,7 +273,7 @@ async function testDirtyDatabase() {
     }
 
     assert.ok(first.some((line) => /contracts: \d+ record\(s\) dated/.test(line)), `the count by table is logged: ${first.join(' | ')}`);
-    const second = await up(runner);
+    const second = await up(runner, run);
     assert.ok(second.some((line) => / 0 record\(s\) dated in \d+ tenant\(s\)/.test(line)), `a second run dates nothing: ${second.join(' | ')}`);
     await setTenant(runner, tenantA);
     assert.equal(await dateOf(runner, 'contracts', child), T_CHILD, 'a second run leaves the dates');
@@ -294,7 +309,8 @@ async function testDownDoesNothing() {
 
 runSpecs('record-dates-from-history migration', [
   ['the frozen correspondence is the dating code', testCorrespondenceIsTheCode],
-  ['a dirty database of two tenants', testDirtyDatabase],
+  ['a dirty database of two tenants', () => testDirtyDatabase(migration)],
+  ['the same, by batches of 2 records and 2 rows per record', () => testDirtyDatabase(smallBounds())],
   ['a failure in the middle of the loop raises its own cause', testFailureMidLoop],
   ['down() leaves the dates', testDownDoesNothing],
 ]).catch((err) => {
