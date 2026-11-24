@@ -22,7 +22,7 @@ const UpdateEntityRelationsInputSchema = z.object({
   ref: z.string().trim().min(1)
     .describe('Exact source record reference. Use a UUID from a previous tool result, or an exact business reference/name when unique.'),
   relation: z.string().trim().min(1)
-    .describe('The supported relation name for the selected entity type, such as companies, contacts, owners, links, projects, assets, or budget_lines.'),
+    .describe('The supported relation name for the selected entity type, such as companies, contacts, owners, links, projects, assets, budget_lines or a site\'s sub_locations.'),
   add: z.array(z.unknown()).optional()
     .describe('Relation entries to add. Simple relations accept strings or objects with ref/id; role-bearing relations accept objects with role/owner_type and contact/user/asset refs. A contact of a supplier, a contract or a budget line is { contact_ref: its CTCT-n reference, email or name, role: commercial, technical, support or other }: the role is required, ask the person when they gave none.'),
   remove: z.array(z.unknown()).optional()
@@ -48,7 +48,8 @@ export class UpdateEntityRelationsAiMutationOperation implements AiMutationOpera
     fields: this.support.getSupportedRelationDescriptions(),
     reversible: true,
     prompt_hint: 'Use `update_entity_relations` for Tier 2 relationship/link writes. Set `entity_type`, `ref`, one `relation`, and add/remove arrays. Do not use this to change fields on linked records. Query the source detail first so relation names and current links are clear. This only creates a preview and still requires explicit approval. Executed relation previews can be undone through `undo_preview` when the previous relation set is still applicable. '
-      + 'Detaching a contact from a supplier, a contract or a budget line ("retire le contact CTCT-4 du fournisseur SUP-2", "remove contact CTCT-4 from contract CTR-3") is a `remove` on the record\'s `contacts` relation: only the link goes, the contact stays as it is; never deactivate or edit the contact for it.',
+      + 'Detaching a contact from a supplier, a contract or a budget line ("retire le contact CTCT-4 du fournisseur SUP-2", "remove contact CTCT-4 from contract CTR-3") is a `remove` on the record\'s `contacts` relation: only the link goes, the contact stays as it is; never deactivate or edit the contact for it. '
+      + 'Removing a sub-location from a site ("retire le sous-site S1 du site LOC-3", "remove sub-location S1 from site LOC-3") is a `remove` of `{ name }` on the site\'s `sub_locations` relation (entity_type `locations`), and adding one is an `add` of `{ name }` there: the card names the assets it leaves without a sub-location.',
   };
 
   constructor(private readonly support: AiRelationMutationSupportService) {}
