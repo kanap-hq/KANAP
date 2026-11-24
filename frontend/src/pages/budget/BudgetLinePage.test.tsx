@@ -257,6 +257,7 @@ import { fetchBudgetRelationsCount } from '../../utils/workspaceTabCounts';
 import { DEFAULT_BUDGET_COLUMNS } from '../../services/budgetColumns';
 import { resetListContextCache } from '../../lib/listContext';
 import { PRODUCT_NAME } from '../../config/product';
+import { clearCreationFieldFocus } from '../../components/workspace/creation';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>; post: ReturnType<typeof vi.fn>; patch: ReturnType<typeof vi.fn>; delete: ReturnType<typeof vi.fn>;
@@ -282,6 +283,10 @@ beforeEach(() => {
   auth.admin = true;
   auth.limited = false;
 });
+
+// A creation test leaves the creation frame waiting for its record (the waiting field and its focus
+// guard, ten seconds at most): the next tests start without it, or it takes their focus.
+afterEach(() => clearCreationFieldFocus());
 
 /**
  * The PATCH bodies without their `base` (lot 3C), checking that each base
