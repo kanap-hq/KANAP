@@ -652,6 +652,20 @@ async function testKadCheckNames(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('ok - Kad names each check as the screen, in the person\'s language; says why an account is outside the company\'s chart');
 }
 
+/**
+ * `describe_entity_filters` counts the fields it describes under names that say so: a model read its
+ * bare `total` (82 fields) as a number of lines a limited person could read.
+ */
+async function testDescribeCountsFields(h: Harness, runner: QueryRunner, s: Seed) {
+  const ctx = aiContext(runner, s, s.users.limited);
+  const description: any = describeAiEntityFilters('budget_lines',
+    await resolveAiEntityRegistry(ctx, 'budget_lines', (entityType: any) => h.policy.canReadEntityType(ctx, entityType, runner.manager)));
+  assert.ok(description.fields.length > 0, 'fields described');
+  assert.deepEqual([description.fields_total, description.fields_returned], [description.fields.length, description.fields.length], 'the number of fields described');
+  assert.deepEqual([description.total, description.returned], [undefined, undefined], 'no bare total a model could read as lines');
+  console.log('ok - describe_entity_filters counts its fields as fields');
+}
+
 async function testLimitedPerson(h: Harness, runner: QueryRunner, s: Seed) {
   if (!(await runner.query(`SELECT to_regrole('kanap_data_limited') IS NOT NULL AS present`))[0].present) {
     if (process.env.CI) assert.fail('CI installs kanap_data_limited before the migrations');
@@ -752,6 +766,7 @@ async function run() {
       await testKad(h, runner, s);
       await testKadDetailWords(h, runner, s);
       await testKadCheckNames(h, runner, s);
+      await testDescribeCountsFields(h, runner, s);
     });
     // `data_access_apply` limits the rest of its transaction: a transaction of its own.
     await inTransaction(h, (runner, s) => testLimitedPerson(h, runner, s));

@@ -93,8 +93,9 @@ export function describeAiEntityFilters(
     // The keys of a family are listed in it, not here.
     sort_fields: Object.keys(registry.sortFields).filter((key) => !registry.fields[key]?.family),
     default_sort: registry.defaultSort,
-    total: fields.length,
-    returned: fields.length,
+    // The number of filter fields described, never a number of records.
+    fields_total: fields.length,
+    fields_returned: fields.length,
     truncated: false,
     complete: true,
   };

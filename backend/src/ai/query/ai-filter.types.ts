@@ -507,8 +507,9 @@ export type AiFilterDescriptionResult = {
   /** Every `sort.field` query_entities takes for this family (the sortable fields, label, created_at, updated_at...), the keys of `field_families` aside. */
   sort_fields: string[];
   default_sort: { field: string; direction: 'asc' | 'desc' };
-  total: number;
-  returned: number;
+  /** The filter fields described (`fields`): a count of fields, never of records. */
+  fields_total: number;
+  fields_returned: number;
   truncated: boolean;
   complete: boolean;
 };
