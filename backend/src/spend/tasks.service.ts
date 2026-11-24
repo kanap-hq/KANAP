@@ -16,6 +16,7 @@ import { contractLabelSql } from '../contracts/contract-reference';
 import { resolveRecordCreators } from '../audit/record-creator.util';
 import type { LinkedModule, LinkedReads } from '../common/relations/linked-reads';
 import { assertSetFilterModes, bindPositional, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type CompiledCondition } from '../common/ag-grid-filtering';
+import { TASK_SHOWN_STREAM_SQL } from '../tasks/task-shown-classification';
 
 export interface TaskListItem {
   id: string;
@@ -1046,7 +1047,7 @@ export class TasksService {
       -- Classification JOINs (COALESCE: task value wins, falls back to project)
       LEFT JOIN portfolio_sources ps ON COALESCE(t.source_id, pp.source_id) = ps.id AND ps.tenant_id = t.tenant_id
       LEFT JOIN portfolio_categories pc ON COALESCE(t.category_id, pp.category_id) = pc.id AND pc.tenant_id = t.tenant_id
-      LEFT JOIN portfolio_streams pst ON COALESCE(t.stream_id, pp.stream_id) = pst.id AND pst.tenant_id = t.tenant_id
+      LEFT JOIN portfolio_streams pst ON ${TASK_SHOWN_STREAM_SQL} = pst.id AND pst.tenant_id = t.tenant_id
       LEFT JOIN companies comp ON COALESCE(t.company_id, pp.company_id) = comp.id AND comp.tenant_id = t.tenant_id
       LEFT JOIN portfolio_streams project_pst ON project_pst.id = pp.stream_id AND project_pst.tenant_id = t.tenant_id
       LEFT JOIN portfolio_categories project_pc ON project_pc.id = pp.category_id AND project_pc.tenant_id = t.tenant_id
@@ -1100,7 +1101,7 @@ export class TasksService {
         -- Classification (task value wins, falls back to project)
         COALESCE(t.source_id, pp.source_id) as source_id,
         COALESCE(t.category_id, pp.category_id) as category_id,
-        COALESCE(t.stream_id, pp.stream_id) as stream_id,
+        ${TASK_SHOWN_STREAM_SQL} as stream_id,
         COALESCE(t.company_id, pp.company_id) as company_id,
         -- Resolved classification names
         ps.name as source_name,
@@ -1130,7 +1131,7 @@ export class TasksService {
       -- Classification JOINs (COALESCE: task value wins, falls back to project)
       LEFT JOIN portfolio_sources ps ON COALESCE(t.source_id, pp.source_id) = ps.id AND ps.tenant_id = t.tenant_id
       LEFT JOIN portfolio_categories pc ON COALESCE(t.category_id, pp.category_id) = pc.id AND pc.tenant_id = t.tenant_id
-      LEFT JOIN portfolio_streams pst ON COALESCE(t.stream_id, pp.stream_id) = pst.id AND pst.tenant_id = t.tenant_id
+      LEFT JOIN portfolio_streams pst ON ${TASK_SHOWN_STREAM_SQL} = pst.id AND pst.tenant_id = t.tenant_id
       LEFT JOIN companies comp ON COALESCE(t.company_id, pp.company_id) = comp.id AND comp.tenant_id = t.tenant_id
       LEFT JOIN portfolio_streams project_pst ON project_pst.id = pp.stream_id AND project_pst.tenant_id = t.tenant_id
       LEFT JOIN portfolio_categories project_pc ON project_pc.id = pp.category_id AND project_pc.tenant_id = t.tenant_id
@@ -1174,7 +1175,7 @@ export class TasksService {
       LEFT JOIN portfolio_task_types tt ON t.task_type_id = tt.id AND tt.tenant_id = t.tenant_id
       LEFT JOIN portfolio_sources ps ON COALESCE(t.source_id, pp.source_id) = ps.id AND ps.tenant_id = t.tenant_id
       LEFT JOIN portfolio_categories pc ON COALESCE(t.category_id, pp.category_id) = pc.id AND pc.tenant_id = t.tenant_id
-      LEFT JOIN portfolio_streams pst ON COALESCE(t.stream_id, pp.stream_id) = pst.id AND pst.tenant_id = t.tenant_id
+      LEFT JOIN portfolio_streams pst ON ${TASK_SHOWN_STREAM_SQL} = pst.id AND pst.tenant_id = t.tenant_id
       LEFT JOIN companies comp ON COALESCE(t.company_id, pp.company_id) = comp.id AND comp.tenant_id = t.tenant_id
       LEFT JOIN portfolio_streams project_pst ON project_pst.id = pp.stream_id AND project_pst.tenant_id = t.tenant_id
       LEFT JOIN portfolio_categories project_pc ON project_pc.id = pp.category_id AND project_pc.tenant_id = t.tenant_id
@@ -1201,7 +1202,7 @@ export class TasksService {
       -- Classification JOINs (COALESCE: task value wins, falls back to project)
       LEFT JOIN portfolio_sources ps ON COALESCE(t.source_id, pp.source_id) = ps.id AND ps.tenant_id = t.tenant_id
       LEFT JOIN portfolio_categories pc ON COALESCE(t.category_id, pp.category_id) = pc.id AND pc.tenant_id = t.tenant_id
-      LEFT JOIN portfolio_streams pst ON COALESCE(t.stream_id, pp.stream_id) = pst.id AND pst.tenant_id = t.tenant_id
+      LEFT JOIN portfolio_streams pst ON ${TASK_SHOWN_STREAM_SQL} = pst.id AND pst.tenant_id = t.tenant_id
       LEFT JOIN companies comp ON COALESCE(t.company_id, pp.company_id) = comp.id AND comp.tenant_id = t.tenant_id
       LEFT JOIN portfolio_streams project_pst ON project_pst.id = pp.stream_id AND project_pst.tenant_id = t.tenant_id
       LEFT JOIN portfolio_categories project_pc ON project_pc.id = pp.category_id AND project_pc.tenant_id = t.tenant_id
@@ -1267,7 +1268,7 @@ export class TasksService {
             LEFT JOIN portfolio_task_types tt ON t.task_type_id = tt.id AND tt.tenant_id = t.tenant_id
             LEFT JOIN portfolio_sources ps ON COALESCE(t.source_id, pp.source_id) = ps.id AND ps.tenant_id = t.tenant_id
             LEFT JOIN portfolio_categories pc ON COALESCE(t.category_id, pp.category_id) = pc.id AND pc.tenant_id = t.tenant_id
-            LEFT JOIN portfolio_streams pst ON COALESCE(t.stream_id, pp.stream_id) = pst.id AND pst.tenant_id = t.tenant_id
+            LEFT JOIN portfolio_streams pst ON ${TASK_SHOWN_STREAM_SQL} = pst.id AND pst.tenant_id = t.tenant_id
             LEFT JOIN companies comp ON COALESCE(t.company_id, pp.company_id) = comp.id AND comp.tenant_id = t.tenant_id
             LEFT JOIN portfolio_streams project_pst ON project_pst.id = pp.stream_id AND project_pst.tenant_id = t.tenant_id
             LEFT JOIN portfolio_categories project_pc ON project_pc.id = pp.category_id AND project_pc.tenant_id = t.tenant_id
@@ -1296,7 +1297,7 @@ export class TasksService {
             LEFT JOIN portfolio_task_types tt ON t.task_type_id = tt.id AND tt.tenant_id = t.tenant_id
             LEFT JOIN portfolio_sources ps ON COALESCE(t.source_id, pp.source_id) = ps.id AND ps.tenant_id = t.tenant_id
             LEFT JOIN portfolio_categories pc ON COALESCE(t.category_id, pp.category_id) = pc.id AND pc.tenant_id = t.tenant_id
-            LEFT JOIN portfolio_streams pst ON COALESCE(t.stream_id, pp.stream_id) = pst.id AND pst.tenant_id = t.tenant_id
+            LEFT JOIN portfolio_streams pst ON ${TASK_SHOWN_STREAM_SQL} = pst.id AND pst.tenant_id = t.tenant_id
             LEFT JOIN companies comp ON COALESCE(t.company_id, pp.company_id) = comp.id AND comp.tenant_id = t.tenant_id
             LEFT JOIN portfolio_streams project_pst ON project_pst.id = pp.stream_id AND project_pst.tenant_id = t.tenant_id
             LEFT JOIN portfolio_categories project_pc ON project_pc.id = pp.category_id AND project_pc.tenant_id = t.tenant_id
@@ -1329,7 +1330,7 @@ export class TasksService {
         -- Classification JOINs (COALESCE: task value wins, falls back to project)
         LEFT JOIN portfolio_sources ps ON COALESCE(t.source_id, pp.source_id) = ps.id AND ps.tenant_id = t.tenant_id
         LEFT JOIN portfolio_categories pc ON COALESCE(t.category_id, pp.category_id) = pc.id AND pc.tenant_id = t.tenant_id
-        LEFT JOIN portfolio_streams pst ON COALESCE(t.stream_id, pp.stream_id) = pst.id AND pst.tenant_id = t.tenant_id
+        LEFT JOIN portfolio_streams pst ON ${TASK_SHOWN_STREAM_SQL} = pst.id AND pst.tenant_id = t.tenant_id
         LEFT JOIN companies comp ON COALESCE(t.company_id, pp.company_id) = comp.id AND comp.tenant_id = t.tenant_id
         LEFT JOIN portfolio_streams project_pst ON project_pst.id = pp.stream_id AND project_pst.tenant_id = t.tenant_id
         LEFT JOIN portfolio_categories project_pc ON project_pc.id = pp.category_id AND project_pc.tenant_id = t.tenant_id
@@ -1393,7 +1394,7 @@ export class TasksService {
         -- Classification (task value wins, falls back to project)
         COALESCE(t.source_id, pp.source_id) as source_id,
         COALESCE(t.category_id, pp.category_id) as category_id,
-        COALESCE(t.stream_id, pp.stream_id) as stream_id,
+        ${TASK_SHOWN_STREAM_SQL} as stream_id,
         COALESCE(t.company_id, pp.company_id) as company_id,
         -- Resolved classification names
         ps.name as source_name,
@@ -1423,7 +1424,7 @@ export class TasksService {
       -- Classification JOINs (COALESCE: task value wins, falls back to project)
       LEFT JOIN portfolio_sources ps ON COALESCE(t.source_id, pp.source_id) = ps.id AND ps.tenant_id = t.tenant_id
       LEFT JOIN portfolio_categories pc ON COALESCE(t.category_id, pp.category_id) = pc.id AND pc.tenant_id = t.tenant_id
-      LEFT JOIN portfolio_streams pst ON COALESCE(t.stream_id, pp.stream_id) = pst.id AND pst.tenant_id = t.tenant_id
+      LEFT JOIN portfolio_streams pst ON ${TASK_SHOWN_STREAM_SQL} = pst.id AND pst.tenant_id = t.tenant_id
       LEFT JOIN companies comp ON COALESCE(t.company_id, pp.company_id) = comp.id AND comp.tenant_id = t.tenant_id
       WHERE t.id = $1
         AND t.tenant_id = $2

@@ -22,6 +22,7 @@ import { linkedModuleNotReadable, linkedParticipationScope, loadLinkedReads } fr
 import { idsInScope } from '../../../portfolio/portfolio-linked-reads';
 import { AiWriteLanguage, previewSummaryText, writeActionText } from '../../ai-write-texts';
 import { givenMembership, pickMemberByParent, settleRecordMembership, STREAM_PAIR } from '../../../common/record-membership';
+import { shownTaskClassification } from '../../../tasks/task-shown-classification';
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const PRIORITIES = ['blocker', 'high', 'normal', 'low', 'optional'] as const;
@@ -419,8 +420,8 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
   }
 
   /**
-   * The category and stream a task shows: its own, else its project's where it has none
-   * (`TasksUnifiedService`, lot I7a of 26.12.1).
+   * The category and stream a task shows: its own, else its project's where it has none, the
+   * project's stream only with the project's category (`tasks/task-shown-classification.ts`).
    */
   private async shownClassification(context: AiExecutionContextWithManager, task: TaskSnapshot): Promise<{ category_id: unknown; stream_id: unknown }> {
     let project: { category_id: unknown; stream_id: unknown } | undefined;
@@ -430,7 +431,8 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
         [context.tenantId, task.related_object_id],
       );
     }
-    return { category_id: task.category_id ?? project?.category_id ?? null, stream_id: task.stream_id ?? project?.stream_id ?? null };
+    const shown = shownTaskClassification(task, project);
+    return { category_id: shown.category_id, stream_id: shown.stream_id };
   }
 
   /** A stream named by Kad: a name several streams share is looked up in the category the task keeps or gets (P12). */

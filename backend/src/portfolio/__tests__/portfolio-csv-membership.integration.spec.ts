@@ -208,9 +208,22 @@ async function testTasks() {
     assert.deepEqual(await pair(runner, 'tasks', named, 'category_id, stream_id'), { category_id: null, stream_id: ids.opsBiz });
     // A stream of another category than the one it shows.
     assert.deepEqual((await refusals(tasks, runner, data, `id;stream_name\n${wrong};Dev`)).map((error) => error.code), ['STREAM_OUTSIDE_CATEGORY']);
-    // The round trip of tasks that follow their project, and of the one with its own stream.
+    // A task of an IT project moved to Business shows no stream, never the project's Ops (A2, A4).
+    const itProject = randomUUID();
+    await runner.query(
+      `INSERT INTO portfolio_projects (id, tenant_id, item_number, name, status, origin, execution_progress, category_id, stream_id)
+       VALUES ($1, $2, 2, 'IT project', 'in_progress', 'fast_track', 0, $3, $4)`,
+      [itProject, tenantId, ids.it, ids.opsIt],
+    );
+    const moved = randomUUID();
+    await runner.query(
+      `INSERT INTO tasks (id, tenant_id, item_number, title, status, related_object_type, related_object_id, category_id) VALUES ($1, $2, 3, 'Moved', 'open', 'project', $3, $4)`,
+      [moved, tenantId, itProject, ids.biz],
+    );
+    // The round trip of tasks that follow their project, of the one with its own stream, and of the moved one.
     const exported = String((await tasks.export({ manager: runner.manager, tenantId, language: 'en' } as any)).content).replace(/^﻿/, '');
-    assert.deepEqual(await load(tasks, runner, data, exported), { inserted: 0, updated: 0, unchanged: 2, cleared: 0 }, 'an export imported as it is');
+    assert.deepEqual(await load(tasks, runner, data, exported), { inserted: 0, updated: 0, unchanged: 3, cleared: 0 }, 'an export imported as it is');
+    assert.deepEqual(await pair(runner, 'tasks', moved, 'category_id, stream_id'), { category_id: ids.biz, stream_id: null });
   });
 }
 

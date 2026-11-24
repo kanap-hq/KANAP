@@ -26,6 +26,7 @@ import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
 import { givenMembership, settleRecordMembership, STREAM_PAIR } from '../common/record-membership';
+import { shownTaskClassification } from './task-shown-classification';
 import {
   IncidentViewer,
   taskIncidentVisibilityQueryBuilderClause,
@@ -102,8 +103,8 @@ export class TasksUnifiedService {
 
   /**
    * A task's stream belongs to its category (`common/record-membership.ts`): the values of the pair to
-   * write, or a 400. On a task of a project, the project's category and stream stand where the task has
-   * none of its own (they are the ones it shows), so the project's values written again change nothing.
+   * write, or a 400. On a task of a project, the values it shows stand where it has none of its own
+   * (`tasks/task-shown-classification.ts`), so the shown values written again change nothing.
    */
   private async settleTaskMembership(
     manager: EntityManager,
@@ -114,11 +115,8 @@ export class TasksUnifiedService {
   ): Promise<Record<string, string | null>> {
     const given = givenMembership([STREAM_PAIR], payload);
     if (Object.keys(given).length === 0) return {};
-    const stored = {
-      category_id: existing?.category_id ?? project?.category_id ?? null,
-      stream_id: existing?.stream_id ?? project?.stream_id ?? null,
-    };
-    return settleRecordMembership(manager, [STREAM_PAIR], given, stored, tenantId);
+    const shown = shownTaskClassification(existing, project);
+    return settleRecordMembership(manager, [STREAM_PAIR], given, { category_id: shown.category_id, stream_id: shown.stream_id }, tenantId);
   }
 
   /** The classification of the project a task belongs to, none for another task. */

@@ -22,6 +22,7 @@ import { hasLevel } from '../common/relations/relations-access';
 import { findRecordByName, noteNameMatch, noteRefusedProposal, proposalFor, takeProposal, undoneMatch, type MatchHow } from '../common/name-matching';
 import { budgetLineReference } from '../spend/budget-nature';
 import { numberedReference } from '../common/csv-sheet/master-data';
+import { shownTaskClassification } from './task-shown-classification';
 
 /** The label of a contract outside the person's access, as the tasks list writes it (`ops:contracts.outsideYourAccess`). */
 export const CONTRACT_OUTSIDE_ACCESS: Record<CsvLanguage, string> = {
@@ -170,7 +171,8 @@ const hasColumns = (raw: Record<string, string>, prefix: string) => numberedColu
 
 /**
  * The classification a task of a project takes from its project when it has none of its own: the
- * task list shows `COALESCE(task, project)` (`TasksService.listAllTasks`), and so does the export.
+ * task list shows it (`TasksService.listAllTasks`), and so does the export. The project's stream
+ * goes only with the project's category (`task-shown-classification.ts`).
  */
 export const TASK_INHERITED_CLASSIFICATION = ['source_id', 'category_id', 'stream_id', 'company_id'] as const;
 
@@ -1099,16 +1101,18 @@ export const taskCsvConfig: CsvEntityConfig = {
     for (const { row, projectId } of matched) {
       const project = projects.get(projectId);
       if (!project) continue;
+      const shown = shownTaskClassification(row.existingEntity, project);
       for (const key of TASK_INHERITED_CLASSIFICATION) {
         const value = row.parsed[key];
-        if (value == null || row.existingEntity[key] != null || project[key] == null) continue;
-        if (String(value).toLowerCase() === project[key]!.toLowerCase()) delete row.parsed[key];
+        if (value == null || row.existingEntity[key] != null || shown[key] == null) continue;
+        if (String(value).toLowerCase() === shown[key]!.toLowerCase()) delete row.parsed[key];
       }
     }
   },
 
   /**
-   * A task of a project shows its project's category and stream where it has none of its own: a stream
+   * A task of a project shows its project's category and stream where it has none of its own (the
+   * stream only with the project's category, `task-shown-classification.ts`): a stream
    * name several streams share is looked up in that category, and the pair check compares with them
    * (lot I7a of 26.12.1).
    */
@@ -1124,7 +1128,9 @@ export const taskCsvConfig: CsvEntityConfig = {
     const inherited = new Map<CsvImportRow, Record<string, string | null>>();
     for (const [row, id] of projectOf) {
       const project = projects.get(id);
-      if (project) inherited.set(row, { category_id: project.category_id, stream_id: project.stream_id });
+      if (!project) continue;
+      const shown = shownTaskClassification(row.existingEntity, project);
+      inherited.set(row, { category_id: shown.category_id, stream_id: shown.stream_id });
     }
     return inherited;
   },
