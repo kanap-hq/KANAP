@@ -129,6 +129,16 @@ export async function fetchItOpsSettings(): Promise<ItOpsSettings> {
   return res.data as ItOpsSettings;
 }
 
+/**
+ * The catalog labels, readable by every signed-in member (no settings right): code, label,
+ * translations, retired flag, and the description of the classification levels. No subnets and no
+ * administration data: the settings editors keep `fetchItOpsSettings`.
+ */
+export async function fetchItOpsCatalogLabels(): Promise<ItOpsSettings> {
+  const res = await api.get('/it-ops/catalog-labels');
+  return res.data as ItOpsSettings;
+}
+
 export async function updateItOpsSettings(payload: Partial<ItOpsSettings>): Promise<ItOpsSettings> {
   const res = await api.patch('/it-ops/settings', payload);
   return res.data as ItOpsSettings;
