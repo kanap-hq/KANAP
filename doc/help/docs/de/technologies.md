@@ -126,6 +126,8 @@ Der Arbeitsbereich hat eine Kopfzeile, rechts einen Eigenschaftenbereich und sie
 
 Änderungen werden sofort gespeichert.
 
+**Nicht mehr angebotene Werte**: Familie, Hosting-Typ, Lebenszyklus, Administrationszone, Cyberkritikalität und Wiederanlaufwelle bieten die Werte an, die in den [IT-Landschaft-Einstellungen](it-ops-settings.md) noch angeboten werden. Ein als **Nicht mehr anbieten** markierter Wert bleibt bei den Technologien, die ihn bereits haben, und sie behalten ihn beim Speichern. Andere Technologien können ihn nicht übernehmen, weder auf dieser Seite noch über Kad. Eine aus dem Katalog hinzugefügte Technologie, deren Familie nicht mehr angeboten wird, erhält die Familie Sonstiges.
+
 #### Hosting-Typ
 
 Der Hosting-Typ sagt, wo die Technologie läuft. Die Liste ist die der **Hosting-Typen** unter **IT-Landschaft > Einstellungen**, gemeinsam mit den Standorten: standardmäßig **On-Premise**, **Colocation**, **Public Cloud**, **Private Cloud** und **SaaS**. Jeder Typ ist entweder vor Ort oder in der Cloud:

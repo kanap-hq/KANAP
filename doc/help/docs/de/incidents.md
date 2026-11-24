@@ -308,6 +308,8 @@ Die Vorfallskategorien gehören Ihnen: Legen Sie sie in **IT-Landschaft > Einste
 
 Halten Sie die Liste kurz. Kategorien sind das, wonach Sie ein Jahr an Vorfällen gruppieren werden, und eine Liste mit dreißig Einträgen nutzt niemand einheitlich. Statt eine bereits verwendete Kategorie zu löschen, markieren Sie sie als veraltet: Sie verschwindet aus der Auswahl für neue Vorfälle, während die bestehenden ihre Historie behalten.
 
+Eine als **Nicht mehr anbieten** markierte Kategorie bleibt bei den Vorfällen, die sie bereits haben, und sie behalten sie beim Speichern. Andere Vorfälle können sie nicht übernehmen, weder auf dieser Seite noch per CSV-Import oder über Kad.
+
 ---
 
 ## Den Assistenten fragen

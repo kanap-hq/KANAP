@@ -126,6 +126,8 @@ El espacio de trabajo tiene una cabecera, un panel de propiedades a la derecha y
 
 Los cambios se guardan a medida que los hace.
 
+**Valores que ya no se proponen**: la familia, el tipo de alojamiento, el ciclo de vida, la zona de administración, la criticidad cibernética y la ola de recuperación ofrecen los valores que siguen disponibles en [Configuración del Panorama IT](it-ops-settings.md). Un valor marcado **Dejar de proponer** permanece en las tecnologías que ya lo tienen, que lo conservan al guardarse. Las demás tecnologías no pueden tomarlo, ni en esta página ni a través de Kad. Una tecnología añadida desde el catálogo cuya familia ya no se propone toma la familia Otro.
+
 #### Tipo de alojamiento
 
 El tipo de alojamiento indica dónde se ejecuta la tecnología. La lista es la de **Tipos de alojamiento** de **Panorama IT > Configuración**, compartida con las ubicaciones: **Local**, **Colocation**, **Cloud público**, **Cloud privado** y **SaaS** por defecto. Cada tipo es local o en la nube:

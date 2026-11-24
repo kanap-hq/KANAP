@@ -143,6 +143,8 @@ Hosting types are configurable in **IT Landscape -> Settings**. Each type belong
 | Private Cloud | Cloud | Company-operated cloud platform |
 | Edge | Cloud | Edge computing locations |
 
+**Values no longer offered**: The hosting type and the provider list the values still offered in [IT Landscape Settings](it-ops-settings.md). A value marked **No longer offered** stays on the locations that already have it, which keep it when they are saved. The other locations cannot take it, on this page or through Kad. A network zone marked **No longer offered** stays on the subnets that have it; a new subnet cannot take it.
+
 ---
 
 ## Permissions

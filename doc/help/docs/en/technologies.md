@@ -126,6 +126,8 @@ The workspace has a header, a properties panel on the right, and seven tabs: **O
 
 Changes save as you make them.
 
+**Values no longer offered**: The family, the hosting type, the lifecycle, the administration zone, the cyber criticality and the recovery wave list the values still offered in [IT Landscape Settings](it-ops-settings.md). A value marked **No longer offered** stays on the technologies that already have it, which keep it when they are saved. The other technologies cannot take it, on this page or through Kad. A technology added from the catalog whose family is no longer offered takes the family Other.
+
 #### Hosting type
 
 The hosting type says where the technology runs. The list is the **Hosting types** list of **IT Landscape > Settings**, shared with the locations: **On-prem**, **Colocation**, **Public cloud**, **Private cloud** and **SaaS** by default. Each type is either on premises or in the cloud:
