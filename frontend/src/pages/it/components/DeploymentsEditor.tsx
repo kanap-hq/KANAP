@@ -187,13 +187,18 @@ export default function DeploymentsEditor({
     }));
   }, [byField.lifecycleStatus, deployments, t]);
 
-  const serverRoleOptions = React.useMemo(() => {
-    const list = byField.serverRole || [];
-    return list.map((item) => ({
+  // Rule P7: the roles still offered, plus the one the assignment being changed holds (none for a new one).
+  const serverRoleOptionsFor = React.useCallback((held?: string | null) => (
+    offeredCatalogOptions(byField.serverRole, held).map((item) => ({
       value: item.code,
       label: item.deprecated ? t('common.deprecatedOption', { label: item.label }) : item.label,
-    }));
-  }, [byField.serverRole, t]);
+    }))
+  ), [byField.serverRole, t]);
+  const serverRoleOptions = React.useMemo(() => serverRoleOptionsFor(), [serverRoleOptionsFor]);
+  const heldRole = assignmentDraft?.assignmentId
+    ? (assignments[assignmentDraft.deploymentId] || []).find((row) => row.id === assignmentDraft.assignmentId)?.role
+    : null;
+  const assignmentRoleOptions = React.useMemo(() => serverRoleOptionsFor(heldRole), [serverRoleOptionsFor, heldRole]);
 
   const usedEnvironments = React.useMemo(() => new Set(deployments.map((deployment) => deployment.environment)), [deployments]);
   const duplicateEnvironment = !deploymentDraft.id && usedEnvironments.has(deploymentDraft.environment);
@@ -709,7 +714,7 @@ export default function DeploymentsEditor({
                 variant="standard"
                 sx={drawerSelectSx}
               >
-                {serverRoleOptions.map((option) => (
+                {assignmentRoleOptions.map((option) => (
                   <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>{option.label}</MenuItem>
                 ))}
               </Select>

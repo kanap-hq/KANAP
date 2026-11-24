@@ -46,6 +46,8 @@ import {
   normalizeServerRole,
 } from '../../app-asset-assignments/cluster-assignment-rules';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
+import { withShippedLabels } from '../../it-ops-settings/catalog-shipped-labels';
 import {
   assertNotPlacedByCluster,
   hostLinksToReplace,
@@ -767,7 +769,8 @@ export class AiRelationMutationSupportService {
   /**
    * The rules of `AppAssetAssignmentsService` (`app-asset-assignments/cluster-assignment-rules.ts`)
    * for the server rows the assistant adds to an application (the items not in `currentItems`):
-   * - the role comes from the server roles catalog (`assignment_role_invalid`);
+   * - the role comes from the server roles catalog (`assignment_role_invalid`); a retired role only
+   *   on the row that already holds it, a row named again (rule P7, `catalog_value_retired`);
    * - a row added to a cluster absorbs the next items of the same deployment and role on its
    *   members (A4): they leave the list, so their rows are deleted, and the cluster's row takes the
    *   earliest date and their notes after its own. A cluster's row the request names again (an
@@ -792,7 +795,9 @@ export class AiRelationMutationSupportService {
     const touched = [...added, ...named];
     if (touched.length === 0) return nextItems;
     const settings = await this.itOpsSettings.getSettingsForWrite(context.tenantId, context.manager);
-    for (const item of touched) normalizeServerRole(item.payload.role, settings.serverRoles);
+    for (const item of touched) {
+      normalizeServerRole(item.payload.role, settings.serverRoles, currentByKey.get(item.key)?.payload.role as string | undefined);
+    }
     const assetOf = (item: RelationItem) => String(item.payload.asset_id);
     const sameSlot = (a: RelationItem, b: RelationItem) =>
       a.payload.app_instance_id === b.payload.app_instance_id && a.payload.role === b.payload.role;
@@ -1261,9 +1266,13 @@ export class AiRelationMutationSupportService {
     const assetRef = textOrNull(item.asset_ref ?? item.asset_id ?? item.server_ref ?? item.server_id ?? item.ref);
     if (!assetRef) throw new BadRequestException('Asset reference is required.');
     const asset = await this.resolveReference(context, 'assets', assetRef);
-    // As the service (`normalizeServerRole`): catalog codes keep their hyphens (`domain-controller`).
-    const role = String(item.role ?? '').trim().toLowerCase();
-    if (!role) throw new BadRequestException('Asset assignment role is required.');
+    // The role by its code or a name the app shows, in any language, as the screen's list names it;
+    // catalog codes keep their hyphens (`domain-controller`). Its offer (rule P7) is checked with the
+    // service's rule (`applyAssignmentRules`); a word the list does not know stays as said, refused there.
+    const said = String(item.role ?? '').trim();
+    if (!said) throw new BadRequestException('Asset assignment role is required.');
+    const settings = withShippedLabels(await this.itOpsSettings.getSettingsForWrite(context.tenantId, context.manager));
+    const role = findCatalogOption(said, settings.serverRoles || [])?.code ?? said;
     const key = `${instances[0].id}:${asset.id}:${role}`;
     const existing = currentItems.find((candidate) => candidate.key === key);
     if (mode === 'remove') {

@@ -20,7 +20,7 @@ export { assert };
 /** The lists that get a retired entry, with its code. */
 export const RETIRED_LISTS = [
   'serverKinds', 'serverProviders', 'domains', 'adminZones', 'lifecycleStates', 'ipAddressTypes', 'connectionTypes', 'entities',
-  'pathHopFunctions', 'interfaceDataCategories', 'interfaceTriggerTypes', 'interfacePatterns', 'interfaceFormats', 'interfaceAuthModes',
+  'pathHopFunctions', 'interfaceDataCategories', 'interfaceTriggerTypes', 'interfacePatterns', 'interfaceFormats', 'interfaceAuthModes', 'serverRoles',
 ] as const;
 export const retiredCode = (list: (typeof RETIRED_LISTS)[number]) => `old_${list.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)}`;
 

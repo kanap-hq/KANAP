@@ -1,6 +1,7 @@
 import type { EntityManager } from 'typeorm';
 import { applicationBadRequest, applicationConflict, applicationDayOf } from '../applications/application-rules';
 import { assetInServiceSql } from '../technologies/technology-reach.service';
+import { offeredCatalogList, resolveOfferedCatalogCode, type CatalogOptionLike } from '../it-ops-settings/catalog-resolve';
 
 /**
  * The rules of an assignment written to a cluster or to one of its members (clusters pass, PR B),
@@ -127,17 +128,29 @@ export async function assertNotInherited(
   if (carrying) throw assignmentInheritedRefusal(carrying.name);
 }
 
-/** A role of the server roles catalog (`serverRoles`), lowercase; else `assignment_role_invalid`. */
-export function normalizeServerRole(value: unknown, serverRoles: ReadonlyArray<{ code: string }> | undefined): string {
-  const normalized = String(value || '').trim().toLowerCase();
-  if (!normalized) {
-    throw applicationBadRequest('assignment_role_invalid', 'role is required', { value: '' });
+/**
+ * A role of the server roles catalog (`serverRoles`), by its code or a name of the list; else
+ * `assignment_role_invalid`, with the roles allowed. Rule P7: a retired role only on the assignment
+ * that already holds it (`held`), else `catalog_value_retired`.
+ */
+export function normalizeServerRole(
+  value: unknown,
+  serverRoles: ReadonlyArray<CatalogOptionLike> | undefined,
+  held?: string | null,
+): string {
+  const options = [...(serverRoles || [])];
+  if (!String(value ?? '').trim()) {
+    throw applicationBadRequest('assignment_role_invalid', 'role is required', { value: '', allowed: offeredCatalogList(options, held) });
   }
-  const allowed = new Set((serverRoles || []).map((item) => item.code));
-  if (!allowed.has(normalized)) {
-    throw applicationBadRequest('assignment_role_invalid', `Invalid role "${value}"`, { value: String(value ?? '') });
-  }
-  return normalized;
+  return resolveOfferedCatalogCode(value, options, {
+    held,
+    what: 'role',
+    refuse: (message, refusal) => applicationBadRequest(
+      refusal.retired ? 'catalog_value_retired' : 'assignment_role_invalid',
+      message,
+      { value: refusal.value, allowed: refusal.allowed },
+    ),
+  });
 }
 
 type DatedNotes = { since_date?: unknown; notes?: unknown };

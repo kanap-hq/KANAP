@@ -18,7 +18,7 @@ vi.mock('../../../api', () => ({
 
 vi.mock('../../../hooks/useItOpsEnumOptions', () => {
   const byField = {
-    serverRole: [{ code: 'app', label: 'Application server' }],
+    serverRole: [{ code: 'web', label: 'Web server', deprecated: true }, { code: 'app', label: 'Application server' }],
     lifecycleStatus: [{ code: 'active', label: 'Active' }, { code: 'deprecated', label: 'Deprecated' }, { code: 'frozen', label: 'Gelé', deprecated: true }],
   };
   return { default: () => ({ byField, labelFor: () => '' }) };
@@ -183,6 +183,16 @@ describe('DeploymentsEditor servers', () => {
     const css = Array.from(document.querySelectorAll('style')).map((node) => node.textContent).join('');
     expect(hidden).toBeTruthy();
     expect(css).toMatch(/tr:focus-within \.hover-actions/);
+  });
+
+  it('gives a new assignment a role still offered (rule P7)', async () => {
+    renderEditor(false);
+    await screen.findByRole('link', { name: 'CAVE-EDGE-01' });
+    fireEvent.click(screen.getByRole('button', { name: 'Add server' }));
+    const dialog = await screen.findByRole('dialog');
+    // The role list is not opened: in jsdom, the list of a select inside this dialog never ends opening.
+    const comboboxes = within(dialog).getAllByRole('combobox');
+    expect(comboboxes[comboboxes.length - 1].textContent).toBe('Application server');
   });
 
   it('shows the refusal of a server in the dialog, which stays open', async () => {
