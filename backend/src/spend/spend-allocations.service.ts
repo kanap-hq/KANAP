@@ -92,10 +92,26 @@ export class SpendAllocationsService {
 
     const computation = await this.calculator.computeForVersions([version], { manager, tenantId });
     const dist = computation.get(versionId);
-    const items = (dist?.shares ?? []).map((share) => ({
+    const shares = dist?.shares ?? [];
+    // The names the line carries, read with the line (as its supplier's): a person who reads the
+    // budget without reading the companies or departments lists sees who the line is split between.
+    const namesOf = async (table: 'companies' | 'departments', ids: Array<string | null | undefined>) => {
+      const wanted = [...new Set(ids.filter((id): id is string => !!id))];
+      if (wanted.length === 0) return new Map<string, string>();
+      const rows: Array<{ id: string; name: string }> = await manager.query(
+        `SELECT id::text AS id, name FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [tenantId, wanted],
+      );
+      return new Map(rows.map((row) => [row.id, row.name]));
+    };
+    const companyNames = await namesOf('companies', shares.map((share) => share.company_id));
+    const departmentNames = await namesOf('departments', shares.map((share) => share.department_id));
+    const items = shares.map((share) => ({
       id: share.allocation_id ?? null,
       company_id: share.company_id,
+      company_name: (share.company_id && companyNames.get(share.company_id)) || null,
       department_id: share.department_id,
+      department_name: (share.department_id && departmentNames.get(share.department_id)) || null,
       allocation_pct: share.allocation_pct,
       source: share.source,
     }));
