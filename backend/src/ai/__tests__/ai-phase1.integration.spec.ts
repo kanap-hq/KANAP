@@ -2008,7 +2008,7 @@ function buildToolIsolationCases(
             assert.equal(result.total, 1);
             assert.equal(result.returned, 1);
             assert.equal(result.truncated, false);
-            assert.deepEqual(result.groups, [{ key: 'open', count: 1 }]);
+            assert.deepEqual(result.groups, [{ key: 'open', count: 1, key_name: 'Open' }]);
             assert.deepEqual(result.filters_applied, []);
             assert.deepEqual(result.filters_ignored, []);
           },
@@ -2044,7 +2044,7 @@ function buildToolIsolationCases(
             assert.equal(result.truncated, false);
             assert.equal(result.metric, 'execution_progress');
             assert.equal(result.function, 'max');
-            assert.deepEqual(result.groups, [{ key: 'planned', value: 25 }]);
+            assert.deepEqual(result.groups, [{ key: 'planned', value: 25, key_name: 'Planned' }]);
           },
         },
       ];
@@ -3393,8 +3393,9 @@ async function testAiQueryLayerSupportsFirstPersonScopesAndPrioritySorting() {
     assert.equal(meProjectPrioritySum.total, 2);
     assert.equal(meProjectPrioritySum.metric, 'priority_score');
     assert.equal(meProjectPrioritySum.function, 'sum');
+    // The group's status comes with its name (K2d: Kad quotes the name, never the code).
     assert.deepEqual(meProjectPrioritySum.groups, [
-      { key: 'planned', value: 110 },
+      { key: 'planned', value: 110, key_name: 'Planned' },
     ]);
     assert.deepEqual(meProjectPrioritySum.scope, { requested: 'me', resolved: true });
 

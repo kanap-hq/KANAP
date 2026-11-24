@@ -226,7 +226,7 @@ async function testMcpLanguage() {
   const read = async (locale: string | null, screenLanguage?: string) => {
     const manager = managerWith(locale, 'de');
     const registry = registryFor(manager, { items: [summary('projects', 'on_hold', {})], total: 1, filters_ignored: [] });
-    const context: any = { tenantId: 't', userId: 'u', surface: screenLanguage ? 'chat' : 'mcp', authMethod: 'api_key', isPlatformHost: false, manager, screenLanguage };
+    const context: any = { tenantId: 't', userId: '00000000-0000-4000-8000-000000000001', surface: screenLanguage ? 'chat' : 'mcp', authMethod: 'api_key', isPlatformHost: false, manager, screenLanguage };
     const out = await registry.execute(context, 'query_entities', { entity_type: 'projects' }) as any;
     return out.items[0].status_name;
   };

@@ -1,3 +1,4 @@
+import { validate as isUuid } from 'uuid';
 import type { EntityManager } from 'typeorm';
 import { tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import type { CsvLanguage } from '../common/csv-sheet';
@@ -391,7 +392,8 @@ export async function aiNamesLanguage(
   userId: string | null | undefined,
   screenLanguage?: string | null,
 ): Promise<AiNamesLanguage> {
-  if (userId) {
+  // A caller that is not a person of the workspace (a test or system id) has no profile to read.
+  if (userId && isUuid(userId)) {
     const rows: Array<{ locale: string | null }> = await manager.query(
       'SELECT locale FROM users WHERE tenant_id = $1 AND id = $2',
       [tenantId, userId],
