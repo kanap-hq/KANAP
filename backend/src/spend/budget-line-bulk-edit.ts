@@ -84,7 +84,8 @@ const DATA_ACCESS_REFUSALS: Partial<Record<DataAccessReason, BudgetLineBulkRefus
   leavesAccess: 'leaves_access',
 };
 
-type LineRow = { id: string; nature: BudgetNature; values: Record<string, string | null>; dimensions: Map<string, string> };
+/** A line as the change reaches it: its columns and its dimension values before the change (`changed_rows`, Kad's card). */
+export type BudgetLineBulkRow = { id: string; nature: BudgetNature; values: Record<string, string | null>; dimensions: Map<string, string> };
 
 export type BudgetLineBulkDeps = {
   manager: EntityManager;
@@ -100,7 +101,7 @@ export type BudgetLineBulkDeps = {
  * The body of `POST /budget-lines/bulk-update`: the selection (`ids`, or `all` with `filters` and
  * `exclude_ids`), `changes`, and `dry_run`, or the `as_of` and `expected_rows` of the dry run.
  */
-export async function bulkUpdateBudgetLines(body: unknown, deps: BudgetLineBulkDeps): Promise<BulkEditResult> {
+export async function bulkUpdateBudgetLines(body: unknown, deps: BudgetLineBulkDeps): Promise<BulkEditResult<BudgetLineBulkRow>> {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new BadRequestException('A body is required.');
   const input = body as Record<string, unknown>;
   const selection = parseBulkSelection(input);
@@ -115,7 +116,7 @@ export async function bulkUpdateBudgetLines(body: unknown, deps: BudgetLineBulkD
   const axisIds = Object.keys(dimensions);
   const refusals = await refusalMessages(manager, tenantId, dimensions);
 
-  const list: BulkEditList<LineRow> = {
+  const list: BulkEditList<BudgetLineBulkRow> = {
     async reach(chosen, asOf) {
       let ids = chosen.ids;
       if (chosen.all) {

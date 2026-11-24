@@ -5,6 +5,49 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ArtifactPanel from '../components/ArtifactPanel';
 import { createAppTheme } from '../../config/ThemeContext';
+import type { AiMutationPreview } from '../aiTypes';
+
+const { setBulk } = vi.hoisted(() => ({ setBulk: vi.fn() }));
+vi.mock('../previewChains', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../previewChains')>()),
+  setBulkExclusions: (...args: unknown[]) => setBulk(...args),
+}));
+
+/** A pending card of a change in bulk that lists two records, and a task card: two to approve at once. */
+function countingCards(): AiMutationPreview[] {
+  const base = {
+    status: 'pending' as const,
+    requires_confirmation: true,
+    actions: ['approve', 'reject'] as Array<'approve' | 'reject'>,
+    error_message: null,
+    conversation_id: 'conversation-1',
+    created_at: '2026-11-23T10:00:00.000Z',
+    expires_at: null,
+    approved_at: null,
+    rejected_at: null,
+    executed_at: null,
+  };
+  const row = (n: number) => ({ id: `00000000-0000-4000-8000-00000000000${n}`, ref: `APP-${n}`, title: `App ${n}`, before: 'Low', before_state: 'value' as const, kept: true });
+  return [
+    {
+      ...base,
+      preview_id: 'bulk-1',
+      tool_name: 'bulk_update_applications',
+      target: { entity_type: 'applications', entity_id: null, ref: null, title: '2 applications' },
+      changes: { application_bulk_edit: { label: 'Change in bulk', from: null, to: '2 applications to change', format: 'markdown' } },
+      summary: 'Change Business criticality on 2 applications.',
+      bulk_edit: { field: 'Business criticality', after: 'High', after_empty: false, rows: [row(1), row(2)], kept: 2, excluded: 0 },
+    },
+    {
+      ...base,
+      preview_id: 'task-1',
+      tool_name: 'create_task',
+      target: { entity_type: 'tasks', entity_id: null, ref: null, title: 'Task 1' },
+      changes: { title: { label: 'Title', from: null, to: 'Task 1', format: 'text' } },
+      summary: 'Create task 1.',
+    },
+  ] as AiMutationPreview[];
+}
 
 // The card's labels read the catalogs through the real i18n instance, which this file mocks.
 vi.mock('../components/previewChangeLabels', () => ({
@@ -90,6 +133,34 @@ describe('ArtifactPanel', () => {
 
     expect(onApproveMany).toHaveBeenCalledWith(previews.map((preview) => preview.preview_id));
     expect(screen.getByText('previewBatch.title:3')).toBeInTheDocument();
+  });
+
+  // Review of lot K2e: a box in flight on a card makes "Approve all" wait, as the card's own Approve.
+  it('waits with Approve all while a box of a change in bulk is counted', async () => {
+    const previews = countingCards();
+    let answer!: (value: AiMutationPreview) => void;
+    setBulk.mockReturnValueOnce(new Promise<AiMutationPreview>((resolve) => { answer = resolve; }));
+    renderWithTheme(
+      <ArtifactPanel
+        previews={previews}
+        selectedId="bulk-1"
+        open
+        onToggle={() => undefined}
+        onSelect={() => undefined}
+        onApprove={() => undefined}
+        onReject={() => undefined}
+        onApproveMany={() => undefined}
+        onRejectMany={() => undefined}
+        onReplace={() => undefined}
+      />,
+    );
+    const approveAll = screen.getByRole('button', { name: 'previewBatch.approveAll' });
+    expect(approveAll).toBeEnabled();
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    expect(setBulk).toHaveBeenCalledTimes(1);
+    expect(approveAll).toBeDisabled();
+    await act(async () => answer({ ...previews[0], preview_id: 'bulk-2', replaces_preview_id: 'bulk-1' }));
+    expect(approveAll).toBeEnabled();
   });
 
   // Lot K1 of 26.11.9: next to Approve all, Reject all rejects every pending card at once, without a dialog.

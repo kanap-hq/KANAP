@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiWriteLanguage } from '../ai-write-texts';
 import {
+  AiBulkEditPreviewDto,
   AiExecutionContextWithManager,
   AiImportMappingPreviewDto,
   AiMutationPreviewChangeDto,
@@ -33,6 +34,12 @@ export type AiMutationPreviewPresentation = {
   summary: string;
   /** The column mapping of an import (`prepare_import_mapping`). */
   importMapping?: AiImportMappingPreviewDto;
+  /** The records a change in bulk lists (`bulk_update_*`). */
+  bulkEdit?: AiBulkEditPreviewDto;
+  /** What the model is told to do next about this card. */
+  assistantNote?: string;
+  /** The card's error in the person's language, when the operation words its own (else the fixed preview errors). */
+  errorMessage?: string;
 };
 
 export interface AiMutationOperation<TInput = unknown> {
@@ -82,6 +89,17 @@ export interface AiMutationOperation<TInput = unknown> {
    * (`ai-write-texts`), checked before anything runs.
    */
   approvalRefusal?(preview: AiMutationPreview): string | null;
+
+  /**
+   * A change in bulk recounted with records the person left out (lot K2e of 26.12.1): the new card,
+   * from the stored selection and the change already resolved, never from the model's words again.
+   * `excluded` are ids the card lists; any other is refused. The left out records stay listed, unticked.
+   */
+  prepareExclusions?(
+    context: AiExecutionContextWithManager,
+    preview: AiMutationPreview,
+    excluded: string[],
+  ): Promise<AiPreparedMutationPreview>;
 
   /** The card of a preview: its summary in the person's language (English when not given). */
   presentPreview(preview: AiMutationPreview, language?: AiWriteLanguage): AiMutationPreviewPresentation;

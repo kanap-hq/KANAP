@@ -55,10 +55,39 @@ function testAnotherFieldIsSaidNotChangedInBulk() {
       );
     }
     // The tool replaces cards of one row each for its own fields only.
-    assert.match(operation.writePreview.prompt_hint, new RegExp(`For one of these fields on more than a few ${row}s, use this tool`), `${operation.toolName}: its own fields only`);
+    assert.match(operation.writePreview.prompt_hint, new RegExp(`For one of these fields set to the same value on two ${row}s or more, named or described by a filter, use this tool: one card`), `${operation.toolName}: its own fields only`);
+    // Two values or two fields stay a card per record (review of lot K2e).
+    assert.ok(operation.writePreview.prompt_hint.includes(`Different values, several fields or another field stay one card per ${row}. `), `${operation.toolName}: one value only`);
+    // The card lists the records: the answer gives no table of them (browser pass of lot K2e).
+    assert.ok(operation.writePreview.prompt_hint.endsWith('it cannot be undone. With a bulk card, the answer repeats none of the records it changes, in a table or a list: the card lists them. '
+      + 'One or two sentences give the field, the value, the number of records that change, the ones left out and why (already at that value, refused), '
+      + 'and that the person may untick a record before approving; a useful warning may stay.'), `${operation.toolName}: no table of the records`);
   }
   console.log('  the bulk edit tools say when a field is not changed in bulk: OK');
 }
 
+/**
+ * From two named records on, the change in bulk (lot K2e of 26.12.1, G1 of the 26.11.9 non-regression):
+ * on QA, "the business criticality of APP-a and APP-b to low" gave two cards to approve one by one,
+ * the hint saying "more than a few". The card lists each record, and the person may leave any out.
+ */
+function testTwoNamedRecordsAreOneCard() {
+  const operations = [
+    { operation: new BulkUpdateBudgetLinesAiMutationOperation(null as any, null as any, null as any, null as any), rows: 'budget lines', row: 'lines' },
+    { operation: new BulkUpdateApplicationsAiMutationOperation(null as any, null as any, null as any, null as any), rows: 'applications', row: 'applications' },
+  ];
+  for (const { operation, rows, row } of operations) {
+    assert.ok(operation.description.includes(`changes one field on two ${rows} or more at once`), `${operation.toolName} description: from two`);
+    assert.equal(/more than a few|many/.test(`${operation.description} ${operation.writePreview.prompt_hint}`), false, `${operation.toolName}: no vague threshold left`);
+    assert.ok(
+      operation.writePreview.prompt_hint.includes(`The card lists each ${row.replace(/s$/, '')} it changes (up to 200) with its value before`),
+      `${operation.toolName} hint: the card lists its records`,
+    );
+    assert.match(operation.writePreview.prompt_hint, /may leave any (?:line|of them) out before approving/, `${operation.toolName} hint: the person leaves records out`);
+  }
+  console.log('  from two named records on, one card of the bulk tool that lists them: OK');
+}
+
 testTheModelInventsNoFilter();
 testAnotherFieldIsSaidNotChangedInBulk();
+testTwoNamedRecordsAreOneCard();

@@ -385,6 +385,16 @@
       "onPremises": "on-prem",
       "cloud": "cloud"
     },
+    "bulkEdit": {
+      "busy": "Another operation is running. Try again in a moment.",
+      "changed": "Changed",
+      "counting": "Counting",
+      "keep": "Keep {{ref}} {{title}}",
+      "kept_one": "{{count}} kept of {{total}}",
+      "kept_other": "{{count}} kept of {{total}}",
+      "leftOut": "Left out",
+      "notChanged": "Not changed"
+    },
     "importChoices": {
       "stale": "This card can no longer be changed. Ask {{agent}} for a new one."
     }
