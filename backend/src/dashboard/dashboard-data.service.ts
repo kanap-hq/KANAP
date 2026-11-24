@@ -143,6 +143,7 @@ export class DashboardDataService {
           OR p.business_sponsor_id = $1
         )
         AND p.status NOT IN ('done', 'cancelled')
+        AND p.tenant_id = app_current_tenant()
         ORDER BY p.name ASC
         LIMIT $2
       )
@@ -156,6 +157,7 @@ export class DashboardDataService {
         SELECT id, name, target_date
         FROM portfolio_project_milestones
         WHERE project_id = lp.id
+          AND tenant_id = app_current_tenant()
           AND status NOT IN ('completed', 'cancelled')
         ORDER BY target_date ASC NULLS LAST
         LIMIT 1
@@ -204,16 +206,19 @@ export class DashboardDataService {
       FROM portfolio_projects p
       JOIN portfolio_project_team ppt
         ON ppt.project_id = p.id
+        AND ppt.tenant_id = p.tenant_id
         AND ppt.user_id = $1
       LEFT JOIN LATERAL (
         SELECT COUNT(*)::int as count
         FROM tasks t
         WHERE t.related_object_type = 'project'
           AND t.related_object_id = p.id
+          AND t.tenant_id = p.tenant_id
           AND t.assignee_user_id = $1
           AND t.status NOT IN ('done', 'cancelled')
       ) task_counts ON true
       WHERE p.status NOT IN ('done', 'cancelled')
+        AND p.tenant_id = app_current_tenant()
         AND p.it_lead_id IS DISTINCT FROM $1
         AND p.business_lead_id IS DISTINCT FROM $1
         AND p.it_sponsor_id IS DISTINCT FROM $1
@@ -366,6 +371,7 @@ export class DashboardDataService {
         SELECT p.id
         FROM portfolio_projects p
         WHERE p.status NOT IN ('done', 'cancelled')
+          AND p.tenant_id = app_current_tenant()
           AND ${projectParticipantCondition('p', '$1')}
       )
       SELECT
@@ -380,9 +386,10 @@ export class DashboardDataService {
         COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email, 'Someone') AS author_name
       FROM portfolio_activities a
       JOIN involved_projects ip ON ip.id = a.project_id
-      JOIN portfolio_projects p ON p.id = a.project_id
+      JOIN portfolio_projects p ON p.id = a.project_id AND p.tenant_id = a.tenant_id
       LEFT JOIN users u ON u.id = a.author_id AND u.tenant_id = p.tenant_id
       WHERE a.project_id IS NOT NULL
+        AND a.tenant_id = app_current_tenant()
         AND a.created_at >= NOW() - ($3 || ' days')::interval
         AND (
           a.type IN ('comment', 'decision')
@@ -450,9 +457,10 @@ export class DashboardDataService {
         a.created_at,
         COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email, 'Someone') AS author_name
       FROM portfolio_activities a
-      JOIN portfolio_projects p ON p.id = a.project_id
+      JOIN portfolio_projects p ON p.id = a.project_id AND p.tenant_id = a.tenant_id
       LEFT JOIN users u ON u.id = a.author_id AND u.tenant_id = p.tenant_id
       WHERE a.project_id IS NOT NULL
+        AND a.tenant_id = app_current_tenant()
         AND a.type = 'change'
         AND a.changed_fields ? 'status'
         AND a.created_at >= NOW() - ($1 || ' days')::interval

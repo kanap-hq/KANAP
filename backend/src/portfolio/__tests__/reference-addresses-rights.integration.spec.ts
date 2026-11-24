@@ -149,6 +149,10 @@ async function run() {
     const timeEntries = await app.get(TaskTimeEntriesService).listForProject(seenProject, { manager: runner.manager });
     assert.deepEqual(timeEntries.map((row: any) => row.task_item_number), [1], 'project time: the task number of each entry');
     assert.deepEqual((await dashboard.getMyLeadershipProjects('5', bc)).map((row: any) => row.item_number), [1], 'projects I lead: their numbers');
+    // The reader of PRJ-1 contributes to PRJ-2's team: their contributions name PRJ-2 only.
+    await runner.query(`INSERT INTO portfolio_project_team (tenant_id, project_id, user_id, role) VALUES ($1, $2, $3, 'it_team')`, [tenantId, unseenProject, readerId]);
+    assert.deepEqual((await dashboard.getMyContributionProjects('5', reader)).map((row: any) => row.item_number), [2], 'projects I contribute to: their numbers');
+    assert.deepEqual((await dashboard.getTeamActivity('5', '7', bc)).map((row: any) => row.projectItemNumber), [1], 'team activity: the numbers of the projects the person takes part in');
     const timeline = await projects.getTimelineData(undefined, undefined, undefined, bc);
     assert.deepEqual(timeline.projects.map((row: any) => row.item_number), [1], 'planning: the numbers of the projects the person reads');
     const breakdown = await app.get(PortfolioCapacityReportService)
