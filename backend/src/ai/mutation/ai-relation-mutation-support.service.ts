@@ -675,21 +675,21 @@ export class AiRelationMutationSupportService {
     const placement = await this.applyPlacementRules(context, config, preview.target_entity_id, expectedItems, nextItems);
     if (replacedHostLinkSignature(placement)
       !== replacedHostLinkSignature(this.coerceReplacedHostLinks(preview.mutation_input?.replaced_host_links))) {
-      throw new ConflictException(`${config.label} changed after the preview was created.`);
+      throw new ConflictException(`The ${config.label} relation changed after the preview was created.`);
     }
     // The assets a removed sub-location holds are the ones the card named: an asset placed in it or
     // moved out since makes the write differ from what the person saw.
     const detachedNow = await this.detachedAssets(context, config, expectedItems, nextItems, false);
     if (detachedNow.map((asset) => asset.id).sort().join('|')
       !== this.coerceDetachedAssets(preview.mutation_input?.detached_assets).map((asset) => asset.id).sort().join('|')) {
-      throw new ConflictException(`${config.label} changed after the preview was created.`);
+      throw new ConflictException(`The ${config.label} relation changed after the preview was created.`);
     }
     const liveItems = await this.loadRelationItems(context, config, preview.target_entity_id);
     if (
       relationItemSignature(liveItems) !== relationItemSignature(expectedItems)
       || relationItemSignature(checkedItems) !== relationItemSignature(nextItems)
     ) {
-      throw new ConflictException(`${config.label} changed after the preview was created.`);
+      throw new ConflictException(`The ${config.label} relation changed after the preview was created.`);
     }
     await this.assertAddedTargetsReadable(context, config, expectedItems, nextItems);
     const audit = buildAiMutationAudit(preview);
@@ -2048,6 +2048,7 @@ export class AiRelationMutationSupportService {
     const log = async (recordId: string, action: 'create' | 'update' | 'delete', before: unknown, after: unknown) => {
       if (rowAudit) await this.logRow(context, rowAudit, tableName, recordId, action, before, after);
     };
+    const label = tableName === 'location_user_contacts' ? 'Internal Contacts' : 'External Contacts';
     const current: Array<Record<string, unknown>> = await context.manager.query(
       `SELECT * FROM ${tableName} WHERE tenant_id = $1 AND location_id = $2`,
       [context.tenantId, locationId],
@@ -2059,7 +2060,7 @@ export class AiRelationMutationSupportService {
         `WITH gone AS (DELETE FROM ${tableName} WHERE tenant_id = $1 AND location_id = $2 AND id = ANY($3::uuid[]) RETURNING *) SELECT * FROM gone`,
         [context.tenantId, locationId, removed],
       );
-      assertWritten(tableName, gone.length, removed.length);
+      assertWritten(label, gone.length, removed.length);
       for (const row of gone) await log(String(row.id), 'delete', row, null);
     }
     const currentByKey = new Map(current.map((row) => [String(row[targetColumn]), row]));
@@ -2072,7 +2073,7 @@ export class AiRelationMutationSupportService {
           `UPDATE ${tableName} SET role = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2 RETURNING *`,
           [context.tenantId, stored.id, role],
         ));
-        assertWritten(tableName, after ? 1 : 0);
+        assertWritten(label, after ? 1 : 0);
         if (after) await log(String(after.id), 'update', stored, after);
         continue;
       }
@@ -2082,7 +2083,7 @@ export class AiRelationMutationSupportService {
          ) SELECT * FROM added`,
         [context.tenantId, locationId, key, role],
       );
-      assertWritten(tableName, added.length);
+      assertWritten(label, added.length);
       for (const row of added) await log(String(row.id), 'create', null, row);
     }
   }

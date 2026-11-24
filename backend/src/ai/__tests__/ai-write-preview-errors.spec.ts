@@ -17,6 +17,36 @@ function expectTranslated(message: string, text: Record<AiTranslatedWriteLanguag
   assert.equal(isFixedPreviewError(message), false, message);
 }
 
+/** The relation cards name their relation after the sentence, so it holds whatever its gender and number (lot K2b). */
+function testRelationCards() {
+  expectTranslated('The Applications relation changed after the preview was created.', {
+    fr: "Cette relation a changé depuis l'aperçu : Applications.",
+    de: 'Diese Beziehung hat sich seit der Vorschau geändert: Anwendungen.',
+    es: 'Esta relación ha cambiado desde la vista previa: Aplicaciones.',
+  });
+  expectTranslated('The Sub-locations relation changed after the preview was created.', {
+    fr: "Cette relation a changé depuis l'aperçu : Sous-sites.",
+    de: 'Diese Beziehung hat sich seit der Vorschau geändert: Unterstandorte.',
+    es: 'Esta relación ha cambiado desde la vista previa: Sub-ubicaciones.',
+  });
+  expectTranslated('The Support Contacts relation changed after the preview was created.', {
+    fr: "Cette relation a changé depuis l'aperçu : Contacts de support.",
+    de: 'Diese Beziehung hat sich seit der Vorschau geändert: Supportkontakte.',
+    es: 'Esta relación ha cambiado desde la vista previa: Contactos de soporte.',
+  });
+  expectTranslated('Owners could not be changed: nothing was written.', {
+    fr: "Cette relation n'a pas été modifiée, rien n'a été écrit : Responsables.",
+    de: 'Diese Beziehung wurde nicht geändert, nichts wurde geschrieben: Verantwortliche.',
+    es: 'Esta relación no se ha modificado, no se ha escrito nada: Responsables.',
+  });
+  expectTranslated('Projects: the record was not found.', {
+    fr: 'Projets : la fiche est introuvable.',
+    de: 'Projekte: der Eintrag wurde nicht gefunden.',
+    es: 'Proyectos: no se ha encontrado el registro.',
+  });
+  console.log('  relation cards: OK');
+}
+
 function testDrift() {
   expectTranslated('APP-3 changed after the preview was created.', {
     fr: "APP-3 a changé depuis l'aperçu.",
@@ -173,6 +203,7 @@ function testLeftAsStored() {
   assert.equal(previewErrorText('es', undefined), null);
 }
 
+testRelationCards();
 testDrift();
 testMissingRecords();
 testLeftAsStored();
