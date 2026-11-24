@@ -13,7 +13,7 @@ import { CHARGEBACK_EXPORT_LABELS } from '../spend/chargeback-report.export';
 import { END_OF_SUPPORT_EXPORT_LABELS } from '../technologies/reports/end-of-support-export-labels';
 import { aiScreenLanguage } from './ai-unread-families';
 import { VULNERABILITY_STATE_LABELS } from './ai-write-texts';
-import { countryNameIn } from './import/ai-import-countries';
+import { countryCode, countryNameIn } from './import/ai-import-countries';
 import {
   BILLING_FREQUENCY_LABELS,
   BUDGET_NATURE_LABELS,
@@ -703,7 +703,147 @@ export class AiCodeNamer {
     if (names.every((name) => name === null)) return null;
     return parts.map((part, index) => names[index] ?? part).join(', ');
   }
+
+  /** The codes of a list, when it can say them (a country cannot: it has no short list). */
+  codes(list: AiCodeList): string[] | null {
+    if (list.kind === 'fixed') return Object.keys(list.labels.en);
+    if (list.kind === 'language') return [...AI_NAMES_LANGUAGES];
+    if (list.kind === 'budgetColumn') return Object.keys(BUDGET_COLUMN_LABELS.en);
+    if (list.kind === 'country') return null;
+    if (list.kind === 'firstOf') {
+      const each = list.lists.map((item) => this.codes(item));
+      return each.every((codes) => codes !== null) ? Array.from(new Set(each.flat() as string[])) : null;
+    }
+    const options = this.catalogs?.[list.list];
+    return Array.isArray(options) ? options.map((option) => option.code) : null;
+  }
+
+  /**
+   * The code a value written by the model stands for: a code (case aside), a stored form the list
+   * reads as one (`aliases`), or a code's name in the reader's language, else in another of the
+   * four. Null when it stands for none.
+   */
+  codeOf(list: AiCodeList, value: string): string | null {
+    const text = value.trim();
+    if (!text) return null;
+    if (list.kind === 'country') return countryCode(text);
+    if (list.kind === 'firstOf') {
+      for (const each of list.lists) {
+        const code = this.codeOf(each, text);
+        if (code !== null) return code;
+      }
+      return null;
+    }
+    const key = nameKey(text);
+    const aliases = Object.entries(list.kind === 'fixed' || list.kind === 'budgetColumn' ? list.aliases ?? {} : {});
+    const alias = aliases.find(([stored]) => stored === text) ?? aliases.find(([stored]) => nameKey(stored) === key);
+    if (alias) return alias[1];
+    const codes = this.codes(list) ?? [];
+    const code = codes.find((each) => each === text) ?? codes.find((each) => nameKey(each) === key);
+    if (code !== undefined) return code;
+    for (const language of [this.language, ...AI_NAMES_LANGUAGES.filter((each) => each !== this.language)]) {
+      const namer = language === this.language ? this : new AiCodeNamer(language, this.catalogs, this.budgetColumns);
+      const named = codes.find((each) => {
+        const name = namer.name(list, each);
+        return name !== null && nameKey(name) === key;
+      });
+      if (named !== undefined) return named;
+    }
+    return null;
+  }
+
+  /**
+   * The value a filter takes for `code`: among the field's declared values when it has some, else
+   * the form the field stores (a list's alias, as the budget lines' "Headcount"), else the code.
+   */
+  filterValue(list: AiCodeList, code: string, declared: ReadonlyArray<string | null> | null): string | null {
+    const aliases = Object.entries(list.kind === 'fixed' || list.kind === 'budgetColumn' ? list.aliases ?? {} : {})
+      .filter(([, target]) => target === code)
+      .map(([stored]) => stored);
+    if (declared) return [code, ...aliases].find((form) => declared.includes(form)) ?? null;
+    return aliases[0] ?? code;
+  }
 }
+
+const AI_NAMES_LANGUAGES: readonly AiNamesLanguage[] = ['en', 'fr', 'de', 'es'];
+
+/** A name as compared with what a person writes: case, accents and spaces aside. */
+function nameKey(value: string): string {
+  return value.normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/** The accepted values a refusal lists at most: a longer list is left to `get_filter_values`. */
+const MAX_ACCEPTED_VALUES = 30;
+
+/** A filter value that stands for no code of its field, with the accepted values when they are few. */
+export type AiFilterValueUnknown = { field: string; values: string[]; accepted?: Array<{ value: string; name: string }> };
+
+/** How the query tools describe a set field: its declared values (null when they are read from the data). */
+export type AiSetFieldValues = (field: string) => { values: ReadonlyArray<string | null> | null } | null;
+
+/** The query tools whose set filters take a name. */
+export const AI_FILTER_NAMED_TOOLS = ['query_entities', 'aggregate_entities'] as const;
+
+/** Whether one of the filters is on a named field of the family. */
+export function aiFiltersOnNamedFields(family: unknown, filters: unknown): boolean {
+  if (typeof family !== 'string' || !isObject(filters)) return false;
+  const fields = AI_NAMED_FIELDS[family] ?? {};
+  return Object.keys(filters).some((key) => Object.hasOwn(fields, key));
+}
+
+/**
+ * A query's filters with each name read as the value its field stores (lot K2d): Kad and the MCP
+ * server read names everywhere, so a set filter on a named field takes a code, its stored form, or
+ * its name in the reader's language or another of the four (« Effectif » finds the lines the list
+ * shows as "Headcount"). A value that stands for no code stays as given; `unknown` lists it, with the
+ * accepted values and their names when they are few. A field that declares its values refuses it
+ * itself, with them (`invalid_filter_values`).
+ */
+export function withFilterCodes(
+  family: string,
+  filters: Record<string, unknown>,
+  namer: AiCodeNamer,
+  setField: AiSetFieldValues,
+): { filters: Record<string, unknown>; unknown: AiFilterValueUnknown[] } {
+  const fields = AI_NAMED_FIELDS[family] ?? {};
+  const unknown: AiFilterValueUnknown[] = [];
+  const output: Record<string, unknown> = { ...filters };
+  for (const [key, raw] of Object.entries(filters)) {
+    const field = fields[key];
+    const set = field ? setField(key) : null;
+    if (!field || !set) continue;
+    const missed: string[] = [];
+    // A catalog the namer was not given knows no code: its values are not said to name nothing.
+    const knowable = field.list.kind === 'country' || namer.codes(field.list) !== null;
+    const resolve = (value: unknown) => {
+      if (typeof value !== 'string') return value;
+      const code = namer.codeOf(field.list, value);
+      const stored = code === null ? null : namer.filterValue(field.list, code, set.values);
+      if (stored === null) {
+        if (code === null && knowable) missed.push(value);
+        return value;
+      }
+      return stored;
+    };
+    if (Array.isArray(raw)) output[key] = raw.map(resolve);
+    else if (typeof raw === 'string') output[key] = resolve(raw);
+    else if (isObject(raw) && Array.isArray(raw.not)) output[key] = { ...raw, not: raw.not.map(resolve) };
+    if (missed.length === 0 || set.values) continue;
+    const codes = namer.codes(field.list);
+    const accepted = codes && codes.length <= MAX_ACCEPTED_VALUES
+      ? codes.flatMap((code) => {
+        const value = namer.filterValue(field.list, code, null);
+        const name = namer.name(field.list, code);
+        return value !== null && name !== null ? [{ value, name }] : [];
+      })
+      : null;
+    unknown.push({ field: key, values: missed, ...(accepted ? { accepted } : {}) });
+  }
+  return { filters: output, unknown };
+}
+
+/** The sentence the query tools add about names in filters. */
+export const AI_FILTER_NAMES_SENTENCE = 'A set filter on a field read with its name (`<field>_name`) also takes that name, in the person\'s language or another of the four: the server reads it as the stored value. A value that names nothing is listed in `filter_values_unknown`, with the accepted values and their names when they are few: nothing matched it, which does not mean "none".';
 
 /**
  * The language codes are named in: the person's language when their profile sets one, else the

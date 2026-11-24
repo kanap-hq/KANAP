@@ -11,6 +11,7 @@ import {
   aiNamesLanguage,
   LANGUAGE_NATIVE_NAMES,
   withCodeNames,
+  withFilterCodes,
 } from '../ai-code-names';
 import { AI_CODE_NAMES_PENDING, AI_NOT_CODE_FIELDS } from '../ai-code-names.inventory';
 import { AiToolRegistry } from '../ai-tool.registry';
@@ -135,6 +136,74 @@ function testDetailAndChildRows() {
   assert.deepEqual(line.data.contacts.map((contact: any) => contact.role_name ?? null), ['Comercial', null]);
   assert.deepEqual([line.data.financial_versions[0].allocation_method_name, line.data.financial_versions[0].resolved_allocation_method_name], ['Predeterminado', 'Facturación']);
   console.log('  a detail, its owners, deployments, contacts and versions: OK');
+}
+
+/**
+ * Lot K2d, browser pass of 24/11: the countries of a detail's child rows (an application's data
+ * residency, a contract's contacts) and the method each year of a line applies, named.
+ */
+function testDetailCountriesAndYearlyMethods() {
+  const app = withCodeNames('get_entity_detail', { entity_type: 'applications' }, {
+    entity: summary('applications', 'enabled', {}),
+    data: { data_residency: [{ country_iso: 'FR' }, { country_iso: 'XX' }] },
+  }, namer('fr')) as any;
+  assert.deepEqual(app.data.data_residency.map((row: any) => row.country_iso_name ?? null), ['France', null]);
+  const contract = withCodeNames('get_entity_detail', { entity_type: 'contracts' }, {
+    entity: summary('contracts', 'enabled', {}),
+    data: { contacts: [{ role: 'technical', country: 'US' }] },
+  }, namer('de')) as any;
+  assert.deepEqual([contract.data.contacts[0].role_name, contract.data.contacts[0].country_name], ['Technik', 'Vereinigte Staaten']);
+  const line = withCodeNames('get_entity_detail', { entity_type: 'budget_lines' }, {
+    entity: summary('budget_lines', 'enabled', {}),
+    data: {
+      contacts: [{ role: 'support', country: 'NL' }],
+      allocation_by_year: [
+        { budget_year: 2026, allocation_method: 'manual_company', default: false, version: true },
+        { budget_year: 2027, allocation_method: 'headcount', default: true, version: false },
+      ],
+    },
+  }, namer('fr')) as any;
+  assert.equal(line.data.contacts[0].country_name, 'Pays-Bas');
+  assert.deepEqual(line.data.allocation_by_year.map((year: any) => year.allocation_method_name), ['Manuel par société', 'Effectif']);
+  console.log('  the countries of child rows and the method of each year of a line: OK');
+}
+
+/**
+ * Lot K2d, browser pass of 24/11: a set filter on a named field takes the name, in the reader's
+ * language or another of the four, as the code; a field read in its stored form (the budget lines'
+ * allocation method, "Headcount") takes that form; an unknown name stays, listed with the accepted
+ * values and their names.
+ */
+function testFiltersTakeNames() {
+  const dynamic = () => ({ values: null });
+  const declared = (values: Array<string | null>) => () => ({ values });
+  const lines = (language: 'en' | 'fr' | 'de' | 'es', values: unknown) =>
+    withFilterCodes('budget_lines', { allocation_method: values, product: 'Okta' }, namer(language), dynamic);
+  // The name in the reader's language, in another language, the code, the stored form.
+  assert.deepEqual(lines('fr', ['Effectif', 'Manuel par société']).filters, { allocation_method: ['Headcount', 'Company'], product: 'Okta' });
+  assert.deepEqual(lines('fr', ['mitarbeiterzahl']).filters.allocation_method, ['Headcount']);
+  assert.deepEqual(lines('en', ['headcount', 'Manual %', 'company']).filters.allocation_method, ['Headcount', 'Manual %', 'Company']);
+  assert.deepEqual(lines('es', { not: ['Porcentajes manuales', null] }).filters.allocation_method, { not: ['Manual %', null] });
+  assert.deepEqual(lines('fr', 'Effectif').unknown, []);
+  // An unknown name: kept, listed with the accepted values and their names.
+  const unknown = lines('fr', ['Inexistant', 'Effectif']);
+  assert.deepEqual(unknown.filters.allocation_method, ['Inexistant', 'Headcount']);
+  assert.equal(unknown.unknown.length, 1);
+  assert.equal(unknown.unknown[0].field, 'allocation_method');
+  assert.deepEqual(unknown.unknown[0].values, ['Inexistant']);
+  assert.ok(unknown.unknown[0].accepted?.some((value) => value.value === 'Headcount' && value.name === 'Effectif'), JSON.stringify(unknown.unknown));
+  // A field that declares its values takes the code among them, and refuses an unknown one itself.
+  const chargeback = withFilterCodes('chargeback_lines', { allocation_method: ['Effectif', 'Inconnu'] }, namer('fr'),
+    declared(['headcount', 'it_users', 'turnover', 'manual_company', 'manual_department', 'manual_pct']));
+  assert.deepEqual(chargeback, { filters: { allocation_method: ['headcount', 'Inconnu'] }, unknown: [] });
+  // A catalog value by the workspace's translation; a country by its name; a status of a fixed list.
+  assert.deepEqual(withFilterCodes('applications', { lifecycle: ['Im Einsatz'], data_residency: 'Pays-Bas' }, namer('fr'), dynamic).filters,
+    { lifecycle: ['active'], data_residency: 'NL' });
+  assert.deepEqual(withFilterCodes('projects', { status: ['Suspendu'] }, namer('fr'), declared(['waiting_list', 'in_progress', 'on_hold'])).filters,
+    { status: ['on_hold'] });
+  // A field that is not a set field, or not named, is left alone.
+  assert.deepEqual(withFilterCodes('budget_lines', { allocation_method: ['Effectif'] }, namer('fr'), () => null).filters, { allocation_method: ['Effectif'] });
+  console.log('  filters take names in the four languages, codes and stored forms; an unknown name is listed: OK');
 }
 
 function testAggregateAndFilterValues() {
@@ -352,6 +421,29 @@ async function testMcpLanguage() {
   console.log('  MCP: the person\'s language, else the workspace\'s; the chat: else the screen\'s: OK');
 }
 
+/** The MCP server and Kad filter with names in the language of the person behind the key. */
+async function testFilterNamesThroughTheRegistry() {
+  const run = async (locale: string | null, filters: Record<string, unknown>, surface: 'mcp' | 'chat' = 'mcp') => {
+    const manager = managerWith(locale, 'en');
+    const received: any[] = [];
+    const registry = registryFor(manager, { items: [], total: 0, filters_ignored: [] });
+    (registry as any).queryExecutor.execute = async (_context: unknown, input: unknown) => {
+      received.push(input);
+      return { items: [summary('projects', 'on_hold', {})], total: 1, filters_ignored: [] };
+    };
+    const context: any = { tenantId: 't', userId: '00000000-0000-4000-8000-000000000001', surface, authMethod: 'api_key', isPlatformHost: false, manager };
+    const out = await registry.execute(context, 'query_entities', { entity_type: 'projects', filters }) as any;
+    return { input: received[0], out };
+  };
+  const german = await run('de-DE', { status: ['Pausiert'] });
+  assert.deepEqual(german.input.filters, { status: ['on_hold'] });
+  assert.equal(german.out.items[0].status_name, 'Pausiert');
+  assert.equal(german.out.filter_values_unknown, undefined);
+  // Another language than the person's, and the code itself.
+  assert.deepEqual((await run('de-DE', { status: ['En pausa', 'in_progress'] }, 'chat')).input.filters, { status: ['on_hold', 'in_progress'] });
+  console.log('  the MCP server and Kad filter with names: OK');
+}
+
 async function run() {
   console.log('ai-code-names.spec');
   testFixedListInTheFourLanguages();
@@ -359,6 +451,8 @@ async function run() {
   testUnknownCodeStaysAsStored();
   testAllocationMethodAndContactRole();
   testDetailAndChildRows();
+  testDetailCountriesAndYearlyMethods();
+  testFiltersTakeNames();
   testAggregateAndFilterValues();
   testSecondPassFixedLists();
   testCountriesLanguagesAndSeveralValues();
@@ -367,6 +461,7 @@ async function run() {
   testEveryFixedListIsTheScreens();
   testEveryCodeFieldIsNamedOrListed();
   await testMcpLanguage();
+  await testFilterNamesThroughTheRegistry();
   console.log('ai-code-names.spec: ok');
 }
 
