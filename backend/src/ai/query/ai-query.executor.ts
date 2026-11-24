@@ -26,6 +26,7 @@ import { budgetLineReference } from '../../spend/budget-nature';
 import { TaskLinkedScopes, TasksService } from '../../spend/tasks.service';
 import { AllocationCalculatorService } from '../../spend/allocation-calculator.service';
 import { describeAllocationWarning } from '../../spend/allocation-distribution';
+import { STANDARD_DEFAULT, buildDefaultByYear } from '../../spend/allocation-rule-resolver';
 import type { SpendVersion } from '../../spend/spend-version.entity';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
@@ -3384,6 +3385,7 @@ export class AiQueryExecutor {
       ...(summary ?? {}),
       financial_summary: summary ?? null,
       financial_versions: financialVersions,
+      allocation_by_year: await this.allocationByYear(context, financialVersions, budgetQueryYears(anchorYear)),
       contacts,
       linked_applications: linkedApplications,
       projects: linkedProjects,
@@ -3392,6 +3394,35 @@ export class AiQueryExecutor {
       links: nativeLineChildren(links),
       attachments: nativeLineChildren(attachments),
     };
+  }
+
+  /**
+   * The allocation method each year applies, as the line's Allocations tab shows it: the year's
+   * version's own method, else the workspace's default for the year (`default` true), also for a
+   * year the line has no version of. A year without a version is not a year without a method.
+   */
+  private async allocationByYear(
+    context: AiExecutionContextWithManager,
+    versions: any[],
+    years: number[],
+  ): Promise<Array<{ budget_year: number; allocation_method: string; default: boolean; version: boolean }>> {
+    const rules = await context.manager.query(
+      `SELECT tenant_id, fiscal_year, method, mode, company_ids
+       FROM allocation_rules
+       WHERE fiscal_year = ANY($2::int[]) AND (tenant_id IS NULL OR tenant_id = $1)`,
+      [context.tenantId, years],
+    );
+    const defaults = buildDefaultByYear(rules, context.tenantId);
+    return years.map((year) => {
+      // The latest version of the year comes first (`loadFinancialVersions`).
+      const version = versions.find((row: any) => Number(row.budget_year) === year);
+      const own = !!version?.allocation_method && version.allocation_method !== 'default';
+      const rule = defaults.get(year) ?? STANDARD_DEFAULT;
+      const method = own
+        ? version.resolved_allocation_method ?? version.allocation_method
+        : version?.resolved_allocation_method ?? (rule.kind === 'manual_company' ? 'manual_company' : rule.method);
+      return { budget_year: year, allocation_method: method, default: !own, version: !!version };
+    });
   }
 
   private async loadContractDeepDetail(

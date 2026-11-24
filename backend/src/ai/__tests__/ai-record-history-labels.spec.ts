@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { RECORD_HISTORY } from '../../audit/record-history.inventory';
 import { assertCodeListIsTheScreens } from './code-list-locale';
 import { AiCodeNamer } from '../ai-code-names';
-import { RECORD_HISTORY_LISTS, withStateLabels } from '../ai-record-history.service';
+import { RECORD_HISTORY_LISTS, withStateLabels, withSubjectName } from '../ai-record-history.service';
 
 /**
  * The values of a fixed list in a record's history, as Kad and the MCP server read them: each with
@@ -83,6 +83,22 @@ function testSecondPassListsInThePersonsWords() {
   console.log('  countries, providers, users mode, route, topology, risk, document status, applies to: OK');
 }
 
+/**
+ * Lot K2d, browser pass of 24/11: a deployment reads as its environment, as the History tab names
+ * it (« Prod », « QA »), in its title, in the line that adds or removes it, and in the record's field.
+ */
+function testDeploymentsByTheirEnvironment() {
+  const namer = new AiCodeNamer('fr');
+  assert.deepEqual(withSubjectName({ kind: 'instance', label: 'qa' } as any, namer), { kind: 'instance', label: 'qa', label_name: 'QA' });
+  assert.deepEqual(withSubjectName({ kind: 'assignment', label: 'pre_prod' } as any, namer), { kind: 'assignment', label: 'pre_prod', label_name: 'Pré-prod' });
+  assert.deepEqual(withSubjectName({ kind: 'assignment', label: 'nightly' } as any, namer), { kind: 'assignment', label: 'nightly' });
+  assert.deepEqual(withSubjectName({ kind: 'binding', label: 'prod' } as any, namer), { kind: 'binding', label: 'prod' });
+  const added = withStateLabels({ field: 'instance', event: 'added', after: 'prod' }, 'applications', { kind: 'instance' } as any, namer) as any;
+  assert.equal(added.after_label, 'Prod');
+  assert.equal((withStateLabels({ field: 'environment', after: 'qa' }, 'applications', record, namer) as any).after_label, 'QA');
+  console.log('  a deployment by its environment, in its title, its line and the record\'s field: OK');
+}
+
 function testListsAreTheHistoryTabs() {
   for (const [table, fields] of Object.entries(RECORD_HISTORY_LISTS.records)) {
     assert.ok(table in RECORD_HISTORY, `${table} has a History tab`);
@@ -102,6 +118,7 @@ function run() {
   testOtherListsInThePersonsWords();
   testCatalogAndChildListsInThePersonsWords();
   testSecondPassListsInThePersonsWords();
+  testDeploymentsByTheirEnvironment();
   testListsAreTheHistoryTabs();
   console.log('ai-record-history-labels.spec: ok');
 }

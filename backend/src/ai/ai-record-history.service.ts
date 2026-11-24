@@ -167,6 +167,7 @@ export const RECORD_HISTORY_LISTS: {
       data_class: L.dataClass,
       hosting_model: L.hostingModel,
       users_mode: L.usersMode,
+      environment: L.environment,
     },
     assets: { status: L.lifecycle, kind: L.serverKind, environment: L.environment, admin_zone: L.adminZone, provider: L.assetProvider },
     interfaces: {
@@ -180,8 +181,9 @@ export const RECORD_HISTORY_LISTS: {
     technologies: { lifecycle: L.lifecycle, family: L.technologyFamily, hosting_type: L.hostingType, admin_zone: L.adminZone },
   },
   recordChildren: {
-    // An application's and an interface's data residency rows: a country each.
-    applications: { owner_type: L.ownerType, environment: L.environment, country_iso: L.country },
+    // An application's and an interface's data residency rows: a country each. A deployment
+    // added or removed reads as its environment (`instance`), as the History tab names it.
+    applications: { owner_type: L.ownerType, environment: L.environment, country_iso: L.country, instance: L.environment },
     interfaces: { country_iso: L.country },
     [BUDGET_LINE_TABLE]: { allocation_method: L.allocationMethod, role: L.contactRole },
     contracts: { role: L.contactRole },
@@ -213,6 +215,17 @@ export function withStateLabels(
   const before = namer.name(list, entry.before);
   const after = namer.name(list, entry.after);
   return { ...entry, ...(before ? { before_label: before } : {}), ...(after ? { after_label: after } : {}) };
+}
+
+/**
+ * A deployment, and a server of a deployment, titled by the deployment's environment: its name next
+ * to it (`label_name`), as the History tab titles them.
+ */
+export function withSubjectName(subject: RecordHistorySubject, namer: AiCodeNamer): RecordHistorySubject {
+  const entry = subject as { kind?: unknown; label?: unknown };
+  if (entry.kind !== 'instance' && entry.kind !== 'assignment') return subject;
+  const name = namer.name(L.environment, entry.label);
+  return name ? ({ ...subject, label_name: name } as RecordHistorySubject) : subject;
 }
 
 /**
@@ -310,7 +323,7 @@ export class AiRecordHistoryService {
       at: item.at,
       action: item.action,
       actor: withoutActorEmail(item.actor),
-      subject: withoutRawIds(item.subject) as RecordHistorySubject,
+      subject: withSubjectName(withoutRawIds(item.subject) as RecordHistorySubject, namer),
       changes: item.changes.map((change) => withStateLabels(withoutRawIds(change), table, item.subject, namer)),
     }));
     return {

@@ -622,14 +622,20 @@ export const AI_NAMED_CHILD_FIELDS: Readonly<Record<string, Readonly<Record<stri
     owners: { owner_type: one(L.ownerType) },
     instances: { environment: one(L.environment) },
     deployments: { environment: one(L.environment) },
+    // The data residency rows: a country each.
+    data_residency: { country_iso: one(L.country) },
+  },
+  interfaces: {
+    data_residency: { country_iso: one(L.country) },
   },
   budget_lines: {
     // A line's contacts are typed by the contact types (`contacts.roles`), as the screen shows them.
-    contacts: { role: one(L.contactRole) },
+    contacts: { role: one(L.contactRole), country: one(L.country) },
     financial_versions: { allocation_method: one(L.allocationMethod), resolved_allocation_method: one(L.allocationMethod) },
+    allocation_by_year: { allocation_method: one(L.allocationMethod) },
   },
   contracts: {
-    contacts: { role: one(L.contactRole) },
+    contacts: { role: one(L.contactRole), country: one(L.country) },
   },
 };
 
