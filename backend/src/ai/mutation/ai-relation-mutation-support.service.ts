@@ -3,19 +3,30 @@ import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AuditService } from '../../audit/audit.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
-import { lockApplicationRow } from '../../applications/application-rules';
 import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { assertContractReadable, assertContractsEditable } from '../../data-access/contract-write-checks';
 import { parseItemNumber } from '../../common/parse-item-number';
 import { budgetLineReferenceNumbers } from '../../common/resolve-item-id';
 import { AiPolicyService } from '../ai-policy.service';
-import { auditTableOf, BUDGET_LINE_PREFIX, BUDGET_NATURES, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
+import {
+  auditTableOf,
+  BUDGET_LINE_PREFIX,
+  BUDGET_NATURES,
+  linkedLineOf,
+  linkedLineOfAnyNature,
+  naturesAnd,
+  type BudgetNature,
+} from '../../spend/budget-nature';
+import { presentChild } from '../../spend/budget-line-presentation';
+import { LocationSubItem } from '../../locations/location-sub-item.entity';
 import {
   applicationParticipantCondition,
   resolveBusinessContributorScopeForUser,
 } from '../../auth/business-contributor-scope';
 import { aiParticipationScopeSql } from '../query/ai-query-scope.util';
 import { SupplierContactsService } from '../../suppliers/supplier-contacts.service';
+import { AssetsService } from '../../assets/services/assets.service';
+import { LocationsService } from '../../locations/locations.service';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewRelationItem } from '../ai.types';
 import { AiMutationAuditOptions, buildAiMutationAudit } from './ai-mutation-audit.util';
@@ -43,8 +54,16 @@ import {
 } from '../../assets/placement-rules';
 import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 import { nameWithoutLeadingReference } from './name-without-leading-reference';
+import { ROW_AUDITED_RELATIONS, SCREEN_SERVICE_RELATIONS, screenLockOf, screenTraceOf } from './ai-relation-screen-audit';
+import {
+  PortfolioRelationsService,
+  type ProjectRelationsAccess,
+  type RequestRelationsAccess,
+} from '../../portfolio/portfolio-relations.service';
 import { LINKED_MODULE_RESOURCES, linkedParticipationScope } from '../../common/relations/linked-reads';
 import { idsInScope } from '../../portfolio/portfolio-linked-reads';
+import { supplierContactRoleOf } from '../import/ai-import-code-labels';
+import { resolveAiEntityReference } from '../ai-entity-reference.util';
 
 export const AI_RELATION_ENTITY_TYPES = [
   'applications',
@@ -149,7 +168,7 @@ type RelationItem = {
 // Both natures are one `budget_lines` relation family (`spend_items`, `spend/budget-nature.ts`):
 // a relation reads and replaces the links to the lines of both natures, naming the nature in its
 // SQL (`targetSql`), and a CAPEX line's own rows keep their CAPEX audit table names
-// (`auditTableName`).
+// (`ai-relation-screen-audit.ts`, `auditTableOf`).
 const SIMPLE_RELATIONS: SimpleRelationConfig[] = [
   { sourceEntity: 'applications', relation: 'companies', label: 'Companies', table: 'application_companies', sourceColumn: 'application_id', targetColumn: 'company_id', target: 'companies', businessResource: 'applications', kind: 'simple' },
   { sourceEntity: 'applications', relation: 'departments', label: 'Departments', table: 'application_departments', sourceColumn: 'application_id', targetColumn: 'department_id', target: 'departments', businessResource: 'applications', kind: 'simple' },
@@ -235,6 +254,70 @@ function textOrNull(value: unknown): string | null {
   if (value == null) return null;
   const text = String(value).trim();
   return text || null;
+}
+
+/** The families a relation names by their `item_number` reference (`resolveAiEntityReference`). */
+const NUMBERED_REFERENCE_FAMILIES: ReadonlySet<string> = new Set(['contacts', 'suppliers', 'contracts', 'companies', 'departments']);
+
+/** The keys a relation item names a contact or a user under, in the order they are read. */
+const CONTACT_REF_KEYS = ['contact_ref', 'contact_id', 'contact', 'email', 'ref', 'id', 'name'];
+const USER_REF_KEYS = ['user_ref', 'user_id', 'user', 'email', 'ref', 'id', 'name'];
+
+/**
+ * The reference a relation item gives under the first of `keys` it carries (one level down when the
+ * value is itself an object: `{ contact: { ref: 'CTCT-2' } }`), or the item itself when it is a
+ * plain value. Never the text of an object: an item with none of the keys names nothing.
+ */
+function itemRefOf(raw: unknown, keys: string[]): string | null {
+  if (raw == null) return null;
+  if (typeof raw !== 'object') return textOrNull(raw);
+  if (Array.isArray(raw)) return null;
+  const item = raw as Record<string, unknown>;
+  for (const key of keys) {
+    const value = item[key];
+    const ref = value != null && typeof value === 'object' ? itemRefOf(value, ['ref', 'id', 'email', 'name']) : textOrNull(value);
+    if (ref) return ref;
+  }
+  return null;
+}
+
+/** The role an item says, as text: `role` (or `{ code }` under it), `contact_role`, `role_code`. */
+function roleTextOf(item: Record<string, unknown>): string | null {
+  const value = item.role ?? item.contact_role ?? item.role_code;
+  if (value != null && typeof value === 'object') return textOrNull(objectValue(value).code ?? objectValue(value).value);
+  return textOrNull(value);
+}
+
+/** The roles of a supplier's, a contract's or a budget line's contact, for the refusals the model reads. */
+const SUPPLIER_CONTACT_ROLES_TEXT = 'commercial, technical, support or other';
+
+/**
+ * The role of a supplier's, a contract's or a budget line's contact: its code, read from the code or
+ * from its word in any of the four languages (`supplierContactRoleOf`). Their screens ask it in the
+ * dialog, with nothing chosen beforehand: an addition without a role, or with another word, is
+ * refused before the card, so that the model asks for it. A removal reads the role said, as given
+ * when it is none of the four (it names a link the record may not have), and null when none is said.
+ */
+function supplierContactRole(item: Record<string, unknown>, mode: 'add' | 'remove'): string | null {
+  const said = roleTextOf(item);
+  if (!said) {
+    if (mode === 'remove') return null;
+    throw new BadRequestException(`A contact role is required: ${SUPPLIER_CONTACT_ROLES_TEXT}. Ask the person which one; nothing was prepared.`);
+  }
+  const code = supplierContactRoleOf(said);
+  if (code) return code;
+  if (mode === 'remove') return said;
+  throw new BadRequestException(`"${said}" is not a contact role. The roles are ${SUPPLIER_CONTACT_ROLES_TEXT}; nothing was prepared.`);
+}
+
+/**
+ * ` AND EXISTS (...)`: a line's child row (`<alias>.spend_item_id`) belongs to a line of `nature`,
+ * or of either nature when it is not known (the preview reads before the line is locked).
+ */
+function lineScope(alias: string, nature: BudgetNature | null): string {
+  return nature
+    ? linkedLineOf(`${alias}.tenant_id`, `${alias}.spend_item_id`, nature)
+    : linkedLineOfAnyNature(`${alias}.tenant_id`, `${alias}.spend_item_id`);
 }
 
 function coerceItemArray(value: unknown, label: string): unknown[] {
@@ -325,6 +408,15 @@ function relationItemForCard(config: RelationConfig, item: RelationItem): AiPrev
   }
 }
 
+/**
+ * An asset a sub-location's removal leaves without a sub-location, its name `null` for a person who
+ * does not read the assets (the card counts it then, as the screen's confirmation does).
+ */
+type DetachedAsset = { id: string; name: string | null };
+
+/** The assets named on a card before their count: the first ones, then "+N". */
+const DETACHED_ASSETS_NAMED = 10;
+
 /** The host/asset pairs of a placement list, in a stable form for the execution comparison. */
 function replacedHostLinkSignature(links: ReplacedHostLink[]): string {
   return links.map((link) => `${link.host_id}:${link.asset_id}`).sort().join('|');
@@ -335,6 +427,15 @@ function objectValue(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+/**
+ * A relation writer that wrote fewer rows than it had to refuses: the card never says "done" for a
+ * write that did not happen (a data-access policy hid the row, or it changed since it was read).
+ * The approval's transaction is rolled back with it.
+ */
+function assertWritten(label: string, written: number, expected = 1): void {
+  if (written < expected) throw new ConflictException(`${label} could not be changed: nothing was written.`);
+}
+
 @Injectable()
 export class AiRelationMutationSupportService {
   constructor(
@@ -343,6 +444,9 @@ export class AiRelationMutationSupportService {
     private readonly taskSupport: AiTaskMutationSupportService,
     private readonly itOpsSettings: ItOpsSettingsService,
     @Optional() private readonly policy?: AiPolicyService,
+    @Optional() private readonly portfolioRelations?: PortfolioRelationsService,
+    @Optional() private readonly assets?: AssetsService,
+    @Optional() private readonly locations?: LocationsService,
   ) {}
 
   /**
@@ -385,9 +489,11 @@ export class AiRelationMutationSupportService {
     if (relationItemSignature(currentItems) === relationItemSignature(askedItems)) {
       throw new BadRequestException(`${config.label} already has the requested links.`);
     }
+    await this.assertWritable(context, config, target.id);
     await this.assertClusterMemberAdds(context, config, target.id, currentItems, askedItems);
     const nextItems = await this.applyAssignmentRules(context, config, currentItems, askedItems);
     const replaced = await this.applyPlacementRules(context, config, target.id, currentItems, nextItems);
+    const detached = await this.detachedAssets(context, config, currentItems, nextItems, true);
     return {
       targetEntityType: config.sourceEntity,
       targetEntityId: target.id,
@@ -399,6 +505,7 @@ export class AiRelationMutationSupportService {
         next_items: nextItems,
         source_preview_id: null,
         ...(replaced.length > 0 ? { replaced_host_links: replaced } : {}),
+        ...(detached.length > 0 ? { detached_assets: detached } : {}),
       },
       currentValues: {
         target_ref: target.ref,
@@ -421,8 +528,10 @@ export class AiRelationMutationSupportService {
     if (relationItemSignature(currentItems) === relationItemSignature(originalItems)) {
       throw new BadRequestException(`${config.label} already matches the original values.`);
     }
+    await this.assertWritable(context, config, target.id);
     const previousItems = await this.applyAssignmentRules(context, config, currentItems, originalItems);
     const replaced = await this.applyPlacementRules(context, config, target.id, currentItems, previousItems);
+    const detached = await this.detachedAssets(context, config, currentItems, previousItems, true);
     return {
       targetEntityType: config.sourceEntity,
       targetEntityId: target.id,
@@ -434,6 +543,7 @@ export class AiRelationMutationSupportService {
         next_items: previousItems,
         source_preview_id: preview.id,
         ...(replaced.length > 0 ? { replaced_host_links: replaced } : {}),
+        ...(detached.length > 0 ? { detached_assets: detached } : {}),
       },
       currentValues: {
         target_ref: target.ref,
@@ -501,6 +611,21 @@ export class AiRelationMutationSupportService {
         },
       };
     }
+    // The assets the removed sub-locations hold, left without a sub-location (the screen's
+    // confirmation): named up to ten, then counted; only counted for a person who does not read them.
+    const detached = this.coerceDetachedAssets(preview.mutation_input?.detached_assets);
+    if (detached.length > 0) {
+      const names = detached.map((asset) => asset.name).filter((name): name is string => !!name).slice(0, DETACHED_ASSETS_NAMED);
+      const items: AiPreviewRelationItem[] = names.map((name) => ({ name, role: null }));
+      if (detached.length > names.length) items.push({ name: names.length > 0 ? `+${detached.length - names.length}` : String(detached.length), role: null });
+      changes.detached_assets = {
+        label: 'Assets left without a sub-location',
+        from: items.map((item) => item.name).join(', '),
+        to: null,
+        format: 'text',
+        relation_items: { from: items, to: [] },
+      };
+    }
     return {
       target: {
         entity_type: config.sourceEntity,
@@ -519,6 +644,8 @@ export class AiRelationMutationSupportService {
     await this.assertLinkedModuleRead(context, config);
     const expectedItems = this.coerceRelationItems(preview.current_values?.items, 'current_values.items');
     const nextItems = this.coerceRelationItems(preview.mutation_input?.next_items, 'mutation_input.next_items');
+    // The screen's checks again, in the approver's access at the approval, before any lock or write.
+    await this.assertWritable(context, config, preview.target_entity_id);
     // A budget line is locked, by its stored nature, before its relations are compared and
     // replaced (lock order, `spend/budget-locks.ts`): no writer of the line changes them in between.
     let sourceNature: BudgetNature | null = null;
@@ -529,13 +656,16 @@ export class AiRelationMutationSupportService {
         throw new NotFoundException(`${config.label}: the line was not found.`);
       }
     }
-    // An application's owners: the application is locked before they are compared and replaced,
-    // the lock order of every writer of them (`lockApplicationRow`).
-    if (config.kind === 'owner_role' && !(await lockApplicationRow(context.manager, context.tenantId, preview.target_entity_id))) {
-      throw new NotFoundException(`${config.label}: the application was not found.`);
-    }
-    // A cluster's members follow the rules of the members endpoint; the cluster row is locked first.
+    // A cluster's members follow the rules of the members endpoint (the members added read, then the
+    // cluster row locked).
     await this.assertClusterMemberAdds(context, config, preview.target_entity_id, expectedItems, nextItems);
+    // The record row the screen locks for the same gesture, the same way, before the links are read
+    // and compared with the preview (`screenLockOf`): a gesture on the screen at the same time either
+    // committed first, and the links changed (409), or waits for this approval.
+    const lock = screenLockOf(config.sourceEntity, config.relation);
+    if (lock && !(await lock(context.manager, context.tenantId, preview.target_entity_id))) {
+      throw new NotFoundException(`${config.label}: the record was not found.`);
+    }
     // Assignments: the clusters are locked and the cluster rules checked again before the rows are
     // compared; an absorption that would now differ from the preview is a change since the preview.
     const checkedItems = await this.applyAssignmentRules(context, config, expectedItems, nextItems);
@@ -545,18 +675,31 @@ export class AiRelationMutationSupportService {
     const placement = await this.applyPlacementRules(context, config, preview.target_entity_id, expectedItems, nextItems);
     if (replacedHostLinkSignature(placement)
       !== replacedHostLinkSignature(this.coerceReplacedHostLinks(preview.mutation_input?.replaced_host_links))) {
-      throw new ConflictException(`${config.label} changed after the preview was created.`);
+      throw new ConflictException(`The ${config.label} relation changed after the preview was created.`);
+    }
+    // The assets a removed sub-location holds are the ones the card named: an asset placed in it or
+    // moved out since makes the write differ from what the person saw.
+    const detachedNow = await this.detachedAssets(context, config, expectedItems, nextItems, false);
+    if (detachedNow.map((asset) => asset.id).sort().join('|')
+      !== this.coerceDetachedAssets(preview.mutation_input?.detached_assets).map((asset) => asset.id).sort().join('|')) {
+      throw new ConflictException(`The ${config.label} relation changed after the preview was created.`);
     }
     const liveItems = await this.loadRelationItems(context, config, preview.target_entity_id);
     if (
       relationItemSignature(liveItems) !== relationItemSignature(expectedItems)
       || relationItemSignature(checkedItems) !== relationItemSignature(nextItems)
     ) {
-      throw new ConflictException(`${config.label} changed after the preview was created.`);
+      throw new ConflictException(`The ${config.label} relation changed after the preview was created.`);
     }
     await this.assertAddedTargetsReadable(context, config, expectedItems, nextItems);
     const audit = buildAiMutationAudit(preview);
-    await this.replaceRelationItems(context, config, preview.target_entity_id, nextItems, audit);
+    // The trace of the screen's gesture (`ai-relation-screen-audit.ts`): the stored state the
+    // screen reads, before the write and after it. The other relations audit each row in their
+    // writer, as the screen does (`ROW_AUDITED_RELATIONS`).
+    const trace = screenTraceOf(config.sourceEntity, config.relation);
+    const traceBefore = trace ? await trace.read(context, preview.target_entity_id) : null;
+    await this.replaceRelationItems(context, config, preview.target_entity_id, nextItems, audit, sourceNature);
+    if (trace) await trace.log(context, this.audit, audit, preview.target_entity_id, traceBefore);
     // R1: the host links the cluster replaces, removed after the cluster's own relations are in
     // place, with the preview's audit source.
     if (placement.length > 0) {
@@ -570,75 +713,29 @@ export class AiRelationMutationSupportService {
         { source: audit.source, sourceRef: audit.sourceRef },
       );
     }
-    await this.logRelationAudit(context, config, preview, sourceNature, expectedItems, nextItems, audit);
   }
 
   /**
-   * The audit row(s) of a relation update. The screens log a line's links under the table of the
-   * line's nature (`application_capex_items` for a CAPEX line, `application_spend_items` for an
-   * OPEX one): one row per nature the update changes, with the same before/after sets the screen
-   * writes. A budget line's own relation keeps its source nature (`auditTableName`) and names the
-   * line as parent, as the screens do: the shared labels have no parent rule, so the line's
-   * History tab reads this parent. A relation whose source is the application carries no parent
-   * (a write may touch several lines).
+   * The checks the screen runs before it writes, at the preview (the card is not proposed) and at
+   * the approval (in the approver's access then), for a person in limited data access:
+   * - a contract's contacts, links and lines need the contract modifiable, as its panels and its
+   *   Budget tab check (`assertContractsEditable`: 403 "This contract is read only in your
+   *   access."). The policies of `contract_contacts` and `contract_links` would otherwise turn a
+   *   removal or a change into a write of no row.
+   * The lines a contract gains or loses are checked at the approval (`replaceSimpleRelation`): the
+   * card is proposed, and refused once approved if one of them is read only, as before.
+   * A budget line's own relations are checked by the preview (`assertTargetLineEditable`) and its
+   * lock (`lockBudgetLine`). The links written from an application, an asset, a project or a
+   * request need the line or the contract readable only, as their Relations tabs: the reference
+   * resolves under the policies.
    */
-  private async logRelationAudit(
+  private async assertWritable(
     context: AiExecutionContextWithManager,
     config: RelationConfig,
-    preview: AiMutationPreview,
-    sourceNature: BudgetNature | null,
-    before: RelationItem[],
-    after: RelationItem[],
-    audit: AiMutationAuditOptions,
+    sourceId: string,
   ): Promise<void> {
-    const tables = config.kind === 'simple' && config.target === 'budget_lines' && config.sourceEntity !== 'budget_lines'
-      ? await this.changedLineAuditTables(context, config.table, before, after)
-      : [this.auditTableName(config, sourceNature)];
-    // From the budget line, the line names itself. The shared link labels have no parent rule,
-    // so the line's History tab reads this parent (`record-history/records/spend_items.ts`).
-    const parent = config.sourceEntity === 'budget_lines'
-      ? { table: 'spend_items' as const, id: preview.target_entity_id! }
-      : undefined;
-    for (const table of tables) {
-      await this.audit.log(
-        {
-          table,
-          recordId: preview.target_entity_id!,
-          action: 'update',
-          before,
-          after,
-          userId: context.userId,
-          source: audit.source,
-          sourceRef: audit.sourceRef,
-          parent,
-        },
-        { manager: context.manager },
-      );
-    }
-  }
-
-  /**
-   * The audit tables of the lines a relation adds or removes, one per nature (`auditTableOf`).
-   * Only the changed lines count: a line that stays linked is not a write on it.
-   */
-  private async changedLineAuditTables(
-    context: AiExecutionContextWithManager,
-    table: string,
-    before: RelationItem[],
-    after: RelationItem[],
-  ): Promise<string[]> {
-    const beforeKeys = new Set(before.map((item) => item.key.toLowerCase()));
-    const afterKeys = new Set(after.map((item) => item.key.toLowerCase()));
-    const changed = Array.from(new Set([...beforeKeys, ...afterKeys]))
-      .filter((key) => beforeKeys.has(key) !== afterKeys.has(key));
-    if (changed.length === 0) return [table];
-    const rows: Array<{ nature: BudgetNature }> = await context.manager.query(
-      `SELECT DISTINCT nature FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[])${naturesAnd(null, BUDGET_NATURES)}`,
-      [context.tenantId, changed],
-    );
-    const natures = new Set(rows.map((row) => row.nature));
-    const tables = BUDGET_NATURES.filter((nature) => natures.has(nature)).map((nature) => auditTableOf(nature, table));
-    return tables.length > 0 ? tables : [table];
+    if (config.sourceEntity !== 'contracts') return;
+    await assertContractsEditable(context.manager, [sourceId]);
   }
 
   /**
@@ -658,10 +755,12 @@ export class AiRelationMutationSupportService {
     const current = new Set(currentItems.map((item) => item.key.toLowerCase()));
     const added = Array.from(new Set(nextItems.map((item) => item.key.toLowerCase()))).filter((id) => !current.has(id));
     if (added.length === 0) return;
+    // The screen's order (`AssetsCrudService.replaceClusterMembers`): the members read `FOR SHARE`,
+    // then the cluster row locked `FOR UPDATE`.
+    await assertClusterMemberCandidates(context.manager, context.tenantId, clusterId, added);
     const cluster = await lockClusterForMembers(context.manager, context.tenantId, clusterId);
     if (!cluster) throw new NotFoundException('Asset not found');
     if (!cluster.isCluster) throw new BadRequestException('Asset is not a cluster');
-    await assertClusterMemberCandidates(context.manager, context.tenantId, clusterId, added);
     if (cluster.os) throw clusterOsWithMembersRefusal(cluster.os);
   }
 
@@ -781,6 +880,48 @@ export class AiRelationMutationSupportService {
     return [];
   }
 
+  /**
+   * The assets the sub-locations a write removes hold: the site's Sub-locations table deletes a
+   * sub-location and leaves them without one (`LocationsService.deleteSubItem`), after a
+   * confirmation that counts them. Named for a person who reads the assets (`named`).
+   */
+  private async detachedAssets(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    currentItems: RelationItem[],
+    nextItems: RelationItem[],
+    named: boolean,
+  ): Promise<DetachedAsset[]> {
+    if (config.kind !== 'sub_locations') return [];
+    const kept = new Set(nextItems.map((item) => textOrNull(item.payload.id)).filter(Boolean));
+    const removed = currentItems.map((item) => String(item.payload.id)).filter((id) => !kept.has(id));
+    if (removed.length === 0) return [];
+    // At the approval (`named` false), the removed sub-locations are locked before their assets are
+    // read. Placing an asset in a sub-location checks its foreign key with a KEY SHARE lock on the
+    // sub-location's row, which FOR UPDATE blocks: an asset placed before this lock is committed and
+    // read (the card differs, 409); one placed after waits, then finds the sub-location gone.
+    if (!named) {
+      await context.manager.query(
+        `SELECT id FROM location_sub_items WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR UPDATE`,
+        [context.tenantId, removed],
+      );
+    }
+    const rows: Array<{ id: string; name: string }> = await context.manager.query(
+      `SELECT id, name FROM assets WHERE tenant_id = $1 AND sub_location_id = ANY($2::uuid[]) ORDER BY lower(name), id`,
+      [context.tenantId, removed],
+    );
+    const readable = named && rows.length > 0 && !!(await this.policy?.canReadEntityType(context, 'assets', context.manager));
+    return rows.map((row) => ({ id: String(row.id), name: readable ? String(row.name) : null }));
+  }
+
+  /** The `detached_assets` a preview stored, read defensively. */
+  private coerceDetachedAssets(value: unknown): DetachedAsset[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((raw) => ({ id: String(objectValue(raw).id || ''), name: textOrNull(objectValue(raw).name) }))
+      .filter((asset) => asset.id);
+  }
+
   /** The `replaced_host_links` a preview stored, read defensively (a stored preview may be old). */
   private coerceReplacedHostLinks(value: unknown): ReplacedHostLink[] {
     if (!Array.isArray(value)) return [];
@@ -828,11 +969,16 @@ export class AiRelationMutationSupportService {
 
     const next = new Map(currentItems.map((item) => [item.key, item]));
     for (const raw of remove) {
-      const item = await this.resolveRelationInput(context, config, sourceId, raw, 'remove', currentItems);
-      if (!next.has(item.key)) {
-        throw new BadRequestException(`${item.label} is not currently linked.`);
+      // A contact's removal names the contact, and may take several of its links.
+      const items = config.kind === 'contact_role' || config.kind === 'supplier_contacts'
+        ? await this.resolveContactRemoval(context, config, raw, currentItems)
+        : [await this.resolveRelationInput(context, config, sourceId, raw, 'remove', currentItems)];
+      for (const item of items) {
+        if (!next.has(item.key) && !currentItems.some((current) => current.key === item.key)) {
+          throw new BadRequestException(`${item.label} is not currently linked.`);
+        }
+        next.delete(item.key);
       }
-      next.delete(item.key);
     }
     for (const raw of add) {
       const item = await this.resolveRelationInput(context, config, sourceId, raw, 'add', currentItems);
@@ -858,9 +1004,9 @@ export class AiRelationMutationSupportService {
       case 'owner_role':
         return this.resolveOwnerRoleInput(context, raw);
       case 'contact_role':
-        return this.resolveContactRoleInput(context, raw, config.sourceEntity === 'contracts' || config.sourceEntity === 'budget_lines');
+        return this.resolveContactRoleInput(context, config, sourceId, raw, mode, currentItems);
       case 'supplier_contacts':
-        return this.resolveSupplierContactInput(context, raw);
+        return this.resolveSupplierContactInput(context, raw, mode);
       case 'asset_relations':
         return this.resolveAssetRelationInput(context, raw);
       case 'link':
@@ -896,7 +1042,7 @@ export class AiRelationMutationSupportService {
     if (role !== 'business' && role !== 'it') {
       throw new BadRequestException('Owner role must be business or it.');
     }
-    const ref = textOrNull(item.user_ref ?? item.user_id ?? item.email ?? item.ref ?? raw);
+    const ref = itemRefOf(raw, USER_REF_KEYS);
     if (!ref) throw new BadRequestException('Owner user reference is required.');
     const user = isUuid(ref)
       ? await this.resolveUserById(context, ref)
@@ -908,13 +1054,81 @@ export class AiRelationMutationSupportService {
     };
   }
 
-  private async resolveContactRoleInput(context: AiExecutionContextWithManager, raw: unknown, supplierOriginCapable: boolean): Promise<RelationItem> {
-    const item = objectValue(raw);
-    const ref = textOrNull(item.contact_ref ?? item.contact_id ?? item.email ?? item.ref ?? raw);
-    if (!ref) throw new BadRequestException('Contact reference is required.');
+  /**
+   * The links a removal takes: it names the contact. Linked once to the record, that link goes,
+   * whatever role is said or not; linked under several roles, a role said takes that role's link, and
+   * none said takes every link added by hand (a contract's or a line's links its supplier brought
+   * stay), or every link when the supplier brought them all. The Contacts panels remove any link,
+   * the supplier's included, one at a time.
+   */
+  private async resolveContactRemoval(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    raw: unknown,
+    currentItems: RelationItem[],
+  ): Promise<RelationItem[]> {
+    const ref = itemRefOf(raw, CONTACT_REF_KEYS);
+    if (!ref) throw new BadRequestException('Contact reference is required (contact_ref: its CTCT-n reference, email or name).');
     const contact = await this.resolveReference(context, 'contacts', ref);
-    const role = textOrNull(item.role) ?? null;
+    const links = currentItems.filter((current) => String(current.payload.contact_id).toLowerCase() === contact.id.toLowerCase());
+    if (links.length === 0) throw new BadRequestException(`${contact.label} is not linked to this record: there is nothing to remove.`);
+    if (links.length === 1) return links;
+    const item = objectValue(raw);
+    const said = config.kind === 'supplier_contacts' || SUPPLIER_ROLE_CONTACT_SOURCES.has(config.sourceEntity)
+      ? supplierContactRole(item, 'remove')
+      : roleTextOf(item);
+    if (said) {
+      const matching = links.filter((link) => String(link.payload.role ?? '').toLowerCase() === said.toLowerCase());
+      if (matching.length > 0) return matching;
+      const roles = links.map((link) => textOrNull(link.payload.role) ?? 'none').join(', ');
+      throw new BadRequestException(
+        `${contact.label} is linked to this record with the roles ${roles}, not ${said}: name one of them, or no role to remove the links added by hand.`,
+      );
+    }
+    const byHand = links.filter((link) => link.payload.origin !== 'supplier');
+    return byHand.length > 0 ? byHand : links;
+  }
+
+  /**
+   * A contact and its role, added (a removal goes through `resolveContactRemoval`). On a contract or
+   * a budget line a contact links once per role, whatever brought it (the supplier or a person,
+   * `origin`), as their Contacts panels: adding by hand the link the supplier already brought with
+   * that role writes nothing on the screen (`attachManualContactLink` returns the stored link): the
+   * card is not proposed, and the model is told so. Another role stays possible.
+   */
+  private async resolveContactRoleInput(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    sourceId: string,
+    raw: unknown,
+    mode: 'add' | 'remove',
+    currentItems: RelationItem[],
+  ): Promise<RelationItem> {
+    const supplierOriginCapable = SUPPLIER_ROLE_CONTACT_SOURCES.has(config.sourceEntity);
+    const item = objectValue(raw);
+    const ref = itemRefOf(raw, CONTACT_REF_KEYS);
+    if (!ref) throw new BadRequestException('Contact reference is required (contact_ref: its CTCT-n reference, email or name).');
+    const contact = await this.resolveReference(context, 'contacts', ref);
+    // A contract's or a line's contact takes one of the four roles; an application's or an asset's
+    // Support panel takes any text, or none.
+    const role = supplierOriginCapable ? supplierContactRole(item, mode) : roleTextOf(item);
     const origin = supplierOriginCapable ? textOrNull(item.origin) ?? 'manual' : null;
+    const stored = supplierOriginCapable
+      ? currentItems.find((current) => current.payload.contact_id === contact.id && (current.payload.role ?? null) === role)
+      : undefined;
+    if (stored && stored.payload.origin === 'supplier' && origin !== 'supplier') {
+      const record = config.sourceEntity === 'contracts' ? 'contract' : 'budget line';
+      const [supplier]: Array<{ name: string | null }> = await context.manager.query(
+        `SELECT s.name FROM ${config.sourceEntity === 'contracts' ? 'contracts' : 'spend_items'} r
+           LEFT JOIN suppliers s ON s.tenant_id = r.tenant_id AND s.id = r.supplier_id
+          WHERE r.tenant_id = $1 AND r.id = $2`,
+        [context.tenantId, sourceId],
+      );
+      const by = supplier?.name ? `by its supplier ${supplier.name}` : 'by its supplier';
+      throw new BadRequestException(
+        `${contact.label} is already linked to this ${record} ${by}, with the role ${role ?? 'none'}: there is nothing to do. Another role can be added.`,
+      );
+    }
     return {
       key: `${contact.id}:${role ?? ''}:${origin ?? ''}`,
       label: [contact.label, role].filter(Boolean).join(' - '),
@@ -922,15 +1136,12 @@ export class AiRelationMutationSupportService {
     };
   }
 
-  private async resolveSupplierContactInput(context: AiExecutionContextWithManager, raw: unknown): Promise<RelationItem> {
+  private async resolveSupplierContactInput(context: AiExecutionContextWithManager, raw: unknown, mode: 'add' | 'remove'): Promise<RelationItem> {
     const item = objectValue(raw);
-    const ref = textOrNull(item.contact_ref ?? item.contact_id ?? item.email ?? item.ref ?? raw);
-    if (!ref) throw new BadRequestException('Contact reference is required.');
+    const ref = itemRefOf(raw, CONTACT_REF_KEYS);
+    if (!ref) throw new BadRequestException('Contact reference is required (contact_ref: its CTCT-n reference, email or name).');
     const contact = await this.resolveReference(context, 'contacts', ref);
-    const role = normalizeKey(String(item.role ?? 'other'));
-    if (!['commercial', 'technical', 'support', 'other'].includes(role)) {
-      throw new BadRequestException('Supplier contact role must be commercial, technical, support, or other.');
-    }
+    const role = supplierContactRole(item, mode);
     return {
       key: `${contact.id}:${role}`,
       label: `${contact.label} - ${role}`,
@@ -978,7 +1189,7 @@ export class AiRelationMutationSupportService {
 
   private async resolveLocationInternalContactInput(context: AiExecutionContextWithManager, raw: unknown): Promise<RelationItem> {
     const item = objectValue(raw);
-    const ref = textOrNull(item.user_ref ?? item.user_id ?? item.email ?? item.ref ?? raw);
+    const ref = itemRefOf(raw, USER_REF_KEYS);
     if (!ref) throw new BadRequestException('User reference is required.');
     const user = isUuid(ref)
       ? await this.resolveUserById(context, ref)
@@ -993,7 +1204,7 @@ export class AiRelationMutationSupportService {
 
   private async resolveLocationExternalContactInput(context: AiExecutionContextWithManager, raw: unknown): Promise<RelationItem> {
     const item = objectValue(raw);
-    const ref = textOrNull(item.contact_ref ?? item.contact_id ?? item.email ?? item.ref ?? raw);
+    const ref = itemRefOf(raw, CONTACT_REF_KEYS);
     if (!ref) throw new BadRequestException('External contact reference is required.');
     const contact = await this.resolveReference(context, 'contacts', ref);
     const role = textOrNull(item.role);
@@ -1193,11 +1404,17 @@ export class AiRelationMutationSupportService {
     }));
   }
 
-  private contactTable(config: RelationConfig): { table: string; sourceColumn: string; includeOrigin: boolean } {
-    if (config.sourceEntity === 'applications') return { table: 'application_support_contacts', sourceColumn: 'application_id', includeOrigin: false };
-    if (config.sourceEntity === 'assets') return { table: 'asset_support_contacts', sourceColumn: 'asset_id', includeOrigin: false };
-    if (config.sourceEntity === 'contracts') return { table: 'contract_contacts', sourceColumn: 'contract_id', includeOrigin: true };
-    if (config.sourceEntity === 'budget_lines') return { table: 'spend_item_contacts', sourceColumn: 'spend_item_id', includeOrigin: true };
+  /**
+   * The contact table of a source. `scope`: on a line's contacts, the line of the stored `nature`
+   * (both natures when it is not known yet, at the preview), on the link alias `l`.
+   */
+  private contactTable(config: RelationConfig, nature: BudgetNature | null = null): { table: string; sourceColumn: string; includeOrigin: boolean; scope: string } {
+    if (config.sourceEntity === 'applications') return { table: 'application_support_contacts', sourceColumn: 'application_id', includeOrigin: false, scope: '' };
+    if (config.sourceEntity === 'assets') return { table: 'asset_support_contacts', sourceColumn: 'asset_id', includeOrigin: false, scope: '' };
+    if (config.sourceEntity === 'contracts') return { table: 'contract_contacts', sourceColumn: 'contract_id', includeOrigin: true, scope: '' };
+    if (config.sourceEntity === 'budget_lines') {
+      return { table: 'spend_item_contacts', sourceColumn: 'spend_item_id', includeOrigin: true, scope: lineScope('l', nature) };
+    }
     // No silent fallback: another source would read and write `location_contacts` as its own.
     throw new BadRequestException(`No contact relation table for ${config.sourceEntity}.${config.relation}.`);
   }
@@ -1211,7 +1428,7 @@ export class AiRelationMutationSupportService {
              COALESCE(NULLIF(TRIM(CONCAT(COALESCE(c.first_name, ''), ' ', COALESCE(c.last_name, ''))), ''), c.email, l.contact_id::text) AS label
       FROM ${table.table} l
       JOIN contacts c ON c.id = l.contact_id AND c.tenant_id = $1
-      WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2
+      WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2${table.scope}
       ORDER BY label, l.role
       `,
       [context.tenantId, sourceId],
@@ -1261,22 +1478,47 @@ export class AiRelationMutationSupportService {
     }));
   }
 
-  private linkTable(config: RelationConfig): { table: string; sourceColumn: string } {
-    if (config.sourceEntity === 'applications') return { table: 'application_links', sourceColumn: 'application_id' };
-    if (config.sourceEntity === 'assets') return { table: 'asset_links', sourceColumn: 'asset_id' };
-    if (config.sourceEntity === 'contracts') return { table: 'contract_links', sourceColumn: 'contract_id' };
-    if (config.sourceEntity === 'budget_lines') return { table: 'spend_links', sourceColumn: 'spend_item_id' };
-    return { table: 'location_links', sourceColumn: 'location_id' };
+  /**
+   * The web link table of a source, and how its screen audits a row: `label` and `shown` (a line's
+   * link under the label and the line key of its nature, `presentChild`), `removal` (a contract's
+   * link removal is an `update` to nothing), `touch` (the table stamps `updated_at`). `scope`: on a
+   * line's links, the line of the stored `nature` (both natures at the preview), on the alias `l`.
+   */
+  private linkTable(config: RelationConfig, nature: BudgetNature | null = null): {
+    table: string;
+    sourceColumn: string;
+    scope: string;
+    label: string;
+    shown: (row: Record<string, unknown>) => unknown;
+    removal: 'delete' | 'update';
+    touch: boolean;
+  } {
+    const plain = { scope: '', shown: (row: Record<string, unknown>) => row, removal: 'delete' as const, touch: false };
+    if (config.sourceEntity === 'applications') return { ...plain, table: 'application_links', sourceColumn: 'application_id', label: 'application_links' };
+    if (config.sourceEntity === 'assets') return { ...plain, table: 'asset_links', sourceColumn: 'asset_id', label: 'asset_links' };
+    if (config.sourceEntity === 'contracts') return { ...plain, table: 'contract_links', sourceColumn: 'contract_id', label: 'contract_links', removal: 'update' };
+    if (config.sourceEntity === 'budget_lines') {
+      const lineNature = nature ?? 'opex';
+      return {
+        ...plain,
+        table: 'spend_links',
+        sourceColumn: 'spend_item_id',
+        scope: lineScope('l', nature),
+        label: auditTableOf(lineNature, 'spend_links'),
+        shown: (row) => presentChild(lineNature, row as any),
+      };
+    }
+    return { ...plain, table: 'location_links', sourceColumn: 'location_id', label: 'location_links', touch: true };
   }
 
-  private async loadLinks(context: AiExecutionContextWithManager, config: RelationConfig, sourceId: string): Promise<RelationItem[]> {
-    const table = this.linkTable(config);
+  private async loadLinks(context: AiExecutionContextWithManager, config: RelationConfig, sourceId: string, nature: BudgetNature | null = null): Promise<RelationItem[]> {
+    const table = this.linkTable(config, nature);
     const rows = await context.manager.query(
       `
-      SELECT id, url, description
-      FROM ${table.table}
-      WHERE tenant_id = $1 AND ${table.sourceColumn} = $2
-      ORDER BY created_at DESC
+      SELECT l.id, l.url, l.description
+      FROM ${table.table} l
+      WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2${table.scope}
+      ORDER BY l.created_at DESC
       `,
       [context.tenantId, sourceId],
     );
@@ -1370,23 +1612,46 @@ export class AiRelationMutationSupportService {
     }));
   }
 
+  /**
+   * `nature`: a budget line's stored nature, read under its lock, when the source is a line. The
+   * rows of the relations in `ROW_AUDITED_RELATIONS` are audited as the screen audits them.
+   */
   private async replaceRelationItems(
     context: AiExecutionContextWithManager,
     config: RelationConfig,
     sourceId: string,
     nextItems: RelationItem[],
     audit: AiMutationAuditOptions,
+    nature: BudgetNature | null,
   ): Promise<void> {
+    if (config.kind === 'simple' && SCREEN_SERVICE_RELATIONS.has(`${config.sourceEntity}.${config.relation}`)) {
+      await this.replaceThroughPortfolioTab(context, config, sourceId, nextItems, audit);
+      return;
+    }
     if (config.kind === 'simple') {
       await this.replaceSimpleRelation(context, config, sourceId, nextItems);
       return;
     }
+    // An asset's support contacts: the Support panel's replacement of the whole set, with the card's
+    // audit source (its row on the asset, `SCREEN_SERVICE_RELATIONS`).
+    if (config.sourceEntity === 'assets' && config.kind === 'contact_role') {
+      if (!this.assets) throw new Error('The assets service is not available.');
+      await this.assets.bulkReplaceSupportContacts(
+        sourceId,
+        nextItems.map((item) => ({ contact_id: String(item.payload.contact_id), role: textOrNull(item.payload.role) })),
+        context.tenantId,
+        context.userId,
+        { manager: context.manager, tenantId: context.tenantId, audit },
+      );
+      return;
+    }
+    const rowAudit = ROW_AUDITED_RELATIONS.has(`${config.sourceEntity}.${config.relation}`) ? audit : null;
     switch (config.kind) {
       case 'owner_role':
         await this.replaceOwnerRoles(context, sourceId, nextItems);
         return;
       case 'contact_role':
-        await this.replaceContactRoles(context, config, sourceId, nextItems);
+        await this.replaceContactRoles(context, config, sourceId, nextItems, rowAudit, nature);
         return;
       case 'supplier_contacts':
         await this.replaceSupplierContacts(context, sourceId, nextItems, audit);
@@ -1395,16 +1660,16 @@ export class AiRelationMutationSupportService {
         await this.replaceAssetRelations(context, sourceId, nextItems);
         return;
       case 'link':
-        await this.replaceLinks(context, config, sourceId, nextItems);
+        await this.replaceLinks(context, config, sourceId, nextItems, rowAudit, nature);
         return;
       case 'location_internal_contacts':
-        await this.replaceLocationContacts(context, 'location_user_contacts', 'user_id', sourceId, nextItems);
+        await this.replaceLocationContacts(context, 'location_user_contacts', 'user_id', sourceId, nextItems, rowAudit);
         return;
       case 'location_external_contacts':
-        await this.replaceLocationContacts(context, 'location_contacts', 'contact_id', sourceId, nextItems);
+        await this.replaceLocationContacts(context, 'location_contacts', 'contact_id', sourceId, nextItems, rowAudit);
         return;
       case 'sub_locations':
-        await this.replaceSubLocations(context, sourceId, nextItems);
+        await this.replaceSubLocations(context, sourceId, nextItems, rowAudit);
         return;
       case 'app_asset_assignments':
         await this.replaceAppAssetAssignments(context, sourceId, nextItems, audit);
@@ -1412,6 +1677,22 @@ export class AiRelationMutationSupportService {
       default:
         throw new BadRequestException(`Unsupported relation kind ${(config as any).kind}.`);
     }
+  }
+
+  /** One audit row of a link row, as the screen writes it, with the card's source. */
+  private async logRow(
+    context: AiExecutionContextWithManager,
+    audit: AiMutationAuditOptions,
+    table: string,
+    recordId: string,
+    action: 'create' | 'update' | 'delete',
+    before: unknown,
+    after: unknown,
+  ): Promise<void> {
+    await this.audit.log(
+      { table, recordId, action, before, after, userId: context.userId, source: audit.source, sourceRef: audit.sourceRef },
+      { manager: context.manager },
+    );
   }
 
   private async replaceSimpleRelation(context: AiExecutionContextWithManager, config: SimpleRelationConfig, sourceId: string, nextItems: RelationItem[]): Promise<void> {
@@ -1447,13 +1728,15 @@ export class AiRelationMutationSupportService {
           context.manager,
           existing.map((row) => row.id).filter((id) => !targetIds.includes(id)),
         );
-        await context.manager.query(
-          `DELETE FROM contract_spend_items l USING spend_items i
+        const [{ n }]: Array<{ n: number }> = await context.manager.query(
+          `WITH gone AS (DELETE FROM contract_spend_items l USING spend_items i
             WHERE l.tenant_id = $1 AND l.contract_id = $2
               AND i.tenant_id = l.tenant_id AND i.id = l.spend_item_id${naturesAnd('i', BUDGET_NATURES)}
-              AND NOT (l.spend_item_id = ANY($3::uuid[]))`,
+              AND NOT (l.spend_item_id = ANY($3::uuid[]))
+            RETURNING 1) SELECT count(*)::int AS n FROM gone`,
           [context.tenantId, sourceId, targetIds],
         );
+        assertWritten(config.label, Number(n), existing.filter((row) => !targetIds.includes(row.id)).length);
       } else {
         await assertLinesEditable(context.manager, [sourceId]);
         const existing: Array<{ id: string }> = await context.manager.query(
@@ -1465,19 +1748,22 @@ export class AiRelationMutationSupportService {
         const existingSet = new Set(existing.map((row) => row.id));
         added = targetIds.filter((id) => !existingSet.has(id));
         for (const targetId of added) await assertContractReadable(context.manager, targetId);
-        await context.manager.query(
-          `DELETE FROM contract_spend_items l USING contracts c
+        const [{ n }]: Array<{ n: number }> = await context.manager.query(
+          `WITH gone AS (DELETE FROM contract_spend_items l USING contracts c
             WHERE l.tenant_id = $1 AND l.spend_item_id = $2
               AND c.tenant_id = l.tenant_id AND c.id = l.contract_id
-              AND NOT (l.contract_id = ANY($3::uuid[]))`,
+              AND NOT (l.contract_id = ANY($3::uuid[]))
+            RETURNING 1) SELECT count(*)::int AS n FROM gone`,
           [context.tenantId, sourceId, targetIds],
         );
+        assertWritten(config.label, Number(n), existing.filter((row) => !targetIds.includes(row.id)).length);
       }
       for (const targetId of added) {
-        await context.manager.query(
-          `INSERT INTO contract_spend_items (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+        const inserted: unknown[] = await context.manager.query(
+          `INSERT INTO contract_spend_items (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING 1`,
           [context.tenantId, sourceId, targetId],
         );
+        assertWritten(config.label, inserted.length);
       }
       return;
     }
@@ -1488,16 +1774,63 @@ export class AiRelationMutationSupportService {
     const removed = Array.from(visible).filter((id) => !targetIds.includes(id));
     const added = targetIds.filter((id) => !visible.has(id));
     if (removed.length > 0) {
-      await context.manager.query(
-        `DELETE FROM ${config.table} WHERE tenant_id = $1 AND ${config.sourceColumn} = $2 AND ${config.targetColumn} = ANY($3::uuid[])`,
+      const [{ n }]: Array<{ n: number }> = await context.manager.query(
+        `WITH gone AS (DELETE FROM ${config.table} WHERE tenant_id = $1 AND ${config.sourceColumn} = $2 AND ${config.targetColumn} = ANY($3::uuid[]) RETURNING 1)
+         SELECT count(*)::int AS n FROM gone`,
         [context.tenantId, sourceId, removed],
       );
+      assertWritten(config.label, Number(n), removed.length);
     }
     for (const targetId of added) {
-      await context.manager.query(
-        `INSERT INTO ${config.table} (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+      const inserted: unknown[] = await context.manager.query(
+        `INSERT INTO ${config.table} (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING 1`,
         [context.tenantId, sourceId, targetId],
       );
+      assertWritten(config.label, inserted.length);
+    }
+  }
+
+  /**
+   * A project's or a request's applications, assets and lines, through the Relations tab's own
+   * toggle (`PortfolioRelationsService.setProjectLink`, `setRequestLink`), one link at a time, the
+   * removals first, with the card's audit source. The record's lock, its activity entry
+   * (`portfolio_activities`, by the person, as on the screen), its audit row and the lines the person
+   * cannot read (kept and counted) come from the screen's code. Only the links the person reads are
+   * compared (`loadSimpleRelation`); the module's read was checked (`assertLinkedModuleRead`).
+   */
+  private async replaceThroughPortfolioTab(
+    context: AiExecutionContextWithManager,
+    config: SimpleRelationConfig,
+    sourceId: string,
+    nextItems: RelationItem[],
+    audit: AiMutationAuditOptions,
+  ): Promise<void> {
+    if (!this.portfolioRelations) throw new Error('The Relations tab of the portfolio is not available.');
+    const kind = config.relation as 'applications' | 'assets' | 'budget_lines';
+    const visible = (await this.loadSimpleRelation(context, config, sourceId)).map((item) => item.key.toLowerCase());
+    const next = Array.from(new Set(nextItems
+      .map((item) => String(item.payload[config.targetColumn] ?? '').toLowerCase())
+      .filter((id) => id !== '')));
+    const steps = [
+      ...visible.filter((id) => !next.includes(id)).map((id) => ({ id, add: false })),
+      ...next.filter((id) => !visible.includes(id)).map((id) => ({ id, add: true })),
+    ];
+    const who = { manager: context.manager, userId: context.userId, tenantId: context.tenantId };
+    const applicationScope = await resolveBusinessContributorScopeForUser(who, 'applications', 'reader');
+    const owner = async () => ({ id: sourceId, tenantId: context.tenantId });
+    const base = { manager: context.manager, tenantId: context.tenantId, userId: context.userId, applicationScope, audit };
+    for (const step of steps) {
+      const result = config.sourceEntity === 'projects'
+        ? await this.portfolioRelations.setProjectLink(kind, step.id, step.add, {
+          ...base,
+          access: { budget_lines: false, applications: false, assets: false, technologies: false, source_requests: false, [kind]: true } as ProjectRelationsAccess,
+        }, owner)
+        : await this.portfolioRelations.setRequestLink(kind, step.id, step.add, {
+          ...base,
+          access: { budget_lines: false, applications: false, assets: false, processes: false, resulting_projects: false, [kind]: true } as RequestRelationsAccess,
+          writes: { processes: false },
+        }, owner);
+      assertWritten(config.label, result.changed ? 1 : 0);
     }
   }
 
@@ -1505,16 +1838,52 @@ export class AiRelationMutationSupportService {
     await context.manager.query(`DELETE FROM application_owners WHERE tenant_id = $1 AND application_id = $2`, [context.tenantId, applicationId]);
     for (const item of nextItems) {
       await context.manager.query(
-        `INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+        `INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING RETURNING 1`,
         [context.tenantId, applicationId, item.payload.user_id, item.payload.owner_type],
-      );
+      ).then((rows: unknown[]) => assertWritten('Owners', rows.length));
     }
   }
 
-  private async replaceContactRoles(context: AiExecutionContextWithManager, config: RelationConfig, sourceId: string, nextItems: RelationItem[]): Promise<void> {
-    const table = this.contactTable(config);
-    await context.manager.query(`DELETE FROM ${table.table} WHERE tenant_id = $1 AND ${table.sourceColumn} = $2`, [context.tenantId, sourceId]);
+  /**
+   * The contacts of an application, an asset, a contract or a line: a removed contact's row is
+   * deleted, a kept one keeps its row, a new one is inserted. With `rowAudit` (a contract, a line),
+   * each row is audited as the contact panel audits it (`ContractContactsService`,
+   * `SpendItemContactsService`: `create` and `delete`, the stored row, `recordId` the link; a line's
+   * under the label and the line key of its nature).
+   */
+  private async replaceContactRoles(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    sourceId: string,
+    nextItems: RelationItem[],
+    rowAudit: AiMutationAuditOptions | null,
+    nature: BudgetNature | null,
+  ): Promise<void> {
+    const table = this.contactTable(config, nature);
+    const label = config.sourceEntity === 'budget_lines' && nature ? auditTableOf(nature, table.table) : table.table;
+    const shown = (row: Record<string, unknown>) => (config.sourceEntity === 'budget_lines' && nature ? presentChild(nature, row as any) : row);
+    const keyOf = (row: Record<string, unknown>) => `${row.contact_id}:${row.role ?? ''}:${table.includeOrigin ? row.origin ?? '' : ''}`;
+    const current: Array<Record<string, unknown>> = await context.manager.query(
+      `SELECT l.* FROM ${table.table} l WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2${table.scope}`,
+      [context.tenantId, sourceId],
+    );
+    const nextKeys = new Set(nextItems.map((item) => item.key));
+    const removed = current.filter((row) => !nextKeys.has(keyOf(row))).map((row) => String(row.id));
+    if (removed.length > 0) {
+      const gone: Array<Record<string, unknown>> = await context.manager.query(
+        `WITH gone AS (DELETE FROM ${table.table} WHERE tenant_id = $1 AND ${table.sourceColumn} = $2 AND id = ANY($3::uuid[]) RETURNING *) SELECT * FROM gone`,
+        [context.tenantId, sourceId, removed],
+      );
+      assertWritten(config.label, gone.length, removed.length);
+      if (rowAudit) for (const row of gone) await this.logRow(context, rowAudit, label, String(row.id), 'delete', shown(row), null);
+    }
+    const currentKeys = new Set(current.map(keyOf));
     for (const item of nextItems) {
+      if (currentKeys.has(item.key)) continue;
+      // A card made before the role was required (none was asked then) refuses in words.
+      if (table.includeOrigin && !supplierContactRoleOf(String(item.payload.role ?? ''))) {
+        throw new BadRequestException(`A contact role is required: ${SUPPLIER_CONTACT_ROLES_TEXT}; nothing was changed.`);
+      }
       const columns = table.includeOrigin
         ? `(tenant_id, ${table.sourceColumn}, contact_id, role, origin)`
         : `(tenant_id, ${table.sourceColumn}, contact_id, role)`;
@@ -1522,7 +1891,12 @@ export class AiRelationMutationSupportService {
       const params = table.includeOrigin
         ? [context.tenantId, sourceId, item.payload.contact_id, item.payload.role, item.payload.origin ?? 'manual']
         : [context.tenantId, sourceId, item.payload.contact_id, item.payload.role];
-      await context.manager.query(`INSERT INTO ${table.table} ${columns} VALUES ${values} ON CONFLICT DO NOTHING`, params);
+      const added: Array<Record<string, unknown>> = await context.manager.query(
+        `WITH added AS (INSERT INTO ${table.table} ${columns} VALUES ${values} ON CONFLICT DO NOTHING RETURNING *) SELECT * FROM added`,
+        params,
+      );
+      assertWritten(config.label, added.length);
+      if (rowAudit) for (const row of added) await this.logRow(context, rowAudit, label, String(row.id), 'create', null, shown(row));
     }
   }
 
@@ -1555,6 +1929,7 @@ export class AiRelationMutationSupportService {
             `UPDATE supplier_contacts SET is_primary = $1, updated_at = now() WHERE tenant_id = $2 AND id = $3 RETURNING *`,
             [item.payload.is_primary === true, context.tenantId, currentItem.payload.id],
           ));
+          assertWritten('Contacts', after ? 1 : 0);
           // The link change is audited like the links attach and detach write, with the preview's source.
           if (before && after) {
             await this.audit.log(
@@ -1592,75 +1967,195 @@ export class AiRelationMutationSupportService {
     for (const item of nextItems) {
       if (item.payload.related_asset_id === assetId) throw new BadRequestException('Asset cannot have a relation to itself.');
       await context.manager.query(
-        `INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type, notes) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+        `INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type, notes) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING RETURNING 1`,
         [context.tenantId, assetId, item.payload.related_asset_id, item.payload.relation_type, item.payload.notes ?? null],
-      );
+      ).then((rows: unknown[]) => assertWritten('Asset Relations', rows.length));
     }
   }
 
-  private async replaceLinks(context: AiExecutionContextWithManager, config: RelationConfig, sourceId: string, nextItems: RelationItem[]): Promise<void> {
-    const table = this.linkTable(config);
-    await context.manager.query(`DELETE FROM ${table.table} WHERE tenant_id = $1 AND ${table.sourceColumn} = $2`, [context.tenantId, sourceId]);
+  /**
+   * The web links: a removed link is deleted, a kept one keeps its row (its description updated when
+   * it changed), a new one is inserted. With `rowAudit`, each row is audited as the screen audits a
+   * link: `create`, `update`, `delete` (a contract's link removal is an `update` to nothing, as
+   * `ContractsService.deleteUrl` writes it), the stored row before and after, `recordId` the link;
+   * a line's link under the label and the line key of its nature.
+   */
+  private async replaceLinks(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    sourceId: string,
+    nextItems: RelationItem[],
+    rowAudit: AiMutationAuditOptions | null,
+    nature: BudgetNature | null,
+  ): Promise<void> {
+    const table = this.linkTable(config, nature);
+    const logRow = async (recordId: string, action: 'create' | 'update' | 'delete', before: Record<string, unknown> | null, after: Record<string, unknown> | null) => {
+      if (!rowAudit) return;
+      const removal = action === 'delete' ? table.removal : action;
+      await this.logRow(context, rowAudit, table.label, recordId, removal, before && table.shown(before), after && table.shown(after));
+    };
+    const current = await this.loadLinks(context, config, sourceId, nature);
+    const keptIds = new Set(nextItems.map((item) => textOrNull(item.payload.id)).filter((id): id is string => !!id));
+    for (const item of current) {
+      const id = String(item.payload.id);
+      if (keptIds.has(id)) continue;
+      const gone: Array<Record<string, unknown>> = await context.manager.query(
+        `WITH gone AS (DELETE FROM ${table.table} l WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2 AND l.id = $3${table.scope} RETURNING l.*) SELECT * FROM gone`,
+        [context.tenantId, sourceId, id],
+      );
+      assertWritten(config.label, gone.length);
+      for (const row of gone) await logRow(String(row.id), 'delete', row, null);
+    }
     for (const item of nextItems) {
-      await context.manager.query(
-        `INSERT INTO ${table.table} (tenant_id, ${table.sourceColumn}, url, description) VALUES ($1, $2, $3, $4)`,
-        [context.tenantId, sourceId, item.payload.url, item.payload.description ?? null],
+      const id = textOrNull(item.payload.id);
+      if (!id) {
+        const added: Array<Record<string, unknown>> = await context.manager.query(
+          `WITH added AS (INSERT INTO ${table.table} (tenant_id, ${table.sourceColumn}, url, description) VALUES ($1, $2, $3, $4) RETURNING *) SELECT * FROM added`,
+          [context.tenantId, sourceId, item.payload.url, item.payload.description ?? null],
+        );
+        for (const row of added) await logRow(String(row.id), 'create', null, row);
+        continue;
+      }
+      const [before]: Array<Record<string, unknown>> = await context.manager.query(
+        `SELECT l.* FROM ${table.table} l WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2 AND l.id = $3${table.scope}`,
+        [context.tenantId, sourceId, id],
       );
+      if (!before || (before.url === item.payload.url && (before.description ?? null) === (item.payload.description ?? null))) continue;
+      const after = firstReturnedRow<Record<string, unknown>>(await context.manager.query(
+        `UPDATE ${table.table} l SET url = $4, description = $5${table.touch ? ', updated_at = now()' : ''}
+          WHERE l.tenant_id = $1 AND l.${table.sourceColumn} = $2 AND l.id = $3${table.scope} RETURNING l.*`,
+        [context.tenantId, sourceId, id, item.payload.url, item.payload.description ?? null],
+      ));
+      assertWritten(config.label, after ? 1 : 0);
+      if (after) await logRow(id, 'update', before, after);
     }
   }
 
+  /**
+   * A site's internal (users) or external contacts, one row per person: a removed one is deleted, a
+   * kept one keeps its row (its role updated when it changed), a new one is inserted. With
+   * `rowAudit`, each row is audited as `LocationsService` audits it (`create`, `update`, `delete`,
+   * the stored row, `recordId` the link; the site's history reads it by `location_id`).
+   */
   private async replaceLocationContacts(
     context: AiExecutionContextWithManager,
-    tableName: string,
+    tableName: 'location_user_contacts' | 'location_contacts',
     targetColumn: 'user_id' | 'contact_id',
     locationId: string,
     nextItems: RelationItem[],
+    rowAudit: AiMutationAuditOptions | null,
   ): Promise<void> {
-    await context.manager.query(`DELETE FROM ${tableName} WHERE tenant_id = $1 AND location_id = $2`, [context.tenantId, locationId]);
-    for (const item of nextItems) {
-      await context.manager.query(
-        `INSERT INTO ${tableName} (tenant_id, location_id, ${targetColumn}, role) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
-        [context.tenantId, locationId, item.payload[targetColumn], item.payload.role ?? null],
+    const log = async (recordId: string, action: 'create' | 'update' | 'delete', before: unknown, after: unknown) => {
+      if (rowAudit) await this.logRow(context, rowAudit, tableName, recordId, action, before, after);
+    };
+    const label = tableName === 'location_user_contacts' ? 'Internal Contacts' : 'External Contacts';
+    const current: Array<Record<string, unknown>> = await context.manager.query(
+      `SELECT * FROM ${tableName} WHERE tenant_id = $1 AND location_id = $2`,
+      [context.tenantId, locationId],
+    );
+    const nextByKey = new Map(nextItems.map((item) => [String(item.payload[targetColumn]), item]));
+    const removed = current.filter((row) => !nextByKey.has(String(row[targetColumn]))).map((row) => String(row.id));
+    if (removed.length > 0) {
+      const gone: Array<Record<string, unknown>> = await context.manager.query(
+        `WITH gone AS (DELETE FROM ${tableName} WHERE tenant_id = $1 AND location_id = $2 AND id = ANY($3::uuid[]) RETURNING *) SELECT * FROM gone`,
+        [context.tenantId, locationId, removed],
       );
+      assertWritten(label, gone.length, removed.length);
+      for (const row of gone) await log(String(row.id), 'delete', row, null);
+    }
+    const currentByKey = new Map(current.map((row) => [String(row[targetColumn]), row]));
+    for (const [key, item] of nextByKey) {
+      const role = textOrNull(item.payload.role);
+      const stored = currentByKey.get(key);
+      if (stored) {
+        if ((stored.role ?? null) === role) continue;
+        const after = firstReturnedRow<Record<string, unknown>>(await context.manager.query(
+          `UPDATE ${tableName} SET role = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2 RETURNING *`,
+          [context.tenantId, stored.id, role],
+        ));
+        assertWritten(label, after ? 1 : 0);
+        if (after) await log(String(after.id), 'update', stored, after);
+        continue;
+      }
+      const added: Array<Record<string, unknown>> = await context.manager.query(
+        `WITH added AS (
+           INSERT INTO ${tableName} (tenant_id, location_id, ${targetColumn}, role) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING RETURNING *
+         ) SELECT * FROM added`,
+        [context.tenantId, locationId, key, role],
+      );
+      assertWritten(label, added.length);
+      for (const row of added) await log(String(row.id), 'create', null, row);
     }
   }
 
-  private async replaceSubLocations(context: AiExecutionContextWithManager, locationId: string, nextItems: RelationItem[]): Promise<void> {
+  /**
+   * A site's sub-locations: a removed one is deleted by the Sub-locations table's service, which
+   * leaves its assets without a sub-location (the card named them), a kept one
+   * keeps its row (its name and description updated when they changed), a new one is created as
+   * `LocationsService.createSubItem` creates it (after the others, in display order). With
+   * `rowAudit`, each row is audited as that service audits it.
+   */
+  private async replaceSubLocations(
+    context: AiExecutionContextWithManager,
+    locationId: string,
+    nextItems: RelationItem[],
+    rowAudit: AiMutationAuditOptions | null,
+  ): Promise<void> {
+    const log = async (recordId: string, action: 'create' | 'update' | 'delete', before: unknown, after: unknown) => {
+      if (rowAudit) await this.logRow(context, rowAudit, 'location_sub_items', recordId, action, before, after);
+    };
     const current = await this.loadSubLocations(context, locationId);
     const nextExistingIds = new Set(nextItems.map((item) => textOrNull(item.payload.id)).filter(Boolean) as string[]);
     const toDelete = current.filter((item) => !nextExistingIds.has(String(item.payload.id)));
     for (const item of toDelete) {
-      const assetRows: Array<{ c: string }> = await context.manager.query(
-        `SELECT COUNT(*)::text AS c FROM assets WHERE tenant_id = $1 AND sub_location_id = $2`,
-        [context.tenantId, item.payload.id],
+      if (!this.locations) throw new Error('The locations service is not available.');
+      // The service answers "ok" for a sub-location already gone: the row is read first, so a removal
+      // that would write nothing refuses.
+      const [present]: Array<{ id: string }> = await context.manager.query(
+        `SELECT id FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2 AND id = $3 FOR UPDATE`,
+        [context.tenantId, locationId, item.payload.id],
       );
-      if (Number(assetRows[0]?.c || '0') > 0) {
-        throw new BadRequestException(`Cannot remove sub-location "${item.label}" because assets are assigned to it.`);
-      }
-      await context.manager.query(`DELETE FROM location_sub_items WHERE tenant_id = $1 AND id = $2`, [context.tenantId, item.payload.id]);
+      assertWritten('Sub-locations', present ? 1 : 0);
+      await this.locations.deleteSubItem(locationId, String(item.payload.id), context.userId, {
+        manager: context.manager,
+        ...(rowAudit ? { audit: rowAudit } : {}),
+      });
     }
+    const repo = context.manager.getRepository(LocationSubItem);
     for (const item of nextItems) {
       const id = textOrNull(item.payload.id);
       const name = textOrNull(item.payload.name);
       if (!name) continue;
+      const description = textOrNull(item.payload.description);
       if (id) {
-        await context.manager.query(
-          `UPDATE location_sub_items SET name = $1, description = $2, updated_at = now() WHERE tenant_id = $3 AND location_id = $4 AND id = $5`,
-          [name, item.payload.description ?? null, context.tenantId, locationId, id],
+        const [before]: Array<Record<string, unknown>> = await context.manager.query(
+          `SELECT * FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2 AND id = $3`,
+          [context.tenantId, locationId, id],
         );
-      } else {
-        await context.manager.query(
-          `
-          INSERT INTO location_sub_items (tenant_id, location_id, name, description, display_order)
-          VALUES ($1, $2, $3, $4, COALESCE((SELECT MAX(display_order) + 1 FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2), 0))
-          `,
-          [context.tenantId, locationId, name, item.payload.description ?? null],
-        );
+        if (!before || (before.name === name && (before.description ?? null) === description)) continue;
+        const after = firstReturnedRow<Record<string, unknown>>(await context.manager.query(
+          `UPDATE location_sub_items SET name = $4, description = $5, updated_at = now() WHERE tenant_id = $1 AND location_id = $2 AND id = $3 RETURNING *`,
+          [context.tenantId, locationId, id, name, description],
+        ));
+        assertWritten('Sub-locations', after ? 1 : 0);
+        if (after) await log(id, 'update', before, after);
+        continue;
       }
+      const [{ next }]: Array<{ next: number }> = await context.manager.query(
+        `SELECT COALESCE(MAX(display_order) + 1, 0)::int AS next FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2`,
+        [context.tenantId, locationId],
+      );
+      // The entity as the service saves it, so the audit row holds the same fields.
+      const saved = await repo.save(repo.create({ tenant_id: context.tenantId, location_id: locationId, name, description, display_order: Number(next) }));
+      await log(saved.id, 'create', null, saved);
     }
   }
 
-  /** Each deleted row (removed, or absorbed by its cluster's row) is audited as the service audits a deletion. */
+  /**
+   * Each row is audited as the service audits it: a deleted row (removed, or absorbed by its
+   * cluster's row) as a deletion, an added one as a creation, a kept one whose date or notes
+   * changed (a cluster's row absorbing its members') as an update, the stored row before and after.
+   */
   private async replaceAppAssetAssignments(
     context: AiExecutionContextWithManager,
     applicationId: string,
@@ -1676,6 +2171,7 @@ export class AiRelationMutationSupportService {
           `WITH gone AS (DELETE FROM app_asset_assignments WHERE tenant_id = $1 AND id = $2 RETURNING *) SELECT * FROM gone`,
           [context.tenantId, item.payload.id],
         );
+        assertWritten('Asset Assignments', deleted.length);
         for (const row of deleted) {
           await this.audit.log(
             {
@@ -1693,36 +2189,37 @@ export class AiRelationMutationSupportService {
         }
       }
     }
+    const log = (recordId: string, action: 'create' | 'update', before: unknown, after: unknown) => this.audit.log(
+      { table: 'app_asset_assignments', recordId, action, before, after, userId: context.userId, source: audit.source, sourceRef: audit.sourceRef },
+      { manager: context.manager },
+    );
     for (const item of nextItems) {
+      const slot = [context.tenantId, item.payload.app_instance_id, item.payload.asset_id, item.payload.role];
       if (currentKeys.has(item.key)) {
-        await context.manager.query(
-          `UPDATE app_asset_assignments SET since_date = $1, notes = $2, updated_at = now() WHERE tenant_id = $3 AND app_instance_id = $4 AND asset_id = $5 AND role = $6`,
-          [item.payload.since_date ?? null, item.payload.notes ?? null, context.tenantId, item.payload.app_instance_id, item.payload.asset_id, item.payload.role],
+        const [before]: Array<Record<string, unknown>> = await context.manager.query(
+          `SELECT * FROM app_asset_assignments WHERE tenant_id = $1 AND app_instance_id = $2 AND asset_id = $3 AND role = $4`,
+          slot,
         );
+        // A row whose date and notes stay is not written: the screen saves nothing for it.
+        const after = firstReturnedRow<{ id: string }>(await context.manager.query(
+          `UPDATE app_asset_assignments SET since_date = $5, notes = $6, updated_at = now()
+            WHERE tenant_id = $1 AND app_instance_id = $2 AND asset_id = $3 AND role = $4
+              AND (since_date IS DISTINCT FROM $5::date OR notes IS DISTINCT FROM $6::text)
+            RETURNING *`,
+          [...slot, item.payload.since_date ?? null, item.payload.notes ?? null],
+        ));
+        if (before && after) await log(String(after.id), 'update', before, after);
       } else {
-        await context.manager.query(
-          `INSERT INTO app_asset_assignments (tenant_id, app_instance_id, asset_id, role, since_date, notes) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING`,
-          [context.tenantId, item.payload.app_instance_id, item.payload.asset_id, item.payload.role, item.payload.since_date ?? null, item.payload.notes ?? null],
+        const added: Array<{ id: string }> = await context.manager.query(
+          `WITH added AS (
+             INSERT INTO app_asset_assignments (tenant_id, app_instance_id, asset_id, role, since_date, notes) VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT DO NOTHING RETURNING *
+           ) SELECT * FROM added`,
+          [...slot, item.payload.since_date ?? null, item.payload.notes ?? null],
         );
+        assertWritten('Asset Assignments', added.length);
+        for (const row of added) await log(String(row.id), 'create', null, row);
       }
-    }
-  }
-
-  /** The table the audit log names: a CAPEX line's own relation keeps its CAPEX table name (`auditTableOf`). */
-  private auditTableName(config: RelationConfig, nature: BudgetNature | null): string {
-    const capex = config.sourceEntity === 'budget_lines' && nature === 'capex';
-    const label = (table: string) => (capex ? auditTableOf('capex', table) : table);
-    if (config.kind === 'simple') return label(config.table);
-    switch (config.kind) {
-      case 'owner_role': return 'application_owners';
-      case 'contact_role': return label(this.contactTable(config).table);
-      case 'supplier_contacts': return 'supplier_contacts';
-      case 'asset_relations': return 'asset_relations';
-      case 'link': return label(this.linkTable(config).table);
-      case 'location_internal_contacts': return 'location_user_contacts';
-      case 'location_external_contacts': return 'location_contacts';
-      case 'sub_locations': return 'location_sub_items';
-      case 'app_asset_assignments': return 'app_asset_assignments';
     }
   }
 
@@ -1764,6 +2261,11 @@ export class AiRelationMutationSupportService {
     const rawDigits = ref.match(/(?:^|[-\s])(\d+)$/)?.[1];
     const itemNumber = rawDigits == null ? 0 : (parseItemNumber(rawDigits) ?? -1);
     const { manager, tenantId } = context;
+    // A business reference the reads give (CTCT-2, SUP-3, CTR-2, COMP-1, DEPT-4) names its row.
+    if (!uuid && NUMBERED_REFERENCE_FAMILIES.has(entityType)) {
+      const id = await resolveAiEntityReference(manager, tenantId, entityType, ref);
+      if (id) return this.queryReferenceCandidates(context, entityType, id);
+    }
     switch (entityType) {
       case 'applications': {
         const accessScope = await resolveBusinessContributorScopeForUser({

@@ -195,13 +195,22 @@ export class NotificationsService {
   /**
    * Build item URL based on type and tenant.
    */
-  private async buildItemUrl(itemType: ItemType, itemId: string, tenantId: string, manager?: import('typeorm').EntityManager): Promise<string> {
+  private async buildItemUrl(
+    itemType: ItemType,
+    itemId: string,
+    tenantId: string,
+    manager?: import('typeorm').EntityManager,
+    itemRef?: string | null,
+  ): Promise<string> {
     const slug = await this.getTenantSlug(tenantId);
     const base = this.buildTenantBaseUrl(slug);
 
-    // For supported types, try to resolve item ref for friendlier URLs. Without a manager, the
-    // budget lines and the contracts read theirs on a connection of their own.
-    const ref = manager
+    // For supported types, try to resolve item ref for friendlier URLs. `itemRef`: the reference
+    // the caller already holds, read nowhere. Without a manager, the budget lines and the
+    // contracts read theirs on a connection of their own.
+    const ref = itemRef
+      ? itemRef
+      : manager
       ? await this.resolveItemRef(itemType, itemId, tenantId, manager)
       : (itemType === 'opex' || itemType === 'capex' || itemType === 'contract')
         ? await withTenant(this.dataSource, tenantId, (lookupManager) =>
@@ -682,9 +691,14 @@ export class NotificationsService {
     excludeUserId?: string;
     actionButtons?: ActionButton[];
     manager?: EntityManager;
+    /**
+     * The item's business reference (`PRJ-7`), for a caller that does not await this: it passes the
+     * reference instead of its request's manager, which may be handed back first (AGENTS.md).
+     */
+    itemRef?: string;
   }): Promise<void> {
     const workspace = this.getWorkspaceForItemType(params.itemType);
-    const itemUrl = await this.buildItemUrl(params.itemType, params.itemId, params.tenantId, params.manager);
+    const itemUrl = await this.buildItemUrl(params.itemType, params.itemId, params.tenantId, params.manager, params.itemRef);
     const branding = await this.resolveBranding(params.tenantId);
     const localeGroups = new Map<string, NotificationRecipient[]>();
 
@@ -748,8 +762,10 @@ export class NotificationsService {
     recipients: Array<NotificationRecipient & { role: 'assignee' | 'requestor' | 'owner' | 'viewer' }>;
     tenantId: string;
     manager?: EntityManager;
+    /** The item's business reference, instead of a request's manager (`notifyStatusChange`). */
+    itemRef?: string;
   }): Promise<void> {
-    const taskUrl = await this.buildItemUrl('task', params.taskId, params.tenantId, params.manager);
+    const taskUrl = await this.buildItemUrl('task', params.taskId, params.tenantId, params.manager, params.itemRef);
     const branding = await this.resolveBranding(params.tenantId);
     const statusChanged = Boolean(
       params.oldStatus
@@ -918,6 +934,8 @@ export class NotificationsService {
     addedUser: NotificationRecipient;
     tenantId: string;
     manager?: EntityManager;
+    /** The item's business reference, instead of a request's manager (`notifyStatusChange`). */
+    itemRef?: string;
   }): Promise<void> {
     if (!(await this.shouldNotify(params.tenantId, params.addedUser.userId, params.itemType, params.itemId, 'team_added'))) {
       return;
@@ -930,7 +948,7 @@ export class NotificationsService {
 
     if (!this.checkPreferences(prefs, 'portfolio', 'team_added')) return;
 
-    const itemUrl = await this.buildItemUrl(params.itemType, params.itemId, params.tenantId, params.manager);
+    const itemUrl = await this.buildItemUrl(params.itemType, params.itemId, params.tenantId, params.manager, params.itemRef);
     const branding = await this.resolveBranding(params.tenantId);
     const content = buildTeamAddedEmail({
       itemType: params.itemType,
@@ -1173,11 +1191,13 @@ export class NotificationsService {
     recipients: NotificationRecipient[];
     tenantId: string;
     manager?: EntityManager;
+    /** The item's business reference, instead of a request's manager (`notifyStatusChange`). */
+    itemRef?: string;
   }): Promise<void> {
     const workspace = this.getWorkspaceForItemType(params.itemType);
     const tenantSlug = await this.getTenantSlug(params.tenantId);
     const tenantBaseUrl = this.buildTenantBaseUrl(tenantSlug);
-    const itemUrl = await this.buildItemUrl(params.itemType, params.itemId, params.tenantId, params.manager);
+    const itemUrl = await this.buildItemUrl(params.itemType, params.itemId, params.tenantId, params.manager, params.itemRef);
     const branding = await this.resolveBranding(params.tenantId);
     const renderedComment = await renderCommentEmail(params.commentContent, tenantBaseUrl, tenantSlug);
     const embeddedComment = await this.embedInlineImagesForComment({
@@ -1243,6 +1263,8 @@ export class NotificationsService {
     dueDate?: string;
     tenantId: string;
     manager?: EntityManager;
+    /** The item's business reference, instead of a request's manager (`notifyStatusChange`). */
+    itemRef?: string;
     locale?: string | null;
   }): Promise<void> {
     if (!(await this.shouldNotify(params.tenantId, params.assigneeId, 'task', params.taskId, 'assignment'))) {
@@ -1256,7 +1278,7 @@ export class NotificationsService {
 
     if (!this.checkPreferences(prefs, 'tasks', 'assignment', 'assignee')) return;
 
-    const taskUrl = await this.buildItemUrl('task', params.taskId, params.tenantId, params.manager);
+    const taskUrl = await this.buildItemUrl('task', params.taskId, params.tenantId, params.manager, params.itemRef);
     const branding = await this.resolveBranding(params.tenantId);
     const content = buildTaskAssignedEmail({
       taskTitle: params.taskTitle,
@@ -1479,8 +1501,10 @@ export class NotificationsService {
     rawEmails?: string[];
     tenantId: string;
     manager?: EntityManager;
+    /** The item's business reference, instead of a request's manager (`notifyStatusChange`). */
+    itemRef?: string;
   }): Promise<void> {
-    const itemUrl = await this.buildItemUrl(params.itemType, params.itemId, params.tenantId, params.manager);
+    const itemUrl = await this.buildItemUrl(params.itemType, params.itemId, params.tenantId, params.manager, params.itemRef);
     const branding = await this.resolveBranding(params.tenantId);
     const localeGroups = this.groupRecipientsByLocale(params.recipients);
 

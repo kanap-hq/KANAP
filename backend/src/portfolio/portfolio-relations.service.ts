@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { moduleRightRequired } from '../auth/module-right-required';
 import { setOwnedLink } from '../common/relations/owned-link';
@@ -67,6 +67,11 @@ export type ProjectRelationsContext = {
   applicationScope?: ParticipationAccessScope;
   /** A Business Contributor's request scope, for the source requests. */
   requestScope?: ParticipationAccessScope;
+  /**
+   * The audit source of a link of an application, an asset or a line (the assistant's card), carried
+   * to the replacement's audit row; its activity names the person as the screen does.
+   */
+  audit?: AuditSourceOptions;
 };
 
 export type ProjectRelations = {
@@ -125,6 +130,8 @@ export type RequestRelationsContext = {
   applicationScope?: ParticipationAccessScope;
   /** A Business Contributor's project scope, for the projects the request produced. */
   projectScope?: ParticipationAccessScope;
+  /** As the project's (`ProjectRelationsContext.audit`). */
+  audit?: AuditSourceOptions;
 };
 
 export type RequestRelations = {
@@ -153,6 +160,9 @@ const PROCESS_LINK = {
   targetColumn: 'business_process_id',
   notFound: PROCESSES_NOT_FOUND,
 } as const;
+
+/** The options a link hands to the replacement that owns it. */
+type LinkWriteOpts = { manager: EntityManager; userId: string | null; audit?: AuditSourceOptions };
 
 export function projectRelationKindOrThrow(value: string): ProjectRelationKind {
   if (!(PROJECT_RELATION_KINDS as readonly string[]).includes(value)) throw new NotFoundException('Unknown relation type.');
@@ -240,15 +250,16 @@ export class PortfolioRelationsService {
     const owner = await loadOwner();
     const mg = ctx.manager;
     if (!(await lockProject(mg, owner.tenantId, owner.id))) throw new NotFoundException('Project not found');
-    if (kind === 'budget_lines') return this.setProjectBudgetLine(mg, owner.tenantId, owner.id, id, add, ctx.userId);
+    const opts = { manager: mg, userId: ctx.userId, audit: ctx.audit };
+    if (kind === 'budget_lines') return this.setProjectBudgetLine(mg, owner.tenantId, owner.id, id, add, opts);
     if (kind === 'applications') {
       await this.assertApplicationVisible(mg, owner.tenantId, id, ctx.applicationScope);
       const current = await this.linkIds(mg, PROJECT_APPLICATIONS, owner.tenantId, owner.id);
-      return this.replaceOne(current, id, add, (next) => this.projects.bulkReplaceLinkedApplications(owner.id, next, { manager: mg, userId: ctx.userId }));
+      return this.replaceOne(current, id, add, (next) => this.projects.bulkReplaceLinkedApplications(owner.id, next, opts));
     }
     await this.assertAssetExists(mg, owner.tenantId, id);
     const current = await this.linkIds(mg, PROJECT_ASSETS, owner.tenantId, owner.id);
-    return this.replaceOne(current, id, add, (next) => this.projects.bulkReplaceLinkedAssets(owner.id, next, { manager: mg, userId: ctx.userId }));
+    return this.replaceOne(current, id, add, (next) => this.projects.bulkReplaceLinkedAssets(owner.id, next, opts));
   }
 
   private async readProject(mg: EntityManager, tenantId: string, projectId: string): Promise<{ id: string; tenant_id: string }> {
@@ -267,14 +278,14 @@ export class PortfolioRelationsService {
     projectId: string,
     id: string,
     add: boolean,
-    userId: string | null,
+    opts: LinkWriteOpts,
   ): Promise<{ ok: true; changed: boolean }> {
     const nature = await this.budgetNature(mg, tenantId, id);
     if (!nature) throw new BadRequestException(BUDGET_LINE_NOT_FOUND);
     const current = await this.linkIds(mg, PROJECT_LINES, tenantId, projectId, linkedLineOf('l.tenant_id', 'l.opex_id', nature));
     const replace = nature === 'opex'
-      ? (next: string[]) => this.projects.bulkReplaceOpex(projectId, next, { manager: mg, userId })
-      : (next: string[]) => this.projects.bulkReplaceCapex(projectId, next, { manager: mg, userId });
+      ? (next: string[]) => this.projects.bulkReplaceOpex(projectId, next, opts)
+      : (next: string[]) => this.projects.bulkReplaceCapex(projectId, next, opts);
     return this.replaceOne(current, id, add, replace);
   }
 
@@ -329,18 +340,19 @@ export class PortfolioRelationsService {
   /**
    * Hand the whole stored set, plus or minus `id`, to the replacement that owns it.
    * The set includes a link the caller cannot see: the replacement rewrites every row it is
-   * given, and dropping an invisible id would remove it.
+   * given, and dropping an invisible id would remove it. `changed` says what the replacement really
+   * wrote: when the other end stored or removed the same link meanwhile, nothing, and no activity.
    */
   private async replaceOne(
     current: string[],
     id: string,
     add: boolean,
-    replace: (next: string[]) => Promise<unknown>,
+    replace: (next: string[]) => Promise<{ added: number; removed: number }>,
   ): Promise<{ ok: true; changed: boolean }> {
     if (current.includes(id) === add) return { ok: true, changed: false };
     const next = (add ? [...current, id] : current.filter((value) => value !== id)).sort();
-    await replace(next);
-    return { ok: true, changed: true };
+    const written = await replace(next);
+    return { ok: true, changed: written.added + written.removed > 0 };
   }
 
   /** The request's tab in one round trip. The request must exist in the tenant (404 otherwise). */
@@ -404,15 +416,16 @@ export class PortfolioRelationsService {
     const owner = await loadOwner();
     const mg = ctx.manager;
     if (!(await this.lockRequest(mg, owner.tenantId, owner.id))) throw new NotFoundException('Request not found');
-    if (kind === 'budget_lines') return this.setRequestBudgetLine(mg, owner.tenantId, owner.id, id, add, ctx.userId);
+    const opts = { manager: mg, userId: ctx.userId, audit: ctx.audit };
+    if (kind === 'budget_lines') return this.setRequestBudgetLine(mg, owner.tenantId, owner.id, id, add, opts);
     if (kind === 'applications') {
       await this.assertApplicationVisible(mg, owner.tenantId, id, ctx.applicationScope);
       const current = await this.linkIds(mg, REQUEST_APPLICATIONS, owner.tenantId, owner.id);
-      return this.replaceOne(current, id, add, (next) => this.requests.bulkReplaceApplications(owner.id, next, { manager: mg, userId: ctx.userId }));
+      return this.replaceOne(current, id, add, (next) => this.requests.bulkReplaceApplications(owner.id, next, opts));
     }
     await this.assertAssetExists(mg, owner.tenantId, id);
     const current = await this.linkIds(mg, REQUEST_ASSETS, owner.tenantId, owner.id);
-    return this.replaceOne(current, id, add, (next) => this.requests.bulkReplaceAssets(owner.id, next, { manager: mg, userId: ctx.userId }));
+    return this.replaceOne(current, id, add, (next) => this.requests.bulkReplaceAssets(owner.id, next, opts));
   }
 
   private async readRequest(mg: EntityManager, tenantId: string, requestId: string): Promise<{ id: string; tenant_id: string }> {
@@ -440,14 +453,14 @@ export class PortfolioRelationsService {
     requestId: string,
     id: string,
     add: boolean,
-    userId: string | null,
+    opts: LinkWriteOpts,
   ): Promise<{ ok: true; changed: boolean }> {
     const nature = await this.budgetNature(mg, tenantId, id);
     if (!nature) throw new BadRequestException(BUDGET_LINE_NOT_FOUND);
     const current = await this.linkIds(mg, REQUEST_LINES, tenantId, requestId, linkedLineOf('l.tenant_id', 'l.opex_id', nature));
     const replace = nature === 'opex'
-      ? (next: string[]) => this.requests.bulkReplaceOpex(requestId, next, { manager: mg, userId })
-      : (next: string[]) => this.requests.bulkReplaceCapex(requestId, next, { manager: mg, userId });
+      ? (next: string[]) => this.requests.bulkReplaceOpex(requestId, next, opts)
+      : (next: string[]) => this.requests.bulkReplaceCapex(requestId, next, opts);
     return this.replaceOne(current, id, add, replace);
   }
 }

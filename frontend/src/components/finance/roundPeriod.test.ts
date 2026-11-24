@@ -21,7 +21,6 @@ import {
   isOneDay,
   longDate,
   periodMonths,
-  formatFteValue,
   formatMoney,
   formatUplift,
   hasLines,
@@ -40,6 +39,7 @@ import {
   toCents,
   zeroedMonthsText,
 } from './roundPeriod';
+import { formatFte } from './amountColumns';
 
 const i18n = i18next.createInstance();
 beforeAll(async () => {
@@ -288,7 +288,9 @@ describe('columns built from lines', () => {
     expect(chipText(en(), 'en', three)).toBe('Quantity and price · 3 lines · 0.12 FTE');
     // A narrow header wraps between the way and the figures, never inside either.
     expect(chipUnits(en(), 'en', three)).toEqual(['Quantity and price ·', '3 lines · 0.12 FTE']);
-    expect(chipText(fr(), 'fr', three)).toBe('Quantité et prix · 3 lignes · 0.12 ETP');
+    // The FTE in the number format of the language, as the lists and the history write it.
+    expect(chipText(fr(), 'fr', three)).toBe('Quantité et prix · 3 lignes · 0,12 ETP');
+    expect(chipText(fr(), 'fr', computed([line()], '1'))).toBe('Quantité et prix · 1 ligne · 1,00 ETP');
     // Pieces only: no FTE to show.
     expect(chipText(en(), 'en', computed([line({ quantity_unit: 'pieces', price_basis: 'per_piece', frequency: 'per_month', working_day_profile_id: null })], '0.00'))).toBe('Quantity and price · 1 line');
     expect(chipUnits(en(), 'en', undefined)).toEqual([]);
@@ -342,6 +344,9 @@ describe('columns built from lines', () => {
     expect(lineText(en(), 'en', line({ label: 'Bundle', quantity: '30', unit_price: '1200', period_start: '2026-02-01', period_end: '2026-07-31' })))
       .toBe('Bundle: 30 days × 1 200 per day over the period, Feb to Jul');
     expect(lineText(fr(), 'fr', line())).toMatch(/^Project manager : 20 jours × 900 par jour sur la période, janv\.? à juin$/);
+    // Decimals take the decimal mark of the language, as the fields of the lines do.
+    expect(lineText(fr(), 'fr', line({ ...person, unit_price: '1200.5', days_per_month: '2.5', period_start: '2026-02-01', period_end: '2026-07-31' })))
+      .toMatch(/^Project manager : 1 personne × 1 200,5 par jour, 2,5 jours par mois, févr\.? à juil\.?$/);
     const two = computed([line(), line({ id: 'l2', label: 'Licences', quantity_unit: 'pieces', quantity: '3', price_basis: 'per_piece', frequency: 'per_month', unit_price: '10' })], '0.5');
     expect(linesText(en(), 'en', two)).toBe('Project manager: 20 days × 900 per day over the period, Jan to Jun\nLicences: 3 pieces × 10 per piece per month, Jan to Jun');
     // No lines, no tooltip.
@@ -393,18 +398,23 @@ describe('columns built from lines', () => {
     expect(changedDays(before, null, [1])).toEqual([]);
     expect(dayChangeText(en(), 'en', { month: 3, before: '22', after: '21' })).toBe('March: 22 days, now 21');
     expect(dayChangeText(en(), 'en', { month: 3, before: '1', after: '0.5' })).toBe('March: 1 day, now 0.5');
+    expect(dayChangeText(fr(), 'fr', { month: 3, before: '1', after: '0.5' })).toMatch(/^Mars[ \u00a0]: 1 jour, maintenant 0,5$/);
   });
 
-  it('formats money and FTE strings without a float', () => {
-    expect(formatMoney('65200.00')).toBe('65 200');
-    expect(formatMoney('91599.96')).toBe('91 599.96');
-    expect(formatMoney('-1234.5')).toBe('-1 234.50');
-    expect(formatMoney('123456789012345678.01')).toBe('123 456 789 012 345 678.01');
-    expect(formatMoney('0.00')).toBe('0');
-    expect(formatMoney('-0.00')).toBe('0');
-    expect(formatFteValue('1')).toBe('1.00');
-    expect(formatFteValue('0.75')).toBe('0.75');
-    expect(formatFteValue('1234.5')).toBe('1 234.50');
+  it('formats money and FTE strings in the language of the person, money without a float', () => {
+    expect(formatMoney('65200.00', 'en')).toBe('65 200');
+    expect(formatMoney('91599.96', 'en')).toBe('91 599.96');
+    expect(formatMoney('91599.96', 'fr')).toBe('91 599,96');
+    expect(formatMoney('-1234.5', 'de')).toBe('-1 234,50');
+    expect(formatMoney('123456789012345678.01', 'en')).toBe('123 456 789 012 345 678.01');
+    expect(formatMoney('0.00', 'fr')).toBe('0');
+    expect(formatMoney('-0.00', 'en')).toBe('0');
+    // The FTE as the lists write it: two decimals, the separators of the language.
+    expect(formatFte('1', 'fr')).toBe('1,00');
+    expect(formatFte('0.75', 'en')).toBe('0.75');
+    expect(formatFte('1234.5', 'fr')).toBe('1\u202f234,50');
+    expect(formatFte('1', 'en')).toBe('1.00');
+    expect(formatFte('1234.5', 'en')).toBe('1,234.50');
   });
 });
 
