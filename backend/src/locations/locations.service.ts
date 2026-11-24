@@ -1128,25 +1128,25 @@ export class LocationsService {
     if (!existing || existing.location_id !== locationId) {
       return { ok: true };
     }
-
-    // The assets in it are left without a sub-location before it goes, each with the History entry
-    // its page writes when the sub-location is emptied by hand (`AssetsCrudService.update`: the row
-    // before and after, by the author of the gesture and its source): one statement for all of them.
-    const cleared: Array<Record<string, unknown>> = await mg.query(
-      `WITH cleared AS (
-         UPDATE assets a SET sub_location_id = NULL, updated_at = now()
-           FROM (SELECT id, updated_at FROM assets WHERE tenant_id = $2 AND sub_location_id = $1) old
-          WHERE a.tenant_id = $2 AND a.id = old.id
-         RETURNING a.*, old.updated_at AS previous_updated_at
-       ) SELECT * FROM cleared ORDER BY id`,
+    // The assets in it, locked and read as they are: each gets the History entry its page writes
+    // when the sub-location is emptied by hand (`AssetsCrudService.update`), written below in one
+    // statement for all of them, by the author of the gesture and its source.
+    const detached: Array<Record<string, unknown>> = await mg.query(
+      `SELECT * FROM assets WHERE tenant_id = $2 AND sub_location_id = $1 ORDER BY id FOR UPDATE`,
       [subItemId, existing.tenant_id],
     );
-    await writeAuditLogs(mg, cleared.map(({ previous_updated_at, ...after }) => ({
+
+    // Clear sub_location_id on affected assets before deleting
+    await mg.query(
+      `UPDATE assets SET sub_location_id = NULL, updated_at = now() WHERE sub_location_id = $1`,
+      [subItemId],
+    );
+    await writeAuditLogs(mg, detached.map((before) => ({
       table: 'assets',
-      recordId: String(after.id),
+      recordId: String(before.id),
       action: 'update',
-      before: { ...after, sub_location_id: subItemId, updated_at: previous_updated_at },
-      after,
+      before,
+      after: { ...before, sub_location_id: null },
       userId,
       source: opts?.audit?.source,
       sourceRef: opts?.audit?.sourceRef ?? null,

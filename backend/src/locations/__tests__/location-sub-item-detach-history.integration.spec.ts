@@ -7,7 +7,7 @@ import { DataSource } from 'typeorm';
 // A sub-location removed (lot K2b), by the site's Sub-locations table or by the assistant's card,
 // leaves its assets without a sub-location: each asset's History tab shows that change as its page
 // shows a sub-location emptied by hand (the field, before and after), by the author of the gesture,
-// "by Kad" for the card. The assets are cleared and their entries written in one statement each,
+// "by Kad" for the card. The assets are read, cleared and their entries written in one statement each,
 // whatever their number (one and twelve here).
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -137,8 +137,10 @@ async function run() {
             assert.equal(entries[0].change.after, null, 'emptied');
             assert.equal(typeof entries[0].change.before, typeof byHand.change.before, 'the sub-location it had, as the page names it');
           }
-          const clears = statements.filter((sql) => /UPDATE assets a SET sub_location_id = NULL/.test(sql));
+          const reads = statements.filter((sql) => /SELECT \* FROM assets WHERE tenant_id = \$2 AND sub_location_id = \$1/.test(sql));
+          const clears = statements.filter((sql) => /UPDATE assets SET sub_location_id = NULL/.test(sql));
           const entriesWritten = statements.filter((sql) => /INSERT INTO "audit_log"/.test(sql));
+          assert.equal(reads.length, 1, 'one statement reads the assets');
           assert.equal(clears.length, 1, 'one statement clears the assets');
           // The entries in one statement: as many audit inserts for twelve assets as for one.
           const one = inserts.get(gesture.name);
