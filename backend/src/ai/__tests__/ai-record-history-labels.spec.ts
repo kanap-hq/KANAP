@@ -1,8 +1,7 @@
 import * as assert from 'node:assert/strict';
-import * as fs from 'node:fs';
-import { backendPath } from '../../common/__tests__/backend-root';
 import { RECORD_HISTORY } from '../../audit/record-history.inventory';
-import { assertLocaleLabels } from '../../common/report-export/__tests__/locale-labels';
+import { assertCodeListIsTheScreens } from './code-list-locale';
+import { AiCodeNamer } from '../ai-code-names';
 import { RECORD_HISTORY_LISTS, withStateLabels } from '../ai-record-history.service';
 
 /**
@@ -40,30 +39,46 @@ function testOtherListsInThePersonsWords() {
   console.log('  severity, run or build, nature, cost center kind, origin, process type, billing: OK');
 }
 
+/** The lists of lot K2d: the workspace's catalog, the contract and line statuses, a version's method, an owner's type. */
+function testCatalogAndChildListsInThePersonsWords() {
+  const namer = new AiCodeNamer('de', {
+    lifecycleStates: [{ code: 'deprecated', label: 'Deprecated' }],
+    businessCriticalityLevels: [{ code: 'tier_1', label: 'Tier 1', translations: { de: { label: 'Stufe 1' } } }],
+  } as any);
+  const label = (table: string, field: string, after: string, subject: any = record) => (withStateLabels({ field, before: null, after }, table, subject, namer) as any).after_label;
+  assert.equal(label('applications', 'lifecycle', 'deprecated'), 'Veraltet');
+  assert.equal(label('applications', 'criticality', 'tier_1'), 'Stufe 1');
+  assert.equal(label('applications', 'hosting_model', 'on_premise'), 'On-Premise');
+  assert.equal(label('contracts', 'status', 'disabled'), 'Deaktiviert');
+  assert.equal(label('interfaces', 'lifecycle', 'deprecated'), 'Veraltet');
+  // A child row of the record: a version's allocation method, a line contact's type, an owner's type.
+  const version = { kind: 'version' } as any;
+  assert.equal(label('spend_items', 'allocation_method', 'manual_pct', version), 'Manuelle Prozentsätze');
+  assert.equal(label('spend_items', 'role', 'technical', { kind: 'contact' }), 'Technik');
+  assert.equal(label('applications', 'owner_type', 'business', { kind: 'owner' }), 'Fachbereich');
+  // The record's own fields are not a child's.
+  assert.equal(label('applications', 'lifecycle', 'deprecated', version), undefined);
+  console.log('  catalog values, statuses, a version\'s method, a contact\'s and an owner\'s type: OK');
+}
+
 function testListsAreTheHistoryTabs() {
   for (const [table, fields] of Object.entries(RECORD_HISTORY_LISTS.records)) {
     assert.ok(table in RECORD_HISTORY, `${table} has a History tab`);
-    for (const [field, list] of Object.entries(fields)) checkList(`${table}.${field}`, list);
+    for (const [field, list] of Object.entries(fields)) assertCodeListIsTheScreens(`${table}.${field}`, list);
   }
-  for (const [field, list] of Object.entries(RECORD_HISTORY_LISTS.children)) checkList(field, list);
+  for (const [table, fields] of Object.entries(RECORD_HISTORY_LISTS.recordChildren)) {
+    assert.ok(table in RECORD_HISTORY, `${table} has a History tab`);
+    for (const [field, list] of Object.entries(fields)) assertCodeListIsTheScreens(`${table} child ${field}`, list);
+  }
+  for (const [field, list] of Object.entries(RECORD_HISTORY_LISTS.children)) assertCodeListIsTheScreens(field, list);
   console.log('  every list is the History tab\'s, in the four languages: OK');
-}
-
-function checkList(name: string, list: { screen: string; labels: Record<string, Record<string, string>> }) {
-  const [namespace, path] = list.screen.split(':');
-  assert.ok(namespace && path, `${name}: screen is namespace:path`);
-  // Every code the History tab names, with its words in the four languages.
-  const json = JSON.parse(fs.readFileSync(backendPath('..', 'frontend', 'src', 'locales', 'en', `${namespace}.json`), 'utf8'));
-  const object = path.split('.').reduce<any>((node, part) => (node == null ? undefined : node[part]), json);
-  const codes = Object.keys(object ?? {});
-  assert.ok(codes.length > 0, `${name}: ${list.screen}`);
-  assertLocaleLabels(namespace, Object.fromEntries(codes.map((code) => [code, `${path}.${code}`])), list.labels as any);
 }
 
 function run() {
   console.log('ai-record-history-labels.spec');
   testPriorityInThePersonsWords();
   testOtherListsInThePersonsWords();
+  testCatalogAndChildListsInThePersonsWords();
   testListsAreTheHistoryTabs();
   console.log('ai-record-history-labels.spec: ok');
 }

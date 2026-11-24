@@ -34,6 +34,7 @@ import { AiHelpManualService, HELP_SECTION_MAX_CHARS } from './ai-help-manual.se
 import { AiImportMappingService } from './import/ai-import-mapping.service';
 import { AI_IMPORT_KEYS } from './import/ai-import-access';
 import { personWriteLanguage } from './ai-write-texts';
+import { AI_CODE_NAMED_TOOLS, AiCodeNamer, aiNamesLanguage, withCodeNames, type AiCodeNamedTool } from './ai-code-names';
 import { AI_BULK_EDIT_TOOLS, BULK_EDIT_PLAN_REFUSAL, MUTATION_PLAN_IS_NOT_BULK } from './mutation/ai-bulk-edit';
 import {
   AI_CONTEXT_ENTITY_TYPES,
@@ -1158,6 +1159,21 @@ export class AiToolRegistry {
       });
     }
 
-    return definition.execute(context, parsed.data);
+    const output = await definition.execute(context, parsed.data);
+    return (AI_CODE_NAMED_TOOLS as readonly string[]).includes(definition.name)
+      ? this.withCodeNames(definition.name as AiCodeNamedTool, context, parsed.data, output)
+      : output;
+  }
+
+  /**
+   * A read result with the name of each code next to it (`ai-code-names.ts`), in the person's
+   * language, else the chat's screen, else the workspace's: Kad and the MCP server read the same.
+   */
+  private async withCodeNames(tool: AiCodeNamedTool, context: AiExecutionContextWithManager, input: unknown, output: unknown): Promise<unknown> {
+    const language = await aiNamesLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
+    const catalogs = this.itOpsSettings
+      ? await this.itOpsSettings.getCatalogLabels(context.tenantId, { manager: context.manager })
+      : null;
+    return withCodeNames(tool, input, output, new AiCodeNamer(language, catalogs));
   }
 }

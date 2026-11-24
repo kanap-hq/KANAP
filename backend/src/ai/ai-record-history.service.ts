@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { moduleRightRequired } from '../auth/module-right-required';
 import { RECORD_HISTORY, recordHistoryEntry } from '../audit/record-history.inventory';
@@ -10,26 +10,12 @@ import {
 import { resolveBudgetLine, resolveToUuid } from '../common/resolve-item-id';
 import { BUDGET_LINE_TABLE } from '../spend/budget-nature';
 import { PRODUCT_NAME } from '../config/product';
+import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { entityNotFound, isUuid } from './ai-entity-reference.util';
 import { AiPolicyService, missingRightMessage } from './ai-policy.service';
 import { AiQueryExecutor } from './query/ai-query.executor';
 import { AI_PERSON_WITHOUT_NAME } from './query/ai-support.query';
-import {
-  BILLING_FREQUENCY_LABELS,
-  BUDGET_NATURE_LABELS,
-  COST_CENTER_KIND_LABELS,
-  INCIDENT_SEVERITY_LABELS,
-  INCIDENT_STATUS_LABELS,
-  PROCESS_TYPE_LABELS,
-  PROJECT_ORIGIN_LABELS,
-  PROJECT_STATUS_LABELS,
-  REQUEST_STATUS_LABELS,
-  RUN_BUILD_LABELS,
-  TASK_PRIORITY_LABELS,
-  TASK_STATUS_LABELS,
-  type AiImportCodeLabels,
-} from './import/ai-import-code-labels';
-import { personWriteLanguage, VULNERABILITY_STATE_LABELS, type AiWriteLanguage } from './ai-write-texts';
+import { AI_CODE_LISTS as L, AiCodeNamer, aiNamesLanguage, type AiCodeList, type AiNamesLanguage } from './ai-code-names';
 import {
   AI_DETAIL_ENTITY_TYPES,
   type AiDetailEntityType,
@@ -144,69 +130,73 @@ function withoutRawIds(value: unknown): unknown {
 }
 
 /**
- * A fixed list of the History tab: `screen`, the locale object the tab names a value from
- * (`namespace:path`, as `enumerationLabel` of `frontend/src/lib/audit/auditLogValues.ts` reads it),
- * and the server's copy of its words, kept for the import and the cards. The API has no locale file
- * of the screens: `ai-record-history-labels.spec.ts` checks each copy against the tab's object in
- * the four languages.
- */
-type HistoryList = { screen: string; labels: AiImportCodeLabels };
-
-/**
- * The fields the History tab names from a fixed list that the server already writes in the
- * person's words, by table (a field of the record itself) or by field (a child row's, wherever it
- * appears: a vulnerability row is a child of a technology). The tab's other lists (criticality,
- * environment, hosting model, the shared statuses...) have no copy on the server: their values stay
- * as stored.
+ * The fields the History tab names from a list, named here in the person's words with the lists of
+ * `ai-code-names.ts` (a fixed list copied from the screens, or the workspace's catalog): by table
+ * (a field of the record itself), by table for its child rows (a version's allocation method, a
+ * line's contact role), or by field (a child row's, wherever it appears: a vulnerability row is a
+ * child of a technology). The tab's other lists have no name here yet: their values stay as stored.
  */
 export const RECORD_HISTORY_LISTS: {
-  records: Readonly<Record<string, Readonly<Record<string, HistoryList>>>>;
-  children: Readonly<Record<string, HistoryList>>;
+  records: Readonly<Record<string, Readonly<Record<string, AiCodeList>>>>;
+  recordChildren: Readonly<Record<string, Readonly<Record<string, AiCodeList>>>>;
+  children: Readonly<Record<string, AiCodeList>>;
 } = {
   records: {
-    tasks: {
-      status: { screen: 'portfolio:statuses.task', labels: TASK_STATUS_LABELS },
-      priority_level: { screen: 'portfolio:priority', labels: TASK_PRIORITY_LABELS },
+    tasks: { status: L.taskStatus, priority_level: L.taskPriority },
+    portfolio_projects: { status: L.projectStatus, origin: L.projectOrigin },
+    portfolio_requests: { status: L.requestStatus },
+    incidents: { status: L.incidentStatus, severity: L.incidentSeverity, category: L.incidentCategory },
+    [BUDGET_LINE_TABLE]: { status: L.enabled, nature: L.budgetNature, run_build: L.runBuild },
+    cost_centers: { kind: L.costCenterKind },
+    business_processes: { process_type: L.processType },
+    contracts: { status: L.enabled, billing_frequency: L.billingFrequency },
+    contacts: { supplier_role: L.contactRole },
+    applications: {
+      status: L.enabled,
+      lifecycle: L.lifecycle,
+      category: L.applicationCategory,
+      criticality: L.businessCriticality,
+      cyber_criticality: L.cyberCriticality,
+      recovery_wave: L.recoveryWave,
+      data_class: L.dataClass,
+      hosting_model: L.hostingModel,
     },
-    portfolio_projects: {
-      status: { screen: 'portfolio:statuses.project', labels: PROJECT_STATUS_LABELS },
-      origin: { screen: 'portfolio:origin', labels: PROJECT_ORIGIN_LABELS },
-    },
-    portfolio_requests: { status: { screen: 'portfolio:statuses.request', labels: REQUEST_STATUS_LABELS } },
-    incidents: {
-      status: { screen: 'it:enums.incidentStatus', labels: INCIDENT_STATUS_LABELS },
-      severity: { screen: 'it:enums.incidentSeverity', labels: INCIDENT_SEVERITY_LABELS },
-    },
-    [BUDGET_LINE_TABLE]: {
-      nature: { screen: 'admin:auditLogs.values.nature', labels: BUDGET_NATURE_LABELS },
-      run_build: { screen: 'admin:auditLogs.values.runBuild', labels: RUN_BUILD_LABELS },
-    },
-    cost_centers: { kind: { screen: 'admin:auditLogs.values.costCenterKind', labels: COST_CENTER_KIND_LABELS } },
-    business_processes: { process_type: { screen: 'master-data:businessProcesses.types', labels: PROCESS_TYPE_LABELS } },
-    contracts: { billing_frequency: { screen: 'ops:contracts.billing', labels: BILLING_FREQUENCY_LABELS } },
+    assets: { status: L.lifecycle, kind: L.serverKind, environment: L.environment, admin_zone: L.adminZone },
+    interfaces: { lifecycle: L.lifecycle, criticality: L.businessCriticality, data_class: L.dataClass, data_category: L.interfaceDataCategory },
+    connections: { lifecycle: L.lifecycle, criticality: L.businessCriticality, data_class: L.dataClass },
+    technologies: { lifecycle: L.lifecycle, family: L.technologyFamily, hosting_type: L.hostingType, admin_zone: L.adminZone },
+  },
+  recordChildren: {
+    applications: { owner_type: L.ownerType, environment: L.environment },
+    [BUDGET_LINE_TABLE]: { allocation_method: L.allocationMethod, role: L.contactRole },
+    contracts: { role: L.contactRole },
   },
   children: {
-    vulnerability_state: { screen: 'admin:auditLogs.values.vulnerabilityState', labels: VULNERABILITY_STATE_LABELS },
+    vulnerability_state: L.vulnerabilityState,
   },
 };
 
-/** A change of a fixed-list field with the History tab's words for its values, in the person's language. */
+/**
+ * A change of a list field with the History tab's words for its values (`before_label`,
+ * `after_label`), in the namer's language; a bare language names the fixed lists only.
+ */
 export function withStateLabels(
   change: unknown,
   table: string,
   subject: RecordHistorySubject,
-  language: AiWriteLanguage,
+  names: AiCodeNamer | AiNamesLanguage,
 ): unknown {
   if (!change || typeof change !== 'object') return change;
   const entry = change as { field?: unknown; before?: unknown; after?: unknown };
   const field = String(entry.field ?? '');
   const list = RECORD_HISTORY_LISTS.children[field]
-    ?? (subject.kind === 'record' ? RECORD_HISTORY_LISTS.records[table]?.[field] : undefined);
+    ?? (subject.kind === 'record'
+      ? RECORD_HISTORY_LISTS.records[table]?.[field]
+      : RECORD_HISTORY_LISTS.recordChildren[table]?.[field]);
   if (!list) return change;
-  const words = list.labels[language];
-  const label = (value: unknown) => (typeof value === 'string' && Object.hasOwn(words, value) ? words[value] : undefined);
-  const before = label(entry.before);
-  const after = label(entry.after);
+  const namer = typeof names === 'string' ? new AiCodeNamer(names) : names;
+  const before = namer.name(list, entry.before);
+  const after = namer.name(list, entry.after);
   return { ...entry, ...(before ? { before_label: before } : {}), ...(after ? { after_label: after } : {}) };
 }
 
@@ -247,6 +237,7 @@ export class AiRecordHistoryService {
     private readonly policy: AiPolicyService,
     private readonly queryExecutor: AiQueryExecutor,
     private readonly history: RecordHistoryService,
+    @Optional() private readonly itOpsSettings?: ItOpsSettingsService,
   ) {}
 
   /** The record an `entity_id` names, in the person's transaction; a name or reference that matches none is not found. */
@@ -297,13 +288,15 @@ export class AiRecordHistoryService {
       throw error;
     }
 
-    const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
+    const language = await aiNamesLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
+    const catalogs = this.itOpsSettings ? await this.itOpsSettings.getCatalogLabels(context.tenantId, { manager: context.manager }) : null;
+    const namer = new AiCodeNamer(language, catalogs);
     const items = page.items.map((item): AiRecordHistoryEntryDto => ({
       at: item.at,
       action: item.action,
       actor: withoutActorEmail(item.actor),
       subject: withoutRawIds(item.subject) as RecordHistorySubject,
-      changes: item.changes.map((change) => withStateLabels(withoutRawIds(change), table, item.subject, language)),
+      changes: item.changes.map((change) => withStateLabels(withoutRawIds(change), table, item.subject, namer)),
     }));
     return {
       entity: { type: input.entity_type, id: input.entity_id },

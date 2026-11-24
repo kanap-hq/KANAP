@@ -208,6 +208,8 @@ async function testPromptCarriesTheUserTimeZoneAndLocalTime() {
   assert.match(prompt, /quote them as given/);
   assert.match(prompt, /If a value carries another offset \(including `Z`\), convert it to `time_zone` before quoting/);
   assert.match(prompt, /Date-only fields keep their calendar day/);
+  // Lot K2d: a code arrives with its name, which the answer quotes.
+  assert.match(prompt, /comes with its name in the user's language .*quote the name, never the code\./);
 
   const fallback = service.build({ ...baseParams, availableTools: [], timeZone: 'Mars/Olympus' });
   assert.match(fallback, /"time_zone": "UTC"/, 'a zone nobody knows reads as UTC');

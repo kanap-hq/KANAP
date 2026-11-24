@@ -408,7 +408,10 @@ export class AiSystemPromptService {
         'Date-time values in tool results are written in `time_zone` with an explicit UTC offset ' +
         '(for example 2026-06-02T07:50:00+02:00): quote them as given. ' +
         'If a value carries another offset (including `Z`), convert it to `time_zone` before quoting. ' +
-        'A value with no offset is UTC. Date-only fields keep their calendar day.',
+        'A value with no offset is UTC. Date-only fields keep their calendar day. ' +
+        'A code of a list (status, lifecycle, category, criticality, type, role, method) comes with its name in the user\'s language ' +
+        '(`<field>_name`, `key_name` in a group, `names` beside filter values, `before_label` and `after_label` in a history entry): ' +
+        'quote the name, never the code.',
     };
 
     if (profile.promptMode === 'minimal') {
