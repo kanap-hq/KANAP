@@ -580,6 +580,78 @@ async function testKadDetailWords(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('ok - Kad\'s detail: who expects it, the columns by name and how they are entered, the only cause; conforming and unconcerned lines');
 }
 
+/**
+ * Kad and the MCP server name each check as the "To check" column does, in the person's language,
+ * next to its code: `to_check_names` on a row, `key_name` on a group, `value_names` with the filter
+ * values. The detail says why an account is outside the company's chart (`account_chart`): the two
+ * charts by name for a reader of the accounts and the companies, the fact alone for the others. And
+ * `describe_entity_filters` counts its fields under names that cannot read as a number of lines.
+ */
+async function testKadCheckNames(h: Harness, runner: QueryRunner, s: Seed) {
+  await savepoint(runner, async () => {
+    const chartId = async (prefix: string) => (await runner.query(`SELECT id FROM chart_of_accounts WHERE tenant_id = $1 AND code LIKE $2`, [s.tenantId, `${prefix}-%`]))[0].id;
+    const chartCode = async (prefix: string) => (await runner.query(`SELECT code FROM chart_of_accounts WHERE tenant_id = $1 AND code LIKE $2`, [s.tenantId, `${prefix}-%`]))[0].code;
+    const companyOf = (label: string) => `(SELECT paying_company_id FROM spend_items WHERE tenant_id = $1 AND id = '${s.lines[label].id}')`;
+    const aLine = LINES.find((line) => line.company === 'a' && line.account && !line.disabledAt)!;
+    const qpLabels = toCheckLabels(truth());
+    const bBoth = LINES.find((line) => line.company === 'b' && line.account && !line.disabledAt && qpLabels.includes(line.label))!;
+    await runner.query(`UPDATE companies SET coa_id = $2 WHERE tenant_id = $1 AND id = ${companyOf(aLine.label)}`, [s.tenantId, await chartId('LOCAL')]);
+    await runner.query(`UPDATE companies SET coa_id = $2 WHERE tenant_id = $1 AND id = ${companyOf(bBoth.label)}`, [s.tenantId, await chartId('OTHER')]);
+    await runner.query(`UPDATE users SET locale = 'fr' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.users.admin]);
+    await runner.query(`UPDATE users SET locale = NULL WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.users.budgetOnly]);
+    const QP = 'Quantité et prix';
+    const COA = 'Compte hors du plan de la société';
+    const admin = aiContext(runner, s, s.users.admin);
+
+    // A row: the codes for the filters, the names to quote.
+    const listed = await h.queries.execute(admin, { entity_type: 'budget_lines', filters: { to_check: ['coa_mismatch'] }, limit: 50 });
+    const both = listed.items.find((item: any) => item.label === `Line ${bBoth.label}`) as any;
+    assert.deepEqual([both.metadata.to_check, both.metadata.to_check_names], [['quantity_price', 'coa_mismatch'], [QP, COA]], 'a row: the codes, and the names on screen in French');
+    assert.ok(listed.items.every((item: any) => item.metadata.to_check_names.includes(COA)), 'every row listed names the check filtered on');
+    const four = await h.queries.execute(aiContext(runner, s, s.users.budgetOnly), { entity_type: 'budget_lines', filters: { to_check: ['coa_mismatch'] }, limit: 1 });
+    assert.deepEqual((four.items[0] as any).metadata.to_check_names.slice(-1),
+      ['en: Account not in the company\'s chart; fr: Compte hors du plan de la société; de: Konto nicht im Kontenplan des Unternehmens; es: Cuenta fuera del plan de la empresa'],
+      'no language in the profile: the four names');
+
+    // A group, and a second group field.
+    const grouped = await h.aggregates.execute(admin, { entity_type: 'budget_lines', group_by: 'to_check' });
+    const byKey = new Map((grouped.groups as any[]).map((group) => [group.key, group]));
+    assert.equal(byKey.get('quantity_price, coa_mismatch')?.key_name, `${QP}, ${COA}`, 'a group of both checks: both names');
+    assert.equal(byKey.get('coa_mismatch')?.key_name, COA, 'a group of one check: its name');
+    assert.equal(byKey.get(null)?.key_name, null, 'the lines that fail none: no name');
+    const then = await h.aggregates.execute(admin, { entity_type: 'budget_lines', group_by: 'nature', then_by: 'to_check' } as any);
+    assert.ok((then.groups as any[]).some((group) => group.then_key === 'coa_mismatch' && group.then_key_name === COA), 'a second group field: its name too');
+
+    // The filter values.
+    const values = await h.queries.executeFilterValues(admin, { entity_type: 'budget_lines', fields: ['to_check'] });
+    assert.deepEqual(values.values.to_check, ['quantity_price', 'coa_mismatch', null], 'the codes to filter on');
+    assert.deepEqual(values.value_names, { to_check: { quantity_price: QP, coa_mismatch: COA } }, 'their names on screen');
+
+    // Why the account is outside the company's chart.
+    const chartOf = async (userId: string, label: string) =>
+      (await h.queries.executeDetail(aiContext(runner, s, userId), { entity_type: 'budget_lines', entity_id: s.lines[label].ref })).data.account_chart as any;
+    const local = await chartCode('LOCAL');
+    const other = await chartCode('OTHER');
+    const outside = await chartOf(s.users.admin, bBoth.label);
+    assert.equal(outside.status, 'to_check', 'outside: to check');
+    assert.deepEqual([outside.account_chart, outside.paying_company_chart], [local, other], 'outside: both charts named');
+    assert.match(outside.paying_company, /^Company B /, 'outside: the paying company named');
+    assert.match(outside.explanation, new RegExp(`belongs to the chart of accounts ${local}, while its paying company Company B \\S+ uses the chart ${other}`), 'outside: the fact in words');
+    assert.match(outside.explanation, /only cause of `coa_mismatch`/, 'outside: the only cause');
+    const inside = await chartOf(s.users.admin, aLine.label);
+    assert.equal(inside.status, 'conforms', 'inside: conforms');
+    assert.match(inside.explanation, /the account is in the company's chart/, 'inside: says it');
+    const noAccounts = await chartOf(s.users.budgetOnly, bBoth.label);
+    assert.equal(noAccounts.status, 'to_check', 'without the right on accounts: still to check');
+    assert.doesNotMatch(JSON.stringify(noAccounts), new RegExp(`${local}|${other}`), 'without the right on accounts: no chart named');
+    assert.match(noAccounts.charts_withheld, /right on accounts/, 'without the right on accounts: says why');
+    const noCompanies = await chartOf(s.users.budgetAndAccounts, bBoth.label);
+    assert.deepEqual([noCompanies.account_chart, noCompanies.paying_company_chart], [local, undefined], 'without the right on companies: the account\'s chart only');
+    assert.match(noCompanies.charts_withheld, /right on companies/, 'without the right on companies: says why');
+  });
+  console.log('ok - Kad names each check as the screen, in the person\'s language; says why an account is outside the company\'s chart');
+}
+
 async function testLimitedPerson(h: Harness, runner: QueryRunner, s: Seed) {
   if (!(await runner.query(`SELECT to_regrole('kanap_data_limited') IS NOT NULL AS present`))[0].present) {
     if (process.env.CI) assert.fail('CI installs kanap_data_limited before the migrations');
@@ -679,6 +751,7 @@ async function run() {
       await testRoute(h, runner, s);
       await testKad(h, runner, s);
       await testKadDetailWords(h, runner, s);
+      await testKadCheckNames(h, runner, s);
     });
     // `data_access_apply` limits the rest of its transaction: a transaction of its own.
     await inTransaction(h, (runner, s) => testLimitedPerson(h, runner, s));

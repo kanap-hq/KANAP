@@ -116,15 +116,18 @@ export const budgetLinesRegistry: AiEntityFilterRegistry = {
       ai: 'to_check',
       grid: 'to_check',
       type: 'set',
-      description: 'The data quality checks the line fails, the "To check" column of the budget list: a list of check names, null when it fails none. '
-        + '`quantity_price`: the line\'s account, or else its consolidation account, expects the amounts to be built as quantity × price and at least '
+      description: 'The data quality checks the line fails, the "To check" column of the budget list: a list of check codes, null when it fails none. '
+        + 'Each row also gives `to_check_names`, the same checks by their names on screen in the person\'s language (in four languages when the profile sets none: use the one of the conversation); '
+        + 'a group gives `key_name`, the filter values give `value_names`. Always name a check by that name, never by its code: the codes are for filters only. '
+        + '`quantity_price` (on screen "Quantity and price"): the line\'s account, or else its consolidation account, expects the amounts to be built as quantity × price and at least '
         + 'one of the line\'s columns is not (a column shown in the budget settings, not frozen, with a non-zero total for a year the line has a version). '
-        + '`coa_mismatch`: the line\'s account belongs to another chart of accounts than its paying company\'s. A line may fail both. '
-        + 'Filter on one name to get the lines that fail that check (the same lines as that control of the Budget home tile\'s data hygiene); null keeps the lines that fail none. '
-        + 'For `quantity_price`, a line\'s get_entity_detail says why in `quantity_price_entry`: `expected_by` (the account that expects it), '
+        + '`coa_mismatch` (on screen "Account not in the company\'s chart"): the line\'s account belongs to another chart of accounts than its paying company\'s. A line may fail both. '
+        + 'Filter on one code to get the lines that fail that check (the same lines as that control of the Budget home tile\'s data hygiene); null keeps the lines that fail none. '
+        + 'A line\'s get_entity_detail says why: for `quantity_price` in `quantity_price_entry`: `expected_by` (the account that expects it), '
         + '`columns_to_check` (each column by its name on screen and year, in four languages when the profile sets none: use the one of the conversation; '
-        + 'with how it is entered today) and `explanation`, the whole cause '
-        + 'of `quantity_price`; its `status` is also `conforms` or `not_expected` for the other lines. Answer "why is this line to check" from it.',
+        + 'with how it is entered today) and `explanation`, the whole cause; its `status` is also `conforms` or `not_expected` for the other lines. '
+        + 'For `coa_mismatch` in `account_chart`: the line\'s account and its chart of accounts, the paying company and its chart, and `explanation`. '
+        + 'Answer "why is this line to check" from them.',
       values: ['quantity_price', 'coa_mismatch', null],
       discoverable: true,
       sortable: true,

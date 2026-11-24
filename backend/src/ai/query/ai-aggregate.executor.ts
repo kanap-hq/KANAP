@@ -11,7 +11,8 @@ import { PermissionsService, type PermissionLevel, type Resource } from '../../p
 import { RolesService } from '../../roles/roles.service';
 import { aggregateRolesRows, listAiRolePermissions, listAiRoles } from './ai-roles.query';
 import { aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
-import { readAiScreenLanguage } from '../ai-unread-families';
+import { readAiScreenLanguage, type AiScreenLanguage } from '../ai-unread-families';
+import { budgetLineCheckKeyName } from './ai-line-check-names';
 import { DataAccessAdminService } from '../../data-access/data-access-admin.service';
 import { DataAccessReservedException } from '../../data-access/reserved-operations';
 import {
@@ -590,8 +591,17 @@ function budgetGroupKeys(field: AiFilterFieldDef): string[] {
   return field.ai === 'line' ? BUDGET_LINE_GROUP_KEYS : [field.grid];
 }
 
-/** A budget group's key, read on its engine keys: a line is named by its reference (BL-12) and its title, never by its id. */
-function budgetGroupKey(field: AiFilterFieldDef, keys: Array<string | null>): { key: string | null; title?: string | null } {
+/**
+ * A budget group's key, read on its engine keys: a line is named by its reference (BL-12) and its title, never by its id.
+ * A group of the line checks (`to_check`, the codes joined) also carries `key_name`, their names on screen in
+ * `language` (`checkLanguage`): the answer quotes it, never the codes.
+ */
+function budgetGroupKey(
+  field: AiFilterFieldDef,
+  keys: Array<string | null>,
+  language: AiScreenLanguage | null = null,
+): { key: string | null; title?: string | null; key_name?: string | null } {
+  if (field.ai === 'to_check') return { key: keys[0] ?? null, key_name: budgetLineCheckKeyName(keys[0] ?? null, language) };
   if (field.ai !== 'line') return { key: keys[0] ?? null };
   return { key: keys[2] != null ? `BL-${keys[2]}` : null, title: keys[1] ?? null };
 }
@@ -1727,10 +1737,14 @@ export class AiAggregateExecutor {
         ...(Object.keys(unknown).length ? { unknown } : {}),
       };
     };
+    const language = await this.checkLanguage(context, groupField, thenField);
     const groups = result.groups.map((group) => {
-      const key = budgetGroupKey(groupField, group.keys);
+      const key = budgetGroupKey(groupField, group.keys, language);
       // A null `then_key` is a real group: the lines without a value of the second field.
-      const then = thenField ? { then_key: group.keys[groupKeys.length] ?? null } : {};
+      const thenKey = thenField ? group.keys[groupKeys.length] ?? null : null;
+      const then = thenField
+        ? { then_key: thenKey, ...(thenField.ai === 'to_check' ? { then_key_name: budgetLineCheckKeyName(thenKey, language) } : {}) }
+        : {};
       if (more.metrics?.length) return { ...key, ...then, ...metricsRow(group) };
       if (!spec.measures.length) return { ...key, ...then, count: group.count };
       return fte ? { ...key, ...then, value: group.values.value, unknown: group.unknown.value } : { ...key, ...then, value: group.values.value };
@@ -1796,11 +1810,12 @@ export class AiAggregateExecutor {
     const access = await aiBudgetListAccess(this.policy, context);
     const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager, access });
     const valueOf = (figures: AiBudgetStaffFigures) => (ratio.kind === 'cost_per_fte' ? figures.cost_per_fte : figures.day_rate);
+    const language = await this.checkLanguage(context, groupField);
     const groups = result.groups
       .filter((group) => group.values[governing] != null)
       .map((group): BudgetRatioGroup => {
         const figures = budgetStaffFigures(group.values);
-        return { ...budgetGroupKey(groupField, group.keys), count: group.count, value: valueOf(figures), ...figures };
+        return { ...budgetGroupKey(groupField, group.keys, language), count: group.count, value: valueOf(figures), ...figures };
       });
     const total = result.total.values;
     const figures = budgetStaffFigures(total);
@@ -1859,10 +1874,11 @@ export class AiAggregateExecutor {
     const result = await this.budgetLines.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager, access });
     // One direction: the reader's rows are the groups, in their order.
     const { processed, allTotals } = readDelta([direction], [result as unknown as ReportAggregateResult], delta.measure);
+    const language = await this.checkLanguage(context, groupField);
     const groups = result.groups.map((group, i): BudgetDeltaGroup => {
       const row = processed[i];
       return {
-        ...budgetGroupKey(groupField, group.keys),
+        ...budgetGroupKey(groupField, group.keys, language),
         count: group.count,
         previous: row.previous,
         current: row.current,
@@ -1913,9 +1929,10 @@ export class AiAggregateExecutor {
       peak: row.peak == null ? null : round2(row.peak),
     });
     // The reader keys a line by its reference and any other group by its value (`name` null: the lines without one).
+    const language = await this.checkLanguage(context, groupField);
     const rows = staffing.rows.map((row): BudgetMonthlyFteGroup => (line
       ? { key: row.key.startsWith('BL-') ? row.key : null, title: row.name, ...figures(row) }
-      : { key: row.name == null ? null : row.key, ...figures(row) }));
+      : { ...budgetGroupKey(groupField, [row.name == null ? null : row.key], language), ...figures(row) }));
     const groups = limit != null ? rows.slice(0, limit) : rows;
     const overall: BudgetOverall = {
       count: result.total.count,
@@ -1924,6 +1941,12 @@ export class AiAggregateExecutor {
       ...(staffing.detached ? { fte_amount_not_following_lines: staffing.detached.fte } : {}),
     };
     return { groups, total: result.total.count, groupCount: rows.length, overall };
+  }
+
+  /** The person's language when a group field is the line checks (`to_check`), whose groups are named; null otherwise. */
+  private async checkLanguage(context: AiExecutionContextWithManager, ...fields: Array<AiFilterFieldDef | null | undefined>): Promise<AiScreenLanguage | null> {
+    if (!fields.some((field) => field?.ai === 'to_check')) return null;
+    return readAiScreenLanguage(context.manager, context.tenantId, context.userId);
   }
 
   /** Whether the caller reads a family; nothing without the policy. */

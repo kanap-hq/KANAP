@@ -463,6 +463,8 @@ export type AiAggregateResult = {
 
 export type AiFilterValuesResult = {
   values: Record<string, Array<string | boolean | null>>;
+  /** The name on screen of each value of a field whose values are codes (budget lines: `to_check`), in the person's language. */
+  value_names?: Record<string, Record<string, string>>;
   fields_ignored: string[];
   /** The requested fields this person may not read, with the reason (also in `fields_ignored`). */
   fields_withheld?: AiWithheldField[];
