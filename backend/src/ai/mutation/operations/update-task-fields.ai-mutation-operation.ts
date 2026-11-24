@@ -442,8 +442,8 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
   ): Promise<{ value: unknown; display: string | null }> {
     const ref = textOrNull(rawValue);
     if (!ref) return { value: null, display: null };
-    const rows: Array<{ id: string; label: string; category_id: string }> = await context.manager.query(
-      `SELECT id, name AS label, category_id FROM portfolio_streams WHERE tenant_id = $1 AND (${isUuid(ref) ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`,
+    const rows: Array<Record<string, unknown>> = await context.manager.query(
+      `SELECT * FROM portfolio_streams WHERE tenant_id = $1 AND (${isUuid(ref) ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`,
       [context.tenantId, ref],
     );
     if (rows.length === 0) throw new NotFoundException(`portfolio streams "${ref}" not found.`);
@@ -452,7 +452,7 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
       : (await this.shownClassification(context, task)).category_id;
     const exact = rows.filter((row) => String(row.id).toLowerCase() === ref.toLowerCase());
     const row = exact.length === 1 ? exact[0] : await pickMemberByParent(context.manager, 'stream', rows, ref, textOrNull(category), context.tenantId);
-    return { value: String(row.id), display: String(row.label || row.id) };
+    return { value: String(row.id), display: String(row.name || row.id) };
   }
 
   /**

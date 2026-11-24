@@ -155,8 +155,50 @@ async function testTasks() {
   });
 }
 
+/**
+ * More homonyms than one search page (A3 of the review): seven companies with a department "Finance",
+ * twelve categories with a stream "Ops". The one of the record's parent is found, whichever it is, and
+ * with no parent Kad is told every parent up to ten, then how many more.
+ */
+async function testManyHomonyms() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, creatorId } = await seed(runner);
+    const ctx = context(runner, tenantId, creatorId);
+    const kad = support();
+    const companies: string[] = [];
+    for (let i = 1; i <= 7; i += 1) {
+      const company = randomUUID();
+      companies.push(company);
+      await runner.query(`INSERT INTO companies (id, tenant_id, name, country_iso, city) VALUES ($1, $2, $3, 'FR', 'Lyon')`, [company, tenantId, `Subsidiary ${i}`]);
+      await runner.query(`INSERT INTO departments (id, tenant_id, company_id, name) VALUES ($1, $2, $3, 'Finance')`, [randomUUID(), tenantId, company]);
+    }
+    const last = companies[6];
+    await runner.query(
+      `INSERT INTO portfolio_requests (id, tenant_id, item_number, name, status, company_id) VALUES ($1, $2, 901, 'Seventh', 'pending_review', $3)`,
+      [randomUUID(), tenantId, last],
+    );
+    const [lastFinance] = await runner.query(`SELECT id FROM departments WHERE company_id = $1`, [last]);
+    const found = await kad.prepareUpdatePreview(ctx, { entity_type: 'requests', ref: 'REQ-901', fields: { department_id: 'Finance' } });
+    assert.equal(found.mutationInput.fields.department_id, lastFinance.id, 'the Finance of the seventh company');
+
+    for (let i = 1; i <= 10; i += 1) {
+      const category = randomUUID();
+      await runner.query(`INSERT INTO portfolio_categories (id, tenant_id, name) VALUES ($1, $2, $3)`, [category, tenantId, `Category ${String(i).padStart(2, '0')}`]);
+      await runner.query(`INSERT INTO portfolio_streams (id, tenant_id, category_id, name) VALUES ($1, $2, $3, 'Ops')`, [randomUUID(), tenantId, category]);
+    }
+    await runner.query(`INSERT INTO portfolio_requests (id, tenant_id, item_number, name, status) VALUES ($1, $2, 902, 'No parent', 'pending_review')`, [randomUUID(), tenantId]);
+    const departments = await refusal(runner, () => kad.prepareUpdatePreview(ctx, { entity_type: 'requests', ref: 'REQ-902', fields: { department_id: 'Finance' } }));
+    assert.equal(departments.code, 'DEPARTMENT_NAME_IN_SEVERAL_COMPANIES', departments.message);
+    assert.match(departments.message, /"Alpha", "Beta", "Subsidiary 1", .*"Subsidiary 7"\./, 'the nine companies named');
+    const streams = await refusal(runner, () => kad.prepareUpdatePreview(ctx, { entity_type: 'requests', ref: 'REQ-902', fields: { stream_id: 'Ops' } }));
+    assert.equal(streams.code, 'STREAM_NAME_IN_SEVERAL_CATEGORIES', streams.message);
+    assert.match(streams.message, /"Business", "Category 01", .*"Category 09" and 2 more\./, 'ten categories named, then how many more');
+  });
+}
+
 async function main() {
   const specs: Array<[string, () => Promise<void>]> = [
+    ['more homonyms than one search page', testManyHomonyms],
     ['requests and projects', testRequestsAndProjects],
     ['tasks', testTasks],
   ];

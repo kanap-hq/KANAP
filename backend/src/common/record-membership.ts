@@ -200,10 +200,14 @@ export function givenMembership(pairs: readonly MembershipPair[], body: Record<s
 }
 
 
+/** How many parents a refusal names before it says how many more there are. */
+const LISTED_PARENTS = 10;
+
 /**
  * A name several records share (two streams "Ops" of two categories), for Kad (P12 of 26.12.1): the
- * one of `rows` in `parentId`, the parent the write leaves on the record. None there, or no parent:
- * a 400 that names the parents that have one, for Kad to ask which.
+ * record of that name in `parentId`, the parent the write leaves on the record, looked up in the
+ * database (`rows`, a page of candidates, may leave it out). None there, or no parent: a 400 that
+ * names the parents that have one (ten, then how many more), for Kad to ask which.
  */
 export async function pickMemberByParent<T extends object>(
   manager: Queryable,
@@ -212,18 +216,28 @@ export async function pickMemberByParent<T extends object>(
   name: string,
   parentId: string | null | undefined,
   tenantId?: string | null,
-): Promise<T> {
+): Promise<T | Record<string, unknown>> {
   if (rows.length === 1) return rows[0];
-  const { parentColumn, parentTable, noun, parentNoun } = KINDS[kind];
-  const parentOfRow = (row: T) => valueOf((row as Record<string, unknown>)[parentColumn]);
-  const inParent = parentId ? rows.filter((row) => sameId(parentOfRow(row), parentId)) : [];
-  if (inParent.length === 1) return inParent[0];
-  const ids = [...new Set(rows.map(parentOfRow).filter((id): id is string => !!id && UUID_RE.test(id)))];
-  const parents: Array<{ name: string }> = ids.length === 0 ? [] : await manager.query(
-    `SELECT name FROM ${parentTable} WHERE tenant_id = ${tenantId ? '$2' : 'app_current_tenant()'} AND id = ANY($1::uuid[]) ORDER BY name`,
-    tenantId ? [ids, tenantId] : [ids],
+  const { table, parentColumn, parentTable, noun, parentNoun } = KINDS[kind];
+  const tenant = (index: number) => (tenantId ? `$${index}` : 'app_current_tenant()');
+  const withTenant = (params: unknown[]) => (tenantId ? [...params, tenantId] : params);
+  const parent = valueOf(parentId);
+  if (parent && UUID_RE.test(parent)) {
+    const inParent: Record<string, unknown>[] = await manager.query(
+      `SELECT * FROM ${table} WHERE tenant_id = ${tenant(3)} AND LOWER(name) = LOWER($1::text) AND ${parentColumn} = $2::uuid LIMIT 2`,
+      withTenant([name, parent]),
+    );
+    if (inParent.length === 1) return inParent[0];
+  }
+  const parents: Array<{ name: string }> = await manager.query(
+    `SELECT DISTINCT p.name FROM ${table} c
+       JOIN ${parentTable} p ON p.id = c.${parentColumn} AND p.tenant_id = c.tenant_id
+      WHERE c.tenant_id = ${tenant(2)} AND LOWER(c.name) = LOWER($1::text)
+      ORDER BY p.name`,
+    withTenant([name]),
   );
-  const listed = parents.map((parent) => `"${parent.name}"`).join(', ');
+  const more = parents.length - LISTED_PARENTS;
+  const listed = parents.slice(0, LISTED_PARENTS).map((row) => `"${row.name}"`).join(', ') + (more > 0 ? ` and ${more} more` : '');
   const plural = kind === 'stream' ? 'categories' : 'companies';
   throw new BadRequestException({
     statusCode: 400,
@@ -232,6 +246,6 @@ export async function pickMemberByParent<T extends object>(
     message: parentId
       ? `No ${noun} "${name}" belongs to the record's ${parentNoun}. The ${plural} that have one: ${listed}.`
       : `Several ${noun}s are named "${name}", in the ${plural} ${listed}. Ask which ${parentNoun} is meant, or set the ${parentNoun} first.`,
-    params: { value: name, parents: parents.map((parent) => parent.name).join(', ') },
+    params: { value: name, parents: parents.slice(0, LISTED_PARENTS).map((row) => row.name).join(', ') + (more > 0 ? ` +${more}` : '') },
   });
 }
