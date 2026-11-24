@@ -1190,6 +1190,7 @@ export default function RequestWorkspacePage() {
               sources={sources}
               statusOptions={statusOptions}
               streams={streams}
+              classification={classificationData}
             />
           </CreationPreview>
         ) : (
@@ -1226,6 +1227,7 @@ export default function RequestWorkspacePage() {
             sources={sources}
             statusOptions={statusOptions}
             streams={streams}
+            classification={classificationData}
           />
         )}
       >

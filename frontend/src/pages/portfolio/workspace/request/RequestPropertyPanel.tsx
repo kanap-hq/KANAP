@@ -19,12 +19,15 @@ import { PropertyGroup, PropertyRow } from '../../../../components/design';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx, selectPlaceholderSx } from '../../../../theme/formSx';
 import { getApiErrorMessage } from '../../../../utils/apiErrorMessage';
 import { getProjectStatusLabel } from '../../../../utils/portfolioI18n';
+import { withCarriedStream, type ClassificationCatalog } from '../../../../utils/carriedStream';
 
 type PanelSection = 'core' | 'team';
 
 type RequestPropertyPanelProps = {
   canManage: boolean;
   categories: Array<{ id: string; name: string }>;
+  /** The full classification lists, to name a stream the request carries outside the offered ones. */
+  classification?: ClassificationCatalog;
   form: any;
   focusSection?: Exclude<PanelSection, 'core'> | null;
   onCategoryChange: (value: string) => void;
@@ -45,6 +48,7 @@ type RequestPropertyPanelProps = {
 export default function RequestPropertyPanel({
   canManage,
   categories,
+  classification,
   form,
   onCategoryChange,
   onCompanyChange,
@@ -88,9 +92,9 @@ export default function RequestPropertyPanel({
   }, [onLocalUpdate, onRefetch, t]);
 
   const filteredStreams = React.useMemo(() => {
-    if (!form?.category_id) return [];
-    return streams.filter((stream) => stream.category_id === form.category_id);
-  }, [form?.category_id, streams]);
+    const offered = form?.category_id ? streams.filter((stream) => stream.category_id === form.category_id) : [];
+    return withCarriedStream(offered, form?.stream_id, form?.category_id, classification);
+  }, [classification, form?.category_id, form?.stream_id, streams]);
 
   return (
     <Stack spacing={0}>

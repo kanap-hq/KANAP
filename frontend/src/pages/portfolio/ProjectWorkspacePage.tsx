@@ -1091,6 +1091,7 @@ export default function ProjectWorkspacePage() {
               sources={sources}
               statusOptions={statusOptions}
               streams={streams}
+              classification={classificationData}
             />
           </CreationPreview>
         ) : (
@@ -1129,6 +1130,7 @@ export default function ProjectWorkspacePage() {
             sources={sources}
             statusOptions={statusOptions}
             streams={streams}
+            classification={classificationData}
           />
         )}
       >
