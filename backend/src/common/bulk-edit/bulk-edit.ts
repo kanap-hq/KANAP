@@ -246,7 +246,7 @@ export type BulkEditList<Row extends { id: string }> = {
  * row); `refused`, the refused rows per code (a code with no row is absent). The dry run answers
  * `changes` and `as_of`, the write `changed`.
  */
-export type BulkEditResult = {
+export type BulkEditResult<Row extends { id: string } = { id: string }> = {
   dry_run: boolean;
   rows: number;
   changes?: number;
@@ -257,15 +257,22 @@ export type BulkEditResult = {
   /** The dry run's: the rows it reached and the change it counted (`bulkFingerprint`), sent back by the write. */
   fingerprint?: string;
   /**
-   * The dry run's, with `changedIds` only: the rows that would change, in the write order. Kad names
-   * the first ones on its card; the routes of the screens never ask for them.
+   * With `changedIds` only: the rows that would change (the dry run) or that changed (the write), in
+   * the write order. Kad names them on its card; the routes of the screens never ask for them.
    */
   changed_ids?: string[];
+  /**
+   * With `changedRows` only: the same rows as `reach` read them, their values before the change
+   * included (no query more). Kad lists them on its card, each with its value before.
+   */
+  changed_rows?: Row[];
 };
 
 export type BulkEditOptions = {
-  /** The dry run also returns the ids of the rows that would change (`changed_ids`). */
+  /** The answer also gives the ids of the rows that would change, or that changed (`changed_ids`). */
   changedIds?: boolean;
+  /** The answer also gives those rows as `reach` read them (`changed_rows`). */
+  changedRows?: boolean;
 };
 
 const DRY_RUN_SAVEPOINT = 'bulk_edit_dry_run';
@@ -285,7 +292,7 @@ export async function runBulkEdit<Row extends { id: string }>(
   confirmation: BulkConfirmation,
   changes: BulkChanges,
   options: BulkEditOptions = {},
-): Promise<BulkEditResult> {
+): Promise<BulkEditResult<Row>> {
   if (!manager.queryRunner?.isTransactionActive) throw new Error('A change in bulk runs in the request transaction.');
   if (selection.all && !confirmation.dryRun && confirmation.fingerprint === null) {
     throw new BadRequestException('fingerprint is required with all: send the fingerprint the dry run returned.');
@@ -309,6 +316,7 @@ export async function runBulkEdit<Row extends { id: string }>(
   let changed = 0;
   let unchanged = 0;
   const changedIds: string[] = [];
+  const changedRows: Row[] = [];
   for (const row of rows) {
     await manager.query(`SAVEPOINT ${ROW_SAVEPOINT}`);
     let outcome: BulkEditOutcome;
@@ -326,15 +334,19 @@ export async function runBulkEdit<Row extends { id: string }>(
     if (outcome === 'changed') {
       changed += 1;
       if (options.changedIds) changedIds.push(row.id);
+      if (options.changedRows) changedRows.push(row);
     } else unchanged += 1;
   }
+  const listed = {
+    ...(options.changedIds ? { changed_ids: changedIds } : {}),
+    ...(options.changedRows ? { changed_rows: changedRows } : {}),
+  };
   if (confirmation.dryRun) {
     await manager.query(`ROLLBACK TO SAVEPOINT ${DRY_RUN_SAVEPOINT}`);
     await manager.query(`RELEASE SAVEPOINT ${DRY_RUN_SAVEPOINT}`);
     return {
-      dry_run: true, rows: reached, changes: changed, unchanged, refused, as_of: asOf!, fingerprint,
-      ...(options.changedIds ? { changed_ids: changedIds } : {}),
+      dry_run: true, rows: reached, changes: changed, unchanged, refused, as_of: asOf!, fingerprint, ...listed,
     };
   }
-  return { dry_run: false, rows: reached, changed, unchanged, refused };
+  return { dry_run: false, rows: reached, changed, unchanged, refused, ...listed };
 }

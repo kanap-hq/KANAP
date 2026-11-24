@@ -159,7 +159,7 @@ A cell with no value shows a dash.
 - **Category**, **Business criticality** and **Cyber criticality** list only the values still offered in **IT Landscape > Settings**
 - A new business or cyber criticality marks a reviewed application **Review needed**, as on the application page
 - Each changed application gets its own entry in its **History** tab
-- [Kad](ai-assistant.md#changing-records-in-bulk) makes the same change when you ask for it in a conversation, with the same rights. You approve its preview
+- [Kad](ai-assistant.md#changing-records-in-bulk) makes the same change when you ask for it in a conversation, with the same rights. Its preview lists the applications it changes, and you can leave some out before you approve it
 
 ---
 

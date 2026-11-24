@@ -68,6 +68,34 @@ export const BULK_EDIT_REFUSAL_WORDS: WordTable = {
 /** "Empty", the new value of a field emptied (`common:bulkEdit.emptied`). */
 export const BULK_EDIT_EMPTIED: Words = { en: 'Empty', fr: 'Vide', de: 'Leer', es: 'Vacío' };
 
+/** A value before that the person may not read (a record outside their access): the card's list says so, never names it. */
+export const BULK_EDIT_HIDDEN: Words = { en: 'Hidden', fr: 'Masqué', de: 'Verborgen', es: 'Oculto' };
+
+/**
+ * The refusal of a card whose records are all left out (lot K2e of 26.12.1): nothing to approve,
+ * the card stays pending and a record ticked again makes it approvable.
+ */
+export const BULK_EDIT_ALL_LEFT_OUT_MESSAGE = 'Every record of this card is left out: there is nothing to approve.';
+export const BULK_EDIT_ALL_LEFT_OUT: Words = {
+  en: BULK_EDIT_ALL_LEFT_OUT_MESSAGE,
+  fr: "Toutes les fiches de cette carte sont écartées : il n'y a rien à approuver.",
+  de: 'Alle Datensätze dieser Karte sind ausgeschlossen: Es gibt nichts zu genehmigen.',
+  es: 'Todos los registros de esta tarjeta están excluidos: no hay nada que aprobar.',
+};
+
+/**
+ * The refusal of a recount that would list more than `max` records (review of lot K2e): records
+ * entered the selection since the card; the card stays as it was and the person asks for a new one.
+ */
+export function bulkEditListGrewText(language: AiWriteLanguage, max: number): string {
+  return {
+    en: `The selection grew past ${max} records since the count: ask for a new card.`,
+    fr: `La sélection a dépassé ${max} fiches depuis le comptage : demandez une nouvelle carte.`,
+    de: `Die Auswahl umfasst seit der Zählung mehr als ${max} Datensätze: Fordern Sie eine neue Karte an.`,
+    es: `La selección ha superado los ${max} registros desde el recuento: pida una nueva tarjeta.`,
+  }[language];
+}
+
 /**
  * The fields of the budget lines Kad's filter accepts, labelled as the columns of the list
  * (`ops:opex.columns.*`, `ops:budget.type`, `ops:opex.metadata.status`). The dimensions
@@ -314,8 +342,14 @@ export type BulkEditCard = {
   changes: number;
   unchanged: number;
   refused: Record<string, number>;
-  /** The first rows that would change, by reference: `BL-3 Office licences`. */
+  /** The first rows that would change, by reference: `BL-3 Office licences`. Not shown when the card lists its rows (`listed`). */
   examples: Array<{ ref: string; title: string }>;
+  /** The rows the person left out (lot K2e of 26.12.1), counted after those to change. */
+  excluded?: number;
+  /** The card lists every row it changes (`bulk_edit`): the first rows are not named again. */
+  listed?: boolean;
+  /** The card was approved: its summary says what changed, the counts made before are not shown again. */
+  done?: boolean;
 };
 
 /** The words of a refusal code, "Other reason" for a code the dialog does not word. */
@@ -344,12 +378,22 @@ export function bulkEditCardText(card: BulkEditCard, language: AiWriteLanguage):
   }
   const value = card.value === null ? BULK_EDIT_EMPTIED[language] : card.value;
   blocks.push(escapeMarkdownLabel(`${card.field} → ${value}`));
+  if (card.done) return blocks.join('\n\n');
   const counts = [{
     en: `${words.rows(card.changes)} to change`,
     fr: `${words.rows(card.changes)} à modifier`,
     de: `${words.rows(card.changes)} zu ändern`,
     es: `${words.rows(card.changes)} por modificar`,
   }[language]];
+  if ((card.excluded ?? 0) > 0) {
+    const n = card.excluded!;
+    counts.push({
+      en: `${n} left out`,
+      fr: `${n} écartée${n === 1 ? '' : 's'}`,
+      de: `${n} ausgeschlossen`,
+      es: `${n} excluida${n === 1 ? '' : 's'}`,
+    }[language]);
+  }
   if (card.unchanged > 0) {
     const one = card.unchanged === 1;
     counts.push({
@@ -374,7 +418,7 @@ export function bulkEditCardText(card: BulkEditCard, language: AiWriteLanguage):
     line = `${line}, ${head}${colon}${reasons}`;
   }
   blocks.push(line);
-  const examples = card.examples.slice(0, 5);
+  const examples = card.listed ? [] : card.examples.slice(0, 5);
   if (examples.length > 0) {
     const more = card.changes - examples.length;
     blocks.push([
@@ -383,6 +427,30 @@ export function bulkEditCardText(card: BulkEditCard, language: AiWriteLanguage):
     ].join('\n'));
   }
   return blocks.join('\n\n');
+}
+
+/**
+ * What the model is told of a card that counts its rows without listing them (more than
+ * `AI_BULK_EDIT_LIST_MAX`): the person cannot leave rows out one by one, so Kad offers to narrow.
+ */
+export function bulkEditTooLongNote(family: BulkEditFamily, rows: number, max: number): string {
+  const what = family === 'applications' ? 'applications' : 'budget lines';
+  return `This card changes ${rows} ${what}: more than ${max}, so it counts them without listing them, and the person cannot leave ${what} out one by one. `
+    + `Tell the person, and offer to narrow the selection (a more precise filter, or fewer references) so that the card lists each one.`;
+}
+
+/**
+ * What the model is told of an approved card whose records the person left out (lot K2e of
+ * 26.12.1, the maintainer's test of 24/11): reading the request (five applications) and one change,
+ * Kad prepared a new card for the four unticked ones. A record left out is the person's choice; one
+ * already at the value or refused by the server is not in the card's list and is not named here.
+ */
+export function bulkEditLeftOutNote(family: BulkEditFamily, refs: readonly string[]): string {
+  const one = refs.length === 1;
+  const what = family === 'applications' ? (one ? 'application' : 'applications') : (one ? 'budget line' : 'budget lines');
+  return `Before approving, the person left out ${refs.length} ${what} of this card: ${refs.join(', ')}. `
+    + `That is their choice, not a remaining change: ${one ? 'it stayed as it was' : 'they stayed as they were'}. `
+    + `Prepare no card for ${one ? 'it' : 'them'} unless the person asks for it; the answer may say so in half a sentence.`;
 }
 
 /** The action of a change in bulk, for the summaries in fr, de and es: the field and the rows. */
