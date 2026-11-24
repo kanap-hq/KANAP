@@ -14,6 +14,8 @@ export type TaskParent = {
   type: RelatedKind;
   id: string;
   name: string;
+  /** The parent's address segment when it differs from its id: a project's reference (`PRJ-3`). */
+  address?: string;
 } | null;
 
 export type TaskCrumb = {
@@ -153,7 +155,11 @@ export function remapProjectListContext(search: URLSearchParams): URLSearchParam
   return sp;
 }
 
-export function buildOriginPath(origin: TaskOrigin, search: URLSearchParams): string {
+/**
+ * The way back to where the task was opened. `originAddress`: the origin's address segment when the
+ * page knows it (a project's reference, `PRJ-3`); the origin's id otherwise.
+ */
+export function buildOriginPath(origin: TaskOrigin, search: URLSearchParams, originAddress?: string): string {
   if (origin.kind === 'tasks') {
     const qs = stripOriginParams(search).toString();
     return `/portfolio/tasks${qs ? `?${qs}` : ''}`;
@@ -162,7 +168,7 @@ export function buildOriginPath(origin: TaskOrigin, search: URLSearchParams): st
   const tab = sanitizeOriginTab(origin.kind, origin.tab);
   if (origin.kind === 'project') {
     const qs = remapProjectListContext(search).toString();
-    return `/portfolio/projects/${origin.id}/${tab}${qs ? `?${qs}` : ''}`;
+    return `/portfolio/projects/${originAddress || origin.id}/${tab}${qs ? `?${qs}` : ''}`;
   }
   const filterQs = entityTaskListFiltersSearch(search);
   if (origin.kind === 'spend_item') return `/ops/budget/${origin.id}/${tab}${filterQs ? `?${filterQs}` : ''}`;
@@ -261,6 +267,8 @@ export function buildTaskBreadcrumbs(args: {
   origin: TaskOrigin;
   parent: TaskParent;
   originName?: string | null;
+  /** The origin's address segment, when the page knows it (`buildOriginPath`). */
+  originAddress?: string;
   search?: URLSearchParams;
   labels: {
     tasks: string;
@@ -268,7 +276,7 @@ export function buildTaskBreadcrumbs(args: {
   };
 }): TaskCrumb[] {
   const search = args.search ?? new URLSearchParams();
-  const originHref = buildOriginPath(args.origin, search);
+  const originHref = buildOriginPath(args.origin, search, args.originAddress);
   const originLabel = args.origin.kind === 'tasks'
     ? args.labels.tasks
     : (args.originName?.trim() || args.labels.typeLabel(args.origin.kind));
@@ -285,7 +293,7 @@ export function buildTaskBreadcrumbs(args: {
   crumbs.push({
     key: 'parent',
     label: formatParentLabel(args.parent, args.labels.typeLabel),
-    href: buildParentPath(args.parent.type, args.parent.id),
+    href: buildParentPath(args.parent.type, args.parent.address || args.parent.id),
     variant: 'link',
   });
 

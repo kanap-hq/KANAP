@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -60,6 +60,17 @@ vi.mock('../../components/workspace/MetadataUserPicker', () => ({
   formatMetadataUserName: () => '',
 }));
 vi.mock('../../components/history/RecordHistoryTab', () => ({ default: () => null }));
+// The dialog hands back the created project's address (its own test covers that it is the reference).
+vi.mock('./components/ConvertToProjectDialog', () => ({
+  default: (props: { open: boolean; onSuccess: (projectAddress: string) => void }) => (
+    props.open ? <button type="button" onClick={() => props.onSuccess('PRJ-12')}>project created</button> : null
+  ),
+}));
+
+function Location() {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname}</div>;
+}
 
 const CONVERT = 'portfolio:actions.convertToProject';
 
@@ -74,8 +85,10 @@ function renderPage() {
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={['/portfolio/requests/req-1/summary']}>
+            <Location />
             <Routes>
               <Route path="/portfolio/requests/:id/:tab" element={<RequestWorkspacePage />} />
+              <Route path="/portfolio/projects/:id/:tab" element={<div data-testid="project-page" />} />
             </Routes>
           </MemoryRouter>
         </KanapDialogProvider>
@@ -92,7 +105,7 @@ describe('RequestWorkspacePage convert to project', () => {
 
   async function open(status: string) {
     get.mockImplementation(async (url: string) => {
-      if (url === '/portfolio/requests/req-1') return { data: request(status) };
+      if (url === '/portfolio/requests/req-1' || url === '/portfolio/requests/REQ-4') return { data: request(status) };
       if (url === '/portfolio/classification/all') return { data: { sources: [], categories: [], streams: [] } };
       return { data: {} };
     });
@@ -115,5 +128,12 @@ describe('RequestWorkspacePage convert to project', () => {
     auth.projects = 'admin';
     await open('converted');
     expect(screen.queryByRole('button', { name: CONVERT })).toBeNull();
+  });
+
+  it('opens the created project by its reference', async () => {
+    await open('approved');
+    fireEvent.click(screen.getByRole('button', { name: CONVERT }));
+    fireEvent.click(await screen.findByRole('button', { name: 'project created' }));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/portfolio/projects/PRJ-12/summary'));
   });
 });

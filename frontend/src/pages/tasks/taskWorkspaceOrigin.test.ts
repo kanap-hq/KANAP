@@ -390,3 +390,21 @@ describe('unified budget workspace origins', () => {
     expect(buildOriginPath(origin, search)).toBe('/ops/budget/BL-127/allocations');
   });
 });
+
+describe('project addresses on the way back', () => {
+  const projectUuid = 'a0b1c2d3-0000-4000-8000-000000000003';
+
+  it('goes back to the project by the reference the page knows, keeping the list context', () => {
+    const search = new URLSearchParams(`projectId=${projectUuid}&projectTab=tasks&projectSort=name%3AASC`);
+    const origin = parseTaskOrigin(search);
+    expect(buildOriginPath(origin, search, 'PRJ-3')).toBe('/portfolio/projects/PRJ-3/tasks?sort=name%3AASC');
+    expect(buildOriginPath(origin, search)).toBe(`/portfolio/projects/${projectUuid}/tasks?sort=name%3AASC`);
+  });
+
+  it('names the parent project by its reference in the breadcrumb, by its uuid without one', () => {
+    const parent = { type: 'project' as const, id: projectUuid, name: 'Cheese cellar' };
+    const crumbsOf = (address?: string) => buildTaskBreadcrumbs({ origin: { kind: 'tasks' }, parent: { ...parent, address }, labels });
+    expect(crumbsOf('PRJ-3')[1]).toMatchObject({ key: 'parent', href: '/portfolio/projects/PRJ-3/summary' });
+    expect(crumbsOf()[1]).toMatchObject({ key: 'parent', href: `/portfolio/projects/${projectUuid}/summary` });
+  });
+});

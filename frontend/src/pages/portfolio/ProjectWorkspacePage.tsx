@@ -17,7 +17,8 @@ import { type ProjectScoringEditorHandle } from './editors/ProjectScoringEditor'
 import { type EffortAllocationData } from './components/EffortAllocationTable';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { buildInlineImageUrl, resolveInlineImageTenantSlug } from '../../utils/inlineImageUrls';
-import { formatItemRef } from '../../utils/item-ref';
+import { buildItemPath, formatItemRef, itemAddress } from '../../utils/item-ref';
+import useRecordEditorKey from '../../components/workspace/useRecordEditorKey';
 import { getDotColor, PROJECT_STATUS_COLORS } from '../../utils/statusColors';
 import { type IntegratedDocumentEditorHandle } from '../../components/IntegratedDocumentEditor';
 import MetadataUserPicker, { formatMetadataUserName } from '../../components/workspace/MetadataUserPicker';
@@ -180,20 +181,6 @@ export default function ProjectWorkspacePage() {
   // Browser tab title
   useRecordTitle(data?.item_number && data?.name ? `PRJ-${data.item_number} ${data.name}` : null);
 
-  // URL replaceState: swap UUID for human-readable ref
-  React.useEffect(() => {
-    if (!data?.item_number) return;
-    const currentParam = params.id || '';
-    const isUuid = /^[0-9a-f]{8}-/.test(currentParam);
-    // Only rewrite once the loaded data matches the current route id — during a
-    // placeholderData nav, `data` is briefly still the previous item.
-    if (isUuid && data.id === currentParam) {
-      const ref = formatItemRef('project', data.item_number);
-      const newPath = location.pathname.replace(currentParam, ref);
-      window.history.replaceState(null, '', newPath + location.search);
-    }
-  }, [data?.id, data?.item_number, params.id, location.pathname, location.search]);
-
   const projectMatchesCurrentRoute = React.useMemo(() => {
     const raw = String(idParam || '').trim();
     if (!data || !raw) return false;
@@ -202,6 +189,19 @@ export default function ProjectWorkspacePage() {
     if (data.item_number != null && raw.toUpperCase() === formatItemRef('project', data.item_number)) return true;
     return false;
   }, [data?.id, data?.item_number, idParam]);
+  // The editors are keyed by project: the same key through the move from a legacy address to the reference.
+  const recordKey = useRecordEditorKey('portfolio-project', id, [projectInclude]);
+
+  // A legacy address (a uuid, `prj-3`, `3`) becomes the project's reference through the router, tab, query
+  // and hash kept: the project read is put under the reference's entry first, so the page shows it at once
+  // (one quiet refresh follows) and the editors stay mounted (`recordKey`). Back and reload then show the reference.
+  React.useEffect(() => {
+    if (isCreate || !data?.item_number || !projectMatchesCurrentRoute) return;
+    const reference = formatItemRef('project', data.item_number);
+    if (id === reference) return;
+    queryClient.setQueryData(['portfolio-project', reference, projectInclude], data);
+    navigate(`${buildItemPath('project', reference)}${params.tab ? `/${params.tab}` : ''}${location.search}${location.hash}`, { replace: true });
+  }, [data, id, isCreate, location.hash, location.search, navigate, params.tab, projectInclude, queryClient, projectMatchesCurrentRoute]);
 
   // Fetch classification data (types, categories, streams)
   const { data: classificationData, isError: classificationFailed } = useQuery({
@@ -333,7 +333,7 @@ export default function ProjectWorkspacePage() {
     scoringAutosaveInFlightRef.current = false;
     scoringEditorRef.current?.reset?.();
     void purposeEditorRef.current?.reset?.();
-  }, [id, isCreate]);
+  }, [recordKey, isCreate]);
 
   React.useEffect(() => () => {
     if (scoringAutosaveTimerRef.current !== null) {
@@ -1032,7 +1032,7 @@ export default function ProjectWorkspacePage() {
             {originLabel && (
               <PortfolioMetadataItem
                 label={t('portfolio:workspace.project.fields.origin')}
-                onClick={sourceRequest?.id ? () => navigate(`/portfolio/requests/${sourceRequest.id}/summary`) : undefined}
+                onClick={sourceRequest?.id ? () => navigate(`${buildItemPath('request', itemAddress('request', sourceRequest))}/summary`) : undefined}
                 title={sourceRequest?.id ? t('portfolio:workspace.project.origin.viewSourceRequest', { name: sourceRequest.name }) : undefined}
                 mono={!!sourceRequestReference}
               >
@@ -1134,7 +1134,7 @@ export default function ProjectWorkspacePage() {
             <ProjectSummaryTab
               canEditManagedDocs={canContributeToProject}
               form={form}
-              id={id}
+              id={recordKey}
               isCreate
               onPurposeDirtyChange={ignoreDraftChange}
               onPurposeDraftChange={ignoreDraftChange}
@@ -1147,7 +1147,7 @@ export default function ProjectWorkspacePage() {
             <ProjectSummaryTab
               canEditManagedDocs={canContributeToProject}
               form={form}
-              id={id}
+              id={recordKey}
               isCreate={isCreate}
               onPurposeDirtyChange={setPurposeDirty}
               onPurposeDraftChange={(value) => updateManagedDocDraft({ purpose: value })}

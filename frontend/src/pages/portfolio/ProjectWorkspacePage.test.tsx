@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -43,7 +43,9 @@ vi.mock('./workspace/PortfolioDetailWorkspaceShell', () => ({
       <h1>{props.title || props.titleFallback}</h1>
       <div data-testid="workspace-notices">{props.notices}</div>
       <div role="tablist">
-        {props.tabs.map((tab: any) => <button key={tab.key} role="tab" disabled={tab.disabled}>{tab.label}</button>)}
+        {props.tabs.map((tab: any) => (
+          <button key={tab.key} role="tab" disabled={tab.disabled} onClick={() => props.onTabChange(tab.key)}>{tab.label}</button>
+        ))}
       </div>
       <main>{props.children}</main>
     </div>
@@ -70,14 +72,28 @@ vi.mock('../../components/history/RecordHistoryTab', () => ({
 
 const PROJECT = { id: 'proj-1', item_number: 7, name: 'Data platform', status: 'planned', origin: 'fast_track', activities: [] };
 
-function renderPage(entry: string) {
+function Location() {
+  const location = useLocation();
+  return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
+}
+
+function BackButton() {
+  const navigate = useNavigate();
+  return <button type="button" onClick={() => navigate(-1)}>step back</button>;
+}
+
+function renderPage(entry: string | string[]) {
+  const entries = Array.isArray(entry) ? entry : [entry];
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
-          <MemoryRouter initialEntries={[entry]}>
+          <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
+            <Location />
+            <BackButton />
             <Routes>
+              <Route path="/start" element={<div data-testid="start" />} />
               <Route path="/portfolio/projects/:id/:tab" element={<ProjectWorkspacePage />} />
             </Routes>
           </MemoryRouter>
@@ -87,11 +103,13 @@ function renderPage(entry: string) {
   );
 }
 
+const location = () => screen.getByTestId('location').textContent;
+
 describe('ProjectWorkspacePage history', () => {
   beforeEach(() => {
     get.mockReset();
     get.mockImplementation(async (url: string) => {
-      if (url === '/portfolio/projects/proj-1') return { data: PROJECT };
+      if (url === '/portfolio/projects/proj-1' || url === '/portfolio/projects/PRJ-7') return { data: PROJECT };
       if (url === '/portfolio/classification/all') return { data: { sources: [], categories: [], streams: [] } };
       return { data: {} };
     });
@@ -133,7 +151,7 @@ describe('ProjectWorkspacePage contribution', () => {
   const serve = (project: Record<string, unknown>) => {
     get.mockReset();
     get.mockImplementation(async (url: string) => {
-      if (url === '/portfolio/projects/proj-1') return { data: project };
+      if (url === '/portfolio/projects/proj-1' || url === '/portfolio/projects/PRJ-7') return { data: project };
       if (url === '/portfolio/classification/all') return { data: { sources: [], categories: [], streams: [] } };
       return { data: {} };
     });
@@ -154,5 +172,39 @@ describe('ProjectWorkspacePage contribution', () => {
     serve({ ...PROJECT, can_contribute: true });
     renderPage('/portfolio/projects/proj-1/tasks');
     expect(await screen.findByTestId('project-tasks')).toHaveAttribute('data-disabled', 'false');
+  });
+});
+
+// A project's address names it by its reference (`PRJ-7`): an address by uuid moves to it through
+// the router, and stays there through a tab change and a step back.
+describe('ProjectWorkspacePage address', () => {
+  beforeEach(() => {
+    get.mockReset();
+    get.mockImplementation(async (url: string) => {
+      if (url === '/portfolio/projects/proj-1' || url === '/portfolio/projects/PRJ-7') return { data: PROJECT };
+      if (url === '/portfolio/classification/all') return { data: { sources: [], categories: [], streams: [] } };
+      return { data: {} };
+    });
+  });
+
+  it('moves an address by uuid to the reference, keeping its tab and its query', async () => {
+    renderPage(['/start', '/portfolio/projects/proj-1/summary?projectScope=all&sort=name%3AASC']);
+    await waitFor(() => expect(location()).toBe('/portfolio/projects/PRJ-7/summary?projectScope=all&sort=name%3AASC'));
+    expect(screen.getByTestId('project-summary')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'portfolio:labels.history' }));
+    await waitFor(() => expect(location()).toBe('/portfolio/projects/PRJ-7/history?projectScope=all&sort=name%3AASC'));
+    expect(await screen.findByTestId('record-history')).toHaveTextContent('portfolio_projects:proj-1');
+    fireEvent.click(screen.getByRole('button', { name: 'step back' }));
+    await waitFor(() => expect(location()).toBe('/portfolio/projects/PRJ-7/summary?projectScope=all&sort=name%3AASC'));
+    // The step back reaches the page before the project, never its uuid address.
+    fireEvent.click(screen.getByRole('button', { name: 'step back' }));
+    await waitFor(() => expect(location()).toBe('/start'));
+  });
+
+  it('leaves an address by reference as it is', async () => {
+    renderPage('/portfolio/projects/PRJ-7/summary');
+    expect(await screen.findByTestId('project-summary')).toBeInTheDocument();
+    expect(location()).toBe('/portfolio/projects/PRJ-7/summary');
+    expect(get).not.toHaveBeenCalledWith('/portfolio/projects/proj-1', expect.anything());
   });
 });

@@ -28,7 +28,8 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { useDoneRequiresTime } from './hooks/useDoneRequiresTime';
 import { budgetLineLabel, type BudgetLineLabel } from '../../components/finance/budgetLineLabel';
 import { budgetLineDetailQuery } from '../../hooks/budgetItemDetailQuery';
-import { formatItemRef } from '../../utils/item-ref';
+import { buildItemPath, formatItemRef } from '../../utils/item-ref';
+import useRecordEditorKey from '../../components/workspace/useRecordEditorKey';
 import { buildInlineImageUrl, resolveInlineImageTenantSlug } from '../../utils/inlineImageUrls';
 import ConvertToRequestDialog from './components/ConvertToRequestDialog';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
@@ -94,6 +95,8 @@ interface TaskData {
   related_object_type: 'spend_item' | 'contract' | 'capex_item' | 'project' | 'incident' | null;
   related_object_id: string | null;
   related_object_name: string | null;
+  /** A project task's project number, for the project's address (`PRJ-3`); null when the project is not read. */
+  project_item_number?: number | null;
   /** The task names a budget line the person cannot read: `related_object_name` is its reference alone, without a link. */
   related_object_hidden?: boolean;
   /** A contract outside the access: it has no reference, the screen shows "Contract outside your access". */
@@ -214,16 +217,13 @@ export default function TaskWorkspacePage() {
   const createContractId = cleanedSearchParams.get('contractId');
   const createIncidentId = cleanedSearchParams.get('incidentId');
   const createPhaseId = cleanedSearchParams.get('phaseId');
-  const originPath = React.useMemo(
-    () => buildOriginPath(origin, cleanedSearchParams),
-    [origin, cleanedSearchParams],
-  );
-  const buildProjectWorkspacePath = React.useCallback((projectId: string, tab?: string) => {
+  // `projectAddress`: the project's address segment, its reference (`PRJ-3`) else its uuid.
+  const buildProjectWorkspacePath = React.useCallback((projectAddress: string, tab?: string) => {
     const requestedTab = (tab || '').trim();
     const fallbackTab = origin.kind === 'project' ? (origin.tab || 'tasks') : 'summary';
     const effectiveTab = requestedTab && PROJECT_ORIGIN_TABS.has(requestedTab) ? requestedTab : fallbackTab;
     const qs = remapProjectListContext(cleanedSearchParams).toString();
-    return `/portfolio/projects/${projectId}/${effectiveTab}${qs ? `?${qs}` : ''}`;
+    return `${buildItemPath('project', projectAddress)}/${effectiveTab}${qs ? `?${qs}` : ''}`;
   }, [cleanedSearchParams, origin]);
   const validTaskStatuses = React.useMemo(
     () => new Set<TaskStatus>(TASK_STATUS_OPTIONS.map((option) => option.value)),
@@ -303,6 +303,24 @@ export default function TaskWorkspacePage() {
     placeholderData: (previousData) => previousData,
   });
   const taskMatchesCurrentRoute = React.useMemo(() => taskMatchesRoute(task, id), [task, id]);
+  // The editors are keyed by task: the same key through the move from a legacy address to the reference.
+  const editorKey = useRecordEditorKey('tasks', id);
+  // The address of the task's stored project: its reference when the task names its number.
+  const storedProjectAddress = taskMatchesCurrentRoute && task?.related_object_type === 'project' && task.related_object_id
+    ? (task.project_item_number ? formatItemRef('project', task.project_item_number) : task.related_object_id)
+    : null;
+  /** A project's address segment: its reference when it is the task's stored project, else the id given. */
+  const projectAddressOf = React.useCallback((projectId: string) => (
+    storedProjectAddress && task?.related_object_id && projectId.toLowerCase() === task.related_object_id.toLowerCase()
+      ? storedProjectAddress
+      : projectId
+  ), [storedProjectAddress, task?.related_object_id]);
+  // The way back to the project the task was opened from, at its reference when it is the task's project.
+  const originAddress = origin.kind === 'project' ? projectAddressOf(origin.id) : undefined;
+  const originPath = React.useMemo(
+    () => buildOriginPath(origin, cleanedSearchParams, originAddress),
+    [origin, cleanedSearchParams, originAddress],
+  );
   const isShowingPreviousTask = Boolean(task && !taskMatchesCurrentRoute);
   const canManageCurrentTask = canManage && !isShowingPreviousTask;
   const canDeleteCurrentTask = canDelete && !isShowingPreviousTask;
@@ -317,17 +335,16 @@ export default function TaskWorkspacePage() {
   // Browser tab title
   useRecordTitle(taskMatchesCurrentRoute && task?.item_number && task?.title ? `T-${task.item_number} ${task.title}` : null);
 
-  // Swap UUID with item ref in URL bar
+  // A legacy address (a uuid, `t-4`, `4`) becomes the task's reference through the router, tab, query
+  // and hash kept: the task read is put under the reference's entry first, so the page shows it at once
+  // (one quiet refresh follows) and the editors stay mounted (`editorKey`). Back and reload then show the reference.
   React.useEffect(() => {
-    if (!task?.item_number || !taskMatchesCurrentRoute) return;
-    const currentParam = params.id || '';
-    const isUuid = /^[0-9a-f]{8}-/.test(currentParam);
-    if (isUuid) {
-      const ref = formatItemRef('task', task.item_number);
-      const newPath = location.pathname.replace(currentParam, ref);
-      window.history.replaceState(null, '', newPath + location.search);
-    }
-  }, [task?.item_number, taskMatchesCurrentRoute, params.id, location.pathname, location.search]);
+    if (isCreate || !task?.item_number || !taskMatchesCurrentRoute) return;
+    const reference = formatItemRef('task', task.item_number);
+    if (id === reference) return;
+    queryClient.setQueryData(['tasks', reference], task);
+    navigate(`${buildItemPath('task', reference)}${params.tab ? `/${params.tab}` : ''}${location.search}${location.hash}`, { replace: true });
+  }, [id, isCreate, location.hash, location.search, navigate, params.tab, queryClient, task, taskMatchesCurrentRoute]);
 
   const { data: totalTimeHours = 0 } = useQuery({
     queryKey: ['task-time-entries-sum', task?.id],
@@ -443,8 +460,8 @@ export default function TaskWorkspacePage() {
     const relatedName = (source?.related_object_name ?? '').trim();
     // A line the person cannot read has no page to go back to.
     if (!type || !relatedId || !relatedName || source?.related_object_hidden) return null;
-    return { type, id: relatedId, name: relatedName };
-  }, [displayedTask]);
+    return { type, id: relatedId, name: relatedName, address: type === 'project' ? projectAddressOf(relatedId) : undefined };
+  }, [displayedTask, projectAddressOf]);
   const originMatchesRelated = originMatchesParent(origin, breadcrumbParent);
   const { data: fetchedOriginName = null } = useQuery({
     queryKey: ['task-origin-name', origin.kind, origin.kind === 'tasks' ? '' : origin.id],
@@ -462,9 +479,10 @@ export default function TaskWorkspacePage() {
     origin,
     parent: isCreate ? null : breadcrumbParent,
     originName: breadcrumbOriginName,
+    originAddress,
     search: cleanedSearchParams,
     labels: breadcrumbLabels,
-  }), [breadcrumbLabels, breadcrumbOriginName, breadcrumbParent, cleanedSearchParams, isCreate, origin]);
+  }), [breadcrumbLabels, breadcrumbOriginName, breadcrumbParent, cleanedSearchParams, isCreate, origin, originAddress]);
 
   React.useEffect(() => {
     if (!location.search.includes('action=') && !location.search.includes('status=')) return;
@@ -1495,9 +1513,10 @@ export default function TaskWorkspacePage() {
   const canConvertToRequest = canManageCurrentTask && canCreateRequest;
   const headerRelatedType = effectiveTask.related_object_type;
   const headerRelatedId = effectiveTask.related_object_id;
+  const headerProjectAddress = headerRelatedType === 'project' && headerRelatedId ? projectAddressOf(headerRelatedId) : null;
   const sidebarProjectWorkspaceLink = (
-    headerRelatedType === 'project' && headerRelatedId
-      ? buildProjectWorkspacePath(headerRelatedId, 'overview')
+    headerProjectAddress
+      ? buildProjectWorkspacePath(headerProjectAddress, 'overview')
       : null
   );
 
@@ -1525,7 +1544,7 @@ export default function TaskWorkspacePage() {
         {initialized ? (
           <React.Suspense fallback={<Box sx={{ minHeight: 10 * 24, border: 1, borderColor: 'divider', borderRadius: 1 }} />}>
             <MarkdownEditor
-              key={`task-description:${id || 'create'}:${descriptionResetNonce}`}
+              key={`task-description:${editorKey || 'create'}:${descriptionResetNonce}`}
               value={description}
               onChange={(val) => { setDescription(val); setDirty(true); }}
               placeholder={t('portfolio:workspace.task.description.placeholder')}
@@ -1620,7 +1639,7 @@ export default function TaskWorkspacePage() {
         dueDate={effectiveTask.due_date}
         isProjectTask={isProjectTask}
         hasConvertedRequest={hasConvertedRequest}
-        projectId={isProjectTask ? effectiveTask.related_object_id : null}
+        projectId={isProjectTask ? headerProjectAddress : null}
         projectName={isProjectTask ? (effectiveTask.related_object_name ?? null) : null}
         onNavigateToProject={(pid) => {
           void confirmUnsavedLeave().then((ok) => {
@@ -1791,12 +1810,12 @@ export default function TaskWorkspacePage() {
             title: task.title,
             description: task.description,
           }}
-          onSuccess={(requestId) => {
+          onSuccess={(requestAddress) => {
             setConvertToRequestOpen(false);
             queryClient.invalidateQueries({ queryKey: ['tasks', task.id] });
             queryClient.invalidateQueries({ queryKey: ['tasks'] });
-            if (requestId) {
-              navigate(`/portfolio/requests/${requestId}/summary`);
+            if (requestAddress) {
+              navigate(`${buildItemPath('request', requestAddress)}/summary`);
               return;
             }
             void refetch();
