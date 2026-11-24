@@ -35,7 +35,8 @@ export const assetsRecord = {
     // The children whose audit row names the asset in `asset_id`.
     asset_hardware_info: 'hardware',
     asset_support_info: 'support',
-    // Written only by the assistant's relation writer; its rows name the asset in `record_id`.
+    // The Support panel's replacement of the set (and the assistant's, through it): its rows name
+    // the asset in `record_id`.
     asset_support_contacts: 'contact',
     asset_links: 'link',
     asset_attachments: 'attachment',

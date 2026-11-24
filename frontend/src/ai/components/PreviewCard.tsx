@@ -16,7 +16,8 @@ import { getPreviewTitle } from '../utils/previewClassification';
 import { usePreviewChangeLabels } from './previewChangeLabels';
 import ImportMappingPreview from './ImportMappingPreview';
 import { downloadServerExport } from '../../components/csv/serverExport';
-import { setImportChoices } from '../previewChains';
+import { previewChainId, setImportChoices } from '../previewChains';
+import BulkEditList from './BulkEditList';
 
 const LINKED_MARKDOWN_IMAGE_RE = /\[\s*!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)\s*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
 const MARKDOWN_IMAGE_RE = /!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
@@ -34,10 +35,12 @@ type PreviewCardProps = {
    */
   stickyActions?: boolean;
   /**
-   * A choice of the person on an import card made a new card: it takes the place of
-   * this one. Without it the card's choices are read only.
+   * A choice of the person on an import card, or a box of a change in bulk, made a new card: it
+   * takes the place of this one. Without it the card's choices are read only.
    */
   onReplace?: (previous: AiMutationPreview, next: AiMutationPreview) => void;
+  /** The server counts a choice of this card (a box, an import choice): "Approve all" waits for it. */
+  onBusy?: (preview: AiMutationPreview, busy: boolean) => void;
 };
 
 function hasDisplayValue(value: string | null | undefined): boolean {
@@ -136,6 +139,7 @@ function PreviewCard({
   onReject,
   stickyActions,
   onReplace,
+  onBusy,
 }: PreviewCardProps) {
   const { t, i18n } = useTranslation(['ai', 'common']);
   const mode = useTheme().palette.mode;
@@ -166,6 +170,7 @@ function PreviewCard({
     if (!onReplace || !preview.conversation_id || sentFor.current === preview.preview_id) return;
     sentFor.current = preview.preview_id;
     setChoosing(true);
+    onBusy?.(preview, true);
     setChoiceError(null);
     setImportChoices(preview.conversation_id, preview.preview_id, choices)
       .then((next) => onReplace(preview, next))
@@ -177,8 +182,11 @@ function PreviewCard({
           ? { text: t('ai:previewCard.importChoices.stale'), detail: null }
           : { text: t('ai:previewCard.notApplied'), detail: message });
       })
-      .finally(() => setChoosing(false));
-  }, [onReplace, preview, t]);
+      .finally(() => {
+        setChoosing(false);
+        onBusy?.(preview, false);
+      });
+  }, [onBusy, onReplace, preview, t]);
 
   return (
     <Box
@@ -374,6 +382,21 @@ function PreviewCard({
             );
           })}
         </Stack>
+        )}
+
+        {/* The records of a change in bulk, under the card's counts: a box each while the card is pending. */}
+        {preview.bulk_edit && (
+          <BulkEditList
+            key={previewChainId(preview)}
+            preview={preview}
+            bulk={preview.bulk_edit}
+            onReplace={onReplace}
+            disabled={disabled}
+            onCounting={(counting) => {
+              setChoosing(counting);
+              onBusy?.(preview, counting);
+            }}
+          />
         )}
 
         {/* A failure of the service reads as a sentence in the person's language, its message as the detail. */}

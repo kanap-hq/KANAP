@@ -17,6 +17,7 @@ import CloseIcon from '@mui/icons-material/CloseRounded';
 import { useTranslation } from 'react-i18next';
 import { AiMutationPreview } from '../aiTypes';
 import { isApprovable, isRejectable } from '../previewApproval';
+import { usePreviewBusy } from '../usePreviewBusy';
 import { getPreviewLabel } from '../utils/previewClassification';
 import { getPreviewStatusColorKey, getPreviewStatusDisplay } from '../utils/previewStatus';
 import { getDotColor } from '../../utils/statusColors';
@@ -205,6 +206,7 @@ export default function ArtifactPanel({
   const [maxWidth, setMaxWidth] = useState(maxPanelWidth);
   const width = clampPanelWidth(preferredWidth, MIN_PANEL_WIDTH, maxWidth);
   const [confirmBulkOpen, setConfirmBulkOpen] = useState(false);
+  const { onBusy, anyBusy } = usePreviewBusy();
 
   // The bound follows the window; the width the person gave comes back when there is room again.
   useEffect(() => {
@@ -219,6 +221,8 @@ export default function ArtifactPanel({
   const handleResetWidth = useCallback(() => setPreferredWidth(DEFAULT_PANEL_WIDTH), [setPreferredWidth]);
 
   const approvablePreviews = previews.filter(isApprovable);
+  // A card whose choices are being counted is about to be replaced: "Approve all" waits for it.
+  const counting = anyBusy(approvablePreviews);
   const rejectablePreviews = previews.filter(isRejectable);
   const showBulkApproval = approvablePreviews.length >= BULK_APPROVAL_MIN;
   const visibleConfirmPreviews = approvablePreviews.slice(0, 6);
@@ -323,7 +327,7 @@ export default function ArtifactPanel({
                   size="small"
                   variant="outlined"
                   color="inherit"
-                  disabled={disabled}
+                  disabled={disabled || counting}
                   onClick={() => setConfirmBulkOpen(true)}
                   sx={{ textTransform: 'none', fontSize: 12 }}
                 >
@@ -347,6 +351,7 @@ export default function ArtifactPanel({
               onApprove={onApprove}
               onReject={onReject}
               onReplace={onReplace}
+              onBusy={onBusy}
               stickyActions
             />
           </Box>
@@ -398,7 +403,7 @@ export default function ArtifactPanel({
               <Button
                 variant="action-primary"
                 onClick={handleApproveAll}
-                disabled={disabled || approvablePreviews.length === 0}
+                disabled={disabled || counting || approvablePreviews.length === 0}
               >
                 {t('previewBatch.approveAll')}
               </Button>

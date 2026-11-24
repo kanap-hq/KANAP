@@ -252,6 +252,7 @@
       "overview_notes": "Notes de synthèse",
       "reason": "Raison",
       "replaced_host_links": "Liens d'hébergement remplacés",
+      "detached_assets": "Actifs laissés sans sous-site",
       "reporting_currency": "Devise de reporting",
       "review_due_at": "Revue prévue le",
       "risks": "Risques et parades",
@@ -383,6 +384,16 @@
       "hostingSeparator": " ; ",
       "onPremises": "sur site",
       "cloud": "cloud"
+    },
+    "bulkEdit": {
+      "busy": "Une autre opération est en cours. Réessayez dans un instant.",
+      "changed": "Modifiée",
+      "counting": "Comptage en cours",
+      "keep": "Garder {{ref}} {{title}}",
+      "kept_one": "{{count}} gardée sur {{total}}",
+      "kept_other": "{{count}} gardées sur {{total}}",
+      "leftOut": "Écartée",
+      "notChanged": "Non modifiée"
     },
     "importChoices": {
       "stale": "Cette carte ne peut plus être modifiée. Demandez-en une nouvelle à {{agent}}."

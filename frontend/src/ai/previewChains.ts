@@ -35,3 +35,12 @@ export async function setImportChoices(conversationId: string, previewId: string
   const response = await api.post(`/ai/conversations/${conversationId}/previews/${previewId}/import-choices`, { choices });
   return response.data as AiMutationPreview;
 }
+
+/**
+ * The records left out of a change in bulk's card, the whole list (`[]` keeps them all): answers the
+ * card recounted, which replaces it (lot K2e of 26.12.1).
+ */
+export async function setBulkExclusions(conversationId: string, previewId: string, excluded: string[]): Promise<AiMutationPreview> {
+  const response = await api.post(`/ai/conversations/${conversationId}/previews/${previewId}/bulk-exclusions`, { excluded });
+  return response.data as AiMutationPreview;
+}

@@ -252,6 +252,7 @@
       "overview_notes": "Notas generales",
       "reason": "Motivo",
       "replaced_host_links": "Vínculos de alojamiento sustituidos",
+      "detached_assets": "Activos que quedan sin sub-ubicación",
       "reporting_currency": "Moneda de reporting",
       "review_due_at": "Revisión prevista",
       "risks": "Riesgos y mitigaciones",
@@ -383,6 +384,16 @@
       "hostingSeparator": "; ",
       "onPremises": "local",
       "cloud": "cloud"
+    },
+    "bulkEdit": {
+      "busy": "Hay otra operación en curso. Vuelva a intentarlo en un momento.",
+      "changed": "Modificada",
+      "counting": "Contando",
+      "keep": "Conservar {{ref}} {{title}}",
+      "kept_one": "{{count}} conservada de {{total}}",
+      "kept_other": "{{count}} conservadas de {{total}}",
+      "leftOut": "Excluida",
+      "notChanged": "No modificada"
     },
     "importChoices": {
       "stale": "Esta tarjeta ya no se puede modificar. Pida una nueva a {{agent}}."

@@ -661,9 +661,11 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       const wants = linkedSet.has(row.id);
       if (has === wants) continue;
       const next = wants ? [...row.application_ids, appId] : row.application_ids.filter((value) => value !== appId);
-      await this.requests.bulkReplaceApplications(row.id, next, { manager: mg, userId });
-      if (wants) added += 1;
-      else removed += 1;
+      // What the request's replacement really wrote: nothing when the request's side linked or
+      // unlinked the application meanwhile.
+      const written = await this.requests.bulkReplaceApplications(row.id, next, { manager: mg, userId });
+      added += written.added;
+      removed += written.removed;
     }
     return { added, removed };
   }

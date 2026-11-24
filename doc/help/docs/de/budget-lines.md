@@ -227,7 +227,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 - Beträge lassen sich so nicht ändern. Ändern Sie sie auf der Zeile oder in der [Budgetdatei](budget-file.md)
 - Jede geänderte Zeile erhält einen eigenen Eintrag in ihrem Tab **Verlauf**
 - Mit begrenztem Datenzugriff ändern Sie die Zeilen Ihres Zugriffs. Eine Änderung, durch die eine Zeile Ihren Zugriff verlassen würde, wird für diese Zeile abgelehnt
-- [Kad](ai-assistant.md#changing-records-in-bulk) nimmt dieselbe Änderung vor, wenn Sie in einer Unterhaltung darum bitten, mit denselben Rechten. Sie genehmigen seine Vorschau
+- [Kad](ai-assistant.md#changing-records-in-bulk) nimmt dieselbe Änderung vor, wenn Sie in einer Unterhaltung darum bitten, mit denselben Rechten. Seine Vorschau listet die Zeilen, die er ändert, und Sie können einzelne ausschließen, bevor Sie sie genehmigen
 
 ---
 

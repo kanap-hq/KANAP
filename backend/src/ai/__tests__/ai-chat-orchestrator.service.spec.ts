@@ -46,6 +46,8 @@ function createOrchestrator(options?: {
   attachmentRows?: any[];
   /** The pool the ANALYZE after a large approved import runs on. */
   dataSource?: any;
+  /** The conversation's cards (`listConversationPreviews`). */
+  conversationPreviews?: any[];
 }) {
   const persistedMessages: any[] = [];
   let conversationCreated = false;
@@ -275,7 +277,7 @@ function createOrchestrator(options?: {
     };
 
   const mockPreviews = {
-    listConversationPreviews: async () => [],
+    listConversationPreviews: async () => options?.conversationPreviews ?? [],
     executePreview: async () => defaultExecutedPreview(),
     executePreviews: async () => options?.previewResults ?? [defaultExecutedPreview()],
     executePreviewsWithFollowUps: async () => ({
@@ -3759,6 +3761,88 @@ async function testRejectedPreviewEndsUnlessThePersonAskedForMore() {
   assert.doesNotMatch(instruction, /prepare the remaining backend previews now/);
 }
 
+/**
+ * Lot K2e of 26.12.1, the maintainer's test of 24/11: five applications on a bulk card, four
+ * unticked, the card approved; Kad then prepared a new card for the four others. The turn after the
+ * approval reads, on the card's result and on its tool message, the applications the person left out
+ * as their choice; a card approved without a box unticked says nothing of it, and the workflow still
+ * prepares what the person asked for and never had a card.
+ */
+async function testApprovedBulkCardSaysWhatThePersonLeftOut() {
+  const approve = '[APPROVE:22222222-2222-4222-8222-222222222222]';
+  const note = 'Before approving, the person left out 4 applications of this card: APP-1, APP-2, APP-3, APP-4. '
+    + 'That is their choice, not a remaining change: they stayed as they were. '
+    + 'Prepare no card for them unless the person asks for it; the answer may say so in half a sentence.';
+  const bulkCard = (status: string, previewId: string, extra: Record<string, unknown> = {}) => ({
+    preview_id: previewId,
+    tool_name: 'bulk_update_applications',
+    status,
+    target: { entity_type: 'applications', entity_id: null, ref: null, title: 'Change in bulk: APP-1, APP-2, APP-3 and 2 more' },
+    changes: { application_bulk_edit: { label: 'Change in bulk', from: null, to: 'Chosen applications: APP-1, APP-2, APP-3, APP-4, APP-5\n\nBusiness criticality → High', format: 'markdown' } },
+    requires_confirmation: false,
+    actions: [],
+    summary: status === 'executed' ? 'Business criticality changed on 1 application.' : 'Change Business criticality on 1 application.',
+    error_message: null,
+    conversation_id: 'conv-1',
+    created_at: '2026-11-24T10:00:00.000Z',
+    expires_at: '2026-11-24T10:10:00.000Z',
+    approved_at: null,
+    rejected_at: null,
+    executed_at: null,
+    ...extra,
+  });
+  const history = [
+    { id: 'm1', role: 'user', content: 'Modifie la criticité métier des applications Microsoft : élevée.' },
+    { id: 'm2', role: 'assistant', content: '', tool_calls: [{ id: 'tc-bulk', name: 'bulk_update_applications', arguments: '{"field":"criticality","value":"High"}' }] },
+    {
+      id: 'm3',
+      role: 'tool',
+      content: JSON.stringify({ tool_call_id: 'tc-bulk', tool_name: 'bulk_update_applications', result: bulkCard('pending', '11111111-1111-4111-8111-111111111111', { summary: 'Change Business criticality on 5 applications.' }) }),
+    },
+    { id: 'm4', role: 'assistant', content: 'Une carte de modification en masse est prête pour 5 applications : décochez celles à garder, puis approuvez.' },
+    { id: 'm5', role: 'user', content: approve },
+  ];
+  const answer = [[
+    { type: 'text_delta', text: 'La criticité métier de APP-5 est passée à Élevée.' },
+    { type: 'done', usage: { input_tokens: 100, output_tokens: 10 } },
+  ]];
+  const tools = [{
+    name: 'bulk_update_applications', category: 'mutation', description: 'Change in bulk.', input_summary: {}, read_only: false, surfaces: ['chat'],
+    write_preview: { entity_type: 'applications', fields: ['application_bulk_edit'], reversible: false, prompt_hint: 'Use bulk_update_applications.' },
+  }];
+
+  const executed = bulkCard('executed', '22222222-2222-4222-8222-222222222222', { replaces_preview_id: '11111111-1111-4111-8111-111111111111', assistant_note: note });
+  const leftOut = createOrchestrator({
+    historyMessages: history,
+    availableTools: tools,
+    previewResults: [executed],
+    conversationPreviews: [bulkCard('expired', '11111111-1111-4111-8111-111111111111'), executed],
+    providerEventBatches: answer,
+  });
+  await collectEvents(leftOut.orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: approve }));
+  assert.equal(leftOut.providerCallCount.value, 1, 'the workflow goes on after the approval');
+  const instruction = sentInstructions(leftOut.recordedRequests).find((content) => /Continue from this exact state/.test(content)) ?? '';
+  assert.ok(instruction.includes(`status=executed; summary=Business criticality changed on 1 application.; note=${note}`), 'the result says what the person left out');
+  assert.match(instruction, /prepare the remaining backend previews now/, 'what the person asked for and never had a card is still prepared');
+  assert.match(instruction, /Records the person left out of an approved card are not remaining changes\./);
+  const replayed = (leftOut.recordedRequests[0].messages as any[]).find((message) => message.role === 'tool' && message.tool_call_id === 'tc-bulk');
+  assert.equal(JSON.parse(replayed.content).result.assistant_note, note, 'the card\'s tool message says it too');
+
+  const whole = createOrchestrator({
+    historyMessages: history,
+    availableTools: tools,
+    previewResults: [bulkCard('executed', '22222222-2222-4222-8222-222222222222')],
+    providerEventBatches: answer,
+  });
+  await collectEvents(whole.orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: approve }));
+  const wholeInstruction = sentInstructions(whole.recordedRequests).find((content) => /Continue from this exact state/.test(content)) ?? '';
+  assert.ok(wholeInstruction.includes('status=executed; summary=Business criticality changed on 1 application.\n'), 'nothing left out: the result as before');
+  assert.equal(wholeInstruction.includes('note='), false);
+  const replayedWhole = (whole.recordedRequests[0].messages as any[]).find((message) => message.role === 'tool' && message.tool_call_id === 'tc-bulk');
+  assert.equal(JSON.parse(replayedWhole.content).result.assistant_note, undefined);
+  console.log('  an approved bulk card says which records the person left out: OK');
+}
+
 function taskPreviewDto(ref: string, toolName: string) {
   return {
     preview_id: `preview-${ref}`,
@@ -5046,6 +5130,7 @@ async function run() {
   await testMissingWritePreviewStopIsInThePersonsLanguage();
   await testRefusalWithAnOfferIsShownAsIs();
   await testRejectedPreviewEndsUnlessThePersonAskedForMore();
+  await testApprovedBulkCardSaysWhatThePersonLeftOut();
   await testHeldBackAnswerStatesNoTargetSet();
   await testConfirmedProposalKeepsItsTargetSet();
   await testRefusalWordsDoNotCoverARequestToApply();

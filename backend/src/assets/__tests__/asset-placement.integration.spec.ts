@@ -606,7 +606,7 @@ async function testAssistantRules() {
     });
 
     // Executed as previewed: the cluster link is written, the host link removed and audited with
-    // the preview's source.
+    // the preview's source, after the cluster's own row, as `bulkReplaceRelations` audits them.
     const previewId = randomUUID();
     await execute(absorbing, previewId);
     assert.deepEqual(await relationsOf(runner, t, host1), []);
@@ -615,11 +615,11 @@ async function testAssistantRules() {
       { related_asset_id: vm1, relation_type: 'contains' },
     ]));
     assert.deepEqual(audit.entries.map((entry) => `${entry.recordId}:${(entry as any).source}:${(entry as any).sourceRef}`), [
-      `${host1}:ai_chat:${previewId}`,
       `${cluster}:ai_chat:${previewId}`,
+      `${host1}:ai_chat:${previewId}`,
     ]);
-    assert.deepEqual(audit.entries[0].before, { relations: [{ related_asset_id: vm1, relation_type: 'contains' }] });
-    assert.deepEqual(audit.entries[0].after, { relations: [] });
+    assert.deepEqual(audit.entries[1].before, { relations: [{ related_asset_id: vm1, relation_type: 'contains' }] });
+    assert.deepEqual(audit.entries[1].after, { relations: [] });
 
     // R2 at the preview: a member cannot add what its cluster carries.
     assert.deepEqual(await refusal(

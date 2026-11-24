@@ -1,6 +1,7 @@
 import type { PortfolioLinkedReads } from '../portfolio-linked-reads';
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import type { AuditSourceOptions } from '../../audit/audit.service';
 import { PortfolioProject, ProjectStatus, ProjectOrigin } from '../portfolio-project.entity';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { PhaseStatus } from '../portfolio-project-phase.entity';
@@ -22,8 +23,6 @@ import { ParticipationAccessScope } from '../../auth/business-contributor-scope'
  */
 export interface ServiceOpts {
   manager?: EntityManager;
-  /** The source of the write's audit rows when it is not the person on the screen (Kad's card: `ai_chat` and its reference). */
-  audit?: { source: string; sourceRef: string | null };
   userId?: string | null;
   tenantId?: string;
   accessScope?: ParticipationAccessScope;
@@ -31,6 +30,11 @@ export interface ServiceOpts {
   readsBudget?: boolean;
   /** What the project may name of other records (see the base service's options). */
   linked?: PortfolioLinkedReads;
+  /**
+   * The source of the write's audit rows when it is not the person on the screen (Kad's card:
+   * `ai_chat` and its preview); the person's own when absent.
+   */
+  audit?: AuditSourceOptions;
 }
 
 /**
