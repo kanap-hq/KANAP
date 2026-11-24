@@ -179,7 +179,7 @@ L'en-tête affiche :
 
 ### Panneau Propriétés
 
-Le panneau affiche la carte d'identité de l'actif sur chaque onglet. Les modifications sont enregistrées automatiquement. Les champs forment trois groupes.
+Le panneau affiche la carte d'identité de l'actif sur chaque onglet. Les modifications sont enregistrées automatiquement. Les champs se répartissent en trois groupes.
 
 **Type et zone** :
 - **Type d'actif** (obligatoire) : un nouvel actif le demande avant d'être créé

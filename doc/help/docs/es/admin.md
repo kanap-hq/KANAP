@@ -269,6 +269,8 @@ En un espacio de trabajo donde [Microsoft Entra ID](#microsoft-entra-id) está c
 
 La cuenta muestra **Invitado** hasta el primer inicio de sesión de la persona. Un enlace de restablecimiento de contraseña, enviado con **Enviar restablecimiento de contraseña** o desde la página de inicio de sesión, sigue siendo válido durante 1 hora.
 
+Solo un acceso es válido a la vez: una invitación **Con Microsoft** anula los enlaces de contraseña enviados antes a la persona, tanto el enlace de una invitación con contraseña como un enlace de restablecimiento de contraseña. Un enlace anulado se rechaza, igual que un enlace caducado.
+
 ### Asignación de múltiples roles
 
 Se pueden asignar múltiples roles a los usuarios. Sus permisos efectivos son la combinación de todos los roles asignados: si cualquier rol otorga acceso a un recurso, el usuario tiene ese acceso.

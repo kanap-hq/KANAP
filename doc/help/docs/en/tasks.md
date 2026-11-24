@@ -20,7 +20,7 @@ When you click **New**, the task page opens with an empty title in its header, s
    - **Related to**: the record you started from, and its phase when you started from a phase. A task started from the Tasks page is standalone
    - **Classification** (standalone and project tasks): for project tasks, **Source**, **Category**, **Stream**, and **Company** come from the parent project. For standalone tasks, your organization's default classification values are used when available
 
-3. **Fill in the details**. Every tab and field is now available, with the Properties drawer on the right:
+3. **Fill in the details**. Every tab and field is now available, with the Properties panel on the right:
    - **Related to**: Keep **Standalone**, or select **Project**, **Budget** (an OPEX or CAPEX line), **Contract**, or **Incident**, then pick the specific item
    - **Task type**: A category for the work (e.g., Task, Bug, Problem, Incident)
    - **Labels**: Free tags, for example urgent or follow-up. Type one and press Enter
@@ -126,7 +126,7 @@ The Tasks grid shows all tasks across your organization.
 
 ## The Task workspace
 
-Click any row to open the task workspace. The workspace puts the task content (description, attachments, activity) in the centre and exposes a **Properties** drawer on the right edge that you can show or hide.
+Click any row to open the task workspace. The workspace puts the task content (description, attachments, activity) in the centre and exposes a **Properties** panel on the right edge that you can show or hide.
 
 ### Header toolbar
 
@@ -157,9 +157,9 @@ The **Overview** tab holds the task content.
   - **Comments**: A unified activity form (comment + optional status change + optional time log in one submit) plus the comment thread. A comment written with a status change shows that change
   - **Time Log**: Time entries (available for standalone and project tasks only)
 
-### Properties drawer
+### Properties panel
 
-The drawer is collapsible (click the vertical **Properties** tab on the right edge to open or close it; press **P** as a shortcut). Drag its left edge to widen it; a double-click on that edge brings back its usual width. Its width and open state are remembered locally. The drawer contains four groups, separated by dividers:
+The panel is collapsible (click the vertical **Properties** tab on the right edge to open or close it; press **P** as a shortcut). Drag its left edge to widen it; a double-click on that edge brings back its usual width. Its width and open state are remembered locally. The panel contains four groups, separated by dividers:
 
 **Context**:
   - **Related to**: Standalone, Project, Budget (an OPEX or CAPEX line), Contract, or Incident. You can change the type and pick a new item; on save, Kadratis applies any related side effects (see [Changing task context](#changing-task-context))
@@ -185,7 +185,7 @@ The drawer is collapsible (click the vertical **Properties** tab on the right ed
   - **Assets**: Hardware/cloud assets this task relates to
   - **Knowledge**: Linked knowledge documents and a shortcut to create new ones (requires `knowledge:member` for creation)
 
-**Note**: Editing fields in the drawer saves immediately. There is no Save button on the drawer.
+**Note**: Editing fields in the panel saves immediately. There is no Save button on the panel.
 
 ### Changing task context
 
@@ -233,7 +233,7 @@ Standalone tasks and project tasks support detailed time tracking through the Ti
 
 ### Logging time
 
-1. Click **+ Log time** in the Properties drawer (Tracking group), or open the **Time Log** tab in the activity section
+1. Click **+ Log time** in the Properties panel (Tracking group), or open the **Time Log** tab in the activity section
 2. Select the **Category**: IT or Business (determines how time contributes to project effort)
 3. Enter the date the work was performed
 4. Enter time as days and/or hours
@@ -321,11 +321,11 @@ The export button is only enabled when the description has content.
   - Time log only
   - Comment + status + time together
 - For project tasks, setting status to **Done** requires logged time (existing + newly added)
-- The status dropdown in the Properties drawer still works independently if you prefer that flow
+- The status dropdown in the Properties panel still works independently if you prefer that flow
 
 ### Viewing history
 
-The **History** tab, the last tab of the task, lists the changes made to the task (see [Record history](record-history.md)). The **Properties** drawer stays available on it. The history shows:
+The **History** tab, the last tab of the task, lists the changes made to the task (see [Record history](record-history.md)). The **Properties** panel stays available on it. The history shows:
   - Status changes
   - Field modifications
   - Links and attachments
@@ -349,16 +349,16 @@ When task notifications are enabled, status and comment updates can trigger emai
 
 ## Linking applications and assets
 
-Tasks can be linked to one or more **Applications** (Apps & Services) and **Assets** (hardware or cloud resources). The links live in the **Tracking** group of the Properties drawer.
+Tasks can be linked to one or more **Applications** (Apps & Services) and **Assets** (hardware or cloud resources). The links live in the **Tracking** group of the Properties panel.
 
 - Use **Applications** to flag work that touches specific apps in your IT landscape (e.g., a deployment, a configuration change, an incident scoped to that app)
 - Use **Assets** for work scoped to specific servers, devices, or cloud assets
 
-Links are bidirectional: from the linked Application or Asset workspace, the task appears in the **Tasks** relation in that workspace's Properties drawer. This makes it easy to pivot from "what's going on with this app/asset?" to the actual work in flight.
+Links are bidirectional: from the linked Application or Asset workspace, the task appears in the **Tasks** relation in that workspace's Properties panel. This makes it easy to pivot from "what's going on with this app/asset?" to the actual work in flight.
 
 **Tip**: Reserve these links for tasks that are operationally about the app or asset, not every task that mentions one in passing. Otherwise the relation becomes noise instead of signal.
 
-You see each linked record only when you can read its module: applications need the applications, assets the infrastructure. The same holds for the record a task belongs to: a project needs the projects, a budget line the budget, a contract the contracts, an incident the incidents. Otherwise the field is absent from the drawer, the list and Kad, and the task keeps its link. A Business Contributor also sees the project, its phase, the request made from the task and the applications only when they take part in them: one application outside their participation hides the **Applications** field.
+You see each linked record only when you can read its module: applications need the applications, assets the infrastructure. The same holds for the record a task belongs to: a project needs the projects, a budget line the budget, a contract the contracts, an incident the incidents. Otherwise the field is absent from the Properties panel, the list and Kad, and the task keeps its link. A Business Contributor also sees the project, its phase, the request made from the task and the applications only when they take part in them: one application outside their participation hides the **Applications** field.
 
 ---
 
@@ -407,7 +407,7 @@ Standalone tasks are independent work items not linked to any specific project, 
 
 1. Click **New** in the Tasks page
 2. Type the title and press Enter: the task is created as standalone
-3. The Properties drawer shows "Standalone task" in the Context group
+3. The Properties panel shows "Standalone task" in the Context group
 4. Fill in the description and other details
 5. Click **Create**
 
@@ -420,7 +420,7 @@ Standalone tasks and project tasks have editable classification fields that help
 - **Stream**: The specific stream within the category (filtered by selected category)
 - **Company**: The company this work relates to
 
-These fields appear in the **Classification** group of the Properties drawer and can be edited at any time. When creating a new standalone task, your organization's default classification values are pre-filled automatically if configured.
+These fields appear in the **Classification** group of the Properties panel and can be edited at any time. When creating a new standalone task, your organization's default classification values are pre-filled automatically if configured.
 
 For **project tasks**, classification defaults from the parent project when the task is created but can be changed independently. This allows, for example, an infrastructure task to exist within a business project, or a compliance task within an IT project. If a task's classification is not explicitly set, it inherits and displays the project's classification.
 
@@ -636,7 +636,7 @@ These fields are included in **Full Export** for reporting purposes but excluded
   - **Viewers and owners**: the export writes as many `viewer_email_N` and `owner_email_N` columns as the longest list, four at least. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
   - **Classification for standalone and project tasks only**: Source, Category, Stream, and Company can be set on standalone and project tasks (not on OPEX, Contract, or CAPEX tasks)
   - **Phase requires project**: Phase assignment only works for project tasks
-  - **Application/Asset links not in CSV**: Use the workspace Properties drawer to link tasks to applications and assets
+  - **Application/Asset links not in CSV**: Use the workspace Properties panel to link tasks to applications and assets
   - **Comments not included**: Task comments and history must be managed in the workspace
   - **Time log not included**: Time entries must be logged in the workspace
   - **Attachments not included**: File attachments require workspace management
@@ -738,7 +738,7 @@ When the focus is not on an input field, you can use:
 
 - **J** or **←**: Previous task in the current list
 - **K** or **→**: Next task in the current list
-- **P**: Toggle the Properties drawer
+- **P**: Toggle the Properties panel
 - **Escape**: Close and return to the list
 - **Ctrl+S** / **Cmd+S**: Save
 
@@ -751,9 +751,9 @@ When the focus is not on an input field, you can use:
   - **Log time regularly**: Time tracking helps with future project estimation.
   - **Filter by status**: The default filter shows active statuses only (`Open`, `In Progress`, `Pending`, `In Testing`). Include `Done` and `Cancelled` when reviewing historical tasks.
   - **Create from context**: Creating tasks from within workspaces (project, OPEX, contract, CAPEX) automatically links them.
-  - **Link apps and assets**: Use the **Applications** and **Assets** fields in the Properties drawer when a task is operationally about a specific app or asset. The link shows up in the related entity's workspace too.
+  - **Link apps and assets**: Use the **Applications** and **Assets** fields in the Properties panel when a task is operationally about a specific app or asset. The link shows up in the related entity's workspace too.
   - **Use priority wisely**: Reserve **Blocker** for genuinely blocking issues.
   - **Use single-submit updates**: In the Comments tab, combine comment + status + time in one action to keep history and notifications aligned.
   - **Import documents**: Use the **Import** button to pull in `.docx` files as description content instead of copy-pasting.
   - **Keyboard shortcut**: Press **Ctrl+S** (or **Cmd+S** on Mac) to save pending changes at once, for instance a description you have just typed.
-  - **Link knowledge articles**: Use the Knowledge group in the Properties drawer to connect relevant documentation to your tasks.
+  - **Link knowledge articles**: Use the Knowledge group in the Properties panel to connect relevant documentation to your tasks.

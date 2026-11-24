@@ -86,7 +86,7 @@ Without `business_processes:member`, the page opens read only.
 
 ### Properties
 
-The properties drawer on the right holds:
+The properties panel on the right holds:
 
 - **Type**: the ISO 9001 process type, optional. **Management** processes steer and direct the organization. **Core** processes deliver value to customers. **Support** processes provide resources to the others. A sub-process does not inherit the type of its parent.
 - **Parent process**: the process this one sits under. Processes form a tree with no depth limit. The picker shows the tree indented and searches on the full path. The process itself and its sub-processes are left out of the list. Leave it empty for the top level. A process cannot be its own parent, and cannot move under one of its own sub-processes.

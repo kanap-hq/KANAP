@@ -76,7 +76,7 @@ El espacio de trabajo utiliza un modelo dividido:
 
 Esto importa porque no todo se guarda de la misma manera:
 
-- Los cambios en el **panel de Propiedades** se aplican inmediatamente.
+- Los cambios en el **panel de propiedades** se aplican inmediatamente.
 - Los cambios en **Resumen**, **Análisis** y **Evaluación** son ediciones del espacio de trabajo y usan **Guardar** / **Restablecer**.
 - Los documentos gestionados **Propósito** y **Riesgos y mitigaciones** también usan el flujo de guardado del espacio de trabajo.
 
@@ -96,7 +96,7 @@ El encabezado del espacio de trabajo le da contexto operativo sin salir de la p�
 2. Escriba el nombre de la solicitud.
 3. Pulse Intro o Tab, o haga clic en **Crear**. Kadratis crea la solicitud de inmediato, con el estado **Pendiente de revisión** y con usted como solicitante. Su referencia (`REQ-42`) aparece y se abren todas las pestañas.
 
-Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un nombre.
+Complete después el panel de propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un nombre.
 
 ### Crear o cancelar { #cancelling-a-creation }
 
@@ -108,7 +108,7 @@ Mientras la solicitud se está creando, su encabezado muestra **Crear** y **Canc
 
 Si sale de la solicitud de otra forma, esta permanece. Un administrador puede entonces eliminarla con **Eliminar**. La referencia de una solicitud cancelada no se reutiliza.
 
-### Panel de Propiedades
+### Panel de propiedades
 
 Trate el panel como la columna vertebral estructural de la solicitud. Contiene tres grupos.
 
@@ -145,7 +145,7 @@ Una lista de solo lectura de los proyectos producidos a partir de esta solicitud
 
 Los mismos proyectos aparecen también en la pestaña **Relaciones**, junto con las dependencias, las líneas presupuestarias, aplicaciones, activos y procesos de negocio vinculados, y los enlaces y archivos de la solicitud.
 
-Los marcadores antiguos pueden seguir apuntando a `overview`, `team` o `relations`. El espacio de trabajo actual coloca este contenido bajo **Resumen**, el panel de Propiedades y la pestaña **Relaciones**.
+Los marcadores antiguos pueden seguir apuntando a `overview`, `team` o `relations`. El espacio de trabajo actual coloca este contenido bajo **Resumen**, el panel de propiedades y la pestaña **Relaciones**.
 
 ## Resumen
 

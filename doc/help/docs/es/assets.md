@@ -177,7 +177,7 @@ El encabezado muestra:
 - **Eliminar**, un icono de papelera con su nombre en una información emergente (`infrastructure:admin`). Para un activo todavía en uso, el motivo aparece antes de cualquier confirmación
 - **Anterior / Siguiente** (p. ej., "3 de 47"): navegar por la lista filtrada sin volver a ella
 
-### Panel de propiedades (panel derecho)
+### Panel de propiedades
 
 El panel muestra la tarjeta de identidad del activo en cada pestaña. Las ediciones se guardan automáticamente. Los campos se reparten en tres grupos.
 

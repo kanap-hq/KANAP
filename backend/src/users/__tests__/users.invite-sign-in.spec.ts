@@ -8,6 +8,7 @@ import { UsersController } from '../users.controller';
 import { AuthService } from '../../auth/auth.service';
 import { Features } from '../../config/features';
 import { getInviteLinkExpirationMinutes, getPasswordResetExpirationMinutes } from '../../auth/password-reset.util';
+import { LINK_CONFIRMATION_HASH_PREFIX } from '../../auth/entra-link-confirmation';
 
 /**
  * An invitation is a password link valid 7 days (`INVITE_LINK_TTL`), apart from the 1 hour reset
@@ -39,8 +40,22 @@ function buildInviteService(opts: {
   const passwordMails: any[] = [];
   const microsoftMails: any[] = [];
   const tenant = opts.tenant === undefined ? ENTRA_TENANT : opts.tenant;
-  // `query` takes the lock on the person's row (`lockPeople`).
-  const manager: any = { query: async () => [] };
+  // `query` takes the lock on the person's row (`lockPeople`), and a Microsoft invitation cancels
+  // the person's pending password links (the double plays that UPDATE on `tokens`).
+  const manager: any = {
+    query: async (sql: string, params: any[] = []) => {
+      if (!/UPDATE password_reset_tokens SET used_at = now\(\)/.test(sql)) return [];
+      assert.match(sql, /tenant_id = \$1 AND user_id = \$2 AND used_at IS NULL AND token_hash NOT LIKE \$3/);
+      const [tenantId, userId, pattern] = params;
+      const prefix = String(pattern).replace(/%$/, '');
+      for (const row of tokens) {
+        if (row.tenant_id === tenantId && row.user_id === userId && !row.used_at && !String(row.token_hash).startsWith(prefix)) {
+          row.used_at = new Date();
+        }
+      }
+      return [];
+    },
+  };
   const users = {
     manager,
     findOne: async (query: any) => {
@@ -173,6 +188,45 @@ async function testMicrosoftInvitationKeepsAnEnabledAccount() {
   assert.equal(saves.length, 0);
 }
 
+/**
+ * One way in at a time: a Microsoft invitation cancels the password link sent earlier (and a
+ * pending reset link, the same kind of row), refused like a used link. The person's Microsoft
+ * link confirmation and another person's links stay usable.
+ */
+async function testMicrosoftInvitationCancelsPendingPasswordLinks() {
+  const { service, manager, tokens, passwordMails, microsoftMails, resetTokens } = buildInviteService();
+  await service.inviteUser('u-1', 'admin-1', 'https://acme.kanap.net', { manager });
+  const inviteToken = decodeURIComponent(passwordMails[0].inviteUrl.split('#token=')[1]);
+
+  const accountUsers = {
+    findById: async (id: string) => ({ id, email: `${id}@example.invalid`, tenant_id: 't-1', status: 'invited', role: { role_name: 'Reader' } }),
+    updateUser: async (id: string) => ({ id }),
+    enableUser: async (id: string) => ({ id }),
+  };
+  const auth = new AuthService(accountUsers as any, { delete: async () => ({ affected: 0 }) } as any, resetTokens as any);
+  const resetToken = await auth.createPasswordResetToken({ id: 'u-1', email: 'julie.martin@example.invalid', tenant_id: 't-1' });
+  const otherToken = await auth.createPasswordResetToken({ id: 'u-2', email: 'u-2@example.invalid', tenant_id: 't-1' });
+  const linkConfirmation = resetTokens.create({
+    tenant_id: 't-1', user_id: 'u-1', token_hash: `${LINK_CONFIRMATION_HASH_PREFIX}abc`,
+    expires_at: new Date(Date.now() + 60_000), used_at: null,
+  });
+  await resetTokens.save(linkConfirmation);
+
+  await service.inviteUser('u-1', 'admin-1', 'https://acme.kanap.net', { manager, signIn: 'microsoft' });
+  assert.equal(microsoftMails.length, 1);
+
+  await assert.rejects(() => auth.resetPasswordWithToken(inviteToken, 'Next-password-2026'), /invalid or expired token/);
+  await assert.rejects(() => auth.resetPasswordWithToken(resetToken, 'Next-password-2026'), /invalid or expired token/);
+  assert.equal(linkConfirmation.used_at, null, 'the Microsoft link confirmation stays usable');
+  await auth.resetPasswordWithToken(otherToken, 'Next-password-2026');
+  assert.equal(tokens.filter((row) => row.user_id === 'u-1' && !row.used_at).length, 1);
+
+  // A password invitation sent afterwards works as before.
+  await service.inviteUser('u-1', 'admin-1', 'https://acme.kanap.net', { manager });
+  const newToken = decodeURIComponent(passwordMails[1].inviteUrl.split('#token=')[1]);
+  await auth.resetPasswordWithToken(newToken, 'Next-password-2026');
+}
+
 async function testMicrosoftInvitationNeedsEntraSignIn() {
   for (const tenant of [
     { id: 't-1', sso_provider: 'none', sso_enabled: false, entra_tenant_id: null },
@@ -247,6 +301,7 @@ async function main() {
   await testTheInvitationIsAcceptedAfterTheResetHour();
   await testMicrosoftInvitationSendsNoLink();
   await testMicrosoftInvitationKeepsAnEnabledAccount();
+  await testMicrosoftInvitationCancelsPendingPasswordLinks();
   await testMicrosoftInvitationNeedsEntraSignIn();
   await testAnEntraAccountGetsNoInvitation();
   await testTheRouteReadsTheChoice();
