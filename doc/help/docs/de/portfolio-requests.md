@@ -126,6 +126,8 @@ Diese Felder prägen, wie die Anfrage geleitet, gefiltert und an anderer Stelle 
 - Das Ändern von **Kategorie** oder **Stream** ändert den analytischen Kontext für Machbarkeit und Bewertung
 - Das Ändern von **Unternehmen** oder **Anforderer** ändert die Berichts- und Verantwortlichkeitssichtbarkeit über das Portfolio hinweg
 
+Ein Stream gehört zu seiner Kategorie und eine Abteilung zu ihrem Unternehmen, auf dieser Seite, in Importen und mit Kad: Ein allein angegebener Stream bringt seine Kategorie mit, und ein Stream einer anderen Kategorie wird abgelehnt, ebenso eine Abteilung eines anderen Unternehmens. Wird nur die Kategorie geändert, wird ein Stream einer anderen Kategorie geleert, und wird nur das Unternehmen geändert, wird eine Abteilung eines anderen Unternehmens geleert.
+
 #### Team
 
 Die Teamzuweisung benennt Verantwortlichkeit, anstatt nur eine Kontaktliste zu führen:

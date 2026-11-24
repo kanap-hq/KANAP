@@ -126,6 +126,8 @@ These fields shape how the request is routed, filtered, and reviewed elsewhere i
 - changing **Category** or **Stream** changes the analytical context for feasibility and scoring
 - changing **Company** or **Requestor** changes reporting and ownership visibility across the portfolio
 
+A stream belongs to its category and a department to its company, on this page, in imports and with Kad: a stream given alone brings its category, and a stream of another category is refused, as is a department of another company. Changing the category alone empties a stream of another category, and changing the company alone empties a department of another company.
+
 #### Team
 
 Team assignment names accountability rather than just keeping a contact list:

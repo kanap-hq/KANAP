@@ -446,6 +446,8 @@ Project tasks have additional features compared to regular tasks:
 
 **Independent classification**: Project tasks have their own Source, Category, Stream, and Company fields. When a task is created within a project, these default from the project's classification for convenience. However, each task's classification can be edited independently. If a task's classification field is not explicitly set, it inherits and displays the project's value.
 
+A task's stream belongs to the task's category, its own or else its project's: in an import or with Kad, a stream name that several categories share is read in that category, and a stream of another category is refused.
+
 **Priority score**: Project tasks display a calculated priority score that combines:
 - The parent project's priority score
 - An adjustment based on the task's priority level (+10 for Blocker, +5 for High, 0 for Normal, -5 for Low, -10 for Optional)

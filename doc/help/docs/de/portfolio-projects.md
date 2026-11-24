@@ -143,6 +143,8 @@ Behandeln Sie den Eigenschaftenbereich als die persistente Identitätskarte des 
 
 Diese Felder treiben Berichterstattung, Planung, Filterung und den standardmäßigen Portfolio-Kontext an. Klassifizierungswahlen sind besonders wichtig, weil sie beeinflussen, wo das Projekt in der portfolio-übergreifenden Analyse erscheint.
 
+Ein Stream gehört zu seiner Kategorie und eine Abteilung zu ihrem Unternehmen, auf dieser Seite, in Importen und mit Kad: Ein allein angegebener Stream bringt seine Kategorie mit, und ein Stream einer anderen Kategorie wird abgelehnt, ebenso eine Abteilung eines anderen Unternehmens. Wird nur die Kategorie geändert, wird ein Stream einer anderen Kategorie geleert, und wird nur das Unternehmen geändert, wird eine Abteilung eines anderen Unternehmens geleert.
+
 ### Team
 
 Die Teamzuweisung liegt im Eigenschaftenbereich, sodass sie verfügbar bleibt, während Sie an Zeitplan, Aufwand oder Aufgaben arbeiten.
