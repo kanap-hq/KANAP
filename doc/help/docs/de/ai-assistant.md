@@ -225,14 +225,20 @@ Wenn Kad eine Budgetzeile anlegt, fragt es, ob die Zeile OPEX oder CAPEX ist, fa
 
 ### Datensätze in großer Zahl ändern { #changing-records-in-bulk }
 
-Kad ändert ein Feld auf vielen Budgetzeilen oder Anwendungen auf einmal, wie **Auswahl ändern** in der Liste. Dafür braucht es dasselbe Recht: die Stufe Mitglied für das Budget oder für die Anwendungen. Benennen Sie die Datensätze mit einem Filter der Liste, etwa einem Lieferanten oder einer Kostenstelle, oder mit ihren Referenzen (`BL-3`, `APP-7`). Verwenden Sie in einer Anfrage das eine oder das andere. Ein Filter nimmt die aktivierten Datensätze, es sei denn, er nennt einen Status. Anwendungen außer Betrieb bleiben außen vor, es sei denn, er nennt einen Lebenszyklus.
+Kad ändert ein Feld auf vielen Budgetzeilen oder Anwendungen auf einmal, wie **Auswahl ändern** in der Liste. Dafür braucht es dasselbe Recht: die Stufe Mitglied für das Budget oder für die Anwendungen. Benennen Sie die Datensätze mit einem Filter der Liste, etwa einem Lieferanten oder einer Kostenstelle, oder mit ihren Referenzen (`BL-3`, `APP-7`). Verwenden Sie in einer Anfrage das eine oder das andere. Zwei Datensätze, die denselben Wert erhalten, genügen: Kad erstellt eine einzige Vorschau für die ganze Änderung. Ein Filter nimmt die aktivierten Datensätze, es sei denn, er nennt einen Status. Anwendungen außer Betrieb bleiben außen vor, es sei denn, er nennt einen Lebenszyklus.
 
 - Bei Budgetzeilen: die Kostenstelle, das Konto, das zahlende Unternehmen, den Lieferanten, den IT-Verantwortlichen, den Fachverantwortlichen, Run oder Build oder den Wert einer Dimension.
 - Bei Anwendungen: die Fachverantwortlichen oder die IT-Verantwortlichen (die genannten Personen ersetzen die der Rolle), die Kategorie, den Lebenszyklus, die Geschäftskritikalität oder die Cyberkritikalität.
 
 Fragen Sie zum Beispiel: „Setze die Zeilen des Lieferanten Acme auf die Kostenstelle IT-01“ oder „Mach Claire Martin zur IT-Verantwortlichen von APP-3 und APP-7“.
 
-Die Vorschau zeigt die betroffenen Datensätze, das Feld und seinen neuen Wert, wie viele Datensätze geändert werden, wie viele diesen Wert bereits haben und wie viele abgelehnt werden, jeweils mit dem Grund. Sie listet die ersten Datensätze mit ihrer Referenz. Genehmigen Sie sie, um die Änderung anzuwenden. Eine Änderung lässt sich nicht rückgängig machen. Der Tab **Verlauf** jedes Datensatzes zeigt sie als von Kad für Sie vorgenommen.
+Die Vorschau zeigt die betroffenen Datensätze, das Feld und seinen neuen Wert, wie viele Datensätze geändert werden, wie viele diesen Wert bereits haben und wie viele abgelehnt werden, jeweils mit dem Grund. Sie listet jeden Datensatz, den sie ändert, bis zu 200: seine Referenz, die den Datensatz öffnet, seinen Namen, seinen Wert vorher und seinen Wert nachher. Bei mehr als zehn Datensätzen zeigt der Link unter der Liste die übrigen. Datensätze, die Sie nicht ändern dürfen, stehen nicht in der Liste: Die Vorschau zählt sie mit dem Grund.
+
+Jeder Datensatz der Liste hat ein Kästchen. Entfernen Sie das Häkchen, um den Datensatz auszuschließen. Der Datensatz bleibt in der Liste, und Sie können ihn wieder ankreuzen. Die Zählung über der Liste folgt jeder Änderung, etwa „2 von 3 behalten“. Sind seit der Vorschau weitere Datensätze in die Auswahl gekommen und würde sie mehr als 200 auflisten, wirken die Kästchen nicht mehr: Bitten Sie Kad um eine neue Vorschau. **Genehmigen** wendet die Änderung auf die behaltenen Datensätze an. Sind alle Datensätze ausgeschlossen, gibt es nichts zu genehmigen, und die Vorschau sagt es.
+
+Bei mehr als 200 Datensätzen gibt die Vorschau die Zahl und die ersten Datensätze mit ihrer Referenz an, ohne Kästchen. Kad bietet an, die Auswahl einzugrenzen.
+
+Nach der Genehmigung bleibt die Liste in der Vorschau und kennzeichnet jeden Datensatz als **Geändert**, **Nicht geändert** oder **Ausgeschlossen**. Eine Änderung lässt sich nicht rückgängig machen. Der Tab **Verlauf** jedes Datensatzes zeigt sie als von Kad für Sie vorgenommen.
 
 Kad lehnt eine Änderung ab:
 
@@ -241,7 +247,7 @@ Kad lehnt eine Änderung ab:
 - Über 5.000 Datensätze. Grenzen Sie den Filter ein
 - Die das Konto, das zahlende Unternehmen, eine Pflichtdimension, die Kategorie oder den Lebenszyklus leeren würde
 
-Ändert sich die Liste zwischen der Vorschau und Ihrer Genehmigung, schlägt die Vorschau fehl. Bitten Sie Kad um eine neue. Solange ein anderer Budgetvorgang läuft, bleibt die Vorschau offen: Genehmigen Sie sie erneut, sobald dieser Vorgang beendet ist. Über MCP verbundene Assistenten lesen nur.
+Ändert sich die Liste zwischen der Vorschau und Ihrer Genehmigung, schlägt die Vorschau fehl, und nichts wird geändert. Das gilt auch für einen Datensatz, der nicht in der Liste steht und den die Änderung inzwischen ändern würde. Bitten Sie Kad um eine neue. Solange ein anderer Budgetvorgang läuft, bleibt die Vorschau offen: Genehmigen Sie sie erneut, sobald dieser Vorgang beendet ist. Über MCP verbundene Assistenten lesen nur.
 
 ### Einen Datensatz löschen { #deleting-a-record }
 

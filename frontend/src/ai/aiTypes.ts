@@ -182,6 +182,28 @@ export type AiImportRun = {
     | { kind: 'budget_file'; file: BudgetFileReport | null };
 };
 
+/** A record of a change in bulk on its card: `before` in the person's language ("Empty", "Hidden" by `before_state`). */
+export type AiBulkEditRow = {
+  id: string;
+  ref: string;
+  title: string;
+  before: string;
+  before_state: 'value' | 'empty' | 'hidden';
+  kept: boolean;
+  /** Once approved: whether the change was written on this record. */
+  changed?: boolean;
+};
+
+/** The list of a change in bulk: the field, the value after, the records, how many are kept and left out. */
+export type AiBulkEditPreview = {
+  field: string;
+  after: string;
+  after_empty: boolean;
+  rows: AiBulkEditRow[];
+  kept: number;
+  excluded: number;
+};
+
 export type AiMutationPreview = {
   preview_id: string;
   tool_name: AiMutationWriteToolName;
@@ -216,10 +238,18 @@ export type AiMutationPreview = {
   error_is_technical?: boolean;
   /** The column mapping of an import (`prepare_import_mapping`), drawn in place of the changes. */
   import_mapping?: AiImportMapping;
+  /**
+   * The records a change in bulk changes, up to 200, each with its value before (lot K2e of
+   * 26.12.1): a box per record, sent whole to `POST …/previews/:previewId/bulk-exclusions`.
+   */
+  bulk_edit?: AiBulkEditPreview;
+  /** What the assistant is told about the card (a change in bulk of more than 200 records, not listed). */
+  assistant_note?: string;
   conversation_id: string | null;
   /**
-   * A card made by a choice of the person on an import card: the id of the card the conversation
-   * shows (the first of the chain). The conversation draws the newest card of a chain in its place.
+   * A card made by a choice of the person on an import card, or by a box of a change in bulk: the id
+   * of the card the conversation shows (the first of the chain). The conversation draws the newest
+   * card of a chain in its place.
    */
   replaces_preview_id?: string;
   created_at: string;

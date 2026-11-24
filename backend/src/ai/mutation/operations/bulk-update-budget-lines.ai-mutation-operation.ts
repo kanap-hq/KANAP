@@ -4,6 +4,7 @@ import { loadAnalyticsAxes, isAxisActive, analyticsAxisLabel, type AnalyticsAxis
 import { BULK_MAX_ROWS, type BulkChanges, type BulkEditResult } from '../../../common/bulk-edit/bulk-edit';
 import { budgetLineReferenceNumbers } from '../../../common/resolve-item-id';
 import { BUDGET_NATURES, naturesAnd } from '../../../spend/budget-nature';
+import type { BudgetLineBulkRow } from '../../../spend/budget-line-bulk-edit';
 import { BudgetLinesService } from '../../../spend/budget-lines.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiPolicyService } from '../../ai-policy.service';
@@ -11,24 +12,48 @@ import {
   BUDGET_LINE_BULK_FIELD_LABELS,
   BUDGET_LINE_FILTER_LABELS,
   BUDGET_LINE_VALUE_WORDS,
+  BULK_EDIT_ALL_LEFT_OUT,
+  BULK_EDIT_ALL_LEFT_OUT_MESSAGE,
   BULK_EDIT_CARD_LABEL,
   bulkEditActionText,
   bulkEditCardText,
   bulkEditCardTitleText,
   bulkEditTitleText,
+  bulkEditLeftOutNote,
+  bulkEditTooLongNote,
   type BulkFilterPart,
 } from '../../ai-bulk-edit-texts';
+import { familyReference } from '../../ai-entity-reference.util';
 import { AiWriteLanguage, previewSummaryText } from '../../ai-write-texts';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { aiBudgetListAccess } from '../../query/ai-budget-list-access.util';
 import { adaptFilters } from '../../query/ai-filter.adapter';
 import type { AiFilterValue } from '../../query/ai-filter.types';
 import { resolveAiEntityRegistry } from '../../query/registries';
-import { AI_BULK_FILTER_VALUE, isEmptyAiBulkFilterValue, withAiBulkEditWaits } from '../ai-bulk-edit';
+import {
+  AI_BULK_EDIT_LIST_MAX,
+  AI_BULK_FILTER_VALUE,
+  assertBulkWriteKept,
+  bulkListGrew,
+  BULK_EDIT_ANSWER,
+  bulkEditPreviewDto,
+  bulkExcluded,
+  bulkListApplied,
+  bulkListLeftOutRefs,
+  bulkListLeftOut,
+  effectiveBulkSelection,
+  isEmptyAiBulkFilterValue,
+  sortedBulkList,
+  storedBulkList,
+  withAiBulkEditWaits,
+  type AiBulkList,
+  type AiBulkListRow,
+} from '../ai-bulk-edit';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
 import { AiBusinessRecordMutationSupportService } from '../ai-business-record-mutation-support.service';
 import { AiTaskMutationSupportService } from '../ai-task-mutation-support.service';
+import { nameWithoutLeadingReference } from '../name-without-leading-reference';
 
 /**
  * Kad's change in bulk of budget lines (lot K1 of 26.11.9): the "Change the selection" of the
@@ -133,7 +158,7 @@ function counts(value: unknown): Record<string, number> {
 @Injectable()
 export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOperation<BulkUpdateBudgetLinesInput> {
   readonly toolName = TOOL;
-  readonly description = 'Create a card that changes one field on many budget lines at once (cost center, account, paying company, supplier, IT or business owner, run or build, or a dimension value), '
+  readonly description = 'Create a card that changes one field on two budget lines or more at once (cost center, account, paying company, supplier, IT or business owner, run or build, or a dimension value), '
     + 'as the "Change the selection" of the budget lines list. Requires explicit user approval before execution. No amount. '
     + `${ONLY_NAMED_CRITERIA} A request on all the lines, with no other criterion, gets a question asking for one, and no card. ${OTHER_FIELD}`;
   readonly inputSchema = BulkUpdateBudgetLinesInputSchema;
@@ -157,7 +182,9 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
       + `${ONLY_NAMED_CRITERIA} A request on all the lines, with no other criterion, gets a question asking for one, and no card. `
       + 'Give the new value by name, code or number; `null` empties a field, except the account and the paying company. An account number found in several charts of accounts needs `company`. '
       + `${OTHER_FIELD} `
-      + 'For one of these fields on more than a few lines, use this tool, never update_business_record line by line nor prepare_mutation_plan. The card counts the lines to change and the refused ones; it cannot be undone.',
+      + 'For one of these fields set to the same value on two lines or more, named or described by a filter, use this tool: one card, never update_business_record line by line nor prepare_mutation_plan. '
+      + 'Different values, several fields or another field stay one card per line. '
+      + `The card lists each line it changes (up to ${AI_BULK_EDIT_LIST_MAX}) with its value before, counts the refused ones, and the person may leave any line out before approving; it cannot be undone. ` + BULK_EDIT_ANSWER,
   };
 
   constructor(
@@ -188,11 +215,8 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
     const target = chosen
       ? { body: { ids: chosen.ids }, parts: null, defaultScope: false }
       : await this.resolveFilters(context, request.filters ?? {});
-    const dry = await this.budgetLines.bulkUpdate(
-      { ...target.body, changes: change.changes, dry_run: true },
-      context.userId ?? undefined,
-      { manager: context.manager, access: await aiBudgetListAccess(this.policy, context), options: { changedIds: true } },
-    ) as BulkEditResult;
+    const counted = await this.countCard(context, request.field, change.changes, target.body, [], null);
+    const dry = counted.dry!;
     if (!dry.changes) {
       const refused = Object.entries(dry.refused).map(([code, n]) => `${code}: ${n}`).join(', ');
       throw new BadRequestException(
@@ -200,15 +224,6 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
         + `${refused ? ` and the others are refused (${refused})` : ''}.`,
       );
     }
-    // The first lines that would change, by reference, read under the person's access.
-    const examples: Array<{ ref: string; title: string }> = (await context.manager.query(
-      `SELECT 'BL-' || i.item_number AS ref, i.product_name AS title
-         FROM spend_items i
-        WHERE i.tenant_id = $1${naturesAnd('i', BUDGET_NATURES)} AND i.id = ANY($2::uuid[])
-        ORDER BY i.item_number
-        LIMIT ${CARD_EXAMPLES}`,
-      [context.tenantId, dry.changed_ids ?? []],
-    )).map((row: { ref: string; title: string | null }) => ({ ref: String(row.ref), title: text(row.title) }));
     return {
       targetEntityType: 'budget_lines',
       targetEntityId: null,
@@ -224,10 +239,194 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
         expected_rows: dry.rows,
         fingerprint: dry.fingerprint,
       },
+      currentValues: counted.currentValues,
+    };
+  }
+
+  /**
+   * The card recounted with the lines the person left out (lot K2e of 26.12.1): the stored selection
+   * and change, never the model's words again; the left out lines go in `excluded`, which the
+   * write reads with the rest of `mutation_input`, and stay listed, unticked. The count takes the
+   * workspace's budget-operations lock, as the first one: another operation running refuses it (409
+   * `operation_running`) and the card stays as it was.
+   */
+  prepareExclusions(context: AiExecutionContextWithManager, preview: AiMutationPreview, excluded: string[]): Promise<AiPreparedMutationPreview> {
+    return withAiBulkEditWaits(context.manager, async () => {
+      const mutation = (preview.mutation_input ?? {}) as Record<string, unknown>;
+      const previous = storedBulkList(preview.current_values);
+      if (!previous) throw new BadRequestException('This card does not list its lines: none can be left out.');
+      const listed = new Set(previous.rows.map((row) => row.id));
+      if (excluded.some((id) => !listed.has(id))) throw new BadRequestException('Only a line this card lists can be left out.');
+      const selection = mutation.selection as Record<string, unknown> | undefined;
+      if (!selection || typeof selection !== 'object' || !mutation.changes) throw new BadRequestException('Preview is missing its lines.');
+      const counted = await this.countCard(context, text(mutation.field) as BulkField, mutation.changes as BulkChanges, selection, excluded, previous);
+      const { excluded: _previous, ...rest } = mutation;
+      return {
+        targetEntityType: 'budget_lines',
+        targetEntityId: null,
+        mutationInput: {
+          ...rest,
+          ...(counted.excluded.length > 0 ? { excluded: counted.excluded } : {}),
+          as_of: counted.dry?.as_of ?? null,
+          expected_rows: counted.dry?.rows ?? 0,
+          fingerprint: counted.dry?.fingerprint ?? null,
+        },
+        currentValues: counted.currentValues,
+      };
+    });
+  }
+
+  /** A card with every line left out cannot be approved; "Approve all" leaves it out. */
+  isApprovable(preview: AiMutationPreview): boolean {
+    return this.approvalRefusal(preview) === null;
+  }
+
+  approvalRefusal(preview: AiMutationPreview): string | null {
+    const values = (preview.current_values?.values ?? {}) as Record<string, unknown>;
+    return values.changes !== undefined && Number(values.changes) === 0 ? BULK_EDIT_ALL_LEFT_OUT_MESSAGE : null;
+  }
+
+  /**
+   * The count of a card (the screen's dry run, under the person's access) on its selection less the
+   * lines left out, and what the card stores: the counts, the first lines, and, up to
+   * `AI_BULK_EDIT_LIST_MAX`, the list of every line it changes with its value before.
+   */
+  private async countCard(
+    context: AiExecutionContextWithManager,
+    field: BulkField,
+    changes: BulkChanges,
+    selection: Record<string, unknown>,
+    excluded: string[],
+    previous: AiBulkList | null,
+  ): Promise<{ dry: BulkEditResult<BudgetLineBulkRow> | null; excluded: string[]; currentValues: Record<string, unknown> }> {
+    // The records left out, read again as the kept ones (review of lot K2e): their name and value
+    // before of today. One the person no longer reads, or that would no longer change, leaves the list
+    // and the records left out: the count reaches it again, unchanged, refused or not at all.
+    const leftOutRows = excluded.length > 0 ? (await this.dryRun(context, { ids: excluded }, changes)).changed_rows ?? [] : [];
+    const stillOut = leftOutRows.map((row) => row.id).sort();
+    const body = effectiveBulkSelection({ selection, excluded: stillOut });
+    const leftOut = stillOut.length > 0 ? { excluded: stillOut.length } : {};
+    if (!body) {
+      // Every chosen line left out: nothing to count, the card lists them unticked.
+      return {
+        dry: null,
+        excluded: stillOut,
+        currentValues: {
+          values: { rows: 0, changes: 0, unchanged: 0, refused: {}, examples: [], ...leftOut },
+          bulk_list: bulkListLeftOut(await this.listOf(context, field, changes, leftOutRows), stillOut),
+        },
+      };
+    }
+    const dry = await this.dryRun(context, body, changes);
+    const changed = dry.changed_rows ?? [];
+    // A recount past the bound would drop the list and the records left out with it: refused.
+    if (previous && changed.length + leftOutRows.length > AI_BULK_EDIT_LIST_MAX) throw await bulkListGrew(context);
+    let list: AiBulkList | null = null;
+    let examples: Array<{ ref: string; title: string }>;
+    if (changed.length + leftOutRows.length <= AI_BULK_EDIT_LIST_MAX) {
+      list = bulkListLeftOut(await this.listOf(context, field, changes, [...changed, ...leftOutRows]), stillOut);
+      examples = list.rows.filter((row) => row.kept).slice(0, CARD_EXAMPLES).map((row) => ({ ref: row.ref, title: row.title }));
+    } else {
+      // The first lines that would change, by reference, read under the person's access.
+      examples = (await context.manager.query(
+        `SELECT 'BL-' || i.item_number AS ref, i.product_name AS title
+           FROM spend_items i
+          WHERE i.tenant_id = $1${naturesAnd('i', BUDGET_NATURES)} AND i.id = ANY($2::uuid[])
+          ORDER BY i.item_number
+          LIMIT ${CARD_EXAMPLES}`,
+        [context.tenantId, dry.changed_ids ?? []],
+      )).map((row: { ref: string; title: string | null }) => ({ ref: String(row.ref), title: text(row.title) }));
+    }
+    return {
+      dry,
+      excluded: stillOut,
       currentValues: {
-        values: { rows: dry.rows, changes: dry.changes, unchanged: dry.unchanged, refused: dry.refused, examples },
+        values: { rows: dry.rows, changes: dry.changes, unchanged: dry.unchanged, refused: dry.refused, examples, ...leftOut },
+        ...(list ? { bulk_list: list } : {}),
       },
     };
+  }
+
+  /** The screen's dry run of a selection, with the lines it changes as `reach` read them. */
+  private async dryRun(context: AiExecutionContextWithManager, body: Record<string, unknown>, changes: BulkChanges): Promise<BulkEditResult<BudgetLineBulkRow>> {
+    return await this.budgetLines.bulkUpdate(
+      { ...body, changes, dry_run: true },
+      context.userId ?? undefined,
+      { manager: context.manager, access: await aiBudgetListAccess(this.policy, context), options: { changedIds: true, changedRows: true } },
+    ) as BulkEditResult<BudgetLineBulkRow>;
+  }
+
+  /**
+   * The lines a count changes, by reference, each with its value before as the card names the new
+   * one: a cost center `IT-01 · Informatique`, an account `6100 - Software`, a company or a supplier
+   * by its reference and name, a person by name, a dimension value by name, run or build in words.
+   * The names are read in the person's transaction, under their access: a value they cannot read
+   * (a company outside their access) is hidden, never named.
+   */
+  private async listOf(context: AiExecutionContextWithManager, field: BulkField, changes: BulkChanges, changed: BudgetLineBulkRow[]): Promise<AiBulkList> {
+    if (changed.length === 0) return { rows: [], words: {} };
+    const { manager, tenantId } = context;
+    const named: Array<{ id: string; ref: string; title: string | null }> = await manager.query(
+      `SELECT i.id::text AS id, 'BL-' || i.item_number AS ref, i.product_name AS title
+         FROM spend_items i
+        WHERE i.tenant_id = $1${naturesAnd('i', BUDGET_NATURES)} AND i.id = ANY($2::uuid[])`,
+      [tenantId, changed.map((row) => row.id)],
+    );
+    const names = new Map(named.map((row) => [row.id, { ref: String(row.ref), title: text(row.title) }]));
+    const axisId = field === 'dimension' ? Object.keys((changes.analytics_values ?? {}) as Record<string, unknown>)[0] : null;
+    const held = new Map(changed.map((row) => [row.id, axisId ? row.dimensions.get(axisId) ?? null : row.values[COLUMN[field as Exclude<BulkField, 'dimension'>]] ?? null]));
+    const values = Array.from(new Set(Array.from(held.values()).filter((value): value is string => value !== null)));
+    const words: AiBulkList['words'] = {};
+    if (field === 'run_build') {
+      for (const value of values) {
+        words[value] = Object.fromEntries((['en', 'fr', 'de', 'es'] as const).map((language) => [language, BUDGET_LINE_VALUE_WORDS[language].run_build[value] ?? value])) as AiBulkList['words'][string];
+      }
+    } else if (values.length > 0) {
+      for (const [id, label] of await this.valueLabels(context, field, values)) words[id] = { en: label, fr: label, de: label, es: label };
+    }
+    return sortedBulkList({
+      rows: changed.map((row): AiBulkListRow => {
+        const value = held.get(row.id) ?? null;
+        const before: Pick<AiBulkListRow, 'before' | 'hidden'> = value === null ? { before: null } : words[value] ? { before: value } : { before: null, hidden: true };
+        return { id: row.id, ...(names.get(row.id) ?? { ref: '', title: '' }), ...before, kept: true };
+      }),
+      words,
+    });
+  }
+
+  /** The names of the values before of one field, by id, as the person reads them (a value they cannot read is absent). */
+  private async valueLabels(context: AiExecutionContextWithManager, field: BulkField, ids: string[]): Promise<Map<string, string>> {
+    const { manager, tenantId } = context;
+    const read = async (sql: string, label: (row: Record<string, unknown>) => string | null) => {
+      const rows: Array<Record<string, unknown>> = await manager.query(sql, [tenantId, ids]);
+      return new Map(rows.map((row) => [String(row.id), label(row) ?? String(row.id)]));
+    };
+    const joined = (parts: unknown[], separator: string) => parts.map((part) => text(part)).filter(Boolean).join(separator) || null;
+    const referenced = (family: string) => (row: Record<string, unknown>) => {
+      const reference = familyReference(family, row.item_number);
+      const rest = nameWithoutLeadingReference(reference, text(row.name) || null);
+      return reference ? (rest ? `${reference} - ${rest}` : reference) : text(row.name) || null;
+    };
+    switch (field) {
+      case 'cost_center':
+        return read(`SELECT id::text AS id, code, name FROM cost_centers WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, (row) => joined([row.code, row.name], ' · '));
+      case 'account':
+        return read(`SELECT id::text AS id, account_number, account_name FROM accounts WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, (row) => joined([row.account_number, row.account_name], ' - '));
+      case 'paying_company':
+        return read(`SELECT id::text AS id, name, item_number FROM companies WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, referenced('companies'));
+      case 'supplier':
+        return read(`SELECT id::text AS id, name, item_number FROM suppliers WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, referenced('suppliers'));
+      case 'owner_it':
+      case 'owner_business':
+        return read(
+          `SELECT id::text AS id, COALESCE(NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), ''), email) AS label FROM users WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+          (row) => text(row.label) || null,
+        );
+      case 'dimension':
+        return read(`SELECT id::text AS id, name FROM analytics_categories WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, (row) => text(row.name) || null);
+      default:
+        return new Map();
+    }
   }
 
   presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
@@ -242,6 +441,9 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
     const done = applied ? Number(applied.changed) || 0 : changes;
     const filterParts = Array.isArray(mutation.filter_parts) ? (mutation.filter_parts as StoredFilterPart[]) : null;
     const refs = filterParts ? null : Array.isArray(mutation.refs) ? (mutation.refs as unknown[]).map(text) : [];
+    const list = storedBulkList(preview.current_values);
+    // An approved card tells the model which records the person left out: their choice, not a change left to make.
+    const leftOut = preview.status === 'executed' ? bulkListLeftOutRefs(list) : [];
     const card = bulkEditCardText({
       family: 'budget_lines',
       selection: filterParts
@@ -255,6 +457,9 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
       refused: counts(values.refused),
       examples: (Array.isArray(values.examples) ? values.examples as Array<Record<string, unknown>> : [])
         .map((row) => ({ ref: text(row.ref), title: text(row.title) })),
+      excluded: bulkExcluded(mutation).length,
+      listed: list !== null,
+      done: preview.status === 'executed',
     }, language);
     const englishField = field === 'dimension' ? fieldLabel : BUDGET_LINE_BULK_FIELD_LABELS.en[field] ?? field;
     let summary = `Preview ${preview.id} ${preview.status}.`;
@@ -274,9 +479,19 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
       );
     }
     return {
-      target: { entity_type: 'budget_lines', entity_id: null, ref: null, title: bulkEditCardTitleText('budget_lines', language, changes, refs) },
+      target: { entity_type: 'budget_lines', entity_id: null, ref: null, title: bulkEditCardTitleText('budget_lines', language, preview.status === 'executed' ? done : changes, refs) },
       changes: { [CARD_FIELD]: { label: BULK_EDIT_CARD_LABEL[language], from: null, to: card, format: 'markdown' } },
       summary,
+      // The list goes to the screen only: the model reads the counts of the card's change.
+      ...(list ? { bulkEdit: bulkEditPreviewDto(list, fieldLabel, value, language) } : {}),
+      ...(!list && preview.status === 'pending' && changes > AI_BULK_EDIT_LIST_MAX
+        ? { assistantNote: bulkEditTooLongNote('budget_lines', changes, AI_BULK_EDIT_LIST_MAX) }
+        : {}),
+      ...(leftOut.length > 0 ? { assistantNote: bulkEditLeftOutNote('budget_lines', leftOut) } : {}),
+      // A pending card with every record left out says why it cannot be approved, before any approval.
+      ...(preview.error_message === BULK_EDIT_ALL_LEFT_OUT_MESSAGE || (preview.status === 'pending' && this.approvalRefusal(preview) !== null)
+        ? { errorMessage: BULK_EDIT_ALL_LEFT_OUT[language] }
+        : {}),
     };
   }
 
@@ -284,17 +499,27 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
     // Read again at approval: the right may have been withdrawn since the card.
     await this.policy.assertWriteAccess(context, 'budget', context.manager, { level: 'member' });
     const mutation = (preview.mutation_input ?? {}) as Record<string, unknown>;
-    const selection = mutation.selection;
-    if (!selection || typeof selection !== 'object' || !mutation.changes) throw new BadRequestException('Preview is missing its lines.');
+    if (!mutation.selection || typeof mutation.selection !== 'object' || !mutation.changes) throw new BadRequestException('Preview is missing its lines.');
+    // The card's selection less the lines left out, as the card holds it.
+    const selection = effectiveBulkSelection(mutation);
+    if (!selection) throw new BadRequestException(BULK_EDIT_ALL_LEFT_OUT_MESSAGE);
     // The count's instant, lines and fingerprint: a list that changed since refuses the write whole.
-    const result = await withAiBulkEditWaits(context.manager, async () => this.budgetLines.bulkUpdate(
-      { ...(selection as Record<string, unknown>), changes: mutation.changes, as_of: mutation.as_of, expected_rows: mutation.expected_rows, fingerprint: mutation.fingerprint },
-      context.userId ?? undefined,
-      { manager: context.manager, access: await aiBudgetListAccess(this.policy, context), audit: buildAiMutationAudit(preview) },
-    )) as BulkEditResult;
+    const list = storedBulkList(preview.current_values);
+    const result = await withAiBulkEditWaits(context.manager, async () => {
+      const written = await this.budgetLines.bulkUpdate(
+        { ...selection, changes: mutation.changes, as_of: mutation.as_of, expected_rows: mutation.expected_rows, fingerprint: mutation.fingerprint },
+        context.userId ?? undefined,
+        { manager: context.manager, access: await aiBudgetListAccess(this.policy, context), audit: buildAiMutationAudit(preview), options: { changedIds: true } },
+      ) as BulkEditResult;
+      // A record the card did not keep in its list would change: nothing is written.
+      assertBulkWriteKept(list, written.changed_ids ?? []);
+      return written;
+    });
     preview.current_values = {
       ...(preview.current_values ?? {}),
       applied: { changed: Number(result.changed) || 0, unchanged: result.unchanged, refused: result.refused },
+      // The list stays on the card, each line it changed marked.
+      ...(list ? { bulk_list: bulkListApplied(list, result.changed_ids ?? []) } : {}),
     };
   }
 

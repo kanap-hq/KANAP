@@ -385,6 +385,16 @@
       "onPremises": "On-Premise",
       "cloud": "Cloud"
     },
+    "bulkEdit": {
+      "busy": "Ein anderer Vorgang läuft. Versuchen Sie es gleich noch einmal.",
+      "changed": "Geändert",
+      "counting": "Zählung läuft",
+      "keep": "{{ref}} {{title}} behalten",
+      "kept_one": "{{count}} von {{total}} behalten",
+      "kept_other": "{{count}} von {{total}} behalten",
+      "leftOut": "Ausgeschlossen",
+      "notChanged": "Nicht geändert"
+    },
     "importChoices": {
       "stale": "Diese Karte kann nicht mehr geändert werden. Bitten Sie {{agent}} um eine neue."
     }

@@ -590,7 +590,8 @@ function testBudgetLineBulkEditCards() {
     mutation_input: { field: 'dimension', dimension: 'Région', value_label: null, filter_parts: [{ key: 'status', op: 'in', values: ['disabled'] }], default_scope: false },
     current_values: { values: { rows: 1, changes: 1, unchanged: 0, refused: {}, examples: [] }, applied: { changed: 1, unchanged: 0, refused: {} } },
   });
-  assert.equal(card(emptied, 'en'), 'Filter: Status "Disabled"\n\nRégion → Empty\n\n1 line to change');
+  // Approved, the card no longer says what it would change: its summary says what changed.
+  assert.equal(card(emptied, 'en'), 'Filter: Status "Disabled"\n\nRégion → Empty');
   assert.equal(summary(operation, emptied, 'en'), 'Région changed on 1 budget line.');
   assert.equal(summary(operation, emptied, 'fr'), 'Appliqué : modification du champ « Région » sur 1 ligne budgétaire.');
   // A list that changed since the card: the card's words in the person's language.
@@ -671,7 +672,7 @@ function testApplicationBulkEditCards() {
     mutation_input: { field: 'lifecycle', value_words: { en: 'Retired', fr: 'Retirée', de: 'Ausgemustert', es: 'Retirada' }, refs: ['APP-3', 'APP-7'] },
     current_values: { values: { rows: 2, changes: 2, unchanged: 0, refused: {}, examples: [] }, applied: { changed: 2, unchanged: 0, refused: {} } },
   });
-  assert.equal(card(executed, 'en'), 'Chosen applications: APP-3, APP-7\n\nLifecycle → Retired\n\n2 applications to change');
+  assert.equal(card(executed, 'en'), 'Chosen applications: APP-3, APP-7\n\nLifecycle → Retired');
   assert.equal(operation.presentPreview(executed, 'en').target.title, 'Change in bulk: APP-3, APP-7');
   assert.equal(operation.presentPreview(executed, 'fr').target.title, 'Modification en masse : APP-3, APP-7');
   assert.equal(summary(operation, executed, 'en'), 'Lifecycle changed on 2 applications.');

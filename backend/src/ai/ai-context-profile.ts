@@ -510,6 +510,38 @@ const INCIDENT_LIFECYCLE_VERBS = 'clos|close|ferme|fermer|rouvre|rouvrir|reopen|
 /** A salutation or a polite/wish turn before the verb does not break the imperative. */
 const DIRECTIVE_PREFIX_RE = /^(?:(?:bonjour|bonsoir|salut|hello|hi|hey)[\s,!.]+)*(?:(?:je veux|je voudrais|il faut|tu peux|vous pouvez|peux[- ]tu|pouvez[- ]vous|i want to|i would like to|can you|could you|would you|please|merci de|merci|stp|svp)[\s,]+)*/;
 
+/**
+ * A reading turn built on a general write verb (lot K2e of 26.12.1), at the head of the request:
+ * "Mets en évidence les lignes sans centre de coûts" highlights rows, "Change de vue : …" reshapes
+ * the answer, "Update me on the retired applications" asks for news. None changes a record.
+ */
+const READING_TURN_RE = /^(?:(?:mets|mettez|mettre|met)\s+en\s+evidence|(?:change|changez|changer)\s+de\s+vue|update\s+me\s+(?:on|about)|keep\s+me\s+(?:updated|posted|informed))\b/;
+
+/** Where a request goes on to another clause: "… et passe leur criticité à basse", "… and set APP-3 to retired". */
+const CLAUSE_BREAK_RE = /\s*(?:[,;:]|\b(?:et|and|puis|then|ensuite)\b)\s*/i;
+
+/** A verb whose object is a pronoun: "mets-les", "passe-la". */
+const CLITIC_VERB_RE = /^\s*(\S+?)-(?:les|la|le|leur|lui|y)\b/i;
+
+/**
+ * A reading head that stays a read: no later clause of the request is a write as the classifier
+ * reads it ("Mets en évidence les applications retirées et passe leur criticité à basse" writes). A
+ * clause that names the head's object by a pronoun is read with that object: "… puis mets-les sur
+ * le centre IT-01" is "mets les lignes … sur le centre IT-01".
+ */
+function isReadingTurn(raw: string, text: string): boolean {
+  const head = text.trim().replace(DIRECTIVE_PREFIX_RE, '');
+  if (!READING_TURN_RE.test(head)) return false;
+  const [first, ...later] = raw.split(CLAUSE_BREAK_RE);
+  const object = normalizeText(first).trim().replace(DIRECTIVE_PREFIX_RE, '').replace(READING_TURN_RE, '').trim();
+  return later.every((clause) => {
+    if (!clause.trim()) return true;
+    const clitic = clause.match(CLITIC_VERB_RE);
+    const readings = clitic ? [clause, `${clitic[1]} ${object}${clause.slice(clitic[0].length)}`] : [clause];
+    return readings.every((reading) => classifyAiContextProfile(reading).profile.promptMode !== 'write');
+  });
+}
+
 function directiveHeadVerb(text: string): string | null {
   const head = text.replace(DIRECTIVE_PREFIX_RE, '');
   return head.match(new RegExp(`^(${INCIDENT_LIFECYCLE_VERBS})\\b`))?.[1] ?? null;
@@ -1037,6 +1069,11 @@ function classifyAiContextProfile(userMessage: string): ClassifiedContextProfile
 
   // A review is a read, not the "passe" write: "Passe en revue les technologies en fin de vie".
   if (/\b(?:passe|passer|pass|go through)\s+(?:en\s+)?revue\b/.test(text)) {
+    return { profile: withWebCapability(PROFILES.read_query, needsWeb), explicitIntent: true };
+  }
+  // A reading turn on a general write verb is a read, as a review: "Mets en évidence les lignes…",
+  // "Change de vue…", "Update me on…", unless a later clause writes.
+  if (isReadingTurn(raw, text)) {
     return { profile: withWebCapability(PROFILES.read_query, needsWeb), explicitIntent: true };
   }
   // "Qui a changé … ?" asks who changed a value, not for a change.
