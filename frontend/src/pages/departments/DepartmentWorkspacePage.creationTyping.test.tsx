@@ -38,6 +38,7 @@ import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import DepartmentWorkspacePage from './DepartmentWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
+import { PAGE_FIELD, pressInto } from '../../test/creationHold';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -122,26 +123,26 @@ describe('DepartmentWorkspacePage typing while the department is created', () =>
 
   it('saves once on the new department the description committed while the department is written', async () => {
     const { finish } = await startWrite();
-    const description = screen.getByLabelText('departments.fields.description');
-    act(() => description.focus());
+    const description = screen.getByLabelText('departments.fields.description', { selector: PAGE_FIELD });
+    pressInto(description);
     fireEvent.change(description, { target: { value: 'Accounting' } });
     fireEvent.blur(description);
     await finish();
 
     await until(() => { if (patchesWith('description', 'Accounting').length === 0) throw new Error(`patches: ${JSON.stringify(mocked.patch.mock.calls)}`); });
     expect(patchesWith('description', 'Accounting')).toHaveLength(1);
-    const shown = screen.getByLabelText('departments.fields.description') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('departments.fields.description', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     await until(() => { if (shown.value !== 'Accounting') throw new Error(`description shows "${shown.value}"`); });
   });
 
   it('keeps the description being typed while the department is written: same field, same focus, saved on the new department', async () => {
     const { finish } = await startWrite();
-    const description = screen.getByLabelText('departments.fields.description');
-    act(() => description.focus());
+    const description = screen.getByLabelText('departments.fields.description', { selector: PAGE_FIELD });
+    pressInto(description);
     fireEvent.change(description, { target: { value: 'Acc' } });
     await finish();
 
-    const shown = screen.getByLabelText('departments.fields.description') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('departments.fields.description', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     expect(shown === description).toBe(true);
     expect(document.activeElement === shown).toBe(true);
     fireEvent.change(shown, { target: { value: 'Accounting' } });

@@ -8,6 +8,7 @@ import api from '../../api';
 import { incidentsApi, type Incident, type IncidentAttachment } from '../../api/endpoints/incidents';
 import { createAppTheme } from '../../config/ThemeContext';
 import IncidentWorkspacePage from './IncidentWorkspacePage';
+import { findCreatedRecordField } from '../../components/workspace/creation/creationFieldFocus';
 
 const navigateMock = vi.hoisted(() => vi.fn());
 const shellProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
@@ -273,8 +274,9 @@ describe('IncidentWorkspacePage — new incident title', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Title is too long.');
     expect(navigateMock).not.toHaveBeenCalled();
+    // The refusal stays while the title is typed again, until it is given again.
     fireEvent.change(title, { target: { value: 'Mail' } });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('Title is too long.');
   });
 
   it('offers no header title to a reader', () => {
@@ -435,6 +437,12 @@ describe('IncidentWorkspacePage — review draft is flushed before every transit
     const saveOrder = vi.mocked(api.patch).mock.invocationCallOrder[0];
     const statusOrder = vi.mocked(incidentsApi.update).mock.invocationCallOrder[0];
     expect(saveOrder).toBeLessThan(statusOrder);
+  });
+
+  it('declares its description as the place of the cursor once an incident is created', async () => {
+    renderPage();
+    await screen.findByLabelText('workspace.incident.overview.review');
+    expect(findCreatedRecordField(document.body)).toBe(screen.getByPlaceholderText('workspace.incident.overview.descriptionPlaceholder'));
   });
 
   it('rolls a failed transition back to the flushed state, not to the stale render', async () => {

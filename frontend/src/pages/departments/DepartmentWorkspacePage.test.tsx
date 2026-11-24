@@ -42,6 +42,7 @@ vi.mock('../../components/fields/CompanySelect', () => ({
 
 import api from '../../api';
 import DepartmentWorkspacePage from './DepartmentWorkspacePage';
+import { findCreatedRecordField } from '../../components/workspace/creation/creationFieldFocus';
 import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = api as unknown as {
@@ -184,6 +185,12 @@ describe('DepartmentWorkspacePage', () => {
     expect(await screen.findByText('departments.messages.nameTaken')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveFocus();
     expect(navigateMock).not.toHaveBeenCalled();
+  });
+
+  it('declares its description as the place of the cursor once a department is created', async () => {
+    renderAt('/master-data/departments/dep-1/overview');
+    const description = await screen.findByLabelText('departments.fields.description');
+    expect(findCreatedRecordField(document.body)).toBe(description);
   });
 
   it('saves the description on blur', async () => {

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useCreationReturn from './useCreationReturn';
 import useRecordCreation from './useRecordCreation';
 import useMissingMarks from './useMissingMarks';
-import { focusFirstMissingField } from './creationFieldFocus';
+import { endCreationWrite, focusFirstMissingField, noteCreationWrite } from './creationFieldFocus';
 import { useCreationPresence, watchCreationFocus } from './creationDeparture';
 
 /**
@@ -90,6 +90,7 @@ export default function useDraftCreation({ isCreate, ready, post, missing, value
     if (written.current || running.current) return;
     held.current = false;
     running.current = true;
+    noteCreationWrite();
     setWriting(true);
     try {
       const created = await latest.current.post();
@@ -100,6 +101,7 @@ export default function useDraftCreation({ isCreate, ready, post, missing, value
       latest.current.startCreation({ recordId: created.id, token: created.token, returnTo: latest.current.returnTo, reference: created.reference });
       navigate(created.path, { replace: true });
     } finally {
+      endCreationWrite();
       running.current = false;
       setWriting(false);
     }
