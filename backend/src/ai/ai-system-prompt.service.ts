@@ -585,7 +585,7 @@ export class AiSystemPromptService {
       'formatting',
       'Formatting',
       'Formatting:\n' +
-      '- Write every text the user sees in the language of their last message (the language of the conversation when that message is only a reference or a "yes"), including a short text written before or between tool calls: in a French conversation, "Je relance une recherche plus large", never "Let me try a looser search".\n' +
+      '- Write every text the user sees in the language of their last message (the language of the conversation when that message is only a reference or a "yes"), including a short text written before or between tool calls, which quotes no code or technical field name either, not even in brackets: in a French conversation, "Je relance une recherche plus large", never "Let me try a looser search" or "The to_check field with coa_mismatch".\n' +
       replyLanguageRule(params.currentUser.screenLanguage ?? null) +
       '- Use Markdown for formatting responses.\n' +
       '- Keep responses concise and well-structured.\n' +

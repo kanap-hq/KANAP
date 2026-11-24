@@ -210,6 +210,8 @@ async function testPromptCarriesTheUserTimeZoneAndLocalTime() {
   assert.match(prompt, /Date-only fields keep their calendar day/);
   // Lot K2d: a code arrives with its name, which the answer quotes.
   assert.match(prompt, /comes with its name in the user's language .*quote the name, never the code, not even in brackets or as a translation\./);
+  // A text written before or between tool calls is shown too: the same rule (browser replay of 24/11).
+  assert.match(prompt, /including a short text written before or between tool calls, which quotes no code or technical field name either, not even in brackets/);
 
   const fallback = service.build({ ...baseParams, availableTools: [], timeZone: 'Mars/Olympus' });
   assert.match(fallback, /"time_zone": "UTC"/, 'a zone nobody knows reads as UTC');
