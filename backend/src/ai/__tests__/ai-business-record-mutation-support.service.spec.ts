@@ -91,10 +91,20 @@ function createHarness() {
     },
   };
   const itOpsSettings = new ItOpsSettingsService(tenantRepo as any, locationRepo as any, {} as any);
+  // The update preview reads the record as the screen does (lot K2c): the services' read.
+  const applications = {
+    get: async (id: string) => (id === APP_ID ? { id: APP_ID, tenant_id: TENANT_ID, sequential_id: 'APP-1', name: 'Payroll', category: 'productivity', status: 'enabled' } : null),
+  };
+  const budgetLines = {
+    get: async (id: string) => (id === SPEND_ID ? { id: SPEND_ID, tenant_id: TENANT_ID, nature: 'opex', item_number: 42, product_name: 'Hosting', status: 'enabled', disabled_at: null } : null),
+  };
+  const assets = {
+    get: async (id: string) => (id === '66666666-6666-4666-8666-666666666666' ? { id, tenant_id: TENANT_ID, asset_reference: 'AST-12', name: 'srv-cheese-01', location_id: null } : null),
+  };
   const service = new AiBusinessRecordMutationSupportService(
-    {} as any,
-    {} as any,
-    {} as any,
+    applications as any,
+    assets as any,
+    budgetLines as any,
     {} as any,
     {} as any,
     {} as any,
@@ -129,7 +139,8 @@ async function testCreateAcceptsConfiguredCategoryCode() {
   });
 
   assert.equal((prepared.mutationInput.fields as Record<string, unknown>).category, 'productivity');
-  assert.equal((prepared.mutationInput.display_values as Record<string, unknown>).category, 'Productivity');
+  // The card shows the code: the frontend names it from the tenant's list in the person's language (lot K2c).
+  assert.equal((prepared.mutationInput.display_values as Record<string, unknown>).category, 'productivity');
 }
 
 async function testCreateResolvesConfiguredCategoryLabel() {
@@ -175,7 +186,7 @@ async function testCreateRejectsCategoryOutsideTenantSettings() {
     }),
     (error: unknown) => {
       assert.ok(error instanceof BadRequestException);
-      assert.match(String((error as Error).message), /Invalid application category "other"/);
+      assert.match(String((error as Error).message), /Unknown application category "other"\. Use one of: /);
       assert.match(String((error as Error).message), /line_of_business \(Business Applications\)/);
       assert.match(String((error as Error).message), /productivity \(Productivity\)/);
       return true;

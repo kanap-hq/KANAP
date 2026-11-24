@@ -86,7 +86,7 @@ async function testCodedRefusals() {
     await expectCoded(() => instances.create(app, { environment: 'prod' }, null, { manager: m, tenantId: t }),
       409, 'deployment_environment_taken', { environment: 'prod' });
     await expectCoded(() => instances.create(app, { environment: 'qa', lifecycle: 'nope' }, null, { manager: m, tenantId: t }),
-      400, 'deployment_lifecycle_invalid', { value: 'nope' });
+      400, 'deployment_lifecycle_invalid', { value: 'nope', allowed: 'proposed (Proposed), active (Active), deprecated (Deprecated), retired (Retired)' });
     await expectCoded(() => instances.create(app, { environment: 'moon' }, null, { manager: m, tenantId: t }),
       400, 'deployment_environment_invalid', { value: 'moon' });
     await expectCoded(() => instances.create(app, null, null, { manager: m, tenantId: t }), 400, 'body_required');
