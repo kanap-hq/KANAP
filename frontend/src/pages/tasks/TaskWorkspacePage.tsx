@@ -333,15 +333,13 @@ export default function TaskWorkspacePage() {
   // Browser tab title
   useRecordTitle(taskMatchesCurrentRoute && task?.item_number && task?.title ? `T-${task.item_number} ${task.title}` : null);
 
+  // The total through the task's own route, which names the task alone: it answers whoever reads the
+  // task, whatever its project (one the person does not read, or the one it just left).
   const { data: totalTimeHours = 0 } = useQuery({
     queryKey: ['task-time-entries-sum', task?.id],
     queryFn: async () => {
       try {
-        const isProject = task?.related_object_type === 'project';
-        const endpoint = isProject
-          ? `/portfolio/projects/${task?.related_object_id}/tasks/${task?.id}/time-entries/sum`
-          : `/tasks/${task?.id}/time-entries/sum`;
-        const res = await api.get<{ total: number }>(endpoint);
+        const res = await api.get<{ total: number }>(`/tasks/${task?.id}/time-entries/sum`);
         return res.data.total;
       } catch {
         return 0;

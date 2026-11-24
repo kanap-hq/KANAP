@@ -246,4 +246,25 @@ describe('TaskWorkspacePage address', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
     await waitFor(() => expect(location()).toBe('/portfolio/projects/PRJ-3/tasks'));
   });
+
+  it('reads the time of a task through its own route, without its project', async () => {
+    // A project the person does not read: the task names neither its id nor its name.
+    renderPage(['/portfolio/tasks/T-9/overview'], { ...TASK, related_object_id: null, related_object_name: null, project_item_number: null });
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/tasks/${TASK.id}/time-entries/sum`));
+    const urls = mocked.get.mock.calls.map(([url]) => String(url));
+    expect(urls.filter((url) => url.includes('/null'))).toEqual([]);
+  });
+
+  it('reads the time of a moved task through its own route, never through the project it left', async () => {
+    mocked.patch.mockResolvedValue({ data: {} } as never);
+    const { client } = renderPage(['/portfolio/tasks/T-9/overview']);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`/tasks/${TASK.id}/time-entries/sum`));
+    fireEvent.click(screen.getByRole('button', { name: 'portfolio:workspace.openProperties' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'move to another project' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(`/tasks/${TASK.id}/move`, expect.anything()));
+    await waitFor(() => expect(client.getQueryState(['task-time-entries-sum', TASK.id])?.isInvalidated).toBe(false));
+    const sums = mocked.get.mock.calls.map(([url]) => String(url)).filter((url) => url.endsWith('/time-entries/sum'));
+    expect(sums.length).toBeGreaterThan(1);
+    expect(new Set(sums)).toEqual(new Set([`/tasks/${TASK.id}/time-entries/sum`]));
+  });
 });

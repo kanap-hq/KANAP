@@ -79,13 +79,11 @@ export default function TaskWorkLog({ taskId, projectId, readOnly = false, relat
     enabled: !!taskId,
   });
 
+  // The task's own route, as the task page reads the same entry: the total does not depend on the project.
   const { data: totalHours = 0 } = useQuery({
     queryKey: ['task-time-entries-sum', taskId],
     queryFn: async () => {
-      const endpoint = projectId
-        ? `/portfolio/projects/${projectId}/tasks/${taskId}/time-entries/sum`
-        : `/tasks/${taskId}/time-entries/sum`;
-      const res = await api.get<{ total: number }>(endpoint);
+      const res = await api.get<{ total: number }>(`/tasks/${taskId}/time-entries/sum`);
       return res.data.total;
     },
     enabled: !!taskId,
