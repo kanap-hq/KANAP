@@ -117,6 +117,11 @@ async function testRequestsAndProjects() {
       // The stream alone, in the record's category.
       await family.update(both.id, { stream_id: ids.devIt });
       assert.equal((await row(runner, family.table, both.id)).stream_id, ids.devIt, `${label}: the stream alone`);
+      // The form sends every value: the parents changed, the children sent back as stored, are the
+      // parents changed alone.
+      const form: any = await family.create({ name: `${label} form`, category_id: ids.it, stream_id: ids.opsIt, company_id: ids.companyA, department_id: ids.finA });
+      await family.update(form.id, { name: `${label} form`, category_id: ids.biz, stream_id: ids.opsIt, company_id: ids.companyB, department_id: ids.finA });
+      assert.deepEqual(await row(runner, family.table, form.id), { category_id: ids.biz, stream_id: null, company_id: ids.companyB, department_id: null }, `${label}: the form's children dropped`);
       // The category changed alone drops the stream; the company changed alone drops the department.
       await family.update(both.id, { category_id: ids.biz, company_id: ids.companyB });
       assert.deepEqual(await row(runner, family.table, both.id), { category_id: ids.biz, stream_id: null, company_id: ids.companyB, department_id: null }, `${label}: the children dropped`);
@@ -237,6 +242,11 @@ async function testContributorsAndPeople() {
     assert.deepEqual(await person(), { company_id: ids.companyB, department_id: ids.finB }, 'the company filled');
     await users.updateUser(creatorId, { company_id: ids.companyA } as any, undefined, { manager });
     assert.deepEqual(await person(), { company_id: ids.companyA, department_id: null }, 'the department dropped');
+    // The person form sends every value: the company changed, the department sent back unchanged (A5).
+    await users.updateUser(creatorId, { department_id: ids.finA } as any, undefined, { manager });
+    const [named] = await runner.query(`SELECT first_name, last_name, email FROM users WHERE id = $1`, [creatorId]);
+    await users.updateUser(creatorId, { ...named, company_id: ids.companyB, department_id: ids.finA } as any, undefined, { manager });
+    assert.deepEqual(await person(), { company_id: ids.companyB, department_id: null }, 'the form: the department of the old company dropped');
   });
 }
 

@@ -135,6 +135,10 @@ async function testRequests() {
     const moved = await request(runner, data, 12, { category: ids.it, stream: ids.opsIt, company: ids.companyA, department: ids.finA });
     assert.deepEqual(await load(requests, runner, data, `id;category_name;company_name\n${moved};Business;Beta`), { inserted: 0, updated: 1, unchanged: 0, cleared: 2 });
     assert.deepEqual(await pair(runner, 'portfolio_requests', moved), { category_id: ids.biz, stream_id: null, company_id: ids.companyB, department_id: null });
+    // The category changed with the stream given back as stored (a file of every column): dropped as well.
+    const sentBack = await request(runner, data, 16, { category: ids.it, stream: ids.devIt });
+    assert.deepEqual(await load(requests, runner, data, `id;category_name;stream_name\n${sentBack};Business;Dev`), { inserted: 0, updated: 1, unchanged: 0, cleared: 1 });
+    assert.deepEqual(await pair(runner, 'portfolio_requests', sentBack, 'category_id, stream_id'), { category_id: ids.biz, stream_id: null });
     // The department by its stored company.
     const finance = await request(runner, data, 13, { category: null, stream: null, company: ids.companyB });
     assert.deepEqual(await load(requests, runner, data, `id;department_name\n${finance};Finance`), { inserted: 0, updated: 1, unchanged: 0, cleared: 0 });

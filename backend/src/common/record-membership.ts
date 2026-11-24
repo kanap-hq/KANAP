@@ -5,7 +5,8 @@ import { BadRequestException } from '@nestjs/common';
  * P13). The one check of every write that sets such a pair: the screens through the API, the imports
  * and Kad. The child gives its parent: a stream written without a category fills the category, a
  * department without a company fills the company. A pair that contradicts itself is refused. A parent
- * changed without its child drops the child, unless the child belongs to the new parent.
+ * changed without its child, or with its child sent back unchanged, drops the child, unless the child
+ * belongs to the new parent.
  *
  * Only what the write changes is checked: a value equal to the stored one is no change, so a record
  * whose stored pair already disagrees stays writable as long as neither value of the pair changes.
@@ -84,8 +85,10 @@ export function settleMembership(
     if (!child) continue;
     const own = parentOf(pair.kind, child);
     if (own == null) continue;
-    if (!childGiven) {
-      // The parent changed alone: its child stays only if it belongs to the new parent.
+    if (!childChanged) {
+      // The parent changed alone, or with its child sent back as stored (the forms send every value):
+      // the child stays only if it belongs to the new parent. A new record has nothing stored, so the
+      // pair it is given is judged as sent.
       if (!sameId(own, parent)) values[pair.child] = null;
       continue;
     }

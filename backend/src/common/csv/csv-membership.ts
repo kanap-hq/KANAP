@@ -188,7 +188,8 @@ export function checkImportMembership(
       continue;
     }
     for (const [key, value] of Object.entries(values)) {
-      if (has(given, key) || sameId(row.parsed[key], value)) continue;
+      // A child given back as stored, with its parent changed, is dropped as well (`settleMembership`).
+      if (sameId(row.parsed[key], value)) continue;
       if (value == null && row.parsed[key] != null && row.existingEntity?.[key] != null) noteCleared(row, 1);
       row.parsed[key] = value;
     }

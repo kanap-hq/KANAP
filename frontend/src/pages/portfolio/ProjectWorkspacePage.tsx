@@ -1106,7 +1106,10 @@ export default function ProjectWorkspacePage() {
             }}
             onCompanyChange={(value) => {
               classificationTouchedRef.current.company_id = true;
-              void persistPanelPatch({ company_id: value });
+              // The department picker lists the company's departments only: another company
+              // clears the department chosen in the old one, in the same save.
+              const dropsDepartment = !!form?.department_id && (value || null) !== (form?.company_id || null);
+              void persistPanelPatch(dropsDepartment ? { company_id: value, department_id: null } : { company_id: value });
             }}
             onLocalUpdate={applyPanelLocalUpdate}
             onPlannedEndChange={(value) => { void persistPanelPatch({ planned_end: value }); }}

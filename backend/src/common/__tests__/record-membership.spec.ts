@@ -41,6 +41,24 @@ function testParentChangedAlone() {
   assert.deepEqual(settle({ company_id: 'b' }, { company_id: 'a', department_id: 'fin-a' }).values, { company_id: 'b', department_id: null }, 'the department of the old company is dropped');
 }
 
+/** The forms send every value: the parent changed, its child sent back as stored, is the parent changed alone. */
+function testParentChangedWithTheChildSentBack() {
+  const stored = { category_id: 'it', stream_id: 'ops-it', company_id: 'a', department_id: 'fin-a' };
+  assert.deepEqual(
+    settle({ category_id: 'biz', stream_id: 'ops-it', company_id: 'b', department_id: 'fin-a' }, stored),
+    { values: { category_id: 'biz', stream_id: null, company_id: 'b', department_id: null }, conflict: null },
+    'the children of the old parents are dropped',
+  );
+  assert.deepEqual(
+    settle({ category_id: 'biz', stream_id: 'ops-biz' }, { category_id: 'it', stream_id: 'ops-biz' }).values,
+    { category_id: 'biz', stream_id: 'ops-biz' },
+    'a child of the new parent stays',
+  );
+  // A child the write changes to another parent's is still refused, and a new record is judged as sent.
+  assert.equal(settle({ company_id: 'b', department_id: 'fin-a' }, { company_id: 'a', department_id: null }).conflict?.pair.kind, 'department', 'a child the write changes');
+  assert.equal(settle({ company_id: 'b', department_id: 'fin-a' }, null).conflict?.pair.kind, 'department', 'a new record');
+}
+
 function testStoredDisagreementStaysWritable() {
   // A record saved before the rule, its stream of another category: written again as it is, or with
   // another field, it is accepted; the same values in another case too.
@@ -61,6 +79,7 @@ const tests: Array<[string, () => void]> = [
   ['pair given together', testPairGivenTogether],
   ['child alone against the stored parent', testChildAloneAgainstStoredParent],
   ['parent changed alone', testParentChangedAlone],
+  ['parent changed with the child sent back', testParentChangedWithTheChildSentBack],
   ['stored disagreement stays writable', testStoredDisagreementStaysWritable],
   ['unknown child left to the write', testUnknownChildIsLeftToTheWrite],
 ];
