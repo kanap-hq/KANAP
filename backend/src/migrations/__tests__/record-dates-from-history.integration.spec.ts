@@ -260,6 +260,24 @@ async function testDirtyDatabase() {
   });
 }
 
+/** A statement that fails in the middle of the loop: up() raises that statement's error. */
+async function testFailureMidLoop() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'dates-boom');
+    const contract = await seedContract(runner, tenantId, 'boom', T0);
+    await audit(runner, tenantId, { table: 'contracts', recordId: contract, action: 'update', before: { name: 'A' }, after: { name: 'B' }, at: T_OWN });
+    await runner.query(`CREATE FUNCTION pg_temp.dates_boom() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'dates boom: the real cause'; END $$`);
+    await runner.query(`CREATE TRIGGER dates_boom BEFORE UPDATE ON contracts FOR EACH ROW EXECUTE FUNCTION pg_temp.dates_boom()`);
+    let message = 'no error';
+    try {
+      await up(runner);
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    assert.match(message, /dates boom: the real cause/, `up() raises the failing statement's own error: ${message}`);
+  });
+}
+
 async function testDownDoesNothing() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'dates-down');
@@ -272,6 +290,7 @@ async function testDownDoesNothing() {
 runSpecs('record-dates-from-history migration', [
   ['the frozen correspondence is the dating code', testCorrespondenceIsTheCode],
   ['a dirty database of two tenants', testDirtyDatabase],
+  ['a failure in the middle of the loop raises its own cause', testFailureMidLoop],
   ['down() leaves the dates', testDownDoesNothing],
 ]).catch((err) => {
   console.error(err);

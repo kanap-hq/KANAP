@@ -193,51 +193,50 @@ export class RecordDatesFromHistory1856277000000 implements MigrationInterface {
     );
     const tenants: Array<{ id: string }> = await queryRunner.query(`SELECT id FROM tenants ORDER BY created_at ASC, id ASC`);
     const dated = new Map<string, number>(tables.map((table) => [table, 0]));
-    try {
-      for (const tenant of tenants) {
-        await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
-        const [{ has_log }]: Array<{ has_log: boolean }> = await queryRunner.query(
-          `SELECT EXISTS (SELECT 1 FROM audit_log WHERE tenant_id = $1) AS has_log`,
-          [tenant.id],
-        );
-        if (!has_log) continue;
-        for (const table of tables) {
-          const { sql, params } = candidatesSql(table, this.dating[table]);
-          params[0] = tenant.id;
-          const candidates: Candidate[] = await queryRunner.query(sql, params);
-          const picked = new Map<string, string>();
-          for (const row of candidates) {
-            if (picked.has(row.record_id)) continue;
-            const shown = row.action !== 'update' || historyShowsRow(table, {
-              table: row.table_name,
-              recordId: row.audit_record_id,
-              action: row.action,
-              before: row.before_json,
-              after: row.after_json,
-            }, row.record_id);
-            if (shown) picked.set(row.record_id, row.audit_id);
-          }
-          if (picked.size === 0) continue;
-          const [{ count }]: Array<{ count: number }> = await queryRunner.query(
-            `WITH picked AS (
-               SELECT p.record_id, LEAST(a.created_at, now()) AS at
-                 FROM unnest($2::uuid[], $3::uuid[]) AS p(record_id, audit_id)
-                 JOIN audit_log a ON a.tenant_id = $1 AND a.id = p.audit_id
-             ), changed AS (
-               UPDATE public.${quoteIdent(table)} t SET updated_at = p.at
-                 FROM picked p
-                WHERE t.tenant_id = $1 AND t.id = p.record_id AND t.updated_at < p.at
-               RETURNING 1
-             )
-             SELECT count(*)::int AS count FROM changed`,
-            [tenant.id, Array.from(picked.keys()), Array.from(picked.values())],
-          );
-          dated.set(table, (dated.get(table) ?? 0) + count);
+    // No `finally`: after a failed statement the transaction is aborted, a reset would fail in turn
+    // and hide the cause; the setting is transaction-local and leaves with the rolled back transaction.
+    for (const tenant of tenants) {
+      await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
+      const [{ has_log }]: Array<{ has_log: boolean }> = await queryRunner.query(
+        `SELECT EXISTS (SELECT 1 FROM audit_log WHERE tenant_id = $1) AS has_log`,
+        [tenant.id],
+      );
+      if (!has_log) continue;
+      for (const table of tables) {
+        const { sql, params } = candidatesSql(table, this.dating[table]);
+        params[0] = tenant.id;
+        const candidates: Candidate[] = await queryRunner.query(sql, params);
+        const picked = new Map<string, string>();
+        for (const row of candidates) {
+          if (picked.has(row.record_id)) continue;
+          const shown = row.action !== 'update' || historyShowsRow(table, {
+            table: row.table_name,
+            recordId: row.audit_record_id,
+            action: row.action,
+            before: row.before_json,
+            after: row.after_json,
+          }, row.record_id);
+          if (shown) picked.set(row.record_id, row.audit_id);
         }
+        if (picked.size === 0) continue;
+        const [{ count }]: Array<{ count: number }> = await queryRunner.query(
+          `WITH picked AS (
+             SELECT p.record_id, LEAST(a.created_at, now()) AS at
+               FROM unnest($2::uuid[], $3::uuid[]) AS p(record_id, audit_id)
+               JOIN audit_log a ON a.tenant_id = $1 AND a.id = p.audit_id
+           ), changed AS (
+             UPDATE public.${quoteIdent(table)} t SET updated_at = p.at
+               FROM picked p
+              WHERE t.tenant_id = $1 AND t.id = p.record_id AND t.updated_at < p.at
+             RETURNING 1
+           )
+           SELECT count(*)::int AS count FROM changed`,
+          [tenant.id, Array.from(picked.keys()), Array.from(picked.values())],
+        );
+        dated.set(table, (dated.get(table) ?? 0) + count);
       }
-    } finally {
-      await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [found ?? '']);
     }
+    await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [found ?? '']);
 
     for (const [table, count] of dated) console.log(`${LOG} ${table}: ${count} record(s) dated`);
     const total = Array.from(dated.values()).reduce((sum, count) => sum + count, 0);
