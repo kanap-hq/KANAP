@@ -8,7 +8,7 @@ Rendez-vous dans **Cartographie SI > Actifs** pour voir votre inventaire d'actif
 
 1. Cliquez sur **Ajouter un actif**, puis sur **Ajouter un actif** ou **Ajouter un cluster**. La page de l'actif s'ouvre avec un titre vide dans l'en-tête. Seuls le titre, le **Type d'actif** et le **Site** sont ouverts. Le reste de la page est grisé.
 2. Saisissez le nom de l'actif, de 200 caractères au plus.
-3. Choisissez son **Type d'actif** et son **Site**, dans le tiroir des propriétés ou dans la barre sous le titre. L'ordre n'importe pas.
+3. Choisissez son **Type d'actif** et son **Site**, dans le panneau Propriétés ou dans la barre sous le titre. L'ordre n'importe pas.
 
 Kadratis crée l'actif dès qu'il a les trois. Sa référence (`AST-12`) s'affiche et tous les onglets s'ouvrent.
 
@@ -114,7 +114,7 @@ Les actifs peuvent être organisés en clusters :
 - **Actif standard** : Une instance d'infrastructure individuelle
 - **Cluster** : Un groupe d'actifs agissant comme une seule unité logique
 
-Pour créer un cluster, choisissez **Ajouter un cluster** dans le menu **Ajouter un actif**, ou activez l'interrupteur **Cluster** dans le tiroir des propriétés d'un actif. Une connexion posée sur un cluster vaut pour ses membres : voir [Connexions sur un cluster](connections.md#connections-on-a-cluster).
+Pour créer un cluster, choisissez **Ajouter un cluster** dans le menu **Ajouter un actif**, ou activez l'interrupteur **Cluster** dans le panneau Propriétés d'un actif. Une connexion posée sur un cluster vaut pour ses membres : voir [Connexions sur un cluster](connections.md#connections-on-a-cluster).
 
 ### Applications sur un cluster { #applications-on-a-cluster }
 
@@ -160,7 +160,7 @@ Avant la suppression d'un actif, la confirmation dit ce qui part avec lui : les 
 
 ## L'espace de travail des Actifs
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **tiroir des propriétés** sur la droite (la carte d'identité de l'actif, toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
+Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **panneau Propriétés** sur la droite (la carte d'identité de l'actif, toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
 
 Une adresse qui ne désigne aucun actif ouvre une page **Actif introuvable**, avec un lien de retour à la liste.
 
@@ -171,15 +171,15 @@ Les onglets sont **Vue d'ensemble**, **Exploitation**, **Réseau**, **Matériel*
 L'en-tête affiche :
 - **Nom de l'actif** (modifiable sur place)
 - **Référence de l'actif** (ex. : `AST-123`) : identifiant copiable
-- Pastille **Cycle de vie** (également modifiable depuis le tiroir des propriétés)
+- Pastille **Cycle de vie** (également modifiable depuis le panneau Propriétés)
 - **Vulnérabilités graves**, par exemple « 3 graves » : les vulnérabilités critiques ou élevées encore à traiter sur l'actif, avec la couleur de la plus haute. Une icône d'alerte suit quand certaines sont connues comme exploitées. Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif. Affiché seulement quand l'actif en a
 - **Partager** : copier un lien partageable vers cet espace de travail
 - **Supprimer**, une icône corbeille avec son nom en infobulle (`infrastructure:admin`). Pour un actif encore utilisé, la raison s'affiche avant toute confirmation
 - **Précédent / Suivant** (ex. : « 3 sur 47 ») : naviguer dans la liste filtrée sans y revenir
 
-### Tiroir des propriétés (panneau de droite)
+### Panneau Propriétés
 
-Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modifications sont enregistrées automatiquement. Les champs forment trois groupes.
+Le panneau affiche la carte d'identité de l'actif sur chaque onglet. Les modifications sont enregistrées automatiquement. Les champs se répartissent en trois groupes.
 
 **Type et zone** :
 - **Type d'actif** (obligatoire) : un nouvel actif le demande avant d'être créé

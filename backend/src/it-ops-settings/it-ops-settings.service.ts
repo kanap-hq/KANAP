@@ -174,6 +174,36 @@ export type ItOpsSettings = ClassificationCatalog & {
   protectedCodes?: Record<string, string[]>;
 };
 
+/** The catalog lists a screen names a stored code from (`useLocalizedItOpsSettings` on the web app). */
+export const CATALOG_LABEL_LISTS = [
+  'applicationCategories', 'networkSegments', 'entities', 'serverKinds', 'serverProviders', 'serverRoles', 'hostingTypes', 'lifecycleStates',
+  'interfaceProtocols', 'interfaceDataCategories', 'interfaceTriggerTypes', 'interfacePatterns', 'interfaceFormats', 'interfaceAuthModes',
+  'connectionTypes', 'domains', 'ipAddressTypes', 'accessMethods', 'pathHopFunctions', 'incidentCategories', 'technologyFamilies', 'adminZones',
+  ...CLASSIFICATION_CATALOG_KEYS,
+] as const;
+export type CatalogLabel = { code: string; label: string; deprecated?: boolean; translations?: CatalogTranslations; description?: string };
+export type ItOpsCatalogLabels = Record<(typeof CATALOG_LABEL_LISTS)[number], CatalogLabel[]>;
+
+/**
+ * What naming a catalog value needs, for every signed-in member: code, label, translations, retired
+ * flag, and the description of the classification levels (shown next to their name). Nothing of the
+ * settings themselves (subnets, DNS suffixes, forests, trusts, counts, groups, ports, locked codes).
+ */
+export function catalogLabelsOf(settings: ItOpsSettings): ItOpsCatalogLabels {
+  const withDescription = new Set<string>(CLASSIFICATION_CATALOG_KEYS);
+  const result = {} as ItOpsCatalogLabels;
+  for (const key of CATALOG_LABEL_LISTS) {
+    result[key] = (((settings as any)[key] ?? []) as any[]).map((row) => {
+      const item: CatalogLabel = { code: row.code, label: row.label };
+      if (row.deprecated) item.deprecated = true;
+      if (row.translations) item.translations = row.translations;
+      if (withDescription.has(key) && typeof row.description === 'string') item.description = row.description;
+      return item;
+    });
+  }
+  return result;
+}
+
 type ItOpsMetadataShape = {
   application_categories?: ItOpsEnumOption[];
   data_classes?: ItOpsEnumOption[];
@@ -1092,6 +1122,10 @@ export class ItOpsSettingsService {
       throw new Error(`Tenant ${tenantId} not found`);
     }
     return this.getMetadataSettings(tenant, { manager: opts?.manager });
+  }
+
+  async getCatalogLabels(tenantId: string, opts?: { manager?: EntityManager }): Promise<ItOpsCatalogLabels> {
+    return catalogLabelsOf(await this.getSettings(tenantId, opts));
   }
 
   async getApplicationCategoryOptions(

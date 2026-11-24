@@ -85,7 +85,7 @@ Die Arbeitsbereichs-Kopfzeile gibt Ihnen operativen Kontext, ohne die Seite zu v
 - eine kopierbare Anfragenreferenz wie `REQ-42`
 - eine Metadatenleiste mit **Status**, **Bewertung**, **Anforderer**, **IT-Verantwortlicher**, **Ziel-Lieferdatum** und (falls zutreffend) der **Quell-Aufgabe**, aus der die Anfrage erstellt wurde
 - **Teilen**, um einen Link zur Anfrage zu senden
-- **In Projekt umwandeln**, wenn die Anfrage **Genehmigt** oder **Konvertiert** ist
+- **In Projekt umwandeln**, wenn die Anfrage **Genehmigt** ist, für eine Person, die Projekte anlegen darf
 - **Erstellen** (dann **Fertig**) und **Abbrechen**, solange die Anfrage erstellt wird. Siehe [Erstellen oder abbrechen](#cancelling-a-creation)
 - **Löschen**, ein Papierkorbsymbol, für Administratoren (wenn die Anfrage noch nicht konvertiert ist). Eine konvertierte Anfrage bleibt der Ursprung ihres Projekts und kann nicht gelöscht werden
 - Vorherige/Nächste-Navigation basierend auf dem genauen Listenkontext, aus dem Sie kamen
@@ -110,7 +110,7 @@ Verlassen Sie die Anfrage auf andere Weise, bleibt sie bestehen. Ein Administrat
 
 ### Eigenschaftenbereich
 
-Behandeln Sie den Bereich als das strukturelle Rückgrat der Anfrage. Er enthält drei Gruppen.
+Behandeln Sie den Eigenschaftenbereich als das strukturelle Rückgrat der Anfrage. Er enthält drei Gruppen.
 
 #### Kerneigenschaften
 
@@ -334,7 +334,9 @@ Verwenden Sie verwaltete Dokumente für die zentrale Anfragen-Erzählung, die im
 
 ## Eine Anfrage in ein Projekt umwandeln
 
-Sobald eine Anfrage **Genehmigt** erreicht, bietet der Arbeitsbereich **In Projekt umwandeln** in der Kopfzeile an.
+Sobald eine Anfrage **Genehmigt** erreicht, bietet der Arbeitsbereich **In Projekt umwandeln** in der Kopfzeile an, für eine Person, die Projekte anlegen darf.
+
+Eine Anfrage mit dem Status **Konvertiert** zeigt ihre Projekte unter **Resultierende Projekte**. Die Kopfzeile hat keine Schaltfläche **In Projekt umwandeln**. Ein weiteres Projekt für denselben Bedarf wird im Portfolio angelegt und mit der Anfrage verknüpft.
 
 Der Konvertierungsfluss ermöglicht es Ihnen:
 

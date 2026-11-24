@@ -78,9 +78,9 @@ La création directe de projet est destinée au travail qui doit entrer en exéc
 2. Saisissez le nom du projet.
 3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis crée le projet aussitôt, avec l'origine **Fast-track**. Sa référence (`PRJ-12`) apparaît et tous les onglets s'ouvrent.
 
-Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi.
+Complétez ensuite le panneau Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi.
 
-Un projet créé ainsi peut passer de **Fast-track** à **Historique** et inversement dans le tiroir Propriétés. Un projet converti depuis une demande garde l'origine **Demande** et son lien source.
+Un projet créé ainsi peut passer de **Fast-track** à **Historique** et inversement dans le panneau Propriétés. Un projet converti depuis une demande garde l'origine **Demande** et son lien source.
 
 Utilisez **Fast-track** pour le travail qui est réellement introduit directement en livraison. Utilisez **Historique** pour le travail qui existe déjà en dehors de l'historique d'intake normal. Cette distinction affecte le reporting et rend l'analyse de portefeuille ultérieure beaucoup moins déroutante.
 
@@ -99,11 +99,11 @@ Tant que le projet est en cours de création, son en-tête affiche **Créer** et
 L'espace de travail du projet a deux couches :
 
 - La **zone de contenu principale** pour les onglets opérationnels : **Synthèse**, **Tâches**, **Planning**, **Charge**, **Évaluation**, **Relations**, **Connaissances** et **Historique** (les modifications du projet, voir [Historique des fiches](record-history.md))
-- Un tiroir **Propriétés** persistant sur le bord droit pour les propriétés principales, l'assignation d'équipe et les demandes sources
+- Un panneau Propriétés persistant sur le bord droit pour les propriétés principales, l'assignation d'équipe et les demandes sources
 
-Ouvrez ou fermez le tiroir Propriétés à l'aide de l'onglet vertical sur le bord droit.
+Ouvrez ou fermez le panneau Propriétés à l'aide de l'onglet vertical sur le bord droit.
 
-Pour les projets existants, le tiroir Propriétés se comporte comme un panneau Propriétés en direct : les modifications y sont enregistrées immédiatement. Le contenu de l'onglet principal suit le flux habituel **Enregistrer** / **Réinitialiser** lorsque cet onglet contient des modifications en brouillon. Si vous changez d'onglet ou passez au projet précédent ou suivant avec des modifications non enregistrées dans l'espace de travail, Kadratis demande s'il faut enregistrer d'abord.
+Pour les projets existants, le panneau Propriétés enregistre les modifications immédiatement. Le contenu de l'onglet principal suit le flux habituel **Enregistrer** / **Réinitialiser** lorsque cet onglet contient des modifications en brouillon. Si vous changez d'onglet ou passez au projet précédent ou suivant avec des modifications non enregistrées dans l'espace de travail, Kadratis demande s'il faut enregistrer d'abord.
 
 ## En-tête et métadonnées
 
@@ -129,9 +129,9 @@ Le workflow est intentionnellement contrôlé :
 - **En pause** peut revenir à **Liste d'attente**, **Planifié** ou **En cours**, ou être **Annulé**
 - **Terminé** et **Annulé** sont des états terminaux
 
-## Tiroir des propriétés
+## Panneau Propriétés
 
-Traitez le tiroir Propriétés comme la carte d'identité persistante du projet. Il est regroupé en trois sections.
+Traitez le panneau Propriétés comme la carte d'identité persistante du projet. Il est regroupé en trois sections.
 
 ### Propriétés principales
 
@@ -145,7 +145,7 @@ Ces champs pilotent le reporting, la planification, le filtrage et le contexte p
 
 ### Équipe
 
-L'assignation d'équipe vit dans le tiroir afin de rester disponible pendant que vous travaillez sur le planning, la charge ou les tâches.
+L'assignation d'équipe vit dans le panneau afin de rester disponible pendant que vous travaillez sur le planning, la charge ou les tâches.
 
 - **Sponsor métier** / **Sponsor IT** capturent la responsabilité exécutive
 - **Responsable métier** / **Responsable IT** identifient le leadership au quotidien
@@ -167,7 +167,7 @@ Les mêmes demandes figurent aussi dans l'onglet **Relations**, avec les dépend
 
 ## Synthèse
 
-L'onglet **Synthèse** est le cockpit du projet. Il est destiné à répondre à l'état actuel du projet en un seul coup d'œil, pas à dupliquer chaque champ du tiroir.
+L'onglet **Synthèse** est le cockpit du projet. Il est destiné à répondre à l'état actuel du projet en un seul coup d'œil, pas à dupliquer chaque champ du panneau Propriétés.
 
 ### Objectif
 
@@ -226,7 +226,7 @@ L'onglet **Planning** est l'endroit où la structure de livraison devient explic
 Le bas de l'onglet affiche trois lignes :
 
 - **Réel** : dates capturées par les événements d'exécution (quand le projet est passé à En cours et quand il a atteint Terminé). Lecture seule dans l'espace de travail.
-- **Planifié** : la fenêtre de livraison prévue. Modifiez-les dans le tiroir Propriétés.
+- **Planifié** : la fenêtre de livraison prévue. Modifiez-les dans le panneau Propriétés.
 - **Référence** : un instantané des dates planifiées capturé lorsque le projet est passé à **En cours**. La variance par rapport à la référence est affichée comme `Nj de retard` ou `Nj d'avance`.
 
 ### Phases
@@ -279,7 +279,7 @@ L'onglet **Charge** sépare la charge estimée en :
 - **Charge IT**
 - **Charge métier**
 
-Chaque côté peut être ventilé entre le responsable concerné et les contributeurs. Les ventilations dépendent de l'équipe configurée dans le tiroir Propriétés, donc les changements d'équipe ont également des conséquences sur la planification ici.
+Chaque côté peut être ventilé entre le responsable concerné et les contributeurs. Les ventilations dépendent de l'équipe configurée dans le panneau Propriétés, donc les changements d'équipe ont également des conséquences sur la planification ici.
 
 ### Charge réelle et journal de temps
 
@@ -420,7 +420,7 @@ Encore une fois, envoyer un lien n'accorde pas l'accès. Cela évite simplement 
 
 ## Conseils pratiques
 
-- Utilisez le tiroir Propriétés pour les données structurelles qui doivent rester visibles pendant que vous travaillez.
+- Utilisez le panneau Propriétés pour les données structurelles qui doivent rester visibles pendant que vous travaillez.
 - Utilisez **Synthèse** pour le récit du projet, l'activité récente et l'image opérationnelle de haut niveau.
 - Utilisez **Planning** pour définir la structure de livraison avant que le volume de tâches ne grandisse.
 - Utilisez **Charge** régulièrement, sinon la variance de charge arrive comme une surprise même si les données vous avertissaient déjà.

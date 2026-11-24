@@ -892,6 +892,12 @@ GET `/locations/:id/relation-counts` (`locations:reader`) → `{ relations }`: t
 ## IT Ops Settings
 Tenant-scoped configuration for IT Landscape dropdowns and enums.
 
+- GET `/it-ops/catalog-labels`
+  - Guards: `JwtAuthGuard` only: every signed-in member of the workspace, no module right.
+  - Returns the label of every catalog value, so screens name stored codes for people without the settings right: one array per catalog list (`applicationCategories`, `networkSegments`, `entities`, `serverKinds`, `serverProviders`, `serverRoles`, `hostingTypes`, `lifecycleStates`, the interface lists, `connectionTypes`, `domains`, `ipAddressTypes`, `accessMethods`, `pathHopFunctions`, `incidentCategories`, `technologyFamilies`, `adminZones`, and the four classification lists), in the order of the settings.
+  - Each row holds `{ code, label, deprecated?, translations? }`, plus `description` for the classification levels and waves. No subnets, DNS suffixes, forests, trusts, counts, administration groups, ports, `lockedCodes` or `protectedCodes`.
+  - A person with `settings:reader` keeps reading `GET /it-ops/settings`.
+
 - GET `/it-ops/settings`
   - Guards: `JwtAuthGuard`, `PermissionGuard`, `@RequireLevel('settings', 'reader')`
   - Returns merged settings with defaults: `{ dataClasses, networkSegments, entities, serverKinds, serverProviders, serverRoles, hostingTypes, lifecycleStates, interfaceProtocols, interfaceDataCategories, interfaceTriggerTypes, interfacePatterns, interfaceFormats, interfaceAuthModes, connectionTypes, subnets, domains, ipAddressTypes, accessMethods }`
@@ -1620,6 +1626,8 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - DELETE `/tasks/bulk` — bulk delete `{ ids: string[] }` → `{ deleted: string[], failed: { id, name, reason }[] }` **[Requires: tasks:admin]**
 
 ## Portfolio Requests
+- POST `/portfolio/requests/:id/convert` — create a project from an approved request **[Requires: portfolio_projects:member]**
+  - The request must be Approved. A request that is already Converted is refused (`400`, `This request has already been converted to a project.`) and no project is created. Any other status is refused (`400`). `actual_start` and `actual_end` in the body are refused (`400`), as on project creation.
 - GET `/portfolio/requests/:id?include=activities` — load request (include activity feed via `include=activities`) **[Requires: portfolio_requests:reader]**
   - Activity rows are ordered newest-first and tenant-scoped in SQL (`a.tenant_id = app_current_tenant()`).
 - PATCH `/portfolio/requests/:id` — update request **[Requires: portfolio_requests:member]**

@@ -20,7 +20,7 @@ Al hacer clic en **Nuevo**, la página de la tarea se abre con un título vacío
    - **Relacionado con**: el registro desde el que empezó, y su fase cuando empezó desde una fase. Una tarea empezada desde la página de Tareas es independiente
    - **Clasificación** (tareas independientes y de proyecto): para tareas de proyecto, **Origen**, **Categoría**, **Flujo** y **Empresa** proceden del proyecto padre. Para tareas independientes, se usan los valores de clasificación predeterminados de su organización cuando existen
 
-3. **Complete los detalles**. Todas las pestañas y todos los campos están ahora disponibles, con el panel de Propiedades a la derecha:
+3. **Complete los detalles**. Todas las pestañas y todos los campos están ahora disponibles, con el panel de propiedades a la derecha:
    - **Relacionado con**: Mantenga **Independiente**, o seleccione **Proyecto**, **Presupuesto** (una línea OPEX o CAPEX), **Contrato** o **Incidente**, luego elija el elemento específico
    - **Tipo de tarea**: Una categoría para el trabajo (p. ej., Tarea, Bug, Problema, Incidente)
    - **Etiquetas**: Etiquetas libres, por ejemplo urgente o seguimiento. Escriba una y pulse Intro
@@ -157,7 +157,7 @@ La pestaña **Vista general** contiene el contenido de la tarea.
   - **Comentarios**: Un formulario de actividad unificado (comentario + cambio de estado opcional + registro de tiempo opcional en un solo envío) más el hilo de comentarios. Un comentario escrito al cambiar el estado muestra ese cambio
   - **Registro de tiempo**: Entradas de tiempo (disponible solo para tareas independientes y de proyecto)
 
-### Panel de Propiedades
+### Panel de propiedades
 
 El panel es plegable (haga clic en la pestaña vertical **Propiedades** en el borde derecho para abrirlo o cerrarlo; pulse **P** como atajo). Arrastre su borde izquierdo para ensancharlo; un doble clic en ese borde le devuelve su anchura habitual. Su anchura y estado abierto se recuerdan localmente. El panel contiene cuatro grupos, separados por divisores:
 
@@ -233,7 +233,7 @@ Las tareas independientes y las tareas de proyecto admiten seguimiento detallado
 
 ### Registrar tiempo
 
-1. Haga clic en **+ Registrar tiempo** en el panel de Propiedades (grupo Seguimiento), o abra la pestaña **Registro de tiempo** en la sección de actividad
+1. Haga clic en **+ Registrar tiempo** en el panel de propiedades (grupo Seguimiento), o abra la pestaña **Registro de tiempo** en la sección de actividad
 2. Seleccione la **Categoría**: IT o Negocio (determina cómo el tiempo contribuye al esfuerzo del proyecto)
 3. Introduzca la fecha en que se realizó el trabajo
 4. Introduzca el tiempo en días y/u horas
@@ -321,7 +321,7 @@ El botón de exportar solo está habilitado cuando la descripción tiene conteni
   - Solo registro de tiempo
   - Comentario + estado + tiempo juntos
 - Para tareas de proyecto, establecer el estado a **Completado** requiere tiempo registrado (existente + recién añadido)
-- El desplegable de estado del panel de Propiedades sigue funcionando de forma independiente si prefiere ese flujo
+- El desplegable de estado del panel de propiedades sigue funcionando de forma independiente si prefiere ese flujo
 
 ### Ver historial
 
@@ -349,16 +349,16 @@ Cuando las notificaciones de tareas están habilitadas, las actualizaciones de e
 
 ## Vincular aplicaciones y activos
 
-Las tareas pueden vincularse a una o más **Aplicaciones** (Apps y servicios) y **Activos** (recursos de hardware o nube). Los enlaces viven en el grupo **Seguimiento** del panel de Propiedades.
+Las tareas pueden vincularse a una o más **Aplicaciones** (Apps y servicios) y **Activos** (recursos de hardware o nube). Los enlaces viven en el grupo **Seguimiento** del panel de propiedades.
 
 - Use **Aplicaciones** para marcar el trabajo que toca apps específicas en su panorama IT (p. ej., un despliegue, un cambio de configuración, un incidente acotado a esa app)
 - Use **Activos** para trabajo acotado a servidores, dispositivos o activos en la nube específicos
 
-Los enlaces son bidireccionales: desde el espacio de trabajo de la Aplicación o Activo vinculado, la tarea aparece en la relación **Tareas** en el panel de Propiedades de ese espacio de trabajo. Esto facilita el pivote desde "¿qué pasa con esta app/activo?" al trabajo real en marcha.
+Los enlaces son bidireccionales: desde el espacio de trabajo de la Aplicación o Activo vinculado, la tarea aparece en la relación **Tareas** en el panel de propiedades de ese espacio de trabajo. Esto facilita el pivote desde "¿qué pasa con esta app/activo?" al trabajo real en marcha.
 
 **Consejo**: Reserve estos enlaces para tareas que tratan operativamente de la app o activo, no cada tarea que mencione una de pasada. De lo contrario, la relación se convierte en ruido en lugar de señal.
 
-Solo ve cada registro vinculado si puede leer su módulo: las aplicaciones requieren las aplicaciones, los activos la infraestructura. Lo mismo vale para el registro al que pertenece una tarea: un proyecto requiere los proyectos, una línea presupuestaria el presupuesto, un contrato los contratos, un incidente los incidentes. De lo contrario, el campo no aparece en el panel, en la lista ni en Kad, y la tarea conserva su vínculo. Además, un Business Contributor solo ve el proyecto, su fase, la solicitud creada a partir de la tarea y las aplicaciones si participa en ellos: una sola aplicación fuera de su participación oculta el campo **Aplicaciones**.
+Solo ve cada registro vinculado si puede leer su módulo: las aplicaciones requieren las aplicaciones, los activos la infraestructura. Lo mismo vale para el registro al que pertenece una tarea: un proyecto requiere los proyectos, una línea presupuestaria el presupuesto, un contrato los contratos, un incidente los incidentes. De lo contrario, el campo no aparece en el panel de propiedades, en la lista ni en Kad, y la tarea conserva su vínculo. Además, un Business Contributor solo ve el proyecto, su fase, la solicitud creada a partir de la tarea y las aplicaciones si participa en ellos: una sola aplicación fuera de su participación oculta el campo **Aplicaciones**.
 
 ---
 
@@ -407,7 +407,7 @@ Las tareas independientes son elementos de trabajo que no están vinculados a ni
 
 1. Haga clic en **Nuevo** en la página de Tareas
 2. Escriba el título y pulse Intro: la tarea se crea como independiente
-3. El panel de Propiedades muestra "Tarea independiente" en el grupo Contexto
+3. El panel de propiedades muestra "Tarea independiente" en el grupo Contexto
 4. Complete la descripción y otros detalles
 5. Haga clic en **Crear**
 
@@ -420,7 +420,7 @@ Las tareas independientes y las tareas de proyecto tienen campos de clasificaci�
 - **Flujo**: El flujo específico dentro de la categoría (filtrado por la categoría seleccionada)
 - **Empresa**: La empresa a la que se refiere este trabajo
 
-Estos campos aparecen en el grupo **Clasificación** del panel de Propiedades y pueden editarse en cualquier momento. Al crear una nueva tarea independiente, los valores de clasificación predeterminados de su organización se rellenan automáticamente si están configurados.
+Estos campos aparecen en el grupo **Clasificación** del panel de propiedades y pueden editarse en cualquier momento. Al crear una nueva tarea independiente, los valores de clasificación predeterminados de su organización se rellenan automáticamente si están configurados.
 
 Para **tareas de proyecto**, la clasificación se hereda del proyecto padre cuando se crea la tarea, pero puede cambiarse de forma independiente. Esto permite, por ejemplo, que una tarea de infraestructura exista dentro de un proyecto de negocio, o una tarea de conformidad dentro de un proyecto IT. Si la clasificación de una tarea no se establece explícitamente, hereda y muestra la clasificación del proyecto.
 
@@ -636,7 +636,7 @@ Estos campos se incluyen en la **Exportación completa** para fines de informes 
   - **Observadores y responsables**: la exportación escribe tantas columnas `viewer_email_N` y `owner_email_N` como la lista más larga, cuatro como mínimo. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing)
   - **Clasificación solo para tareas independientes y de proyecto**: Origen, Categoría, Flujo y Empresa solo pueden establecerse en tareas independientes y de proyecto (no en tareas OPEX, Contrato o CAPEX)
   - **La fase requiere proyecto**: La asignación de fase solo funciona para tareas de proyecto
-  - **Enlaces de aplicación/activo no en CSV**: Use el panel de Propiedades del espacio de trabajo para vincular tareas a aplicaciones y activos
+  - **Enlaces de aplicación/activo no en CSV**: Use el panel de propiedades del espacio de trabajo para vincular tareas a aplicaciones y activos
   - **Comentarios no incluidos**: Los comentarios e historial de tareas deben gestionarse en el espacio de trabajo
   - **Registro de tiempo no incluido**: Las entradas de tiempo deben registrarse en el espacio de trabajo
   - **Adjuntos no incluidos**: Los archivos adjuntos requieren gestión en el espacio de trabajo
@@ -738,7 +738,7 @@ Cuando el foco no está en un campo de entrada, puede usar:
 
 - **J** o **←**: Tarea anterior en la lista actual
 - **K** o **→**: Siguiente tarea en la lista actual
-- **P**: Alternar el panel de Propiedades
+- **P**: Alternar el panel de propiedades
 - **Escape**: Cerrar y volver a la lista
 - **Ctrl+S** / **Cmd+S**: Guardar
 
@@ -751,9 +751,9 @@ Cuando el foco no está en un campo de entrada, puede usar:
   - **Registre tiempo regularmente**: El seguimiento de tiempo ayuda con la estimación de futuros proyectos.
   - **Filtre por estado**: El filtro predeterminado muestra solo estados activos (`Abierto`, `En progreso`, `Pendiente`, `En pruebas`). Incluya `Completado` y `Cancelado` al revisar tareas históricas.
   - **Cree desde el contexto**: Crear tareas desde dentro de los espacios de trabajo (proyecto, OPEX, contrato, CAPEX) las vincula automáticamente.
-  - **Vincule apps y activos**: Use los campos **Aplicaciones** y **Activos** del panel de Propiedades cuando una tarea trate operativamente de una app o activo específico. El enlace aparece también en el espacio de trabajo de la entidad relacionada.
+  - **Vincule apps y activos**: Use los campos **Aplicaciones** y **Activos** del panel de propiedades cuando una tarea trate operativamente de una app o activo específico. El enlace aparece también en el espacio de trabajo de la entidad relacionada.
   - **Use la prioridad con criterio**: Reserve **Bloqueante** para problemas que genuinamente bloquean.
   - **Use actualizaciones de envío único**: En la pestaña Comentarios, combine comentario + estado + tiempo en una sola acción para mantener el historial y las notificaciones alineados.
   - **Importe documentos**: Use el botón **Importar** para traer archivos `.docx` como contenido de descripción en lugar de copiar y pegar.
   - **Atajo de teclado**: Pulse **Ctrl+S** (o **Cmd+S** en Mac) para guardar al instante los cambios pendientes, por ejemplo una descripción que acaba de escribir.
-  - **Vincule artículos de la base de conocimiento**: Use el grupo Conocimiento del panel de Propiedades para conectar documentación relevante a sus tareas.
+  - **Vincule artículos de la base de conocimiento**: Use el grupo Conocimiento del panel de propiedades para conectar documentación relevante a sus tareas.
