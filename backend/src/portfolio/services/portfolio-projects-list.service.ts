@@ -801,7 +801,7 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
 
     // Note: RLS via app_current_tenant() automatically filters by tenant.
     let sql = `
-      SELECT p.id, p.name, p.status, p.scheduling_mode, p.category_id,
+      SELECT p.id, p.item_number, p.name, p.status, p.scheduling_mode, p.category_id,
              p.planned_start, p.planned_end, p.actual_start, p.actual_end,
              p.execution_progress
       FROM portfolio_projects p
@@ -850,7 +850,7 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
     // Fetch milestones for projects in the timeline
     const milestones = projectIds.length > 0
       ? await mg.query(
-          `SELECT m.id, m.project_id, m.name, m.target_date, m.status, p.name as project_name
+          `SELECT m.id, m.project_id, m.name, m.target_date, m.status, p.name as project_name, p.item_number as project_item_number
            FROM portfolio_project_milestones m
            JOIN portfolio_projects p ON p.id = m.project_id
            WHERE m.project_id = ANY($1)

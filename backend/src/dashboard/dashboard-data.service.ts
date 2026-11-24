@@ -19,6 +19,8 @@ interface ServiceOptions {
 
 export interface MyLeadershipProject {
   id: string;
+  /** The project's number, for its address (`PRJ-12`). */
+  item_number: number;
   name: string;
   status: string;
   role: 'it_lead' | 'business_lead' | 'it_sponsor' | 'business_sponsor';
@@ -32,6 +34,8 @@ export interface MyLeadershipProject {
 
 export interface MyContributionProject {
   id: string;
+  /** The project's number, for its address (`PRJ-12`). */
+  item_number: number;
   name: string;
   status: string;
   team: 'it_team' | 'business_team';
@@ -55,6 +59,8 @@ export interface TimeSummary {
 export interface TeamActivityItem {
   id: string;
   projectId: string;
+  /** The project's number, for its address (`PRJ-12`). */
+  projectItemNumber: number;
   projectName: string;
   type: 'change' | 'comment' | 'decision';
   content: string | null;
@@ -66,6 +72,8 @@ export interface TeamActivityItem {
 export interface ProjectStatusChangeItem {
   id: string;
   projectId: string;
+  /** The project's number, for its address (`PRJ-12`). */
+  projectItemNumber: number;
   projectName: string;
   previousStatus: string | null;
   nextStatus: string | null;
@@ -117,6 +125,7 @@ export class DashboardDataService {
       WITH leadership_projects AS (
         SELECT
           p.id,
+          p.item_number,
           p.name,
           p.status,
           p.planned_end,
@@ -157,6 +166,7 @@ export class DashboardDataService {
 
     return projects.map((p: any) => ({
       id: p.id,
+      item_number: p.item_number,
       name: p.name,
       status: p.status,
       role: p.role,
@@ -186,6 +196,7 @@ export class DashboardDataService {
       `
       SELECT
         p.id,
+        p.item_number,
         p.name,
         p.status,
         ppt.role as team,
@@ -215,6 +226,7 @@ export class DashboardDataService {
 
     return projects.map((p: any) => ({
       id: p.id,
+      item_number: p.item_number,
       name: p.name,
       status: p.status,
       team: p.team,
@@ -359,6 +371,7 @@ export class DashboardDataService {
       SELECT
         a.id,
         a.project_id,
+        p.item_number AS project_item_number,
         p.name AS project_name,
         a.type,
         a.content,
@@ -400,6 +413,7 @@ export class DashboardDataService {
     return rows.map((row: any) => ({
       id: row.id,
       projectId: row.project_id,
+      projectItemNumber: row.project_item_number,
       projectName: row.project_name,
       type: row.type,
       content: row.content || null,
@@ -429,6 +443,7 @@ export class DashboardDataService {
       SELECT
         a.id,
         a.project_id,
+        p.item_number AS project_item_number,
         p.name AS project_name,
         a.changed_fields->'status'->>0 AS previous_status,
         a.changed_fields->'status'->>1 AS next_status,
@@ -451,6 +466,7 @@ export class DashboardDataService {
     return rows.map((row: any) => ({
       id: row.id,
       projectId: row.project_id,
+      projectItemNumber: row.project_item_number,
       projectName: row.project_name,
       previousStatus: row.previous_status || null,
       nextStatus: row.next_status || null,
