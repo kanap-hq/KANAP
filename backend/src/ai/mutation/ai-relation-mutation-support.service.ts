@@ -62,6 +62,8 @@ import {
 } from '../../portfolio/portfolio-relations.service';
 import { LINKED_MODULE_RESOURCES, linkedParticipationScope } from '../../common/relations/linked-reads';
 import { idsInScope } from '../../portfolio/portfolio-linked-reads';
+import { supplierContactRoleOf } from '../import/ai-import-code-labels';
+import { resolveAiEntityReference } from '../ai-entity-reference.util';
 
 export const AI_RELATION_ENTITY_TYPES = [
   'applications',
@@ -252,6 +254,60 @@ function textOrNull(value: unknown): string | null {
   if (value == null) return null;
   const text = String(value).trim();
   return text || null;
+}
+
+/** The families a relation names by their `item_number` reference (`resolveAiEntityReference`). */
+const NUMBERED_REFERENCE_FAMILIES: ReadonlySet<string> = new Set(['contacts', 'suppliers', 'contracts', 'companies', 'departments']);
+
+/** The keys a relation item names a contact or a user under, in the order they are read. */
+const CONTACT_REF_KEYS = ['contact_ref', 'contact_id', 'contact', 'email', 'ref', 'id', 'name'];
+const USER_REF_KEYS = ['user_ref', 'user_id', 'user', 'email', 'ref', 'id', 'name'];
+
+/**
+ * The reference a relation item gives under the first of `keys` it carries (one level down when the
+ * value is itself an object: `{ contact: { ref: 'CTCT-2' } }`), or the item itself when it is a
+ * plain value. Never the text of an object: an item with none of the keys names nothing.
+ */
+function itemRefOf(raw: unknown, keys: string[]): string | null {
+  if (raw == null) return null;
+  if (typeof raw !== 'object') return textOrNull(raw);
+  if (Array.isArray(raw)) return null;
+  const item = raw as Record<string, unknown>;
+  for (const key of keys) {
+    const value = item[key];
+    const ref = value != null && typeof value === 'object' ? itemRefOf(value, ['ref', 'id', 'email', 'name']) : textOrNull(value);
+    if (ref) return ref;
+  }
+  return null;
+}
+
+/** The role an item says, as text: `role` (or `{ code }` under it), `contact_role`, `role_code`. */
+function roleTextOf(item: Record<string, unknown>): string | null {
+  const value = item.role ?? item.contact_role ?? item.role_code;
+  if (value != null && typeof value === 'object') return textOrNull(objectValue(value).code ?? objectValue(value).value);
+  return textOrNull(value);
+}
+
+/** The roles of a supplier's, a contract's or a budget line's contact, for the refusals the model reads. */
+const SUPPLIER_CONTACT_ROLES_TEXT = 'commercial, technical, support or other';
+
+/**
+ * The role of a supplier's, a contract's or a budget line's contact: its code, read from the code or
+ * from its word in any of the four languages (`supplierContactRoleOf`). Their screens ask it in the
+ * dialog, with nothing chosen beforehand: an addition without a role, or with another word, is
+ * refused before the card, so that the model asks for it. A removal reads the role said, as given
+ * when it is none of the four (it names a link the record may not have), and null when none is said.
+ */
+function supplierContactRole(item: Record<string, unknown>, mode: 'add' | 'remove'): string | null {
+  const said = roleTextOf(item);
+  if (!said) {
+    if (mode === 'remove') return null;
+    throw new BadRequestException(`A contact role is required: ${SUPPLIER_CONTACT_ROLES_TEXT}. Ask the person which one; nothing was prepared.`);
+  }
+  const code = supplierContactRoleOf(said);
+  if (code) return code;
+  if (mode === 'remove') return said;
+  throw new BadRequestException(`"${said}" is not a contact role. The roles are ${SUPPLIER_CONTACT_ROLES_TEXT}; nothing was prepared.`);
 }
 
 /**
@@ -945,7 +1001,7 @@ export class AiRelationMutationSupportService {
       case 'contact_role':
         return this.resolveContactRoleInput(context, config, sourceId, raw, mode, currentItems);
       case 'supplier_contacts':
-        return this.resolveSupplierContactInput(context, raw);
+        return this.resolveSupplierContactInput(context, raw, mode);
       case 'asset_relations':
         return this.resolveAssetRelationInput(context, raw);
       case 'link':
@@ -981,7 +1037,7 @@ export class AiRelationMutationSupportService {
     if (role !== 'business' && role !== 'it') {
       throw new BadRequestException('Owner role must be business or it.');
     }
-    const ref = textOrNull(item.user_ref ?? item.user_id ?? item.email ?? item.ref ?? raw);
+    const ref = itemRefOf(raw, USER_REF_KEYS);
     if (!ref) throw new BadRequestException('Owner user reference is required.');
     const user = isUuid(ref)
       ? await this.resolveUserById(context, ref)
@@ -1009,12 +1065,14 @@ export class AiRelationMutationSupportService {
     mode: 'add' | 'remove',
     currentItems: RelationItem[],
   ): Promise<RelationItem> {
-    const supplierOriginCapable = config.sourceEntity === 'contracts' || config.sourceEntity === 'budget_lines';
+    const supplierOriginCapable = SUPPLIER_ROLE_CONTACT_SOURCES.has(config.sourceEntity);
     const item = objectValue(raw);
-    const ref = textOrNull(item.contact_ref ?? item.contact_id ?? item.email ?? item.ref ?? raw);
-    if (!ref) throw new BadRequestException('Contact reference is required.');
+    const ref = itemRefOf(raw, CONTACT_REF_KEYS);
+    if (!ref) throw new BadRequestException('Contact reference is required (contact_ref: its CTCT-n reference, email or name).');
     const contact = await this.resolveReference(context, 'contacts', ref);
-    const role = textOrNull(item.role) ?? null;
+    // A contract's or a line's contact takes one of the four roles; an application's or an asset's
+    // Support panel takes any text, or none.
+    const role = supplierOriginCapable ? supplierContactRole(item, mode) : roleTextOf(item);
     const origin = supplierOriginCapable ? textOrNull(item.origin) ?? 'manual' : null;
     const stored = supplierOriginCapable
       ? currentItems.find((current) => current.payload.contact_id === contact.id && (current.payload.role ?? null) === role)
@@ -1040,15 +1098,12 @@ export class AiRelationMutationSupportService {
     };
   }
 
-  private async resolveSupplierContactInput(context: AiExecutionContextWithManager, raw: unknown): Promise<RelationItem> {
+  private async resolveSupplierContactInput(context: AiExecutionContextWithManager, raw: unknown, mode: 'add' | 'remove'): Promise<RelationItem> {
     const item = objectValue(raw);
-    const ref = textOrNull(item.contact_ref ?? item.contact_id ?? item.email ?? item.ref ?? raw);
-    if (!ref) throw new BadRequestException('Contact reference is required.');
+    const ref = itemRefOf(raw, CONTACT_REF_KEYS);
+    if (!ref) throw new BadRequestException('Contact reference is required (contact_ref: its CTCT-n reference, email or name).');
     const contact = await this.resolveReference(context, 'contacts', ref);
-    const role = normalizeKey(String(item.role ?? 'other'));
-    if (!['commercial', 'technical', 'support', 'other'].includes(role)) {
-      throw new BadRequestException('Supplier contact role must be commercial, technical, support, or other.');
-    }
+    const role = supplierContactRole(item, mode);
     return {
       key: `${contact.id}:${role}`,
       label: `${contact.label} - ${role}`,
@@ -1096,7 +1151,7 @@ export class AiRelationMutationSupportService {
 
   private async resolveLocationInternalContactInput(context: AiExecutionContextWithManager, raw: unknown): Promise<RelationItem> {
     const item = objectValue(raw);
-    const ref = textOrNull(item.user_ref ?? item.user_id ?? item.email ?? item.ref ?? raw);
+    const ref = itemRefOf(raw, USER_REF_KEYS);
     if (!ref) throw new BadRequestException('User reference is required.');
     const user = isUuid(ref)
       ? await this.resolveUserById(context, ref)
@@ -1111,7 +1166,7 @@ export class AiRelationMutationSupportService {
 
   private async resolveLocationExternalContactInput(context: AiExecutionContextWithManager, raw: unknown): Promise<RelationItem> {
     const item = objectValue(raw);
-    const ref = textOrNull(item.contact_ref ?? item.contact_id ?? item.email ?? item.ref ?? raw);
+    const ref = itemRefOf(raw, CONTACT_REF_KEYS);
     if (!ref) throw new BadRequestException('External contact reference is required.');
     const contact = await this.resolveReference(context, 'contacts', ref);
     const role = textOrNull(item.role);
@@ -1787,6 +1842,10 @@ export class AiRelationMutationSupportService {
     const currentKeys = new Set(current.map(keyOf));
     for (const item of nextItems) {
       if (currentKeys.has(item.key)) continue;
+      // A card made before the role was required (none was asked then) refuses in words.
+      if (table.includeOrigin && !supplierContactRoleOf(String(item.payload.role ?? ''))) {
+        throw new BadRequestException(`A contact role is required: ${SUPPLIER_CONTACT_ROLES_TEXT}; nothing was changed.`);
+      }
       const columns = table.includeOrigin
         ? `(tenant_id, ${table.sourceColumn}, contact_id, role, origin)`
         : `(tenant_id, ${table.sourceColumn}, contact_id, role)`;
@@ -2163,6 +2222,11 @@ export class AiRelationMutationSupportService {
     const rawDigits = ref.match(/(?:^|[-\s])(\d+)$/)?.[1];
     const itemNumber = rawDigits == null ? 0 : (parseItemNumber(rawDigits) ?? -1);
     const { manager, tenantId } = context;
+    // A business reference the reads give (CTCT-2, SUP-3, CTR-2, COMP-1, DEPT-4) names its row.
+    if (!uuid && NUMBERED_REFERENCE_FAMILIES.has(entityType)) {
+      const id = await resolveAiEntityReference(manager, tenantId, entityType, ref);
+      if (id) return this.queryReferenceCandidates(context, entityType, id);
+    }
     switch (entityType) {
       case 'applications': {
         const accessScope = await resolveBusinessContributorScopeForUser({
