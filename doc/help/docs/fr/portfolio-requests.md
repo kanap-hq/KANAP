@@ -72,11 +72,11 @@ La grille standard met en évidence les champs qui comptent pendant l'intake et 
 L'espace de travail utilise un modèle divisé :
 
 - La zone principale contient les onglets opérationnels : **Synthèse**, **Analyse**, **Évaluation**, **Relations**, **Connaissances** et **Historique** (les modifications de la demande, voir [Historique des fiches](record-history.md)).
-- Un tiroir **Propriétés** persistant sur le bord droit contient les métadonnées stables de la demande, l'assignation d'équipe et les projets résultants. Ouvrez ou fermez-le à l'aide de l'onglet vertical sur le bord droit.
+- Un panneau Propriétés persistant sur le bord droit contient les métadonnées stables de la demande, l'assignation d'équipe et les projets résultants. Ouvrez ou fermez-le à l'aide de l'onglet vertical sur le bord droit.
 
 Cela compte parce que tout n'est pas enregistré de la même manière :
 
-- Les modifications dans le **tiroir Propriétés** sont appliquées immédiatement.
+- Les modifications dans le **panneau Propriétés** sont appliquées immédiatement.
 - Les modifications dans **Synthèse**, **Analyse** et **Évaluation** sont des modifications d'espace de travail et utilisent **Enregistrer** / **Réinitialiser**.
 - Les documents managés **Objectif** et **Risques et atténuations** utilisent également le flux d'enregistrement de l'espace de travail.
 
@@ -85,7 +85,7 @@ L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quit
 - une référence de demande copiable telle que `REQ-42`
 - une bande de métadonnées avec **Statut**, **Score**, **Demandeur**, **Responsable IT**, **Date de livraison cible** et (lorsque applicable) la **Tâche source** depuis laquelle la demande a été créée
 - **Partager** pour envoyer un lien vers la demande
-- **Convertir en projet** lorsque la demande est **Approuvée** ou **Convertie**
+- **Convertir en projet** lorsque la demande est **Approuvée**, pour une personne qui peut créer des projets
 - **Créer** (puis **Terminé**) et **Annuler**, tant que la demande est en cours de création. Voir [Créer ou annuler](#cancelling-a-creation)
 - **Supprimer**, une icône corbeille, pour les administrateurs (lorsque la demande n'est pas encore convertie). Une demande convertie reste l'origine de son projet et ne peut pas être supprimée
 - navigation précédent/suivant basée sur le contexte exact de la liste d'où vous venez
@@ -96,7 +96,7 @@ L'en-tête de l'espace de travail vous donne le contexte opérationnel sans quit
 2. Saisissez le nom de la demande.
 3. Appuyez sur Entrée ou Tab, ou cliquez sur **Créer**. Kadratis crée la demande aussitôt, au statut **En attente de revue** et avec vous comme demandeur. Sa référence (`REQ-42`) apparaît et tous les onglets s'ouvrent.
 
-Complétez ensuite le tiroir Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi.
+Complétez ensuite le panneau Propriétés et l'**Objectif**. Le nom se modifie uniquement dans l'en-tête. Appuyer sur Échap dans le titre, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un nom saisi.
 
 ### Créer ou annuler { #cancelling-a-creation }
 
@@ -108,9 +108,9 @@ Tant que la demande est en cours de création, son en-tête affiche **Créer** e
 
 Si vous quittez la demande autrement, elle reste. Un administrateur peut alors la supprimer avec **Supprimer**. La référence d'une demande annulée n'est pas réutilisée.
 
-### Tiroir des propriétés
+### Panneau Propriétés
 
-Traitez le tiroir comme la colonne vertébrale structurelle de la demande. Il contient trois groupes.
+Traitez le panneau comme la colonne vertébrale structurelle de la demande. Il contient trois groupes.
 
 #### Propriétés principales
 
@@ -145,7 +145,7 @@ Une liste en lecture seule des projets produits depuis cette demande après conv
 
 Les mêmes projets figurent aussi dans l'onglet **Relations**, avec les dépendances, les lignes budgétaires, applications, actifs et processus métier liés, et les liens et fichiers de la demande.
 
-D'anciens favoris peuvent encore pointer vers `overview`, `team` ou `relations`. L'espace de travail actuel place ce contenu sous **Synthèse**, le tiroir Propriétés et l'onglet **Relations**.
+D'anciens favoris peuvent encore pointer vers `overview`, `team` ou `relations`. L'espace de travail actuel place ce contenu sous **Synthèse**, le panneau Propriétés et l'onglet **Relations**.
 
 ## Synthèse
 
@@ -334,7 +334,9 @@ Utilisez les documents managés pour le récit de demande de base qui doit toujo
 
 ## Convertir une demande en projet
 
-Une fois qu'une demande atteint **Approuvée**, l'espace de travail propose **Convertir en projet** dans l'en-tête.
+Une fois qu'une demande atteint **Approuvée**, l'espace de travail propose **Convertir en projet** dans l'en-tête, pour une personne qui peut créer des projets.
+
+Une demande déjà **Convertie** affiche ses projets sous **Projets résultants**. L'en-tête n'a pas le bouton **Convertir en projet**. Un autre projet pour le même besoin se crée depuis le portefeuille et se lie à la demande.
 
 Le flux de conversion vous permet de :
 
