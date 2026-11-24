@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { codedForbidden } from '../../auth/module-right-required';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
@@ -22,6 +22,8 @@ import { IncidentViewer, incidentVisibilitySql, isFrozenIncidentStatus } from '.
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import { binder } from '../../common/relations/related-objects';
 import { assertSetFilterModes } from '../../common/ag-grid-filtering';
+import { codedCatalogRefusal, resolveOfferedCatalogCode } from '../../it-ops-settings/catalog-resolve';
+import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 
 const DEFAULT_SORT: Sort = { field: 'detected_at', direction: 'DESC' };
 
@@ -236,8 +238,26 @@ export class IncidentsService extends IncidentsBaseService {
     private readonly audit: AuditService,
     private readonly itemNumbers: ItemNumberService,
     private readonly integratedDocuments: IntegratedDocumentsService,
+    // Always injected by the module; a spec that builds the service by hand may leave it out.
+    @Optional() private readonly itOpsSettings?: ItOpsSettingsService,
   ) {
     super(incidentRepo);
+  }
+
+  /**
+   * The category follows rule P7 (`resolveOfferedCatalogCode`): a code or a name of the tenant's
+   * incident categories; a retired one, or one the list no longer has, only on the incident that
+   * already holds it (`held`). Empty clears it.
+   */
+  private async resolveCategory(value: string | null | undefined, held: string | null, mg: EntityManager, tenantId: string): Promise<string | null> {
+    const text = nullableText(value);
+    if (text === null || !this.itOpsSettings) return text;
+    const settings = await this.itOpsSettings.getSettings(tenantId, { manager: mg });
+    return resolveOfferedCatalogCode(text, settings.incidentCategories || [], {
+      held,
+      what: 'category',
+      refuse: codedCatalogRefusal('category_invalid'),
+    });
   }
 
   // =========================================================================
@@ -807,6 +827,7 @@ export class IncidentsService extends IncidentsBaseService {
     const tenantId = this.ensureTenantId(opts?.tenantId);
     const dto = parseCreateIncident(body);
     await this.ensureUsers([dto.reporter_user_id, dto.owner_user_id], mg, tenantId);
+    const category = await this.resolveCategory(dto.category, null, mg, tenantId);
 
     const now = new Date();
     const repo = mg.getRepository(Incident);
@@ -814,7 +835,7 @@ export class IncidentsService extends IncidentsBaseService {
       tenant_id: tenantId,
       item_number: await this.itemNumbers.nextItemNumber('incident', tenantId, mg),
       title: dto.title,
-      category: nullableText(dto.category),
+      category,
       severity: dto.severity,
       status: dto.status ?? 'open',
       started_at: toDate(dto.started_at),
@@ -881,6 +902,8 @@ export class IncidentsService extends IncidentsBaseService {
       throw new BadRequestException('Status cannot move backwards. Use Reopen instead.');
     }
     await this.ensureUsers([dto.reporter_user_id, dto.owner_user_id], mg, tenantId);
+
+    if (dto.category !== undefined) dto.category = await this.resolveCategory(dto.category, incident.category, mg, tenantId);
 
     const before = { ...incident };
     this.applyConfidentialChange(incident, dto.confidential, opts?.viewer);
