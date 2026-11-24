@@ -67,6 +67,8 @@ export function ColumnHowText({ tab, col, testId }: { tab: BudgetTabState; col: 
  */
 export default function ColumnCards({ tab }: { tab: BudgetTabState }) {
   const { t, shown, activeCol, totals, waitingSet, isFrozen, selectColumn } = tab;
+  // The card the keyboard is on: its orange dot shows its sentence, as on hover.
+  const [focusedCard, setFocusedCard] = React.useState<AmountCol | null>(null);
   return (
     <Box
       role="group"
@@ -90,6 +92,8 @@ export default function ColumnCards({ tab }: { tab: BudgetTabState }) {
             data-waiting={waits ? 'true' : undefined}
             aria-pressed={active}
             onClick={() => selectColumn(c.measure)}
+            onFocusVisible={() => setFocusedCard(c.measure)}
+            onBlur={() => setFocusedCard((card) => (card === c.measure ? null : card))}
             sx={{
               display: 'flex',
               flexDirection: 'column',
@@ -113,7 +117,7 @@ export default function ColumnCards({ tab }: { tab: BudgetTabState }) {
             <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: 12, color: 'kanap.text.secondary', minWidth: 0 }}>
               <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.label}</Box>
               {frozen && <LockOutlinedIcon titleAccess={t('budgetTab.card.frozen')} sx={{ fontSize: 12, color: 'kanap.text.tertiary', flex: 'none' }} />}
-              {toCheck && <EntryCheckDot text={toCheck} testId={`entry-check-${c.measure}`} />}
+              {toCheck && <EntryCheckDot text={toCheck} testId={`entry-check-${c.measure}`} focused={focusedCard === c.measure} />}
               {waits && (
                 <Box component="span" title={t('budgetTab.card.waiting')} sx={{ ml: 'auto', display: 'inline-flex' }}>
                   <StatusDot color="warning.main" />

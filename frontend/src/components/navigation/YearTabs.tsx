@@ -23,6 +23,9 @@ export default function YearTabs({
 }: YearTabsProps) {
   const { t } = useTranslation('common');
   const markId = React.useId();
+  // The year whose mark shows its sentence: under the pointer, or its tab under the keyboard focus.
+  const [hoveredMark, setHoveredMark] = React.useState<number | null>(null);
+  const [focusedTab, setFocusedTab] = React.useState<number | null>(null);
   // Generate years around current year if no availableYears provided. The current year is always one
   // of them: a page opened on a year outside the list still shows it selected.
   const allYears = availableYears.length > 0
@@ -108,12 +111,20 @@ export default function YearTabs({
               label={mark ? (
                 <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                   {year}
-                  <Tooltip title={mark} describeChild>
+                  <Tooltip
+                    title={mark}
+                    describeChild
+                    open={hoveredMark === year || focusedTab === year}
+                    onOpen={() => setHoveredMark(year)}
+                    onClose={() => setHoveredMark((y) => (y === year ? null : y))}
+                  >
                     <Box component="span" aria-hidden data-testid={`year-mark-${year}`} sx={attentionDotSx} />
                   </Tooltip>
                 </Box>
               ) : year.toString()}
               aria-describedby={mark ? `${markId}-${year}` : undefined}
+              onFocusVisible={mark ? () => setFocusedTab(year) : undefined}
+              onBlur={mark ? () => setFocusedTab((y) => (y === year ? null : y)) : undefined}
               value={year}
               disabled={disabled}
             />

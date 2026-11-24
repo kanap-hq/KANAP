@@ -1,3 +1,4 @@
+import React from 'react';
 import { Box, Tooltip } from '@mui/material';
 import type { TFunction } from 'i18next';
 import { attentionDotSx } from '../../../theme/formSx';
@@ -38,10 +39,15 @@ export function entryExpectedText(t: TFunction, check: BudgetLineEntryCheck, col
   return columns ? t('budgetTab.entryCheck.withColumns', { reason, columns }) : t('budgetTab.entryCheck.sentence', { reason });
 }
 
-/** The orange dot of a column, or a year, to check: its text in a tooltip and as its accessible name. */
-export function EntryCheckDot({ text, testId }: { text: string; testId?: string }) {
+/**
+ * The orange dot of a column to check: its text in a tooltip and as its accessible name. The tooltip
+ * opens above the dot, clear of its card's title and amount, on hover and while `focused` (its card
+ * has the keyboard focus: the dot itself is no tab stop).
+ */
+export function EntryCheckDot({ text, testId, focused = false }: { text: string; testId?: string; focused?: boolean }) {
+  const [hovered, setHovered] = React.useState(false);
   return (
-    <Tooltip title={text}>
+    <Tooltip title={text} placement="top" open={hovered || focused} onOpen={() => setHovered(true)} onClose={() => setHovered(false)}>
       <Box
         component="span"
         role="img"

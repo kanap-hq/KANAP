@@ -3478,6 +3478,38 @@ describe('BudgetTab: the account expects quantity and price (lot B12a)', () => {
     expect(within(editor()).getByRole('img', { name: ACCOUNT })).toBeInTheDocument();
   });
 
+  it('shows the sentence of a dot above it on hover, and while its card or its year tab has the keyboard focus, with no tab stop of its own', async () => {
+    setupApi();
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, {
+      availableYears: [YEAR, YEAR + 1],
+      entryCheck: expected([{ year: YEAR, measure: 'planned' }, { year: YEAR, measure: 'forecast' }]),
+    });
+    await waitForAmounts();
+    const dot = within(card('planned')).getByRole('img', { name: ACCOUNT });
+    expect(dot).not.toHaveAttribute('tabindex');
+    // Hover: above the dot, clear of the card's title and amount.
+    fireEvent.mouseOver(dot);
+    const hovered = await screen.findByRole('tooltip');
+    expect(hovered).toHaveTextContent(ACCOUNT);
+    expect(hovered.querySelector('.MuiTooltip-tooltip')).toHaveClass('MuiTooltip-tooltipPlacementTop');
+    fireEvent.mouseLeave(dot);
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    // The keyboard on the card: the same sentence, until the focus leaves it.
+    fireEvent.keyDown(document.body, { key: 'Tab' });
+    act(() => card('planned').focus());
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(ACCOUNT);
+    act(() => card('planned').blur());
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    // The keyboard on a year tab: the reason and its columns.
+    const tab = screen.getByRole('tab', { name: String(YEAR) });
+    fireEvent.keyDown(document.body, { key: 'Tab' });
+    act(() => tab.focus());
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(`The line's account expects quantity and price entry: ${label('planned')} and ${label('forecast')}.`);
+    expect(tab).toHaveAccessibleDescription(`The line's account expects quantity and price entry: ${label('planned')} and ${label('forecast')}.`);
+    act(() => tab.blur());
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+  });
+
   it('leaves out a column frozen since the server listed it', async () => {
     setupApi({ frozen: ['budget'] });
     renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: expected([{ year: YEAR, measure: 'planned' }, { year: YEAR, measure: 'forecast' }]) });
