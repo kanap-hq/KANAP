@@ -109,10 +109,22 @@ function testDrift() {
     de: 'Die Technologie „Say "hi"“ hat sich seit der Vorschau geändert.',
     es: 'La tecnología «Say "hi"» ha cambiado desde la vista previa.',
   });
+  // A known thing is named after the sentence in French and German, which then holds whatever its
+  // gender and number; Spanish carries its article (lot K2b).
   expectTranslated('Budget line changed after the preview was created.', {
-    fr: "Ligne budgétaire a changé depuis l'aperçu.",
-    de: 'Budgetzeile hat sich seit der Vorschau geändert.',
+    fr: "Les données ont changé depuis l'aperçu : Ligne budgétaire.",
+    de: 'Die Daten haben sich seit der Vorschau geändert: Budgetzeile.',
     es: 'La línea presupuestaria ha cambiado desde la vista previa.',
+  });
+  expectTranslated('Tasks changed after the preview was created.', {
+    fr: "Les données ont changé depuis l'aperçu : Tâches.",
+    de: 'Die Daten haben sich seit der Vorschau geändert: Aufgaben.',
+    es: 'Las tareas han cambiado desde la vista previa.',
+  });
+  expectTranslated('Assignee changed after the preview was created.', {
+    fr: "Les données ont changé depuis l'aperçu : Responsable.",
+    de: 'Die Daten haben sich seit der Vorschau geändert: Zuständige Person.',
+    es: 'El responsable ha cambiado desde la vista previa.',
   });
   expectTranslated('Company metrics for 2024 changed after the preview was created.', {
     fr: "Les indicateurs (Société) pour 2024 ont changé depuis l'aperçu.",
@@ -144,7 +156,7 @@ function testMissingRecords() {
   });
   expectTranslated('Assignee not found.', {
     fr: 'Responsable introuvable.',
-    de: 'Zuständig nicht gefunden.',
+    de: 'Zuständige Person nicht gefunden.',
     es: 'No se ha encontrado el responsable.',
   });
   expectTranslated('Asset not found', {

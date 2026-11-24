@@ -1666,7 +1666,7 @@ const PREVIEW_ERROR_THINGS: Record<string, { fr: string; de: string; es: string;
   'current user': { fr: 'Utilisateur actuel', de: 'Aktueller Benutzer', es: 'el usuario actual' },
   'budget line': { fr: 'Ligne budgétaire', de: 'Budgetzeile', es: 'la línea presupuestaria' },
   'budget lines': { fr: 'Lignes budgétaires', de: 'Budgetzeilen', es: 'las líneas presupuestarias', plural: true },
-  assignee: { fr: 'Responsable', de: 'Zuständig', es: 'el responsable' },
+  assignee: { fr: 'Responsable', de: 'Zuständige Person', es: 'el responsable' },
   version: { fr: 'Version', de: 'Version', es: 'la versión' },
   'financial version': { fr: 'Version budgétaire', de: 'Budgetversion', es: 'la versión presupuestaria' },
   document: { fr: 'Document', de: 'Dokument', es: 'el documento' },
@@ -1760,16 +1760,18 @@ function missingRecordText(language: AiTranslatedWriteLanguage, subject: string,
     : `No se ${verb} encontrado ${word}.`;
 }
 
-/** "<subject> changed after the preview was created." A reference or a dimension name is kept. */
+/**
+ * "<subject> changed after the preview was created." A reference or a dimension name is kept at
+ * the head. A known thing is named after the sentence in French and German, which then holds
+ * whatever its gender and number; Spanish carries its article.
+ */
 function changedSincePreviewText(language: AiTranslatedWriteLanguage, subject: string): string {
   const thing = previewErrorThing(subject);
   if (language === 'fr') {
-    const word = thing?.fr ?? subject;
-    return `${word} ${thing?.plural ? 'ont' : 'a'} changé depuis l'aperçu.`;
+    return thing ? `Les données ont changé depuis l'aperçu : ${thing.fr}.` : `${subject} a changé depuis l'aperçu.`;
   }
   if (language === 'de') {
-    const word = thing?.de ?? subject;
-    return `${word} ${thing?.plural ? 'haben' : 'hat'} sich seit der Vorschau geändert.`;
+    return thing ? `Die Daten haben sich seit der Vorschau geändert: ${thing.de}.` : `${subject} hat sich seit der Vorschau geändert.`;
   }
   const word = thing ? capitalize(thing.es) : subject;
   return `${word} ha${thing?.plural ? 'n' : ''} cambiado desde la vista previa.`;
