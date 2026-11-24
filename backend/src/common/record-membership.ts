@@ -235,12 +235,12 @@ export async function pickMemberByParent<T extends object>(
   if (rows.length === 1) return rows[0];
   const { table, parentColumn, parentTable, noun, parentNoun } = KINDS[kind];
   const tenant = (index: number) => (tenantId ? `$${index}` : 'app_current_tenant()');
-  const withTenant = (params: unknown[]) => (tenantId ? [...params, tenantId] : params);
+  const paramsInTenant = (params: unknown[]) => (tenantId ? [...params, tenantId] : params);
   const parent = valueOf(parentId);
   if (parent && UUID_RE.test(parent)) {
     const inParent: Record<string, unknown>[] = await manager.query(
       `SELECT * FROM ${table} WHERE tenant_id = ${tenant(3)} AND LOWER(name) = LOWER($1::text) AND ${parentColumn} = $2::uuid LIMIT 2`,
-      withTenant([name, parent]),
+      paramsInTenant([name, parent]),
     );
     if (inParent.length === 1) return inParent[0];
   }
@@ -249,7 +249,7 @@ export async function pickMemberByParent<T extends object>(
        JOIN ${parentTable} p ON p.id = c.${parentColumn} AND p.tenant_id = c.tenant_id
       WHERE c.tenant_id = ${tenant(2)} AND LOWER(c.name) = LOWER($1::text)
       ORDER BY p.name`,
-    withTenant([name]),
+    paramsInTenant([name]),
   );
   const more = parents.length - LISTED_PARENTS;
   const listed = parents.slice(0, LISTED_PARENTS).map((row) => `"${row.name}"`).join(', ') + (more > 0 ? ` and ${more} more` : '');
