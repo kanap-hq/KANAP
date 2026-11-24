@@ -149,7 +149,7 @@ export class ConnectionsLegsService extends ConnectionsBaseService {
     }
 
     if (body?.hasOwnProperty('function_code')) {
-      leg.function_code = await this.normalizeHopFunctionCode(body.function_code, tenant, mg);
+      leg.function_code = await this.normalizeHopFunctionCode(body.function_code, tenant, mg, leg.function_code);
     }
 
     if (body?.hasOwnProperty('protocol_codes') || body?.hasOwnProperty('protocol_code')) {
@@ -157,6 +157,7 @@ export class ConnectionsLegsService extends ConnectionsBaseService {
         body.protocol_codes ?? body.protocol_code,
         tenant,
         mg,
+        leg.protocol_codes,
       );
     }
 
@@ -184,6 +185,7 @@ export class ConnectionsLegsService extends ConnectionsBaseService {
         },
         tenant,
         mg,
+        leg.equipment_entity_code,
       );
       leg.equipment_asset_id = equipment.equipment_asset_id;
       leg.equipment_entity_code = equipment.equipment_entity_code;

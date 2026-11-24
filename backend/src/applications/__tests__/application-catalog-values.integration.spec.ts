@@ -25,6 +25,7 @@ import { ApplicationsListService } from '../services/applications-list.service';
 // that does, at the creation and at the update, by the API (the change in bulk goes through it)
 // and the import: category, lifecycle, access methods, and a deployment's lifecycle. The access
 // methods are now checked against the tenant's catalog (they were free text).
+// @database-spec: opens the data-source through runSpecs, so run-ci-tests.js runs this file on a database lane.
 
 type Ctx = { runner: QueryRunner; tenantId: string; crud: ApplicationsCrudService; csv: ApplicationsCsvService; instances: AppInstancesService; settings: ItOpsSettingsService };
 

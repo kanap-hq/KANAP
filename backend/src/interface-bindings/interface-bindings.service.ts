@@ -9,6 +9,7 @@ import { AppInstance } from '../app-instances/app-instance.entity';
 import { Application } from '../applications/application.entity';
 import { AuditService } from '../audit/audit.service';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
+import { resolveOfferedCatalogCode } from '../it-ops-settings/catalog-resolve';
 import { InterfaceConnectionLink } from '../interface-connection-links/interface-connection-link.entity';
 import { Connection } from '../connections/connection.entity';
 
@@ -70,6 +71,7 @@ export class InterfaceBindingsService {
     tenantId: string,
     manager?: EntityManager,
     fallback: string = 'proposed',
+    held?: string | null,
   ): Promise<BindingLifecycle> {
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
     const allowed = (settings.lifecycleStates || []).map((item) => item.code);
@@ -77,11 +79,8 @@ export class InterfaceBindingsService {
     if (value === undefined || value === null || String(value).trim() === '') {
       return fallbackCode;
     }
-    const normalized = normalizeBindingLifecycle(value);
-    if (!allowed.includes(normalized)) {
-      throw new BadRequestException(`Invalid status "${value}"`);
-    }
-    return normalized;
+    // Rule P7: a retired state only on the binding that holds it.
+    return resolveOfferedCatalogCode(normalizeBindingLifecycle(value), settings.lifecycleStates || [], { held, what: 'status' });
   }
 
   private normalizeNullable(value: unknown): string | null {
@@ -90,20 +89,18 @@ export class InterfaceBindingsService {
     return text.length === 0 ? null : text;
   }
 
+  /** Rule P7: a retired mode, or one the catalog does not know, only on the binding that holds it. */
   private async normalizeAuthMode(
     value: unknown,
     tenantId: string,
     manager?: EntityManager,
+    held?: string | null,
   ): Promise<string | null> {
     if (value == null || value === '') return null;
-    const code = String(value || '').trim().toLowerCase();
+    const code = String(value || '').trim();
     if (!code) return null;
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set((settings.interfaceAuthModes || []).map((o) => o.code));
-    if (!allowed.has(code)) {
-      throw new BadRequestException(`Invalid authentication_mode "${value}"`);
-    }
-    return code;
+    return resolveOfferedCatalogCode(code, settings.interfaceAuthModes || [], { held, what: 'authentication mode' });
   }
 
   private async ensureInterface(id: string, manager?: EntityManager) {
@@ -323,6 +320,7 @@ export class InterfaceBindingsService {
         payload.authentication_mode,
         tenantId,
         opts?.manager,
+        existing.authentication_mode,
       );
     }
     if (payload.monitoring_url !== undefined) {
@@ -332,7 +330,7 @@ export class InterfaceBindingsService {
       existing.env_notes = this.normalizeNullable(payload.env_notes);
     }
     if (payload.status !== undefined) {
-      existing.status = await this.normalizeStatus(payload.status ?? existing.status, tenantId, opts?.manager, existing.status);
+      existing.status = await this.normalizeStatus(payload.status ?? existing.status, tenantId, opts?.manager, existing.status, existing.status);
     }
     if (payload.integration_tool_application_id !== undefined) {
       existing.integration_tool_application_id = payload.integration_tool_application_id

@@ -6,6 +6,7 @@ import { ConnectionProtocol } from '../connection-protocol.entity';
 import { ConnectionLeg } from '../connection-leg.entity';
 import { Asset } from '../../assets/asset.entity';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { resolveOfferedCatalogCode, resolveOfferedCatalogCodes } from '../../it-ops-settings/catalog-resolve';
 import { classificationRankSql, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 
 /**
@@ -245,16 +246,14 @@ export abstract class ConnectionsBaseService {
     tenantId: string,
     manager?: EntityManager,
     fallback: string = 'active',
+    held?: string | null,
   ): Promise<string> {
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
     const allowed = (settings.lifecycleStates || []).map((item) => item.code);
-    const normalized = String(value ?? '').trim().toLowerCase();
+    const normalized = String(value ?? '').trim();
     const fallbackCode = allowed.includes(fallback) ? fallback : allowed[0] || 'active';
     if (!normalized) return fallbackCode;
-    if (!allowed.includes(normalized)) {
-      throw new BadRequestException(`Invalid lifecycle "${value}"`);
-    }
-    return normalized;
+    return resolveOfferedCatalogCode(normalized, settings.lifecycleStates || [], { held, what: 'lifecycle' });
   }
 
   protected normalizeEnvironment(value: unknown): EnvironmentValue {
@@ -339,32 +338,28 @@ export abstract class ConnectionsBaseService {
     return conn;
   }
 
-  protected async validateEntityCode(code: string, tenantId: string, manager?: EntityManager) {
+  /**
+   * The catalog values of a connection follow rule P7 (`resolveOfferedCatalogCode`): a retired value,
+   * or one the catalog does not know, only on the connection (or hop) that already holds it (`held`).
+   */
+  protected async validateEntityCode(code: string, tenantId: string, manager?: EntityManager, held?: string | null) {
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set((settings.entities || []).map((e) => e.code));
-    if (!allowed.has(code)) {
-      throw new BadRequestException(`Invalid entity "${code}"`);
-    }
+    resolveOfferedCatalogCode(code, settings.entities || [], { held, what: 'entity' });
   }
 
   protected async normalizeProtocolCodes(
     codes: unknown,
     tenantId: string,
     manager?: EntityManager,
+    held?: string[] | null,
   ): Promise<string[]> {
     const arr = Array.isArray(codes) ? codes : [];
-    const list = arr.map((c) => String(c || '').trim().toLowerCase()).filter(Boolean);
+    const list = arr.map((c) => String(c || '').trim()).filter(Boolean);
     if (list.length === 0) {
       throw new BadRequestException('At least one protocol is required');
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set((settings.connectionTypes || []).map((o) => o.code));
-    for (const code of list) {
-      if (!allowed.has(code)) {
-        throw new BadRequestException(`Invalid protocol "${code}"`);
-      }
-    }
-    return Array.from(new Set(list));
+    return resolveOfferedCatalogCodes(list, settings.connectionTypes || [], { held, what: 'protocol' });
   }
 
   /**
@@ -378,6 +373,7 @@ export abstract class ConnectionsBaseService {
     input: unknown,
     tenantId: string,
     manager?: EntityManager,
+    held?: string[] | null,
   ): Promise<Array<{ code: string; port_override: string | null }>> {
     const arr = Array.isArray(input) ? input : [];
     const byCode = new Map<string, string | null>();
@@ -400,13 +396,11 @@ export abstract class ConnectionsBaseService {
       throw new BadRequestException('At least one protocol is required');
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set((settings.connectionTypes || []).map((o) => o.code));
-    for (const code of byCode.keys()) {
-      if (!allowed.has(code)) {
-        throw new BadRequestException(`Invalid protocol "${code}"`);
-      }
+    const resolved = new Map<string, string | null>();
+    for (const [code, portOverride] of byCode.entries()) {
+      resolved.set(resolveOfferedCatalogCode(code, settings.connectionTypes || [], { held, what: 'protocol' }), portOverride);
     }
-    return Array.from(byCode.entries()).map(([code, port_override]) => ({ code, port_override }));
+    return Array.from(resolved.entries()).map(([code, port_override]) => ({ code, port_override }));
   }
 
   /**
@@ -417,16 +411,13 @@ export abstract class ConnectionsBaseService {
     value: unknown,
     tenantId: string,
     manager?: EntityManager,
+    held?: string | null,
   ): Promise<string | null> {
     if (value == null) return null;
-    const normalized = String(value).trim().toLowerCase();
+    const normalized = String(value).trim();
     if (!normalized) return null;
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set((settings.pathHopFunctions || []).map((o: any) => String(o.code).toLowerCase()));
-    if (!allowed.has(normalized)) {
-      throw new BadRequestException(`Invalid path-hop function "${value}"`);
-    }
-    return normalized;
+    return resolveOfferedCatalogCode(normalized, settings.pathHopFunctions || [], { held, what: 'path-hop function' });
   }
 
   protected normalizeLegOrderIndex(value: unknown): number {
@@ -436,22 +427,16 @@ export abstract class ConnectionsBaseService {
     return n;
   }
 
-  protected async normalizeLegProtocols(codes: unknown, tenantId: string, manager?: EntityManager): Promise<string[]> {
+  protected async normalizeLegProtocols(codes: unknown, tenantId: string, manager?: EntityManager, held?: string[] | null): Promise<string[]> {
     const list = Array.isArray(codes) ? codes : codes == null ? [] : [codes];
     const normalized = list
-      .map((c) => String(c ?? '').trim().toLowerCase())
+      .map((c) => String(c ?? '').trim())
       .filter((c) => c.length > 0);
     if (normalized.length === 0) {
       throw new BadRequestException('At least one protocol is required for each leg');
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set((settings.connectionTypes || []).map((o: any) => o.code));
-    for (const code of normalized) {
-      if (!allowed.has(code)) {
-        throw new BadRequestException(`Invalid protocol "${code}"`);
-      }
-    }
-    return Array.from(new Set(normalized));
+    return resolveOfferedCatalogCodes(normalized, settings.connectionTypes || [], { held, what: 'protocol' });
   }
 
   /**
@@ -466,6 +451,7 @@ export abstract class ConnectionsBaseService {
     }>,
     tenantId: string,
     manager?: EntityManager,
+    heldEntity?: string | null,
   ): Promise<Pick<LegInput, 'equipment_asset_id' | 'equipment_entity_code'>> {
     const aid = this.normalizeNullable(payload.equipment_asset_id);
     const eidRaw = this.normalizeNullable(payload.equipment_entity_code);
@@ -480,7 +466,7 @@ export abstract class ConnectionsBaseService {
       await this.ensureAsset(aid, tenantId, manager);
       return { equipment_asset_id: aid, equipment_entity_code: null };
     }
-    await this.validateEntityCode(eid as string, tenantId, manager);
+    await this.validateEntityCode(eid as string, tenantId, manager, heldEntity);
     return { equipment_asset_id: null, equipment_entity_code: eid };
   }
 

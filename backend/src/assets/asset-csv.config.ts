@@ -1,6 +1,6 @@
 import type { CsvLanguage } from '../common/csv-sheet';
 import { assetEnvironmentCode } from './asset-environments';
-import { findCatalogOption, requireImportCatalogs, resolveCatalogCode } from '../it-ops-settings/catalog-resolve';
+import { CatalogOptionLike, findCatalogOption, offeredCatalogList, requireImportCatalogs, resolveCatalogCode, resolveOfferedCatalogCode } from '../it-ops-settings/catalog-resolve';
 import { shippedLabelIn } from '../it-ops-settings/catalog-shipped-labels';
 import {
   ArrayStrategy,
@@ -43,6 +43,11 @@ import {
   osClusterWithMembersRefusal,
   type ClusterSwitch,
 } from './asset-rules';
+
+/** The entry a value names, or null (an ambiguous value names none). */
+function findCatalogOptionSafe(value: string, options: CatalogOptionLike[]): CatalogOptionLike | null {
+  try { return findCatalogOption(value, options); } catch { return null; }
+}
 
 /**
  * The operating system is not a column. `beforeCommit` keeps the text here and takes it off the
@@ -587,12 +592,20 @@ async function validateAssetRows(rows: CsvImportRow[], context: CsvImportContext
   takeKindProposals(rows, context, settings);
   const fail = (row: CsvImportRow, code: string, message: string, params: Record<string, string | number>, column: string) =>
     row.errors.push({ row: row.rowNumber, column, message, code, params });
-  const catalog = (row: CsvImportRow, column: string, options: Parameters<typeof findCatalogOption>[1], code: string, label: string) => {
+  // Rule P7: a value the catalog does not know, or one it retired, unless the asset the row updates holds it.
+  const offered = (row: CsvImportRow, column: string, value: string, options: CatalogOptionLike[], held: unknown, code: string, label: string) => {
+    try {
+      resolveOfferedCatalogCode(value, options, { held, what: label });
+    } catch (error: any) {
+      const retired = !!findCatalogOptionSafe(value, options);
+      if (retired) fail(row, 'catalog_value_retired', error.message, { value, allowed: offeredCatalogList(options, held) }, column);
+      else fail(row, code, `Unknown ${label} "${value}"`, { value }, column);
+    }
+  };
+  const catalog = (row: CsvImportRow, column: string, options: CatalogOptionLike[], code: string, label: string) => {
     const value = cellText(row, column);
-    if (!value) return;
-    let found: ReturnType<typeof findCatalogOption> = null;
-    try { found = findCatalogOption(value, options); } catch { found = null; }
-    if (!found) fail(row, code, `Unknown ${label} "${value}"`, { value }, column);
+    if (!value || value === '-') return;
+    offered(row, column, value, options, (row.existingEntity as Record<string, unknown> | undefined)?.[column], code, label);
   };
 
   for (const row of rows) {
@@ -615,10 +628,9 @@ async function validateAssetRows(rows: CsvImportRow[], context: CsvImportContext
       const typeColumn = `ip_${slot}_type`;
       const addressColumn = `ip_${slot}_address`;
       const type = cellText(row, typeColumn);
-      if (type) {
-        let found: ReturnType<typeof findCatalogOption> = null;
-        try { found = findCatalogOption(type, settings.ipAddressTypes ?? []); } catch { found = null; }
-        if (!found) fail(row, 'asset_ip_type_invalid', `Unknown IP address type "${type}"`, { value: type }, typeColumn);
+      if (type && type !== '-') {
+        const heldTypes = (Array.isArray(existing?.ip_addresses) ? existing.ip_addresses : []).map((item: any) => item?.type);
+        offered(row, typeColumn, type, settings.ipAddressTypes ?? [], heldTypes, 'asset_ip_type_invalid', 'IP address type');
       }
       const address = cellText(row, addressColumn);
       const stored = Array.isArray(existing?.ip_addresses) ? existing.ip_addresses[slot - 1]?.ip : undefined;
