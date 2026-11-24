@@ -2,7 +2,7 @@ import type { EntityManager } from 'typeorm';
 import { UPDATED_AT_TABLES } from '../common/updated-at.inventory';
 import { touchUpdatedAtMany } from '../common/updated-at-trigger';
 import { isAuditUuid } from './audit-parent-rules';
-import { RECORD_HISTORY, type RecordHistoryRecord } from './record-history.inventory';
+import { RECORD_HISTORY, recordHistoryEntry, type RecordHistoryRecord } from './record-history.inventory';
 import { isHistoryEntry, presentItem, type AuditRow, type PageContext } from './record-history/presenters';
 
 /**
@@ -123,6 +123,18 @@ function shownAsEntry(row: AuditedRow, entry: RecordHistoryRecord, id: string): 
     // A payload the presenter cannot read: the page would fail on it too; the record is dated.
     return true;
   }
+}
+
+/**
+ * Whether the history page of the record `id` of `table` shows this stored row as an entry, the
+ * filter `recordsToDate` applies: migration 1856277000000 (the dates of the records that existed
+ * before the dating) judges its update rows with it. A table outside the history inventory has no
+ * page to judge by: the row is kept, as a payload the presenter cannot read.
+ */
+export function historyShowsRow(table: string, row: AuditedRow, id: string): boolean {
+  const entry = recordHistoryEntry(table);
+  if (!entry) return true;
+  return shownAsEntry({ ...row, before: stored(row.before), after: stored(row.after) }, entry, id.toLowerCase());
 }
 
 /** The records these rows date, by table (tables and ids sorted). */
