@@ -74,6 +74,7 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
+import { isHeldUnknown, offeredCatalogOptions } from '../../utils/catalogOffered';
 
 type TabKey = 'overview' | 'deployments' | 'interfaces' | 'operations' | 'compliance' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
@@ -331,15 +332,11 @@ function ApplicationProperties({
   const feedback = useApplicationFeedback();
   const { byField } = useItOpsEnumOptions();
   const categoryOptions = byField.applicationCategory || [];
-  const categorySelectOptions = React.useMemo(() => {
-    if (!app.category || categoryOptions.some((option) => option.code === app.category)) {
-      return categoryOptions;
-    }
-    return [
-      { code: app.category, label: t('common.legacyOption', { label: app.category }), deprecated: true },
-      ...categoryOptions,
-    ];
-  }, [app.category, categoryOptions, t]);
+  // Rule P7: the categories still offered, plus the one the application holds.
+  const categorySelectOptions = React.useMemo(
+    () => offeredCatalogOptions(categoryOptions, app.category, (code) => t('common.legacyOption', { label: code })),
+    [app.category, categoryOptions, t],
+  );
   const [savingAudience, setSavingAudience] = React.useState(false);
   const [audienceRows, setAudienceRows] = React.useState<Array<{ key: string; company_id: string | null; department_ids: string[] }>>([]);
 
@@ -475,7 +472,7 @@ function ApplicationProperties({
               <MenuItem
                 key={option.code}
                 value={option.code}
-                disabled={option.code === app.category && !categoryOptions.some((known) => known.code === option.code)}
+                disabled={isHeldUnknown(option)}
                 sx={drawerMenuItemSx}
               >
                 {option.label}
@@ -1274,7 +1271,11 @@ export function OperationsTab({
 }) {
   const { t } = useTranslation(['it', 'common']);
   const { byField } = useItOpsEnumOptions();
-  const accessOptions = byField.accessMethod || [];
+  // Rule P7: the access methods still offered, plus those the application holds (an unknown one under its code).
+  const accessOptions = React.useMemo(
+    () => offeredCatalogOptions(byField.accessMethod, app.access_methods),
+    [byField.accessMethod, app.access_methods],
+  );
   const horizontalRowSx = { display: 'grid', gridTemplateColumns: '140px minmax(0, 1fr)', columnGap: '18px', alignItems: 'center' } as const;
   const horizontalLabelSx = { pt: '3px' } as const;
 
@@ -1671,14 +1672,16 @@ export default function ApplicationWorkspacePage() {
     }
   }, [t]);
 
+  // Rule P7: the lifecycles still offered, plus the one the application holds.
+  const heldLifecycle = app?.lifecycle;
   const lifecycleOptions = React.useMemo(() => {
-    const list = byField.lifecycleStatus || [];
+    const list = offeredCatalogOptions(byField.lifecycleStatus, heldLifecycle);
     return list.map((option) => ({
       value: option.code,
       label: option.label,
       color: getDotColor(LIFECYCLE_COLORS[option.code] || 'default', theme.palette.mode),
     }));
-  }, [byField.lifecycleStatus, theme.palette.mode]);
+  }, [byField.lifecycleStatus, heldLifecycle, theme.palette.mode]);
 
   // Creating an application takes the member level, as the server does.
   if (isCreate && !canManage) return <ForbiddenPage resource="applications" level="member" />;

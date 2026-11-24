@@ -42,8 +42,9 @@ vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => <div da
 vi.mock('../../components/history/RecordHistoryTab', () => ({
   default: ({ table, recordId }: { table: string; recordId: string }) => <div data-testid="record-history">{`${table}:${recordId}`}</div>,
 }));
+const enumOptions = vi.hoisted(() => ({ byField: { accessMethod: [] as Array<{ code: string; label: string; deprecated?: boolean }> } }));
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({
-  default: () => ({ byField: { accessMethod: [] }, labelFor: (_field: string, code: string) => code }),
+  default: () => ({ byField: enumOptions.byField, labelFor: (_field: string, code: string) => code }),
 }));
 
 const mocked = vi.mocked(api);
@@ -95,7 +96,7 @@ function Location() {
   return <div data-testid="location">{useLocation().pathname}</div>;
 }
 
-function renderTab() {
+function renderTab(accessMethods: string[] = []) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/applications/app-1/relations') {
       return {
@@ -123,7 +124,7 @@ function renderTab() {
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter>
           <OperationsTab
-            app={{ id: 'app-1', access_methods: [], support_contacts: [], support_notes: null, external_facing: false, etl_enabled: false, is_suite: false } as never}
+            app={{ id: 'app-1', access_methods: accessMethods, support_contacts: [], support_notes: null, external_facing: false, etl_enabled: false, is_suite: false } as never}
             canManage
             onPatch={async () => undefined}
           />
@@ -137,6 +138,26 @@ beforeEach(() => {
   mocked.get.mockReset();
   mocked.post.mockReset();
   features.vulnerabilityFeed = true;
+  enumOptions.byField.accessMethod = [];
+});
+
+describe('Operations tab access methods', () => {
+  it('shows every access method the application holds and offers a retired one only to it (rule P7)', async () => {
+    enumOptions.byField.accessMethod = [
+      { code: 'web', label: 'Web' },
+      { code: 'vdi', label: 'VDI', deprecated: true },
+      { code: 'mobile', label: 'Mobile' },
+      { code: 'fat_client', label: 'Fat client', deprecated: true },
+    ];
+    renderTab(['web', 'citrix', 'vdi']);
+    await screen.findByRole('heading', { name: 'workspace.application.technical.sectionTitle' });
+    const field = screen.getByRole('combobox');
+    const chips = field.closest('.MuiAutocomplete-root')!.querySelectorAll('.MuiChip-label');
+    expect([...chips].map((chip) => chip.textContent)).toEqual(['citrix', 'Web', 'VDI']);
+    fireEvent.mouseDown(field);
+    const listbox = await screen.findByRole('listbox');
+    expect(within(listbox).getAllByRole('option').map((option) => option.textContent)).toEqual(['citrix', 'Web', 'VDI', 'Mobile']);
+  });
 });
 
 describe('Operations tab', () => {

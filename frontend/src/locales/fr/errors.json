@@ -329,6 +329,8 @@
   "name_too_long": "Le nom est trop long : {{max}} caractères au plus.",
   "lifecycle_invalid": "Cycle de vie inconnu : {{value}}. Utilisez un cycle de vie de la liste, par son nom ou son code. Valeurs possibles : {{allowed}}.",
   "category_invalid": "Catégorie inconnue : {{value}}. Utilisez une catégorie de la liste, par son nom ou son code. Valeurs possibles : {{allowed}}.",
+  "catalog_value_retired": "{{value}} n'est plus proposé : seule une fiche qui le porte déjà le garde. Valeurs possibles : {{allowed}}.",
+  "access_method_invalid": "Méthode d'accès inconnue : {{value}}. Utilisez une méthode d'accès de la liste, par son nom ou son code. Valeurs possibles : {{allowed}}.",
   "classification_unknown": "Valeur inconnue : {{value}}. Utilisez un niveau des paramètres de classification, par son nom ou son code.",
   "duration_invalid": "{{field}} doit être un nombre entier de minutes.",
   "owner_email_unknown": "Aucun utilisateur avec le courriel {{email}}.",

@@ -472,6 +472,11 @@ export function usePreviewChangeLabels(preview?: AiMutationPreview) {
         }
       }
       if (field === 'lifecycle' && entity === 'applications') return labelFor('lifecycleStatus', value) || value;
+      // The server sends the codes of the tenant's lists: their labels, in the person's language.
+      if (field === 'category' && entity === 'applications') return labelFor('applicationCategory', value) || value;
+      if (field === 'access_methods' && entity === 'applications') {
+        return value.split(', ').map((code) => labelFor('accessMethod', code) || code).join(', ');
+      }
       if (RECORD_TOOLS.has(preview.tool_name) && (value === 'Yes' || value === 'No')) {
         return known([`it:enums.yesNo.${value.toLowerCase()}`]) ?? value;
       }

@@ -35,6 +35,7 @@ import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import { getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { offeredCatalogOptions } from '../../../utils/catalogOffered';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDate } from '../../../lib/dateFormat';
@@ -177,13 +178,14 @@ export default function DeploymentsEditor({
   );
   const [lifecycleAnchor, setLifecycleAnchor] = React.useState<{ id: string; element: HTMLElement } | null>(null);
 
-  const lifecycleOptions = React.useMemo(() => {
-    const list = byField.lifecycleStatus || [];
-    return list.map((item) => ({
+  // Rule P7: the lifecycles still offered, plus the one the deployment holds (none for a new one).
+  const lifecycleOptionsFor = React.useCallback((deploymentId?: string) => {
+    const held = deployments.find((deployment) => deployment.id === deploymentId)?.lifecycle;
+    return offeredCatalogOptions(byField.lifecycleStatus, held).map((item) => ({
       value: item.code,
       label: item.deprecated ? t('common.deprecatedOption', { label: item.label }) : item.label,
     }));
-  }, [byField.lifecycleStatus, t]);
+  }, [byField.lifecycleStatus, deployments, t]);
 
   const serverRoleOptions = React.useMemo(() => {
     const list = byField.serverRole || [];
@@ -587,7 +589,7 @@ export default function DeploymentsEditor({
       )}
 
       <Menu anchorEl={lifecycleAnchor?.element || null} open={!!lifecycleAnchor} onClose={() => setLifecycleAnchor(null)}>
-        {lifecycleOptions.map((option) => (
+        {lifecycleOptionsFor(lifecycleAnchor?.id).map((option) => (
           <MenuItem
             key={option.value}
             sx={drawerMenuItemSx}
@@ -634,7 +636,7 @@ export default function DeploymentsEditor({
               variant="standard"
               sx={drawerSelectSx}
             >
-              {lifecycleOptions.map((option) => (
+              {lifecycleOptionsFor(deploymentDraft.id).map((option) => (
                 <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>{option.label}</MenuItem>
               ))}
             </Select>
