@@ -145,6 +145,8 @@
   "CSV_DEPARTMENT_COMPANY_REQUIRED": "Un département demande une société connue dans company_name.",
   "CSV_DEPARTMENT_IN_SEVERAL_COMPANIES": "« {{value}} » désigne un département dans chacune des sociétés {{parents}} : indiquez l'une d'elles dans {{columns}}.",
   "CSV_STREAM_IN_SEVERAL_CATEGORIES": "« {{value}} » désigne une filière dans chacune des catégories {{parents}} : indiquez l'une d'elles dans {{columns}}.",
+  "CSV_DEPARTMENT_IN_OTHER_COMPANIES": "Aucun département « {{value}} » n'appartient à la société « {{parent}} ». Les sociétés qui en ont un : {{parents}}.",
+  "CSV_STREAM_IN_OTHER_CATEGORIES": "Aucune filière « {{value}} » n'appartient à la catégorie « {{parent}} ». Les catégories qui en ont une : {{parents}}.",
   "CSV_ENUM_INVALID": "« {{value}} » n'est pas valide. Valeurs possibles : {{allowed}}.",
   "CSV_REFERENCE_NOT_FOUND": "« {{value}} » est introuvable.",
   "CSV_REFERENCE_NOT_FOUND_SKIPPED": "« {{value}} » est introuvable et n'est pas importé.",

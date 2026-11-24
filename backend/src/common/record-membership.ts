@@ -218,6 +218,34 @@ export function givenMembership(pairs: readonly MembershipPair[], body: Record<s
 /** How many parents a refusal names before it says how many more there are. */
 const LISTED_PARENTS = 10;
 
+/** The parents of a name, for a refusal's params: ten, then how many more (`A, B, C +2`). */
+export function listParents(names: string[]): string {
+  const more = names.length - LISTED_PARENTS;
+  return names.slice(0, LISTED_PARENTS).join(', ') + (more > 0 ? ` +${more}` : '');
+}
+
+/**
+ * The refusal of an import row whose name has no record in the row's parent but has one in others (a
+ * department of another company): one other parent, the pair's own refusal; several, a refusal naming
+ * them, ten then how many more. `others`: the names of those parents, sorted.
+ */
+export function nameInOtherParents(
+  kind: MembershipKind,
+  value: string,
+  parent: string,
+  others: string[],
+): { code: string; message: string; params: Record<string, string> } {
+  if (others.length === 1) return membershipMessage(kind, { child: value, childParent: others[0], parent });
+  const { noun, parentNoun } = KINDS[kind];
+  const plural = kind === 'stream' ? 'categories' : 'companies';
+  const parents = listParents(others);
+  return {
+    code: kind === 'stream' ? 'CSV_STREAM_IN_OTHER_CATEGORIES' : 'CSV_DEPARTMENT_IN_OTHER_COMPANIES',
+    message: `No ${noun} "${value}" belongs to the ${parentNoun} "${parent}". The ${plural} that have one: ${parents}.`,
+    params: { value, parent, parents },
+  };
+}
+
 /**
  * A name several records share (two streams "Ops" of two categories), for Kad (P12 of 26.12.1): the
  * record of that name in `parentId`, the parent the write leaves on the record, looked up in the
@@ -261,6 +289,6 @@ export async function pickMemberByParent<T extends object>(
     message: parentId
       ? `No ${noun} "${name}" belongs to the record's ${parentNoun}. The ${plural} that have one: ${listed}.`
       : `Several ${noun}s are named "${name}", in the ${plural} ${listed}. Ask which ${parentNoun} is meant, or set the ${parentNoun} first.`,
-    params: { value: name, parents: parents.slice(0, LISTED_PARENTS).map((row) => row.name).join(', ') + (more > 0 ? ` +${more}` : '') },
+    params: { value: name, parents: listParents(parents.map((row) => row.name)) },
   });
 }

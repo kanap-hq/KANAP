@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { PORTFOLIO_PAIRS, settleMembership, STREAM_PAIR, type ParentOf } from '../record-membership';
+import { nameInOtherParents, PORTFOLIO_PAIRS, settleMembership, STREAM_PAIR, type ParentOf } from '../record-membership';
 
 // A stream belongs to its category, a department to its company (lot I7a of 26.12.1, P13): the rule
 // alone, on values already read. Streams `ops-it` and `ops-biz` are both named "Ops", in the categories
@@ -74,7 +74,23 @@ function testUnknownChildIsLeftToTheWrite() {
   assert.deepEqual(settleMembership([STREAM_PAIR], { stream_id: 'missing', category_id: 'it' }, null, parentOf), { values: { stream_id: 'missing', category_id: 'it' }, conflict: null });
 }
 
+function testOtherParents() {
+  // An import row whose name lives in other parents only: one, the pair's refusal; several, named, ten then how many more.
+  assert.deepEqual(nameInOtherParents('department', 'Purchasing', 'Beta', ['Alpha']), {
+    code: 'DEPARTMENT_OUTSIDE_COMPANY',
+    message: 'The department "Purchasing" belongs to the company "Alpha". It cannot go with the company "Beta".',
+    params: { child: 'Purchasing', childParent: 'Alpha', parent: 'Beta' },
+  });
+  const twelve = Array.from({ length: 12 }, (_, i) => `Company ${String(i + 1).padStart(2, '0')}`);
+  const several = nameInOtherParents('department', 'Finance', 'Gamma', twelve);
+  assert.equal(several.code, 'CSV_DEPARTMENT_IN_OTHER_COMPANIES');
+  assert.equal(several.params.parents, `${twelve.slice(0, 10).join(', ')} +2`);
+  assert.equal(several.message, `No department "Finance" belongs to the company "Gamma". The companies that have one: ${twelve.slice(0, 10).join(', ')} +2.`);
+  assert.equal(nameInOtherParents('stream', 'Ops', 'Data', ['Business', 'IT']).code, 'CSV_STREAM_IN_OTHER_CATEGORIES');
+}
+
 const tests: Array<[string, () => void]> = [
+  ['name in other parents', testOtherParents],
   ['child gives its parent', testChildGivesItsParent],
   ['pair given together', testPairGivenTogether],
   ['child alone against the stored parent', testChildAloneAgainstStoredParent],

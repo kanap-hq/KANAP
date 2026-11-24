@@ -2,7 +2,7 @@ import type { CsvFieldDefinition, CsvImportContext, CsvImportParams, CsvImportRo
 import type { CsvResolverService } from './csv-resolver.service';
 import { importCell, noteCleared } from './csv-import-cells';
 import { noteNameMatch } from '../name-matching';
-import { membershipMessage, settleMembership, type MembershipKind, type MembershipPair } from '../record-membership';
+import { listParents, membershipMessage, nameInOtherParents, settleMembership, type MembershipKind, type MembershipPair } from '../record-membership';
 
 /**
  * Imports and the pairs of a record (lot I7a of 26.12.1): a stream in its category, a department in its
@@ -124,10 +124,16 @@ export function settlePendingNames(
         continue;
       }
       const parentNames = namesOf(resolver, pair.parentEntity, context);
-      const parents = [...new Set(pending.entries.map((entry) => String(entry[parentKey] ?? '').toLowerCase()))]
+      const others = [...new Set(pending.entries.map((entry) => String(entry[parentKey] ?? '').toLowerCase()))]
         .map((id) => parentNames.get(id) ?? id)
-        .sort((left, right) => left.localeCompare(right))
-        .join(', ');
+        .sort((left, right) => left.localeCompare(right));
+      if (parent) {
+        // The row's parent has none of that name: the parents that have one are named.
+        const refusal = nameInOtherParents(pair.pair.kind, pending.value, parentNames.get(String(parent).toLowerCase()) ?? String(parent), others);
+        row.errors.push({ row: row.rowNumber, column: pending.column, ...refusal });
+        continue;
+      }
+      const parents = listParents(others);
       const columns = pair.parent?.csvColumn ?? parentKey;
       const code = pair.pair.kind === 'stream' ? 'CSV_STREAM_IN_SEVERAL_CATEGORIES' : 'CSV_DEPARTMENT_IN_SEVERAL_COMPANIES';
       const plural = pair.pair.kind === 'stream' ? 'categories' : 'companies';

@@ -145,6 +145,8 @@
   "CSV_DEPARTMENT_COMPANY_REQUIRED": "A department needs a known company in company_name.",
   "CSV_DEPARTMENT_IN_SEVERAL_COMPANIES": "\"{{value}}\" names a department in each of the companies {{parents}}: give one of them in {{columns}}.",
   "CSV_STREAM_IN_SEVERAL_CATEGORIES": "\"{{value}}\" names a stream in each of the categories {{parents}}: give one of them in {{columns}}.",
+  "CSV_DEPARTMENT_IN_OTHER_COMPANIES": "No department \"{{value}}\" belongs to the company \"{{parent}}\". The companies that have one: {{parents}}.",
+  "CSV_STREAM_IN_OTHER_CATEGORIES": "No stream \"{{value}}\" belongs to the category \"{{parent}}\". The categories that have one: {{parents}}.",
   "CSV_ENUM_INVALID": "\"{{value}}\" is not valid. Use one of: {{allowed}}.",
   "CSV_REFERENCE_NOT_FOUND": "\"{{value}}\" was not found.",
   "CSV_REFERENCE_NOT_FOUND_SKIPPED": "\"{{value}}\" was not found and is not imported.",

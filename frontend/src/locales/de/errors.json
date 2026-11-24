@@ -145,6 +145,8 @@
   "CSV_DEPARTMENT_COMPANY_REQUIRED": "Eine Abteilung braucht ein bekanntes Unternehmen in company_name.",
   "CSV_DEPARTMENT_IN_SEVERAL_COMPANIES": "„{{value}}“ bezeichnet eine Abteilung in jedem der Unternehmen {{parents}}: Geben Sie eines davon in {{columns}} an.",
   "CSV_STREAM_IN_SEVERAL_CATEGORIES": "„{{value}}“ bezeichnet einen Stream in jeder der Kategorien {{parents}}: Geben Sie eine davon in {{columns}} an.",
+  "CSV_DEPARTMENT_IN_OTHER_COMPANIES": "Keine Abteilung „{{value}}“ gehört zum Unternehmen „{{parent}}“. Die Unternehmen, die eine haben: {{parents}}.",
+  "CSV_STREAM_IN_OTHER_CATEGORIES": "Kein Stream „{{value}}“ gehört zur Kategorie „{{parent}}“. Die Kategorien, die einen haben: {{parents}}.",
   "CSV_ENUM_INVALID": "„{{value}}“ ist ungültig. Mögliche Werte: {{allowed}}.",
   "CSV_REFERENCE_NOT_FOUND": "„{{value}}“ wurde nicht gefunden.",
   "CSV_REFERENCE_NOT_FOUND_SKIPPED": "„{{value}}“ wurde nicht gefunden und wird nicht importiert.",

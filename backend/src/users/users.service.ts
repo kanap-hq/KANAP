@@ -63,7 +63,7 @@ import { uploadedBytes } from '../common/upload';
 import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
 import type { ExportFileFormat } from '../common/xlsx/format';
 import { mapDatabaseError, sqlStateOf } from '../common/filters/database-error.mapping';
-import { DEPARTMENT_PAIR, givenMembership, settleRecordMembership } from '../common/record-membership';
+import { DEPARTMENT_PAIR, givenMembership, listParents, nameInOtherParents, settleRecordMembership } from '../common/record-membership';
 import {
   assertKeepsAnActiveAdministrator,
   assertPersonWithinActorRights,
@@ -1205,7 +1205,7 @@ export class UsersService {
           department = found[0];
           companyOfDepartment = found[0].company_id;
         } else if (found.length > 1) {
-          const parents = found.map((d) => d.company_name).join(', ');
+          const parents = listParents(found.map((d) => d.company_name));
           errors.push(rowError(line, 'department_name', 'CSV_DEPARTMENT_IN_SEVERAL_COMPANIES',
             `"${departmentName}" names a department in each of the companies ${parents}: give one of them in company_name.`,
             { value: departmentName, parents, columns: 'company_name' }));
@@ -1217,7 +1217,16 @@ export class UsersService {
           errors.push(rowError(line, 'department_name', 'CSV_DEPARTMENT_COMPANY_REQUIRED', 'department_name provided but company_name is missing or invalid'));
         } else {
           department = await getDepartmentByName(departmentCompany.id, departmentName);
-          if (!department) errors.push(rowError(line, 'department_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown department '${departmentName}' for company '${departmentCompany.name}'`, { value: departmentName }));
+          if (!department) {
+            // A name of other companies says so, naming them; a name of none is not found.
+            const elsewhere = await findDepartmentsByName(departmentName);
+            if (elsewhere.length > 0) {
+              const { code, message, params } = nameInOtherParents('department', departmentName, departmentCompany.name, elsewhere.map((d) => d.company_name));
+              errors.push(rowError(line, 'department_name', code, message, params));
+            } else {
+              errors.push(rowError(line, 'department_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown department '${departmentName}' for company '${departmentCompany.name}'`, { value: departmentName }));
+            }
+          }
         }
       }
 

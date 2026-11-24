@@ -145,6 +145,8 @@
   "CSV_DEPARTMENT_COMPANY_REQUIRED": "Un departamento necesita una empresa conocida en company_name.",
   "CSV_DEPARTMENT_IN_SEVERAL_COMPANIES": "«{{value}}» designa un departamento en cada una de las empresas {{parents}}: indique una de ellas en {{columns}}.",
   "CSV_STREAM_IN_SEVERAL_CATEGORIES": "«{{value}}» designa una línea en cada una de las categorías {{parents}}: indique una de ellas en {{columns}}.",
+  "CSV_DEPARTMENT_IN_OTHER_COMPANIES": "Ningún departamento «{{value}}» pertenece a la empresa «{{parent}}». Las empresas que tienen uno: {{parents}}.",
+  "CSV_STREAM_IN_OTHER_CATEGORIES": "Ninguna línea «{{value}}» pertenece a la categoría «{{parent}}». Las categorías que tienen una: {{parents}}.",
   "CSV_ENUM_INVALID": "«{{value}}» no es válido. Valores posibles: {{allowed}}.",
   "CSV_REFERENCE_NOT_FOUND": "No se encontró «{{value}}».",
   "CSV_REFERENCE_NOT_FOUND_SKIPPED": "No se encontró «{{value}}» y no se importa.",

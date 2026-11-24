@@ -86,6 +86,12 @@ async function refusals(service: Service, runner: QueryRunner, data: Seed, csv: 
   return check.errors.map((error: any) => ({ code: error.code, column: error.column, params: error.params }));
 }
 
+/** A company without a Finance department, and a Purchasing department of Alpha only. */
+async function otherCompanies(runner: QueryRunner, data: Seed) {
+  await runner.query(`INSERT INTO companies (id, tenant_id, name, country_iso, city) VALUES ($1, $2, 'Gamma', 'FR', 'Nantes')`, [randomUUID(), data.tenantId]);
+  await runner.query(`INSERT INTO departments (id, tenant_id, company_id, name) VALUES ($1, $2, $3, 'Purchasing')`, [randomUUID(), data.tenantId, data.ids.companyA]);
+}
+
 async function pair(runner: QueryRunner, table: string, id: string, columns = 'category_id, stream_id, company_id, department_id') {
   const [stored] = await runner.query(`SELECT ${columns} FROM ${table} WHERE id = $1`, [id]);
   return stored;
@@ -124,6 +130,14 @@ async function testRequests() {
     ]);
     assert.deepEqual(await refusals(requests, runner, data, 'name;department_name\nAmbiguous;Finance'), [
       { code: 'CSV_DEPARTMENT_IN_SEVERAL_COMPANIES', column: 'department_name', params: { value: 'Finance', parents: 'Alpha, Beta', columns: 'company_name' } },
+    ]);
+    // A department name of other companies only: the refusal names them, one or several.
+    await otherCompanies(runner, data);
+    assert.deepEqual(await refusals(requests, runner, data, 'name;company_name;department_name\nOne other;Beta;Purchasing'), [
+      { code: 'DEPARTMENT_OUTSIDE_COMPANY', column: 'department_name', params: { child: 'Purchasing', childParent: 'Alpha', parent: 'Beta' } },
+    ]);
+    assert.deepEqual(await refusals(requests, runner, data, 'name;company_name;department_name\nSeveral others;Gamma;Finance'), [
+      { code: 'CSV_DEPARTMENT_IN_OTHER_COMPANIES', column: 'department_name', params: { value: 'Finance', parent: 'Gamma', parents: 'Alpha, Beta' } },
     ]);
 
     // Stored requests: the stream alone, in the stored category; a stream of another category refused.
@@ -184,6 +198,15 @@ async function testProjects() {
     assert.equal((await pair(runner, 'portfolio_projects', business)).stream_id, ids.opsBiz, 'the Ops of the stored category');
     assert.deepEqual((await refusals(projects, runner, data, `id;stream_name\n${none};Ops`)).map((error) => [error.code, error.params?.parents]), [['CSV_STREAM_IN_SEVERAL_CATEGORIES', 'Business, IT']]);
     assert.deepEqual((await refusals(projects, runner, data, `id;category_name;stream_name\n${none};IT;Run`)).map((error) => error.code), ['STREAM_OUTSIDE_CATEGORY']);
+    // A name of other parents only, in the row's category or company: the refusal names them.
+    await otherCompanies(runner, data);
+    await runner.query(`INSERT INTO portfolio_categories (id, tenant_id, name) VALUES ($1, $2, 'Data')`, [randomUUID(), data.tenantId]);
+    assert.deepEqual(await refusals(projects, runner, data, `id;category_name;stream_name\n${none};Data;Ops`), [
+      { code: 'CSV_STREAM_IN_OTHER_CATEGORIES', column: 'stream_name', params: { value: 'Ops', parent: 'Data', parents: 'Business, IT' } },
+    ]);
+    assert.deepEqual(await refusals(projects, runner, data, `id;company_name;department_name\n${none};Gamma;Finance`), [
+      { code: 'CSV_DEPARTMENT_IN_OTHER_COMPANIES', column: 'department_name', params: { value: 'Finance', parent: 'Gamma', parents: 'Alpha, Beta' } },
+    ]);
     const exported = String((await projects.export({ manager: runner.manager, tenantId: data.tenantId, language: 'en', ids: [incoherent, business] } as any)).content).replace(/^﻿/, '');
     assert.deepEqual(await load(projects, runner, data, exported), { inserted: 0, updated: 0, unchanged: 2, cleared: 0 }, 'an export imported as it is');
     assert.deepEqual(await pair(runner, 'portfolio_projects', incoherent, 'category_id, stream_id'), { category_id: ids.it, stream_id: ids.opsBiz });
@@ -249,6 +272,16 @@ async function testUsers() {
     assert.deepEqual(ambiguous.errors.map((error: any) => [error.code, error.params?.parents]), [['CSV_DEPARTMENT_IN_SEVERAL_COMPANIES', 'Alpha, Beta']]);
     const named = await check(`email;company_name;department_name\n${person.email};Beta;Finance`);
     assert.deepEqual(named.errors, [], 'the department of the company the row names');
+    // A department name of other companies only: the refusal names them; a name of none is not found.
+    await otherCompanies(runner, data);
+    const refused = async (csv: string) => (await check(csv)).errors.map((error: any) => [error.code, error.params]);
+    assert.deepEqual(await refused(`email;company_name;department_name\n${person.email};Beta;Purchasing`), [
+      ['DEPARTMENT_OUTSIDE_COMPANY', { child: 'Purchasing', childParent: 'Alpha', parent: 'Beta' }],
+    ]);
+    assert.deepEqual(await refused(`email;company_name;department_name\n${person.email};Gamma;Finance`), [
+      ['CSV_DEPARTMENT_IN_OTHER_COMPANIES', { value: 'Finance', parent: 'Gamma', parents: 'Alpha, Beta' }],
+    ]);
+    assert.deepEqual((await refused(`email;company_name;department_name\n${person.email};Beta;Nowhere`)).map(([code]: any) => code), ['CSV_REFERENCE_NOT_FOUND']);
     await runner.query(`UPDATE users SET company_id = $2 WHERE id = $1`, [data.creatorId, ids.companyA]);
     const stored = await check(`email;department_name\n${person.email};Finance`);
     assert.deepEqual(stored.errors, [], 'the department of the stored company');
