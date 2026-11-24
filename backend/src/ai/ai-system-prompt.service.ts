@@ -414,7 +414,7 @@ export class AiSystemPromptService {
         'A value with no offset is UTC. Date-only fields keep their calendar day. ' +
         'A code of a list (status, lifecycle, category, criticality, type, role, method) comes with its name in the user\'s language ' +
         '(`<field>_name`, `key_name` in a group, `names` beside filter values, `before_label` and `after_label` in a history entry): ' +
-        'quote the name, never the code.',
+        'quote the name, never the code, not even in brackets or as a translation.',
     };
 
     if (profile.promptMode === 'minimal') {
