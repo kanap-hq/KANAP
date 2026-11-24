@@ -114,6 +114,8 @@ export default function YearTabs({
                   <Tooltip
                     title={mark}
                     describeChild
+                    // Above the tabs, where nothing shows: below, it covered the column cards' titles.
+                    placement="top"
                     open={hoveredMark === year || focusedTab === year}
                     onOpen={() => setHoveredMark(year)}
                     onClose={() => setHoveredMark((y) => (y === year ? null : y))}

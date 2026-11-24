@@ -131,7 +131,8 @@ export default function ColumnEditor({ tab, i18nPrefix, effectiveStart, endOfVal
   const entryMarks = tab.entryExpected && (
     columnToCheck
       ? (single ? <EntryCheckDot text={columnToCheck} testId={`entry-check-${col}`} /> : null)
-      : <InfoHint text={tab.entryExpected} />
+      // Beside the icon, where the editor's title row is empty: below, it covered the table's header.
+      : <InfoHint text={tab.entryExpected} placement="right" />
   );
   const titleRowSx = { display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 } as const;
 

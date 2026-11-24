@@ -3510,6 +3510,23 @@ describe('BudgetTab: the account expects quantity and price (lot B12a)', () => {
     await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
   });
 
+  it('opens the year mark\'s sentence above the tabs, and the editor icon\'s beside it: neither covers the cards nor the table', async () => {
+    setupApi();
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: expected([{ year: YEAR, measure: 'forecast' }]) });
+    await waitForAmounts();
+    const placementOf = async (target: HTMLElement) => {
+      fireEvent.mouseOver(target);
+      const tooltip = await screen.findByRole('tooltip');
+      const classes = tooltip.querySelector('.MuiTooltip-tooltip')!.className;
+      fireEvent.mouseLeave(target);
+      await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+      return { text: tooltip.textContent, top: classes.includes('MuiTooltip-tooltipPlacementTop'), right: classes.includes('MuiTooltip-tooltipPlacementRight') };
+    };
+    expect(await placementOf(screen.getByTestId(`year-mark-${YEAR}`))).toEqual({ text: `The line's account expects quantity and price entry: ${label('forecast')}.`, top: true, right: false });
+    // The active column conforms: the icon beside the editor's title says why it opens in quantity and price.
+    expect(await placementOf(within(editor()).getByRole('img', { name: ACCOUNT }))).toEqual({ text: ACCOUNT, top: false, right: true });
+  });
+
   it('leaves out a column frozen since the server listed it', async () => {
     setupApi({ frozen: ['budget'] });
     renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: expected([{ year: YEAR, measure: 'planned' }, { year: YEAR, measure: 'forecast' }]) });
