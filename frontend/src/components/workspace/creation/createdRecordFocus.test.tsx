@@ -431,6 +431,26 @@ describe('what the person does while the record is written', () => {
     expect(screen.getByLabelText('description')).toHaveValue('abcde');
   });
 
+  it('takes the characters typed after a choice made from the keyboard at once after a click in its field', async () => {
+    const user = userEvent.setup();
+    const write = heldWrite();
+    renderPage(DraftPage, { post: write.post, pick: 'typed' });
+    fireEvent.keyDown(typeTitle('Billing'), { key: 'Enter' });
+    const owner = screen.getByLabelText('owner');
+    fireEvent.change(owner, { target: { value: 'ana' } });
+    // The click into the list, then Enter before the browser has run what follows its release.
+    pressInto(owner);
+    fireEvent.keyDown(owner, { key: 'Enter' });
+    expect(write.calls).toEqual(['Billing']);
+    expect(document.activeElement).toHaveAttribute('data-creation-hold');
+    await user.keyboard('abcde');
+    expect(owner).toHaveValue('ana');
+    await write.answer();
+    await onRecord();
+    await waitFor(() => expect(screen.getByLabelText('description')).toHaveFocus());
+    expect(screen.getByLabelText('description')).toHaveValue('abcde');
+  });
+
   it('goes to the description after a Tab pressed while the record is written', async () => {
     const user = userEvent.setup();
     const write = heldWrite();

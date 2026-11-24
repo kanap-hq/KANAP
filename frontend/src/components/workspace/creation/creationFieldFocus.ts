@@ -232,21 +232,27 @@ let guard: Guard | null = null;
 // The frame is moving the focus itself: the guard lets it.
 let placing = 0;
 // The press under way (from the pointer's press until its release has run), and where the focus
-// was when it began: a field it focuses is the person's choice.
-let press: { target: Element | null; from: Element | null; at: number } | null = null;
+// was when it began: a field it focuses is the person's choice. A key pressed once the pointer is
+// released ends it at once: the browser may run that key before what follows the release (a click
+// in a list, then Enter on its choice, writes the record from the keyboard).
+let press: { target: Element | null; from: Element | null; at: number; released: boolean } | null = null;
 if (typeof document !== 'undefined') {
   document.addEventListener('pointerdown', (event) => {
-    press = { target: event.target instanceof Element ? event.target : null, from: document.activeElement, at: Date.now() };
+    press = { target: event.target instanceof Element ? event.target : null, from: document.activeElement, at: Date.now(), released: false };
     if (guard && !guard.held) guard.onPerson();
   }, true);
   const release = () => {
     const ended = press;
+    if (ended) ended.released = true;
     window.setTimeout(() => {
       if (press === ended) press = null;
     }, 0);
   };
   document.addEventListener('pointerup', release, true);
   document.addEventListener('pointercancel', release, true);
+  document.addEventListener('keydown', () => {
+    if (press?.released) press = null;
+  }, true);
 }
 
 /** The press under way: a pointer held down past a second focuses nothing more of its own. */
