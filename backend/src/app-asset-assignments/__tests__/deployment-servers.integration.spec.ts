@@ -99,7 +99,7 @@ async function testCodedRefusals() {
     await expectCoded(() => assignments.create(prod, null, null, { manager: m, tenantId: t }), 400, 'body_required');
     await expectCoded(() => assignments.create(prod, { role: 'app' }, null, { manager: m, tenantId: t }), 400, 'asset_required');
     await expectCoded(() => assignments.create(prod, { server_id: server, role: 'nope' }, null, { manager: m, tenantId: t }),
-      400, 'assignment_role_invalid', { value: 'nope' });
+      400, 'assignment_role_invalid', { value: 'nope', allowed: 'app (Application server), backup (Backup server), cloud-service (Cloud service), db (Database server), domain-controller (Domain controller), file (File server), mail (Mail / messaging), monitoring (Monitoring server), other (Other), print (Print server), proxy (Proxy / gateway), remote-desktop (Remote desktop), virtualization (Virtualization host), web (Web server)' });
     await expectCoded(() => assignments.create(prod, { server_id: server, role: '' }, null, { manager: m, tenantId: t }),
       400, 'assignment_role_invalid');
     await expectCoded(() => assignments.create(prod, { server_id: server, role: 'app', since_date: '2026-13-45' }, null, { manager: m, tenantId: t }),

@@ -296,7 +296,7 @@ async function testBusinessReferencesNameTheRecord() {
 
 async function testAssetNeedsItsSite() {
   const { service, context } = createHarness();
-  const base = { name: 'srv-new', kind: 'vm', provider: 'other', environment: 'prod' };
+  const base = { name: 'srv-new', kind: 'virtual_machine', provider: 'other', environment: 'prod' };
   for (const location_id of [undefined, null, '']) {
     await assert.rejects(
       () => service.prepareCreatePreview(context, { entity_type: 'assets', fields: { ...base, location_id } }),
