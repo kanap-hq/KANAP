@@ -660,7 +660,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             {!isCreate && <EntityTasksSection entityType="contract" entityId={form.id} disabled={!editable} />}
             <Stack spacing={1.25}>
               <RelationsSectionTitle>{t('contracts.fields.notes')}</RelationsSectionTitle>
-              <Box onFocusCapture={() => { notesTouchedRef.current = true; }} data-testid="contract-notes" data-creation-description="">
+              <Box onFocusCapture={() => { notesTouchedRef.current = true; }} data-testid="contract-notes" data-creation-description={editable ? '' : undefined}>
                 <React.Suspense fallback={null}>
                   <MarkdownEditor
                     value={form.notes}

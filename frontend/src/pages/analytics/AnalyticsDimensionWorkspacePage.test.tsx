@@ -64,6 +64,7 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
 import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/analytics';
 import AnalyticsDimensionWorkspacePage from './AnalyticsDimensionWorkspacePage';
+import { findCreatedRecordField } from '../../components/workspace/creation/creationFieldFocus';
 import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = service as unknown as {
@@ -156,6 +157,12 @@ describe('AnalyticsDimensionWorkspacePage', () => {
 
     renderAt('/master-data/analytics/dimensions/new/overview');
     expect(screen.queryByRole('button', { name: 'admin:auditLogs.history.title' })).toBeNull();
+  });
+
+  it('declares its description as the place of the cursor once a dimension is created', async () => {
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    const description = await screen.findByLabelText('analytics.fields.description');
+    expect(findCreatedRecordField(document.body)).toBe(description);
   });
 
   it('saves name, code and description when each field loses focus, with no save button', async () => {

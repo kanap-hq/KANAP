@@ -12,5 +12,7 @@ export function isRejectable(preview: AiMutationPreview): boolean {
 
 export function isApprovable(preview: AiMutationPreview): boolean {
   const validation = preview.import_mapping?.validation;
+  // A change in bulk whose records are all left out: nothing to approve (the server refuses it too).
+  if (preview.bulk_edit && preview.bulk_edit.kept === 0) return false;
   return preview.status === 'pending' && validation?.ok !== false && validation?.nothing_to_import !== true;
 }

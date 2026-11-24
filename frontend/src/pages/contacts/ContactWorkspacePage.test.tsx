@@ -55,6 +55,7 @@ vi.mock('../../components/fields/SupplierSelect', () => ({
 import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import ContactWorkspacePage from './ContactWorkspacePage';
+import { findCreatedRecordField } from '../../components/workspace/creation/creationFieldFocus';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
@@ -260,6 +261,12 @@ describe('ContactWorkspacePage', () => {
       { email: 'alex@example.com', phone: '+44 20 7946 0958', country: 'GB' },
     ]));
     await waitFor(() => expect(screen.queryByText('master-data:contacts.messages.phoneInvalid')).toBeNull());
+  });
+
+  it('declares its notes as the place of the cursor once a contact is created', async () => {
+    renderAt('/master-data/contacts/c-1/overview');
+    const notes = await screen.findByLabelText('contacts.fields.notes');
+    expect(findCreatedRecordField(document.body)).toBe(notes);
   });
 
   it('saves the notes after a pause in typing, and at once when focus leaves them', async () => {

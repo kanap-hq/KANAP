@@ -1,5 +1,5 @@
 import React from 'react';
-import { clearCreationFieldFocus } from './creationFieldFocus';
+import { clearCreationFieldFocus, endCreationWrite, noteCreationWrite } from './creationFieldFocus';
 import { useCreationPresence } from './creationDeparture';
 
 type Options<C> = {
@@ -62,6 +62,8 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
     typed.current = '';
   }, [isCreate]);
   const running = React.useRef(false);
+  // The last write was refused: its message stays under the title until the name is given again.
+  const refused = React.useRef(false);
 
   const write = React.useCallback(async (name: string) => {
     if (running.current) return;
@@ -75,8 +77,10 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
       await latest.current.onCreated(created as C, token, stillHere);
     } catch (err) {
       sent.current = false;
+      refused.current = true;
       setTitleError(latest.current.errorMessage(err));
     } finally {
+      endCreationWrite();
       running.current = false;
       setWriting(false);
     }
@@ -84,6 +88,9 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
 
   const commit = React.useCallback((name: string) => {
     sent.current = true;
+    refused.current = false;
+    // From the gesture on, what is typed waits for the record's description, defaults or not.
+    noteCreationWrite();
     setTitleError(null);
     if (latest.current.ready) void write(name);
     else setPendingName(name);
@@ -97,7 +104,8 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
 
   const onTitleDraftChange = React.useCallback((draft: string) => {
     typed.current = draft;
-    setTitleError(null);
+    // A refusal of the write stays until the name is given again: typing on does not hide it.
+    if (!refused.current) setTitleError(null);
   }, []);
 
   const create = React.useCallback(() => {
@@ -107,7 +115,7 @@ export default function useTitleCreation<C>({ isCreate, requiredMessage, ready =
       commit(name);
       return;
     }
-    // Nothing is created: the cursor the press of Create armed stays in the title.
+    // Nothing is created: the cursor stays in the title.
     clearCreationFieldFocus();
     setTitleError((current) => current || requiredMessage);
     setFocusRequest((n) => n + 1);

@@ -144,7 +144,7 @@ export default function CompaniesPage() {
       // The reference (`COMP-12`): filtered and sorted on the number by the server.
       field: 'item_number',
       headerName: t('companies.columns.reference'),
-      width: 100,
+      width: 110,
       filter: 'agTextColumnFilter',
       valueFormatter: (p: any) => (p.value ? `COMP-${p.value}` : ''),
       comparator: (a: number, b: number) => (a || 0) - (b || 0),

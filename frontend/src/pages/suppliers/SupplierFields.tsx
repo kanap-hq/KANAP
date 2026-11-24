@@ -178,7 +178,7 @@ export function SupplierNotes({
   const { t } = useTranslation(['master-data']);
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   return (
-    <Box>
+    <Box data-creation-description={disabled ? undefined : ''}>
       <Typography sx={sectionLabelSx}>{t('suppliers.fields.notes')}</Typography>
       <TextField
         value={draft}

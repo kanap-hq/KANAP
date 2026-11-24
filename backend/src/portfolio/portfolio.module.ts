@@ -243,6 +243,8 @@ const entities = [
   exports: [
     PortfolioRequestsService,
     PortfolioProjectsService,
+    // The assistant links a project's or a request's applications, assets and lines through it.
+    PortfolioRelationsService,
     PortfolioCriteriaService,
     PortfolioRequestsCsvService,
     PortfolioProjectsCsvService,

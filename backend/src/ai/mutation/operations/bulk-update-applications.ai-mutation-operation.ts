@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
 import { resolveBusinessContributorScopeForUser, applicationParticipantCondition, type ParticipationAccessScope } from '../../../auth/business-contributor-scope';
+import type { ApplicationBulkRow } from '../../../applications/application-bulk-edit';
 import { ApplicationsService } from '../../../applications/services/applications.service';
 import { BULK_MAX_ROWS, type BulkChanges, type BulkEditResult } from '../../../common/bulk-edit/bulk-edit';
 import { CATALOG_LOCALES, matchCatalogAliases, normalizeAlias, type CatalogTranslations } from '../../../it-ops-settings/catalog-codes';
@@ -12,11 +13,15 @@ import {
   APPLICATION_BULK_FIELD_LABELS,
   APPLICATION_FILTER_LABELS,
   APPLICATION_YES_NO_WORDS,
+  BULK_EDIT_ALL_LEFT_OUT,
+  BULK_EDIT_ALL_LEFT_OUT_MESSAGE,
   BULK_EDIT_CARD_LABEL,
   bulkEditActionText,
   bulkEditCardText,
   bulkEditCardTitleText,
   bulkEditTitleText,
+  bulkEditLeftOutNote,
+  bulkEditTooLongNote,
   type BulkFilterPart,
 } from '../../ai-bulk-edit-texts';
 import { AiWriteLanguage, previewSummaryText } from '../../ai-write-texts';
@@ -24,7 +29,25 @@ import { AiExecutionContextWithManager } from '../../ai.types';
 import { adaptFilters } from '../../query/ai-filter.adapter';
 import type { AiFilterValue } from '../../query/ai-filter.types';
 import { resolveAiEntityRegistry } from '../../query/registries';
-import { AI_BULK_FILTER_VALUE, isEmptyAiBulkFilterValue, withAiBulkEditWaits } from '../ai-bulk-edit';
+import {
+  AI_BULK_EDIT_LIST_MAX,
+  AI_BULK_FILTER_VALUE,
+  assertBulkWriteKept,
+  bulkListGrew,
+  BULK_EDIT_ANSWER,
+  bulkEditPreviewDto,
+  bulkExcluded,
+  bulkListApplied,
+  bulkListLeftOutRefs,
+  bulkListLeftOut,
+  effectiveBulkSelection,
+  isEmptyAiBulkFilterValue,
+  sortedBulkList,
+  storedBulkList,
+  withAiBulkEditWaits,
+  type AiBulkList,
+  type AiBulkListRow,
+} from '../ai-bulk-edit';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
 import { AiTaskMutationSupportService } from '../ai-task-mutation-support.service';
@@ -58,6 +81,15 @@ const MAX_OWNERS = 20;
 
 const FIELDS = ['owners_business', 'owners_it', 'category', 'lifecycle', 'criticality', 'cyber_criticality'] as const;
 type BulkField = (typeof FIELDS)[number];
+/** The catalog of the value a field holds, by field (the owners are people). */
+const FIELD_CATALOG = {
+  category: 'applicationCategories',
+  lifecycle: 'lifecycleStates',
+  criticality: 'businessCriticalityLevels',
+  cyber_criticality: 'cyberCriticalityLevels',
+} as const;
+const OWNER_TYPES = { owners_business: 'business', owners_it: 'it' } as const;
+
 /** The fields that take a value still offered by the workspace's catalog, by its name or its code. */
 const OFFERED_FIELDS = {
   category: { list: 'applicationCategories', what: 'category', all: 'categories', emptied: false },
@@ -150,7 +182,7 @@ function sameWords(value: string): Words {
 @Injectable()
 export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOperation<BulkUpdateApplicationsInput> {
   readonly toolName = TOOL;
-  readonly description = 'Create a card that changes one field on many applications at once (business owners, IT owners, category, lifecycle, business criticality or cyber criticality), '
+  readonly description = 'Create a card that changes one field on two applications or more at once (business owners, IT owners, category, lifecycle, business criticality or cyber criticality), '
     + 'as the "Change the selection" of the applications list. Requires explicit user approval before execution. '
     + `${ONLY_NAMED_CRITERIA} A request on all the applications, with no other criterion, gets a question asking for one, and no card. ${OTHER_FIELD}`;
   readonly inputSchema = BulkUpdateApplicationsInputSchema;
@@ -174,7 +206,9 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
       + 'A filter covers the enabled applications of the list, the retired ones left out unless it names the lifecycle. '
       + `${ONLY_NAMED_CRITERIA} A request on all the applications, with no other criterion, gets a question asking for one, and no card. `
       + `${OTHER_FIELD} `
-      + 'For one of these fields on more than a few applications, use this tool, never update_business_record application by application nor prepare_mutation_plan. The card counts the applications to change; it cannot be undone.',
+      + 'For one of these fields set to the same value on two applications or more, named or described by a filter, use this tool: one card, never update_business_record application by application nor prepare_mutation_plan. '
+      + 'Different values, several fields or another field stay one card per application. '
+      + `The card lists each application it changes (up to ${AI_BULK_EDIT_LIST_MAX}) with its value before, and the person may leave any of them out before approving; it cannot be undone. ` + BULK_EDIT_ANSWER,
   };
 
   constructor(
@@ -208,11 +242,8 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
     const target = chosen
       ? { body: { ids: chosen.ids }, parts: null, defaultScope: false }
       : await this.resolveFilters(context, request.filters ?? {});
-    const dry = await this.applications.bulkUpdate(
-      { ...target.body, changes: change.changes, dry_run: true },
-      context.userId ?? null,
-      { manager: context.manager, tenantId: context.tenantId, accessScope: scope, options: { changedIds: true } },
-    ) as BulkEditResult;
+    const counted = await this.countCard(context, request.field, change.changes, target.body, [], null);
+    const dry = counted.dry!;
     if (!dry.changes) {
       const refused = Object.entries(dry.refused).map(([code, n]) => `${code}: ${n}`).join(', ');
       throw new BadRequestException(
@@ -220,15 +251,6 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
         + `${refused ? ` and the others are refused (${refused})` : ''}.`,
       );
     }
-    // The first applications that would change, by reference.
-    const examples: Array<{ ref: string; title: string }> = (await context.manager.query(
-      `SELECT a.sequential_id AS ref, a.name AS title
-         FROM applications a
-        WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[])
-        ORDER BY substring(a.sequential_id from '(\\d+)$')::bigint NULLS LAST, a.name
-        LIMIT ${CARD_EXAMPLES}`,
-      [context.tenantId, dry.changed_ids ?? []],
-    )).map((row: { ref: string | null; title: string | null }) => ({ ref: text(row.ref), title: text(row.title) }));
     return {
       targetEntityType: 'applications',
       targetEntityId: null,
@@ -243,10 +265,170 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
         expected_rows: dry.rows,
         fingerprint: dry.fingerprint,
       },
+      currentValues: counted.currentValues,
+    };
+  }
+
+  /**
+   * The card recounted with the applications the person left out (lot K2e of 26.12.1): the stored
+   * selection and change, never the model's words again; the left out applications go in
+   * `excluded`, which the write reads with the rest of `mutation_input`, and stay listed, unticked.
+   */
+  prepareExclusions(context: AiExecutionContextWithManager, preview: AiMutationPreview, excluded: string[]): Promise<AiPreparedMutationPreview> {
+    return withAiBulkEditWaits(context.manager, async () => {
+      const mutation = (preview.mutation_input ?? {}) as Record<string, unknown>;
+      const previous = storedBulkList(preview.current_values);
+      if (!previous) throw new BadRequestException('This card does not list its applications: none can be left out.');
+      const listed = new Set(previous.rows.map((row) => row.id));
+      if (excluded.some((id) => !listed.has(id))) throw new BadRequestException('Only an application this card lists can be left out.');
+      const selection = mutation.selection as Record<string, unknown> | undefined;
+      if (!selection || typeof selection !== 'object' || !mutation.changes) throw new BadRequestException('Preview is missing its applications.');
+      const counted = await this.countCard(context, text(mutation.field) as BulkField, mutation.changes as BulkChanges, selection, excluded, previous);
+      const { excluded: _previous, ...rest } = mutation;
+      return {
+        targetEntityType: 'applications',
+        targetEntityId: null,
+        mutationInput: {
+          ...rest,
+          ...(counted.excluded.length > 0 ? { excluded: counted.excluded } : {}),
+          as_of: counted.dry?.as_of ?? null,
+          expected_rows: counted.dry?.rows ?? 0,
+          fingerprint: counted.dry?.fingerprint ?? null,
+        },
+        currentValues: counted.currentValues,
+      };
+    });
+  }
+
+  /** A card with every application left out cannot be approved; "Approve all" leaves it out. */
+  isApprovable(preview: AiMutationPreview): boolean {
+    return this.approvalRefusal(preview) === null;
+  }
+
+  approvalRefusal(preview: AiMutationPreview): string | null {
+    const values = (preview.current_values?.values ?? {}) as Record<string, unknown>;
+    return values.changes !== undefined && Number(values.changes) === 0 ? BULK_EDIT_ALL_LEFT_OUT_MESSAGE : null;
+  }
+
+  /**
+   * The count of a card (the screen's dry run) on its selection less the applications left out,
+   * and what the card stores: the counts, the first applications, and, up to
+   * `AI_BULK_EDIT_LIST_MAX`, the list of every application it changes with its value before.
+   */
+  private async countCard(
+    context: AiExecutionContextWithManager,
+    field: BulkField,
+    changes: BulkChanges,
+    selection: Record<string, unknown>,
+    excluded: string[],
+    previous: AiBulkList | null,
+  ): Promise<{ dry: BulkEditResult<ApplicationBulkRow> | null; excluded: string[]; currentValues: Record<string, unknown> }> {
+    // The records left out, read again as the kept ones (review of lot K2e): their name and value
+    // before of today. One the person no longer reads, or that would no longer change, leaves the list
+    // and the records left out: the count reaches it again, unchanged, refused or not at all.
+    const leftOutRows = excluded.length > 0 ? (await this.dryRun(context, { ids: excluded }, changes)).changed_rows ?? [] : [];
+    const stillOut = leftOutRows.map((row) => row.id).sort();
+    const body = effectiveBulkSelection({ selection, excluded: stillOut });
+    const leftOut = stillOut.length > 0 ? { excluded: stillOut.length } : {};
+    if (!body) {
+      // Every chosen application left out: nothing to count, the card lists them unticked.
+      return {
+        dry: null,
+        excluded: stillOut,
+        currentValues: {
+          values: { rows: 0, changes: 0, unchanged: 0, refused: {}, examples: [], ...leftOut },
+          bulk_list: bulkListLeftOut(await this.listOf(context, field, leftOutRows), stillOut),
+        },
+      };
+    }
+    const dry = await this.dryRun(context, body, changes);
+    const changed = dry.changed_rows ?? [];
+    // A recount past the bound would drop the list and the records left out with it: refused.
+    if (previous && changed.length + leftOutRows.length > AI_BULK_EDIT_LIST_MAX) throw await bulkListGrew(context);
+    let list: AiBulkList | null = null;
+    let examples: Array<{ ref: string; title: string }>;
+    if (changed.length + leftOutRows.length <= AI_BULK_EDIT_LIST_MAX) {
+      list = bulkListLeftOut(await this.listOf(context, field, [...changed, ...leftOutRows]), stillOut);
+      examples = list.rows.filter((row) => row.kept).slice(0, CARD_EXAMPLES).map((row) => ({ ref: row.ref, title: row.title }));
+    } else {
+      // The first applications that would change, by reference.
+      examples = (await context.manager.query(
+        `SELECT a.sequential_id AS ref, a.name AS title
+           FROM applications a
+          WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[])
+          ORDER BY substring(a.sequential_id from '(\\d+)$')::bigint NULLS LAST, a.name
+          LIMIT ${CARD_EXAMPLES}`,
+        [context.tenantId, dry.changed_ids ?? []],
+      )).map((row: { ref: string | null; title: string | null }) => ({ ref: text(row.ref), title: text(row.title) }));
+    }
+    return {
+      dry,
+      excluded: stillOut,
       currentValues: {
-        values: { rows: dry.rows, changes: dry.changes, unchanged: dry.unchanged, refused: dry.refused, examples },
+        values: { rows: dry.rows, changes: dry.changes, unchanged: dry.unchanged, refused: dry.refused, examples, ...leftOut },
+        ...(list ? { bulk_list: list } : {}),
       },
     };
+  }
+
+  /** The screen's dry run of a selection, with the applications it changes as `reach` read them. */
+  private async dryRun(context: AiExecutionContextWithManager, body: Record<string, unknown>, changes: BulkChanges): Promise<BulkEditResult<ApplicationBulkRow>> {
+    return await this.applications.bulkUpdate(
+      { ...body, changes, dry_run: true },
+      context.userId ?? null,
+      { manager: context.manager, tenantId: context.tenantId, accessScope: await this.scopeOf(context), options: { changedIds: true, changedRows: true } },
+    ) as BulkEditResult<ApplicationBulkRow>;
+  }
+
+  /**
+   * The applications a count changes, by reference, each with its value before as the screen names
+   * it: a catalog value in each language, the owners by their names. An owner the person cannot read
+   * makes the value before hidden, never named.
+   */
+  private async listOf(context: AiExecutionContextWithManager, field: BulkField, changed: ApplicationBulkRow[]): Promise<AiBulkList> {
+    if (changed.length === 0) return { rows: [], words: {} };
+    const named: Array<{ id: string; ref: string | null; title: string | null }> = await context.manager.query(
+      `SELECT a.id::text AS id, a.sequential_id AS ref, a.name AS title FROM applications a WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[])`,
+      [context.tenantId, changed.map((row) => row.id)],
+    );
+    const names = new Map(named.map((row) => [row.id, { ref: text(row.ref), title: text(row.title) }]));
+    const words: AiBulkList['words'] = {};
+    const before = new Map<string, Pick<AiBulkListRow, 'before' | 'hidden'>>();
+    if (field === 'owners_business' || field === 'owners_it') {
+      const type = OWNER_TYPES[field];
+      const held = new Map(changed.map((row) => [row.id, row.owners.filter((owner) => owner.owner_type === type).map((owner) => owner.user_id)]));
+      const people = Array.from(new Set(Array.from(held.values()).flat()));
+      const found: Array<{ id: string; label: string }> = people.length === 0 ? [] : await context.manager.query(
+        `SELECT u.id::text AS id, COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), u.email) AS label
+           FROM users u WHERE u.tenant_id = $1 AND u.id = ANY($2::uuid[])`,
+        [context.tenantId, people],
+      );
+      const labels = new Map(found.map((person) => [person.id, text(person.label)]));
+      for (const [id, ids] of held) {
+        if (ids.length === 0) before.set(id, { before: null });
+        else if (ids.some((user) => !labels.has(user))) before.set(id, { before: null, hidden: true });
+        else {
+          const key = ids.join(',');
+          words[key] = sameWords(ids.map((user) => labels.get(user)!).join(', '));
+          before.set(id, { before: key });
+        }
+      }
+    } else {
+      const list = FIELD_CATALOG[field];
+      const options = new Map((await this.catalog(context, list)).map((option) => [option.code, option]));
+      for (const row of changed) {
+        const code = row[field] ?? null;
+        if (code !== null && !words[code]) {
+          const option = options.get(code);
+          words[code] = option ? optionWords(list, option) : sameWords(code);
+        }
+        before.set(row.id, { before: code });
+      }
+    }
+    return sortedBulkList({
+      rows: changed.map((row) => ({ id: row.id, ...(names.get(row.id) ?? { ref: '', title: '' }), ...before.get(row.id)!, kept: true })),
+      words,
+    });
   }
 
   presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
@@ -261,6 +443,9 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
     const done = applied ? Number(applied.changed) || 0 : changes;
     const filterParts = Array.isArray(mutation.filter_parts) ? (mutation.filter_parts as StoredFilterPart[]) : null;
     const refs = filterParts ? null : Array.isArray(mutation.refs) ? (mutation.refs as unknown[]).map(text) : [];
+    const list = storedBulkList(preview.current_values);
+    // An approved card tells the model which records the person left out: their choice, not a change left to make.
+    const leftOut = preview.status === 'executed' ? bulkListLeftOutRefs(list) : [];
     const card = bulkEditCardText({
       family: 'applications',
       selection: filterParts
@@ -274,6 +459,9 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
       refused: counts(values.refused),
       examples: (Array.isArray(values.examples) ? values.examples as Array<Record<string, unknown>> : [])
         .map((row) => ({ ref: text(row.ref), title: text(row.title) })),
+      excluded: bulkExcluded(mutation).length,
+      listed: list !== null,
+      done: preview.status === 'executed',
     }, language);
     const englishField = APPLICATION_BULK_FIELD_LABELS.en[field] ?? field;
     let summary = `Preview ${preview.id} ${preview.status}.`;
@@ -293,9 +481,19 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
       );
     }
     return {
-      target: { entity_type: 'applications', entity_id: null, ref: null, title: bulkEditCardTitleText('applications', language, changes, refs) },
+      target: { entity_type: 'applications', entity_id: null, ref: null, title: bulkEditCardTitleText('applications', language, preview.status === 'executed' ? done : changes, refs) },
       changes: { [CARD_FIELD]: { label: BULK_EDIT_CARD_LABEL[language], from: null, to: card, format: 'markdown' } },
       summary,
+      // The list goes to the screen only: the model reads the counts of the card's change.
+      ...(list ? { bulkEdit: bulkEditPreviewDto(list, fieldLabel, value, language) } : {}),
+      ...(!list && preview.status === 'pending' && changes > AI_BULK_EDIT_LIST_MAX
+        ? { assistantNote: bulkEditTooLongNote('applications', changes, AI_BULK_EDIT_LIST_MAX) }
+        : {}),
+      ...(leftOut.length > 0 ? { assistantNote: bulkEditLeftOutNote('applications', leftOut) } : {}),
+      // A pending card with every record left out says why it cannot be approved, before any approval.
+      ...(preview.error_message === BULK_EDIT_ALL_LEFT_OUT_MESSAGE || (preview.status === 'pending' && this.approvalRefusal(preview) !== null)
+        ? { errorMessage: BULK_EDIT_ALL_LEFT_OUT[language] }
+        : {}),
     };
   }
 
@@ -303,17 +501,27 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
     // Read again at approval: the right may have been withdrawn since the card.
     await this.policy.assertWriteAccess(context, 'applications', context.manager, { level: 'member' });
     const mutation = (preview.mutation_input ?? {}) as Record<string, unknown>;
-    const selection = mutation.selection;
-    if (!selection || typeof selection !== 'object' || !mutation.changes) throw new BadRequestException('Preview is missing its applications.');
+    if (!mutation.selection || typeof mutation.selection !== 'object' || !mutation.changes) throw new BadRequestException('Preview is missing its applications.');
+    // The card's selection less the applications left out, as the card holds it.
+    const selection = effectiveBulkSelection(mutation);
+    if (!selection) throw new BadRequestException(BULK_EDIT_ALL_LEFT_OUT_MESSAGE);
     // The count's instant, applications and fingerprint: a list that changed since refuses the write whole.
-    const result = await withAiBulkEditWaits(context.manager, async () => this.applications.bulkUpdate(
-      { ...(selection as Record<string, unknown>), changes: mutation.changes, as_of: mutation.as_of, expected_rows: mutation.expected_rows, fingerprint: mutation.fingerprint },
-      context.userId ?? null,
-      { manager: context.manager, tenantId: context.tenantId, accessScope: await this.scopeOf(context), audit: buildAiMutationAudit(preview) },
-    )) as BulkEditResult;
+    const list = storedBulkList(preview.current_values);
+    const result = await withAiBulkEditWaits(context.manager, async () => {
+      const written = await this.applications.bulkUpdate(
+        { ...selection, changes: mutation.changes, as_of: mutation.as_of, expected_rows: mutation.expected_rows, fingerprint: mutation.fingerprint },
+        context.userId ?? null,
+        { manager: context.manager, tenantId: context.tenantId, accessScope: await this.scopeOf(context), audit: buildAiMutationAudit(preview), options: { changedIds: true } },
+      ) as BulkEditResult;
+      // A record the card did not keep in its list would change: nothing is written.
+      assertBulkWriteKept(list, written.changed_ids ?? []);
+      return written;
+    });
     preview.current_values = {
       ...(preview.current_values ?? {}),
       applied: { changed: Number(result.changed) || 0, unchanged: result.unchanged, refused: result.refused },
+      // The list stays on the card, each application it changed marked.
+      ...(list ? { bulk_list: bulkListApplied(list, result.changed_ids ?? []) } : {}),
     };
   }
 

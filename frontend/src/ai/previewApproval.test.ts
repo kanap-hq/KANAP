@@ -17,6 +17,12 @@ describe('isApprovable', () => {
     expect(isApprovable(card({ ok: true, nothing_to_import: true, inserted: 0, updated: 0 }))).toBe(false);
   });
 
+  it('leaves out a change in bulk whose records are all left out, "Approve all" included', () => {
+    const bulk = (kept: number) => ({ status: 'pending', bulk_edit: { kept, excluded: 2 - kept, rows: [] } }) as unknown as AiMutationPreview;
+    expect(isApprovable(bulk(0))).toBe(false);
+    expect(isApprovable(bulk(1))).toBe(true);
+  });
+
   it('leaves out a card that is no longer pending', () => {
     expect(isApprovable(card({ ok: true }, 'executed'))).toBe(false);
   });

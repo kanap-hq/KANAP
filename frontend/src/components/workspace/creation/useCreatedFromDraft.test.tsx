@@ -79,8 +79,12 @@ async function typeWhileCreated(path: string) {
   const notes = screen.getByLabelText('notes');
   act(() => notes.focus());
   fireEvent.change(notes, { target: { value: 'Ma' } });
-  await act(async () => { fireEvent.blur(title); });
+  act(() => title.focus());
+  // The person presses into the notes: the title, left for them, writes the record.
+  fireEvent.pointerDown(notes);
   act(() => notes.focus());
+  await act(async () => { fireEvent.blur(title); });
+  fireEvent.pointerUp(notes);
   await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(path));
   return notes as HTMLInputElement;
 }

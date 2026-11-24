@@ -957,7 +957,7 @@ export function OverviewTab({
 
   return (
     <Stack spacing={3.5}>
-      <Box data-creation-description="">
+      <Box data-creation-description={canEditManagedDocs ? '' : undefined}>
         <Box sx={{ mb: 1 }}>
           <SectionLabel>{t('workspace.application.overview.description')}</SectionLabel>
         </Box>

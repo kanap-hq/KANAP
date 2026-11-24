@@ -62,6 +62,7 @@ import { clearCreation, creationKey, getCreation, setCreation } from '../../comp
 import { clearCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import SupplierWorkspacePage from './SupplierWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
+import { PAGE_FIELD } from '../../test/creationHold';
 
 const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
@@ -336,7 +337,7 @@ describe('SupplierWorkspacePage', () => {
     try {
       renderAt('/master-data/suppliers/s-1/overview');
       expect(await screen.findByLabelText('suppliers.fields.erpSupplierId')).toBeEnabled();
-      expect(screen.getByLabelText('suppliers.fields.notes')).toBeEnabled();
+      expect(screen.getByLabelText('suppliers.fields.notes', { selector: PAGE_FIELD })).toBeEnabled();
       expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
     } finally {
       auth.limited = false;
@@ -348,7 +349,7 @@ describe('SupplierWorkspacePage', () => {
     renderAt('/master-data/suppliers/s-1/overview');
     const erp = await screen.findByLabelText('suppliers.fields.erpSupplierId');
     expect(erp).toBeDisabled();
-    expect(screen.getByLabelText('suppliers.fields.notes')).toBeDisabled();
+    expect(screen.getByLabelText('suppliers.fields.notes', { selector: PAGE_FIELD })).toBeDisabled();
     fireEvent.click(screen.getByText('Acme Software'));
     expect(screen.queryByLabelText('suppliers.fields.name')).toBeNull();
   });
@@ -543,7 +544,7 @@ describe('SupplierWorkspacePage', () => {
     try {
       renderAt('/master-data/suppliers/s-1/overview');
       expect(await screen.findByLabelText('suppliers.fields.erpSupplierId')).toBeEnabled();
-      expect(screen.getByLabelText('suppliers.fields.notes')).toBeEnabled();
+      expect(screen.getByLabelText('suppliers.fields.notes', { selector: PAGE_FIELD })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'common:buttons.done' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeEnabled();
     } finally {
@@ -592,21 +593,18 @@ describe('SupplierWorkspacePage', () => {
     expect(mocked.post).not.toHaveBeenCalled();
     await user.tab();
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/suppliers', expect.objectContaining({ name: 'Initech' })));
-    // Nothing is required: Tab goes on to the notes, the supplier's free text.
-    const notes = screen.getByLabelText('suppliers.fields.notes');
-    await waitFor(() => expect(notes).toHaveFocus());
-    const create = screen.getByRole('button', { name: 'common:buttons.create' });
-    for (let i = 0; i < 20 && document.activeElement !== create; i += 1) {
-      await user.tab({ shift: true });
-    }
-    expect(create).toHaveFocus();
+    // Nothing is required: the cursor waits for the notes, the supplier's free text, in a field
+    // named after them, until the supplier shows them.
+    expect(document.activeElement).toHaveAttribute('data-creation-hold');
+    expect(document.activeElement).toHaveAttribute('aria-label', 'suppliers.fields.notes');
+    expect(title).not.toHaveFocus();
     clearCreation(creationKey('suppliers', 's-new'));
   });
 
   it('shows the supplier page itself, with the tabs that need a saved supplier greyed', () => {
     renderAt('/master-data/suppliers/new/overview');
     expect(screen.getByLabelText('suppliers.fields.erpSupplierId')).toBeInTheDocument();
-    expect(screen.getByLabelText('suppliers.fields.notes')).toBeInTheDocument();
+    expect(screen.getByLabelText('suppliers.fields.notes', { selector: PAGE_FIELD })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'shared.labels.contacts' })).toBeDisabled();
     expect(screen.getByRole('tab', { name: 'shared.labels.history' })).toBeDisabled();
     expect(mocked.get.mock.calls.some(([url]) => String(url).includes('/new'))).toBe(false);

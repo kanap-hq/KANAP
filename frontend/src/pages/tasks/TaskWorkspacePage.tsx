@@ -1505,7 +1505,7 @@ export default function TaskWorkspacePage() {
   const overview = (
     <>
       {/* Description */}
-      <Box sx={{ mb: contentSpacing.sectionLarge }} data-creation-description="">
+      <Box sx={{ mb: contentSpacing.sectionLarge }} data-creation-description={isCreate || canManageCurrentTask ? '' : undefined}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
           <Typography variant="subtitle2" fontWeight={500}>
             {t('portfolio:labels.description')}
