@@ -184,14 +184,15 @@ describe('Application creation at the title', () => {
     expect(done).toHaveFocus();
   });
 
-  it('creates the application when the title is committed, then opens every tab with the focus on the title', async () => {
+  it('creates the application when the title is committed, then opens every tab with the cursor in the description', async () => {
     renderPage(['/it/applications/new/overview']);
     await createBilling();
     expect(mocked.post).toHaveBeenCalledTimes(1);
     expect(mocked.post).toHaveBeenCalledWith('/applications', { name: 'Billing' });
     const title = await screen.findByRole('button', { name: TITLE });
     expect(title).toHaveTextContent('Billing');
-    await waitFor(() => expect(title).toHaveFocus());
+    // Enter gives the name as Tab and Create do: the cursor goes to the description.
+    await waitFor(() => expect(screen.getByLabelText('description editor')).toHaveFocus());
     for (const tab of screen.getAllByRole('tab')) expect(tab).not.toBeDisabled();
     expect(screen.getByRole('button', { name: 'common:buttons.cancel' })).toBeTruthy();
   });
@@ -205,9 +206,10 @@ describe('Application creation at the title', () => {
     expect(await screen.findByText('An application named Billing already exists.')).toBeTruthy();
     expect(screen.getByRole('textbox', { name: TITLE_FIELD })).toHaveValue('Billing');
     expect(location()).toBe('/it/applications/new/overview');
-    // Typing answers the refusal; the next commit tries again.
+    // The refusal stays while the name is typed again (typing that went on after the gesture lands
+    // here too); the next commit tries again.
     fireEvent.change(screen.getByRole('textbox', { name: TITLE_FIELD }), { target: { value: 'Billing 2' } });
-    expect(screen.queryByText('An application named Billing already exists.')).toBeNull();
+    expect(screen.getByText('An application named Billing already exists.')).toBeTruthy();
   });
 
   it('cancels a creation with only its title at once, and goes back where it started', async () => {

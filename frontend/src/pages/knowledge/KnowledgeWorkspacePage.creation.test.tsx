@@ -31,13 +31,19 @@ vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: '
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: () => undefined }) }));
 vi.mock('../../components/MarkdownEditor', async () => {
   const React = await import('react');
-  // As the editor: a new focus request focuses it once it is editable.
+  // As the editor: a new focus request focuses it once it is editable. Its toolbar, hidden until
+  // the text has the focus, comes first and holds a list (the block style): the text is the target.
   function Editor(props: { value: string; onChange: (value: string) => void; focusNonce?: number; disabled?: boolean }) {
     const ref = React.useRef<HTMLTextAreaElement>(null);
     React.useEffect(() => {
       if (!props.disabled && (props.focusNonce ?? 0) >= 1) ref.current?.focus();
     }, [props.focusNonce, props.disabled]);
-    return <textarea ref={ref} aria-label="Document body" value={props.value} onChange={(event) => props.onChange(event.target.value)} />;
+    return (
+      <div>
+        <div role="toolbar"><button type="button" role="combobox" aria-expanded="false">Block style</button></div>
+        <textarea ref={ref} aria-label="Document body" value={props.value} onChange={(event) => props.onChange(event.target.value)} />
+      </div>
+    );
   }
   return { default: Editor };
 });
@@ -323,11 +329,10 @@ describe('Document creation at the title', () => {
     await waitFor(() => expect(screen.getByLabelText('Document body')).toHaveFocus());
   });
 
-  it('leaves the text alone when Enter created the document', async () => {
+  it('puts the cursor in the text of the document Enter created, as Tab and Create do', async () => {
     renderPage(['/knowledge/new?library=runbooks']);
     await createRunbook();
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(screen.getByLabelText('Document body')).not.toHaveFocus();
+    await waitFor(() => expect(screen.getByLabelText('Document body')).toHaveFocus());
   });
 
   it('shows the error under the empty title on Create, nothing created', async () => {

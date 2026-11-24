@@ -86,7 +86,7 @@ Sans `business_processes:member`, la page s'ouvre en lecture seule.
 
 ### Propriétés
 
-Le tiroir des propriétés, à droite, contient :
+Le panneau Propriétés à droite contient :
 
 - **Type** : le type de processus ISO 9001, facultatif. Les processus de **Pilotage** orientent et dirigent l'organisation. Les processus de **Réalisation** apportent de la valeur aux clients. Les processus **Support** fournissent des ressources aux autres. Un sous-processus n'hérite pas du type de son parent.
 - **Processus parent** : le processus sous lequel celui-ci se trouve. Les processus forment une arborescence sans limite de profondeur. Le sélecteur affiche l'arborescence avec un décalage par niveau et cherche sur le chemin complet. Le processus lui-même et ses sous-processus n'y figurent pas. Laissez vide pour le premier niveau. Un processus ne peut pas être son propre parent, ni passer sous l'un de ses propres sous-processus.

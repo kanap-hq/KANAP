@@ -59,7 +59,7 @@ Ces autorisations couvrent aussi la revue d'incident et l'export PDF : celui qui
 
 Un incident restreint est masqué pour tout le monde sauf les administrateurs du registre, le déclarant et le responsable. Sur un tenant standard, cela veut dire Administrateur et Administrateur cartographie SI, plus la personne qui a consigné l'incident ou qui en est responsable. Un lecteur ou un contributeur qui n'est ni le déclarant ni le responsable ne le voit pas dans la liste, la recherche, le chat ou un export. L'ouvrir par sa référence renvoie la même page « introuvable » qu'un numéro inexistant. Ses tâches liées leur sont aussi masquées : dans la liste des tâches, la recherche, le tableau de bord, Kad et les objets liés. La revue d'incident est soumise à la même restriction, quel que soit le chemin emprunté : base de connaissances, recherche, assistant, exports et images collées dans le texte.
 
-**Restreindre aux administrateurs du registre** se trouve dans le tiroir des propriétés, sous Classification. Un contributeur peut l'activer tant qu'il voit encore la fiche ; seul un administrateur peut la désactiver, y compris après clôture. Le changement est écrit dans le journal. Le journal d'audit ne montre les lignes d'un incident restreint, de sa revue et de ses tâches qu'aux personnes qui voient l'incident, et les pastilles de relation documentaire n'affichent pas son titre. Seule la liste « récemment consultés », conservée dans le navigateur de chacun, peut encore afficher le titre à une personne qui a ouvert l'incident avant sa restriction.
+**Restreindre aux administrateurs du registre** se trouve dans le panneau Propriétés, sous Classification. Un contributeur peut l'activer tant qu'il voit encore la fiche ; seul un administrateur peut la désactiver, y compris après clôture. Le changement est écrit dans le journal. Le journal d'audit ne montre les lignes d'un incident restreint, de sa revue et de ses tâches qu'aux personnes qui voient l'incident, et les pastilles de relation documentaire n'affichent pas son titre. Seule la liste « récemment consultés », conservée dans le navigateur de chacun, peut encore afficher le titre à une personne qui a ouvert l'incident avant sa restriction.
 
 ---
 
@@ -96,7 +96,7 @@ Les filtres appliqués sont conservés dans l'incident que vous ouvrez : **Préc
 
 ## L'espace de travail de l'incident
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'incident. L'espace de travail comporte un **en-tête** avec la référence et des métadonnées rapides, un **tiroir des propriétés** sur la droite et une **zone de contenu** au centre qui change selon l'onglet.
+Cliquez sur n'importe quelle ligne pour ouvrir l'incident. L'espace de travail comporte un **en-tête** avec la référence et des métadonnées rapides, un **panneau Propriétés** sur la droite et une **zone de contenu** au centre qui change selon l'onglet.
 
 Les onglets sont **Vue d'ensemble**, **Journal**, **Relations**, **Documents** et **Historique** (les modifications de l'incident, voir [Historique des fiches](record-history.md)).
 
@@ -106,9 +106,9 @@ L'en-tête affiche le titre (modifiable sur place), la référence `INC-N` (cliq
 
 La ligne de métadonnées en dessous affiche **Statut**, **Gravité**, **Responsable**, **Détecté** et, une fois l'incident résolu, la **Durée** entre la détection et la résolution. Gravité, Responsable et Détecté se modifient directement depuis cette ligne.
 
-### Tiroir des propriétés
+### Panneau Propriétés
 
-Le tiroir reste visible sur chaque onglet et enregistre au fur et à mesure.
+Le panneau reste visible sur chaque onglet et enregistre au fur et à mesure.
 
 **Classification** :
 
@@ -246,7 +246,7 @@ Un incident qui porte des données de déclaration réglementaire ne peut pas ê
 
 ## Conformité et éléments de preuve
 
-Deux interrupteurs du tiroir portent la partie réglementaire de l'enregistrement :
+Deux interrupteurs du panneau Propriétés portent la partie réglementaire de l'enregistrement :
 
 - **Données personnelles concernées** : activez-le dès que des données personnelles ont été exposées, altérées ou perdues. C'est l'indicateur sur lequel filtre votre délégué à la protection des données
 - **Notification à l'autorité requise** : activez-le quand l'événement doit être signalé, par exemple à une autorité de protection des données, à une agence nationale de cybersécurité ou à un régulateur sectoriel. **Notifié le** enregistre alors la date de dépôt, et **Parties informées** liste qui a été prévenu : régulateur, assureur, clients touchés, sécurité groupe

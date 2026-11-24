@@ -8,7 +8,7 @@ Navigate to **IT Landscape > Assets** to see your asset inventory. To create an 
 
 1. Click **Add asset**, then **Add asset** or **Add cluster**. The asset page opens with an empty title in the header. Only the title, the **Asset type** and the **Location** are open. The rest of the page is dimmed.
 2. Type the name of the asset, up to 200 characters.
-3. Choose its **Asset type** and its **Location**, in the properties drawer or in the bar under the title. The order does not matter.
+3. Choose its **Asset type** and its **Location**, in the properties panel or in the bar under the title. The order does not matter.
 
 Kadratis creates the asset as soon as it has all three. Its reference (`AST-12`) shows and all tabs open.
 
@@ -114,7 +114,7 @@ Assets can be organized into clusters:
 - **Regular asset**: An individual infrastructure instance
 - **Cluster**: A group of assets acting as a single logical unit
 
-To create a cluster, choose **Add cluster** in the **Add asset** menu, or turn on the **Cluster** switch in the properties drawer of an asset. A connection set on a cluster applies to its members: see [Connections on a cluster](connections.md#connections-on-a-cluster).
+To create a cluster, choose **Add cluster** in the **Add asset** menu, or turn on the **Cluster** switch in the properties panel of an asset. A connection set on a cluster applies to its members: see [Connections on a cluster](connections.md#connections-on-a-cluster).
 
 ### Applications on a cluster { #applications-on-a-cluster }
 
@@ -160,7 +160,7 @@ Before you delete an asset, the confirmation says what goes with it: the cluster
 
 ## The Assets workspace
 
-Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the asset's identity card, always visible), and a **content area** in the centre that switches with each tab.
+Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties panel** on the right (the asset's identity card, always visible), and a **content area** in the centre that switches with each tab.
 
 An address that names no asset opens an **Asset not found** page, with a link back to the list.
 
@@ -171,15 +171,15 @@ The tabs are **Overview**, **Operations**, **Network**, **Hardware** (physical a
 The header shows:
 - **Asset name** (editable in place)
 - **Asset reference** (e.g., `AST-123`): copyable identifier
-- **Lifecycle** chip (also editable from the properties drawer)
+- **Lifecycle** chip (also editable from the properties panel)
 - **Severe vulnerabilities**, for example "3 severe": the critical or high vulnerabilities still to review on the asset, with the colour of the highest one. An alert icon follows when some are known to be exploited. Click it to open the [Vulnerabilities](vulnerabilities.md) page filtered on the asset. Shown only when the asset has some
 - **Share**: copy a shareable link to this workspace
 - **Delete**, a trash icon with its name in a tooltip (`infrastructure:admin`). For an asset still in use, the reason shows before any confirmation
 - **Previous / Next** (e.g., "3 of 47"): navigate the filtered list without returning to it
 
-### Properties drawer (right panel)
+### Properties panel
 
-The drawer shows the asset's identity card on every tab. Edits save automatically. The fields come in three groups.
+The panel shows the asset's identity card on every tab. Edits save automatically. The fields come in three groups.
 
 **Type and zone**:
 - **Asset type** (required): a new asset asks for it before it is created

@@ -262,7 +262,7 @@ export const fr: EmailStrings = {
     userInvite: {
       subject: 'Invitation à rejoindre {{organisation}}',
       intro: '{{inviterName}} vous invite à rejoindre {{place}}.',
-      introNoInviter: 'Vous pouvez désormais rejoindre {{place}}.',
+      introNoInviter: 'Vous êtes invité à rejoindre {{place}}.',
       placeWorkspace: `l'espace {{organisation}} sur ${PRODUCT_NAME}`,
       placeProduct: PRODUCT_NAME,
       password: 'Choisissez votre mot de passe pour activer votre compte ; ce lien reste valable {{duration}}.',

@@ -27,6 +27,7 @@ vi.mock('../../hooks/useSupplierNav', () => ({
 import api from '../../api';
 import SupplierWorkspacePage from './SupplierWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
+import { PAGE_FIELD, pressInto } from '../../test/creationHold';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -112,7 +113,7 @@ describe('SupplierWorkspacePage typing while the supplier is created', () => {
   it('keeps the ERP ID being typed while the supplier is written: same field, same focus, saved on the new supplier', async () => {
     const { drawer, finish } = await startWrite();
     const erp = within(drawer).getByLabelText('suppliers.fields.erpSupplierId');
-    act(() => erp.focus());
+    pressInto(erp);
     fireEvent.change(erp, { target: { value: 'F100' } });
     await finish();
 
@@ -128,7 +129,7 @@ describe('SupplierWorkspacePage typing while the supplier is created', () => {
   it('saves on the new supplier a field committed while the supplier is written', async () => {
     const { drawer, finish } = await startWrite();
     const erp = within(drawer).getByLabelText('suppliers.fields.erpSupplierId');
-    act(() => erp.focus());
+    pressInto(erp);
     fireEvent.change(erp, { target: { value: 'F10077' } });
     fireEvent.blur(erp);
     await finish();
@@ -140,13 +141,13 @@ describe('SupplierWorkspacePage typing while the supplier is created', () => {
 
   it('saves on the new supplier the notes typed while the supplier is written, with the same field and focus', async () => {
     const { finish } = await startWrite();
-    const notes = screen.getByLabelText('suppliers.fields.notes');
-    act(() => notes.focus());
+    const notes = screen.getByLabelText('suppliers.fields.notes', { selector: PAGE_FIELD });
+    pressInto(notes);
     fireEvent.change(notes, { target: { value: 'Net 30' } });
     await finish();
 
     // Nothing more is typed: the text scheduled on the draft is saved on the supplier.
-    const shown = screen.getByLabelText('suppliers.fields.notes') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('suppliers.fields.notes', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     expect(shown === notes).toBe(true);
     expect(document.activeElement === shown).toBe(true);
     expect(shown.value).toBe('Net 30');

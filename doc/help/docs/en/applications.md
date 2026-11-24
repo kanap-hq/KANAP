@@ -42,7 +42,7 @@ Navigate to **IT Landscape > Applications** to see your list. To create an appli
 2. Type the name of the application or service, up to 200 characters. See [Unique names](#unique-names).
 3. Press Enter or Tab, or click **Create**. Kadratis creates the application at once. Its reference (`APP-12`) shows and all tabs open.
 
-The new application is **Active**, in the default category. Change them in the header and the properties drawer, then fill in the rest:
+The new application is **Active**, in the default category. Change them in the header and the properties panel, then fill in the rest:
 
 - **Category**: the primary purpose of this application (see categories above)
 - **Lifecycle**: Active, Proposed, Deprecated, Retired, or any custom code defined in Settings
@@ -86,7 +86,7 @@ Applications that already shared a name before this rule stay editable. Their na
 The Applications grid provides a comprehensive view of your application portfolio.
 
 **Top scope filter (Show)**:
-- **My apps**: shows apps where you are listed in the properties drawer as either a **Business owner** or **IT owner**. Multi-owner entries are supported.
+- **My apps**: shows apps where you are listed in the properties panel as either a **Business owner** or **IT owner**. Multi-owner entries are supported.
 - **My team's apps**: shows apps where any member of your Portfolio team is listed as Business owner or IT owner. Your own ownership is also included in this scope. Disabled if you are not assigned to a Portfolio team.
 - **All apps** (default): shows the full Applications grid with the standard default lifecycle filter behavior.
 - Your selection is remembered across sessions: returning to the page restores your last choice.
@@ -165,7 +165,7 @@ A cell with no value shows a dash.
 
 ## The Applications workspace
 
-Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the application's identity card, always visible), and a **content area** in the centre that switches with each tab.
+Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties panel** on the right (the application's identity card, always visible), and a **content area** in the centre that switches with each tab.
 
 The tabs are **Overview**, **Deployments**, **Interfaces**, **Operations**, **Compliance**, **Relations** and **History** (the changes made to the application, see [Record history](record-history.md)).
 
@@ -186,9 +186,9 @@ The header shows:
 - **Delete**, a trash icon with its name in a tooltip (`applications:admin`): an application with interfaces gets the refusal and why, with Close only. Otherwise the confirmation names the application and counts the deployments deleted with it, along with its links to other records
 - **Previous / Next**: walk through the filtered list without returning to the grid
 
-### Properties drawer (right panel)
+### Properties panel
 
-The drawer is the application's identity card. It is shown on every tab and edited inline. Changes save automatically.
+The panel is the application's identity card. It is shown on every tab and edited inline. Changes save automatically.
 
 **Identity**:
 - **Category**, **Supplier**, **Publisher**
@@ -363,7 +363,7 @@ Two discreet hints may appear: data at the highest confidentiality level combine
 
 ### Relations
 
-The Relations tab shows what this application is linked to: its budget lines, contracts, projects, requests, tasks and incidents, each in its own table, then its links and files. The technologies are on the [Operations](#operations) tab, the business processes in the [properties drawer](#properties-drawer-right-panel). Click a row to open the record. The tab badge counts the linked budget lines, contracts, projects, requests and incidents, and the links and files. Tasks are not counted.
+The Relations tab shows what this application is linked to: its budget lines, contracts, projects, requests, tasks and incidents, each in its own table, then its links and files. The technologies are on the [Operations](#operations) tab, the business processes in the [properties panel](#properties-panel). Click a row to open the record. The tab badge counts the linked budget lines, contracts, projects, requests and incidents, and the links and files. Tasks are not counted.
 
 **Components** (only when "Can have child apps" is enabled): a table listing the child applications of this Suite, with their lifecycle and criticality. Click a row to open the child workspace.
 
@@ -428,12 +428,12 @@ Kadratis offers **two ways to manage application versions**, depending on how yo
 
 | Approach | Best for | What happens |
 |----------|----------|--------------|
-| **Simple** | Most applications | Update the version fields in the properties drawer: same record, new version number |
+| **Simple** | Most applications | Update the version fields in the properties panel: same record, new version number |
 | **Sophisticated** | Major migrations | Use **New version** to create a new application record with lineage tracking. Run old and new versions side by side |
 
 ### Simple version tracking (in-place updates)
 
-For most applications (where you upgrade and the old version simply goes away), update **Version**, **Go live**, **End of support** and **Retired date** in the properties drawer. The header version chip and the **Go live** metadata reflect what you set.
+For most applications (where you upgrade and the old version simply goes away), update **Version**, **Go live**, **End of support** and **Retired date** in the properties panel. The header version chip and the **Go live** metadata reflect what you set.
 
 This approach keeps everything in a single record. When you upgrade, update the version fields and you're done. The **History** tab keeps the earlier values.
 
@@ -455,7 +455,7 @@ The new version is created as a separate application with:
 - Copied data based on your selections
 - Duplicated interfaces pointing to the new version
 
-Once it is created, a message gives the new version's reference. The two applications then link to each other through **Previous version** and **Next version** in the properties drawer.
+Once it is created, a message gives the new version's reference. The two applications then link to each other through **Previous version** and **Next version** in the properties panel.
 
 Classification and continuity values are copied, but the new version starts with a reset review and no copied last recovery test.
 
@@ -792,7 +792,7 @@ Ask, for example: "Add PostgreSQL 16 to CheeseTrack and its servers", "Remove Po
 - **Use Suites for grouping**: Enable "Can have child apps" in the Operations tab to mark an application as a Suite that groups related components (e.g., SAP modules under an SAP Suite).
 - **Link to spend early**: Connect OPEX, CAPEX and contracts in the Relations tab to see the full cost picture for each application.
 - **Keep deployments current**: The Deployments tab drives the environment chips in the list. Keep it updated for accurate visibility.
-- **Document the audience**: Set company and department audiences in the properties drawer; the user count is then derived automatically and used in reports.
+- **Document the audience**: Set company and department audiences in the properties panel; the user count is then derived automatically and used in reports.
 - **Leverage category filtering**: Use the Category column filter to focus on specific application types (e.g., show only Line-of-business apps, or exclude Productivity tools).
 - **Attach knowledge early**: Link runbooks and architecture documents from the Overview tab so the team knows where to look during incidents.
 - **Link tasks from either side**: Add a task from Relations > Tasks, or set the App / Service field on the task itself; both show the same link.

@@ -50,7 +50,8 @@ import {
 } from '@mdxeditor/editor';
 import '@mdxeditor/editor/style.css';
 import { $createHeadingNode, $createQuoteNode } from '@lexical/rich-text';
-import { $createParagraphNode, $getSelection, type LexicalEditor } from 'lexical';
+import { $createParagraphNode, $getRoot, $getSelection, $isRangeSelection, type LexicalEditor } from 'lexical';
+import { registerTypedTextInsertion } from './workspace/creation/creationFieldFocus';
 import { hasPotentiallyUnsafeMdxPaste, sanitizeMarkdownForMdxPaste, toEditorDisplayMarkdown } from '../lib/mdxPaste';
 import { normalizeMarkdownForRichTextEditor } from '../lib/markdownEditorNormalization';
 import { getMarkdownEditorToolbarConfig, type MarkdownEditorHeadingLevel } from './markdownEditorToolbarConfig';
@@ -307,13 +308,35 @@ function getPasteTargetElement(target: EventTarget | null): HTMLElement | null {
   return null;
 }
 
+/** Text typed while a record was written: where the caret is (the end when none yet), Enter as a new paragraph. */
+function insertTypedText(editor: LexicalEditor, text: string): void {
+  editor.update(() => {
+    if (!$isRangeSelection($getSelection())) $getRoot().selectEnd();
+    text.split('\n').forEach((line, index) => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) return;
+      if (index > 0) selection.insertParagraph();
+      const after = $getSelection();
+      if (line && $isRangeSelection(after)) after.insertText(line);
+    });
+  });
+}
+
 const captureRootEditorPlugin = realmPlugin<{ editorRef: React.MutableRefObject<LexicalEditor | null> }>({
   init(realm, params) {
     if (!params?.editorRef) return;
 
     realm.pub(createRootEditorSubscription$, (rootEditor) => {
       params.editorRef.current = rootEditor;
+      // The text typed while a record was written reaches its description through the editor.
+      let release = () => undefined as void;
+      const stopRoot = rootEditor.registerRootListener((root) => {
+        release();
+        release = root ? registerTypedTextInsertion(root, (text) => insertTypedText(rootEditor, text)) : () => undefined;
+      });
       return () => {
+        stopRoot();
+        release();
         if (params.editorRef.current === rootEditor) {
           params.editorRef.current = null;
         }

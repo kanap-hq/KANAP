@@ -698,7 +698,7 @@ function DescriptionField({
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   const label = t('accounts.fields.description');
   return (
-    <Box>
+    <Box data-creation-description={disabled ? undefined : ''}>
       <Typography sx={sectionLabelSx}>{label}</Typography>
       <TextField
         value={draft}

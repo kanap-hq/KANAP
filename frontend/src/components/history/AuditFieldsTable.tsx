@@ -2,6 +2,7 @@ import { Box } from '@mui/material';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import type { Translate } from '../../lib/audit/auditLogLabels';
 import {
+  auditFieldLabel,
   formatAuditValue,
   type AuditFields,
   type AuditValueContext,
@@ -79,7 +80,7 @@ export function AuditFieldsTable({ fields, t, context }: { fields: AuditFields; 
         </Box>
         <Box component="tbody">
           {fields.rows.map((row) => {
-            const label = t(`auditLogs.fields.${row.key}`, { defaultValue: row.key });
+            const label = auditFieldLabel(row.key, t);
             return (
               <Box component="tr" key={row.key}>
                 <Box component="td">

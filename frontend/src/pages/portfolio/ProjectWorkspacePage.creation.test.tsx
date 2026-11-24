@@ -43,7 +43,9 @@ vi.mock('./workspace/portfolioRelations', () => ({
   usePortfolioRelationsBadge: () => 0,
 }));
 vi.mock('../../components/IntegratedDocumentEditor', () => ({
-  default: (props: { disabled?: boolean }) => <div data-testid="purpose-editor" data-disabled={String(!!props.disabled)} />,
+  default: (props: { disabled?: boolean }) => (
+    <textarea data-testid="purpose-editor" aria-label="purpose editor" data-disabled={String(!!props.disabled)} disabled={props.disabled} />
+  ),
 }));
 vi.mock('./workspace/project/ProjectActivityTab', () => ({ default: () => <div data-testid="project-activity" /> }));
 vi.mock('../../utils/workspaceTabCounts', () => ({ fetchProjectTasksCount: async () => 0 }));
@@ -174,6 +176,12 @@ describe('Project creation at the title', () => {
     await createDataPlatform();
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/portfolio/projects/PRJ-9', expect.anything()));
     await waitFor(() => expect(screen.getByTestId('purpose-editor')).toHaveAttribute('data-disabled', 'false'));
+  });
+
+  it('puts the cursor in the purpose of the project its title created', async () => {
+    renderPage(['/portfolio/projects/new/summary']);
+    await createDataPlatform();
+    await waitFor(() => expect(screen.getByLabelText('purpose editor')).toHaveFocus());
   });
 
   it('takes Ctrl+S as Create: the empty title is asked for, nothing created', async () => {

@@ -27,9 +27,9 @@ Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pou
 
 ![Une fiche d'application](images/landscape-example-2.webp)
 
-**Le geste.** Lisez le panneau des propriétés, puis ouvrez les onglets **Déploiements**, **Interfaces**, **Exploitation** et **Relations**.
+**Le geste.** Lisez le panneau Propriétés, puis ouvrez les onglets **Déploiements**, **Interfaces**, **Exploitation** et **Relations**.
 
-**Ce que vous lisez.** Le panneau des propriétés donne l'éditeur, les dates de son cycle de vie et ses responsables. **Déploiements** montre un bloc par environnement avec les serveurs qui la font tourner. **Interfaces** liste les flux de données entrants et sortants. **Exploitation** liste les technologies dont l'application dépend, avec leur fin de support. **Relations** la relie aux lignes budgétaires, aux contrats et aux projets.
+**Ce que vous lisez.** Le panneau Propriétés donne l'éditeur, les dates de son cycle de vie et ses responsables. **Déploiements** montre un bloc par environnement avec les serveurs qui la font tourner. **Interfaces** liste les flux de données entrants et sortants. **Exploitation** liste les technologies dont l'application dépend, avec leur fin de support. **Relations** la relie aux lignes budgétaires, aux contrats et aux projets.
 
 ## 3. Les actifs
 

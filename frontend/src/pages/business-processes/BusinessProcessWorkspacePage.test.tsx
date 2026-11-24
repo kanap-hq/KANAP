@@ -10,6 +10,7 @@ import NavigationTracker, { resetNavigationTracker } from '../../components/navi
 import { resetCreationStore } from '../../components/workspace/creation/creationStore';
 import api from '../../api';
 import BusinessProcessWorkspacePage from './BusinessProcessWorkspacePage';
+import { findCreatedRecordField } from '../../components/workspace/creation/creationFieldFocus';
 import { TITLE_FIELD } from '../../test/titleField';
 
 // The business process page on the record shell (lot V7): fields saved one by one, and the
@@ -133,6 +134,12 @@ beforeEach(() => {
 });
 
 describe('Business process record', () => {
+  it('declares its description as the place of the cursor once a process is created', async () => {
+    renderPage(['/master-data/business-processes/bp-1/overview']);
+    await openRecord();
+    expect(findCreatedRecordField(document.body)).toBe(screen.getByRole('textbox', { name: 'shared.fields.description' }));
+  });
+
   it('shows the name in the header, the tabs and no Save, and saves the description when it is left', async () => {
     renderPage(['/master-data/business-processes/bp-1/overview']);
     await openRecord();

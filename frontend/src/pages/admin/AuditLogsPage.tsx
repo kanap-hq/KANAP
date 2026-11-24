@@ -42,15 +42,19 @@ import {
   type Translate,
 } from '../../lib/audit/auditLogLabels';
 import {
+  auditCatalogList,
   auditFields as buildAuditFields,
   auditHasNonObjectPayload,
   auditRecordLabel,
   auditSnapshot,
   auditUserIds,
+  sortAuditFields,
   type AuditFields,
+  type AuditLinkedRecord,
   type AuditValueContext,
 } from '../../lib/audit/auditLogValues';
 import { AuditFieldsTable } from '../../components/history/AuditFieldsTable';
+import { isItCatalogList, useCatalogLabel } from '../../components/history/useCatalogLabel';
 
 type AuditLogItem = {
   id: string;
@@ -66,6 +70,8 @@ type AuditLogItem = {
   source: string;
   source_ref: string | null;
   created_at: string;
+  /** Only on the detail of a budget line's link entry: the linked records by id. */
+  linked_records?: Record<string, AuditLinkedRecord>;
 };
 
 /** The header the server sets on an export that stopped at its row limit (the limit). */
@@ -186,7 +192,8 @@ export default function AuditLogsPage() {
   });
 
   const detail = detailQuery.data ?? selectedRow;
-  const fields = React.useMemo<AuditFields>(() => buildAuditFields(detail), [detail]);
+  // The rows in alphabetical order of their label, in the reader's language.
+  const fields = React.useMemo<AuditFields>(() => sortAuditFields(buildAuditFields(detail), t, locale), [detail, t, locale]);
   const rawPayload = React.useMemo(() => auditHasNonObjectPayload(detail), [detail]);
   const rawVisible = rawPayload || showRaw;
   const recordLabel = detail ? auditRecordLabel(detail, t) : null;
@@ -208,9 +215,19 @@ export default function AuditLogsPage() {
     return names;
   }, [userLookup.items]);
   const snapshot = React.useMemo(() => auditSnapshot(detail), [detail]);
+  // The workspace's own labels of its catalog values, read only when a row names such a value.
+  const catalogs = React.useMemo(() => {
+    const lists = fields.rows
+      .map((row) => auditCatalogList(row.key, detail?.table_name || undefined))
+      .filter((list): list is NonNullable<typeof list> => list !== null);
+    return { it: open && lists.some(isItCatalogList), classification: open && lists.some((list) => !isItCatalogList(list)) };
+  }, [fields, detail?.table_name, open]);
+  const catalogLabel = useCatalogLabel(catalogs);
+  // The linked records of a budget line's link entry come with the detail, never from the list row.
+  const linkedRecords = detailQuery.data?.linked_records;
   const valueContext = React.useMemo<AuditValueContext>(
-    () => ({ locale, t, snapshot, users: userNames, table: detail?.table_name || undefined }),
-    [locale, t, snapshot, userNames, detail?.table_name],
+    () => ({ locale, t, snapshot, users: userNames, table: detail?.table_name || undefined, catalogLabel, linkedRecords }),
+    [locale, t, snapshot, userNames, detail?.table_name, catalogLabel, linkedRecords],
   );
 
   const getFilterValues = React.useCallback((field: 'table_name' | 'action' | 'source') => {

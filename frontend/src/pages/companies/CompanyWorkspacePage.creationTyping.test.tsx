@@ -28,6 +28,7 @@ vi.mock('../workspace/hooks/useRecentlyViewed', () => ({
 import api from '../../api';
 import CompanyWorkspacePage from './CompanyWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
+import { PAGE_FIELD, pressInto } from '../../test/creationHold';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -137,12 +138,12 @@ describe('CompanyWorkspacePage typing while the company is created', () => {
 
   it('keeps the notes being typed while the company is written: same field, same focus, saved on the new company', async () => {
     const { finish } = await startWrite();
-    const notes = screen.getByLabelText('companies.fields.notes');
-    act(() => notes.focus());
+    const notes = screen.getByLabelText('companies.fields.notes', { selector: PAGE_FIELD });
+    pressInto(notes);
     fireEvent.change(notes, { target: { value: 'Ma' } });
     await finish();
 
-    const shown = screen.getByLabelText('companies.fields.notes') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('companies.fields.notes', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     expect(shown === notes).toBe(true);
     expect(document.activeElement === shown).toBe(true);
     fireEvent.change(shown, { target: { value: 'Main entity' } });

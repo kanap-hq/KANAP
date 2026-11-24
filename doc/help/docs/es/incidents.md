@@ -59,7 +59,7 @@ Estos permisos cubren también la revisión del incidente y la exportación PDF:
 
 Un incidente restringido queda oculto para todos excepto los administradores del registro, el notificante y el responsable. En un espacio de trabajo de fábrica eso equivale a Administrador y Administrador de panorama IT, más quien lo registró o es responsable de la ficha. Un lector o colaborador que no sea el notificante ni el responsable no lo ve en la lista, en la búsqueda, en el chat ni en una exportación: abrirlo por su referencia devuelve el mismo «no encontrado» que un número inexistente. Sus tareas vinculadas también les quedan ocultas: en la lista de tareas, en la búsqueda, en el panel de control, en Kad y entre los objetos vinculados. La revisión del incidente está sujeta a la misma restricción, se llegue a ella por donde se llegue: base de conocimiento, búsqueda, asistente, exportaciones e imágenes pegadas en el texto.
 
-**Restringir a los administradores del registro** está en el cajón de propiedades, bajo Clasificación. Un colaborador puede activarlo mientras aún vea la ficha; solo un administrador puede desactivarlo, también después del cierre. El cambio se escribe en el diario. El registro de auditoría solo muestra las líneas de un incidente restringido, de su revisión y de sus tareas a las personas que ven el incidente, y las pastillas de relación documental omiten su título. Solo la lista «vistos recientemente», guardada en el navegador de cada persona, puede seguir mostrando el título a quien abrió el incidente antes de la restricción.
+**Restringir a los administradores del registro** está en el panel de propiedades, bajo Clasificación. Un colaborador puede activarlo mientras aún vea la ficha; solo un administrador puede desactivarlo, también después del cierre. El cambio se escribe en el diario. El registro de auditoría solo muestra las líneas de un incidente restringido, de su revisión y de sus tareas a las personas que ven el incidente, y las pastillas de relación documental omiten su título. Solo la lista «vistos recientemente», guardada en el navegador de cada persona, puede seguir mostrando el título a quien abrió el incidente antes de la restricción.
 
 ---
 
@@ -96,7 +96,7 @@ Los filtros aplicados se conservan al abrir un incidente: **Anterior / Siguiente
 
 ## El espacio de trabajo del incidente
 
-Haga clic en cualquier fila para abrir el incidente. El espacio de trabajo tiene un **encabezado** con la referencia y metadatos rápidos, un **cajón de propiedades** a la derecha y un **área de contenido** en el centro que cambia con cada pestaña.
+Haga clic en cualquier fila para abrir el incidente. El espacio de trabajo tiene un **encabezado** con la referencia y metadatos rápidos, un **panel de propiedades** a la derecha y un **área de contenido** en el centro que cambia con cada pestaña.
 
 Las pestañas son **Vista general**, **Diario**, **Relaciones**, **Documentos** e **Historial** (los cambios del incidente, vea [Historial de los registros](record-history.md)).
 
@@ -106,9 +106,9 @@ El encabezado muestra el título (editable en el sitio), la referencia `INC-N` (
 
 La línea de metadatos inferior muestra **Estado**, **Gravedad**, **Responsable**, **Detectado** y, una vez resuelto el incidente, la **Duración** entre la detección y la resolución. Gravedad, Responsable y Detectado se cambian directamente desde esa línea.
 
-### Cajón de propiedades
+### Panel de propiedades
 
-El cajón permanece visible en todas las pestañas y guarda a medida que edita.
+El panel permanece visible en todas las pestañas y guarda a medida que edita.
 
 **Clasificación**:
 
@@ -246,7 +246,7 @@ Un incidente con datos de notificación regulatoria no se puede eliminar: **Dato
 
 ## Conformidad y evidencia para auditoría
 
-Dos interruptores del cajón sostienen la parte normativa del registro:
+Dos interruptores del panel de propiedades sostienen la parte normativa del registro:
 
 - **Datos personales afectados**: actívelo en cuanto se hayan expuesto, alterado o perdido datos personales. Es el indicador por el que filtra su delegado de protección de datos
 - **Notificación a la autoridad requerida**: actívelo cuando el evento deba comunicarse, por ejemplo a una autoridad de protección de datos, a una agencia nacional de ciberseguridad o a un regulador sectorial. **Notificado el** recoge entonces cuándo lo presentó, y **Partes informadas** enumera a quién se avisó: regulador, aseguradora, clientes afectados, seguridad del grupo

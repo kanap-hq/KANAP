@@ -78,9 +78,9 @@ La creación directa de proyectos es para trabajo que debe entrar en ejecución 
 2. Escriba el nombre del proyecto.
 3. Pulse Intro o Tab, o haga clic en **Crear**. Kadratis crea el proyecto de inmediato, con el origen **Fast-track**. Su referencia (`PRJ-12`) aparece y se abren todas las pestañas.
 
-Complete después el panel de Propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un nombre.
+Complete después el panel de propiedades y el **Propósito**. El nombre solo se edita en el encabezado. Pulsar Escape en el título, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un nombre.
 
-Un proyecto creado así puede pasar de **Fast-track** a **Histórico** y viceversa en el panel de Propiedades. Un proyecto convertido desde una solicitud conserva el origen **Solicitud** y su vinculación de fuente.
+Un proyecto creado así puede pasar de **Fast-track** a **Histórico** y viceversa en el panel de propiedades. Un proyecto convertido desde una solicitud conserva el origen **Solicitud** y su vinculación de fuente.
 
 Use **Fast-track** para trabajo que se introduce genuinamente directo en la entrega. Use **Histórico** para trabajo que ya existe fuera del historial normal de captación. Esa distinción afecta a los informes y hace que el análisis posterior del portafolio sea mucho menos confuso.
 
@@ -101,9 +101,9 @@ El espacio de trabajo del proyecto tiene dos capas:
 - El **área de contenido principal** para las pestañas operativas: **Resumen**, **Tareas**, **Cronograma**, **Esfuerzo**, **Evaluación**, **Relaciones**, **Conocimiento** e **Historial** (los cambios del proyecto, vea [Historial de los registros](record-history.md))
 - Un panel persistente de **Propiedades** en el borde derecho para las propiedades principales, la asignación de equipo y las solicitudes de origen
 
-Abra o cierre el panel de Propiedades usando la pestaña vertical en el borde derecho.
+Abra o cierre el panel de propiedades usando la pestaña vertical en el borde derecho.
 
-Para proyectos existentes, el panel de Propiedades se comporta como un panel de propiedades en vivo: los cambios allí se guardan inmediatamente. El contenido de la pestaña principal sigue el flujo habitual de **Guardar** / **Restablecer** cuando esa pestaña contiene cambios en borrador. Si cambia de pestaña o pasa al proyecto anterior o siguiente con cambios sin guardar en el espacio de trabajo, Kadratis pregunta si guardar primero.
+Para proyectos existentes, el panel de propiedades se comporta como un panel de propiedades en vivo: los cambios allí se guardan inmediatamente. El contenido de la pestaña principal sigue el flujo habitual de **Guardar** / **Restablecer** cuando esa pestaña contiene cambios en borrador. Si cambia de pestaña o pasa al proyecto anterior o siguiente con cambios sin guardar en el espacio de trabajo, Kadratis pregunta si guardar primero.
 
 ## Encabezado y metadatos
 
@@ -129,9 +129,9 @@ El flujo de trabajo está intencionalmente controlado:
 - **En espera** puede volver a **Lista de espera**, **Planificado** o **En progreso**, o ser **Cancelado**
 - **Hecho** y **Cancelado** son estados terminales
 
-## Panel de Propiedades
+## Panel de propiedades
 
-Trate el panel de Propiedades como la tarjeta de identidad persistente del proyecto. Está agrupado en tres secciones.
+Trate el panel de propiedades como la tarjeta de identidad persistente del proyecto. Está agrupado en tres secciones.
 
 ### Propiedades principales
 
@@ -167,7 +167,7 @@ Las mismas solicitudes aparecen también en la pestaña **Relaciones**, junto co
 
 ## Resumen
 
-La pestaña **Resumen** es la cabina del proyecto. Está pensada para responder al estado actual del proyecto en una sola pasada, no para duplicar cada campo en el panel.
+La pestaña **Resumen** es la cabina del proyecto. Está pensada para responder al estado actual del proyecto en una sola pasada, no para duplicar cada campo en el panel de propiedades.
 
 ### Propósito
 
@@ -226,7 +226,7 @@ La pestaña **Cronograma** es donde la estructura de entrega se hace explícita.
 La parte inferior de la pestaña muestra tres líneas:
 
 - **Real**: fechas capturadas por eventos de ejecución (cuando el proyecto pasó a En progreso y cuando alcanzó Hecho). Solo lectura en el espacio de trabajo.
-- **Planificado**: la ventana de entrega prevista. Edite esto en el panel de Propiedades.
+- **Planificado**: la ventana de entrega prevista. Edite esto en el panel de propiedades.
 - **Línea base**: una instantánea de las fechas planificadas capturada cuando el proyecto pasó a **En progreso**. La variación contra la línea base se muestra como `Nd tarde` o `Nd temprano`.
 
 ### Fases
@@ -279,7 +279,7 @@ La pestaña **Esfuerzo** separa el esfuerzo estimado en:
 - **Esfuerzo IT**
 - **Esfuerzo de negocio**
 
-Cada lado puede asignarse entre el responsable y los colaboradores relevantes. Las asignaciones dependen del equipo configurado en el panel de Propiedades, así que los cambios de equipo también tienen consecuencias de planificación aquí.
+Cada lado puede asignarse entre el responsable y los colaboradores relevantes. Las asignaciones dependen del equipo configurado en el panel de propiedades, así que los cambios de equipo también tienen consecuencias de planificación aquí.
 
 ### Esfuerzo real y registro de tiempo
 
@@ -420,7 +420,7 @@ De nuevo, enviar un enlace no concede acceso. Solo evita que la gente tenga que 
 
 ## Orientación práctica
 
-- Use el panel de Propiedades para datos estructurales que deben permanecer visibles mientras trabaja.
+- Use el panel de propiedades para datos estructurales que deben permanecer visibles mientras trabaja.
 - Use **Resumen** para la narrativa del proyecto, la actividad más reciente y la imagen operativa de alto nivel.
 - Use **Cronograma** para definir la estructura de entrega antes de que crezca el volumen de tareas.
 - Use **Esfuerzo** regularmente, de lo contrario la variación de esfuerzo llega como una sorpresa aunque los datos ya le estuvieran avisando.

@@ -41,7 +41,9 @@ vi.mock('../../hooks/useModuleItemNav', () => ({
 }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: () => undefined }) }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
-vi.mock('../../components/MarkdownEditor', () => ({ default: () => <div data-testid="description-editor" /> }));
+vi.mock('../../components/MarkdownEditor', () => ({
+  default: (props: { disabled?: boolean }) => <textarea data-testid="description-editor" aria-label="description editor" disabled={props.disabled} />,
+}));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
 vi.mock('./workspace/ConnectionLinkInterfacesDialog', () => ({ default: () => null }));
 // An end is picked as in the picker: an asset (with its summary) or an entity.
@@ -246,6 +248,15 @@ describe('Connection born complete', () => {
     await screen.findByRole('button', { name: TITLE });
     expect(mocked.patch).not.toHaveBeenCalled();
     expect(connectionPosts()).toHaveLength(1);
+  });
+
+  it('puts the cursor in the description of the connection its last required field wrote', async () => {
+    await typeName();
+    click('workspace.connection.layers.source web');
+    click('workspace.connection.layers.destination internet');
+    click('add https');
+    await waitFor(() => expect(location()).toBe('/it/connections/CONN-7/overview'));
+    await waitFor(() => expect(screen.getByLabelText('description editor')).toHaveFocus());
   });
 
   it('writes a multi-server connection with its two servers', async () => {

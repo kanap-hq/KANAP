@@ -16,10 +16,17 @@ vi.mock('../auth/AuthContext', () => ({
 }));
 
 import { useItOpsSettings } from './useItOpsSettings';
+import { useItOpsEnumOptions } from './useItOpsEnumOptions';
 
+const LABELS = {
+  applicationCategories: [
+    { code: 'line_of_business', label: 'Line of business' },
+    { code: 'old_one', label: 'Old one', deprecated: true },
+  ],
+};
 const SETTINGS = { applicationCategories: [{ code: 'line_of_business', label: 'Line of business' }] };
 
-function renderSettings(options?: { enabled?: boolean }, seed?: unknown) {
+function renderSettings(options?: { enabled?: boolean; labelsWithoutRight?: boolean }, seed?: unknown) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
   });
@@ -58,5 +65,42 @@ describe('useItOpsSettings', () => {
     await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
     expect(get).not.toHaveBeenCalled();
     expect(result.current.data).toEqual(SETTINGS);
+  });
+
+  it('reads the catalog labels instead of the settings for the display projection, without the settings right', async () => {
+    auth.canReadSettings = false;
+    get.mockResolvedValue({ data: LABELS });
+    const { result } = renderSettings({ labelsWithoutRight: true });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get).toHaveBeenCalledWith('/it-ops/catalog-labels');
+    expect(get).not.toHaveBeenCalledWith('/it-ops/settings');
+  });
+
+  it('keeps the full settings for a settings reader, even when the labels would do', async () => {
+    const { result } = renderSettings({ labelsWithoutRight: true });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(get).toHaveBeenCalledWith('/it-ops/settings');
+  });
+});
+
+describe('display projection without the settings right', () => {
+  beforeEach(() => {
+    auth.canReadSettings = false;
+    get.mockReset();
+    get.mockResolvedValue({ data: LABELS });
+  });
+
+  it('names a catalog value by its label, with the retired suffix of a retired value', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useItOpsEnumOptions(), { wrapper });
+    await waitFor(() => expect(result.current.labelFor('applicationCategory', 'line_of_business')).toBe('Line of business'));
+    expect(result.current.labelFor('applicationCategory', 'old_one')).toMatch(/^Old one \(.+\)$/);
+    expect(get).toHaveBeenCalledWith('/it-ops/catalog-labels');
+    expect(get).not.toHaveBeenCalledWith('/it-ops/settings');
   });
 });

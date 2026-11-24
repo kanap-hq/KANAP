@@ -160,7 +160,7 @@ The Portfolio Management module (`/portfolio/*`) provides end-to-end IT portfoli
   - Activity tab: Unified view combining comments and audit history
   - History now includes overview/analysis field updates and sub-entity diffs (team, dependencies, CAPEX/OPEX links, scoring override fields) with display-name snapshots.
   - Opening the Activity tab triggers a fresh fetch so newly logged history entries appear without manual page reload.
-- Conversion: Approved requests can be converted to projects via `POST /portfolio/requests/:id/convert`
+- Conversion: an approved request can be converted to a project via `POST /portfolio/requests/:id/convert` (`portfolio_projects:member`). A converted request is refused (`400`) and creates no project.
 
 ### Projects (`/portfolio/projects`)
 - Grid: `frontend/src/pages/portfolio/ProjectsPage.tsx` with progress bar column. Scope filter (My/Team/All) persisted per user via `useGridScopePreference`.
@@ -256,7 +256,7 @@ Portfolio workspaces use a shared activity system (modeled after Tasks):
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | /portfolio/requests | List requests with filters |
-| POST | /portfolio/requests/:id/convert | Convert request to project |
+| POST | /portfolio/requests/:id/convert | Convert an approved request to a project. A converted request is a 400 |
 | POST | /portfolio/requests/:id/attachments/inline | Upload inline image |
 | GET | /portfolio/requests/inline/:tenantSlug/:attachmentId | View inline image |
 | GET | /portfolio/requests/:id?include=activities | Load request including activity history |

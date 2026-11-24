@@ -23,6 +23,8 @@ import { StatusDot } from '../../components/design';
 import { setListFiltersParam, getWithListContext, withClearedDefaults } from '../../lib/listContext';
 import { useUrlFilterModel } from '../../hooks/useListContextSearch';
 import { ImportLabel } from '../../components/csv/importFiles';
+import { displayedRequestPriority } from './requestPriority';
+import { useEnabledCriterionIds } from './useEnabledCriterionIds';
 
 type RequestRow = {
   id: string;
@@ -39,7 +41,10 @@ type RequestRow = {
   company?: { id: string; name: string } | null;
   requestor_id: string | null;
   requestor?: { id: string; email: string; first_name?: string; last_name?: string } | null;
-  priority_score: number | null;
+  priority_score: number | string | null;
+  priority_override?: boolean;
+  override_value?: number | string | null;
+  criteria_values?: Record<string, string> | null;
   target_delivery_date: string | null;
   item_number: number;
   created_at: string;
@@ -285,6 +290,8 @@ export default function RequestsPage() {
     };
   }, []);
 
+  const enabledCriteria = useEnabledCriterionIds();
+
   const columns: EnhancedColDef<RequestRow>[] = useMemo(() => [
     {
       field: 'item_number',
@@ -332,7 +339,19 @@ export default function RequestsPage() {
       headerName: t('requests.columns.priority'),
       width: 100,
       filter: 'agNumberColumnFilter',
-      valueFormatter: (params: any) => (params.value != null ? String(Math.round(params.value)) : ''),
+      // The field stays the stored score, so the column still sorts and filters by it.
+      // The cell is empty when no enabled criterion is answered and no override is set.
+      valueFormatter: (params: { value?: unknown; data?: RequestRow }) => {
+        if (enabledCriteria.pending) return '';
+        const shown = displayedRequestPriority({
+          priorityScore: params.data?.priority_score ?? (params.value as number | string | null | undefined),
+          priorityOverride: params.data?.priority_override,
+          overrideValue: params.data?.override_value,
+          criteriaValues: params.data ? params.data.criteria_values : undefined,
+          enabledCriterionIds: enabledCriteria.unavailable ? null : enabledCriteria.ids,
+        });
+        return shown == null ? '' : String(Math.round(shown));
+      },
       cellRenderer: clickableCellRenderer,
     },
     {
@@ -442,7 +461,7 @@ export default function RequestsPage() {
       cellRenderer: clickableCellRenderer,
       hide: true,
     },
-  ], [clickableCellRenderer, getRequestFilterValues, locale, renderStatusCell, statusLabelMap, t]);
+  ], [clickableCellRenderer, enabledCriteria.ids, enabledCriteria.pending, enabledCriteria.unavailable, getRequestFilterValues, locale, renderStatusCell, statusLabelMap, t]);
 
   const extraParams = useMemo(() => {
     // The grid's status filter alone decides: without `status: 'all'` the server would still hide
