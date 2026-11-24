@@ -740,7 +740,8 @@ const MODEL_MATCHING_ENTRIES = 60;
 
 const MATCHING_NOTE = 'matches: values of the file the check matched to an existing value beyond case (origin server: accents '
   + 'or another language; origin model: your `values`); the card lists them and the person may undo one. refused_proposals: '
-  + 'your `values` whose target is not an enabled value of the workspace: they were not applied. candidates: values nothing '
+  + 'your `values` whose target is not an enabled value of the workspace (reason `shared`: several records have that name, '
+  + 'so the row\'s parent column decides): they were not applied. candidates: values nothing '
   + 'matched, created on approval (outcome create, one entry per value created) or refused, with the closest names of the '
   + 'workspace\'s list (`candidates`) and, for a dimension value created, the enabled values of its dimension '
   + '(`dimension_values`, the first ones). Before you present the card, read each dimension value created against its '

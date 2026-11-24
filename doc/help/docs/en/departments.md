@@ -126,7 +126,7 @@ The columns, in this order:
 
 **Required cells**: `name` and `company_name`, an existing company. A row with a `reference` can leave them empty: the department keeps its name and company
 
-**Same name in two companies**: two companies may each have a department of the same name. An import that names one on a person, a request or a project, or Kad on a request or a project, reads it in the record's company; when the record has none, the message names the companies that have one. See [Names of records](csv-files.md#names-of-records)
+**Same name in two companies**: two companies may each have a department of the same name. An import that names one on a person, a request or a project, or Kad on a request or a project, reads it in the record's company. When the record has no company, a name only one company has gives its company, and a name several companies share is refused with a message that names them. See [Names of records](csv-files.md#names-of-records)
 
 **Empty cells and `-`**: on a department the file updates, an empty cell keeps the stored value, and `-` clears `description` or `disabled_at`. `-` cannot clear `reference`, `company_name`, `name` or `status`: the row is refused. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
 

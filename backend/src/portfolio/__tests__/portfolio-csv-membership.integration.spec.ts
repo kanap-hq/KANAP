@@ -131,6 +131,13 @@ async function testRequests() {
     assert.deepEqual(await load(requests, runner, data, `id;stream_name\n${dev};Ops`), { inserted: 0, updated: 1, unchanged: 0, cleared: 0 });
     assert.equal((await pair(runner, 'portfolio_requests', dev)).stream_id, ids.opsIt, 'the Ops of the stored category');
     assert.deepEqual((await refusals(requests, runner, data, `id;stream_name\n${dev};Run`)).map((error) => error.code), ['STREAM_OUTSIDE_CATEGORY']);
+    // Kad proposing a name two streams share: refused as shared, not as missing.
+    const proposedCsv = `id;stream_name\n${dev};Opps`;
+    const proposedFile = { buffer: Buffer.from(proposedCsv, 'utf8'), originalname: 'import.csv', mimetype: 'text/csv', size: proposedCsv.length } as Express.Multer.File;
+    const proposed: any = await (requests as any).import(proposedFile, { dryRun: true, operation: 'upsert', proposals: { stream_name: { Opps: 'Ops' } } }, {
+      manager: runner.manager, tenantId: data.tenantId, userId: data.creatorId, isAdmin: true, access: { isAdmin: true },
+    });
+    assert.deepEqual(proposed.refusedProposals?.map((entry: any) => [entry.value, entry.target, entry.reason]), [['Opps', 'Ops', 'shared']]);
     // The category changed alone drops the stream, counted; the company changed alone, the department.
     const moved = await request(runner, data, 12, { category: ids.it, stream: ids.opsIt, company: ids.companyA, department: ids.finA });
     assert.deepEqual(await load(requests, runner, data, `id;category_name;company_name\n${moved};Business;Beta`), { inserted: 0, updated: 1, unchanged: 0, cleared: 2 });

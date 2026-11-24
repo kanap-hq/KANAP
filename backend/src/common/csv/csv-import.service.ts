@@ -1344,7 +1344,9 @@ export class CsvImportService {
         return { id: target.entry.id };
       }
       if (!same && context.refusedProposals) {
-        noteRefusedProposal(context.refusedProposals, { column, name: null, value: value.trim(), target: proposal, reason: 'missing' }, row.rowNumber);
+        // A name several records share (two streams "Ops") is no missing one (lot I7a of 26.12.1).
+        const reason = target?.kind === 'many' ? 'shared' : 'missing';
+        noteRefusedProposal(context.refusedProposals, { column, name: null, value: value.trim(), target: proposal, reason }, row.rowNumber);
       }
     }
     const beyondCase = !undone && reads;

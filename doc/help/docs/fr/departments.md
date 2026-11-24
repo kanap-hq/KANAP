@@ -126,7 +126,7 @@ Les colonnes, dans cet ordre :
 
 **Cellules obligatoires** : `name` et `company_name`, une société existante. Une ligne avec une `reference` peut les laisser vides : le département garde son nom et sa société
 
-**Même nom dans deux sociétés** : deux sociétés peuvent avoir chacune un département du même nom. Un import qui en nomme un sur une personne, une demande ou un projet, ou Kad sur une demande ou un projet, le lit dans la société de la fiche ; quand la fiche n'en a pas, le message nomme les sociétés qui en ont un. Voir [Noms des fiches](csv-files.md#names-of-records)
+**Même nom dans deux sociétés** : deux sociétés peuvent avoir chacune un département du même nom. Un import qui en nomme un sur une personne, une demande ou un projet, ou Kad sur une demande ou un projet, le lit dans la société de la fiche. Quand la fiche n'a pas de société, un nom qu'une seule société possède donne sa société, et un nom que plusieurs sociétés partagent est refusé par un message qui les nomme. Voir [Noms des fiches](csv-files.md#names-of-records)
 
 **Cellules vides et `-`** : sur un département que le fichier met à jour, une cellule vide garde la valeur enregistrée, et `-` efface `description` ou `disabled_at`. `-` ne peut pas effacer `reference`, `company_name`, `name` ni `status` : la ligne est refusée. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing)
 

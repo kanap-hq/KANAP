@@ -126,7 +126,7 @@ Die Spalten in dieser Reihenfolge:
 
 **Pflichtzellen**: `name` und `company_name`, ein bestehendes Unternehmen. Eine Zeile mit einer `reference` kann sie leer lassen: Die Abteilung behält ihren Namen und ihr Unternehmen
 
-**Gleicher Name in zwei Unternehmen**: Zwei Unternehmen können jeweils eine Abteilung mit demselben Namen haben. Ein Import, der eine davon bei einer Person, einer Anfrage oder einem Projekt nennt, oder Kad bei einer Anfrage oder einem Projekt, liest sie im Unternehmen des Datensatzes; hat der Datensatz keines, nennt die Meldung die Unternehmen, die eine solche Abteilung haben. Siehe [Namen von Datensätzen](csv-files.md#names-of-records)
+**Gleicher Name in zwei Unternehmen**: Zwei Unternehmen können jeweils eine Abteilung mit demselben Namen haben. Ein Import, der eine davon bei einer Person, einer Anfrage oder einem Projekt nennt, oder Kad bei einer Anfrage oder einem Projekt, liest sie im Unternehmen des Datensatzes. Hat der Datensatz kein Unternehmen, gibt ein Name, den nur ein Unternehmen hat, dieses Unternehmen vor, und ein Name, den mehrere Unternehmen teilen, wird mit einer Meldung abgelehnt, die sie nennt. Siehe [Namen von Datensätzen](csv-files.md#names-of-records)
 
 **Leere Zellen und `-`**: Bei einer Abteilung, die die Datei aktualisiert, behält eine leere Zelle den gespeicherten Wert, und `-` leert `description` oder `disabled_at`. `-` kann `reference`, `company_name`, `name` oder `status` nicht leeren: Die Zeile wird abgelehnt. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing)
 

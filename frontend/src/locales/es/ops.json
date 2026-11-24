@@ -1100,6 +1100,7 @@
         "redo": "Volver a asociar",
         "refusedMissing": "{{dimension}}: {{value}} → {{target}}: valor inexistente",
         "refusedDisabled": "{{dimension}}: {{value}} → {{target}}: valor desactivado",
+        "refusedShared": "{{dimension}}: {{value}} → {{target}}: nombre compartido por varios registros",
         "closeTo": "Parecido a: {{names}}",
         "lines": "Líneas {{lines}}",
         "lines_one": "Línea {{lines}}"

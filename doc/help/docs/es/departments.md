@@ -126,7 +126,7 @@ Las columnas, en este orden:
 
 **Celdas obligatorias**: `name` y `company_name`, una empresa existente. Una fila con una `reference` puede dejarlas vacías: el departamento conserva su nombre y su empresa
 
-**Mismo nombre en dos empresas**: dos empresas pueden tener cada una un departamento con el mismo nombre. Una importación que nombra uno en una persona, una solicitud o un proyecto, o Kad en una solicitud o un proyecto, lo lee en la empresa del registro; cuando el registro no tiene ninguna, el mensaje nombra las empresas que tienen uno. Consulte [Nombres de registros](csv-files.md#names-of-records)
+**Mismo nombre en dos empresas**: dos empresas pueden tener cada una un departamento con el mismo nombre. Una importación que nombra uno en una persona, una solicitud o un proyecto, o Kad en una solicitud o un proyecto, lo lee en la empresa del registro. Cuando el registro no tiene empresa, un nombre que solo tiene una empresa le da esa empresa, y un nombre que comparten varias empresas se rechaza con un mensaje que las nombra. Consulte [Nombres de registros](csv-files.md#names-of-records)
 
 **Celdas vacías y `-`**: en un departamento que el archivo actualiza, una celda vacía conserva el valor guardado, y `-` borra `description` o `disabled_at`. `-` no puede borrar `reference`, `company_name`, `name` ni `status`: la fila se rechaza. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing)
 

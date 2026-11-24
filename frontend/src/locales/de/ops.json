@@ -1100,6 +1100,7 @@
         "redo": "Wieder zuordnen",
         "refusedMissing": "{{dimension}}: {{value}} → {{target}}: Wert nicht vorhanden",
         "refusedDisabled": "{{dimension}}: {{value}} → {{target}}: Wert deaktiviert",
+        "refusedShared": "{{dimension}}: {{value}} → {{target}}: Name mehrerer Datensätze",
         "closeTo": "Ähnlich: {{names}}",
         "lines": "Zeilen {{lines}}",
         "lines_one": "Zeile {{lines}}"
