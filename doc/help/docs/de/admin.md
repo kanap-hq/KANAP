@@ -345,6 +345,8 @@ Ressourcen sind zur einfacheren Verwaltung in Gruppen organisiert:
 
 Die Ressource Budget gilt für OPEX- und CAPEX-Zeilen gleichermaßen. Eine Rolle, die früher getrennte Stufen für OPEX und CAPEX hatte, behält die höhere der beiden auf Budget.
 
+Die Namen des Lieferanten, der Unternehmen und der Abteilungen, die eine Budgetzeile trägt, die Sie lesen dürfen, bleiben lesbar, auch wenn Ihre Rolle diese Listen nicht öffnen darf.
+
 **Portfolio**
 | Ressource | Was sie steuert |
 |-----------|-----------------|
