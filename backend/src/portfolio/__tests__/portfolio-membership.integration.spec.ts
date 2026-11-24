@@ -69,8 +69,8 @@ function services(runner: QueryRunner) {
     documents,
   );
   const tasks = new TasksUnifiedService(
-    manager.getRepository(Task), audit, undefined as any, undefined as any, quiet as any, new ItemNumberService(),
-    { logChange: async () => undefined } as any, undefined as any, undefined as any,
+    manager.getRepository(Task), audit, undefined as any, { recalculateForTask: async () => undefined } as any, quiet as any, new ItemNumberService(),
+    { logChange: async () => undefined } as any, undefined as any, { recalculateActualEffort: async () => undefined } as any,
   );
   return { requests, projects, tasks, audit };
 }
@@ -210,6 +210,17 @@ async function testTasks() {
     assert.deepEqual(await row(runner, 'tasks', dev.id), { category_id: ids.biz, stream_id: null }, 'the category alone drops the stream');
     await tasks.updateForTarget({ ...target, payload: { id: dev.id, stream_id: ids.opsBiz } as any }, creatorId, opts);
     assert.equal((await row(runner, 'tasks', dev.id)).stream_id, ids.opsBiz, 'the stream alone, in the task category');
+    // Moved into a project (A1): the project's stream goes on the task only within the task's category.
+    const businessProject: any = await projects.create({ name: 'Project Business', origin: 'fast_track', category_id: ids.biz, stream_id: ids.opsBiz } as any, tenantId, creatorId, { manager: runner.manager });
+    const itAlone: any = await tasks.createForTarget({ type: null, id: null, payload: { title: 'IT alone', category_id: ids.it } as any }, creatorId, opts);
+    await tasks.updateById(itAlone.id, { related_object_type: 'project', related_object_id: businessProject.id } as any, creatorId, opts);
+    assert.deepEqual(await row(runner, 'tasks', itAlone.id), { category_id: ids.it, stream_id: null }, 'moved: keeps its category, without the project stream');
+    const bare: any = await tasks.createForTarget({ type: null, id: null, payload: { title: 'Bare' } as any }, creatorId, opts);
+    await tasks.updateById(bare.id, { related_object_type: 'project', related_object_id: businessProject.id } as any, creatorId, opts);
+    assert.deepEqual(await row(runner, 'tasks', bare.id), { category_id: ids.biz, stream_id: ids.opsBiz }, 'moved: takes the project pair');
+    const businessAlone: any = await tasks.createForTarget({ type: null, id: null, payload: { title: 'Business alone', category_id: ids.biz } as any }, creatorId, opts);
+    await tasks.updateById(businessAlone.id, { related_object_type: 'project', related_object_id: businessProject.id } as any, creatorId, opts);
+    assert.deepEqual(await row(runner, 'tasks', businessAlone.id), { category_id: ids.biz, stream_id: ids.opsBiz }, 'moved: the project stream of its category');
     // A task saved before the rule stays writable on another field.
     await runner.query(`UPDATE tasks SET category_id = $2, stream_id = $3 WHERE id = $1`, [standalone.id, ids.it, ids.opsBiz]);
     await tasks.updateById(standalone.id, { title: 'Alone, renamed', category_id: ids.it } as any, creatorId, opts);

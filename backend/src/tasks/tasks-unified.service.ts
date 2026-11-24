@@ -25,7 +25,7 @@ import { assertContractsEditable } from '../data-access/contract-write-checks';
 import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
-import { givenMembership, settleRecordMembership, STREAM_PAIR } from '../common/record-membership';
+import { givenMembership, loadMembershipParents, settleRecordMembership, STREAM_PAIR } from '../common/record-membership';
 import { shownTaskClassification } from './task-shown-classification';
 import {
   IncidentViewer,
@@ -1190,8 +1190,8 @@ export class TasksUnifiedService {
           nextPayload.phase_id = null;
         }
 
-        const classificationKeys: Array<'source_id' | 'category_id' | 'stream_id' | 'company_id'> = [
-          'source_id', 'category_id', 'stream_id', 'company_id',
+        const classificationKeys: Array<'source_id' | 'category_id' | 'company_id'> = [
+          'source_id', 'category_id', 'company_id',
         ];
         for (const key of classificationKeys) {
           if ((nextPayload as any)[key] !== undefined) continue;
@@ -1202,14 +1202,23 @@ export class TasksUnifiedService {
             (nextPayload as any)[key] = defaultValue;
           }
         }
+        // The project's stream goes on a task without one only within the task's category (lot I7a of
+        // 26.12.1): another category keeps the task's, without a stream.
+        if (nextPayload.stream_id === undefined && existing.stream_id == null && defaults.stream_id) {
+          const category = nextPayload.category_id !== undefined ? nextPayload.category_id : existing.category_id;
+          const parentOf = await loadMembershipParents(manager, new Map([['stream', [String(defaults.stream_id)]]]), tenantId);
+          const streamCategory = parentOf('stream', String(defaults.stream_id));
+          if (!category || String(streamCategory ?? '').toLowerCase() === String(category).toLowerCase()) {
+            nextPayload.stream_id = defaults.stream_id as any;
+          }
+        }
       }
     }
 
-    // A stream in its category: on a project task, the target project's values stand where the task has none.
+    // A stream in its category: on a project task, the values it shows stand where it has none. A task
+    // that moves is judged on its own values: what its new project fills in is written by the move.
     if (canEditClassification && Object.keys(givenMembership([STREAM_PAIR], nextPayload as Record<string, unknown>)).length > 0) {
-      const project = relationChanged
-        ? resolvedTarget.projectDefaults ?? null
-        : await this.taskProjectDefaults(manager, existing);
+      const project = relationChanged ? null : await this.taskProjectDefaults(manager, existing);
       Object.assign(nextPayload, await this.settleTaskMembership(manager, nextPayload as Record<string, unknown>, existing, project, tenantId));
     }
 
