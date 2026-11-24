@@ -14,7 +14,7 @@ import type { CurrencyOption } from '../../../constants/isoOptions';
 import { currencyLabel, filterCurrencyOptions, useCurrencyOptions } from '../../../i18n/currencies';
 import useCurrencySettings from '../../../hooks/useCurrencySettings';
 import { STATUS_ENABLED, StatusValue } from '../../../constants/status';
-import { formatShortDate } from '../../../lib/dateFormat';
+import { formatShortInstantDate } from '../../../lib/dateFormat';
 import { isoToLocalDateInput, localDateInputToEndOfDayIso } from '../../../lib/datetime';
 import { useLocale } from '../../../i18n/useLocale';
 import { useCostCenterNode } from '../../../hooks/useCostCenterTree';
@@ -408,10 +408,10 @@ export default function BudgetPropertiesDrawer({
           {dimUnlessLive(false, (
             <>
               <PropertyRow label={t('opex.fields.created')}>
-                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(createdAt, locale, { year: 'always', empty: '-' })}</Typography>
+                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortInstantDate(createdAt, locale, { year: 'always', empty: '-' })}</Typography>
               </PropertyRow>
               <PropertyRow label={t('opex.fields.updated')}>
-                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(updatedAt, locale, { year: 'always', empty: '-' })}</Typography>
+                <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortInstantDate(updatedAt, locale, { year: 'always', empty: '-' })}</Typography>
               </PropertyRow>
             </>
           ))}
