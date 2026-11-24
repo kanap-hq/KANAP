@@ -689,6 +689,8 @@ function BudgetListPageView() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { values: [...LINE_CHECKS.map((check) => ({ value: check.value, label: t(check.label) })), { value: null }], searchable: false },
       valueGetter: (p) => lineChecksOf(p.data).map((check) => t(check.label)).join(', '),
+      // Two checks overflow the column: the whole text on hover, as the other cut cells.
+      tooltipValueGetter: (p) => (p.value ? String(p.value) : ''),
       width: 220,
       defaultHidden: true,
       cellRenderer: (params: any) => (

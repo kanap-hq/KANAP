@@ -804,6 +804,10 @@ describe('BudgetListPage', () => {
     expect(check.valueGetter!({ data: { to_check: ['coa_mismatch'] } })).toBe('shared.accountOutsideChart');
     expect(check.valueGetter!({ data: { to_check: null } })).toBe('');
     expect(check.valueGetter!({ data: undefined })).toBe('');
+    // The cell cuts two checks: the whole text in the grid's tooltip.
+    const tooltip = (check as Col & { tooltipValueGetter?: (p: unknown) => unknown }).tooltipValueGetter!;
+    expect(tooltip({ value: 'shared.quantityPrice, shared.accountOutsideChart' })).toBe('shared.quantityPrice, shared.accountOutsideChart');
+    expect(tooltip({ value: '' })).toBe('');
 
     const row = { id: 'c-1', nature: 'opex', item_number: 7, to_check: ['quantity_price', 'coa_mismatch'] };
     const { unmount } = render(<MemoryRouter>{check.cellRenderer!({ data: row, value: '', colDef: {} })}</MemoryRouter>);
