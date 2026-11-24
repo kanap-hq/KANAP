@@ -31,6 +31,7 @@ import AttachmentImage from './AttachmentImage';
 import AttachmentFileChip from './AttachmentFileChip';
 import PreviewCard from './PreviewCard';
 import { previewChainId } from '../previewChains';
+import { usePreviewBusy } from '../usePreviewBusy';
 import PlaidActivity from './PlaidActivity';
 import { useReferenceLinkPlugins } from '../utils/referenceLinks';
 
@@ -525,6 +526,7 @@ function PreviewBatch({
     return first ? previewChainId(first) : null;
   });
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const { onBusy, anyBusy } = usePreviewBusy();
 
   useEffect(() => {
     const current = previews.find((preview) => previewChainId(preview) === selectedId);
@@ -538,6 +540,8 @@ function PreviewBatch({
 
   const selected = previews.find((preview) => previewChainId(preview) === selectedId) || previews[0];
   const approvablePreviews = previews.filter(isApprovable);
+  // A card whose choices are being counted is about to be replaced: "Approve all" waits for it.
+  const counting = anyBusy(approvablePreviews);
   const rejectablePreviews = previews.filter(isRejectable);
   const showBulkAction = approvablePreviews.length >= PREVIEW_BATCH_BULK_MIN && !onOpenArtifact;
   const visibleConfirmPreviews = approvablePreviews.slice(0, 6);
@@ -572,7 +576,7 @@ function PreviewBatch({
               size="small"
               variant="outlined"
               color="inherit"
-              disabled={disabled}
+              disabled={disabled || counting}
               onClick={() => setConfirmOpen(true)}
               sx={{ textTransform: 'none', fontSize: 12, flexShrink: 0 }}
             >
@@ -676,6 +680,7 @@ function PreviewBatch({
             onApprove={onApprove}
             onReject={onReject}
             onReplace={onReplacePreview}
+            onBusy={onBusy}
           />
         )}
       </Stack>
@@ -727,7 +732,7 @@ function PreviewBatch({
           <Button
             variant="action-primary"
             onClick={handleApproveAll}
-            disabled={disabled || approvablePreviews.length === 0}
+            disabled={disabled || counting || approvablePreviews.length === 0}
           >
             {t('previewBatch.approveAll')}
           </Button>

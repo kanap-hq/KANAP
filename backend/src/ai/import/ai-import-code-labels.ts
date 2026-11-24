@@ -1,4 +1,5 @@
 import type { CsvLanguage } from '../../common/csv-sheet';
+import { accentFreeKey } from '../../common/name-matching';
 
 /**
  * The names of the fixed lists an import template offers, in the four languages, copied from the
@@ -128,6 +129,18 @@ export const SUPPLIER_CONTACT_ROLE_LABELS = codeLabels({
   support: ['Support', 'Support', 'Support', 'Soporte'],
   other: ['Other', 'Autre', 'Sonstige', 'Otro'],
 });
+
+/**
+ * A supplier contact role as a person or a file writes it: its code, or its word in any of the four
+ * languages (`Technique`), case and accents aside. Null for anything else. The contacts import and
+ * the assistant's contact links (supplier, contract, budget line) read a role through here.
+ */
+export function supplierContactRoleOf(text: string): string | null {
+  const key = accentFreeKey(text);
+  return Object.keys(SUPPLIER_CONTACT_ROLE_LABELS.en)
+    .find((code) => [code, ...Object.values(SUPPLIER_CONTACT_ROLE_LABELS).map((labels) => labels[code])]
+      .some((word) => !!word && accentFreeKey(word) === key)) ?? null;
+}
 
 export const RUN_BUILD_LABELS = codeLabels({
   run: ['Run', 'Run', 'Run', 'Run'],

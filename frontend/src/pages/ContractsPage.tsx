@@ -436,7 +436,7 @@ export default function ContractsPage() {
     {
       field: 'item_number',
       headerName: t('contracts.columns.reference'),
-      width: 100,
+      width: 110,
       filter: 'agTextColumnFilter',
       valueFormatter: (p) => (isPinned(p) || !p.value ? '' : formatItemRef('contract', Number(p.value))),
       comparator: (a: number, b: number) => (a || 0) - (b || 0),

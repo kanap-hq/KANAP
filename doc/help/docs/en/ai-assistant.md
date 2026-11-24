@@ -215,7 +215,7 @@ When Kad tries a filter value that a field does not take, for example "active" f
 
 When you ask for a change your role does not allow, Kad names the right you are missing, for example "you need the right to modify projects". An administrator adds it to your role.
 
-Kad makes only the changes your screens let you make, on the records you can reach there. With the right to contribute to projects, you can have Kad change the purpose of a project and its links to applications, assets and budget lines. The right to contribute to requests covers the same links on requests. A Business Contributor makes these changes only on the projects and requests they take part in. Linking a record needs the right to read its module. Renaming a project or changing its other fields needs the right to modify projects, as on the project page.
+Kad makes only the changes your screens let you make, on the records you can reach there. With the right to contribute to projects, you can have Kad change the purpose of a project and its links to applications, assets and budget lines. The right to contribute to requests covers the same links on requests. A Business Contributor makes these changes only on the projects and requests they take part in. Linking a record needs the right to read its module. Renaming a project or changing its other fields needs the right to modify projects, as on the project page. When Kad adds or removes a link, such as a contact, an application or a web link, the **History** tab of each record concerned shows the change as it does when you make it on the screen, with Kad for you as its author.
 
 With the Contributor level on incidents, Kad logs an incident, changes its fields, moves its status forward up to Closed, adds notes to the journal and links assets, applications and technologies. With the Member level on tasks, it creates a follow-up task on an incident. With the Administrator level on incidents, it reopens or cancels an incident, with a reason, and turns its restriction on or off. Closing freezes the incident. Deleting it stays on its screen. See [Ask the assistant](incidents.md#ask-the-assistant).
 
@@ -227,14 +227,20 @@ When Kad creates a budget line, it asks whether the line is OPEX or CAPEX if you
 
 ### Changing records in bulk { #changing-records-in-bulk }
 
-Kad changes one field on many budget lines or applications at once, as **Change the selection** does on the list. It needs the same right: the Member level on budget, or on applications. Name the records with a filter of the list, such as a supplier or a cost center, or with their references (`BL-3`, `APP-7`). Use one or the other in a request. A filter takes the enabled records, unless it names a status. Retired applications stay out, unless it names a lifecycle.
+Kad changes one field on many budget lines or applications at once, as **Change the selection** does on the list. It needs the same right: the Member level on budget, or on applications. Name the records with a filter of the list, such as a supplier or a cost center, or with their references (`BL-3`, `APP-7`). Use one or the other in a request. Two records that take the same value are enough: Kad prepares one preview for the whole change. A filter takes the enabled records, unless it names a status. Retired applications stay out, unless it names a lifecycle.
 
 - On budget lines: the cost center, the account, the paying company, the supplier, the IT owner, the business owner, run or build, or the value of a dimension.
 - On applications: the business owners or the IT owners (the people you name replace those of the role), the category, the lifecycle, the business criticality or the cyber criticality.
 
 Ask, for example: "Move the lines of supplier Acme to cost center IT-01" or "Make Claire Martin the IT owner of APP-3 and APP-7".
 
-The preview shows the records targeted, the field and its new value, how many records change, how many already have this value and how many are refused, with the reason. It lists the first records by reference. Approve it to apply the change. A change cannot be undone. The **History** tab of each record shows it as made by Kad for you.
+The preview shows the records targeted, the field and its new value, how many records change, how many already have this value and how many are refused, with the reason. It lists each record it changes, up to 200: its reference, which opens the record, its name, its value before and its value after. Beyond ten records, the link below the list shows the rest. Records you may not change are not in the list: the preview counts them with the reason.
+
+Each record in the list has a box. Clear it to leave the record out. The record stays in the list, and you can tick it again. The count above the list follows each change, such as "2 kept of 3". If more records have entered the selection since the preview and it would list more than 200, the boxes stop working: ask Kad for a new preview. **Approve** applies the change to the records you kept. When every record is left out, there is nothing to approve and the preview says so.
+
+Above 200 records, the preview gives the count and the first records by reference, without boxes. Kad offers to narrow the selection.
+
+After approval, the list stays in the preview and marks each record **Changed**, **Not changed** or **Left out**. A change cannot be undone. The **History** tab of each record shows it as made by Kad for you.
 
 Kad refuses a change:
 
@@ -243,7 +249,7 @@ Kad refuses a change:
 - Above 5,000 records. Narrow the filter
 - That would empty the account, the paying company, a required dimension, the category or the lifecycle
 
-If the list changes between the preview and your approval, the preview fails. Ask Kad for a new one. While another budget operation is running, the preview stays open: approve it again once that operation has finished. Assistants connected over MCP read only.
+If the list changes between the preview and your approval, the preview fails and nothing is changed. This includes a record that is not in the list and that the change would now modify. Ask Kad for a new one. While another budget operation is running, the preview stays open: approve it again once that operation has finished. Assistants connected over MCP read only.
 
 ### Deleting a record { #deleting-a-record }
 

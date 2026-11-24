@@ -1067,6 +1067,8 @@ export function useChat() {
   // A card replaced by a choice of the person (an import card) gives way to the newest of its chain.
   const shownPreviews = useMemo(() => latestOfChains(previews), [previews]);
   const replacePreview = useCallback((next: AiMutationPreview) => {
+    // A count answered after the person opened another conversation belongs to the one it came from.
+    if (next.conversation_id !== conversationIdRef.current) return;
     setPreviews((prev) => upsertPreview(prev, next));
   }, []);
 

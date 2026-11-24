@@ -215,7 +215,7 @@ Quand Kad essaie une valeur de filtre qu'un champ n'accepte pas, par exemple « 
 
 Quand vous demandez une modification que votre rôle ne permet pas, Kad nomme le droit qui vous manque, par exemple « vous avez besoin du droit de modifier les projets ». Un administrateur l'ajoute à votre rôle.
 
-Kad ne fait que les modifications que vos écrans vous permettent, sur les fiches que vous pouvez y atteindre. Avec le droit de contribuer aux projets, vous pouvez faire changer par Kad l'objectif d'un projet et ses liens vers des applications, des actifs et des lignes budgétaires. Le droit de contribuer aux demandes couvre les mêmes liens sur les demandes. Un Business Contributor ne fait ces modifications que sur les projets et les demandes auxquels il participe. Lier une fiche demande le droit de lire son module. Renommer un projet ou changer ses autres champs demande le droit de modifier les projets, comme sur la page du projet.
+Kad ne fait que les modifications que vos écrans vous permettent, sur les fiches que vous pouvez y atteindre. Avec le droit de contribuer aux projets, vous pouvez faire changer par Kad l'objectif d'un projet et ses liens vers des applications, des actifs et des lignes budgétaires. Le droit de contribuer aux demandes couvre les mêmes liens sur les demandes. Un Business Contributor ne fait ces modifications que sur les projets et les demandes auxquels il participe. Lier une fiche demande le droit de lire son module. Renommer un projet ou changer ses autres champs demande le droit de modifier les projets, comme sur la page du projet. Quand Kad ajoute ou retire un lien, comme un contact, une application ou un lien web, l'onglet **Historique** de chaque fiche concernée montre la modification comme quand vous la faites à l'écran, avec Kad pour vous comme auteur.
 
 Avec le niveau Contributeur sur les incidents, Kad enregistre un incident, modifie ses champs, fait avancer son statut jusqu'à Clôturé, ajoute des notes au journal et lie des actifs, des applications et des technologies. Avec le niveau Membre sur les tâches, il crée une tâche de suivi sur un incident. Avec le niveau Administrateur sur les incidents, il rouvre ou annule un incident, avec une raison, et active ou désactive sa restriction. La clôture fige l'incident. Sa suppression reste sur son écran. Voir [Demander à l'assistant](incidents.md#demander-a-lassistant).
 
@@ -227,14 +227,20 @@ Quand Kad crée une ligne budgétaire, il demande si la ligne est OPEX ou CAPEX 
 
 ### Modifier des fiches en masse { #changing-records-in-bulk }
 
-Kad modifie un champ sur de nombreuses lignes budgétaires ou applications à la fois, comme **Modifier la sélection** dans la liste. Il lui faut le même droit : le niveau Membre sur le budget, ou sur les applications. Désignez les fiches par un filtre de la liste, comme un fournisseur ou un centre de coûts, ou par leurs références (`BL-3`, `APP-7`). Utilisez l'un ou l'autre dans une demande. Un filtre prend les fiches activées, sauf s'il nomme un statut. Les applications retirées restent à l'écart, sauf s'il nomme un cycle de vie.
+Kad modifie un champ sur de nombreuses lignes budgétaires ou applications à la fois, comme **Modifier la sélection** dans la liste. Il lui faut le même droit : le niveau Membre sur le budget, ou sur les applications. Désignez les fiches par un filtre de la liste, comme un fournisseur ou un centre de coûts, ou par leurs références (`BL-3`, `APP-7`). Utilisez l'un ou l'autre dans une demande. Deux fiches qui prennent la même valeur suffisent : Kad prépare un seul aperçu pour toute la modification. Un filtre prend les fiches activées, sauf s'il nomme un statut. Les applications retirées restent à l'écart, sauf s'il nomme un cycle de vie.
 
 - Sur les lignes budgétaires : le centre de coûts, le compte, la société payeuse, le fournisseur, le responsable IT, le responsable métier, run ou build, ou la valeur d'une dimension.
 - Sur les applications : les responsables métier ou les responsables IT (les personnes nommées remplacent celles du rôle), la catégorie, le cycle de vie, la criticité business ou la criticité cyber.
 
 Demandez par exemple : « Passe les lignes du fournisseur Acme sur le centre de coûts IT-01 » ou « Mets Claire Martin responsable IT de APP-3 et APP-7 ».
 
-L'aperçu montre les fiches visées, le champ et sa nouvelle valeur, combien de fiches changent, combien ont déjà cette valeur et combien sont refusées, avec la raison. Il liste les premières fiches par leur référence. Approuvez-le pour appliquer la modification. Une modification ne s'annule pas. L'onglet **Historique** de chaque fiche l'indique comme faite par Kad pour vous.
+L'aperçu montre les fiches visées, le champ et sa nouvelle valeur, combien de fiches changent, combien ont déjà cette valeur et combien sont refusées, avec la raison. Il liste chaque fiche qu'il modifie, jusqu'à 200 : sa référence, qui ouvre la fiche, son nom, sa valeur avant et sa valeur après. Au-delà de dix fiches, le lien sous la liste affiche les autres. Les fiches que vous ne pouvez pas modifier ne sont pas dans la liste : l'aperçu les compte, avec la raison.
+
+Chaque fiche de la liste a une case. Décochez-la pour écarter la fiche. La fiche reste dans la liste, et vous pouvez la cocher de nouveau. Le décompte au-dessus de la liste suit chaque changement, par exemple « 2 gardées sur 3 ». Si d'autres fiches sont entrées dans la sélection depuis l'aperçu et qu'il en listerait plus de 200, les cases ne fonctionnent plus : demandez un nouvel aperçu à Kad. **Approuver** applique la modification aux fiches gardées. Quand toutes les fiches sont écartées, il n'y a rien à approuver et l'aperçu le dit.
+
+Au-delà de 200 fiches, l'aperçu donne le décompte et les premières fiches par leur référence, sans cases. Kad propose de resserrer la sélection.
+
+Après l'approbation, la liste reste dans l'aperçu et marque chaque fiche **Modifiée**, **Non modifiée** ou **Écartée**. Une modification ne s'annule pas. L'onglet **Historique** de chaque fiche l'indique comme faite par Kad pour vous.
 
 Kad refuse une modification :
 
@@ -243,7 +249,7 @@ Kad refuse une modification :
 - Au-delà de 5 000 fiches. Resserrez le filtre
 - Qui viderait le compte, la société payeuse, une dimension obligatoire, la catégorie ou le cycle de vie
 
-Si la liste change entre l'aperçu et votre approbation, l'aperçu échoue. Demandez-en un nouveau à Kad. Pendant qu'une autre opération sur le budget est en cours, l'aperçu reste ouvert : approuvez-le de nouveau une fois cette opération terminée. Les assistants connectés par MCP ne font que lire.
+Si la liste change entre l'aperçu et votre approbation, l'aperçu échoue et rien n'est modifié. Cela vaut aussi pour une fiche absente de la liste que la modification changerait désormais. Demandez-en un nouveau à Kad. Pendant qu'une autre opération sur le budget est en cours, l'aperçu reste ouvert : approuvez-le de nouveau une fois cette opération terminée. Les assistants connectés par MCP ne font que lire.
 
 ### Supprimer une fiche { #deleting-a-record }
 

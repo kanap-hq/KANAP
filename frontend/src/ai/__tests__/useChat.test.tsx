@@ -616,6 +616,27 @@ describe('useChat', () => {
     expect(result.current.lastRequestUsage).toEqual({ input_tokens: 1, output_tokens: 1 });
   });
 
+  // Review of lot K2e: a card answered by the server (a box, an import choice) after the person opened
+  // another conversation stays out of the one shown.
+  it('takes a replaced card into the conversation shown only', async () => {
+    vi.mocked(aiConversationsApi.getMessages).mockResolvedValue({ messages: [], conversation_usage: { input_tokens: 0, output_tokens: 0 } } as any);
+    vi.mocked(aiConversationsApi.getPreviews).mockResolvedValue([]);
+    const { result } = renderHook(() => useChat());
+    await act(async () => {
+      await result.current.loadConversation('conversation-2');
+    });
+    const card = (id: string, conversationId: string) => ({
+      preview_id: id, replaces_preview_id: 'preview-1', tool_name: 'bulk_update_applications', status: 'pending', conversation_id: conversationId,
+      target: { entity_type: 'applications', entity_id: null, ref: null, title: '2 applications' }, changes: {}, requires_confirmation: true,
+      actions: ['approve', 'reject'], summary: '', error_message: null, created_at: '2026-11-23T10:00:00.000Z',
+      expires_at: null, approved_at: null, rejected_at: null, executed_at: null,
+    }) as unknown as AiMutationPreview;
+    act(() => result.current.replacePreview(card('preview-2', 'conversation-1')));
+    expect(result.current.previews).toEqual([]);
+    act(() => result.current.replacePreview(card('preview-3', 'conversation-2')));
+    expect(result.current.previews.map((preview) => preview.preview_id)).toEqual(['preview-3']);
+  });
+
   it('shows a card the turn replaced as expired once the answer ends', async () => {
     const mapping = (id: string): AiMutationPreview => ({
       preview_id: id,

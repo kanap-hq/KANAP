@@ -417,8 +417,8 @@ export class SpendItemsService {
         recipients: recipientRows,
         rawEmails,
         tenantId,
-        // The CAPEX share always handed its manager over (the link it builds); the OPEX one never did.
-        ...(this.nature === 'capex' ? { manager: mg } : {}),
+        // The line's reference, read nowhere: the send outlives the request and its manager.
+        itemRef: `BL-${item.item_number}`,
       });
     }
     // The chosen persons who cannot open the line: the screen warns the sender (spec §5.6).
@@ -584,7 +584,7 @@ export class SpendItemsService {
           recipients,
           tenantId: saved.tenant_id,
           excludeUserId: userId,
-          manager: mg,
+          itemRef: `BL-${saved.item_number}`,
         });
       }
     }

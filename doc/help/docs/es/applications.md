@@ -159,7 +159,7 @@ Una celda sin valor muestra un guion.
 - **Categoría**, **Criticidad de negocio** y **Criticidad cibernética** solo ofrecen los valores que siguen disponibles en **Panorama IT > Configuración**
 - Una nueva criticidad de negocio o cibernética pasa una aplicación revisada a **Por revisar**, como en la página de la aplicación
 - Cada aplicación modificada tiene su propia entrada en su pestaña **Historial**
-- [Kad](ai-assistant.md#changing-records-in-bulk) hace el mismo cambio cuando usted se lo pide en una conversación, con los mismos derechos. Usted aprueba su vista previa
+- [Kad](ai-assistant.md#changing-records-in-bulk) hace el mismo cambio cuando usted se lo pide en una conversación, con los mismos derechos. Su vista previa lista las aplicaciones que modifica, y usted puede excluir algunas antes de aprobarla
 
 ---
 

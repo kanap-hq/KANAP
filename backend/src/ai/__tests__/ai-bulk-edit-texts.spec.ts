@@ -11,9 +11,22 @@ import {
   BUDGET_LINE_BULK_FIELD_LABELS,
   BUDGET_LINE_FILTER_LABELS,
   BUDGET_LINE_VALUE_WORDS,
+  BULK_EDIT_ALL_LEFT_OUT,
   BULK_EDIT_EMPTIED,
+  BULK_EDIT_HIDDEN,
+  bulkEditListGrewText,
   BULK_EDIT_REFUSAL_WORDS,
+  bulkEditCardText,
+  bulkEditTooLongNote,
 } from '../ai-bulk-edit-texts';
+import {
+  AI_BULK_EDIT_LIST_MAX,
+  bulkEditPreviewDto,
+  bulkListApplied,
+  bulkListLeftOut,
+  effectiveBulkSelection,
+  parseBulkExclusions,
+} from '../mutation/ai-bulk-edit';
 import { BUDGET_LINE_BULK_FILTER_FIELDS } from '../mutation/operations/bulk-update-budget-lines.ai-mutation-operation';
 import { APPLICATION_BULK_FILTER_FIELDS } from '../mutation/operations/bulk-update-applications.ai-mutation-operation';
 import { APPLICATION_BULK_REFUSALS } from '../../applications/application-bulk-edit';
@@ -157,4 +170,83 @@ function testApprovalRefusals() {
   }
 }
 
+/**
+ * The card that lists its records (lot K2e of 26.12.1): the counts say the records left out, the
+ * list replaces the first five, each value before in the person's language (empty and hidden
+ * worded), the left out records listed unticked, the selection the write runs on less them.
+ */
+function testTheCardListsItsRecords() {
+  const card = {
+    family: 'budget_lines' as const,
+    selection: { kind: 'rows' as const, refs: ['BL-1', 'BL-2', 'BL-3'] },
+    field: 'Cost center',
+    value: 'IT-01 · Informatique',
+    rows: 2,
+    changes: 2,
+    unchanged: 0,
+    refused: {},
+    examples: [{ ref: 'BL-1', title: 'Line 1' }, { ref: 'BL-2', title: 'Line 2' }],
+    excluded: 1,
+    listed: true,
+  };
+  const counts = {
+    en: 'Chosen lines: BL-1, BL-2, BL-3\n\nCost center → IT-01 · Informatique\n\n2 lines to change, 1 left out',
+    fr: 'Lignes choisies : BL-1, BL-2, BL-3\n\nCentre de coûts → IT-01 · Informatique\n\n2 lignes à modifier, 1 écartée',
+    de: 'Ausgewählte Zeilen: BL-1, BL-2, BL-3\n\nKostenstelle → IT-01 · Informatique\n\n2 Zeilen zu ändern, 1 ausgeschlossen',
+    es: 'Líneas elegidas: BL-1, BL-2, BL-3\n\nCentro de coste → IT-01 · Informatique\n\n2 líneas por modificar, 1 excluida',
+  };
+  for (const language of LANGUAGES) {
+    assert.equal(bulkEditCardText({ ...card, field: BUDGET_LINE_BULK_FIELD_LABELS[language].cost_center }, language), counts[language], `the card in ${language}`);
+  }
+  // Without the list (more than 200 records), the first five are named as before.
+  assert.match(bulkEditCardText({ ...card, listed: false, excluded: 0 }, 'en'), /2 lines to change\n\n- BL-1 Line 1\n- BL-2 Line 2$/);
+  assert.match(bulkEditCardText({ ...card, family: 'applications', excluded: 2 }, 'fr'), /2 applications à modifier, 2 écartées$/);
+  // Approved, the card no longer says what it would change: its summary says what changed (browser pass of lot K2e).
+  assert.equal(bulkEditCardText({ ...card, field: BUDGET_LINE_BULK_FIELD_LABELS.fr.cost_center, done: true }, 'fr'), 'Lignes choisies : BL-1, BL-2, BL-3\n\nCentre de coûts → IT-01 · Informatique');
+  assert.equal(bulkEditCardText({ ...card, listed: false, done: true }, 'en').includes('to change'), false);
+  assert.match(bulkEditTooLongNote('applications', 250, AI_BULK_EDIT_LIST_MAX), /^This card changes 250 applications: more than 200, so it counts them without listing them.*offer to narrow the selection/);
+
+  // The list for the screen: each value before in words, empty and hidden worded, the kept counted.
+  const list = {
+    rows: [
+      { id: 'a', ref: 'BL-1', title: 'Line 1', before: 'cc-fin', kept: true },
+      { id: 'b', ref: 'BL-2', title: 'Line 2', before: null, kept: true },
+      { id: 'c', ref: 'BL-3', title: 'Line 3', before: null, hidden: true as const, kept: false },
+    ],
+    words: { 'cc-fin': { en: 'FIN-02 · Finance', fr: 'FIN-02 · Finance', de: 'FIN-02 · Finance', es: 'FIN-02 · Finance' } },
+  };
+  for (const language of LANGUAGES) {
+    const dto = bulkEditPreviewDto(list, 'Field', null, language);
+    assert.deepEqual(dto.rows.map((row) => [row.before, row.before_state, row.kept]), [
+      ['FIN-02 · Finance', 'value', true], [BULK_EDIT_EMPTIED[language], 'empty', true], [BULK_EDIT_HIDDEN[language], 'hidden', false],
+    ]);
+    assert.deepEqual([dto.after, dto.after_empty, dto.kept, dto.excluded], [BULK_EDIT_EMPTIED[language], true, 2, 1]);
+    assert.ok(BULK_EDIT_ALL_LEFT_OUT[language].length > 20, `the refusal of a card with every record left out, in ${language}`);
+  }
+  assert.equal(new Set(LANGUAGES.map((language) => BULK_EDIT_HIDDEN[language])).size, 4);
+  // A recount past the bound is refused in the person's language (review of lot K2e).
+  assert.equal(bulkEditListGrewText('fr', 200), 'La sélection a dépassé 200 fiches depuis le comptage : demandez une nouvelle carte.');
+  assert.equal(new Set(LANGUAGES.map((language) => bulkEditListGrewText(language, 200))).size, 4);
+  // Once approved, each kept record marked changed or not; a left out one never.
+  assert.deepEqual(bulkListApplied(list, ['A', 'c']).rows.map((row) => row.changed), [true, false, false]);
+  // A recount, read again whole: the records left out unticked, the others kept.
+  const next = bulkListLeftOut(list, ['a']);
+  assert.deepEqual(next.rows.map((row) => [row.ref, row.kept]), [['BL-1', false], ['BL-2', true], ['BL-3', true]]);
+  assert.deepEqual(next.words, list.words);
+
+  // The selection the count and the write run on: the filter's exclude_ids, or the chosen ids less those left out.
+  const [x, y] = ['0b0e5c3c-0000-4000-8000-000000000001', '0b0e5c3c-0000-4000-8000-000000000002'];
+  assert.deepEqual(effectiveBulkSelection({ selection: { all: true, filters: { q: 1 } }, excluded: [x] }), { all: true, filters: { q: 1 }, exclude_ids: [x] });
+  assert.deepEqual(effectiveBulkSelection({ selection: { ids: [x, y] }, excluded: [x] }), { ids: [y] });
+  assert.deepEqual(effectiveBulkSelection({ selection: { ids: [x, y] } }), { ids: [x, y] });
+  assert.equal(effectiveBulkSelection({ selection: { ids: [x] }, excluded: [x] }), null, 'every chosen record left out: nothing to count');
+  // The route's list: ids, lower case, without repeats, sorted; at most 200.
+  assert.deepEqual(parseBulkExclusions([y.toUpperCase(), x, y]), [x, y]);
+  assert.throws(() => parseBulkExclusions('x'), /must be a list/);
+  assert.throws(() => parseBulkExclusions(['APP-3']), /must be record ids/);
+  assert.throws(() => parseBulkExclusions(Array.from({ length: 201 }, (_, i) => `0b0e5c3c-0000-4000-8000-${String(i).padStart(12, '0')}`)), /At most 200/);
+  console.log('  the card lists its records, left out ones counted and kept unticked: OK');
+}
+
+testTheCardListsItsRecords();
 run();

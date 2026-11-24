@@ -15,11 +15,11 @@ const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 
 const MODES: ColumnMode[] = ['amount', 'lines', 'monthly'];
 
 /** What the lines kept as a reference gave, when the record still says it (`lines_result`, or the computation a hand edit kept). */
-function referenceTotal(record: RoundInput): string {
+function referenceTotal(record: RoundInput, locale: string): string {
   const calc = record.last_calculation;
   if (!calc) return '';
   const total = calc.kind === 'computed' ? calc.total : calc.lines_result?.total;
-  return total ? formatMoney(total) : '';
+  return total ? formatMoney(total, locale) : '';
 }
 
 /** The question asked before a mode change on a column with amounts: what changes, what stays. */
@@ -169,7 +169,7 @@ export default function ColumnEditor({ tab, i18nPrefix, effectiveStart, endOfVal
   const pending = modeSwitch && modeSwitch.col === col ? modeSwitch : null;
   const shownMode = pending ? pending.to : activeMode;
   const reference = hasLines(record) && !followsLines(record) ? record : null;
-  const referenceAmount = reference ? referenceTotal(reference) : '';
+  const referenceAmount = reference ? referenceTotal(reference, tab.locale) : '';
 
   const referenceNote = reference && (
     <Typography data-testid="lines-reference" sx={captionSx}>

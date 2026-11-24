@@ -1048,8 +1048,8 @@
       "distributionChanged": "{{label}}: distribution changed",
       "copiedFrom": "copied from {{source}}",
       "overwriteManual": "manual rows replaced",
-      "roundInput": "Budget input {{column}}",
-      "roundInputNoColumn": "Budget input",
+      "roundInput": "{{column}} entry",
+      "roundInputNoColumn": "Entry",
       "calc": {
         "line": "Costed line {{name}}",
         "lineNumber": "Costed line no. {{number}}",

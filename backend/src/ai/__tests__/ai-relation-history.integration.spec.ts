@@ -1,0 +1,1444 @@
+import 'reflect-metadata';
+import * as assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { NestFactory } from '@nestjs/core';
+import { DataSource, QueryRunner } from 'typeorm';
+
+// A link the assistant changes leaves in the audit log the trace the screen leaves for the same
+// gesture (lot K2b), and it reads in the History tab of the record, said "by Kad":
+// - one entry per relation of the assistant's relation writer (`update_entity_relations`), three
+//   gestures each: add, remove, replace (one removed, one added);
+// - the assistant plays the gesture on a record up to the approval of its card; the screen's own
+//   service plays the same gesture on a twin record in the same state; their audit rows are
+//   compared (tables, actions, before and after, parent), the record ids, the generated ids and the
+//   dates neutralised, and the assistant's rows carry the card (`ai_chat`, the preview id);
+// - the History tab of the record, and of the other records the screen marks, holds an entry by the
+//   assistant that names the linked record;
+// - read by a person who may not read the linked record's module, the entry does not name it;
+// - the undo of an addition leaves the trace of the screen's removal of the same link.
+// The grid is a table: `CASES` below, one entry per relation of the writer (37). One more cell
+// writes as a person in limited data access: the lines they cannot read stay linked and are counted.
+// Needs the role kanap_data_limited (CI installs it) for that cell.
+
+process.env.STRIPE_SECRET_KEY = '';
+process.env.JWT_SECRET ||= 'test-jwt-secret-of-at-least-32-characters';
+process.env.AI_SETTINGS_ENCRYPTION_SECRET ||= 'test-ai-secret';
+process.env.S3_ENDPOINT ||= 'http://127.0.0.1:9';
+process.env.S3_BUCKET ||= 'ai-relation-history-spec';
+process.env.AWS_ACCESS_KEY_ID ||= 'test';
+process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
+
+type Gesture = 'add' | 'remove' | 'replace';
+const GESTURES: Gesture[] = ['add', 'remove', 'replace'];
+
+/** A linked record (or a web link) of a case: its id when it has one, and the name the history shows. */
+type Target = { id: string; name: string; input: unknown; extra?: Record<string, unknown> };
+
+/** One record of a gesture: the assistant's, or its twin for the screen. `name`: what another record's history shows of it. */
+type Rec = { id: string; ref: string; name?: string; instanceId?: string };
+
+type Env = {
+  runner: QueryRunner;
+  tenantId: string;
+  writer: string;
+  roleId: string;
+  app: any;
+  services: Record<string, any>;
+};
+
+/** A gesture: the targets that stay linked, the one removed, the one added. */
+type Step = { kept: Target; stays: Target[]; removed?: Target; added?: Target };
+
+type Entity = 'applications' | 'assets' | 'suppliers' | 'contracts' | 'budget_lines' | 'projects' | 'requests' | 'locations';
+
+type Case = {
+  name: string;
+  entity: Entity;
+  relation: string;
+  /** The History route key of the record. */
+  table: string;
+  /** kept, removed (by remove and replace), added (by add and replace). */
+  targets: (env: Env) => Promise<{ kept: Target; removed: Target; added: Target }>;
+  /** A new record (assistant's or twin) with the kept and removed targets linked. */
+  record: (env: Env, n: number, kept: Target, removed: Target) => Promise<Rec>;
+  /** The screen's gesture on the twin: the whole next set, or one toggle at a time. */
+  screen: (env: Env, rec: Rec, step: Step) => Promise<void>;
+  /** The module whose reader names the linked record; null when no such reader exists. */
+  hiddenWithout: string | null;
+  /** Other records the screen's gesture marks, read for the added target (add and replace). */
+  alsoOn?: (rec: Rec, step: { added?: Target; removed?: Target }) => Array<{ table: string; id: string; name: string }>;
+  /** The record's activity the screen writes too (`portfolio_activities`), by its column. */
+  activities?: 'project_id' | 'request_id';
+};
+
+const FULL = {
+  applications: 'admin', infrastructure: 'admin', budget: 'admin', contracts: 'admin', portfolio_projects: 'admin',
+  portfolio_requests: 'admin', business_processes: 'admin', companies: 'admin', departments: 'admin', contacts: 'admin',
+  suppliers: 'admin', locations: 'admin', users: 'admin',
+} as const;
+
+async function insertId(runner: QueryRunner, sql: string, params: unknown[]): Promise<string> {
+  return (await runner.query(`${sql} RETURNING id`, params))[0].id;
+}
+
+let counter = 0;
+const unique = (label: string) => `${label} ${++counter}`;
+
+async function application(env: Env, n: number): Promise<Rec> {
+  const ref = `APP-${n}`;
+  const id = await insertId(env.runner,
+    `INSERT INTO applications (tenant_id, name, sequential_id, status) VALUES ($1, $2, $3, 'enabled')`, [env.tenantId, unique('Caisse'), ref]);
+  const instanceId = await insertId(env.runner,
+    `INSERT INTO app_instances (tenant_id, application_id, environment) VALUES ($1, $2, 'prod')`, [env.tenantId, id]);
+  return { id, ref, instanceId };
+}
+
+async function asset(env: Env, cluster = false): Promise<Rec> {
+  const name = unique(cluster ? 'cluster' : 'srv-source').replace(/ /g, '-');
+  const id = await insertId(env.runner,
+    `INSERT INTO assets (tenant_id, name, kind, environment, is_cluster) VALUES ($1, $2, $3, 'prod', $4)`,
+    [env.tenantId, name, cluster ? 'cluster' : 'server', cluster]);
+  return { id, ref: name };
+}
+
+async function serverTarget(env: Env, label: string): Promise<Target> {
+  const name = unique(label).replace(/ /g, '-');
+  const id = await insertId(env.runner, `INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, $2, 'server', 'prod')`, [env.tenantId, name]);
+  return { id, name, input: name };
+}
+
+async function contactTarget(env: Env, first: string, role: string): Promise<Target> {
+  const last = unique('Contact').replace(/ /g, '');
+  const email = `${first}.${last}@example.test`.toLowerCase();
+  const id = await insertId(env.runner, `INSERT INTO contacts (tenant_id, first_name, last_name, email) VALUES ($1, $2, $3, $4)`, [env.tenantId, first, last, email]);
+  return { id, name: `${first} ${last}`, input: { contact_ref: email, role }, extra: { role } };
+}
+
+async function line(env: Env, nature: 'opex' | 'capex', number: number): Promise<Target> {
+  const name = unique(nature === 'opex' ? 'Licences' : 'Serveurs');
+  const id = await insertId(env.runner,
+    `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number, nature) VALUES ($1, $2, 'EUR', '2026-01-01', $3, $4)`,
+    [env.tenantId, name, number, nature]);
+  return { id, name, input: `BL-${number}`, extra: { nature } };
+}
+
+let companyId: string | null = null;
+let supplierId: string | null = null;
+async function contractTarget(env: Env): Promise<Target> {
+  companyId ??= await insertId(env.runner, `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Cidrerie', 'FR', 'Quimper')`, [env.tenantId]);
+  supplierId ??= await insertId(env.runner, `INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Fournisseur')`, [env.tenantId]);
+  const name = unique('Contrat');
+  const id = await insertId(env.runner,
+    `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES ($1, $2, $3, $4, '2026-01-01')`,
+    [env.tenantId, name, companyId, supplierId]);
+  return { id, name, input: name };
+}
+
+let projectNumber = 0;
+async function projectTarget(env: Env): Promise<Target> {
+  const number = ++projectNumber;
+  const name = unique('Projet');
+  const id = await insertId(env.runner, `INSERT INTO portfolio_projects (tenant_id, item_number, name) VALUES ($1, $2, $3)`, [env.tenantId, number, name]);
+  return { id, name, input: `PRJ-${number}` };
+}
+
+async function supplier(env: Env): Promise<Rec> {
+  const name = unique('Fournisseur');
+  return { id: await insertId(env.runner, `INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2)`, [env.tenantId, name]), ref: name, name };
+}
+
+async function contractRecord(env: Env): Promise<Rec> {
+  const t = await contractTarget(env);
+  return { id: t.id, ref: t.name, name: t.name };
+}
+
+let lineNumber = 2000;
+async function lineRecord(env: Env, nature: 'opex' | 'capex'): Promise<Rec> {
+  const t = await line(env, nature, ++lineNumber);
+  return { id: t.id, ref: String(t.input), name: t.name };
+}
+
+async function projectRecord(env: Env): Promise<Rec> {
+  const t = await projectTarget(env);
+  return { id: t.id, ref: String(t.input), name: t.name };
+}
+
+let requestNumber = 0;
+async function requestRecord(env: Env): Promise<Rec> {
+  const number = ++requestNumber;
+  const name = unique('Demande');
+  const id = await insertId(env.runner, `INSERT INTO portfolio_requests (tenant_id, item_number, name) VALUES ($1, $2, $3)`, [env.tenantId, number, name]);
+  return { id, ref: `REQ-${number}`, name };
+}
+
+async function locationRecord(env: Env): Promise<Rec> {
+  const name = unique('Site');
+  const id = await insertId(env.runner, `INSERT INTO locations (tenant_id, name, hosting_type) VALUES ($1, $2, 'on_premise')`, [env.tenantId, name]);
+  return { id, ref: name, name };
+}
+
+const RECORDS: Record<Entity, (env: Env, n: number) => Promise<Rec>> = {
+  applications: application,
+  assets: (env) => asset(env),
+  suppliers: supplier,
+  contracts: contractRecord,
+  budget_lines: (env) => lineRecord(env, 'opex'),
+  projects: projectRecord,
+  requests: requestRecord,
+  locations: locationRecord,
+};
+
+/** The History route key of each record. */
+const HISTORY_TABLE: Record<Entity, string> = {
+  applications: 'applications',
+  assets: 'assets',
+  suppliers: 'suppliers',
+  contracts: 'contracts',
+  budget_lines: 'spend_items',
+  projects: 'portfolio_projects',
+  requests: 'portfolio_requests',
+  locations: 'locations',
+};
+
+async function applicationTarget(env: Env): Promise<Target> {
+  const rec = await application(env, 500 + counter);
+  const [row] = await env.runner.query(`SELECT name FROM applications WHERE id = $1`, [rec.id]);
+  return { id: rec.id, name: row.name, input: rec.ref };
+}
+
+async function processTarget(env: Env): Promise<Target> {
+  const name = unique('Processus');
+  return { id: await insertId(env.runner, `INSERT INTO business_processes (tenant_id, name) VALUES ($1, $2)`, [env.tenantId, name]), name, input: name };
+}
+
+async function userTarget(env: Env, first: string, role: string): Promise<Target> {
+  const last = unique('Agent').replace(/ /g, '');
+  const email = `${first}.${last}@example.test`.toLowerCase();
+  const id = await insertId(env.runner, `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, $3, $4, $5, 'enabled')`, [env.tenantId, email, first, last, env.roleId]);
+  return { id, name: `${first} ${last}`, input: { user_ref: email, role }, extra: { role } };
+}
+
+function webLink(label: string): Target {
+  const name = unique(label);
+  const url = `https://example.test/${name.replace(/ /g, '-').toLowerCase()}`;
+  return { id: url, name, input: { url, description: name }, extra: { url } };
+}
+
+/** The relations-tab context of the screen, as the controllers build it for a person who reads every module. */
+function relationsCtx(env: Env) {
+  const access = { budget_lines: true, contracts: true, projects: true, requests: true, tasks: true, technologies: true, processes: true, incidents: true, assets: true };
+  return { manager: env.runner.manager, tenantId: env.tenantId, userId: env.writer, access, writes: { technologies: true, processes: true, incidents: true }, scopes: {}, incidentViewer: undefined };
+}
+
+/** The application's set relations the screen replaces whole (Overview, Audience). */
+function setCase(
+  name: string,
+  relation: string,
+  targets: Case['targets'],
+  seed: (env: Env, rec: Rec, t: Target) => Promise<void>,
+  replace: (env: Env, rec: Rec, list: Target[]) => Promise<void>,
+  hiddenWithout: string | null,
+): Case {
+  return {
+    name, entity: 'applications', relation, table: 'applications', targets, hiddenWithout,
+    record: async (env, n, kept, removed) => {
+      const rec = await application(env, n);
+      await seed(env, rec, kept);
+      await seed(env, rec, removed);
+      return rec;
+    },
+    screen: (env, rec, step) => replace(env, rec, [...step.stays, ...(step.added ? [step.added] : [])]),
+  };
+}
+
+/** The relations the Relations tab links one at a time (`setOwnedLink`, or the contracts' replacement). */
+function toggleCase(
+  name: string,
+  entity: Entity,
+  relation: string,
+  targets: Case['targets'],
+  seed: (env: Env, rec: Rec, t: Target) => Promise<void>,
+  toggle: (env: Env, rec: Rec, t: Target, add: boolean) => Promise<void>,
+  hiddenWithout: string | null,
+  alsoOn?: Case['alsoOn'],
+  make: (env: Env, n: number) => Promise<Rec> = RECORDS[entity],
+): Case {
+  return {
+    name, entity, relation, table: HISTORY_TABLE[entity], targets, hiddenWithout, alsoOn,
+    record: async (env, n, kept, removed) => {
+      const rec = await make(env, n);
+      await seed(env, rec, kept);
+      await seed(env, rec, removed);
+      return rec;
+    },
+    screen: async (env, rec, step) => {
+      if (step.removed) await toggle(env, rec, step.removed, false);
+      if (step.added) await toggle(env, rec, step.added, true);
+    },
+  };
+}
+
+/** The id of the link row of `ownerId` whose `column` is `value` (table and columns from the cases only). */
+async function rowId(env: Env, table: string, ownerColumn: string, ownerId: string, column: string, value: unknown): Promise<string> {
+  const [row] = await env.runner.query(`SELECT id FROM ${table} WHERE tenant_id = $1 AND ${ownerColumn} = $2 AND ${column} = $3`, [env.tenantId, ownerId, value]);
+  return row.id;
+}
+
+/** The targets a gesture adds or removes. */
+const changed = (step: { added?: Target; removed?: Target }): Target[] => [step.added, step.removed].filter((t): t is Target => !!t);
+
+/** The owner a portfolio Relations tab loads (`setProjectLink`, `setRequestLink`). */
+const owner = (env: Env, rec: Rec) => async () => ({ id: rec.id, tenantId: env.tenantId });
+
+/** The budget line's Relations tab context (`setBudgetLineRelation`). */
+function lineCtx(env: Env) {
+  return { manager: env.runner.manager, userId: env.writer, access: { projects: true, applications: true, technologies: true, contracts: true, assets: true } };
+}
+
+function projectCtx(env: Env) {
+  return { manager: env.runner.manager, tenantId: env.tenantId, userId: env.writer, access: { budget_lines: true, applications: true, assets: true, technologies: true, source_requests: true } };
+}
+
+function requestCtx(env: Env) {
+  return {
+    manager: env.runner.manager, tenantId: env.tenantId, userId: env.writer,
+    access: { budget_lines: true, applications: true, assets: true, processes: true, resulting_projects: true },
+    writes: { processes: true },
+  };
+}
+
+const insertLink = (table: string, source: string, target: string) => async (env: Env, rec: Rec, t: Target) => {
+  await env.runner.query(`INSERT INTO ${table} (tenant_id, ${source}, ${target}) VALUES ($1, $2, $3)`, [env.tenantId, rec.id, t.id]);
+};
+
+const CASES: Case[] = [
+  setCase('applications.owners', 'owners',
+    async (env) => {
+      const user = async (first: string, last: string) => {
+        const email = `${first}.${last}.${counter++}@example.test`.toLowerCase();
+        const id = await insertId(env.runner, `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, $3, $4, $5, 'enabled')`, [env.tenantId, email, first, last, env.roleId]);
+        return { id, name: `${first} ${last}`, input: { owner_type: 'it', user_ref: email } };
+      };
+      return { kept: await user('Erwan', 'Tanguy'), removed: await user('Yann', 'Le Goff'), added: await user('Maëlle', 'Kerbrat') };
+    },
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, 'it')`, [env.tenantId, rec.id, t.id]);
+    },
+    (env, rec, list) => env.services.owners.bulkReplaceOwners(rec.id, list.map((t) => ({ user_id: t.id, owner_type: 'it' })), env.writer, { manager: env.runner.manager }),
+    null),
+  setCase('applications.companies', 'companies',
+    async (env) => {
+      const company = async () => {
+        const name = unique('Société');
+        return { id: await insertId(env.runner, `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, $2, 'FR', 'Brest')`, [env.tenantId, name]), name, input: name };
+      };
+      return { kept: await company(), removed: await company(), added: await company() };
+    },
+    insertLink('application_companies', 'application_id', 'company_id'),
+    (env, rec, list) => env.services.owners.bulkReplaceCompanies(rec.id, list.map((t) => t.id), env.writer, { manager: env.runner.manager }),
+    'companies'),
+  setCase('applications.departments', 'departments',
+    async (env) => {
+      const company = await insertId(env.runner, `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, $2, 'FR', 'Brest')`, [env.tenantId, unique('Maison')]);
+      const department = async () => {
+        const name = unique('Service');
+        return { id: await insertId(env.runner, `INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, $3)`, [env.tenantId, company, name]), name, input: name };
+      };
+      return { kept: await department(), removed: await department(), added: await department() };
+    },
+    insertLink('application_departments', 'application_id', 'department_id'),
+    (env, rec, list) => env.services.owners.bulkReplaceDepartments(rec.id, list.map((t) => t.id), env.writer, { manager: env.runner.manager }),
+    'departments'),
+  setCase('applications.support_contacts', 'support_contacts',
+    async (env) => ({ kept: await contactTarget(env, 'Anne', 'Support'), removed: await contactTarget(env, 'Brieuc', 'Support'), added: await contactTarget(env, 'Gwen', 'Vendor') }),
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO application_support_contacts (tenant_id, application_id, contact_id, role) VALUES ($1, $2, $3, $4)`, [env.tenantId, rec.id, t.id, t.extra?.role]);
+    },
+    (env, rec, list) => env.services.owners.bulkReplaceSupportContacts(rec.id, list.map((t) => ({ contact_id: t.id, role: t.extra?.role })), env.writer, { manager: env.runner.manager }),
+    'contacts'),
+  toggleCase('applications.budget_lines', 'applications', 'budget_lines',
+    async (env) => ({ kept: await line(env, 'opex', 901), removed: await line(env, 'opex', 902), added: await line(env, 'capex', 903) }),
+    insertLink('application_spend_items', 'application_id', 'spend_item_id'),
+    (env, rec, t, add) => env.services.appRelations.setLink('budget_lines', rec.id, t.id, add, relationsCtx(env)),
+    'budget'),
+  toggleCase('applications.contracts', 'applications', 'contracts',
+    async (env) => ({ kept: await contractTarget(env), removed: await contractTarget(env), added: await contractTarget(env) }),
+    insertLink('application_contracts', 'application_id', 'contract_id'),
+    (env, rec, t, add) => env.services.appRelations.setLink('contracts', rec.id, t.id, add, relationsCtx(env)),
+    'contracts'),
+  toggleCase('applications.projects', 'applications', 'projects',
+    async (env) => ({ kept: await projectTarget(env), removed: await projectTarget(env), added: await projectTarget(env) }),
+    insertLink('application_projects', 'application_id', 'project_id'),
+    (env, rec, t, add) => env.services.appRelations.setLink('projects', rec.id, t.id, add, relationsCtx(env)),
+    'portfolio_projects'),
+  toggleCase('applications.links', 'applications', 'links',
+    async () => {
+      const link = (label: string) => {
+        const name = unique(label);
+        const url = `https://example.test/${name.replace(/ /g, '-').toLowerCase()}`;
+        return { id: url, name, input: { url, description: name }, extra: { url } };
+      };
+      return { kept: link('Wiki'), removed: link('Runbook'), added: link('Supervision') };
+    },
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO application_links (tenant_id, application_id, url, description) VALUES ($1, $2, $3, $4)`, [env.tenantId, rec.id, t.extra?.url, t.name]);
+    },
+    async (env, rec, t, add) => {
+      if (add) {
+        await env.services.appCrud.createLink(rec.id, { url: t.extra?.url, description: t.name }, env.writer, { manager: env.runner.manager });
+        return;
+      }
+      const [row] = await env.runner.query(`SELECT id FROM application_links WHERE tenant_id = $1 AND application_id = $2 AND url = $3`, [env.tenantId, rec.id, t.extra?.url]);
+      await env.services.appCrud.deleteLink(rec.id, row.id, env.writer, { manager: env.runner.manager });
+    },
+    null),
+  toggleCase('applications.asset_assignments', 'applications', 'asset_assignments',
+    async (env) => {
+      const server = async (label: string) => {
+        const t = await serverTarget(env, label);
+        return { ...t, input: { environment: 'prod', asset_ref: t.name, role: 'web' } };
+      };
+      return { kept: await server('srv-kept'), removed: await server('srv-gone'), added: await server('srv-new') };
+    },
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO app_asset_assignments (tenant_id, app_instance_id, asset_id, role) VALUES ($1, $2, $3, 'web')`, [env.tenantId, rec.instanceId, t.id]);
+    },
+    async (env, rec, t, add) => {
+      const opts = { manager: env.runner.manager, tenantId: env.tenantId };
+      if (add) {
+        await env.services.assignments.create(rec.instanceId, { asset_id: t.id, role: 'web' }, env.writer, opts);
+        return;
+      }
+      const [row] = await env.runner.query(`SELECT id FROM app_asset_assignments WHERE tenant_id = $1 AND app_instance_id = $2 AND asset_id = $3`, [env.tenantId, rec.instanceId, t.id]);
+      await env.services.assignments.delete(rec.instanceId, row.id, env.writer, opts);
+    },
+    'infrastructure'),
+
+  toggleCase('assets.budget_lines', 'assets', 'budget_lines',
+    async (env) => ({ kept: await line(env, 'opex', 911), removed: await line(env, 'opex', 912), added: await line(env, 'capex', 913) }),
+    insertLink('asset_spend_items', 'asset_id', 'spend_item_id'),
+    (env, rec, t, add) => env.services.assetTab.setLink('budget_lines', rec.id, t.id, add, relationsCtx(env)),
+    'budget',
+    // The Relations tab names the line it added or removed: its own history shows the asset.
+    (rec, step) => [step.added, step.removed].filter((t): t is Target => !!t).map((t) => ({ table: 'spend_items', id: t.id, name: rec.ref }))),
+  toggleCase('assets.contracts', 'assets', 'contracts',
+    async (env) => ({ kept: await contractTarget(env), removed: await contractTarget(env), added: await contractTarget(env) }),
+    insertLink('asset_contracts', 'asset_id', 'contract_id'),
+    (env, rec, t, add) => env.services.assetTab.setLink('contracts', rec.id, t.id, add, relationsCtx(env)),
+    'contracts'),
+  toggleCase('assets.projects', 'assets', 'projects',
+    async (env) => ({ kept: await projectTarget(env), removed: await projectTarget(env), added: await projectTarget(env) }),
+    insertLink('asset_projects', 'asset_id', 'project_id'),
+    (env, rec, t, add) => env.services.assetTab.setLink('projects', rec.id, t.id, add, relationsCtx(env)),
+    'portfolio_projects'),
+  {
+    name: 'assets.relations', entity: 'assets', relation: 'relations', table: 'assets', hiddenWithout: null,
+    targets: async (env) => {
+      const related = async (label: string) => {
+        const t = await serverTarget(env, label);
+        return { ...t, input: { related_asset_ref: t.name, relation_type: 'depends_on' } };
+      };
+      return { kept: await related('db-kept'), removed: await related('db-gone'), added: await related('db-new') };
+    },
+    record: async (env, _n, kept, removed) => {
+      const rec = await asset(env);
+      for (const t of [kept, removed]) {
+        await env.runner.query(`INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type) VALUES ($1, $2, $3, 'depends_on')`, [env.tenantId, rec.id, t.id]);
+      }
+      return rec;
+    },
+    screen: (env, rec, step) => env.services.assetRelations.bulkReplaceRelations(
+      rec.id,
+      [...step.stays, ...(step.added ? [step.added] : [])].map((t) => ({ related_asset_id: t.id, relation_type: 'depends_on' })),
+      env.tenantId,
+      env.writer,
+      { manager: env.runner.manager, tenantId: env.tenantId },
+    ),
+  },
+  {
+    name: 'assets.cluster_members', entity: 'assets', relation: 'cluster_members', table: 'assets', hiddenWithout: null,
+    targets: async (env) => ({ kept: await serverTarget(env, 'node-kept'), removed: await serverTarget(env, 'node-gone'), added: await serverTarget(env, 'node-new') }),
+    record: async (env, _n, kept, removed) => {
+      const rec = await asset(env, true);
+      for (const t of [kept, removed]) {
+        await env.runner.query(`INSERT INTO asset_cluster_members (tenant_id, cluster_id, asset_id) VALUES ($1, $2, $3)`, [env.tenantId, rec.id, t.id]);
+      }
+      return rec;
+    },
+    screen: (env, rec, step) => env.services.assetCrud.replaceClusterMembers(
+      rec.id, [...step.stays, ...(step.added ? [step.added] : [])].map((t) => t.id), env.tenantId, env.writer, { manager: env.runner.manager, tenantId: env.tenantId },
+    ),
+  },
+  {
+    // The asset's Support panel replaces the whole set (`AssetsSupportService.bulkReplaceSupportContacts`).
+    name: 'assets.support_contacts', entity: 'assets', relation: 'support_contacts', table: 'assets', hiddenWithout: 'contacts',
+    targets: async (env) => ({ kept: await contactTarget(env, 'Loïc', 'Support'), removed: await contactTarget(env, 'Nolwenn', 'Support'), added: await contactTarget(env, 'Tanguy', 'Vendor') }),
+    record: async (env, _n, kept, removed) => {
+      const rec = await asset(env);
+      for (const t of [kept, removed]) {
+        await env.runner.query(`INSERT INTO asset_support_contacts (tenant_id, asset_id, contact_id, role) VALUES ($1, $2, $3, $4)`, [env.tenantId, rec.id, t.id, t.extra?.role]);
+      }
+      return rec;
+    },
+    screen: (env, rec, step) => env.services.assetSupport.bulkReplaceSupportContacts(
+      rec.id,
+      [...step.stays, ...(step.added ? [step.added] : [])].map((t) => ({ contact_id: t.id, role: t.extra?.role })),
+      env.tenantId,
+      env.writer,
+      { manager: env.runner.manager, tenantId: env.tenantId },
+    ),
+  },
+  toggleCase('assets.links', 'assets', 'links',
+    async () => {
+      const link = (label: string) => {
+        const name = unique(label);
+        const url = `https://example.test/${name.replace(/ /g, '-').toLowerCase()}`;
+        return { id: url, name, input: { url, description: name }, extra: { url } };
+      };
+      return { kept: link('Console'), removed: link('Fiche'), added: link('Sonde') };
+    },
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO asset_links (tenant_id, asset_id, url, description) VALUES ($1, $2, $3, $4)`, [env.tenantId, rec.id, t.extra?.url, t.name]);
+    },
+    async (env, rec, t, add) => {
+      const opts = { manager: env.runner.manager, tenantId: env.tenantId };
+      if (add) {
+        await env.services.assetAttachments.createLink(rec.id, { url: t.extra?.url, description: t.name }, env.writer, opts);
+        return;
+      }
+      const [row] = await env.runner.query(`SELECT id FROM asset_links WHERE tenant_id = $1 AND asset_id = $2 AND url = $3`, [env.tenantId, rec.id, t.extra?.url]);
+      await env.services.assetAttachments.deleteLink(rec.id, row.id, env.writer, opts);
+    },
+    null),
+
+  // Pass 2: suppliers, contracts, budget lines, projects, requests and sites.
+  toggleCase('suppliers.contacts', 'suppliers', 'contacts',
+    async (env) => {
+      // The contact added already has a supplier: attaching it does not change the contact, so the
+      // assistant's record and the screen's twin see it in the same state.
+      const added = await contactTarget(env, 'Tugdual', 'support');
+      await env.runner.query(`UPDATE contacts SET supplier_id = $2 WHERE id = $1`, [added.id, (await supplier(env)).id]);
+      return { kept: await contactTarget(env, 'Ronan', 'commercial'), removed: await contactTarget(env, 'Soazig', 'technical'), added };
+    },
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO supplier_contacts (tenant_id, supplier_id, contact_id, role) VALUES ($1, $2, $3, $4)`, [env.tenantId, rec.id, t.id, t.extra?.role]);
+    },
+    async (env, rec, t, add) => {
+      const ctx = { manager: env.runner.manager, tenantId: env.tenantId, userId: env.writer };
+      if (add) {
+        await env.services.supplierContacts.attach(rec.id, { contactId: t.id, role: t.extra?.role }, ctx);
+        return;
+      }
+      await env.services.supplierContacts.detach(rec.id, await rowId(env, 'supplier_contacts', 'supplier_id', rec.id, 'contact_id', t.id), ctx);
+    },
+    'contacts',
+    // The link belongs to the contact's history too.
+    (rec, step) => changed(step).map((t) => ({ table: 'contacts', id: t.id, name: rec.name! }))),
+  toggleCase('contracts.contacts', 'contracts', 'contacts',
+    async (env) => ({ kept: await contactTarget(env, 'Annaig', 'commercial'), removed: await contactTarget(env, 'Brendan', 'technical'), added: await contactTarget(env, 'Corentin', 'support') }),
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO contract_contacts (tenant_id, contract_id, contact_id, role, origin) VALUES ($1, $2, $3, $4, 'manual')`, [env.tenantId, rec.id, t.id, t.extra?.role]);
+    },
+    async (env, rec, t, add) => {
+      const opts = { manager: env.runner.manager, tenantId: env.tenantId };
+      if (add) {
+        await env.services.contractContacts.attachManual(rec.id, { contactId: t.id, role: t.extra?.role }, env.writer, opts);
+        return;
+      }
+      await env.services.contractContacts.detach(rec.id, await rowId(env, 'contract_contacts', 'contract_id', rec.id, 'contact_id', t.id), env.writer, opts);
+    },
+    'contacts',
+    (rec, step) => changed(step).map((t) => ({ table: 'contacts', id: t.id, name: rec.name! }))),
+  toggleCase('contracts.links', 'contracts', 'links',
+    async () => ({ kept: webLink('Portail'), removed: webLink('Annexe'), added: webLink('Avenant') }),
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO contract_links (tenant_id, contract_id, url, description) VALUES ($1, $2, $3, $4)`, [env.tenantId, rec.id, t.extra?.url, t.name]);
+    },
+    async (env, rec, t, add) => {
+      const opts = { manager: env.runner.manager };
+      if (add) {
+        await env.services.contracts.createUrl(rec.id, { url: t.extra?.url, description: t.name }, env.writer, opts);
+        return;
+      }
+      await env.services.contracts.deleteUrl(rec.id, await rowId(env, 'contract_links', 'contract_id', rec.id, 'url', t.extra?.url), env.writer, opts);
+    },
+    null),
+  {
+    // The contract's Budget tab replaces the whole set (`replaceContractRelations`).
+    name: 'contracts.budget_lines', entity: 'contracts', relation: 'budget_lines', table: 'contracts', hiddenWithout: 'budget',
+    targets: async (env) => ({ kept: await line(env, 'opex', ++lineNumber), removed: await line(env, 'opex', ++lineNumber), added: await line(env, 'capex', ++lineNumber) }),
+    record: async (env, _n, kept, removed) => {
+      const rec = await contractRecord(env);
+      for (const t of [kept, removed]) await insertLink('contract_spend_items', 'contract_id', 'spend_item_id')(env, rec, t);
+      return rec;
+    },
+    screen: (env, rec, step) => env.services.contracts.replaceRelations(
+      rec.id, 'budget_lines', [...step.stays, ...(step.added ? [step.added] : [])].map((t) => t.id), env.writer, { manager: env.runner.manager },
+    ),
+    // The tab names the line when exactly one changed: the line's history shows the contract.
+    alsoOn: (rec, step) => (step.added && step.removed ? [] : changed(step)).map((t) => ({ table: 'spend_items', id: t.id, name: rec.name! })),
+  },
+  toggleCase('budget_lines.applications', 'budget_lines', 'applications',
+    async (env) => ({ kept: await applicationTarget(env), removed: await applicationTarget(env), added: await applicationTarget(env) }),
+    insertLink('application_spend_items', 'spend_item_id', 'application_id'),
+    (env, rec, t, add) => env.services.budgetLines.setRelation('applications', rec.id, t.id, add, lineCtx(env)),
+    'applications',
+    undefined,
+    // A CAPEX line: the rows keep the CAPEX labels.
+    (env) => lineRecord(env, 'capex')),
+  toggleCase('budget_lines.projects', 'budget_lines', 'projects',
+    async (env) => ({ kept: await projectTarget(env), removed: await projectTarget(env), added: await projectTarget(env) }),
+    insertLink('portfolio_project_opex', 'opex_id', 'project_id'),
+    (env, rec, t, add) => env.services.budgetLines.setRelation('projects', rec.id, t.id, add, lineCtx(env)),
+    'portfolio_projects'),
+  toggleCase('budget_lines.contracts', 'budget_lines', 'contracts',
+    async (env) => ({ kept: await contractTarget(env), removed: await contractTarget(env), added: await contractTarget(env) }),
+    insertLink('contract_spend_items', 'spend_item_id', 'contract_id'),
+    (env, rec, t, add) => env.services.budgetLines.setRelation('contracts', rec.id, t.id, add, lineCtx(env)),
+    'contracts'),
+  toggleCase('budget_lines.contacts', 'budget_lines', 'contacts',
+    async (env) => ({ kept: await contactTarget(env, 'Denez', 'commercial'), removed: await contactTarget(env, 'Enora', 'technical'), added: await contactTarget(env, 'Fanch', 'support') }),
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO spend_item_contacts (tenant_id, spend_item_id, contact_id, role, origin) VALUES ($1, $2, $3, $4, 'manual')`, [env.tenantId, rec.id, t.id, t.extra?.role]);
+    },
+    async (env, rec, t, add) => {
+      const opts = { manager: env.runner.manager, tenantId: env.tenantId };
+      if (add) {
+        await env.services.lineContacts.attachManual(rec.id, { contactId: t.id, role: t.extra?.role }, env.writer, opts);
+        return;
+      }
+      await env.services.lineContacts.detach(rec.id, await rowId(env, 'spend_item_contacts', 'spend_item_id', rec.id, 'contact_id', t.id), env.writer, opts);
+    },
+    'contacts',
+    (rec, step) => changed(step).map((t) => ({ table: 'contacts', id: t.id, name: rec.name! }))),
+  toggleCase('budget_lines.links', 'budget_lines', 'links',
+    async () => ({ kept: webLink('Devis'), removed: webLink('Facture'), added: webLink('Bon') }),
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO spend_links (tenant_id, spend_item_id, url, description) VALUES ($1, $2, $3, $4)`, [env.tenantId, rec.id, t.extra?.url, t.name]);
+    },
+    async (env, rec, t, add) => {
+      const opts = { manager: env.runner.manager };
+      if (add) {
+        await env.services.capexItems.createLink(rec.id, { url: t.extra?.url, description: t.name }, env.writer, opts);
+        return;
+      }
+      await env.services.capexItems.deleteLink(rec.id, await rowId(env, 'spend_links', 'spend_item_id', rec.id, 'url', t.extra?.url), env.writer, opts);
+    },
+    null,
+    undefined,
+    // A CAPEX line: the links read `capex_links`, the line named `capex_item_id`, as its route writes them.
+    (env) => lineRecord(env, 'capex')),
+  { ...toggleCase('projects.applications', 'projects', 'applications',
+    async (env) => ({ kept: await applicationTarget(env), removed: await applicationTarget(env), added: await applicationTarget(env) }),
+    insertLink('application_projects', 'project_id', 'application_id'),
+    (env, rec, t, add) => env.services.portfolioRelations.setProjectLink('applications', t.id, add, projectCtx(env), owner(env, rec)),
+    'applications',
+    // The application added or removed is the row's parent: its history shows the project.
+    (rec, step) => changed(step).map((t) => ({ table: 'applications', id: t.id, name: rec.name! }))), activities: 'project_id' },
+  { ...toggleCase('projects.assets', 'projects', 'assets',
+    async (env) => ({ kept: await serverTarget(env, 'srv-p-kept'), removed: await serverTarget(env, 'srv-p-gone'), added: await serverTarget(env, 'srv-p-new') }),
+    insertLink('asset_projects', 'project_id', 'asset_id'),
+    (env, rec, t, add) => env.services.portfolioRelations.setProjectLink('assets', t.id, add, projectCtx(env), owner(env, rec)),
+    'infrastructure',
+    (rec, step) => changed(step).map((t) => ({ table: 'assets', id: t.id, name: rec.name! }))), activities: 'project_id' },
+  { ...toggleCase('projects.budget_lines', 'projects', 'budget_lines',
+    async (env) => ({ kept: await line(env, 'opex', ++lineNumber), removed: await line(env, 'opex', ++lineNumber), added: await line(env, 'capex', ++lineNumber) }),
+    insertLink('portfolio_project_opex', 'project_id', 'opex_id'),
+    (env, rec, t, add) => env.services.portfolioRelations.setProjectLink('budget_lines', t.id, add, projectCtx(env), owner(env, rec)),
+    'budget',
+    (rec, step) => changed(step).map((t) => ({ table: 'spend_items', id: t.id, name: rec.name! }))), activities: 'project_id' },
+  { ...toggleCase('requests.applications', 'requests', 'applications',
+    async (env) => ({ kept: await applicationTarget(env), removed: await applicationTarget(env), added: await applicationTarget(env) }),
+    insertLink('portfolio_request_applications', 'request_id', 'application_id'),
+    (env, rec, t, add) => env.services.portfolioRelations.setRequestLink('applications', t.id, add, requestCtx(env), owner(env, rec)),
+    'applications'), activities: 'request_id' },
+  { ...toggleCase('requests.assets', 'requests', 'assets',
+    async (env) => ({ kept: await serverTarget(env, 'srv-r-kept'), removed: await serverTarget(env, 'srv-r-gone'), added: await serverTarget(env, 'srv-r-new') }),
+    insertLink('portfolio_request_assets', 'request_id', 'asset_id'),
+    (env, rec, t, add) => env.services.portfolioRelations.setRequestLink('assets', t.id, add, requestCtx(env), owner(env, rec)),
+    'infrastructure'), activities: 'request_id' },
+  { ...toggleCase('requests.budget_lines', 'requests', 'budget_lines',
+    async (env) => ({ kept: await line(env, 'opex', ++lineNumber), removed: await line(env, 'opex', ++lineNumber), added: await line(env, 'capex', ++lineNumber) }),
+    insertLink('portfolio_request_opex', 'request_id', 'opex_id'),
+    (env, rec, t, add) => env.services.portfolioRelations.setRequestLink('budget_lines', t.id, add, requestCtx(env), owner(env, rec)),
+    'budget',
+    (rec, step) => changed(step).map((t) => ({ table: 'spend_items', id: t.id, name: rec.name! }))), activities: 'request_id' },
+  toggleCase('requests.business_processes', 'requests', 'business_processes',
+    async (env) => ({ kept: await processTarget(env), removed: await processTarget(env), added: await processTarget(env) }),
+    insertLink('portfolio_request_business_processes', 'request_id', 'business_process_id'),
+    (env, rec, t, add) => env.services.portfolioRelations.setRequestLink('processes', t.id, add, requestCtx(env), owner(env, rec)),
+    'business_processes'),
+  toggleCase('locations.internal_contacts', 'locations', 'internal_contacts',
+    async (env) => ({ kept: await userTarget(env, 'Gaël', 'Gardien'), removed: await userTarget(env, 'Hervé', 'Astreinte'), added: await userTarget(env, 'Iwan', 'Responsable') }),
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO location_user_contacts (tenant_id, location_id, user_id, role) VALUES ($1, $2, $3, $4)`, [env.tenantId, rec.id, t.id, t.extra?.role]);
+    },
+    async (env, rec, t, add) => {
+      const opts = { manager: env.runner.manager };
+      if (add) {
+        await env.services.locations.addInternalContact(rec.id, { user_id: t.id, role: t.extra?.role }, env.tenantId, env.writer, opts);
+        return;
+      }
+      await env.services.locations.removeInternalContact(rec.id, await rowId(env, 'location_user_contacts', 'location_id', rec.id, 'user_id', t.id), env.writer, opts);
+    },
+    null),
+  toggleCase('locations.external_contacts', 'locations', 'external_contacts',
+    async (env) => ({ kept: await contactTarget(env, 'Jakez', 'Mainteneur'), removed: await contactTarget(env, 'Katell', 'Bailleur'), added: await contactTarget(env, 'Loeiz', 'Électricien') }),
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO location_contacts (tenant_id, location_id, contact_id, role) VALUES ($1, $2, $3, $4)`, [env.tenantId, rec.id, t.id, t.extra?.role]);
+    },
+    async (env, rec, t, add) => {
+      const opts = { manager: env.runner.manager };
+      if (add) {
+        await env.services.locations.addExternalContact(rec.id, { contact_id: t.id, role: t.extra?.role }, env.tenantId, env.writer, opts);
+        return;
+      }
+      await env.services.locations.removeExternalContact(rec.id, await rowId(env, 'location_contacts', 'location_id', rec.id, 'contact_id', t.id), env.writer, opts);
+    },
+    'contacts'),
+  toggleCase('locations.links', 'locations', 'links',
+    async () => ({ kept: webLink('Plan'), removed: webLink('Accès'), added: webLink('Badge') }),
+    async (env, rec, t) => {
+      await env.runner.query(`INSERT INTO location_links (tenant_id, location_id, url, description) VALUES ($1, $2, $3, $4)`, [env.tenantId, rec.id, t.extra?.url, t.name]);
+    },
+    async (env, rec, t, add) => {
+      const opts = { manager: env.runner.manager };
+      if (add) {
+        await env.services.locations.createLink(rec.id, { url: t.extra?.url, description: t.name }, env.writer, opts);
+        return;
+      }
+      await env.services.locations.deleteLink(rec.id, await rowId(env, 'location_links', 'location_id', rec.id, 'url', t.extra?.url), env.writer, opts);
+    },
+    null),
+  toggleCase('locations.sub_locations', 'locations', 'sub_locations',
+    async () => {
+      const room = (label: string): Target => {
+        const name = unique(label);
+        return { id: name, name, input: { name } };
+      };
+      return { kept: room('Salle A'), removed: room('Salle B'), added: room('Salle C') };
+    },
+    async (env, rec, t) => {
+      await env.runner.query(
+        `INSERT INTO location_sub_items (tenant_id, location_id, name, display_order)
+         VALUES ($1, $2, $3, COALESCE((SELECT MAX(display_order) + 1 FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2), 0))`,
+        [env.tenantId, rec.id, t.name],
+      );
+    },
+    async (env, rec, t, add) => {
+      const opts = { manager: env.runner.manager };
+      if (add) {
+        await env.services.locations.createSubItem(rec.id, { name: t.name }, env.tenantId, env.writer, opts);
+        return;
+      }
+      await env.services.locations.deleteSubItem(rec.id, await rowId(env, 'location_sub_items', 'location_id', rec.id, 'name', t.name), env.writer, opts);
+    },
+    null),
+];
+
+type AuditRow = {
+  id: string; table_name: string; record_id: string | null; action: string; before_json: unknown; after_json: unknown;
+  user_id: string | null; source: string | null; source_ref: string | null; parent_table: string | null; parent_id: string | null;
+};
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DATE = /^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}(:?\d{2})?)?)?$/;
+
+/**
+ * The rows seeded for the spec, by id: the record (or the case's targets) they were seeded for, and
+ * their name there, `<table> <k>` for the k-th row of that table. The assistant's record and its
+ * twin are seeded by the same code: their rows bear the same names.
+ */
+const SEEDED = new Map<string, { owner: string; name: string }>();
+
+/**
+ * Runs a seeding and names the rows it inserts (`SEEDED`), for the record `ownerOf` returns. Its
+ * inserts answer their rows (`RETURNING *` when they ask for none).
+ */
+async function seeding<T>(runner: QueryRunner, fn: () => Promise<T>, ownerOf: (value: T) => string): Promise<T> {
+  const query = runner.query;
+  const born: Array<{ table: string; id: string }> = [];
+  runner.query = (async (sql: string, parameters?: unknown[], structured?: boolean) => {
+    const insert = /^\s*INSERT\s+INTO\s+([\w."]+)/i.exec(sql);
+    const text = insert && !/\bRETURNING\b/i.test(sql) ? `${sql.replace(/;\s*$/, '')} RETURNING *` : sql;
+    const result: any = await (query as any).call(runner, text, parameters, structured);
+    if (insert) {
+      const table = insert[1].replace(/"/g, '').replace(/^public\./, '');
+      for (const row of Array.isArray(result) ? result : result?.records ?? []) {
+        if (typeof row?.id === 'string' && UUID.test(row.id)) born.push({ table, id: row.id.toLowerCase() });
+      }
+    }
+    return result;
+  }) as QueryRunner['query'];
+  let value: T;
+  try {
+    value = await fn();
+  } finally {
+    runner.query = query;
+  }
+  const owner = ownerOf(value).toLowerCase();
+  const counts = new Map<string, number>();
+  for (const { table, id } of born) {
+    if (SEEDED.has(id)) continue;
+    const k = (counts.get(table) ?? 0) + 1;
+    counts.set(table, k);
+    SEEDED.set(id, { owner, name: `${table} ${k}` });
+  }
+  return value;
+}
+
+type Namer = (id: string) => string;
+
+/**
+ * How a cell names an id: `SELF` for the record, its role for a target or a person (`KEPT`,
+ * `REMOVED`, `ADDED`, `WRITER`...), `own <table> <k>` for a row seeded with the record,
+ * `target <table> <k>` for a row seeded with the case's targets, `other <uuid>` for a row seeded
+ * for anything else (another record, the twin, a shared row). `ID` is left to the ids born from
+ * the write itself (a link row it creates).
+ */
+function namer(self: string, roles: Map<string, string>, targetsOwner: string): Namer {
+  const selfKey = self.toLowerCase();
+  const targetsKey = targetsOwner.toLowerCase();
+  return (id) => {
+    const key = id.toLowerCase();
+    if (key === selfKey) return 'SELF';
+    const role = roles.get(key);
+    if (role) return role;
+    const seeded = SEEDED.get(key);
+    if (!seeded) return 'ID';
+    if (seeded.owner === selfKey) return `own ${seeded.name}`;
+    if (seeded.owner === targetsKey) return `target ${seeded.name}`;
+    return `other ${key}`;
+  };
+}
+
+/** The ids of a cell by role, lower case. */
+const rolesOf = (entries: Array<[string, string]>) => new Map(entries.map(([id, role]) => [id.toLowerCase(), role]));
+
+/** A row as both sides compare it: ids named by the cell (`namer`), dates `DATE`, sets unordered. */
+function neutral(value: unknown, name: Namer): unknown {
+  if (typeof value === 'string') {
+    if (UUID.test(value)) return name(value);
+    if (DATE.test(value)) return 'DATE';
+    return value;
+  }
+  if (Array.isArray(value)) {
+    // The sets the screens write carry no order: compared as sets.
+    return value.map((entry) => neutral(entry, name)).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      // The tenancy column: an entity the screen saves without it does not read it back; every
+      // allow-list hides it.
+      .filter(([key, entry]) => entry !== undefined && key !== 'tenant_id')
+      .map(([key, entry]) => [key, neutral(entry, name)]));
+  }
+  return value;
+}
+
+type ActivityRow = { type: string; context: string | null; content: string | null; decision_outcome: string | null; changed_fields: unknown; author_id: string | null };
+
+/** The activities of a record as both sides compare them: a set. */
+function activityShape(rows: ActivityRow[], name: Namer) {
+  return rows.map((row) => neutral(row, name)).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+}
+
+function shape(rows: AuditRow[], name: Namer) {
+  return rows.map((row) => ({
+    table: row.table_name,
+    action: row.action,
+    record_id: neutral(row.record_id, name),
+    before: neutral(row.before_json, name),
+    after: neutral(row.after_json, name),
+    parent_table: row.parent_table,
+    parent_id: neutral(row.parent_id, name),
+  }));
+}
+
+async function run() {
+  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for ai-relation-history.integration.spec.ts.');
+  const { AppModule } = require('../../app.module');
+  const { AiMutationPreviewService } = require('../ai-mutation-preview.service');
+  const { AiPolicyService } = require('../ai-policy.service');
+  const { AiEntityService } = require('../ai-entity.service');
+  const { RecordHistoryService } = require('../../audit/record-history.service');
+  const { ApplicationsOwnersService } = require('../../applications/services/applications-owners.service');
+  const { ApplicationsRelationsService } = require('../../applications/services/applications-relations.service');
+  const { ApplicationsCrudService } = require('../../applications/services/applications-crud.service');
+  const { AppAssetAssignmentsService } = require('../../app-asset-assignments/app-asset-assignments.service');
+  const { AssetRelationsTabService } = require('../../assets/asset-relations-tab.service');
+  const { AssetsRelationsService } = require('../../assets/services/assets-relations.service');
+  const { AssetsCrudService } = require('../../assets/services/assets-crud.service');
+  const { AssetsAttachmentsService } = require('../../assets/services/assets-attachments.service');
+  const { AssetsSupportService } = require('../../assets/services/assets-support.service');
+  const { SupplierContactsService } = require('../../suppliers/supplier-contacts.service');
+  const { ContractContactsService } = require('../../contracts/contract-contacts.service');
+  const { ContractsService } = require('../../contracts/contracts.service');
+  const { BudgetLinesService } = require('../../spend/budget-lines.service');
+  const { SpendItemContactsService } = require('../../spend/spend-item-contacts.service');
+  const { CapexItemsService } = require('../../spend/spend-items.service');
+  const { PortfolioRelationsService } = require('../../portfolio/portfolio-relations.service');
+  const { LocationsService } = require('../../locations/locations.service');
+  const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
+  app.get(AiPolicyService).assertSurfaceAccess = async () => undefined;
+  const previews = app.get(AiMutationPreviewService);
+  const dataSource = app.get(DataSource);
+  const runner = dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  const failures: string[] = [];
+  let passed = 0;
+  try {
+    const tenantId = randomUUID();
+    const slug = `ai-relation-history-${tenantId.slice(0, 8)}`;
+    await runner.query(
+      `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
+       VALUES ($1, $2, $3, 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
+      [tenantId, slug, slug],
+    );
+    await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+    const roleId = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Writer', 'Writer')`, [tenantId]);
+    for (const [resource, level] of Object.entries({ ...FULL, ai_chat: 'member' })) {
+      await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, $3, $4)`, [tenantId, roleId, resource, level]);
+    }
+    const writer = await insertId(runner,
+      `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, 'Claude', 'Writer', $3, 'enabled')`,
+      [tenantId, `writer-${tenantId.slice(0, 8)}@example.test`, roleId]);
+    await runner.query(`INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary) VALUES ($1, $2, $3, true)`, [tenantId, writer, roleId]);
+
+    const env: Env = {
+      runner, tenantId, writer, roleId, app,
+      services: {
+        owners: app.get(ApplicationsOwnersService),
+        appRelations: app.get(ApplicationsRelationsService),
+        appCrud: app.get(ApplicationsCrudService),
+        assignments: app.get(AppAssetAssignmentsService),
+        assetTab: app.get(AssetRelationsTabService),
+        assetRelations: app.get(AssetsRelationsService),
+        assetCrud: app.get(AssetsCrudService),
+        assetAttachments: app.get(AssetsAttachmentsService),
+        assetSupport: app.get(AssetsSupportService),
+        supplierContacts: app.get(SupplierContactsService),
+        contractContacts: app.get(ContractContactsService),
+        contracts: app.get(ContractsService),
+        budgetLines: app.get(BudgetLinesService),
+        lineContacts: app.get(SpendItemContactsService),
+        capexItems: app.get(CapexItemsService),
+        portfolioRelations: app.get(PortfolioRelationsService),
+        locations: app.get(LocationsService),
+      },
+    };
+    const ctx = { tenantId, userId: writer, isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const, manager: runner.manager, conversationId: null };
+    const history = (table: string, id: string, permissions: Record<string, string>) => new RecordHistoryService().list(
+      { tenantId, userId: writer, isAdmin: false, permissions, manager: runner.manager }, table, id, { limit: 100 },
+    );
+    const auditSince = async (marker: string): Promise<AuditRow[]> => runner.query(
+      `SELECT id, table_name, record_id::text, action, before_json, after_json, user_id::text, source, source_ref,
+              parent_table, parent_id::text
+         FROM audit_log WHERE tenant_id = $1 AND created_at > $2::timestamptz ORDER BY created_at, id`,
+      [tenantId, marker],
+    );
+    const now = async (): Promise<string> => (await runner.query(`SELECT clock_timestamp()::text AS t`))[0].t;
+    // Every activity of a record made for the cell (`created_at` is the transaction's time: unordered).
+    const activitiesOf = async (column: 'project_id' | 'request_id', id: string): Promise<ActivityRow[]> => runner.query(
+      `SELECT type, context, content, decision_outcome, changed_fields, author_id::text FROM portfolio_activities WHERE tenant_id = $1 AND ${column} = $2`,
+      [tenantId, id],
+    );
+    const entities = app.get(AiEntityService);
+
+    let n = 100;
+    for (const c of CASES) {
+      const targetsOwner = `targets ${c.name}`;
+      const targets = await seeding(runner, () => c.targets(env), () => targetsOwner);
+      const roles = rolesOf([[targets.kept.id, 'KEPT'], [targets.removed.id, 'REMOVED'], [targets.added.id, 'ADDED'], [writer, 'WRITER'], [roleId, 'ROLE']]);
+      for (const gesture of GESTURES) {
+        const cell = `${c.name} ${gesture}`;
+        try {
+          const step: Step = {
+            kept: targets.kept,
+            stays: gesture === 'add' ? [targets.kept, targets.removed] : [targets.kept],
+            ...(gesture !== 'add' ? { removed: targets.removed } : {}),
+            ...(gesture !== 'remove' ? { added: targets.added } : {}),
+          };
+          // The assistant, up to the approval of its card.
+          const mine = await seeding(runner, () => c.record(env, ++n, targets.kept, targets.removed), (rec) => rec.id);
+          const ofMine = namer(mine.id, roles, targetsOwner);
+          const kadMarker = await now();
+          const preview = await previews.createPreview(ctx, 'update_entity_relations', {
+            entity_type: c.entity, ref: mine.ref, relation: c.relation,
+            ...(step.added ? { add: [step.added.input] } : {}),
+            ...(step.removed ? { remove: [step.removed.input] } : {}),
+          });
+          const executed = await previews.executePreview(ctx, preview.preview_id);
+          assert.equal(executed.status, 'executed', `${cell}: the card runs (${executed.error_message ?? executed.summary ?? ''})`);
+          const kadRows = await auditSince(kadMarker);
+          assert.ok(kadRows.length > 0, `${cell}: the assistant writes audit rows`);
+          for (const row of kadRows) {
+            assert.equal(row.source, 'ai_chat', `${cell}: ${row.table_name} by the assistant`);
+            assert.equal(row.source_ref, preview.preview_id, `${cell}: ${row.table_name} names the card`);
+          }
+
+          // The screen, on the twin.
+          const twin = await seeding(runner, () => c.record(env, ++n, targets.kept, targets.removed), (rec) => rec.id);
+          const ofTwin = namer(twin.id, roles, targetsOwner);
+          {
+            const screenMarker = await now();
+            await c.screen(env, twin, step);
+            const screenRows = await auditSince(screenMarker);
+            assert.deepEqual(shape(kadRows, ofMine), shape(screenRows, ofTwin), `${cell}: the assistant's audit rows are the screen's`);
+            if (c.activities) {
+              const kadActivities = await activitiesOf(c.activities, mine.id);
+              assert.ok(kadActivities.length > 0, `${cell}: the assistant writes the record's activity`);
+              assert.deepEqual(activityShape(kadActivities, ofMine), activityShape(await activitiesOf(c.activities, twin.id), ofTwin), `${cell}: the assistant's activity is the screen's`);
+            }
+          }
+          // The assistant reads its own change in the project's recent activity.
+          if (c.activities === 'project_id') {
+            const read = await entities.getEntityContext(ctx, { entity_type: 'projects', entity_id: mine.id });
+            const recent = JSON.stringify((read as any)?.metadata?.recent_activity ?? read);
+            assert.ok(/"type":"change"/.test(recent), `${cell}: the project's recent activity holds the change (${recent.slice(0, 400)})`);
+          }
+
+          // The History tab, said by the assistant, names the linked record.
+          const named = step.added ?? step.removed!;
+          const page = await history(c.table, mine.id, FULL);
+          const byKad = page.items.filter((item: any) => item.actor.kind === 'assistant');
+          assert.ok(byKad.length > 0, `${cell}: the history holds an entry by the assistant`);
+          assert.ok(JSON.stringify(byKad).includes(named.name), `${cell}: the entry names ${named.name}`);
+          if (step.added && step.removed) {
+            assert.ok(JSON.stringify(byKad).includes(step.removed.name), `${cell}: the entry names the removed ${step.removed.name}`);
+          }
+          for (const other of c.alsoOn?.(mine, step) ?? []) {
+            const otherPage = await history(other.table, other.id, FULL);
+            const otherByKad = otherPage.items.filter((item: any) => item.actor.kind === 'assistant');
+            assert.ok(JSON.stringify(otherByKad).includes(other.name), `${cell}: the ${other.table} history names ${other.name}`);
+          }
+          // A reader of the record who may not read the linked record's module: not named.
+          if (c.hiddenWithout) {
+            const { [c.hiddenWithout]: _dropped, ...partial } = FULL as Record<string, string>;
+            const hiddenPage = await history(c.table, mine.id, partial);
+            const hiddenByKad = hiddenPage.items.filter((item: any) => item.actor.kind === 'assistant');
+            assert.ok(hiddenByKad.length > 0, `${cell}: the entry stays for a reader without ${c.hiddenWithout}`);
+            assert.ok(!JSON.stringify(hiddenByKad).includes(named.name), `${cell}: ${named.name} is not named without ${c.hiddenWithout}`);
+            // Withheld: a reference `{ hidden: true }`, or a count of the lines outside the reader's
+            // modules (`budget_lines_outside`, the `{ ids }` line sets of a contract, a project, a request).
+            assert.ok(/"hidden":true|"field":"budget_lines_outside"/.test(JSON.stringify(hiddenByKad)), `${cell}: the linked record reads as withheld (${JSON.stringify(hiddenByKad).slice(0, 800)})`);
+          }
+          // The undo of an addition leaves the trace of the screen's removal of the same link.
+          if (gesture === 'add') {
+            const undoMarker = await now();
+            const undo = await previews.createReversePreview(ctx, preview.preview_id);
+            const undone = await previews.executePreview(ctx, undo.preview_id);
+            assert.equal(undone.status, 'executed', `${cell}: the undo runs (${undone.error_message ?? ''})`);
+            const undoRows = await auditSince(undoMarker);
+            assert.ok(undoRows.length > 0 && undoRows.every((row) => row.source === 'ai_chat' && row.source_ref === undo.preview_id), `${cell}: the undo is audited by its card`);
+            {
+              const screenMarker = await now();
+              await c.screen(env, twin, { kept: targets.kept, stays: step.stays, removed: targets.added });
+              const screenRows = await auditSince(screenMarker);
+              assert.deepEqual(shape(undoRows, ofMine), shape(screenRows, ofTwin), `${cell}: the undo's audit rows are the screen's removal`);
+              if (c.activities) {
+                assert.deepEqual(activityShape(await activitiesOf(c.activities, mine.id), ofMine), activityShape(await activitiesOf(c.activities, twin.id), ofTwin), `${cell}: the undo's activity is the screen's`);
+              }
+            }
+          }
+          passed += 1;
+          console.log(`  ${cell}: OK`);
+        } catch (error: any) {
+          failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 40).join('\n')}`);
+          console.log(`  ${cell}: FAILED`);
+        }
+      }
+    }
+
+    // A person in limited data access links a line to a project: the line they cannot read stays
+    // linked, is never named and is counted in the rows (`hidden_kept`), as the project's Relations
+    // tab writes them for the same person.
+    const cell = 'projects.budget_lines limited access';
+    const [limitedRole] = await runner.query(`SELECT 1 FROM pg_roles WHERE rolname = 'kanap_data_limited'`);
+    if (!limitedRole) {
+      if (process.env.CI) failures.push(`${cell}: the role kanap_data_limited is missing`);
+      else console.log(`  ${cell}: skipped (no role kanap_data_limited)`);
+    } else {
+      await runner.query('SAVEPOINT limited_access');
+      try {
+        const company = async (name: string) => insertId(runner, `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, $2, 'FR', 'Rennes')`, [tenantId, unique(name)]);
+        const readable = await company('Lisible');
+        const outside = await company('Hors accès');
+        const limited = await insertId(runner,
+          `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status, data_access_mode) VALUES ($1, $2, 'Rita', 'Limitée', $3, 'enabled', 'limited')`,
+          [tenantId, `limited-${tenantId.slice(0, 8)}@example.test`, roleId]);
+        await runner.query(`INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary) VALUES ($1, $2, $3, true)`, [tenantId, limited, roleId]);
+        await runner.query(
+          `INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, access) VALUES ($1, $2, 'company', $3, 'edit')`,
+          [tenantId, limited, readable]);
+        const paidBy = async (companyId: string) => {
+          const t = await line(env, 'opex', ++lineNumber);
+          await runner.query(`UPDATE spend_items SET paying_company_id = $2 WHERE id = $1`, [t.id, companyId]);
+          return t;
+        };
+        const limitedTargets = 'targets limited access';
+        const [kept, added, hidden] = await seeding(runner, async () => [await paidBy(readable), await paidBy(readable), await paidBy(outside)], () => limitedTargets);
+        const seeded = async () => {
+          const rec = await projectRecord(env);
+          for (const t of [kept, hidden]) await insertLink('portfolio_project_opex', 'project_id', 'opex_id')(env, rec, t);
+          return rec;
+        };
+        const mine = await seeding(runner, seeded, (rec) => rec.id);
+        const twin = await seeding(runner, seeded, (rec) => rec.id);
+        const roles = rolesOf([
+          [kept.id, 'KEPT'], [added.id, 'ADDED'], [hidden.id, 'HIDDEN'], [limited, 'LIMITED'], [readable, 'READABLE COMPANY'],
+          [outside, 'OUTSIDE COMPANY'], [roleId, 'ROLE'],
+        ]);
+        await runner.query(`SELECT data_access_apply($1)`, [limited]);
+        const limitedCtx = { ...ctx, userId: limited };
+
+        const kadMarker = await now();
+        const preview = await previews.createPreview(limitedCtx, 'update_entity_relations', {
+          entity_type: 'projects', ref: mine.ref, relation: 'budget_lines', add: [added.input],
+        });
+        assert.ok(!JSON.stringify(preview).includes(hidden.name), `${cell}: the card does not name the line outside the access`);
+        const executed = await previews.executePreview(limitedCtx, preview.preview_id);
+        assert.equal(executed.status, 'executed', `${cell}: the card runs (${executed.error_message ?? ''})`);
+        const kadRows = await auditSince(kadMarker);
+        assert.ok(kadRows.length === 1 && (kadRows[0].after_json as any)?.hidden_kept === 1, `${cell}: one row counting the hidden line (${JSON.stringify(kadRows)})`);
+        assert.ok(!JSON.stringify(kadRows).includes(hidden.id), `${cell}: the rows do not name the hidden line`);
+        const [{ n }] = await runner.query(`SELECT data_access_hidden_count('project', $1) AS n`, [mine.id]);
+        assert.equal(Number(n), 1, `${cell}: the hidden line stays linked`);
+
+        const screenMarker = await now();
+        await env.services.portfolioRelations.setProjectLink('budget_lines', added.id, true, { ...projectCtx(env), userId: limited }, owner(env, twin));
+        const screenRows = await auditSince(screenMarker);
+        assert.deepEqual(shape(kadRows, namer(mine.id, roles, limitedTargets)), shape(screenRows, namer(twin.id, roles, limitedTargets)), `${cell}: the assistant's audit rows are the screen's`);
+        passed += 1;
+        console.log(`  ${cell}: OK`);
+      } catch (error: any) {
+        failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 40).join('\n')}`);
+        console.log(`  ${cell}: FAILED`);
+      } finally {
+        // Back to the writer's access and the state before the cell.
+        await runner.query('ROLLBACK TO SAVEPOINT limited_access');
+      }
+    }
+
+    // A person in limited data access reads a contract of their company without the right to modify
+    // it: every change of its contacts or its links is refused when the card is asked, and a card
+    // asked while they could still modify it is refused at its approval. Nothing is written, no audit
+    // row is left, as the contract's own panels answer (403 "This contract is read only in your access.").
+    if (limitedRole) {
+      await runner.query('SAVEPOINT read_only_contract');
+      try {
+        const companyId = await insertId(runner, `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, $2, 'FR', 'Morlaix')`, [tenantId, unique('Lecture')]);
+        const supplier = await insertId(runner, `INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2)`, [tenantId, unique('Fournisseur')]);
+        const reader = await insertId(runner,
+          `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status, data_access_mode) VALUES ($1, $2, 'Léa', 'Lectrice', $3, 'enabled', 'limited')`,
+          [tenantId, `reader-${tenantId.slice(0, 8)}@example.test`, roleId]);
+        await runner.query(`INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary) VALUES ($1, $2, $3, true)`, [tenantId, reader, roleId]);
+        await runner.query(
+          `INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, access) VALUES ($1, $2, 'company', $3, 'read')`,
+          [tenantId, reader, companyId]);
+        const readerCtx = { ...ctx, userId: reader };
+        // The access of the person, taken again as the approval takes it. Each cell starts from the
+        // writer's role: the rollback to its savepoint drops the person's.
+        const access = async (level: 'read' | 'edit') => {
+          await runner.query(`UPDATE user_data_access_nodes SET access = $3 WHERE tenant_id = $1 AND user_id = $2`, [tenantId, reader, level]);
+          await runner.query(`SELECT data_access_apply($1)`, [reader]);
+        };
+        // Seeded by the writer, before the person's access is taken.
+        const contract = async () => {
+          const name = unique('Contrat lu');
+          const id = await insertId(runner,
+            `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES ($1, $2, $3, $4, '2026-01-01')`,
+            [tenantId, name, companyId, supplier]);
+          for (const t of [anne, brieuc]) {
+            await runner.query(`INSERT INTO contract_contacts (tenant_id, contract_id, contact_id, role, origin) VALUES ($1, $2, $3, $4, 'manual')`, [tenantId, id, t.id, t.extra?.role]);
+          }
+          for (const t of [portail, annexe]) {
+            await runner.query(`INSERT INTO contract_links (tenant_id, contract_id, url, description) VALUES ($1, $2, $3, $4)`, [tenantId, id, t.extra?.url, t.name]);
+          }
+          return { id, ref: name };
+        };
+        const anne = await contactTarget(env, 'Anne', 'commercial');
+        const brieuc = await contactTarget(env, 'Brieuc', 'technical');
+        const corentin = await contactTarget(env, 'Corentin', 'support');
+        const portail = webLink('Portail');
+        const annexe = webLink('Annexe');
+        const email = (t: Target) => (t.input as { contact_ref: string }).contact_ref;
+        const gestures: Array<{ name: string; relation: 'contacts' | 'links'; add?: unknown[]; remove?: unknown[] }> = [
+          { name: 'contracts.contacts add', relation: 'contacts', add: [corentin.input] },
+          { name: 'contracts.contacts remove', relation: 'contacts', remove: [brieuc.input] },
+          { name: 'contracts.contacts role', relation: 'contacts', remove: [anne.input], add: [{ contact_ref: email(anne), role: 'support' }] },
+          { name: 'contracts.links add', relation: 'links', add: [{ url: 'https://example.test/avenant', description: 'Avenant' }] },
+          { name: 'contracts.links remove', relation: 'links', remove: [{ url: annexe.extra?.url }] },
+          { name: 'contracts.links label', relation: 'links', add: [{ url: portail.extra?.url, description: 'Portail renommé' }] },
+        ];
+        const stored = async (contractId: string) => JSON.stringify([
+          await runner.query(`SELECT contact_id, role, origin FROM contract_contacts WHERE tenant_id = $1 AND contract_id = $2 ORDER BY contact_id, role`, [tenantId, contractId]),
+          await runner.query(`SELECT url, description FROM contract_links WHERE tenant_id = $1 AND contract_id = $2 ORDER BY url`, [tenantId, contractId]),
+        ]);
+        for (const gesture of gestures) {
+          const input = {
+            entity_type: 'contracts', relation: gesture.relation,
+            ...(gesture.add ? { add: gesture.add } : {}), ...(gesture.remove ? { remove: gesture.remove } : {}),
+          };
+          // Read only: the card is not proposed.
+          let cell = `${gesture.name} read only, preview`;
+          await runner.query('SAVEPOINT read_only_cell');
+          try {
+            const rec = await contract();
+            await access('read');
+            const before = await stored(rec.id);
+            const marker = await now();
+            await runner.query('SAVEPOINT read_only_preview');
+            let refusal = '';
+            try {
+              await previews.createPreview(readerCtx, 'update_entity_relations', { ...input, ref: rec.ref });
+            } catch (error: any) {
+              refusal = String(error?.message ?? error);
+            }
+            await runner.query('ROLLBACK TO SAVEPOINT read_only_preview');
+            assert.match(refusal, /read only in your access/, `${cell}: the card is refused (${refusal || 'proposed'})`);
+            assert.equal(await stored(rec.id), before, `${cell}: nothing is written`);
+            assert.deepEqual(await auditSince(marker), [], `${cell}: no audit row`);
+            passed += 1;
+            console.log(`  ${cell}: OK`);
+          } catch (error: any) {
+            failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 20).join('\n')}`);
+            console.log(`  ${cell}: FAILED`);
+          } finally {
+            await runner.query('ROLLBACK TO SAVEPOINT read_only_cell');
+          }
+          // A card asked while the person could modify the contract, approved once they cannot.
+          cell = `${gesture.name} read only, approval`;
+          await runner.query('SAVEPOINT read_only_cell');
+          try {
+            const rec = await contract();
+            await access('edit');
+            const preview = await previews.createPreview(readerCtx, 'update_entity_relations', { ...input, ref: rec.ref });
+            await access('read');
+            const before = await stored(rec.id);
+            const marker = await now();
+            const executed = await previews.executePreview(readerCtx, preview.preview_id);
+            assert.equal(executed.status, 'failed', `${cell}: the card is refused (${executed.status})`);
+            assert.match(String(executed.error_message), /read only in your access/, `${cell}: the refusal says why`);
+            assert.equal(await stored(rec.id), before, `${cell}: nothing is written`);
+            assert.deepEqual((await auditSince(marker)).map((row) => row.table_name), [], `${cell}: no audit row`);
+            passed += 1;
+            console.log(`  ${cell}: OK`);
+          } catch (error: any) {
+            failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 20).join('\n')}`);
+            console.log(`  ${cell}: FAILED`);
+          } finally {
+            await runner.query('ROLLBACK TO SAVEPOINT read_only_cell');
+          }
+        }
+      } finally {
+        await runner.query('ROLLBACK TO SAVEPOINT read_only_contract');
+      }
+    }
+
+    // A sub-location that holds assets, removed by the assistant: the Sub-locations table's service
+    // deletes it and leaves its assets without a sub-location, after a confirmation that counts
+    // them. The card names them first (ten, then "+N"; only their count for a person who does not
+    // read the assets); an asset placed in it after the card makes the approval refuse.
+    await runner.query('SAVEPOINT sub_location_assets');
+    try {
+      const site = async (assets: number) => {
+        const rec = await locationRecord(env);
+        // One name on every site: the audit rows of both sides carry it.
+        const room = 'Salle pleine';
+        const roomId = await insertId(runner, `INSERT INTO location_sub_items (tenant_id, location_id, name, display_order) VALUES ($1, $2, $3, 0)`, [tenantId, rec.id, room]);
+        const names: string[] = [];
+        for (let i = 0; i < assets; i += 1) {
+          const name = `srv-${String(i).padStart(2, '0')}-${unique('baie').replace(/ /g, '')}`;
+          await runner.query(`INSERT INTO assets (tenant_id, name, kind, environment, location_id, sub_location_id) VALUES ($1, $2, 'server', 'prod', $3, $4)`, [tenantId, name, rec.id, roomId]);
+          names.push(name);
+        }
+        return { rec, room, roomId, names: names.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())) };
+      };
+      const held = async (roomId: string) => Number((await runner.query(`SELECT count(*)::int AS n FROM assets WHERE tenant_id = $1 AND sub_location_id = $2`, [tenantId, roomId]))[0].n);
+      const detachedOn = (preview: any) => preview?.changes?.detached_assets?.relation_items?.from?.map((item: any) => item.name);
+
+      let cell = 'locations.sub_locations with assets';
+      try {
+        const mine = await seeding(runner, () => site(12), (value) => value.rec.id);
+        const twin = await seeding(runner, () => site(12), (value) => value.rec.id);
+        const kadMarker = await now();
+        const preview = await previews.createPreview(ctx, 'update_entity_relations', {
+          entity_type: 'locations', ref: mine.rec.ref, relation: 'sub_locations', remove: [{ name: mine.room }],
+        });
+        assert.deepEqual(detachedOn(preview), [...mine.names.slice(0, 10), '+2'], `${cell}: the card names the assets left without a sub-location (${JSON.stringify(preview?.changes)})`);
+        const executed = await previews.executePreview(ctx, preview.preview_id);
+        assert.equal(executed.status, 'executed', `${cell}: the card runs (${executed.error_message ?? ''})`);
+        assert.equal(await held(mine.roomId), 0, `${cell}: the assets are left without a sub-location`);
+        const [{ n: kept }] = await runner.query(`SELECT count(*)::int AS n FROM assets WHERE tenant_id = $1 AND location_id = $2`, [tenantId, mine.rec.id]);
+        assert.equal(kept, 12, `${cell}: the assets are kept at the site`);
+        const kadRows = await auditSince(kadMarker);
+        assert.ok(kadRows.length > 0 && kadRows.every((row) => row.source === 'ai_chat' && row.source_ref === preview.preview_id), `${cell}: audited by the card`);
+        const screenMarker = await now();
+        await env.services.locations.deleteSubItem(twin.rec.id, twin.roomId, writer, { manager: runner.manager });
+        const screenRows = await auditSince(screenMarker);
+        const roles = rolesOf([[writer, 'WRITER'], [roleId, 'ROLE']]);
+        // Each asset's own entry names that asset (`location-sub-item-detach-history.integration.spec.ts`
+        // compares it with the asset page's): both sides write one per asset, the rest is compared.
+        const ofAssets = (rows: AuditRow[]) => rows.filter((row) => row.table_name === 'assets').length;
+        assert.deepEqual([ofAssets(kadRows), ofAssets(screenRows)], [12, 12], `${cell}: one entry per asset left without a sub-location`);
+        const others = (rows: AuditRow[]) => rows.filter((row) => row.table_name !== 'assets');
+        assert.deepEqual(shape(others(kadRows), namer(mine.rec.id, roles, '')), shape(others(screenRows), namer(twin.rec.id, roles, '')), `${cell}: the assistant's audit rows are the screen's`);
+        passed += 1;
+        console.log(`  ${cell}: OK`);
+      } catch (error: any) {
+        failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 40).join('\n')}`);
+        console.log(`  ${cell}: FAILED`);
+      }
+
+      cell = 'locations.sub_locations with assets, without the assets module';
+      try {
+        const blindRole = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Sites', 'Sites')`, [tenantId]);
+        await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'locations', 'admin'), ($1, $2, 'ai_chat', 'member')`, [tenantId, blindRole]);
+        const blind = await insertId(runner,
+          `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, 'Sacha', 'Sites', $3, 'enabled')`,
+          [tenantId, `sites-${tenantId.slice(0, 8)}@example.test`, blindRole]);
+        await runner.query(`INSERT INTO user_roles (tenant_id, user_id, role_id, is_primary) VALUES ($1, $2, $3, true)`, [tenantId, blind, blindRole]);
+        const mine = await site(3);
+        const preview = await previews.createPreview({ ...ctx, userId: blind }, 'update_entity_relations', {
+          entity_type: 'locations', ref: mine.rec.ref, relation: 'sub_locations', remove: [{ name: mine.room }],
+        });
+        assert.deepEqual(detachedOn(preview), ['3'], `${cell}: the card counts the assets only (${JSON.stringify(preview?.changes)})`);
+        assert.ok(!mine.names.some((name) => JSON.stringify(preview).includes(name)), `${cell}: no asset is named`);
+        passed += 1;
+        console.log(`  ${cell}: OK`);
+      } catch (error: any) {
+        failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 40).join('\n')}`);
+        console.log(`  ${cell}: FAILED`);
+      }
+
+      cell = 'locations.sub_locations with assets, an asset placed after the card';
+      try {
+        const mine = await site(1);
+        const preview = await previews.createPreview(ctx, 'update_entity_relations', {
+          entity_type: 'locations', ref: mine.rec.ref, relation: 'sub_locations', remove: [{ name: mine.room }],
+        });
+        await runner.query(`INSERT INTO assets (tenant_id, name, kind, environment, location_id, sub_location_id) VALUES ($1, $2, 'server', 'prod', $3, $4)`, [tenantId, unique('srv-tard').replace(/ /g, '-'), mine.rec.id, mine.roomId]);
+        const marker = await now();
+        const executed = await previews.executePreview(ctx, preview.preview_id);
+        assert.equal(executed.status, 'failed', `${cell}: the card is refused (${executed.status})`);
+        assert.match(String(executed.error_message), /changed after the preview/, `${cell}: the refusal says why`);
+        assert.equal(await held(mine.roomId), 2, `${cell}: nothing is detached`);
+        assert.deepEqual(await auditSince(marker), [], `${cell}: no audit row`);
+        passed += 1;
+        console.log(`  ${cell}: OK`);
+      } catch (error: any) {
+        failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 40).join('\n')}`);
+        console.log(`  ${cell}: FAILED`);
+      }
+    } finally {
+      await runner.query('ROLLBACK TO SAVEPOINT sub_location_assets');
+    }
+
+    // A contact the supplier brought to a contract or a budget line (`origin` supplier). Added by hand
+    // with the same role, the screen's attach returns the link as it is and writes nothing: the
+    // assistant says so when the card is asked, with no card that would fail at its approval.
+    // Removed, the screen's panel deletes it like any other: the assistant removes it the same way.
+    await runner.query('SAVEPOINT supplier_contacts');
+    try {
+      const supplierName = unique('Fournisseur du contact');
+      const supplierOfLine = await insertId(runner, `INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2)`, [tenantId, supplierName]);
+      const brought = await contactTarget(env, 'Gwenn', 'technical');
+      const email = (brought.input as { contact_ref: string }).contact_ref;
+      const families = [
+        {
+          name: 'contracts.contacts', entity: 'contracts' as const, table: 'contract_contacts', column: 'contract_id',
+          record: async () => {
+            const rec = await contractRecord(env);
+            await runner.query(`UPDATE contracts SET supplier_id = $2 WHERE id = $1`, [rec.id, supplierOfLine]);
+            return rec;
+          },
+          detach: (rec: Rec, linkId: string) => env.services.contractContacts.detach(rec.id, linkId, writer, { manager: runner.manager, tenantId }),
+        },
+        {
+          name: 'budget_lines.contacts', entity: 'budget_lines' as const, table: 'spend_item_contacts', column: 'spend_item_id',
+          record: async () => {
+            const rec = await lineRecord(env, 'opex');
+            await runner.query(`UPDATE spend_items SET supplier_id = $2 WHERE id = $1`, [rec.id, supplierOfLine]);
+            return rec;
+          },
+          detach: (rec: Rec, linkId: string) => env.services.lineContacts.detach(rec.id, linkId, writer, { manager: runner.manager, tenantId }),
+        },
+      ];
+      for (const family of families) {
+        const seeded = async () => {
+          const rec = await family.record();
+          await runner.query(`INSERT INTO ${family.table} (tenant_id, ${family.column}, contact_id, role, origin) VALUES ($1, $2, $3, 'technical', 'supplier')`, [tenantId, rec.id, brought.id]);
+          return rec;
+        };
+        const links = async (rec: Rec) => runner.query(`SELECT role, origin FROM ${family.table} WHERE tenant_id = $1 AND ${family.column} = $2 ORDER BY role`, [tenantId, rec.id]);
+
+        let cell = `${family.name} from the supplier, added by hand`;
+        try {
+          const rec = await seeded();
+          const marker = await now();
+          await runner.query('SAVEPOINT supplier_contact_preview');
+          let refusal = '';
+          try {
+            await previews.createPreview(ctx, 'update_entity_relations', {
+              entity_type: family.entity, ref: rec.ref, relation: 'contacts', add: [{ contact_ref: email, role: 'technical' }],
+            });
+          } catch (error: any) {
+            refusal = String(error?.message ?? error);
+          }
+          await runner.query('ROLLBACK TO SAVEPOINT supplier_contact_preview');
+          assert.match(refusal, new RegExp(`already linked to this .* by its supplier ${supplierName}, with the role technical: there is nothing to do`), `${cell}: the card is not proposed (${refusal || 'proposed'})`);
+          assert.deepEqual(await links(rec), [{ role: 'technical', origin: 'supplier' }], `${cell}: the link stays as it is`);
+          assert.deepEqual(await auditSince(marker), [], `${cell}: no audit row`);
+          passed += 1;
+          console.log(`  ${cell}: OK`);
+        } catch (error: any) {
+          failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 40).join('\n')}`);
+          console.log(`  ${cell}: FAILED`);
+        }
+
+        cell = `${family.name} from the supplier, removed`;
+        try {
+          const mine = await seeding(runner, seeded, (rec) => rec.id);
+          const twin = await seeding(runner, seeded, (rec) => rec.id);
+          const kadMarker = await now();
+          const preview = await previews.createPreview(ctx, 'update_entity_relations', {
+            entity_type: family.entity, ref: mine.ref, relation: 'contacts', remove: [{ contact_ref: email, role: 'technical' }],
+          });
+          const executed = await previews.executePreview(ctx, preview.preview_id);
+          assert.equal(executed.status, 'executed', `${cell}: the card runs (${executed.error_message ?? ''})`);
+          assert.deepEqual(await links(mine), [], `${cell}: the contact is removed`);
+          const kadRows = await auditSince(kadMarker);
+          assert.ok(kadRows.length > 0 && kadRows.every((row) => row.source === 'ai_chat' && row.source_ref === preview.preview_id), `${cell}: audited by the card`);
+          const screenMarker = await now();
+          await family.detach(twin, await rowId(env, family.table, family.column, twin.id, 'contact_id', brought.id));
+          const screenRows = await auditSince(screenMarker);
+          const roles = rolesOf([[brought.id, 'CONTACT'], [supplierOfLine, 'SUPPLIER'], [writer, 'WRITER'], [roleId, 'ROLE']]);
+          assert.deepEqual(shape(kadRows, namer(mine.id, roles, '')), shape(screenRows, namer(twin.id, roles, '')), `${cell}: the assistant's audit rows are the screen's`);
+          passed += 1;
+          console.log(`  ${cell}: OK`);
+        } catch (error: any) {
+          failures.push(`${cell}: ${String(error?.message ?? error).split('\n').slice(0, 40).join('\n')}`);
+          console.log(`  ${cell}: FAILED`);
+        }
+      }
+    } finally {
+      await runner.query('ROLLBACK TO SAVEPOINT supplier_contacts');
+    }
+  } finally {
+    await runner.rollbackTransaction();
+    await runner.release();
+    await app.close();
+  }
+  if (failures.length > 0) {
+    console.error(`\n${failures.length} cell(s) failed, ${passed} passed:\n\n${failures.join('\n\n')}`);
+    process.exit(1);
+  }
+  console.log(`ai-relation-history.integration.spec: ok (${passed} cells)`);
+}
+
+run().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
