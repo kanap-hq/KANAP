@@ -107,7 +107,7 @@ Cuando se siguen las vulnerabilidades, la columna **Editor** también abre la p�
 
 ## El espacio de trabajo de la tecnología
 
-El espacio de trabajo tiene una cabecera, un panel de propiedades a la derecha y siete pestañas: **Resumen**, **Servidores**, **Aplicaciones**, **Operaciones**, **Cumplimiento**, **Relaciones** e **Historial** (los cambios hechos en la tecnología, vea [Historial de los registros](record-history.md)). Las pestañas **Servidores**, **Aplicaciones** y **Relaciones** muestran su número en una insignia.
+El espacio de trabajo tiene una cabecera, un panel de propiedades a la derecha y siete pestañas: **Resumen**, **Servidores**, **Aplicaciones**, **Operaciones**, **Cumplimiento**, **Relaciones** e **Historial** (los cambios hechos en la tecnología, consulte [Historial de los registros](record-history.md)). Las pestañas **Servidores**, **Aplicaciones** y **Relaciones** muestran su número en una insignia.
 
 ### Cabecera
 

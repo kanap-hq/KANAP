@@ -43,7 +43,7 @@ Allez dans **Cartographie SI > Applications** et cliquez sur **Nouvelle applicat
 
 Saisissez le nom dans le titre, par exemple `Salesforce CRM`, et appuyez sur Entrée. Votre application est maintenant dans le registre, et ses six onglets s'ouvrent pour une documentation détaillée : **Vue d'ensemble**, **Déploiements**, **Interfaces**, **Exploitation**, **Conformité** et **Relations**.
 
-Complétez ensuite l'essentiel dans l'en-tête et le panneau Propriétés :
+Complétez ensuite l'essentiel dans l'en-tête et dans le panneau Propriétés :
 
 | Champ | Quoi saisir | Exemple |
 |-------|------------|---------|

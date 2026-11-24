@@ -43,7 +43,7 @@ Go to **IT Landscape → Applications** and click **New application**.
 
 Type the name in the title, for example `Salesforce CRM`, and press Enter. Your application is now in the registry, and its six tabs open for detailed documentation: **Overview**, **Deployments**, **Interfaces**, **Operations**, **Compliance**, and **Relations**.
 
-Then fill in the essentials in the header and the properties drawer:
+Then fill in the essentials in the header and the properties panel:
 
 | Field | What to enter | Example |
 |-------|--------------|---------|

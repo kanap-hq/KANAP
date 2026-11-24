@@ -72,11 +72,11 @@ The standard grid highlights the fields that matter during intake and review:
 The workspace uses a split model:
 
 - The main area holds the operational tabs: **Summary**, **Analysis**, **Scoring**, **Relations**, **Knowledge**, and **History** (the changes made to the request, see [Record history](record-history.md)).
-- A persistent **Properties** drawer on the right edge holds stable request metadata, team assignment, and resulting projects. Open or close it using the vertical tab on the right edge.
+- A persistent **Properties** panel on the right edge holds stable request metadata, team assignment, and resulting projects. Open or close it using the vertical tab on the right edge.
 
 This matters because not everything is saved the same way:
 
-- Changes in the **Properties drawer** are applied immediately.
+- Changes in the **Properties panel** are applied immediately.
 - Changes in **Summary**, **Analysis**, and **Scoring** are workspace edits and use **Save** / **Reset**.
 - The managed documents **Purpose** and **Risks & Mitigations** also use the workspace save flow.
 
@@ -96,7 +96,7 @@ The workspace header gives you operational context without leaving the page:
 2. Type the name of the request.
 3. Press Enter or Tab, or click **Create**. Kadratis creates the request at once, with status **Pending Review** and you as the requestor. Its reference (`REQ-42`) shows and all tabs open.
 
-Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Pressing Escape in the title, clicking **Cancel** or leaving the page creates nothing, even with a name typed.
+Then fill in the Properties panel and the **Purpose**. The name is edited in the header only. Pressing Escape in the title, clicking **Cancel** or leaving the page creates nothing, even with a name typed.
 
 ### Creating or cancelling { #cancelling-a-creation }
 
@@ -108,9 +108,9 @@ While the request is being created, its header shows **Create** and **Cancel**. 
 
 Leaving the request any other way keeps it. An administrator can then delete it with **Delete**. The reference of a cancelled request is not used again.
 
-### Properties drawer
+### Properties panel
 
-Treat the drawer as the request's structural backbone. It contains three groups.
+Treat the panel as the request's structural backbone. It contains three groups.
 
 #### Core properties
 
@@ -145,7 +145,7 @@ A read-only list of the projects produced from this request after conversion. Cl
 
 The same projects also appear on the **Relations** tab, with dependencies, linked budget lines, applications, assets and business processes, and the request's links and files.
 
-Older bookmarks may still point to `overview`, `team`, or `relations`. The current workspace places this content under **Summary**, the Properties drawer, and the **Relations** tab.
+Older bookmarks may still point to `overview`, `team`, or `relations`. The current workspace places this content under **Summary**, the Properties panel, and the **Relations** tab.
 
 ## Summary
 

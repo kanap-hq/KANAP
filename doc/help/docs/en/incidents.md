@@ -59,7 +59,7 @@ These permissions also cover the incident review and the PDF export, so someone 
 
 A restricted incident is hidden from everyone except register administrators, the reporter and the owner. On a stock tenant that means Administrator and IT Landscape Administrator, plus whoever logged or owns that record. Readers and contributors who are not the reporter or owner do not see it in the list, in search, in chat or in an export. Opening it by reference returns the same “not found” as a missing number. Its linked tasks are hidden from them too: in the task list, in search, on the dashboard, in Kad and among linked records. The incident review is covered by the same restriction, wherever it is reached from: Knowledge, search, the assistant, exports and the images pasted into it.
 
-**Restrict to register administrators** is in the properties drawer, under Classification. A contributor can turn it on while they can still see the record; only an administrator can turn it off, including after the incident is closed. The change is written to the journal. The audit log shows the entries of a restricted incident, of its review and of its tasks only to people who can see the incident, and document relation chips leave its title out. Only the “recently viewed” list, kept in each person's browser, can still show the title to someone who opened the incident before it was restricted.
+**Restrict to register administrators** is in the properties panel, under Classification. A contributor can turn it on while they can still see the record; only an administrator can turn it off, including after the incident is closed. The change is written to the journal. The audit log shows the entries of a restricted incident, of its review and of its tasks only to people who can see the incident, and document relation chips leave its title out. Only the “recently viewed” list, kept in each person's browser, can still show the title to someone who opened the incident before it was restricted.
 
 ---
 
@@ -96,7 +96,7 @@ Whatever you filter carries over into the incident you open, so **Previous / Nex
 
 ## The incident workspace
 
-Click any row to open the incident. The workspace has a **header** with the reference and quick metadata, a **properties drawer** on the right, and a **content area** in the centre that switches with each tab.
+Click any row to open the incident. The workspace has a **header** with the reference and quick metadata, a **properties panel** on the right, and a **content area** in the centre that switches with each tab.
 
 The tabs are **Overview**, **Journal**, **Relations**, **Documents** and **History** (the changes made to the incident, see [Record history](record-history.md)).
 
@@ -106,9 +106,9 @@ The header shows the title (editable in place), the reference `INC-N` (click to 
 
 The metadata line underneath shows **Status**, **Severity**, **Owner**, **Detected** and, once the incident is resolved, the **Duration** between detection and resolution. Severity, Owner and Detected can be changed straight from that line.
 
-### Properties drawer
+### Properties panel
 
-The drawer stays visible on every tab and saves as you edit.
+The panel stays visible on every tab and saves as you edit.
 
 **Classification**:
 
@@ -246,7 +246,7 @@ An incident that holds regulatory reporting data cannot be deleted: **Personal d
 
 ## Compliance and audit evidence
 
-Two switches in the drawer carry the regulatory part of the record:
+Two switches in the properties panel carry the regulatory part of the record:
 
 - **Personal data affected**: turn it on as soon as personal data was exposed, altered or lost. It is the flag your data protection officer filters on
 - **Authority notification required**: turn it on when the event has to be reported, for instance to a data protection authority, a national cyber agency or a sector regulator. **Notified on** then records when you filed, and **Parties informed** lists who was told: regulator, insurer, affected customers, group security

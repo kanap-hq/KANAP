@@ -167,7 +167,7 @@ Les mêmes demandes figurent aussi dans l'onglet **Relations**, avec les dépend
 
 ## Synthèse
 
-L'onglet **Synthèse** est le cockpit du projet. Il est destiné à répondre à l'état actuel du projet en un seul coup d'œil, pas à dupliquer chaque champ du panneau.
+L'onglet **Synthèse** est le cockpit du projet. Il est destiné à répondre à l'état actuel du projet en un seul coup d'œil, pas à dupliquer chaque champ du panneau Propriétés.
 
 ### Objectif
 

@@ -17,7 +17,7 @@ Sie sehen nur die Tabs, die Ihre Berechtigungen erlauben. Wenn Sie den Eintrag *
 
 ## Wie die Seite organisiert ist
 
-Die Seite hat zwei Tabs:
+Die Seite hat zwei Reiter:
 
 - **Listen** enthält die Dropdown-Werte, die auf dieser Seite beschrieben sind.
 - **Netbox** enthält die Synchronisierung mit Ihrem Netbox-Inventar. Siehe [Netbox-Synchronisierung](netbox.md).

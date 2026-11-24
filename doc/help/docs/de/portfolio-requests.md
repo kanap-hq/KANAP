@@ -110,7 +110,7 @@ Verlassen Sie die Anfrage auf andere Weise, bleibt sie bestehen. Ein Administrat
 
 ### Eigenschaftenbereich
 
-Behandeln Sie den Bereich als das strukturelle Rückgrat der Anfrage. Er enthält drei Gruppen.
+Behandeln Sie den Eigenschaftenbereich als das strukturelle Rückgrat der Anfrage. Er enthält drei Gruppen.
 
 #### Kerneigenschaften
 

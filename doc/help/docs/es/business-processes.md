@@ -86,7 +86,7 @@ Sin `business_processes:member`, la página se abre en solo lectura.
 
 ### Propiedades
 
-El panel de propiedades, a la derecha, contiene:
+El panel de propiedades de la derecha contiene:
 
 - **Tipo**: el tipo de proceso ISO 9001, opcional. Un proceso **Estratégico** orienta y dirige la organización. Un proceso **Operativo** aporta valor a los clientes. Un proceso de **Apoyo** proporciona recursos a los demás. Un subproceso no hereda el tipo de su padre.
 - **Proceso padre**: el proceso bajo el que se encuentra este. Los procesos forman un árbol sin límite de profundidad. El selector muestra el árbol con sangría y busca en la ruta completa. El propio proceso y sus subprocesos no se ofrecen. Déjelo vacío para el primer nivel. Un proceso no puede ser su propio padre ni pasar bajo uno de sus propios subprocesos.
