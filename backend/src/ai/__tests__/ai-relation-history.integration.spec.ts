@@ -1279,7 +1279,12 @@ async function run() {
         await env.services.locations.deleteSubItem(twin.rec.id, twin.roomId, writer, { manager: runner.manager });
         const screenRows = await auditSince(screenMarker);
         const roles = rolesOf([[writer, 'WRITER'], [roleId, 'ROLE']]);
-        assert.deepEqual(shape(kadRows, namer(mine.rec.id, roles, '')), shape(screenRows, namer(twin.rec.id, roles, '')), `${cell}: the assistant's audit rows are the screen's`);
+        // Each asset's own entry names that asset (`location-sub-item-detach-history.integration.spec.ts`
+        // compares it with the asset page's): both sides write one per asset, the rest is compared.
+        const ofAssets = (rows: AuditRow[]) => rows.filter((row) => row.table_name === 'assets').length;
+        assert.deepEqual([ofAssets(kadRows), ofAssets(screenRows)], [12, 12], `${cell}: one entry per asset left without a sub-location`);
+        const others = (rows: AuditRow[]) => rows.filter((row) => row.table_name !== 'assets');
+        assert.deepEqual(shape(others(kadRows), namer(mine.rec.id, roles, '')), shape(others(screenRows), namer(twin.rec.id, roles, '')), `${cell}: the assistant's audit rows are the screen's`);
         passed += 1;
         console.log(`  ${cell}: OK`);
       } catch (error: any) {

@@ -8,7 +8,7 @@ import { LocationLink } from './location-link.entity';
 import { LocationSubItem } from './location-sub-item.entity';
 import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
 import { compileAgFilterCondition, createParamNameGenerator, assertSetFilterModes } from '../common/ag-grid-filtering';
-import { AuditService, AuditSourceOptions } from '../audit/audit.service';
+import { AuditService, AuditSourceOptions, writeAuditLogs } from '../audit/audit.service';
 import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { Company } from '../companies/company.entity';
 import { User } from '../users/user.entity';
@@ -1129,11 +1129,28 @@ export class LocationsService {
       return { ok: true };
     }
 
-    // Clear sub_location_id on affected assets before deleting
-    await mg.query(
-      `UPDATE assets SET sub_location_id = NULL, updated_at = now() WHERE sub_location_id = $1`,
-      [subItemId],
+    // The assets in it are left without a sub-location before it goes, each with the History entry
+    // its page writes when the sub-location is emptied by hand (`AssetsCrudService.update`: the row
+    // before and after, by the author of the gesture and its source): one statement for all of them.
+    const cleared: Array<Record<string, unknown>> = await mg.query(
+      `WITH cleared AS (
+         UPDATE assets a SET sub_location_id = NULL, updated_at = now()
+           FROM (SELECT id, updated_at FROM assets WHERE tenant_id = $2 AND sub_location_id = $1) old
+          WHERE a.tenant_id = $2 AND a.id = old.id
+         RETURNING a.*, old.updated_at AS previous_updated_at
+       ) SELECT * FROM cleared ORDER BY id`,
+      [subItemId, existing.tenant_id],
     );
+    await writeAuditLogs(mg, cleared.map(({ previous_updated_at, ...after }) => ({
+      table: 'assets',
+      recordId: String(after.id),
+      action: 'update',
+      before: { ...after, sub_location_id: subItemId, updated_at: previous_updated_at },
+      after,
+      userId,
+      source: opts?.audit?.source,
+      sourceRef: opts?.audit?.sourceRef ?? null,
+    })));
 
     await repo.delete({ id: subItemId } as any);
     await this.audit.log(
