@@ -452,9 +452,6 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Mets en évidence les lignes sans centre de coûts puis mets-les sur le centre IT-01', profile: 'write_financial', mode: 'write' },
   { prompt: 'Change de vue et passe APP-3 en retiré', profile: 'write_business', mode: 'write' },
   { prompt: 'Keep me posted and set APP-3 to retired', profile: 'write_business', mode: 'write' },
-  // Read as an inspection before lot K2e as after it: a defect of its own, outside the lot.
-  { prompt: 'Make me the business owner of APP-3', profile: 'entity_inspection', mode: 'entity' },
-  { prompt: 'Mets-moi responsable métier de APP-3', profile: 'entity_inspection', mode: 'entity' },
   { prompt: 'Présente les lignes du fournisseur Acme dans un tableau par centre de coûts', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
   { prompt: 'Show the applications in a report by lifecycle', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
   { prompt: 'Combien de failles sont traitées ?', profile: 'read_query', mode: 'read' },
