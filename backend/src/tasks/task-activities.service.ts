@@ -244,7 +244,7 @@ export class TaskActivitiesService {
         commentContent: normalizedContent,
         recipients: recipients.map(r => ({ userId: r.userId, email: r.email, locale: r.locale })),
         tenantId,
-        manager: mg,
+        itemRef: `T-${task.item_number}`,
       });
     }
 
@@ -423,7 +423,7 @@ export class TaskActivitiesService {
         commentContent: hasComment ? normalizedContent : undefined,
         recipients,
         tenantId,
-        manager: mg,
+        itemRef: `T-${task.item_number}`,
       });
     }
 

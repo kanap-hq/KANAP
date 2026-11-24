@@ -177,7 +177,7 @@ Die Kopfzeile zeigt:
 - **Löschen**, ein Papierkorbsymbol mit seinem Namen im Tooltip (`infrastructure:admin`). Bei einem Asset, das noch verwendet wird, erscheint der Grund vor jeder Bestätigung
 - **Vorherige / Nächste** (z. B. „3 von 47"): Durch die gefilterte Liste navigieren, ohne dorthin zurückzukehren
 
-### Eigenschaftenbereich (rechtes Panel)
+### Eigenschaftenbereich
 
 Der Bereich zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen werden automatisch gespeichert. Die Felder bilden drei Gruppen.
 

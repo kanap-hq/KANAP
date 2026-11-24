@@ -24,6 +24,7 @@ vi.mock('../../hooks/useAccountNav', () => ({
 import api from '../../api';
 import AccountWorkspacePage from './AccountWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
+import { PAGE_FIELD, pressInto } from '../../test/creationHold';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -130,12 +131,12 @@ describe('AccountWorkspacePage typing while the account is created', () => {
 
   it('keeps the description being typed while the account is written: same field, same focus, saved on the new account', async () => {
     const { finish } = await startWrite();
-    const description = screen.getByLabelText('accounts.fields.description');
-    act(() => description.focus());
+    const description = screen.getByLabelText('accounts.fields.description', { selector: PAGE_FIELD });
+    pressInto(description);
     fireEvent.change(description, { target: { value: 'Ho' } });
     await finish();
 
-    const shown = screen.getByLabelText('accounts.fields.description') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('accounts.fields.description', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     expect(shown === description).toBe(true);
     expect(document.activeElement === shown).toBe(true);
     fireEvent.change(shown, { target: { value: 'Hosting costs' } });

@@ -6,6 +6,7 @@ import es from '../../locales/es/admin.json';
 import fr from '../../locales/fr/admin.json';
 import type { Translate } from './auditLogLabels';
 import {
+  auditFieldLabel,
   auditFields,
   auditHasNonObjectPayload,
   auditRecordLabel,
@@ -13,6 +14,7 @@ import {
   auditSnapshot,
   auditUserIds,
   formatAuditValue,
+  sortAuditFields,
   type AuditValueContext,
 } from './auditLogValues';
 
@@ -642,5 +644,167 @@ describe('audit field labels', () => {
         expect(admin.auditLogs.fields[key], `${language} ${key}`).toBeTruthy();
       }
     }
+  });
+});
+
+/**
+ * Every field key of the audit entries in the sample data (`fromage` tenant, 2026-11-24: the
+ * keys of `before_json` and `after_json`), plus the row of a budget line's link entry. Each has a
+ * label in the four languages, or is one of the fields the detail hides.
+ */
+const SAMPLE_AUDIT_FIELD_KEYS = [
+  '__csv_managed_purpose', '__csv_managed_risks', '_owners', 'accessMethods', 'access_methods', 'account_id',
+  'account_name', 'account_number', 'active', 'active_seats', 'actual_effort_business', 'actual_effort_it',
+  'actual_end', 'actual_start', 'added', 'additional_info', 'address1', 'address2', 'adminZones',
+  'admin_zone', 'aliases', 'allocation_driver', 'allocation_method', 'allowedCurrencies', 'amount',
+  'analytics_category_id', 'analytics_category_name', 'analytics_values', 'angle', 'app_instance_id',
+  'applicationCategories', 'application_id', 'applies_to', 'applies_to_leg_id', 'areas_of_expertise',
+  'as_of_date', 'asset_id', 'asset_reference', 'assignee_user_id', 'audit_logging', 'authentication',
+  'authentication_mode', 'authority_notification_required', 'authority_notified_at', 'auto_renewal',
+  'axis_id', 'base_currency', 'base_url', 'baseline_effort_business', 'baseline_effort_it',
+  'baseline_end_date', 'baseline_start_date', 'billing_address', 'billing_company_name',
+  'billing_customer_info', 'billing_email', 'billing_frequency', 'billing_invoice_info', 'billing_phone',
+  'billing_tax_id', 'budget_rev', 'budget_year', 'build_prefixes', 'builtin_provider',
+  'businessCriticalityLevels', 'business_effort_allocation_mode', 'business_lead_id', 'business_objects',
+  'business_phone', 'business_process_id', 'business_purpose', 'business_rule_text', 'business_sponsor_id',
+  'cancel_at', 'canceled_at', 'canceled_at_effective', 'capex_item_id', 'capex_lines', 'catalog_key',
+  'catalog_sync', 'categories', 'category', 'category_id', 'chart_of_accounts', 'chat_enabled',
+  'chat_model_config_id', 'chat_ready', 'city', 'classification_incomplete', 'classification_justification',
+  'classification_review', 'classification_revision', 'closed_at', 'cluster', 'coa_id', 'code',
+  'collection_method', 'company_id', 'condition_text', 'confidential', 'connectionTypes', 'connection_id',
+  'connection_reference', 'consolidation_account_description', 'consolidation_account_name',
+  'consolidation_account_number', 'contact_id', 'contains_pii', 'content_markdown', 'content_plain',
+  'contract_id', 'conversation_retention_days', 'converted_date', 'converted_to_project_id',
+  'core_transformations_summary', 'cost_center_id', 'country', 'country_iso', 'cpe_products', 'cpe_version',
+  'created_at', 'created_by', 'created_by_id', 'created_by_user_id', 'creator_id', 'credential_kind',
+  'criteria_values', 'criticality', 'currency', 'current_period_end', 'current_period_start',
+  'current_situation', 'current_version_number', 'cve_id', 'cve_names', 'cyberCriticalityLevels',
+  'cyber_criticality', 'dataClasses', 'data_category', 'data_class', 'days_by_year', 'days_until_due',
+  'defaultCapexCurrency', 'defaultSpendCurrency', 'default_category_id', 'default_company_id',
+  'default_payment_method_brand', 'default_payment_method_id', 'default_payment_method_last4',
+  'default_source_id', 'default_stream_id', 'deleted_at', 'demo_users_removed', 'department_id',
+  'description', 'destinationColumn', 'destinationYear', 'destination_asset_id', 'destination_entity_code',
+  'detected_at', 'disabled_at', 'display_order', 'document_id', 'document_type_id', 'domain', 'domains',
+  'due_date', 'duplicated_from', 'duration_months', 'editor', 'effective_start', 'email',
+  'employment_type_id', 'end_of_life_date', 'end_of_support_date', 'entities', 'env_job_name', 'env_notes',
+  'environment', 'environment_scope', 'equipment_asset_id', 'equipment_entity_code', 'erp_supplier_id',
+  'error_handling_summary', 'estimated_effort_business', 'estimated_effort_it', 'etl_enabled',
+  'example_input', 'example_output', 'execution_progress', 'expected_benefits', 'expires_at',
+  'extended_support_end', 'external_auth_provider', 'external_facing', 'external_id', 'external_source',
+  'external_subject', 'external_synced_at', 'external_url', 'family', 'feasibility_review', 'first_name',
+  'fiscal_year', 'folder_id', 'forced', 'format', 'fqdn', 'from_nature', 'from_reference', 'from_year',
+  'frozen_at', 'fte', 'function_code', 'functional_rules', 'fx_rate_set_id', 'glpi_enabled', 'glpi_url',
+  'go_live_date', 'group_id', 'has_glpi_app_token', 'has_glpi_user_token', 'has_llm_api_key', 'headcount',
+  'hostingTypes', 'hosting_model', 'hosting_type', 'hostname', 'hours', 'id', 'ids', 'impact_of_failure',
+  'implementation_status', 'incidentCategories', 'incident_id', 'input_grain', 'integrated_binding',
+  'integration_route_type', 'integration_tool_application_id', 'interfaceAuthModes',
+  'interfaceDataCategories', 'interfaceFormats', 'interfacePatterns', 'interfaceProtocols',
+  'interfaceTriggerTypes', 'interface_id', 'interface_leg_id', 'interface_reference', 'investment_type',
+  'ip', 'ipAddressTypes', 'ip_addresses', 'is_approved', 'is_cluster', 'is_consolidation', 'is_default',
+  'is_frozen', 'is_global_default', 'is_operating_system', 'is_primary', 'is_suite',
+  'it_effort_allocation_mode', 'it_lead_id', 'it_owner_user_id', 'it_sponsor_id', 'it_users', 'item_number',
+  'job_title', 'key_prefix', 'kind', 'label', 'labels', 'last_calculation', 'last_dr_test', 'last_login_at',
+  'last_name', 'last_payment_error_code', 'last_payment_error_message', 'last_reviewed_at', 'last_synced_at',
+  'last_used_at', 'latest_invoice_amount', 'latest_invoice_created', 'latest_invoice_currency',
+  'latest_invoice_id', 'latest_invoice_number', 'latest_invoice_pdf', 'latest_invoice_status',
+  'latest_invoice_url', 'legacy_number', 'library_id', 'licensing', 'lifecycle', 'lifecycleStates', 'lines',
+  'llm_endpoint_url', 'llm_model', 'llm_provider', 'llm_supports_vision', 'locale', 'location_id',
+  'location_reference', 'lockedCodes', 'logged_at', 'logged_by_id', 'main_use_cases', 'manager_source',
+  'manager_user_id', 'manufacturer', 'mapping_set_id', 'mcp_allowed_capabilities', 'mcp_denied_capabilities',
+  'mcp_enabled', 'mcp_key_max_lifetime_days', 'mcp_max_effect', 'mcp_rate_limit_per_minute', 'mcp_scopes',
+  'measure', 'members', 'method', 'mfa_enabled', 'mfa_supported', 'middleware_rule_text', 'mime_type',
+  'mobile', 'mobile_phone', 'mode', 'model', 'monitoring_url', 'name', 'native_name', 'nature',
+  'networkSegments', 'next_payment_at', 'note', 'notes', 'notice_period_months', 'notified_parties', 'oauth',
+  'oauth_client_id', 'oauth_client_name', 'oauth_redirect_host', 'observed_at', 'open_values',
+  'operatingSystems', 'operating_company_id', 'operating_system', 'operation', 'operation_kind',
+  'opex_lines', 'order_index', 'origin', 'origin_task_id', 'original_filename', 'override_justification',
+  'override_value', 'overview_notes', 'owner_business_id', 'owner_ids', 'owner_it_id', 'owner_user_id',
+  'parent_id', 'path', 'pathHopFunctions', 'paying_company_id', 'payment_mode', 'percentageIncrease',
+  'period_end', 'period_start', 'permissions', 'personal_data_affected', 'phase_id', 'phone',
+  'pii_description', 'plan_name', 'planned_end', 'planned_start', 'port_override', 'postal_code', 'ppe_type',
+  'predecessor_id', 'previous', 'priority', 'priority_level', 'priority_override', 'priority_score',
+  'process_type', 'product_name', 'project_availability', 'project_id', 'protectedCodes', 'protocol_codes',
+  'provider', 'provider_secret_writable', 'provider_source', 'provider_validation_errors', 'published_at',
+  'purchase_date', 'purged_rows', 'purged_tables', 'purpose', 'query', 'rack_location', 'rack_unit', 'rate',
+  'reason', 'recoveryWaves', 'recovery_wave', 'reference', 'reg_number', 'region', 'region_code',
+  'related_object_id', 'related_object_type', 'relations', 'remarks', 'removed', 'renewal_decision',
+  'renewal_resume', 'renewal_stop', 'renewal_task', 'replaced_by_id', 'reporter_user_id',
+  'reportingCurrency', 'reporting_currency', 'requestor_id', 'required', 'requirement', 'resolved_at',
+  'resource', 'retired_date', 'review_due_at', 'revision', 'revision_number', 'revocation_reason',
+  'revoked_at', 'revoked_by_user_id', 'risk_mode', 'risks', 'role', 'role_description', 'role_id',
+  'role_name', 'roles', 'row_version', 'rows', 'rpo_minutes', 'rto_minutes', 'rule_key', 'run_build',
+  'scheduling_mode', 'scope', 'search_vector', 'seat_limit', 'security_controls_summary', 'sequence',
+  'sequential_id', 'serial_number', 'serverKinds', 'serverProviders', 'serverRoles', 'severity',
+  'since_date', 'size', 'skills', 'sort_order', 'source', 'sourceColumn', 'sourceYear',
+  'source_application_id', 'source_asset_id', 'source_bindings', 'source_endpoint', 'source_entity_code',
+  'source_field', 'source_id', 'source_instance_id', 'source_ref', 'source_request_id', 'spend_item_id',
+  'spread_profile_name', 'sso_enabled', 'standard_support_end', 'start_date', 'started_at', 'state',
+  'state_changed_at', 'state_changed_by', 'status', 'step_key', 'storage_objects', 'storage_path',
+  'stored_filename', 'stream_id', 'stripe_customer_id', 'stripe_price_id', 'stripe_product_id',
+  'stripe_subscription_id', 'sub_location_id', 'subnets', 'subscription_type', 'summary', 'supplier_id',
+  'supplier_role', 'support_contract_id', 'support_expiry', 'support_notes', 'support_tier',
+  'target_application_id', 'target_bindings', 'target_date', 'target_delivery_date', 'target_endpoint',
+  'target_instance_id', 'task_id', 'task_type_id', 'team_id', 'technologyFamilies', 'technology_id',
+  'technology_version_id', 'template_document_id', 'tenant_id', 'terms_acceptance', 'test_status', 'title',
+  'to_nature', 'to_reference', 'topology', 'totals', 'trial_end', 'trigger_details', 'turnover',
+  'typical_data', 'updated_at', 'updated_by', 'uploaded_at', 'uploaded_by', 'uploaded_by_id', 'url',
+  'user_agent', 'user_id', 'users_mode', 'users_override', 'users_year', 'values', 'vat_number', 'vendor_id',
+  'version', 'version_id', 'version_name', 'versions_added', 'viewer_ids', 'vulnerability_alerts',
+  'vulnerability_alerts_effective', 'web_search_enabled', 'year', 'yearly_amount_at_signature', 'zone',
+  'linked_records',
+];
+const HIDDEN_AUDIT_FIELD_KEYS = new Set(['id', 'tenant_id', 'updated_at', 'search_vector', 'content_plain']);
+
+describe('audit field labels', () => {
+  it('labels every field of the sample audit entries in the four languages', () => {
+    for (const [language, admin] of Object.entries(ADMIN)) {
+      const missing = SAMPLE_AUDIT_FIELD_KEYS
+        .filter((key) => !HIDDEN_AUDIT_FIELD_KEYS.has(key) && !key.startsWith('__'))
+        .filter((key) => typeof admin.auditLogs.fields[key] !== 'string' || !admin.auditLogs.fields[key].trim());
+      expect(missing, language).toEqual([]);
+    }
+  });
+
+  it('hides the fields that carry nothing for a reader', () => {
+    const fields = auditFields({
+      action: 'create',
+      table_name: 'documents',
+      after_json: { id: 'x', tenant_id: 'y', updated_at: '2026-01-01', search_vector: 'v', content_plain: 'c', title: 'T' },
+    });
+    expect(fields.rows.map((row) => row.key)).toEqual(['title']);
+  });
+});
+
+describe('sortAuditFields', () => {
+  const rows = ['status', 'name', 'description', 'end_date', 'cost_center_id', 'zzz_unknown'].map((key) => ({ key, before: 1, after: 2 }));
+
+  it('orders the rows by their displayed label, in English and in French, accents and case aside', () => {
+    const collate = (locale: string) => (a: string, b: string) => new Intl.Collator(locale, { sensitivity: 'base' }).compare(a, b);
+    for (const [translate, locale] of [[t, 'en'], [tFr, 'fr']] as const) {
+      const labels = sortAuditFields({ mode: 'change', rows }, translate, locale).rows.map((row) => auditFieldLabel(row.key, translate));
+      expect(labels).toEqual([...labels].sort(collate(locale)));
+      expect(labels).toHaveLength(rows.length);
+    }
+    const english = sortAuditFields({ mode: 'change', rows }, t, 'en').rows.map((row) => row.key);
+    const french = sortAuditFields({ mode: 'change', rows }, tFr, 'fr').rows.map((row) => row.key);
+    expect(english).not.toEqual(french);
+  });
+});
+
+describe('budget line link entries', () => {
+  const tech = '33333333-3333-4333-8333-333333333333';
+  const entry = { action: 'update', table_name: 'technology_spend_items', before_json: [], after_json: [tech, uuid] };
+
+  it('reads the ids as one row of linked records, never as a raw payload', () => {
+    expect(auditHasNonObjectPayload(entry)).toBe(false);
+    expect(auditFields(entry)).toEqual({ mode: 'change', rows: [{ key: 'linked_records', before: [], after: [tech, uuid] }] });
+    expect(auditHasNonObjectPayload({ ...entry, table_name: 'application_owners' })).toBe(true);
+  });
+
+  it('names each record by reference and name, and a record that no longer exists without its id', () => {
+    const value = formatAuditValue([tech, uuid], 'linked_records', context({ linkedRecords: { [tech]: { ref: 'TEC-4', name: 'Oracle Database' } } }));
+    expect(value.text).toBe('TEC-4 Oracle Database\nDeleted record');
+    expect(value.text).not.toContain(uuid);
+    expect(formatAuditValue([], 'linked_records', context()).text).toBe('—');
   });
 });

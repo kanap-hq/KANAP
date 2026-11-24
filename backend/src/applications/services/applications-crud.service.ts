@@ -174,7 +174,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
         recipients: recipientRows,
         rawEmails,
         tenantId,
-        manager: mg,
+        itemRef: app.sequential_id ?? undefined,
       });
     }
 

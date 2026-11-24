@@ -236,7 +236,7 @@ export class InterfacesCrudService extends InterfacesBaseService {
         recipients: recipientRows,
         rawEmails,
         tenantId: tenant,
-        manager: mg,
+        itemRef: intf.interface_reference ?? undefined,
       });
     }
 

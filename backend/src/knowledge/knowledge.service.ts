@@ -4292,7 +4292,7 @@ export class KnowledgeService {
         recipients: recipientRows,
         rawEmails,
         tenantId,
-        manager,
+        itemRef: `DOC-${document.item_number}`,
       });
     }
     return { success: true };

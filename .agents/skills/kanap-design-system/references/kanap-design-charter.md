@@ -1024,7 +1024,7 @@ Most form fields save on every change, optimistically update the UI, and show a 
 14. **No `cursor: help`** on tooltipped elements. Let the tooltip work without visual cue.
 15. **No save buttons for in-place editing.** All existing-entity workspace fields auto-save by default, including drawer fields, metadata controls, relations, linked URLs, and child-tab detail panels. Selects/dates/autocompletes/toggles save on change; titles save on blur; short text saves on blur or short debounce; long-form text saves on debounce. Ctrl+S may flush pending autosave, but it must not be required. Create forms, dialogs, composers, imports, and uploads still have explicit submit buttons.
 16. **No permanent toolbars** on rich text editors. Hide them, reveal on focus.
-17. **No auto-focus on form inputs at page load.** Let users orient themselves first.
+17. **No auto-focus on form inputs at page load.** Let users orient themselves first. The one exception is a record the person has just created: the cursor goes to its description, else to the first field they may change (Record creation, `SKILL.md`).
 18. **No font weights other than 400 and 500.** No 600, 700, or bold.
 19. **No more than 2 color ramps** in a single component (gray + one accent max).
 20. **No `MuiDrawer`** for contained side panels. Build a custom flex layout.

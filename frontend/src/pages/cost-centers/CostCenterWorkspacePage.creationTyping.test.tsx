@@ -38,6 +38,7 @@ vi.mock('../../components/fields/CostCenterSelect', () => ({ default: () => <div
 import api from '../../api';
 import CostCenterWorkspacePage from './CostCenterWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
+import { PAGE_FIELD, pressInto } from '../../test/creationHold';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -138,12 +139,12 @@ describe('CostCenterWorkspacePage typing while the cost center is created', () =
 
   it('keeps the description being typed while the cost center is written: same field, same focus, saved on the new cost center', async () => {
     const { finish } = await startWrite();
-    const description = screen.getByLabelText('costCenters.fields.description');
-    act(() => description.focus());
+    const description = screen.getByLabelText('costCenters.fields.description', { selector: PAGE_FIELD });
+    pressInto(description);
     fireEvent.change(description, { target: { value: 'Pa' } });
     await finish();
 
-    const shown = screen.getByLabelText('costCenters.fields.description') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('costCenters.fields.description', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     expect(shown === description).toBe(true);
     expect(document.activeElement === shown).toBe(true);
     fireEvent.change(shown, { target: { value: 'Paris office' } });
@@ -155,7 +156,7 @@ describe('CostCenterWorkspacePage typing while the cost center is created', () =
   it('keeps the code being typed while the cost center is written: same field, same focus', async () => {
     const { finish } = await startWrite();
     const code = screen.getByLabelText('costCenters.fields.code') as HTMLInputElement;
-    act(() => code.focus());
+    pressInto(code);
     fireEvent.change(code, { target: { value: 'CC-78' } });
     await finish();
 

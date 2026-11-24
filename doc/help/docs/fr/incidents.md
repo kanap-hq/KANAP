@@ -246,7 +246,7 @@ Un incident qui porte des données de déclaration réglementaire ne peut pas ê
 
 ## Conformité et éléments de preuve
 
-Deux interrupteurs du panneau portent la partie réglementaire de l'enregistrement :
+Deux interrupteurs du panneau Propriétés portent la partie réglementaire de l'enregistrement :
 
 - **Données personnelles concernées** : activez-le dès que des données personnelles ont été exposées, altérées ou perdues. C'est l'indicateur sur lequel filtre votre délégué à la protection des données
 - **Notification à l'autorité requise** : activez-le quand l'événement doit être signalé, par exemple à une autorité de protection des données, à une agence nationale de cybersécurité ou à un régulateur sectoriel. **Notifié le** enregistre alors la date de dépôt, et **Parties informées** liste qui a été prévenu : régulateur, assureur, clients touchés, sécurité groupe

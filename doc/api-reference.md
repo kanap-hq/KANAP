@@ -892,6 +892,12 @@ GET `/locations/:id/relation-counts` (`locations:reader`) → `{ relations }`: t
 ## IT Ops Settings
 Tenant-scoped configuration for IT Landscape dropdowns and enums.
 
+- GET `/it-ops/catalog-labels`
+  - Guards: `JwtAuthGuard` only: every signed-in member of the workspace, no module right.
+  - Returns the label of every catalog value, so screens name stored codes for people without the settings right: one array per catalog list (`applicationCategories`, `networkSegments`, `entities`, `serverKinds`, `serverProviders`, `serverRoles`, `hostingTypes`, `lifecycleStates`, the interface lists, `connectionTypes`, `domains`, `ipAddressTypes`, `accessMethods`, `pathHopFunctions`, `incidentCategories`, `technologyFamilies`, `adminZones`, and the four classification lists), in the order of the settings.
+  - Each row holds `{ code, label, deprecated?, translations? }`, plus `description` for the classification levels and waves. No subnets, DNS suffixes, forests, trusts, counts, administration groups, ports, `lockedCodes` or `protectedCodes`.
+  - A person with `settings:reader` keeps reading `GET /it-ops/settings`.
+
 - GET `/it-ops/settings`
   - Guards: `JwtAuthGuard`, `PermissionGuard`, `@RequireLevel('settings', 'reader')`
   - Returns merged settings with defaults: `{ dataClasses, networkSegments, entities, serverKinds, serverProviders, serverRoles, hostingTypes, lifecycleStates, interfaceProtocols, interfaceDataCategories, interfaceTriggerTypes, interfacePatterns, interfaceFormats, interfaceAuthModes, connectionTypes, subnets, domains, ipAddressTypes, accessMethods }`

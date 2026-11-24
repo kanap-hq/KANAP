@@ -175,7 +175,7 @@ export class AssetsCrudService extends AssetsBaseService {
         recipients: recipientRows,
         rawEmails,
         tenantId,
-        manager: mg,
+        itemRef: asset.asset_reference ?? undefined,
       });
     }
 

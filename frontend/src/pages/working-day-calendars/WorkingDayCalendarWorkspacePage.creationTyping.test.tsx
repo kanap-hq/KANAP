@@ -36,6 +36,7 @@ vi.mock('../../hooks/useWorkingDayCalendarNav', () => ({
 import * as service from '../../services/workingDayProfiles';
 import WorkingDayCalendarWorkspacePage from './WorkingDayCalendarWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
+import { PAGE_FIELD, pressInto } from '../../test/creationHold';
 
 const mocked = service as unknown as {
   getWorkingDayProfile: ReturnType<typeof vi.fn>;
@@ -139,26 +140,26 @@ describe('WorkingDayCalendarWorkspacePage typing while the calendar is created',
 
   it('saves once on the new calendar the description committed while the calendar is written', async () => {
     const { finish } = await startWrite();
-    const description = screen.getByLabelText('workingDayCalendars.fields.description');
-    act(() => description.focus());
+    const description = screen.getByLabelText('workingDayCalendars.fields.description', { selector: PAGE_FIELD });
+    pressInto(description);
     fireEvent.change(description, { target: { value: 'Contract staff' } });
     fireEvent.blur(description);
     await finish();
 
     await until(() => { if (updatesWith('description', 'Contract staff').length === 0) throw new Error(`updates: ${JSON.stringify(mocked.updateWorkingDayProfile.mock.calls)}`); });
     expect(updatesWith('description', 'Contract staff')).toHaveLength(1);
-    const shown = screen.getByLabelText('workingDayCalendars.fields.description') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('workingDayCalendars.fields.description', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     await until(() => { if (shown.value !== 'Contract staff') throw new Error(`description shows "${shown.value}"`); });
   });
 
   it('keeps the description being typed while the calendar is written: same field, same focus, saved on the new calendar', async () => {
     const { finish } = await startWrite();
-    const description = screen.getByLabelText('workingDayCalendars.fields.description');
-    act(() => description.focus());
+    const description = screen.getByLabelText('workingDayCalendars.fields.description', { selector: PAGE_FIELD });
+    pressInto(description);
     fireEvent.change(description, { target: { value: 'Con' } });
     await finish();
 
-    const shown = screen.getByLabelText('workingDayCalendars.fields.description') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('workingDayCalendars.fields.description', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     expect(shown === description).toBe(true);
     expect(document.activeElement === shown).toBe(true);
     fireEvent.change(shown, { target: { value: 'Contract staff' } });

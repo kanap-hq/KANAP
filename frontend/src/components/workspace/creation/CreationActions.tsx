@@ -3,7 +3,6 @@ import { flushSync } from 'react-dom';
 import { Box, Button } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { visuallyHiddenSx } from '../../design/FieldLabel';
-import { armCreationFieldFocus } from './creationFieldFocus';
 import useMissingAnnouncement from './missingAnnouncement';
 
 type Props = {
@@ -54,8 +53,6 @@ export default function CreationActions({ onCreate, onCancel, busy = false, writ
   const { t } = useTranslation('common');
   const createRef = React.useRef<HTMLButtonElement>(null);
   const announcement = useMissingAnnouncement(createRef);
-  const doneRef = React.useRef(done);
-  doneRef.current = done;
   // What the pill said when the pointer last pressed it.
   const pressedOnDone = React.useRef(false);
 
@@ -76,8 +73,7 @@ export default function CreationActions({ onCreate, onCancel, busy = false, writ
       // A key held down repeats: its first press is the one meant.
       if (event.repeat) return;
       // As from the keyboard: the field being typed commits as the focus leaves it, and the pill runs
-      // on the page rendered with it. A busy pill takes neither.
-      if (!doneRef.current && !create.disabled) armCreationFieldFocus();
+      // on the page rendered with it.
       flushSync(() => create.focus());
       create.click();
     };
@@ -101,8 +97,6 @@ export default function CreationActions({ onCreate, onCancel, busy = false, writ
         disabled={busy}
         onPointerDown={(event) => {
           pressedOnDone.current = done;
-          // The record this press creates puts the cursor in its first field to fill.
-          if (!done) armCreationFieldFocus();
           // Safari gives a pressed button no focus: the field being typed would not commit.
           event.currentTarget.focus();
         }}

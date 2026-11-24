@@ -48,6 +48,7 @@ import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import ContractWorkspacePage from './ContractWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
+import { PAGE_FIELD, pressInto } from '../../test/creationHold';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -149,8 +150,8 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
   it('keeps the notes typed while the contract is written: same editor, same focus, saved on the new contract', async () => {
     const { finish } = await startWrite();
     // The person goes on to the notes and types a first letter while the contract is written.
-    const notes = await screen.findByLabelText('markdown-editor');
-    act(() => notes.focus());
+    const notes = await screen.findByLabelText('markdown-editor', { selector: PAGE_FIELD });
+    pressInto(notes);
     fireEvent.change(notes, { target: { value: 'S' } });
     await finish();
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/ops/contracts/CTR-7/overview'));
@@ -159,7 +160,7 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
     await until(() => { if (!mocked.get.mock.calls.some(([url]) => url === '/contracts/c-new/relation-counts')) throw new Error('counts not read'); });
 
     // The rest of the sentence goes to the same editor, which still has the focus.
-    const shown = screen.getByLabelText('markdown-editor') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('markdown-editor', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     expect(shown === notes).toBe(true);
     expect(document.activeElement === shown).toBe(true);
     fireEvent.change(shown, { target: { value: 'Signed by the CIO' } });
@@ -188,7 +189,7 @@ describe('ContractWorkspacePage typing while the contract is created', () => {
 
     // The person moves on to the amount while the contract is being written.
     const amount = within(drawer).getByRole('textbox', { name: 'contracts.fields.yearlyAmount' });
-    act(() => amount.focus());
+    pressInto(amount);
     fireEvent.change(amount, { target: { value: '12000' } });
 
     await act(async () => { answer({ data: { ...STORED, creation_token: 'tok' } }); });

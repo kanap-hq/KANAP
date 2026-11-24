@@ -108,6 +108,31 @@ describe('TechnologiesPage', () => {
     }
   });
 
+  it('sizes the counter columns to hold their header whole in the four languages', () => {
+    renderPage();
+    for (const [field, key] of [['servers', 'servers'], ['applications', 'applications']]) {
+      const col = column(field);
+      expect(col.headerName).toBe(`pages.technologies.columns.${key}`);
+      for (const locale of [en, fr, de, es]) {
+        const label: string = (locale as any).pages.technologies.columns[key];
+        // A header reads 11 px Inter (6.5 px a letter at most for these words: "Servidores" 57 px,
+        // "Anwendungen" 77 px) inside 12 px of padding on each side; these columns have no icon.
+        expect(label.length * 6.5 + 24).toBeLessThanOrEqual(col.width);
+      }
+    }
+  });
+
+  it('keeps the reference header whole beside the sort icon in the four languages', () => {
+    renderPage();
+    const col = column('reference');
+    expect(col.headerName).toBe('pages.technologies.columns.reference');
+    for (const locale of [en, fr, de, es]) {
+      const label: string = (locale as any).pages.technologies.columns.reference;
+      // Same measure as the counters, plus 18 px for the sort icon a sorted column shows.
+      expect(label.length * 6.5 + 24 + 18).toBeLessThanOrEqual(col.width);
+    }
+  });
+
   it('filters by hosting type from the catalog, with its localized names', async () => {
     renderPage();
     expect(await column('hosting_type').filterParams.getValues({})).toEqual([

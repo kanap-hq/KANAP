@@ -20,6 +20,7 @@ vi.mock('./LocationSubItemsTable', () => ({ default: () => null }));
 
 import api from '../../../api';
 import LocationOverviewTab from './LocationOverviewTab';
+import { findCreatedRecordField } from '../../../components/workspace/creation/creationFieldFocus';
 
 const patch = (api as unknown as { patch: ReturnType<typeof vi.fn> }).patch;
 const pause = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
@@ -163,6 +164,15 @@ describe('LocationOverviewTab notes waiting to be saved', () => {
     await pause(50);
     expect(onNotesSaved).toHaveBeenCalledWith('one, typed', 'loc-1');
     expect(onNotesSaved).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('LocationOverviewTab place of the cursor once a site is created', () => {
+  it('declares its notes when the person may change them, and nothing otherwise', () => {
+    const view = render(wrap({}));
+    expect(findCreatedRecordField(document.body)).toBe(screen.getByLabelText('markdown-editor'));
+    view.rerender(wrap({ canManage: false }));
+    expect(document.querySelector('[data-creation-description]')).toBeNull();
   });
 });
 

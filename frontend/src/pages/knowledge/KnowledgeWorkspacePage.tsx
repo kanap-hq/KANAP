@@ -43,7 +43,7 @@ import { releaseLockKeepalive } from '../../lib/releaseLockKeepalive';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { classifyKnowledgeLoadError, isKnowledgeDocumentAddress } from './knowledgeLoadError';
 import EditableTitle from '../../components/workspace/EditableTitle';
-import { CreationActions, CreationPreview, takeCreationFieldFocus, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
+import { CreationActions, CreationPreview, useCreationFieldFocus, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 
 const MarkdownEditor = React.lazy(() => import('../../components/MarkdownEditor'));
 
@@ -1759,20 +1759,9 @@ export default function KnowledgeWorkspacePage() {
     queryKeyPrefixes: ['knowledge'],
     onError: setError,
   });
-  // Tab from the title of a new document, or the press of Create (`CreationActions`): the text
-  // gets the focus once the document is created.
-  const contentFocusPendingRef = React.useRef(false);
-  const wasCreateRef = React.useRef(isCreate);
-  // The editor takes the focus once it is enabled (it waits while the lock is being taken).
-  React.useEffect(() => {
-    const created = wasCreateRef.current && !isCreate;
-    wasCreateRef.current = isCreate;
-    if (!created) return;
-    const armed = takeCreationFieldFocus();
-    if (!contentFocusPendingRef.current && !armed) return;
-    contentFocusPendingRef.current = false;
-    setContentFocusNonce((n) => n + 1);
-  }, [isCreate]);
+  // The document the title created puts the cursor in its text, its description (the creation frame).
+  const workspaceRef = React.useRef<HTMLDivElement>(null);
+  useCreationFieldFocus(workspaceRef, isCreate ? 'new' : 'record');
   // The title committed before the library, the default type and the template were read waits for them.
   const createDefaultsReady = isCreate
     && librariesStatus !== 'pending'
@@ -1968,7 +1957,7 @@ export default function KnowledgeWorkspacePage() {
   const showReadOnlyAccessNotice = (!isCreate && !canManageDocument) || (isCreate && !!activeCreateLibrary && !canManageDocument);
 
   return (
-    <>
+    <Box ref={workspaceRef} sx={{ display: 'contents' }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1, flexWrap: 'wrap', gap: 1 }}>
         <Breadcrumbs aria-label={t('common:labels.breadcrumb')}>
           <MLink component={Link} underline="hover" color="inherit" to="/knowledge">{t('workspace.breadcrumbs.knowledge')}</MLink>
@@ -2137,7 +2126,7 @@ export default function KnowledgeWorkspacePage() {
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
               <Stack spacing={1} sx={{ mb: 2, flexShrink: 0 }}>
-                <Box sx={{ minWidth: 0 }}>
+                <Box data-creation-title="" sx={{ minWidth: 0 }}>
                   <EditableTitle
                     value={isCreate ? '' : displayTitle}
                     fallback={isCreate ? t('workspace.fields.titlePlaceholder') : t('workspace.values.untitled')}
@@ -2156,9 +2145,9 @@ export default function KnowledgeWorkspacePage() {
                       handleTitleSave(value);
                     }}
                     onTab={() => {
-                      // Tab goes on to the text: at once on a document, once created on a new one.
-                      if (isCreate) contentFocusPendingRef.current = true;
-                      else setContentFocusNonce((n) => n + 1);
+                      // Tab goes on to the text: at once on a document; on a new one, Tab gives
+                      // the title, and the document created puts the cursor in its text.
+                      if (!isCreate) setContentFocusNonce((n) => n + 1);
                     }}
                     typography={DOCUMENT_TITLE_TYPOGRAPHY}
                   />
@@ -2201,7 +2190,7 @@ export default function KnowledgeWorkspacePage() {
                 )}
               </Stack>
 
-              <Box ref={editorHostRef} sx={{ flex: 1, minHeight: 0 }}>
+              <Box ref={editorHostRef} data-creation-description={canEditContent ? '' : undefined} sx={{ flex: 1, minHeight: 0 }}>
                 <CreationFrame dimmed={isCreate}>
                 <React.Suspense fallback={<MarkdownEditorLoadingFallback minRows={editorRows} />}>
                   <MarkdownEditor
@@ -2288,6 +2277,6 @@ export default function KnowledgeWorkspacePage() {
           </Box>
         )}
       </Stack>
-    </>
+    </Box>
   );
 }

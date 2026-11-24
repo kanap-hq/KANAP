@@ -37,6 +37,7 @@ vi.mock('../../hooks/useAnalyticsNav', () => ({
 import * as service from '../../services/analytics';
 import AnalyticsWorkspacePage from './AnalyticsWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
+import { PAGE_FIELD, pressInto } from '../../test/creationHold';
 
 const mocked = service as unknown as {
   getAnalyticsValue: ReturnType<typeof vi.fn>;
@@ -123,8 +124,8 @@ describe('AnalyticsWorkspacePage typing while the value is created', () => {
 
   it('saves once on the new value the description committed while the value is written', async () => {
     const { finish } = await startWrite();
-    const description = screen.getByLabelText('analytics.fields.description');
-    act(() => description.focus());
+    const description = screen.getByLabelText('analytics.fields.description', { selector: PAGE_FIELD });
+    pressInto(description);
     fireEvent.change(description, { target: { value: 'Servers' } });
     fireEvent.blur(description);
     await finish();
@@ -135,12 +136,12 @@ describe('AnalyticsWorkspacePage typing while the value is created', () => {
 
   it('keeps the description being typed while the value is written: same field, same focus, saved on the new value', async () => {
     const { finish } = await startWrite();
-    const description = screen.getByLabelText('analytics.fields.description');
-    act(() => description.focus());
+    const description = screen.getByLabelText('analytics.fields.description', { selector: PAGE_FIELD });
+    pressInto(description);
     fireEvent.change(description, { target: { value: 'Ser' } });
     await finish();
 
-    const shown = screen.getByLabelText('analytics.fields.description') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('analytics.fields.description', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     expect(shown === description).toBe(true);
     expect(document.activeElement === shown).toBe(true);
     fireEvent.change(shown, { target: { value: 'Servers' } });

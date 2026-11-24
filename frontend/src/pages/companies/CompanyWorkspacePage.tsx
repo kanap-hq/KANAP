@@ -845,7 +845,7 @@ function NotesField({
   const { t } = useTranslation(['master-data']);
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   return (
-    <Box>
+    <Box data-creation-description={disabled ? undefined : ''}>
       <Typography sx={sectionLabelSx}>{t('companies.fields.notes')}</Typography>
       <TextField
         value={draft}

@@ -8,6 +8,7 @@ import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 import { resetCreationStore } from '../../components/workspace/creation/creationStore';
+import { clearCreationFieldFocus } from '../../components/workspace/creation/creationFieldFocus';
 import NavigationTracker, { resetNavigationTracker } from '../../components/navigation/NavigationTracker';
 import InterfaceWorkspacePage from './InterfaceWorkspacePage';
 
@@ -198,6 +199,8 @@ describe('InterfaceWorkspacePage (draft)', () => {
 
   afterEach(async () => {
     cleanup();
+    // A record written here opens on no record page: the cursor it awaits is dropped.
+    clearCreationFieldFocus();
     await i18n.changeLanguage('en');
   });
 

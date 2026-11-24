@@ -8,7 +8,7 @@ import { LocationLink } from './location-link.entity';
 import { LocationSubItem } from './location-sub-item.entity';
 import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
 import { compileAgFilterCondition, createParamNameGenerator, assertSetFilterModes } from '../common/ag-grid-filtering';
-import { AuditService, AuditSourceOptions } from '../audit/audit.service';
+import { AuditService, AuditSourceOptions, writeAuditLogs } from '../audit/audit.service';
 import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { Company } from '../companies/company.entity';
 import { User } from '../users/user.entity';
@@ -563,7 +563,7 @@ export class LocationsService {
         recipients: recipientRows,
         rawEmails,
         tenantId: tenant,
-        manager: mg,
+        itemRef: location.location_reference ?? undefined,
       });
     }
 
@@ -1109,11 +1109,16 @@ export class LocationsService {
     return saved;
   }
 
+  /**
+   * Deletes a sub-location; the assets in it are kept and left without a sub-location (the
+   * Sub-locations table confirms it first). `opts.audit` carries the source of a write made for the
+   * assistant's card.
+   */
   async deleteSubItem(
     locationId: string,
     subItemId: string,
     userId: string | null,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; audit?: AuditSourceOptions },
   ) {
     await this.loadLocationOrThrow(locationId, opts?.manager);
     const mg = opts?.manager ?? this.repo.manager;
@@ -1122,16 +1127,42 @@ export class LocationsService {
     if (!existing || existing.location_id !== locationId) {
       return { ok: true };
     }
+    // The assets in it, locked and read as they are: each gets the History entry its page writes
+    // when the sub-location is emptied by hand (`AssetsCrudService.update`), written below in one
+    // statement for all of them, by the author of the gesture and its source.
+    const detached: Array<Record<string, unknown>> = await mg.query(
+      `SELECT * FROM assets WHERE tenant_id = $2 AND sub_location_id = $1 ORDER BY id FOR UPDATE`,
+      [subItemId, existing.tenant_id],
+    );
 
     // Clear sub_location_id on affected assets before deleting
     await mg.query(
       `UPDATE assets SET sub_location_id = NULL WHERE sub_location_id = $1`,
       [subItemId],
     );
+    await writeAuditLogs(mg, detached.map((before) => ({
+      table: 'assets',
+      recordId: String(before.id),
+      action: 'update',
+      before,
+      after: { ...before, sub_location_id: null },
+      userId,
+      source: opts?.audit?.source,
+      sourceRef: opts?.audit?.sourceRef ?? null,
+    })));
 
     await repo.delete({ id: subItemId } as any);
     await this.audit.log(
-      { table: 'location_sub_items', recordId: subItemId, action: 'delete', before: existing, after: null, userId },
+      {
+        table: 'location_sub_items',
+        recordId: subItemId,
+        action: 'delete',
+        before: existing,
+        after: null,
+        userId,
+        source: opts?.audit?.source,
+        sourceRef: opts?.audit?.sourceRef ?? null,
+      },
       { manager: mg },
     );
     return { ok: true };

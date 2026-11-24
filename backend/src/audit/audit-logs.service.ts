@@ -9,6 +9,7 @@ import { neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { writeCsvHeader, writeCsvRows } from '../common/csv-sheet/write';
 import { writeListExportStream, type ListExportFile } from '../common/csv/list-export';
 import { AUTH_EVENT_TABLE, EXPORT_EVENT_TABLE } from './security-events';
+import { loadAuditLinkedRecords, type AuditLinkedRecord } from './audit-linked-records';
 import {
   IncidentViewer,
   auditLogIncidentVisibilityQueryBuilderClause,
@@ -29,6 +30,8 @@ type AuditListItem = {
   source: string;
   source_ref: string | null;
   created_at: Date;
+  /** The detail of a budget line's link entry: the linked records by id (`audit-linked-records.ts`). */
+  linked_records?: Record<string, AuditLinkedRecord>;
 };
 
 const AUDIT_FILTER_VALUE_FIELDS = ['table_name', 'action', 'source'] as const;
@@ -764,6 +767,8 @@ export class AuditLogsService {
     if (!found) throw new NotFoundException('Audit entry not found');
 
     const usersById = await this.loadUsersById(found.user_id ? [found.user_id] : [], opts?.manager);
-    return this.toAuditListItem(found, usersById);
+    const item = this.toAuditListItem(found, usersById);
+    const linkedRecords = await loadAuditLinkedRecords(manager, tenantId, found);
+    return linkedRecords ? { ...item, linked_records: linkedRecords } : item;
   }
 }

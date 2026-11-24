@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { AiExecutionContextWithManager } from '../ai.types';
 import { AiRelationMutationSupportService } from '../mutation/ai-relation-mutation-support.service';
+import { ROW_AUDITED_RELATIONS, SCREEN_SERVICE_RELATIONS, screenTraceOf } from '../mutation/ai-relation-screen-audit';
 
 const TENANT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const USER_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -111,8 +112,9 @@ async function testRelationTitleNamesTheReferenceOnce() {
 
 /**
  * A link written by Plaid from the budget line names the line as parent, as the screens do, so
- * the line's History tab shows it. The same link written from the application carries no parent:
- * one write may touch several lines (`record-history/records/spend_items.ts`).
+ * the line's History tab shows it. The same link written from the application leaves the row of the
+ * application's Relations tab: one row per toggled line, on the application, with no parent
+ * (`ai-relation-screen-audit.ts`).
  */
 async function testRelationAuditParentsTheBudgetLine() {
   const line = await runRelation({
@@ -130,6 +132,8 @@ async function testRelationAuditParentsTheBudgetLine() {
   assert.equal(line.audited[0].table, 'application_spend_items');
   assert.equal(line.audited[0].recordId, LINE_ID);
   assert.deepEqual(line.audited[0].parent, { table: 'spend_items', id: LINE_ID });
+  assert.deepEqual(line.audited[0].before, []);
+  assert.deepEqual(line.audited[0].after, [APP_ID]);
 
   const application = await runRelation({
     id: 'preview-app',
@@ -146,6 +150,8 @@ async function testRelationAuditParentsTheBudgetLine() {
   assert.equal(application.audited[0].table, 'application_spend_items');
   assert.equal(application.audited[0].recordId, APP_ID);
   assert.equal(application.audited[0].parent, undefined);
+  assert.deepEqual(application.audited[0].before, []);
+  assert.deepEqual(application.audited[0].after, [LINE_ID]);
   console.log('  relation audit parent: OK');
 }
 
@@ -153,6 +159,8 @@ type AuditedRelation = {
   table: string;
   recordId?: string;
   parent?: { table: string; id: string };
+  before?: unknown;
+  after?: unknown;
 };
 
 async function runRelation(input: {
@@ -164,10 +172,19 @@ async function runRelation(input: {
 }): Promise<{ audited: AuditedRelation[] }> {
   const audited: AuditedRelation[] = [];
   const queries: string[] = [];
+  let lineLinked = false;
+  let applicationLinked = false;
   const manager = {
     query: async (sql: string) => {
       const text = sql.replace(/\s+/g, ' ').trim();
       queries.push(text);
+      // An insert answers the row it wrote: the writer refuses a write of no row.
+      if (/INSERT INTO application_spend_items \(tenant_id, application_id/.test(text)) { lineLinked = true; return [{ ok: 1 }]; }
+      if (/INSERT INTO application_spend_items \(tenant_id, spend_item_id/.test(text)) { applicationLinked = true; return [{ ok: 1 }]; }
+      if (/SELECT l\.application_id AS id FROM application_spend_items/.test(text)) return applicationLinked ? [{ id: APP_ID }] : [];
+      if (/SELECT l\.spend_item_id AS id FROM application_spend_items/.test(text)) {
+        return lineLinked && /nature = 'opex'/.test(text) ? [{ id: LINE_ID }] : [];
+      }
       if (/FROM\s+users\b|FROM\s+user_roles\b|assigned_roles/.test(text)) return [];
       if (/FOR NO KEY UPDATE/.test(text)) return [{ ok: 1 }];
       if (/SELECT DISTINCT nature FROM spend_items/.test(text)) return [{ nature: 'opex' }];
@@ -211,9 +228,31 @@ async function runRelation(input: {
   return { audited };
 }
 
+/**
+ * Every relation of the writer leaves the screen's trace (lot K2b): a trace of the stored state
+ * (`screenTraceOf`), a writer that audits each row (`ROW_AUDITED_RELATIONS`) or the screen's own
+ * service (`SCREEN_SERVICE_RELATIONS`): exactly one of the three.
+ */
+function testEveryRelationLeavesTheScreensTrace() {
+  const service = new AiRelationMutationSupportService(null as any, null as any, null as any, null as any);
+  const relations = service.getSupportedRelationDescriptions().flatMap((entry) => {
+    const [entity, list] = entry.split(': ');
+    return list.split(', ').map((relation) => `${entity}.${relation}`);
+  });
+  assert.equal(relations.length, 36);
+  for (const key of relations) {
+    const [entity, relation] = key.split('.');
+    const ways = [!!screenTraceOf(entity, relation), ROW_AUDITED_RELATIONS.has(key), SCREEN_SERVICE_RELATIONS.has(key)];
+    assert.equal(ways.filter(Boolean).length, 1, `${key}: one trace exactly`);
+  }
+  for (const key of [...ROW_AUDITED_RELATIONS, ...SCREEN_SERVICE_RELATIONS]) assert.ok(relations.includes(key), `${key}: a relation of the writer`);
+  console.log('  every relation leaves the screen trace: OK');
+}
+
 async function main(): Promise<void> {
   await testRelationTitleNamesTheReferenceOnce();
   await testRelationAuditParentsTheBudgetLine();
+  testEveryRelationLeavesTheScreensTrace();
 }
 
 main().catch((error) => {
