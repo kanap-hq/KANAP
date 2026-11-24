@@ -59,7 +59,7 @@ import { fixMulterFilename } from '../common/upload';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { isInlineAttachmentShownInContent, isStoragePathReferencedInAnyTable, lockStoragePaths, unreferencedPaths } from '../common/storage-path-refs';
 import { detectChanges, REQUEST_TRACKED_FIELDS, resolveDisplayNames } from '../common/change-detection';
-import { givenMembership, PORTFOLIO_PAIRS, settleRecordMembership } from '../common/record-membership';
+import { givenMembership, PORTFOLIO_PAIRS, settleRecordMembership, STREAM_PAIR } from '../common/record-membership';
 import { MarkdownWorkBudget, markdownWorkBudget, normalizeMarkdownRichText } from '../common/markdown-worker';
 import { RemoteInlineImageImportService } from '../common/remote-inline-image-import.service';
 import { loadSlotBodies } from '../knowledge/integrated-document-bodies';
@@ -1288,14 +1288,20 @@ export class PortfolioRequestsService {
     const hasPurposeOverride = Object.prototype.hasOwnProperty.call(overrides || {}, 'purpose');
     const hasRequestorOverride = Object.prototype.hasOwnProperty.call(overrides || {}, 'requestor_id');
     const purposeContent = await convertedRequestPurpose(hasPurposeOverride, overrides?.purpose, task.description);
+    // The task's own stream and category, under the rule of every write (lot I7a of 26.12.1): a stream
+    // without its category brings it, and a pair that contradicts itself (a task saved before the rule,
+    // or whose stream moved to another category) is refused, naming both.
+    const classification = await settleRecordMembership(
+      mg, [STREAM_PAIR], { category_id: task.category_id || null, stream_id: task.stream_id || null }, null, tenantId,
+    );
 
     const request = requestRepo.create({
       tenant_id: tenantId,
       name,
       requestor_id: hasRequestorOverride ? (overrides?.requestor_id || null) : (userId || task.creator_id || null),
       source_id: task.source_id || null,
-      category_id: task.category_id || null,
-      stream_id: task.stream_id || null,
+      category_id: (classification.category_id as string | null | undefined) ?? null,
+      stream_id: (classification.stream_id as string | null | undefined) ?? null,
       company_id: task.company_id || null,
       department_id: null,
       target_delivery_date: task.due_date || null,

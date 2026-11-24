@@ -152,6 +152,33 @@ async function testConversion() {
   });
 }
 
+/** A request made from a task: the task's own stream and category, under the same rule. */
+async function testRequestFromATask() {
+  await inRolledBackTransaction(async (runner) => {
+    const { ids, tenantId, creatorId } = await seed(runner);
+    const manager = runner.manager;
+    const requests = new PortfolioRequestsService(
+      manager.getRepository(PortfolioRequest), new AuditService(manager.getRepository(AuditLog)), {} as any, {} as any,
+      { logChange: async () => undefined } as any, {} as any, new ItemNumberService(), {} as any, managedDocumentServices(manager),
+    );
+    const task = async (n: number, category: string | null, stream: string | null) => {
+      const id = randomUUID();
+      await runner.query(
+        `INSERT INTO tasks (id, tenant_id, item_number, title, status, category_id, stream_id) VALUES ($1, $2, $3, $4, 'open', $5, $6)`,
+        [id, tenantId, n, `Task ${n}`, category, stream],
+      );
+      return id;
+    };
+    // A stream without its category brings it.
+    const alone: any = await requests.convertFromTask(await task(1, null, ids.opsBiz), {}, tenantId, creatorId, { manager });
+    assert.deepEqual([alone.category_id, alone.stream_id], [ids.biz, ids.opsBiz], 'the category of the stream');
+    const coherent: any = await requests.convertFromTask(await task(2, ids.it, ids.opsIt), {}, tenantId, creatorId, { manager });
+    assert.deepEqual([coherent.category_id, coherent.stream_id], [ids.it, ids.opsIt]);
+    // A task saved before the rule, its stream of another category: refused, naming both.
+    await refused(requests.convertFromTask(await task(3, ids.it, ids.opsBiz), {}, tenantId, creatorId, { manager }), 'STREAM_OUTSIDE_CATEGORY', { child: 'Ops', childParent: 'Business', parent: 'IT' });
+  });
+}
+
 /** Tasks: a task of a project shows its project's category and stream where it has none. */
 async function testTasks() {
   await inRolledBackTransaction(async (runner) => {
@@ -218,6 +245,7 @@ async function main() {
   const tests: Array<[string, () => Promise<void>]> = [
     ['requests and projects', testRequestsAndProjects],
     ['conversion of a request', testConversion],
+    ['request made from a task', testRequestFromATask],
     ['tasks', testTasks],
     ['contributors and people', testContributorsAndPeople],
   ];
