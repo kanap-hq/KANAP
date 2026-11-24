@@ -757,9 +757,18 @@ function hasTechnologyPeopleWrite(rawText: string, text: string): boolean {
   // "Make" writes people only in the form "Make <name> the IT owner of …" or "… the support
   // contact of …". A determiner or a pronoun after it opens a report: "Make a list of…",
   // "Make me a summary…".
+  // "Make me the business owner of APP-3": the person names themselves, the owner phrase follows
+  // "me" directly ("Make me a list of the owners" stays a report).
   if (first === 'make') {
     const rest = text.slice(text.indexOf('make') + 4).trim();
+    if (/^me\s+the\s+(?:(?:it|business)\s+owner|support contacts?)\s+of\b/.test(rest)) return true;
     return /^(?!a\b|an\b|the\b|me\b|us\b)\S[\s\S]*?\bthe\s+(?:(?:it|business)\s+owner|support contacts?)\s+of\b/.test(rest);
+  }
+  // "Mets-moi responsable métier de APP-3": the owner phrase follows "moi" directly ("Mets-moi la
+  // liste des responsables" stays a report).
+  if (first === 'mets-moi' || first === 'mettez-moi') {
+    const rest = text.slice(text.indexOf('-moi') + 4).trim();
+    return /^(?:comme\s+)?responsable\s+(?:it|metier)\s+(?:de|du|des|d')/.test(rest);
   }
   const changeVerb = first != null && [
     'ajoute', 'ajoutez', 'ajouter', 'add',
