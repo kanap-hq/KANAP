@@ -969,11 +969,16 @@ export class AiRelationMutationSupportService {
 
     const next = new Map(currentItems.map((item) => [item.key, item]));
     for (const raw of remove) {
-      const item = await this.resolveRelationInput(context, config, sourceId, raw, 'remove', currentItems);
-      if (!next.has(item.key)) {
-        throw new BadRequestException(`${item.label} is not currently linked.`);
+      // A contact's removal names the contact, and may take several of its links.
+      const items = config.kind === 'contact_role' || config.kind === 'supplier_contacts'
+        ? await this.resolveContactRemoval(context, config, raw, currentItems)
+        : [await this.resolveRelationInput(context, config, sourceId, raw, 'remove', currentItems)];
+      for (const item of items) {
+        if (!next.has(item.key) && !currentItems.some((current) => current.key === item.key)) {
+          throw new BadRequestException(`${item.label} is not currently linked.`);
+        }
+        next.delete(item.key);
       }
-      next.delete(item.key);
     }
     for (const raw of add) {
       const item = await this.resolveRelationInput(context, config, sourceId, raw, 'add', currentItems);
@@ -1050,12 +1055,46 @@ export class AiRelationMutationSupportService {
   }
 
   /**
-   * A contact and its role. On a contract or a budget line a contact links once per role, whatever
-   * brought it (the supplier or a person, `origin`), as their Contacts panels:
-   * - removing it names the stored link, from the supplier too: the panel removes any link;
-   * - adding by hand the link the supplier already brought with that role writes nothing on the
-   *   screen (`attachManualContactLink` returns the stored link): the card is not proposed, and the
-   *   model is told so. Another role stays possible.
+   * The links a removal takes: it names the contact. Linked once to the record, that link goes,
+   * whatever role is said or not; linked under several roles, a role said takes that role's link, and
+   * none said takes every link added by hand (a contract's or a line's links its supplier brought
+   * stay), or every link when the supplier brought them all. The Contacts panels remove any link,
+   * the supplier's included, one at a time.
+   */
+  private async resolveContactRemoval(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    raw: unknown,
+    currentItems: RelationItem[],
+  ): Promise<RelationItem[]> {
+    const ref = itemRefOf(raw, CONTACT_REF_KEYS);
+    if (!ref) throw new BadRequestException('Contact reference is required (contact_ref: its CTCT-n reference, email or name).');
+    const contact = await this.resolveReference(context, 'contacts', ref);
+    const links = currentItems.filter((current) => String(current.payload.contact_id).toLowerCase() === contact.id.toLowerCase());
+    if (links.length === 0) throw new BadRequestException(`${contact.label} is not linked to this record: there is nothing to remove.`);
+    if (links.length === 1) return links;
+    const item = objectValue(raw);
+    const said = config.kind === 'supplier_contacts' || SUPPLIER_ROLE_CONTACT_SOURCES.has(config.sourceEntity)
+      ? supplierContactRole(item, 'remove')
+      : roleTextOf(item);
+    if (said) {
+      const matching = links.filter((link) => String(link.payload.role ?? '').toLowerCase() === said.toLowerCase());
+      if (matching.length > 0) return matching;
+      const roles = links.map((link) => textOrNull(link.payload.role) ?? 'none').join(', ');
+      throw new BadRequestException(
+        `${contact.label} is linked to this record with the roles ${roles}, not ${said}: name one of them, or no role to remove the links added by hand.`,
+      );
+    }
+    const byHand = links.filter((link) => link.payload.origin !== 'supplier');
+    return byHand.length > 0 ? byHand : links;
+  }
+
+  /**
+   * A contact and its role, added (a removal goes through `resolveContactRemoval`). On a contract or
+   * a budget line a contact links once per role, whatever brought it (the supplier or a person,
+   * `origin`), as their Contacts panels: adding by hand the link the supplier already brought with
+   * that role writes nothing on the screen (`attachManualContactLink` returns the stored link): the
+   * card is not proposed, and the model is told so. Another role stays possible.
    */
   private async resolveContactRoleInput(
     context: AiExecutionContextWithManager,
@@ -1077,7 +1116,6 @@ export class AiRelationMutationSupportService {
     const stored = supplierOriginCapable
       ? currentItems.find((current) => current.payload.contact_id === contact.id && (current.payload.role ?? null) === role)
       : undefined;
-    if (stored && mode === 'remove') return stored;
     if (stored && stored.payload.origin === 'supplier' && origin !== 'supplier') {
       const record = config.sourceEntity === 'contracts' ? 'contract' : 'budget line';
       const [supplier]: Array<{ name: string | null }> = await context.manager.query(

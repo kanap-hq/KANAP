@@ -189,6 +189,77 @@ async function run() {
       assert.match(refusal, /Asset assignment role is required/);
       assert.doesNotMatch(refusal, PG_TEXT);
     });
+
+    // Removals name the contact (lot K2b): linked once, it goes whatever role is said; linked under
+    // several roles, a role said takes that one, none said takes the links added by hand.
+    const linkContact = async (table: string, column: string, id: string, role: string, origin?: 'manual' | 'supplier') => {
+      if (origin) {
+        await runner.query(`INSERT INTO ${table} (tenant_id, ${column}, contact_id, role, origin) VALUES ($1, $2, $3, $4, $5)`, [tenantId, id, contactId, role, origin]);
+      } else {
+        await runner.query(`INSERT INTO ${table} (tenant_id, ${column}, contact_id, role) VALUES ($1, $2, $3, $4)`, [tenantId, id, contactId, role]);
+      }
+    };
+    const rolesLeft = async (table: string, column: string, id: string) => (await runner.query(
+      `SELECT role::text AS role${table === 'contract_contacts' || table === 'spend_item_contacts' ? ', origin' : ''} FROM ${table} WHERE tenant_id = $1 AND ${column} = $2 AND contact_id = $3 ORDER BY role::text`,
+      [tenantId, id, contactId],
+    ));
+    const [{ id: opexId }] = await runner.query(`SELECT id FROM spend_items WHERE tenant_id = $1 AND item_number = 9101`, [tenantId]);
+    const [{ id: capexId }] = await runner.query(`SELECT id FROM spend_items WHERE tenant_id = $1 AND item_number = 9102`, [tenantId]);
+    const removalFamilies = [
+      { name: 'contract', entity: 'contracts', ref: `CTR-${contractNumber}`, table: 'contract_contacts', column: 'contract_id', id: contractId, origin: true },
+      { name: 'OPEX line', entity: 'budget_lines', ref: 'BL-9101', table: 'spend_item_contacts', column: 'spend_item_id', id: opexId, origin: true },
+      { name: 'CAPEX line', entity: 'budget_lines', ref: 'BL-9102', table: 'spend_item_contacts', column: 'spend_item_id', id: capexId, origin: true },
+      { name: 'supplier', entity: 'suppliers', ref: `SUP-${supplierNumber}`, table: 'supplier_contacts', column: 'supplier_id', id: supplierId, origin: false },
+    ];
+    for (const family of removalFamilies) {
+      const base = { entity_type: family.entity, ref: family.ref, relation: 'contacts' };
+      const manual = family.origin ? 'manual' as const : undefined;
+      for (const [said, label] of [[undefined, 'no role'], ['technique', 'the role it has'], ['support', 'another role']] as const) {
+        await cell(`${family.name}: a contact linked once is removed with ${label}`, async () => {
+          await linkContact(family.table, family.column, family.id, 'technical', manual);
+          const executed = await approve({ ...base, remove: [{ contact: contactRef, ...(said ? { role: said } : {}) }] });
+          assert.equal(executed.status, 'executed', executed.error_message ?? '');
+          assert.deepEqual(await rolesLeft(family.table, family.column, family.id), []);
+        });
+      }
+      await cell(`${family.name}: linked under several roles, a removal without a role takes the links added by hand`, async () => {
+        await linkContact(family.table, family.column, family.id, 'technical', manual);
+        await linkContact(family.table, family.column, family.id, 'commercial', manual);
+        if (family.origin) await linkContact(family.table, family.column, family.id, 'support', 'supplier');
+        const preview = await previews.createPreview(ctx, 'update_entity_relations', { ...base, remove: [{ contact_ref: contactRef }] });
+        const to = (preview.changes?.contacts?.relation_items?.to ?? []) as unknown[];
+        const from = (preview.changes?.contacts?.relation_items?.from ?? []) as unknown[];
+        assert.equal(from.length - to.length, 2, 'the card names the two links removed');
+        const executed = await previews.executePreview(ctx, preview.preview_id);
+        assert.equal(executed.status, 'executed', executed.error_message ?? '');
+        assert.deepEqual(await rolesLeft(family.table, family.column, family.id), family.origin ? [{ role: 'support', origin: 'supplier' }] : []);
+      });
+      await cell(`${family.name}: linked under several roles, a role said takes that link only`, async () => {
+        await linkContact(family.table, family.column, family.id, 'technical', manual);
+        await linkContact(family.table, family.column, family.id, 'commercial', manual);
+        const refusal = await refused({ ...base, remove: [{ contact: contactRef, role: 'other' }] });
+        assert.match(refusal, /with the roles commercial, technical, not other/, `a role it does not have is refused (${refusal})`);
+        const executed = await approve({ ...base, remove: [{ contact: contactRef, role: 'Technical' }] });
+        assert.equal(executed.status, 'executed', executed.error_message ?? '');
+        assert.deepEqual(await rolesLeft(family.table, family.column, family.id), [{ role: 'commercial', ...(family.origin ? { origin: 'manual' } : {}) }]);
+      });
+      await cell(`${family.name}: a contact not linked is refused before the card`, async () => {
+        const refusal = await refused({ ...base, remove: [{ contact: contactRef, role: 'technical' }] });
+        assert.match(refusal, /is not linked to this record/);
+      });
+    }
+    await cell('contract: the only link, brought by the supplier, is removed as on the panel', async () => {
+      await linkContact('contract_contacts', 'contract_id', contractId, 'support', 'supplier');
+      const executed = await approve({ entity_type: 'contracts', ref: `CTR-${contractNumber}`, relation: 'contacts', remove: [contactRef] });
+      assert.equal(executed.status, 'executed', executed.error_message ?? '');
+      assert.deepEqual(await rolesLeft('contract_contacts', 'contract_id', contractId), []);
+    });
+    await cell('application support contact: removed with no role', async () => {
+      await runner.query(`INSERT INTO application_support_contacts (tenant_id, application_id, contact_id, role) VALUES ($1, $2, $3, 'Astreinte')`, [tenantId, appId, contactId]);
+      const executed = await approve({ entity_type: 'applications', ref: 'APP-9101', relation: 'support_contacts', remove: [{ contact: contactRef }] });
+      assert.equal(executed.status, 'executed', executed.error_message ?? '');
+      assert.deepEqual(await runner.query(`SELECT 1 FROM application_support_contacts WHERE tenant_id = $1 AND application_id = $2`, [tenantId, appId]), []);
+    });
   } finally {
     await runner.rollbackTransaction().catch(() => undefined);
     await runner.release();
