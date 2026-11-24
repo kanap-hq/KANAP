@@ -14,7 +14,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   the card names from the shipped labels in the person's language ("Obsolète" in French), then
 //   the approval writes it.
 // - A state the workspace created is accepted by its name and keeps that name; a state marked
-//   retired in the settings is still accepted, as the screen and the change in bulk still offer it.
+//   retired in the settings is refused on an application that does not hold it (rule P7, lot K2c of
+//   26.12.1), as the screen and the change in bulk no longer offer it there.
 
 process.env.AI_CHAT_ENABLED = 'true';
 process.env.AI_SETTINGS_ENABLED = 'true';
@@ -190,11 +191,12 @@ async function testWorkspaceStates(harness: Harness) {
     await approve(harness, ctx, preview);
     assert.equal(await lifecycleOf(runner, s), 'pilot');
 
-    // A state marked retired in the settings stays offered on the screen and in the change in bulk.
-    const retired = await card(harness, ctx, 'update_business_record', { entity_type: 'applications', ref: 'APP-1', fields: { lifecycle: 'Gelé' } });
-    assert.equal(retired.changes.lifecycle.to, 'frozen');
-    await approve(harness, ctx, retired);
-    assert.equal(await lifecycleOf(runner, s), 'frozen');
+    // A state marked retired in the settings is refused on an application that does not hold it.
+    await refused(
+      () => card(harness, ctx, 'update_business_record', { entity_type: 'applications', ref: 'APP-1', fields: { lifecycle: 'Gelé' } }),
+      /The lifecycle "Gelé" is retired: only a record that already holds it keeps it\. Valid values: Proposed, Active, Deprecated, Retired, Pilote maison\./,
+    );
+    assert.equal(await lifecycleOf(runner, s), 'pilot');
   });
 }
 

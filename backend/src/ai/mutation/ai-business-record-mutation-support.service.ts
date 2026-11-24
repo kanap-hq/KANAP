@@ -15,7 +15,7 @@ import { InterfacesService } from '../../interfaces/services/interfaces.service'
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { TechnologyCatalogService } from '../../technologies/catalog/technology-catalog.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
-import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
+import { findCatalogOption, resolveOfferedCatalogCodes } from '../../it-ops-settings/catalog-resolve';
 import { withShippedLabels } from '../../it-ops-settings/catalog-shipped-labels';
 import { ClassificationCatalog, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
@@ -60,6 +60,7 @@ import {
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
 import { nameWithoutLeadingReference } from './name-without-leading-reference';
+import { loadSlotBodies } from '../../knowledge/integrated-document-bodies';
 import { familyReference, familyReferenceNumber } from '../ai-entity-reference.util';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, INCIDENT_STATUS_RANK } from '../../incidents/incident.entity';
@@ -134,6 +135,7 @@ type FieldKind =
   | 'application_classification'
   | 'incident_category'
   | 'it_catalog'
+  | 'it_catalog_list'
   | 'date_time'
   | 'non_negative_decimal'
   | 'percent'
@@ -142,7 +144,7 @@ type FieldKind =
   | 'upper3';
 
 /** The tenant's IT settings lists a `it_catalog` field takes its code and label from. */
-type ItCatalogList = 'technologyFamilies' | 'lifecycleStates' | 'hostingTypes' | 'cyberCriticalityLevels' | 'recoveryWaves' | 'adminZones';
+type ItCatalogList = 'technologyFamilies' | 'lifecycleStates' | 'hostingTypes' | 'cyberCriticalityLevels' | 'recoveryWaves' | 'adminZones' | 'accessMethods';
 
 type FieldConfig = {
   label: string;
@@ -155,8 +157,10 @@ type FieldConfig = {
   classificationAxis?: 'business' | 'cyber' | 'confidentiality' | 'recovery';
   /** A tenant catalog of IT settings: the card accepts the code or the exact label and shows the label. */
   itCatalog?: ItCatalogList;
-  /** The screen still offers a value marked retired in the settings: accept it like the others. */
-  offersRetired?: boolean;
+  /** Written at the creation only: an update refuses it before the card, with this sentence. */
+  createOnly?: string;
+  /** An alias the write folds into another field (that field is the one compared and written). */
+  writesAs?: string;
   minimum?: number;
   maximum?: number;
   /** The service's text bound, in characters; absent keeps the generic text rule. */
@@ -256,9 +260,9 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       end_of_support_date: { label: 'End of Support Date', kind: 'date', nullable: true },
       go_live_date: { label: 'Go-Live Date', kind: 'date', nullable: true },
       predecessor_id: { label: 'Predecessor', kind: 'relation', nullable: true, relationTarget: 'applications', aliases: ['predecessor'] },
-      // The workspace's states, as the Applications screen and the change in bulk offer them: a state
-      // marked retired in the settings stays offered there, so it stays accepted here.
-      lifecycle: { label: 'Lifecycle', kind: 'it_catalog', itCatalog: 'lifecycleStates', offersRetired: true },
+      // The workspace's states, as the Applications screen and the change in bulk offer them (rule P7:
+      // a state marked retired only on the application that holds it).
+      lifecycle: { label: 'Lifecycle', kind: 'it_catalog', itCatalog: 'lifecycleStates' },
       environment: { label: 'Environment', kind: 'enum', enumValues: ENVIRONMENTS },
       criticality: { label: 'Business criticality', kind: 'application_classification', classificationAxis: 'business', nullable: true, aliases: ['business_criticality'] },
       cyber_criticality: { label: 'Cyber Criticality', kind: 'application_classification', classificationAxis: 'cyber', nullable: true, aliases: ['cyber'] },
@@ -274,7 +278,7 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       sso_enabled: { label: 'SSO Enabled', kind: 'boolean' },
       mfa_supported: { label: 'MFA Supported', kind: 'boolean' },
       etl_enabled: { label: 'ETL Enabled', kind: 'boolean' },
-      access_methods: { label: 'Access Methods', kind: 'array_text' },
+      access_methods: { label: 'Access Methods', kind: 'it_catalog_list', itCatalog: 'accessMethods' },
       contains_pii: { label: 'Contains PII', kind: 'boolean' },
       licensing: { label: 'Licensing', kind: 'text', nullable: true },
       notes: { label: 'Notes', kind: 'text', nullable: true },
@@ -404,7 +408,12 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       audit_logging: { label: 'Audit Logging', kind: 'text', nullable: true },
       security_controls_summary: { label: 'Security Controls Summary', kind: 'text', nullable: true },
       middleware_application_ids: { label: 'Middleware Applications', kind: 'relation', nullable: true, relationTarget: 'applications', aliases: ['middleware_applications'] },
-      specification_markdown: { label: 'Specification', kind: 'text', nullable: true },
+      // The specification is a document of the interface, filled at the creation; its text then
+      // changes through the document's own tool.
+      specification_markdown: {
+        label: 'Specification', kind: 'text', nullable: true,
+        createOnly: "An interface's specification is a document: change its text with `update_document_content` on the interface's specification document.",
+      },
     },
   },
   connections: {
@@ -492,7 +501,7 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       currency: { label: 'Currency', kind: 'upper3', requiredOnCreate: true },
       effective_start: { label: 'Effective Start', kind: 'date', requiredOnCreate: true },
       // Deprecated alias of disabled_at for one release: fills an empty end of validity, never clears it.
-      effective_end: { label: 'End of validity', kind: 'date', nullable: true },
+      effective_end: { label: 'End of validity', kind: 'date', nullable: true, writesAs: 'disabled_at' },
       owner_it_id: { label: 'IT Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['it_owner'] },
       owner_business_id: { label: 'Business Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['business_owner'] },
       analytics_category_id: { label: 'Analytics Category', kind: 'relation', nullable: true, relationTarget: 'analytics_categories', aliases: ['analytics_category'] },
@@ -528,6 +537,11 @@ const TECHNOLOGY_REFUSED_FIELDS: Record<string, string> = {
   file: "Attachments are added from the technology's Relations tab, not by a record write.",
   technology_attachments: "Attachments are added from the technology's Relations tab, not by a record write.",
 };
+
+/** The fields an update of the family writes (`update_business_record`): every field but the creation-only ones. */
+export function aiBusinessRecordUpdateFields(entityType: AiBusinessRecordEntityType): string[] {
+  return Object.entries(ENTITY_CONFIG[entityType].fields).filter(([, field]) => !field.createOnly && !field.writesAs).map(([name]) => name);
+}
 
 export const AI_BUSINESS_RECORD_BUSINESS_RESOURCES = Array.from(
   new Set(AI_BUSINESS_RECORD_ENTITY_TYPES.map((entityType) => ENTITY_CONFIG[entityType].businessResource)),
@@ -696,9 +710,14 @@ export class AiBusinessRecordMutationSupportService {
     return getAiBusinessRecordBusinessResource(entityType);
   }
 
-  getWritableFieldDescriptions(entityTypes: readonly AiBusinessRecordEntityType[] = AI_BUSINESS_RECORD_ENTITY_TYPES): string[] {
+  getWritableFieldDescriptions(
+    entityTypes: readonly AiBusinessRecordEntityType[] = AI_BUSINESS_RECORD_ENTITY_TYPES,
+    mode: 'create' | 'update' = 'create',
+  ): string[] {
     return entityTypes.map((entityType) => {
-      const fields = Object.keys(ENTITY_CONFIG[entityType].fields);
+      const fields = Object.entries(ENTITY_CONFIG[entityType].fields)
+        .filter(([, field]) => mode === 'create' || !field.createOnly)
+        .map(([name]) => name);
       // The tenant's other analytics dimensions (listed per tenant in the prompt context).
       if (isBudgetLineEntity(entityType)) fields.push(`${ANALYTICS_CSV_PREFIX}<dimension code>`);
       return `${entityType}: ${fields.join(', ')}`;
@@ -833,34 +852,51 @@ export class AiBusinessRecordMutationSupportService {
       return { value: normalized, displayValue: normalized };
     }
     if (field.kind === 'application_category') {
+      // Rule P7: a retired category only on the application that holds it. The card shows the
+      // code: the frontend names it from the tenant's list in the person's language.
       const option = await this.itOpsSettings.resolveApplicationCategoryOption(context.tenantId, rawValue, {
         manager: context.manager,
+        current: existing?.[fieldName] == null ? null : String(existing[fieldName]),
       });
-      return { value: option.code, displayValue: option.label || option.code };
+      return { value: option.code, displayValue: option.code };
     }
     if (field.kind === 'it_catalog') {
       // The tenant's own list, with the labels the app shows for a shipped value in every
       // language: the code or an exact label is accepted. A retired value is refused unless it is
-      // the one the record already holds, as the screen hides it (`offersRetired` keeps it when the
-      // screen still offers it). An ambiguous label is refused.
+      // the one the record already holds, as the screen hides it (rule P7). An ambiguous label is refused.
       const settings = withShippedLabels(await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager }));
       const options = field.itCatalog
         ? settings[field.itCatalog] as Array<{ code: string; label: string; deprecated?: boolean }>
         : [];
       const current = existing?.[fieldName] == null ? null : String(existing[fieldName]);
-      const option = findCatalogOption(rawValue, options, current, !field.offersRetired);
+      const option = findCatalogOption(rawValue, options, current, true);
       if (!option) {
         const allowed = options
-          .filter((item) => field.offersRetired || !item.deprecated || item.code === current)
+          .filter((item) => !item.deprecated || item.code === current)
           .slice(0, 10)
           .map((item) => item.label || item.code)
           .join(', ');
-        throw new BadRequestException(
-          `Unknown ${field.label.toLowerCase()} "${String(rawValue).trim()}". Valid values: ${allowed}.`,
-        );
+        const retired = findCatalogOption(rawValue, options);
+        throw new BadRequestException(retired
+          ? `The ${field.label.toLowerCase()} "${retired.label || retired.code}" is retired: only a record that already holds it keeps it. Valid values: ${allowed}.`
+          : `Unknown ${field.label.toLowerCase()} "${String(rawValue).trim()}". Valid values: ${allowed}.`);
       }
       // The card shows the code: the frontend names it from the same list in the person's language.
       return { value: option.code, displayValue: option.code };
+    }
+    if (field.kind === 'it_catalog_list') {
+      // A list of the tenant's catalog (the access methods of an application): each value by its
+      // code or an exact label in any language the app shows; an unknown value is refused with the
+      // list of the values allowed, a retired one unless the record already holds it (rule P7).
+      const settings = withShippedLabels(await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager }));
+      const options = field.itCatalog ? settings[field.itCatalog] as Array<{ code: string; label: string; deprecated?: boolean }> : [];
+      const values = Array.isArray(rawValue) ? rawValue : String(rawValue).split(',');
+      const codes = resolveOfferedCatalogCodes(values, options, {
+        held: Array.isArray(existing?.[fieldName]) ? existing?.[fieldName] : [],
+        what: field.label.toLowerCase().replace(/s$/, ''),
+      });
+      // The card shows the codes: the frontend names them from the same list in the person's language.
+      return { value: codes, displayValue: codes.join(', ') };
     }
     if (field.kind === 'incident_category') {
       const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
@@ -1037,6 +1073,9 @@ export class AiBusinessRecordMutationSupportService {
       if (Object.prototype.hasOwnProperty.call(fields, resolved.name)) {
         const shown = axis && !axis.is_default ? `${ANALYTICS_CSV_PREFIX}${axis.code}` : resolved.name;
         throw new BadRequestException(`Field ${shown} was provided more than once.`);
+      }
+      if (mode === 'update' && resolved.config.createOnly) {
+        throw new BadRequestException(resolved.config.createOnly);
       }
       if (isLine && resolved.name === 'contract_id' && nature === 'capex') {
         throw new BadRequestException('A contract cannot be written on a CAPEX line: link the contract from the line\'s Relations tab instead.');
@@ -1867,7 +1906,11 @@ export class AiBusinessRecordMutationSupportService {
     input: AiUpdateBusinessRecordInput,
   ): Promise<AiPreparedMutationPreview> {
     const entityType = requireEntityType(input.entity_type);
-    const target = await this.resolveRecordReference(context, entityType, input.ref);
+    const reference = await this.resolveRecordReference(context, entityType, input.ref);
+    // The record as the screen reads it, the read the approval compares with: an operating system,
+    // a connection's protocols and servers, an interface's middleware are not columns of its table.
+    const row = this.withAnalyticsValueKeys(entityType, await this.getRecordSnapshot(context, entityType, reference.id));
+    const target = { ...reference, row };
     return this.prepareUpdatePreviewForTarget(context, entityType, target, coerceRecord(input.fields, 'fields'), {
       sourcePreviewId: null,
     });
@@ -2405,7 +2448,30 @@ export class AiBusinessRecordMutationSupportService {
     }
   }
 
+  /**
+   * The record as its screen reads it (`get`), with the values Kad writes in the same shape: a
+   * connection's servers as their ids.
+   */
   private async getRecordSnapshot(
+    context: AiExecutionContextWithManager,
+    entityType: AiBusinessRecordEntityType,
+    id: string,
+  ): Promise<Record<string, unknown>> {
+    const row = await this.readRecord(context, entityType, id);
+    if (entityType === 'connections' && Array.isArray(row?.servers)) {
+      return { ...row, servers: (row.servers as Array<{ id?: unknown } | string>).map((server) => (typeof server === 'string' ? server : String(server?.id ?? ''))) };
+    }
+    if (entityType === 'projects' || entityType === 'requests') {
+      // A project's purpose, a request's purpose and risks are the texts of its managed documents.
+      const slots = entityType === 'projects' ? { purpose: 'purpose' } : { purpose: 'purpose', risks: 'risks_mitigations' };
+      const bodies = (await loadSlotBodies(context.manager, context.tenantId, entityType, [String(row.id)], Object.values(slots) as any[])).get(String(row.id));
+      const texts = Object.fromEntries(Object.entries(slots).map(([field, slot]) => [field, bodies?.get(slot) ?? null]));
+      return { ...row, ...texts };
+    }
+    return row;
+  }
+
+  private async readRecord(
     context: AiExecutionContextWithManager,
     entityType: AiBusinessRecordEntityType,
     id: string,
