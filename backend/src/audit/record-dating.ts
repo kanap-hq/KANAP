@@ -59,11 +59,25 @@ function fieldOf(value: unknown, key: string): unknown {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>)[key] : undefined;
 }
 
-/** The value as `jsonb` keeps it: dates as text, no undefined, null for nothing. */
+/** Every uuid of a payload in lower case: a writer may store either case, the page reads one record. */
+function lowerUuids(value: unknown): unknown {
+  if (isAuditUuid(value)) return value.toLowerCase();
+  if (Array.isArray(value)) return value.map(lowerUuids);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, lowerUuids(item)]));
+  }
+  return value;
+}
+
+/**
+ * The value as `jsonb` keeps it: dates as text, no undefined, null for nothing; its uuids in lower
+ * case, so that an update where only the case of an id changed (the page names the same record on
+ * both sides) is no change for the dating.
+ */
 function stored(value: unknown): unknown {
   if (value === undefined || value === null) return null;
   const text = JSON.stringify(value);
-  return text === undefined ? null : JSON.parse(text);
+  return text === undefined ? null : lowerUuids(JSON.parse(text));
 }
 
 /**

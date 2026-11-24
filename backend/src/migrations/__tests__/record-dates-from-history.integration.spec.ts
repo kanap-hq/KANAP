@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import { RecordDatesFromHistory1856277000000 as Migration } from '../1856277000000-record-dates-from-history';
+import { historyShowsRow, recordsToDate } from '../../audit/record-dating';
 import { RECORD_HISTORY, type RecordHistoryRecord } from '../../audit/record-history.inventory';
 import { UPDATED_AT_TABLES } from '../../common/updated-at.inventory';
 import { assert, inRolledBackTransaction, runSpecs, seedItem, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
@@ -280,6 +281,17 @@ async function testDirtyDatabase(run: Migration) {
   });
 }
 
+/** An update where only the case of a uuid changed shows no change, so it dates nothing. */
+async function testUuidCase() {
+  const id = randomUUID();
+  const company = randomUUID();
+  const row = { table: 'contracts', recordId: id, action: 'update', before: { company_id: company }, after: { company_id: company.toUpperCase() } };
+  assert.equal(historyShowsRow('contracts', row, id), false, 'the migration does not take such a row');
+  assert.deepEqual(Array.from(recordsToDate([row]).entries()), [], 'a new such row dates nothing');
+  const changed = { ...row, after: { company_id: randomUUID().toUpperCase() } };
+  assert.equal(historyShowsRow('contracts', changed, id), true, 'another company is a change');
+}
+
 /** A statement that fails in the middle of the loop: up() raises that statement's error. */
 async function testFailureMidLoop() {
   await inRolledBackTransaction(async (runner) => {
@@ -311,6 +323,7 @@ runSpecs('record-dates-from-history migration', [
   ['the frozen correspondence is the dating code', testCorrespondenceIsTheCode],
   ['a dirty database of two tenants', () => testDirtyDatabase(migration)],
   ['the same, by batches of 2 records and 2 rows per record', () => testDirtyDatabase(smallBounds())],
+  ['an update where only the case of a uuid changed dates nothing', testUuidCase],
   ['a failure in the middle of the loop raises its own cause', testFailureMidLoop],
   ['down() leaves the dates', testDownDoesNothing],
 ]).catch((err) => {
