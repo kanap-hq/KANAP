@@ -189,6 +189,21 @@ export async function settleRecordMembership(
   return values;
 }
 
+/**
+ * The lock of the record read before a write that gives a value of a pair: `FOR NO KEY UPDATE`, as the
+ * write's own UPDATE takes it, so two writes at the same moment (one changes the category, the other
+ * the stream) are checked one after the other and never store a pair that contradicts itself. None
+ * outside a transaction (the lock would end with the read) or when the write leaves the pairs alone.
+ */
+export function membershipReadLock(
+  manager: { queryRunner?: { isTransactionActive?: boolean } | null },
+  pairs: readonly MembershipPair[],
+  body: Record<string, unknown> | null | undefined,
+): { lock?: { mode: 'for_no_key_update' } } {
+  if (!manager.queryRunner?.isTransactionActive) return {};
+  return Object.keys(givenMembership(pairs, body)).length > 0 ? { lock: { mode: 'for_no_key_update' } } : {};
+}
+
 /** The keys of `body` among the pairs' columns, with their values: what a write gives. */
 export function givenMembership(pairs: readonly MembershipPair[], body: Record<string, unknown> | null | undefined): Record<string, unknown> {
   const given: Record<string, unknown> = {};

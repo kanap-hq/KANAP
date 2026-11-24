@@ -25,7 +25,7 @@ import { assertContractsEditable } from '../data-access/contract-write-checks';
 import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
-import { givenMembership, loadMembershipParents, settleRecordMembership, STREAM_PAIR } from '../common/record-membership';
+import { givenMembership, loadMembershipParents, membershipReadLock, settleRecordMembership, STREAM_PAIR } from '../common/record-membership';
 import { shownTaskClassification } from './task-shown-classification';
 import {
   IncidentViewer,
@@ -117,6 +117,22 @@ export class TasksUnifiedService {
     if (Object.keys(given).length === 0) return {};
     const shown = shownTaskClassification(existing, project);
     return settleRecordMembership(manager, [STREAM_PAIR], given, { category_id: shown.category_id, stream_id: shown.stream_id }, tenantId);
+  }
+
+  /**
+   * A write that sets the stream or the category of a standalone or project task, its relation kept,
+   * reads the task again under the write's lock (`membershipReadLock`), so two such writes at the same
+   * moment are checked one after the other. Such a write locks nothing after the task (no budget line,
+   * no project), so the lock order of the other writes stays as it is.
+   */
+  private async lockForMembership(manager: EntityManager, repo: Repository<Task>, existing: Task, payload: Record<string, unknown>): Promise<Task> {
+    if (this.hasOwn(payload, 'related_object_type') || this.hasOwn(payload, 'related_object_id')) return existing;
+    if (existing.related_object_type !== null && existing.related_object_type !== 'project') return existing;
+    const lock = membershipReadLock(manager, [STREAM_PAIR], payload);
+    if (!lock.lock) return existing;
+    const locked = await repo.findOne({ where: { id: existing.id }, ...lock });
+    if (!locked) throw new NotFoundException('Task not found');
+    return locked;
   }
 
   /** The classification of the project a task belongs to, none for another task. */
@@ -979,8 +995,9 @@ export class TasksUnifiedService {
     delete (payload as any).application_ids;
     delete (payload as any).asset_ids;
     if (!payload?.id) throw new BadRequestException('id is required');
-    const existing = await repo.findOne({ where: { id: payload.id } });
-    if (!existing) throw new NotFoundException('Task not found');
+    const found = await repo.findOne({ where: { id: payload.id } });
+    if (!found) throw new NotFoundException('Task not found');
+    const existing = await this.lockForMembership(manager, repo, found, payloadRecord);
 
     const normalizedDescription = this.hasOwn(payload, 'description')
       ? await normalizeMarkdownRichText(payload.description, { fieldName: 'description', storedValue: existing.description })
@@ -1104,8 +1121,9 @@ export class TasksUnifiedService {
     delete (payload as any).application_ids;
     delete (payload as any).asset_ids;
 
-    const existing = await repo.findOne({ where: { id: taskId } });
-    if (!existing) throw new NotFoundException('Task not found');
+    const found = await repo.findOne({ where: { id: taskId } });
+    if (!found) throw new NotFoundException('Task not found');
+    const existing = await this.lockForMembership(manager, repo, found, payloadRecord);
 
     // Capture "before" state for notification comparison
     const before = { ...existing };

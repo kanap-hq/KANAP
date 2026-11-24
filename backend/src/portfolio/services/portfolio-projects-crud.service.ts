@@ -32,7 +32,7 @@ import { readsPartOf, withCountedLinkChanges } from '../../common/relations/link
 import { auditedLinkSet, hiddenLineCount } from '../../data-access/hidden-links';
 import { singleChangedId } from '../../audit/audit-parent-rules';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
-import { givenMembership, PORTFOLIO_PAIRS, settleRecordMembership } from '../../common/record-membership';
+import { givenMembership, membershipReadLock, PORTFOLIO_PAIRS, settleRecordMembership } from '../../common/record-membership';
 import { appliedLinks, wroteLinks } from '../portfolio-link-writes.util';
 
 const ACTUAL_DATE_FIELDS = ['actual_start', 'actual_end'] as const;
@@ -598,7 +598,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const mg = this.getManager(opts);
     const repo = mg.getRepository(PortfolioProject);
 
-    const existing = await repo.findOne({ where: { id } });
+    // Read under the write's lock when the body sets a pair (`membershipReadLock`).
+    const existing = await repo.findOne({ where: { id }, ...membershipReadLock(mg, PORTFOLIO_PAIRS, body as Record<string, unknown>) });
     if (!existing) throw new NotFoundException('Project not found');
     refuseActualDates(body);
 

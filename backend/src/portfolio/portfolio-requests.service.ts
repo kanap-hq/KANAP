@@ -59,7 +59,7 @@ import { fixMulterFilename } from '../common/upload';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { isInlineAttachmentShownInContent, isStoragePathReferencedInAnyTable, lockStoragePaths, unreferencedPaths } from '../common/storage-path-refs';
 import { detectChanges, REQUEST_TRACKED_FIELDS, resolveDisplayNames } from '../common/change-detection';
-import { givenMembership, PORTFOLIO_PAIRS, settleRecordMembership, STREAM_PAIR } from '../common/record-membership';
+import { givenMembership, membershipReadLock, PORTFOLIO_PAIRS, settleRecordMembership, STREAM_PAIR } from '../common/record-membership';
 import { MarkdownWorkBudget, markdownWorkBudget, normalizeMarkdownRichText } from '../common/markdown-worker';
 import { RemoteInlineImageImportService } from '../common/remote-inline-image-import.service';
 import { loadSlotBodies } from '../knowledge/integrated-document-bodies';
@@ -1457,7 +1457,8 @@ export class PortfolioRequestsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioRequest);
 
-    const existing = await repo.findOne({ where: { id } });
+    // Read under the write's lock when the body sets a pair (`membershipReadLock`).
+    const existing = await repo.findOne({ where: { id }, ...membershipReadLock(mg, PORTFOLIO_PAIRS, body as Record<string, unknown>) });
     if (!existing) throw new NotFoundException('Request not found');
 
     if (existing.status === 'converted') {
