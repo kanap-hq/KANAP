@@ -1,6 +1,6 @@
 import type { CsvLanguage } from '../common/csv-sheet';
 import { catalogFromMetadata, catalogToMetadata } from '../it-ops-settings/classification-catalog';
-import { findCatalogOption, requireImportCatalogs, resolveCatalogCode } from '../it-ops-settings/catalog-resolve';
+import { CatalogOptionLike, CatalogRefusal, offeredCatalogList, requireImportCatalogs, resolveCatalogCode, resolveOfferedCatalogCodes } from '../it-ops-settings/catalog-resolve';
 import { APPLICATION_NAME_MAX, applicationNameKey, assertApplicationDates, codedErrorOf } from './application-rules';
 import { CLASSIFICATION_INPUT_FIELDS, classificationPatch } from './services/application-classification';
 import {
@@ -17,7 +17,7 @@ import { numberedColumns } from '../common/csv/csv-numbered-lists';
 import { VULNERABILITY_CSV_HEADERS, vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
 import { richTextCell } from '../common/csv/rich-text-cell';
 import { sameStoredValue, sameStoredValues } from '../common/csv-sheet/unchanged';
-import { formatApplicationCategoryOptions, ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
+import { ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
 
 const OWNER_COLUMN = /^(business|it)_owner_email_/;
 
@@ -122,10 +122,6 @@ async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportC
     [context.tenantId, unsuited],
   );
   const childCount = new Map(children.map((row) => [row.suite_id, row.count]));
-  const catalogAllowed = {
-    lifecycle: formatApplicationCategoryOptions(settings.lifecycleStates),
-    category: formatApplicationCategoryOptions(settings.applicationCategories),
-  };
 
   for (const row of rows) {
     const name = cellText(row, 'name');
@@ -145,15 +141,30 @@ async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportC
       }
     }
 
-    for (const [column, options, code] of [['lifecycle', settings.lifecycleStates, 'lifecycle_invalid'], ['category', settings.applicationCategories, 'category_invalid']] as const) {
+    // Rule P7: a value the catalog does not know, or one it retired, is refused unless the
+    // application the row updates already holds it.
+    for (const [column, options, code] of [
+      ['lifecycle', settings.lifecycleStates, 'lifecycle_invalid'],
+      ['category', settings.applicationCategories, 'category_invalid'],
+      ['access_methods', settings.accessMethods, 'access_method_invalid'],
+    ] as const) {
       // A blank cell keeps the value; `-` on these values that cannot be empty is refused by the import.
       const value = cellText(row, column);
-      if (!value) continue;
-      let found = null;
-      try { found = findCatalogOption(value, options as any[]); } catch { found = null; }
-      if (!found) {
-        const allowed = catalogAllowed[column];
-        fail(row, code, `Unknown ${column} "${value}"; use a code or a name of the catalog: ${allowed}`, { value, allowed }, column);
+      if (!value || value === '-') continue;
+      const values = column === 'access_methods' ? value.split(',').map((item) => item.trim()).filter(Boolean) : [value];
+      try {
+        resolveOfferedCatalogCodes(values, options as CatalogOptionLike[], {
+          held: existing?.[column],
+          what: column === 'access_methods' ? 'access method' : column,
+          refuse: (message, refusal) => Object.assign(new Error(message), { refusal }),
+        });
+      } catch (error: any) {
+        const refusal = error?.refusal as CatalogRefusal | undefined;
+        if (!refusal) {
+          fail(row, code, error.message, { value, allowed: offeredCatalogList(options as CatalogOptionLike[], existing?.[column]) }, column);
+          continue;
+        }
+        fail(row, refusal.retired ? 'catalog_value_retired' : code, error.message, { value: refusal.value, allowed: refusal.allowed }, column);
       }
     }
 

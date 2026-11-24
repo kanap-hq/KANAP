@@ -1,6 +1,7 @@
 import { AuditService } from '../audit/audit.service';
 import { ClassificationCatalog, ClassificationLevel, CLASSIFICATION_CATALOG_KEYS, OBSOLETE_CATALOG_METADATA_KEYS, catalogFromMetadata, catalogToMetadata, validateClassificationCatalog } from './classification-catalog';
 import { CatalogTranslations, normalizeTranslations, prepareCatalogListForWrite } from './catalog-codes';
+import { CatalogRefusal, findCatalogOption, offeredCatalogList, resolveOfferedCatalogCode } from './catalog-resolve';
 import { CATALOG_USAGE, CatalogUsageItem, UsageKey, countCatalogUsage } from './catalog-usage';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { englishList, RecordInUseException } from '../common/record-in-use';
@@ -1151,10 +1152,20 @@ export class ItOpsSettingsService {
     return fallbackCode;
   }
 
+  /**
+   * The category a write stores, by its code or its name (rule P7: a retired category only on the
+   * application that holds it, `current`; a value the catalog does not know only when the
+   * application already holds it). Empty takes the default when `useDefaultForEmpty` is set.
+   */
   async resolveApplicationCategoryOption(
     tenantId: string,
     value: unknown,
-    opts?: { manager?: EntityManager; useDefaultForEmpty?: boolean },
+    opts?: {
+      manager?: EntityManager;
+      useDefaultForEmpty?: boolean;
+      current?: string | null;
+      refuse?: (message: string, refusal: CatalogRefusal) => Error;
+    },
   ): Promise<ItOpsEnumOption> {
     const options = await this.getApplicationCategoryOptions(tenantId, { manager: opts?.manager });
     const text = String(value ?? '').trim();
@@ -1164,25 +1175,28 @@ export class ItOpsSettingsService {
         const fallback = options.find((option) => option.code === fallbackCode);
         if (fallback) return fallback;
       }
-      throw new BadRequestException('Application category is required');
+      const allowed = offeredCatalogList(options, opts?.current);
+      const message = `Application category is required. Use one of: ${allowed}.`;
+      throw opts?.refuse ? opts.refuse(message, { value: '', allowed, retired: false }) : new BadRequestException(message);
     }
-
-    const codeKey = this.normalizeLookupKey(text);
-    const byCode = options.find((option) => this.normalizeLookupKey(option.code) === codeKey);
-    if (byCode) return byCode;
-
-    const byLabel = options.find((option) => this.normalizeLookupKey(option.label) === codeKey);
-    if (byLabel) return byLabel;
-
-    throw new BadRequestException(
-      `Invalid application category "${text}". Valid application categories for this tenant: ${formatApplicationCategoryOptions(options)}.`,
-    );
+    // A code or a name typed with spaces for its underscores or dashes ("line of business") still names it.
+    const key = this.normalizeLookupKey(text);
+    const loose = findCatalogOption(text, options)
+      ? null
+      : options.find((option) => this.normalizeLookupKey(option.code) === key || this.normalizeLookupKey(option.label) === key);
+    const code = resolveOfferedCatalogCode(loose?.code ?? text, options, { held: opts?.current, what: 'application category', refuse: opts?.refuse });
+    return options.find((option) => option.code === code) ?? { code, label: code };
   }
 
   async resolveApplicationCategoryCode(
     tenantId: string,
     value: unknown,
-    opts?: { manager?: EntityManager; useDefaultForEmpty?: boolean },
+    opts?: {
+      manager?: EntityManager;
+      useDefaultForEmpty?: boolean;
+      current?: string | null;
+      refuse?: (message: string, refusal: CatalogRefusal) => Error;
+    },
   ): Promise<string> {
     return (await this.resolveApplicationCategoryOption(tenantId, value, opts)).code;
   }

@@ -9,6 +9,7 @@ import { RecordInUseException, type UsageCount } from '../common/record-in-use';
 import { AuditService } from '../audit/audit.service';
 import { resolveLifecycleState, DisabledAtInput } from '../common/status';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
+import { resolveOfferedCatalogCode } from '../it-ops-settings/catalog-resolve';
 import {
   applicationParticipantCondition,
   ParticipationAccessScope,
@@ -256,6 +257,7 @@ export class AppInstancesService {
         existing.tenant_id,
         mg,
         existing.lifecycle as string,
+        existing.lifecycle as string,
       );
       existing.lifecycle = lifecycle;
     }
@@ -328,6 +330,7 @@ export class AppInstancesService {
     tenantId: string,
     manager?: EntityManager,
     fallback?: string,
+    held?: string | null,
   ): Promise<string> {
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
     const allowed = (settings.lifecycleStates || []).map((item) => item.code);
@@ -335,11 +338,16 @@ export class AppInstancesService {
     if (value === undefined || value === null || String(value).trim() === '') {
       return normalizedFallback;
     }
-    const normalized = String(value).trim().toLowerCase();
-    if (!allowed.includes(normalized)) {
-      throw applicationBadRequest('deployment_lifecycle_invalid', `Invalid lifecycle "${value}"`, { value: String(value) });
-    }
-    return normalized;
+    // Rule P7: a retired state only on the deployment that holds it.
+    return resolveOfferedCatalogCode(value, settings.lifecycleStates || [], {
+      held,
+      what: 'lifecycle',
+      refuse: (message, refusal) => applicationBadRequest(
+        refusal.retired ? 'catalog_value_retired' : 'deployment_lifecycle_invalid',
+        message,
+        { value: refusal.value, allowed: refusal.allowed },
+      ),
+    });
   }
 
   private pickLifecycleFallback(candidate: string | undefined, allowed: string[]): string {

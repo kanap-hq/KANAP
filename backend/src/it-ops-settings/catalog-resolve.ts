@@ -12,8 +12,8 @@ export type CatalogOptionLike = { code: string; label?: string | null; deprecate
  *
  * A deprecated entry can only be named to keep the value a record already holds (`current`) when
  * `excludeDeprecated` is set: it is then no longer offered to new records, as the screen hides it.
- * Callers that accept a retired value (an administrator zone still assignable by a bulk action)
- * keep the default.
+ * A record's write applies that rule through `resolveOfferedCatalogCode`; the default (every entry)
+ * serves the reads that only name a stored value (filters, exports, the import's lookups).
  */
 export function findCatalogOption<T extends CatalogOptionLike>(
   input: unknown,
@@ -31,6 +31,75 @@ export function findCatalogOption<T extends CatalogOptionLike>(
   const distinct = [...new Map(matches.map((option) => [option.code, option])).values()];
   if (distinct.length > 1) throw new BadRequestException(`"${String(input)}" matches several values (${distinct.map((option) => option.label || option.code).join(', ')}); use the exact name of one of them`);
   return distinct[0] ?? null;
+}
+
+/** The values a record holds, normalized for comparison: one code, a list of codes, or none. */
+function heldKeys(held: unknown): Set<string> {
+  const values = Array.isArray(held) ? held : held == null ? [] : [held];
+  return new Set(values.map(normalizeAlias).filter(Boolean));
+}
+
+/**
+ * The entries a record may take (rule P7, maintainer's decision of 2026-11-23): the entries still
+ * offered, and a retired one only on the record that already holds it (`held`: its value or its
+ * values). Every write of a catalog value (screen, Plaid, bulk change, import) offers this list.
+ */
+export function offeredCatalogOptions<T extends CatalogOptionLike>(options: T[], held?: unknown): T[] {
+  const keys = heldKeys(held);
+  return options.filter((option) => !option.deprecated || keys.has(normalizeAlias(option.code)));
+}
+
+/** The offered entries as a refusal names them: `code (name)`, or the code alone when the name is the code. */
+export function offeredCatalogList(options: CatalogOptionLike[], held?: unknown): string {
+  return offeredCatalogOptions(options, held)
+    .map((option) => {
+      const label = String(option.label || '').trim();
+      return label && label !== option.code ? `${option.code} (${label})` : option.code;
+    })
+    .join(', ');
+}
+
+export type CatalogRefusal = { value: string; allowed: string; retired: boolean };
+
+/**
+ * Rule P7 on a write: `input` (a code or an exact name) resolves to the code of an offered entry.
+ * A retired entry is refused unless the record already holds it; a value the catalog does not know
+ * is refused too, unless the record already holds it (a value stored before the catalog changed
+ * stays on its record). Both refusals list the values the record may take. `refuse` lets a service
+ * build its own error (a coded refusal); the default is a 400 with that list.
+ */
+export function resolveOfferedCatalogCode(
+  input: unknown,
+  options: CatalogOptionLike[],
+  opts: { held?: unknown; what: string; refuse?: (message: string, refusal: CatalogRefusal) => Error },
+): string {
+  const value = String(input ?? '').trim();
+  const option = findCatalogOption(value, options);
+  const keys = heldKeys(opts.held);
+  if (option && (!option.deprecated || keys.has(normalizeAlias(option.code)))) return option.code;
+  if (!option && keys.has(normalizeAlias(value))) {
+    const held = (Array.isArray(opts.held) ? opts.held : [opts.held]).find((item) => normalizeAlias(item) === normalizeAlias(value));
+    return String(held);
+  }
+  const allowed = offeredCatalogList(options, opts.held);
+  const refusal: CatalogRefusal = { value, allowed, retired: !!option };
+  const message = option
+    ? `The ${opts.what} "${option.label || option.code}" is retired: only a record that already holds it keeps it. Use one of: ${allowed}.`
+    : `Unknown ${opts.what} "${value}". Use one of: ${allowed}.`;
+  throw opts.refuse ? opts.refuse(message, refusal) : new BadRequestException(message);
+}
+
+/** `resolveOfferedCatalogCode` for each value of a list field (access methods, protocols), duplicates dropped. */
+export function resolveOfferedCatalogCodes(
+  inputs: unknown,
+  options: CatalogOptionLike[],
+  opts: { held?: unknown; what: string; refuse?: (message: string, refusal: CatalogRefusal) => Error },
+): string[] {
+  const values = Array.isArray(inputs) ? inputs : inputs == null ? [] : [inputs];
+  const codes = values
+    .filter((item) => String(item ?? '').trim() !== '')
+    .map((item) => resolveOfferedCatalogCode(item, options, opts));
+  return [...new Set(codes)];
 }
 
 /** Resolves to a code; unknown values are returned as typed so the caller decides (tolerant import) or throws. */
