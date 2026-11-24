@@ -96,6 +96,7 @@ const T_HIDDEN = '2025-06-01T00:00:00.000000Z';
 const T_AMOUNT = '2024-05-05T05:05:05.505050Z';
 const T_CONTACT = '2023-04-04T04:04:04.404040Z';
 const T_B = '2024-07-07T07:07:07.707070Z';
+const T_DAMAGED = '2024-08-08T08:08:08.080808Z';
 const T_CROSS = '2025-08-08T08:08:08.808080Z';
 
 type AuditSeed = {
@@ -199,6 +200,9 @@ async function testDirtyDatabase(run: Migration) {
     const hidden = await seedContract(runner, tenantA, 'hidden', T0);
     const earlier = await seedContract(runner, tenantA, 'earlier', T0);
     const deep = await seedContract(runner, tenantA, 'deep', T0);
+    const damagedA = await seedContract(runner, tenantA, 'damaged-a', T0);
+    const damagedB = await seedContract(runner, tenantA, 'damaged-b', T0);
+    const damagedC = await seedContract(runner, tenantA, 'damaged-c', T0);
     const contact = await insertId(runner, `INSERT INTO contacts (tenant_id, email) VALUES ($1, $2)`, [tenantA, `dates-${tenantA.slice(0, 8)}@example.test`]);
     await setDate(runner, 'contacts', contact, T0);
     const line = await seedItem(runner, 'opex', tenantA, 1, 'Dated line');
@@ -233,6 +237,17 @@ async function testDirtyDatabase(run: Migration) {
     for (const at of ['2025-06-01T00:00:01Z', '2025-06-01T00:00:02Z', '2025-06-01T00:00:03Z']) {
       await audit(runner, tenantA, { table: 'contracts', recordId: deep, action: 'update', before: { name: 'B' }, after: { name: 'B' }, at });
     }
+    // Damaged payloads: not objects, wrong types, null and null, an unknown action, a payload key that
+    // is no uuid, an invalid uuid. None raises; the payloads the page cannot read show no change, and
+    // a row that is no update (the unknown action) is an entry, as for a new row (`recordsToDate`).
+    await audit(runner, tenantA, { table: 'contracts', recordId: damagedA, action: 'update', before: 'text', after: [1, 2, { x: null }], at: T_DAMAGED });
+    await audit(runner, tenantA, { table: 'contracts', recordId: damagedB, action: 'update', before: { company_id: 42, start_date: { x: [1] }, name: ['n'] }, after: { company_id: 'zz', start_date: true, name: { deep: { er: 1 } } }, at: T_DAMAGED });
+    await audit(runner, tenantA, { table: 'contracts', recordId: damagedC, action: 'update', before: { name: 'A' }, after: { name: 'B' }, at: T_OWN });
+    await audit(runner, tenantA, { table: 'contracts', recordId: damagedC, action: 'update', at: T_DAMAGED });
+    await audit(runner, tenantA, { table: 'contracts', recordId: damagedC, action: 'mystery', before: {}, after: {}, at: T_HIDDEN });
+    await audit(runner, tenantA, { table: 'contract_contacts', action: 'create', after: { contact_id: 12345, contract_id: 'not-a-uuid' }, parent: { table: 'contracts', id: damagedC }, at: T_DAMAGED });
+    await audit(runner, tenantA, { table: 'technology_links', action: 'create', after: { technology_id: 'ZZ-not-uuid' }, at: T_DAMAGED });
+    await audit(runner, tenantA, { table: 'application_technologies', action: 'create', after: { application_id: '00000000-0000-0000-0000-00000000000G' }, at: T_DAMAGED });
     // Rows naming deleted records, and a row of tenant A naming tenant B's contract.
     await audit(runner, tenantA, { table: 'contracts', recordId: randomUUID(), action: 'update', before: { name: 'A' }, after: { name: 'B' }, at: T_HIDDEN });
     await audit(runner, tenantA, { table: 'contract_contacts', action: 'delete', before: { contract_id: randomUUID(), contact_id: randomUUID() }, parent: { table: 'contracts', id: randomUUID() }, at: T_HIDDEN });
@@ -253,12 +268,15 @@ async function testDirtyDatabase(run: Migration) {
     assert.equal(await dateOf(runner, 'contracts', future), now, 'an entry in the future is capped at now()');
     assert.equal(await dateOf(runner, 'contracts', hidden), T0, 'a save that changed nothing and an export date nothing');
     assert.equal(await dateOf(runner, 'contracts', earlier), T_OWN, 'under a latest update that shows no change, an earlier one dates the record');
+    assert.equal(await dateOf(runner, 'contracts', damagedA), T0, 'payloads that are no objects show no change');
+    assert.equal(await dateOf(runner, 'contracts', damagedB), T0, 'fields of the wrong type show no change');
+    assert.equal(await dateOf(runner, 'contracts', damagedC), T_HIDDEN, 'beside damaged rows, the latest entry dates the record');
     assert.equal(await dateOf(runner, 'contracts', deep), T_OWN, 'under more hidden updates than a first read takes, the shown one dates the record');
     await setTenant(runner, tenantB);
     assert.equal(await dateOf(runner, 'contracts', contractB), T_B, "a tenant's rows never date another tenant's record");
 
     const dated = new Map<string, string>([
-      [`contracts:${child}`, T_CHILD], [`contracts:${own}`, T_OWN], [`contracts:${future}`, now], [`contracts:${earlier}`, T_OWN], [`contracts:${deep}`, T_OWN],
+      [`contracts:${child}`, T_CHILD], [`contracts:${own}`, T_OWN], [`contracts:${future}`, now], [`contracts:${earlier}`, T_OWN], [`contracts:${deep}`, T_OWN], [`contracts:${damagedC}`, T_HIDDEN],
       [`contacts:${contact}`, T_CHILD], [`spend_items:${line}`, T_AMOUNT], [`contracts:${contractB}`, T_B],
     ]);
     const indexAfter = await searchIndex(runner, [tenantA, tenantB]);
