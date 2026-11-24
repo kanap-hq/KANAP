@@ -306,15 +306,44 @@ async function contactRoleWords(context: AiExecutionContextWithManager): Promise
   };
 }
 
+/** A text as its words compare: case and accents aside. */
+function plainWords(value: string): string {
+  return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
+/**
+ * Whether the person said this contact role in the conversation (Kad's chat): the role's code or
+ * one of its words in the four languages begins a word of one of their messages, on its first six
+ * letters (`technisch` says `Technik`, `autres` says `Autre`). The model sometimes picks a role the
+ * person never said (lot K2d, browser pass of 24/11): the addition then reads as one without a role,
+ * so that the person is asked. Outside a conversation (the MCP server, an agent), the role given is
+ * taken.
+ */
+async function personSaidContactRole(context: AiExecutionContextWithManager, code: string): Promise<boolean> {
+  if (context.surface !== 'chat' || !context.conversationId) return true;
+  const rows: Array<{ content: string | null }> = await context.manager.query(
+    `SELECT content FROM ai_messages WHERE tenant_id = $1 AND conversation_id = $2 AND role = 'user'`,
+    [context.tenantId, context.conversationId],
+  );
+  const said = plainWords(rows.map((row) => row.content ?? '').join('\n'));
+  const stems = [code, ...Object.values(SUPPLIER_CONTACT_ROLE_LABELS).map((labels) => labels[code])]
+    .filter((word): word is string => !!word)
+    .map((word) => plainWords(word).slice(0, 6).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return stems.some((stem) => new RegExp(`(^|[^\\p{L}\\p{N}])${stem}`, 'u').test(said));
+}
+
 /**
  * The role of a supplier's, a contract's or a budget line's contact: its code, read from the code or
  * from its word in any of the four languages (`supplierContactRoleOf`). Their screens ask it in the
- * dialog, with nothing chosen beforehand: an addition without a role, or with another word, is
- * refused before the card, so that the model asks for it. A removal reads the role said, as given
- * when it is none of the four (it names a link the record may not have), and null when none is said.
+ * dialog, with nothing chosen beforehand: an addition without a role, with another word, or with a
+ * role the person did not say in the conversation (`personSaidContactRole`), is refused before the
+ * card, so that the model asks for it. A removal reads the role said, as given when it is none of
+ * the four (it names a link the record may not have), and null when none is said.
  */
 async function supplierContactRole(context: AiExecutionContextWithManager, item: Record<string, unknown>, mode: 'add' | 'remove'): Promise<string | null> {
-  const said = roleTextOf(item);
+  const given = roleTextOf(item);
+  const givenCode = given ? supplierContactRoleOf(given) : null;
+  const said = mode === 'add' && givenCode && !(await personSaidContactRole(context, givenCode)) ? null : given;
   if (!said) {
     if (mode === 'remove') return null;
     const words = await contactRoleWords(context);

@@ -181,6 +181,55 @@ async function run() {
       assert.match(unknown, /The roles are: Vertrieb, Technik, Support, Sonstige;/);
     });
 
+    // Lot K2d, browser pass of 24/11: in Kad's chat, a role the person never said is refused as no
+    // role, even when the model passes one (`other` taken by itself); a role said by its name in any
+    // language, or in an earlier message of the conversation, is taken.
+    const conversation = async (...messages: string[]) => {
+      const id = await insertId(runner, `INSERT INTO ai_conversations (tenant_id, user_id, title) VALUES ($1, $2, 'Rôles')`, [tenantId, writer]);
+      for (const content of messages) {
+        await runner.query(`INSERT INTO ai_messages (tenant_id, conversation_id, user_id, role, content) VALUES ($1, $2, $3, 'user', $4)`, [tenantId, id, writer, content]);
+      }
+      // A reply of the assistant names a role: it is not the person's word.
+      await runner.query(`INSERT INTO ai_messages (tenant_id, conversation_id, role, content) VALUES ($1, $2, 'assistant', 'Quel rôle : Commercial, Technique, Support ou Autre ?')`, [tenantId, id]);
+      return { ...ctx, conversationId: id, screenLanguage: 'fr' };
+    };
+    const contractAdd = (role: unknown) => ({ entity_type: 'contracts', ref: `CTR-${contractNumber}`, relation: 'contacts', add: [{ contact: contactRef, role }] });
+    const roleOfCard = async (chat: any, role: unknown): Promise<string> => {
+      await runner.query('SAVEPOINT said');
+      try {
+        const preview = await previews.createPreview(chat, 'update_entity_relations', contractAdd(role));
+        const to = (preview.changes?.contacts?.relation_items?.to ?? []) as Array<{ role: { code: string } | null }>;
+        return to.map((item) => item.role?.code).filter(Boolean).join(',');
+      } catch (error: any) {
+        return `refused: ${String(error?.message ?? error)}`;
+      } finally {
+        await runner.query('ROLLBACK TO SAVEPOINT said');
+      }
+    };
+    await cell('chat: a role the person did not say is refused as no role, even when the model passes it', async () => {
+      const chat = await conversation('Ajoute le contact Maëlle Kerbrat au contrat');
+      for (const role of ['other', 'Autre', 'technical']) {
+        const refusal = await roleOfCard(chat, role);
+        assert.match(refusal, /^refused: A contact role is required, one of: Commercial, Technique, Support, Autre\./, `${role}: ${refusal}`);
+      }
+    });
+    await cell('chat: the role said by its name in each language, or by its code, is taken', async () => {
+      for (const [said, role, code] of [
+        ['Ajoute Maëlle Kerbrat au contrat comme contact technique', 'technical', 'technical'],
+        ['Add Maëlle Kerbrat to the contract as the sales contact, role Commercial', 'Commercial', 'commercial'],
+        ['Füge Maëlle Kerbrat als technischen Kontakt hinzu', 'Technik', 'technical'],
+        ['Añade a Maëlle Kerbrat como contacto de soporte', 'support', 'support'],
+        ['Ajoute-la avec le rôle autre', 'other', 'other'],
+      ] as const) {
+        assert.equal(await roleOfCard(await conversation(said), role), code, said);
+      }
+    });
+    await cell('chat: the role said in an earlier message of the conversation is taken', async () => {
+      const chat = await conversation('Ajoute le contact Maëlle Kerbrat au contrat', 'Technique');
+      assert.equal(await roleOfCard(chat, 'technical'), 'technical');
+      assert.match(await roleOfCard(chat, 'support'), /^refused: A contact role is required/);
+    });
+
     await cell('contract: a card stored without a role refuses at its approval in words', async () => {
       const preview = await previews.createPreview(ctx, 'update_entity_relations', {
         entity_type: 'contracts', ref: `CTR-${contractNumber}`, relation: 'contacts', add: [{ contact: contactRef, role: 'support' }],
