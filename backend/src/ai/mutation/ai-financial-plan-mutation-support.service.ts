@@ -140,8 +140,8 @@ function allocationBasis(method: string, driver: unknown): AllocationBasis | nul
 }
 
 /** A percentage as a model may write it (60, "60", "60 %", "60,5"). */
-function percentValue(value: unknown, label: string): number {
-  const parsed = typeof value === 'number' ? value : Number(String(value).replace('%', '').replace(',', '.').trim());
+export function percentValue(value: unknown, label: string): number {
+  const parsed = typeof value === 'number' ? value : Number(String(value).replace(/%/g, '').replace(',', '.').trim());
   if (!Number.isFinite(parsed)) throw new BadRequestException(`${label} must be a number.`);
   return parsed;
 }
