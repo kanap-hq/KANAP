@@ -632,6 +632,17 @@ async function validateAssetRows(rows: CsvImportRow[], context: CsvImportContext
         const heldTypes = (Array.isArray(existing?.ip_addresses) ? existing.ip_addresses : []).map((item: any) => item?.type);
         offered(row, typeColumn, type, settings.ipAddressTypes ?? [], heldTypes, 'asset_ip_type_invalid', 'IP address type');
       }
+      // Rule P7, as the API: a retired subnet only on the asset that already holds it.
+      const subnetColumn = `ip_${slot}_subnet_cidr`;
+      const subnet = cellText(row, subnetColumn);
+      if (subnet && subnet !== '-') {
+        const heldSubnets = (Array.isArray(existing?.ip_addresses) ? existing.ip_addresses : []).map((item: any) => String(item?.subnet_cidr ?? ''));
+        const known = (settings.subnets ?? []).filter((item) => item.cidr === subnet);
+        if (known.length > 0 && known.every((item) => item.deprecated) && !heldSubnets.includes(subnet)) {
+          const allowed = [...new Set((settings.subnets ?? []).filter((item) => !item.deprecated || heldSubnets.includes(item.cidr)).map((item) => item.cidr))].join(', ');
+          fail(row, 'catalog_value_retired', `The subnet "${subnet}" is retired: only a record that already holds it keeps it. Use one of: ${allowed}.`, { value: subnet, allowed }, subnetColumn);
+        }
+      }
       const address = cellText(row, addressColumn);
       const stored = Array.isArray(existing?.ip_addresses) ? existing.ip_addresses[slot - 1]?.ip : undefined;
       const unchanged = !!existing && address === String(stored ?? '').trim();
