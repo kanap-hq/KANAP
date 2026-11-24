@@ -506,6 +506,9 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText('Criticité business → Haute')).toBeInTheDocument();
     expect(screen.getByText('2 applications à modifier, 1 a déjà cette valeur')).toBeInTheDocument();
     expect(screen.getByText('APP-6 Foxtrot')).toBeInTheDocument();
+    // More than 200 applications, no list (`bulk_edit`): the card of before, with no box.
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('shows a budget line deletion with its versions, tasks and links, in French', () => {

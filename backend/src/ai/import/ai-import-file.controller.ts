@@ -10,6 +10,7 @@ import { AiPolicyService } from '../ai-policy.service';
 import { personWriteLanguage, screenLanguageOf } from '../ai-write-texts';
 import type { AiExecutionContextWithManager } from '../ai.types';
 import type { AiMutationPreviewDto } from '../ai.types';
+import { AI_BULK_EDIT_TOOLS, parseBulkExclusions } from '../mutation/ai-bulk-edit';
 import { AiImportMappingService, aiImportTarget, PrepareImportMappingInput } from './ai-import-mapping.service';
 import { parseImportChoices } from './ai-import-targets';
 
@@ -20,10 +21,12 @@ export function preparedFileName(filename: unknown): string {
 }
 
 /**
- * The file Plaid prepared for an import (lot I3), downloaded from the import card: the person's
- * spreadsheet in the import's format, rebuilt from the attachment and the card's mapping, never
- * stored. Unlike the other conversation routes, it runs in the request's tenant transaction, so
- * ExportEventsInterceptor records each download in the audit log, as any export.
+ * The routes of a card the person acts on before approving it, in the request's tenant transaction
+ * (the person's data access applied by the tenant interceptor). The file Plaid prepared for an
+ * import (lot I3), downloaded from the import card: the person's spreadsheet in the import's format,
+ * rebuilt from the attachment and the card's mapping, never stored; unlike the other conversation
+ * routes, ExportEventsInterceptor records each download in the audit log, as any export. The
+ * choices on an import card, and the records left out of a change in bulk (lot K2e of 26.12.1).
  */
 @Controller('ai/conversations')
 @UseGuards(JwtAuthGuard)
@@ -91,8 +94,35 @@ export class AiImportFileController {
     return this.previews.replaceImportChoices(context, previewId, choices);
   }
 
+  /**
+   * The records the person leaves out of a card of a change in bulk (lot K2e of 26.12.1):
+   * `{ excluded: [ids] }`, the whole list of the ids left out (at most 200, each one listed by the
+   * card), an empty list to keep them all. Answers the new card, recounted, which replaces this one;
+   * the same checks as the import choices: the frozen workspace (`assertSurfaceAccess`), the card of
+   * the person and of this conversation, pending, and the rights of the write. Another budget
+   * operation running answers 409 `operation_running` and leaves the card as it was.
+   */
+  @Post(':id/previews/:previewId/bulk-exclusions')
+  @HttpCode(200)
+  async exclude(
+    @Param('id') id: string,
+    @Param('previewId') previewId: string,
+    @Body() body: unknown,
+    @Req() req: any,
+    @Tenant() tenant: TenantRequest,
+  ): Promise<AiMutationPreviewDto> {
+    const context = this.context(id, req, tenant);
+    await this.policy.assertSurfaceAccess(context, context.manager);
+    const preview = await this.previews.getPreviewForUser(context, previewId);
+    if (!AI_BULK_EDIT_TOOLS.has(preview.tool_name) || preview.conversation_id !== id) {
+      throw new NotFoundException('AI preview not found.');
+    }
+    const excluded = parseBulkExclusions((body as { excluded?: unknown } | null)?.excluded);
+    return this.previews.replaceBulkExclusions(context, previewId, excluded);
+  }
+
   private context(id: string, req: any, tenant: TenantRequest): AiExecutionContextWithManager {
-    if (!tenant.manager) throw new BadRequestException('The prepared file needs a tenant.');
+    if (!tenant.manager) throw new BadRequestException('This route needs a tenant.');
     return {
       tenantId: tenant.tenantId,
       userId: String(req?.user?.sub || ''),

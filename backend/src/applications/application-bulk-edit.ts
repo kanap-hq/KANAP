@@ -65,7 +65,8 @@ export function applicationBulkFields(values: ApplicationBulkValues): BulkEditFi
   ];
 }
 
-type AppRow = {
+/** An application as the change reaches it: its values before the change (`changed_rows`, Kad's card). */
+export type ApplicationBulkRow = {
   id: string;
   category: string;
   lifecycle: string;
@@ -98,7 +99,7 @@ const sameIds = (a: readonly string[], b: readonly string[]) => a.length === b.l
  * `exclude_ids`), `changes`, and `dry_run`, or the `as_of`, `expected_rows` and `fingerprint` of the
  * dry run.
  */
-export async function bulkUpdateApplications(body: unknown, deps: ApplicationBulkDeps): Promise<BulkEditResult> {
+export async function bulkUpdateApplications(body: unknown, deps: ApplicationBulkDeps): Promise<BulkEditResult<ApplicationBulkRow>> {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new BadRequestException('A body is required.');
   const input = body as Record<string, unknown>;
   const selection = parseBulkSelection(input);
@@ -109,7 +110,7 @@ export async function bulkUpdateApplications(body: unknown, deps: ApplicationBul
   const ownerFields = (Object.keys(OWNER_FIELDS) as OwnerField[]).filter((field) => field in changes);
   const owners = (field: OwnerField) => (changes[field] as string[] | null) ?? [];
 
-  const list: BulkEditList<AppRow> = {
+  const list: BulkEditList<ApplicationBulkRow> = {
     async reach(chosen, asOf) {
       let ids = chosen.ids;
       if (chosen.all) {
@@ -140,7 +141,7 @@ export async function bulkUpdateApplications(body: unknown, deps: ApplicationBul
         where += ` AND a.created_at <= $${params.length}::timestamptz`;
       }
       // In id order, held until the end of the request: the update of one application locks it the same way.
-      const rows: Array<Omit<AppRow, 'owners'>> = await manager.query(
+      const rows: Array<Omit<ApplicationBulkRow, 'owners'>> = await manager.query(
         `SELECT a.id::text AS id, a.category, a.lifecycle, a.criticality, a.cyber_criticality
            FROM applications a
           WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[])${where}
@@ -148,7 +149,7 @@ export async function bulkUpdateApplications(body: unknown, deps: ApplicationBul
             FOR UPDATE OF a`,
         params,
       );
-      const held = new Map<string, AppRow['owners']>();
+      const held = new Map<string, ApplicationBulkRow['owners']>();
       if (ownerFields.length > 0 && rows.length > 0) {
         const found: Array<{ application_id: string; user_id: string; owner_type: OwnerType }> = await manager.query(
           `SELECT application_id::text AS application_id, user_id::text AS user_id, owner_type

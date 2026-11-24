@@ -227,14 +227,20 @@ Cuando Kad crea una línea presupuestaria, pregunta si la línea es OPEX o CAPEX
 
 ### Modificar registros en bloque { #changing-records-in-bulk }
 
-Kad modifica un campo en muchas líneas presupuestarias o aplicaciones a la vez, como **Modificar la selección** en la lista. Necesita el mismo derecho: el nivel Miembro en el presupuesto, o en las aplicaciones. Designe los registros con un filtro de la lista, como un proveedor o un centro de coste, o con sus referencias (`BL-3`, `APP-7`). Use uno u otro en una solicitud. Un filtro toma los registros activados, salvo que nombre un estado. Las aplicaciones retiradas quedan fuera, salvo que nombre un ciclo de vida.
+Kad modifica un campo en muchas líneas presupuestarias o aplicaciones a la vez, como **Modificar la selección** en la lista. Necesita el mismo derecho: el nivel Miembro en el presupuesto, o en las aplicaciones. Designe los registros con un filtro de la lista, como un proveedor o un centro de coste, o con sus referencias (`BL-3`, `APP-7`). Use uno u otro en una solicitud. Dos registros que toman el mismo valor bastan: Kad prepara una sola vista previa para todo el cambio. Un filtro toma los registros activados, salvo que nombre un estado. Las aplicaciones retiradas quedan fuera, salvo que nombre un ciclo de vida.
 
 - En las líneas presupuestarias: el centro de coste, la cuenta, la empresa pagadora, el proveedor, el responsable de TI, el responsable de negocio, run o build, o el valor de una dimensión.
 - En las aplicaciones: los responsables de negocio o los responsables IT (las personas que nombre sustituyen a las del rol), la categoría, el ciclo de vida, la criticidad de negocio o la criticidad cibernética.
 
 Pida, por ejemplo: "Pasa las líneas del proveedor Acme al centro de coste IT-01" o "Haz a Claire Martin responsable IT de APP-3 y APP-7".
 
-La vista previa muestra los registros afectados, el campo y su nuevo valor, cuántos registros cambian, cuántos ya tienen este valor y cuántos se rechazan, con el motivo. Lista los primeros registros por su referencia. Apruébela para aplicar el cambio. Un cambio no se puede deshacer. La pestaña **Historial** de cada registro lo muestra como hecho por Kad para usted.
+La vista previa muestra los registros afectados, el campo y su nuevo valor, cuántos registros cambian, cuántos ya tienen este valor y cuántos se rechazan, con el motivo. Lista cada registro que modifica, hasta 200: su referencia, que abre el registro, su nombre, su valor antes y su valor después. Por encima de diez registros, el enlace bajo la lista muestra los demás. Los registros que usted no puede modificar no están en la lista: la vista previa los cuenta, con el motivo.
+
+Cada registro de la lista tiene una casilla. Desmárquela para excluir el registro. El registro sigue en la lista, y puede marcarlo de nuevo. El recuento sobre la lista sigue cada cambio, por ejemplo «2 conservadas de 3». Si desde la vista previa han entrado más registros en la selección y esta listaría más de 200, las casillas dejan de funcionar: pida una nueva vista previa a Kad. **Aprobar** aplica el cambio a los registros conservados. Cuando todos los registros están excluidos, no hay nada que aprobar y la vista previa lo indica.
+
+Por encima de 200 registros, la vista previa da el recuento y los primeros registros por su referencia, sin casillas. Kad propone acotar la selección.
+
+Tras la aprobación, la lista sigue en la vista previa y marca cada registro como **Modificada**, **No modificada** o **Excluida**. Un cambio no se puede deshacer. La pestaña **Historial** de cada registro lo muestra como hecho por Kad para usted.
 
 Kad rechaza un cambio:
 
@@ -243,7 +249,7 @@ Kad rechaza un cambio:
 - Por encima de 5000 registros. Acote el filtro
 - Que vaciaría la cuenta, la empresa pagadora, una dimensión obligatoria, la categoría o el ciclo de vida
 
-Si la lista cambia entre la vista previa y su aprobación, la vista previa falla. Pida una nueva a Kad. Mientras otra operación de presupuesto está en curso, la vista previa sigue abierta: apruébela de nuevo cuando esa operación haya terminado. Los asistentes conectados por MCP solo leen.
+Si la lista cambia entre la vista previa y su aprobación, la vista previa falla y no se modifica nada. Esto incluye un registro que no está en la lista y que el cambio modificaría ahora. Pida una nueva a Kad. Mientras otra operación de presupuesto está en curso, la vista previa sigue abierta: apruébela de nuevo cuando esa operación haya terminado. Los asistentes conectados por MCP solo leen.
 
 ### Eliminar un registro { #deleting-a-record }
 

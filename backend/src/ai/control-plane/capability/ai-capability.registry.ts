@@ -345,6 +345,9 @@ export const MODEL_HIDDEN_OUTPUT_FIELDS: Readonly<Record<string, readonly string
     '/import_mapping/validation/report',
     '/import_mapping/result/report',
   ],
+  // The list of a change in bulk (lot K2e of 26.12.1): the screen's, the model reads the card's counts.
+  bulk_update_applications: ['/bulk_edit'],
+  bulk_update_budget_lines: ['/bulk_edit'],
 };
 
 function compatibilityContract(
