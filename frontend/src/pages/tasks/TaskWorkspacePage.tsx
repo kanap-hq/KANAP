@@ -740,8 +740,10 @@ export default function TaskWorkspacePage() {
     const projectIds = new Set<string>();
     if (previous.type === 'project' && previous.id) projectIds.add(previous.id);
     if (next.type === 'project' && next.id) projectIds.add(next.id);
+    // A project page reads its project under its address (`PRJ-7`), which this page does not know
+    // for the project the task left: every open project read is refreshed.
+    if (projectIds.size > 0) void queryClient.invalidateQueries({ queryKey: ['portfolio-project'] });
     for (const projectId of projectIds) {
-      void queryClient.invalidateQueries({ queryKey: ['portfolio-project', projectId] });
       void queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time', projectId] });
       void queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time-entries', projectId] });
       void queryClient.invalidateQueries({ queryKey: ['project-workspace-tasks-count', projectId] });

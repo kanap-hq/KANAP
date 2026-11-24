@@ -19,7 +19,8 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: () => true, profile: { id: 'u-1' } }),
 }));
-vi.mock('../../api', () => ({ default: { get, post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+const patch = vi.hoisted(() => vi.fn());
+vi.mock('../../api', () => ({ default: { get, post: vi.fn(), patch, delete: vi.fn() } }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'acme' }) }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../hooks/useProjectNav', () => ({
@@ -42,6 +43,7 @@ vi.mock('./workspace/PortfolioDetailWorkspaceShell', () => ({
     <div>
       <h1>{props.title || props.titleFallback}</h1>
       <div data-testid="workspace-notices">{props.notices}</div>
+      <div data-testid="workspace-metadata">{props.metadata}</div>
       <div role="tablist">
         {props.tabs.map((tab: any) => (
           <button key={tab.key} role="tab" disabled={tab.disabled} onClick={() => props.onTabChange(tab.key)}>{tab.label}</button>
@@ -62,9 +64,20 @@ vi.mock('./editors/ProjectTasksPanel', () => ({
 }));
 vi.mock('./workspace/project/ProjectActivityTab', () => ({ default: () => <div data-testid="project-activity" /> }));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
+// A picker is a button that picks `u-2`: the header's IT lead change, for the effort reads below.
 vi.mock('../../components/workspace/MetadataUserPicker', () => ({
-  default: () => null,
+  default: (props: { label: string; onChange: (value: string) => void }) => (
+    <button type="button" onClick={() => props.onChange('u-2')}>{props.label}</button>
+  ),
   formatMetadataUserName: () => '',
+}));
+vi.mock('./workspace/project/ProjectEffortTab', () => ({
+  default: (props: { itAllocationData?: { version?: number } | null; projectId: string }) => (
+    <div data-testid="project-effort" data-project={props.projectId} data-it-version={String(props.itAllocationData?.version ?? '')} />
+  ),
+}));
+vi.mock('./workspace/project/ProjectTimelineTab', () => ({
+  default: (props: { projectId: string }) => <div data-testid="project-timeline" data-project={props.projectId} />,
 }));
 vi.mock('../../components/history/RecordHistoryTab', () => ({
   default: (props: { table: string; recordId: string }) => <div data-testid="record-history">{`${props.table}:${props.recordId}`}</div>,
@@ -206,5 +219,42 @@ describe('ProjectWorkspacePage address', () => {
     expect(await screen.findByTestId('project-summary')).toBeInTheDocument();
     expect(location()).toBe('/portfolio/projects/PRJ-7/summary');
     expect(get).not.toHaveBeenCalledWith('/portfolio/projects/proj-1', expect.anything());
+  });
+});
+
+// The effort and timeline reads are keyed by the project's uuid: the gestures that change them
+// (a lead, the team, a task moved) invalidate them by the uuid, while the address is `PRJ-7`.
+describe('ProjectWorkspacePage reads under the address PRJ-7', () => {
+  let itVersion = 0;
+  beforeEach(() => {
+    itVersion = 0;
+    get.mockReset();
+    patch.mockReset();
+    patch.mockResolvedValue({ data: {} });
+    get.mockImplementation(async (url: string) => {
+      if (url === '/portfolio/projects/proj-1' || url === '/portfolio/projects/PRJ-7') return { data: PROJECT };
+      if (url === '/portfolio/classification/all') return { data: { sources: [], categories: [], streams: [] } };
+      if (url.endsWith('/effort-allocations/it')) {
+        itVersion += 1;
+        return { data: { version: itVersion, url } };
+      }
+      return { data: {} };
+    });
+  });
+
+  it('reads the effort of the project by its uuid, and reads it again when the IT lead changes', async () => {
+    renderPage('/portfolio/projects/PRJ-7/effort');
+    const effort = await screen.findByTestId('project-effort');
+    await waitFor(() => expect(effort).toHaveAttribute('data-it-version', '1'));
+    fireEvent.click(screen.getByRole('button', { name: 'portfolio:workspace.project.fields.itLead' }));
+    await waitFor(() => expect(patch).toHaveBeenCalledWith('/portfolio/projects/PRJ-7', { it_lead_id: 'u-2' }));
+    await waitFor(() => expect(screen.getByTestId('project-effort')).toHaveAttribute('data-it-version', '2'));
+    expect(screen.getByTestId('project-effort')).toHaveAttribute('data-project', 'proj-1');
+    expect(get).toHaveBeenCalledWith('/portfolio/projects/proj-1/effort-allocations/it');
+  });
+
+  it('hands the timeline the project uuid', async () => {
+    renderPage('/portfolio/projects/PRJ-7/timeline');
+    expect(await screen.findByTestId('project-timeline')).toHaveAttribute('data-project', 'proj-1');
   });
 });

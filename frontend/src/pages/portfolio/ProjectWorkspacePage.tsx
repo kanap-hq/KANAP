@@ -189,6 +189,10 @@ export default function ProjectWorkspacePage() {
     if (data.item_number != null && raw.toUpperCase() === formatItemRef('project', data.item_number)) return true;
     return false;
   }, [data?.id, data?.item_number, idParam]);
+  // The project's own reads (effort, timeline) are keyed by its uuid, never by the address: the
+  // gestures that change them elsewhere (a lead, the team, a task moved to another project) invalidate
+  // them by the uuid they know, and the address is the reference (`PRJ-7`).
+  const loadedProjectId: string | undefined = !isCreate && projectMatchesCurrentRoute && data?.id ? String(data.id) : undefined;
   // The editors are keyed by project: the same key through the move from a legacy address to the reference.
   const recordKey = useRecordEditorKey('portfolio-project', id, [projectInclude]);
 
@@ -232,42 +236,42 @@ export default function ProjectWorkspacePage() {
 
   // Fetch task time summary for progress breakdown
   const { data: taskTimeSummary } = useQuery({
-    queryKey: ['portfolio-project-task-time', id],
+    queryKey: ['portfolio-project-task-time', loadedProjectId],
     queryFn: async () => {
-      const res = await api.get(`/portfolio/projects/${id}/tasks/time-summary`);
+      const res = await api.get(`/portfolio/projects/${loadedProjectId}/tasks/time-summary`);
       return res.data as { it_hours: number; business_hours: number; total_hours: number };
     },
-    enabled: !isCreate && routeTab === 'effort',
+    enabled: !!loadedProjectId && routeTab === 'effort',
   });
 
   // Fetch task time entries for Time Log display
   const { data: taskTimeEntries = [] } = useQuery({
-    queryKey: ['portfolio-project-task-time-entries', id],
+    queryKey: ['portfolio-project-task-time-entries', loadedProjectId],
     queryFn: async () => {
-      const res = await api.get(`/portfolio/projects/${id}/tasks/time-entries`);
+      const res = await api.get(`/portfolio/projects/${loadedProjectId}/tasks/time-entries`);
       return res.data as any[];
     },
-    enabled: !isCreate && routeTab === 'effort',
+    enabled: !!loadedProjectId && routeTab === 'effort',
   });
 
   // Fetch effort allocations for IT
   const { data: itAllocationData, refetch: refetchItAlloc } = useQuery({
-    queryKey: ['project-effort-allocations', id, 'it'],
+    queryKey: ['project-effort-allocations', loadedProjectId, 'it'],
     queryFn: async () => {
-      const res = await api.get(`/portfolio/projects/${id}/effort-allocations/it`);
+      const res = await api.get(`/portfolio/projects/${loadedProjectId}/effort-allocations/it`);
       return res.data as EffortAllocationData;
     },
-    enabled: !!id && !isCreate && routeTab === 'effort',
+    enabled: !!loadedProjectId && routeTab === 'effort',
   });
 
   // Fetch effort allocations for Business
   const { data: businessAllocationData, refetch: refetchBusinessAlloc } = useQuery({
-    queryKey: ['project-effort-allocations', id, 'business'],
+    queryKey: ['project-effort-allocations', loadedProjectId, 'business'],
     queryFn: async () => {
-      const res = await api.get(`/portfolio/projects/${id}/effort-allocations/business`);
+      const res = await api.get(`/portfolio/projects/${loadedProjectId}/effort-allocations/business`);
       return res.data as EffortAllocationData;
     },
-    enabled: !!id && !isCreate && routeTab === 'effort',
+    enabled: !!loadedProjectId && routeTab === 'effort',
   });
 
   const sources = classificationData?.sources?.filter((t) => t.is_active) || [];
@@ -1191,7 +1195,7 @@ export default function ProjectWorkspacePage() {
             <ProjectTimelineTab
               canManage={canManage}
               form={form}
-              projectId={id}
+              projectId={loadedProjectId || id}
               onError={setSaveError}
               onNavigateToTask={navigateWithTaskWorkspaceContext}
               onRefetch={refetch}
@@ -1216,7 +1220,7 @@ export default function ProjectWorkspacePage() {
               onRefetchItAlloc={refetchItAlloc}
               onUpdate={(patch) => { void persistPanelPatch(patch); }}
               profileId={profile?.id}
-              projectId={id}
+              projectId={loadedProjectId || id}
               taskTimeEntries={taskTimeEntries}
               taskTimeSummary={taskTimeSummary}
             />

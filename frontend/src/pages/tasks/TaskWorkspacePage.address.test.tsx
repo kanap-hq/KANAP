@@ -31,7 +31,16 @@ vi.mock('../../hooks/useClassificationDefaults', () => ({
 }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: () => undefined }) }));
 vi.mock('./components/TaskPropertiesDrawer', () => ({
-  default: (props: { projectWorkspaceLink?: string | null }) => <aside data-testid="task-properties" data-project-link={props.projectWorkspaceLink ?? ''} />,
+  default: (props: {
+    projectWorkspaceLink?: string | null;
+    onRelationChange: (relation: { type: 'project'; id: string; name: string }) => void;
+  }) => (
+    <aside data-testid="task-properties" data-project-link={props.projectWorkspaceLink ?? ''}>
+      <button type="button" onClick={() => props.onRelationChange({ type: 'project', id: OTHER_PROJECT, name: 'Tasting room' })}>
+        move to another project
+      </button>
+    </aside>
+  ),
 }));
 vi.mock('./components/TaskActivity', () => ({ default: () => <div data-testid="task-activity" /> }));
 vi.mock('./components/TaskAttachments', () => ({ default: () => null }));
@@ -45,6 +54,7 @@ vi.mock('../../components/workspace/MetadataUserPicker', () => ({
 vi.mock('../../components/history/RecordHistoryTab', () => ({ default: () => <div data-testid="task-history" /> }));
 
 const mocked = vi.mocked(api);
+const OTHER_PROJECT = 'b0b1c2d3-0000-4000-8000-000000000004';
 
 const TASK = {
   id: 'f1e2d3c4-0000-4000-8000-000000000009',
@@ -90,8 +100,9 @@ function renderPage(entries: string[], task: Record<string, unknown> = TASK) {
     if (url.endsWith('/time-entries/sum')) return { data: { total: 0 } } as never;
     return { data: {} } as never;
   });
-  return render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const view = render(
+    <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
@@ -109,6 +120,7 @@ function renderPage(entries: string[], task: Record<string, unknown> = TASK) {
       </ThemeProvider>
     </QueryClientProvider>,
   );
+  return { ...view, client };
 }
 
 const location = () => screen.getByTestId('location').textContent;
@@ -163,5 +175,17 @@ describe('TaskWorkspacePage address', () => {
     await waitFor(() => expect(screen.getAllByTitle('Cheese cellar')).toHaveLength(2));
     const hrefs = screen.getAllByTitle('Cheese cellar').map((link) => link.getAttribute('href')).sort();
     expect(hrefs).toEqual([`/portfolio/projects/${TASK.related_object_id}`, `/portfolio/projects/${TASK.related_object_id}/summary`]);
+  });
+
+  it('refreshes the project pages read under their reference when the task moves to another project', async () => {
+    mocked.patch.mockResolvedValue({ data: { ...TASK, related_object_id: OTHER_PROJECT, related_object_name: 'Tasting room' } } as never);
+    const { client } = renderPage(['/portfolio/tasks/T-9/overview']);
+    // The page of the project the task leaves, read under its address.
+    client.setQueryData(['portfolio-project', 'PRJ-3', 'summary'], { id: TASK.related_object_id, item_number: 3 });
+    await screen.findAllByTitle('Cheese cellar');
+    fireEvent.click(screen.getByRole('button', { name: 'portfolio:workspace.openProperties' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'move to another project' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalled());
+    await waitFor(() => expect(client.getQueryState(['portfolio-project', 'PRJ-3', 'summary'])?.isInvalidated).toBe(true));
   });
 });
