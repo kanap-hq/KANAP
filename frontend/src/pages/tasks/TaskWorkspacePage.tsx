@@ -748,8 +748,6 @@ export default function TaskWorkspacePage() {
       void queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time-entries', projectId] });
       void queryClient.invalidateQueries({ queryKey: ['project-workspace-tasks-count', projectId] });
       void queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
-      void queryClient.invalidateQueries({ queryKey: ['project-tasks-time-summary', projectId] });
-      void queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     }
 
     for (const related of [previous, next]) {

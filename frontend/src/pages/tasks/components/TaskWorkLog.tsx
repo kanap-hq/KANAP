@@ -106,10 +106,12 @@ export default function TaskWorkLog({ taskId, projectId, readOnly = false, relat
       await refetch();
       queryClient.invalidateQueries({ queryKey: ['task-time-entries-sum', taskId] });
       queryClient.invalidateQueries({ queryKey: ['task-activities', taskId] });
-      // Invalidate project queries so Progress tab updates with new actual effort
+      // The project's effort tab: the task time it reads, and the project, whose actual effort the server
+      // recomputes (read under its address, `PRJ-7`, which this panel does not know).
       if (projectId) {
-        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-        queryClient.invalidateQueries({ queryKey: ['project-tasks-time-summary', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time-entries', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-project'] });
       }
     } catch (e: any) {
       setError(getApiErrorMessage(
@@ -148,10 +150,12 @@ export default function TaskWorkLog({ taskId, projectId, readOnly = false, relat
     queryClient.invalidateQueries({ queryKey: ['task-time-entries-sum', taskId] });
     queryClient.invalidateQueries({ queryKey: ['tasks', taskId] });
     queryClient.invalidateQueries({ queryKey: ['task-activities', taskId] });
-    // Invalidate project queries so Progress tab updates with new actual effort
+    // The project's effort tab: the task time it reads, and the project, whose actual effort the server
+    // recomputes (read under its address, `PRJ-7`, which this panel does not know).
     if (projectId) {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project-tasks-time-summary', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time-entries', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['portfolio-project'] });
     }
   };
 
