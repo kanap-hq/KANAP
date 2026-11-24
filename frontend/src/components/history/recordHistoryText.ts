@@ -324,7 +324,7 @@ export function historySubjectText(subject: RecordHistorySubject, t: Translate, 
 
 /**
  * The title line of a technical child's creation or deletion: its name and the event, with no
- * field list and no technical action ("Budget 2026 added", "Budget input Budget added").
+ * field list and no technical action ("Budget 2026 added", "Budget entry added").
  * A child update keeps its title in the header and its fields below, so it returns null here.
  */
 export function historyChildTitle(item: RecordHistoryItem, t: Translate, table?: string): string | null {

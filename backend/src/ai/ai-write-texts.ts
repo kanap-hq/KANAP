@@ -1666,7 +1666,7 @@ const PREVIEW_ERROR_THINGS: Record<string, { fr: string; de: string; es: string;
   'current user': { fr: 'Utilisateur actuel', de: 'Aktueller Benutzer', es: 'el usuario actual' },
   'budget line': { fr: 'Ligne budgétaire', de: 'Budgetzeile', es: 'la línea presupuestaria' },
   'budget lines': { fr: 'Lignes budgétaires', de: 'Budgetzeilen', es: 'las líneas presupuestarias', plural: true },
-  assignee: { fr: 'Responsable', de: 'Zuständig', es: 'el responsable' },
+  assignee: { fr: 'Responsable', de: 'Zuständige Person', es: 'el responsable' },
   version: { fr: 'Version', de: 'Version', es: 'la versión' },
   'financial version': { fr: 'Version budgétaire', de: 'Budgetversion', es: 'la versión presupuestaria' },
   document: { fr: 'Document', de: 'Dokument', es: 'el documento' },
@@ -1760,16 +1760,18 @@ function missingRecordText(language: AiTranslatedWriteLanguage, subject: string,
     : `No se ${verb} encontrado ${word}.`;
 }
 
-/** "<subject> changed after the preview was created." A reference or a dimension name is kept. */
+/**
+ * "<subject> changed after the preview was created." A reference or a dimension name is kept at
+ * the head. A known thing is named after the sentence in French and German, which then holds
+ * whatever its gender and number; Spanish carries its article.
+ */
 function changedSincePreviewText(language: AiTranslatedWriteLanguage, subject: string): string {
   const thing = previewErrorThing(subject);
   if (language === 'fr') {
-    const word = thing?.fr ?? subject;
-    return `${word} ${thing?.plural ? 'ont' : 'a'} changé depuis l'aperçu.`;
+    return thing ? `Les données ont changé depuis l'aperçu : ${thing.fr}.` : `${subject} a changé depuis l'aperçu.`;
   }
   if (language === 'de') {
-    const word = thing?.de ?? subject;
-    return `${word} ${thing?.plural ? 'haben' : 'hat'} sich seit der Vorschau geändert.`;
+    return thing ? `Die Daten haben sich seit der Vorschau geändert: ${thing.de}.` : `${subject} hat sich seit der Vorschau geändert.`;
   }
   const word = thing ? capitalize(thing.es) : subject;
   return `${word} ha${thing?.plural ? 'n' : ''} cambiado desde la vista previa.`;
@@ -1794,6 +1796,13 @@ function relationLabel(language: AiTranslatedWriteLanguage, subject: string): st
   const thing = previewErrorThing(subject);
   if (!thing) return subject;
   return language === 'es' ? capitalize(thing.es) : thing[language];
+}
+
+/** A relation's screen word, without the Spanish article, for a sentence that names it after a colon. */
+function relationWord(language: AiTranslatedWriteLanguage, subject: string): string {
+  const thing = previewErrorThing(subject);
+  if (!thing) return subject;
+  return language === 'es' ? capitalize(thing.es.replace(/^(?:el|la|los|las) /, '')) : thing[language];
 }
 
 const CHANGED_AFTER = String.raw` changed after the preview was created\.`;
@@ -1927,6 +1936,35 @@ const PREVIEW_ERROR_PATTERNS: Array<{
       : language === 'de'
         ? 'Die Zuordnungen haben sich seit der Vorschau geändert.'
         : 'Las asignaciones han cambiado desde la vista previa.'),
+  },
+  // The relation cards (`ai-relation-mutation-support.service.ts`): the relation is named after the
+  // sentence, which then holds whatever its gender and number.
+  {
+    pattern: new RegExp(`^The (.+) relation${CHANGED_AFTER}$`),
+    render: (language, match) => {
+      const word = relationWord(language, match[1]);
+      if (language === 'fr') return `Cette relation a changé depuis l'aperçu : ${word}.`;
+      if (language === 'de') return `Diese Beziehung hat sich seit der Vorschau geändert: ${word}.`;
+      return `Esta relación ha cambiado desde la vista previa: ${word}.`;
+    },
+  },
+  {
+    pattern: /^(.+) could not be changed: nothing was written\.$/,
+    render: (language, match) => {
+      const word = relationWord(language, match[1]);
+      if (language === 'fr') return `Cette relation n'a pas été modifiée, rien n'a été écrit : ${word}.`;
+      if (language === 'de') return `Diese Beziehung wurde nicht geändert, nichts wurde geschrieben: ${word}.`;
+      return `Esta relación no se ha modificado, no se ha escrito nada: ${word}.`;
+    },
+  },
+  {
+    pattern: /^(.+): the record was not found\.$/,
+    render: (language, match) => {
+      const word = relationWord(language, match[1]);
+      if (language === 'fr') return `${word} : la fiche est introuvable.`;
+      if (language === 'de') return `${word}: der Eintrag wurde nicht gefunden.`;
+      return `${word}: no se ha encontrado el registro.`;
+    },
   },
   {
     pattern: new RegExp(`^(.+)${CHANGED_AFTER}$`),

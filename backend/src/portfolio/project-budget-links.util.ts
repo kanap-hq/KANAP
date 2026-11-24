@@ -60,20 +60,27 @@ export async function lockProject(manager: EntityManager, tenantId: string, proj
   return rows.length > 0;
 }
 
-/** Inserts the links, skipping one already stored, and one whose line has another nature than the kind's. */
+/**
+ * Inserts the links, skipping one already stored, and one whose line has another nature than the
+ * kind's. Returns the links it really inserted (counted through a CTE).
+ */
 export async function insertProjectBudgetLinks(
   manager: EntityManager,
   kind: ProjectBudgetLinkKind,
   tenantId: string,
   links: Array<{ projectId: string; itemId: string }>,
-): Promise<void> {
-  if (links.length === 0) return;
+): Promise<Array<{ projectId: string; itemId: string }>> {
+  if (links.length === 0) return [];
   const t = TABLES[kind];
-  await manager.query(
-    `INSERT INTO ${t.table} (tenant_id, project_id, ${t.itemFk})
-     SELECT $1, l.project_id, l.item_id FROM unnest($2::uuid[], $3::uuid[]) AS l(project_id, item_id)
-      WHERE true${linkedLineOf('$1', 'l.item_id', t.nature, t.items)}
-     ON CONFLICT (project_id, ${t.itemFk}) DO NOTHING`,
+  const rows: Array<{ project_id: string; item_id: string }> = await manager.query(
+    `WITH put AS (
+       INSERT INTO ${t.table} (tenant_id, project_id, ${t.itemFk})
+       SELECT $1, l.project_id, l.item_id FROM unnest($2::uuid[], $3::uuid[]) AS l(project_id, item_id)
+        WHERE true${linkedLineOf('$1', 'l.item_id', t.nature, t.items)}
+       ON CONFLICT (project_id, ${t.itemFk}) DO NOTHING
+       RETURNING project_id, ${t.itemFk} AS item_id
+     ) SELECT project_id, item_id FROM put`,
     [tenantId, links.map((l) => l.projectId), links.map((l) => l.itemId)],
   );
+  return rows.map((row) => ({ projectId: row.project_id, itemId: row.item_id }));
 }

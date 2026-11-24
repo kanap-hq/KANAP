@@ -1,4 +1,6 @@
 import type { TFunction } from 'i18next';
+import { decimalMark } from '../../i18n/formatters';
+import { formatFte } from './amountColumns';
 
 /**
  * Period of a budget column (a "round" on the server) and the texts built from
@@ -458,40 +460,32 @@ export function formatUplift(locale: string, pct: string | number | null | undef
 }
 
 /**
- * A decimal string from the server (days, FTE, quantity, price) as the budget tab writes numbers:
- * space groups, dot decimals, no trailing zeros ("163", "171.75", "0.75"). Read from the string.
+ * A decimal string from the server (days, quantity, price) as the fields of the budget tab write
+ * numbers: space groups, the decimal mark of the language, no trailing zeros ("163", "171.75",
+ * "0,75" in French). Read from the string.
  */
-export function formatDecimal(value: string | null | undefined): string {
+export function formatDecimal(value: string | null | undefined, locale: string): string {
   const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(value ?? '').trim());
   if (!match) return String(value ?? '');
   const [, sign, int, frac = ''] = match;
   const decimals = frac.replace(/0+$/, '');
   const grouped = int.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   if (grouped === '0' && !decimals) return '0';
-  return `${sign}${grouped}${decimals ? `.${decimals}` : ''}`;
-}
-
-/** FTE as the server rounds it, always two decimals ("1.00", "0.75"). Read from the string. */
-export function formatFteValue(value: string | null | undefined): string {
-  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(value ?? '').trim());
-  if (!match) return String(value ?? '');
-  const [, sign, int, frac = ''] = match;
-  const grouped = int.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return `${sign}${grouped}.${frac.padEnd(2, '0').slice(0, 2)}`;
+  return `${sign}${grouped}${decimals ? `${decimalMark(locale)}${decimals}` : ''}`;
 }
 
 /**
- * A money string from the server as the budget fields show it ("65 200", "91 599.96"): whole
- * units unless there are cents. Read from the string, so nothing goes through a float.
+ * A money string from the server as the budget fields show it ("65 200", "91 599.96", "91 599,96" in
+ * French): whole units unless there are cents. Read from the string, so nothing goes through a float.
  */
-export function formatMoney(value: string | null | undefined): string {
+export function formatMoney(value: string | null | undefined, locale: string): string {
   const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(value ?? '').trim());
   if (!match) return String(value ?? '');
   const [, sign, int, frac = ''] = match;
   const cents = frac.padEnd(2, '0').slice(0, 2);
   const grouped = int.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   if (grouped === '0' && cents === '00') return '0';
-  return `${sign}${grouped}${cents === '00' ? '' : `.${cents}`}`;
+  return `${sign}${grouped}${cents === '00' ? '' : `${decimalMark(locale)}${cents}`}`;
 }
 
 /** True when a line counts days or people: pieces give no FTE. */
@@ -522,7 +516,7 @@ function chipParts(
   if ((record.lines?.length ?? 0) === 0) return record.method === 'computed' ? [[t('budgetTab.chip.lines')]] : (method.length ? [method] : []);
   const detail = [
     t('budgetTab.chip.lineCount', { count: record.lines.length }),
-    linesGiveFte(record) ? t('budgetTab.chip.fte', { value: formatFteValue(record.fte) }) : '',
+    linesGiveFte(record) ? t('budgetTab.chip.fte', { value: formatFte(record.fte, locale) }) : '',
   ].filter(Boolean).join(' · ');
   const lines = [t('budgetTab.chip.lines'), detail];
   return record.method === 'computed' || method.length === 0 ? [lines] : [lines, method];
@@ -622,10 +616,10 @@ export function lineText(
     : months.length === 1 ? shortMonth(locale, months[0])
       : t('budgetTab.monthRange', { from: shortMonth(locale, months[0]), to: shortMonth(locale, months[months.length - 1]) });
   const days = line.days_per_month == null ? ''
-    : t('budgetTab.lines.daysPerMonthCount', { count: Number(line.days_per_month), value: formatDecimal(line.days_per_month) });
+    : t('budgetTab.lines.daysPerMonthCount', { count: Number(line.days_per_month), value: formatDecimal(line.days_per_month, locale) });
   const text = t(`budgetTab.lines.lineText.${lineSentenceKey(line)}`, {
-    quantity: t(`budgetTab.lines.count.${line.quantity_unit}`, { count: Number(line.quantity), value: formatDecimal(line.quantity) }),
-    price: formatDecimal(line.unit_price),
+    quantity: t(`budgetTab.lines.count.${line.quantity_unit}`, { count: Number(line.quantity), value: formatDecimal(line.quantity, locale) }),
+    price: formatDecimal(line.unit_price, locale),
     days,
     months: when,
   });
@@ -662,8 +656,8 @@ export function dayChangeText(t: TFunction, locale: string, change: { month: num
   return t('budgetTab.lines.dayChange', {
     count: Number(change.before),
     month: capitalize(monthName(locale, change.month), locale),
-    before: formatDecimal(change.before),
-    after: formatDecimal(change.after),
+    before: formatDecimal(change.before, locale),
+    after: formatDecimal(change.after, locale),
   });
 }
 

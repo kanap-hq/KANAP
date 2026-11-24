@@ -17,6 +17,36 @@ function expectTranslated(message: string, text: Record<AiTranslatedWriteLanguag
   assert.equal(isFixedPreviewError(message), false, message);
 }
 
+/** The relation cards name their relation after the sentence, so it holds whatever its gender and number (lot K2b). */
+function testRelationCards() {
+  expectTranslated('The Applications relation changed after the preview was created.', {
+    fr: "Cette relation a changé depuis l'aperçu : Applications.",
+    de: 'Diese Beziehung hat sich seit der Vorschau geändert: Anwendungen.',
+    es: 'Esta relación ha cambiado desde la vista previa: Aplicaciones.',
+  });
+  expectTranslated('The Sub-locations relation changed after the preview was created.', {
+    fr: "Cette relation a changé depuis l'aperçu : Sous-sites.",
+    de: 'Diese Beziehung hat sich seit der Vorschau geändert: Unterstandorte.',
+    es: 'Esta relación ha cambiado desde la vista previa: Sub-ubicaciones.',
+  });
+  expectTranslated('The Support Contacts relation changed after the preview was created.', {
+    fr: "Cette relation a changé depuis l'aperçu : Contacts de support.",
+    de: 'Diese Beziehung hat sich seit der Vorschau geändert: Supportkontakte.',
+    es: 'Esta relación ha cambiado desde la vista previa: Contactos de soporte.',
+  });
+  expectTranslated('Owners could not be changed: nothing was written.', {
+    fr: "Cette relation n'a pas été modifiée, rien n'a été écrit : Responsables.",
+    de: 'Diese Beziehung wurde nicht geändert, nichts wurde geschrieben: Verantwortliche.',
+    es: 'Esta relación no se ha modificado, no se ha escrito nada: Responsables.',
+  });
+  expectTranslated('Projects: the record was not found.', {
+    fr: 'Projets : la fiche est introuvable.',
+    de: 'Projekte: der Eintrag wurde nicht gefunden.',
+    es: 'Proyectos: no se ha encontrado el registro.',
+  });
+  console.log('  relation cards: OK');
+}
+
 function testDrift() {
   expectTranslated('APP-3 changed after the preview was created.', {
     fr: "APP-3 a changé depuis l'aperçu.",
@@ -79,10 +109,22 @@ function testDrift() {
     de: 'Die Technologie „Say "hi"“ hat sich seit der Vorschau geändert.',
     es: 'La tecnología «Say "hi"» ha cambiado desde la vista previa.',
   });
+  // A known thing is named after the sentence in French and German, which then holds whatever its
+  // gender and number; Spanish carries its article (lot K2b).
   expectTranslated('Budget line changed after the preview was created.', {
-    fr: "Ligne budgétaire a changé depuis l'aperçu.",
-    de: 'Budgetzeile hat sich seit der Vorschau geändert.',
+    fr: "Les données ont changé depuis l'aperçu : Ligne budgétaire.",
+    de: 'Die Daten haben sich seit der Vorschau geändert: Budgetzeile.',
     es: 'La línea presupuestaria ha cambiado desde la vista previa.',
+  });
+  expectTranslated('Tasks changed after the preview was created.', {
+    fr: "Les données ont changé depuis l'aperçu : Tâches.",
+    de: 'Die Daten haben sich seit der Vorschau geändert: Aufgaben.',
+    es: 'Las tareas han cambiado desde la vista previa.',
+  });
+  expectTranslated('Assignee changed after the preview was created.', {
+    fr: "Les données ont changé depuis l'aperçu : Responsable.",
+    de: 'Die Daten haben sich seit der Vorschau geändert: Zuständige Person.',
+    es: 'El responsable ha cambiado desde la vista previa.',
   });
   expectTranslated('Company metrics for 2024 changed after the preview was created.', {
     fr: "Les indicateurs (Société) pour 2024 ont changé depuis l'aperçu.",
@@ -114,7 +156,7 @@ function testMissingRecords() {
   });
   expectTranslated('Assignee not found.', {
     fr: 'Responsable introuvable.',
-    de: 'Zuständig nicht gefunden.',
+    de: 'Zuständige Person nicht gefunden.',
     es: 'No se ha encontrado el responsable.',
   });
   expectTranslated('Asset not found', {
@@ -173,6 +215,7 @@ function testLeftAsStored() {
   assert.equal(previewErrorText('es', undefined), null);
 }
 
+testRelationCards();
 testDrift();
 testMissingRecords();
 testLeftAsStored();

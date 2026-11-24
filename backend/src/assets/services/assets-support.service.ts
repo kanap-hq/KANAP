@@ -170,7 +170,10 @@ export class AssetsSupportService extends AssetsBaseService {
   }
 
   /**
-   * Bulk replace support contacts for an asset.
+   * Bulk replace support contacts for an asset. One audit row on the asset when the set changed:
+   * the sorted `"<contact_id>:<role>"` states before and after, as an application's support contacts
+   * (`ApplicationsOwnersService.bulkReplaceSupportContacts`); `opts.audit` carries the source of a
+   * write made for the assistant's card.
    */
   async bulkReplaceSupportContacts(
     assetId: string,
@@ -197,10 +200,28 @@ export class AssetsSupportService extends AssetsBaseService {
     }
 
     const existing = await repo.find({ where: { asset_id: assetId, tenant_id: asset.tenant_id } as any });
+    const beforeState = existing.map((c) => `${c.contact_id}:${c.role ?? ''}`).sort();
     if (existing.length) await repo.delete({ id: In(existing.map((x) => x.id)) as any });
+    let afterRows: AssetSupportContact[] = [];
     if (filtered.length) {
       const rows = filtered.map((c) => repo.create({ tenant_id: asset.tenant_id, asset_id: assetId, contact_id: c.contact_id, role: c.role }));
-      await repo.save(rows);
+      afterRows = await repo.save(rows);
+    }
+    const afterState = afterRows.map((c) => `${c.contact_id}:${c.role ?? ''}`).sort();
+    if (JSON.stringify(beforeState) !== JSON.stringify(afterState)) {
+      await this.audit.log(
+        {
+          table: 'asset_support_contacts',
+          recordId: asset.id,
+          action: 'update',
+          before: beforeState,
+          after: afterState,
+          userId,
+          source: opts?.audit?.source,
+          sourceRef: opts?.audit?.sourceRef,
+        },
+        { manager: mg },
+      );
     }
 
     return this.listSupportContacts(assetId, { manager: mg, tenantId: tenant });

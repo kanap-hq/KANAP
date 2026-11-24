@@ -692,7 +692,7 @@ export class TasksUnifiedService {
       assignerName,
       dueDate: saved.due_date ? String(saved.due_date).split('T')[0] : undefined,
       tenantId,
-      manager,
+      itemRef: `T-${saved.item_number}`,
       locale: assignee[0].locale,
     });
   }
@@ -1076,7 +1076,7 @@ export class TasksUnifiedService {
           recipients,
           tenantId,
           excludeUserId: userId,
-          manager,
+          itemRef: `T-${saved.item_number}`,
         });
       }
     }
@@ -1293,7 +1293,7 @@ export class TasksUnifiedService {
           recipients,
           tenantId,
           excludeUserId: userId,
-          manager,
+          itemRef: `T-${saved.item_number}`,
         });
       }
     }
@@ -1329,7 +1329,7 @@ export class TasksUnifiedService {
 
     const manager = opts?.manager ?? this.repo.manager;
 
-    const task = await manager.findOne(Task, { where: { id: taskId }, select: ['id', 'title'] });
+    const task = await manager.findOne(Task, { where: { id: taskId }, select: ['id', 'title', 'item_number'] });
     if (!task) throw new NotFoundException('Task not found');
 
     const senderRows = await manager.query(
@@ -1360,6 +1360,7 @@ export class TasksUnifiedService {
         recipients: recipientRows,
         rawEmails,
         tenantId,
+        itemRef: `T-${task.item_number}`,
       });
     }
 
