@@ -13,7 +13,7 @@ Para la legibilidad del mapa, las **Entidades** y **Roles de servidor** también
   - Necesita `settings:admin` para cambiar valores.
   - Necesita `infrastructure:admin` para ver la pestaña **Netbox**.
 
-Solo ve las pestañas que sus permisos permiten. Si no ve la entrada **Configuración** en el cajón del Panorama IT, solicite a su administrador que le otorgue los permisos apropiados. Otras pantallas llaman a esta página la configuración de IT.
+Solo ve las pestañas que sus permisos permiten. Si no ve la entrada **Configuración** en el menú del Panorama IT, solicite a su administrador que le otorgue los permisos apropiados. Otras pantallas llaman a esta página la configuración de IT.
 
 ## Cómo está organizada la página
 

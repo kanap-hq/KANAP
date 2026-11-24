@@ -43,7 +43,7 @@ Vaya a **Panorama IT > Aplicaciones** y haga clic en **Nueva aplicación**.
 
 Escriba el nombre en el título, por ejemplo `Salesforce CRM`, y pulse Intro. Su aplicación está ahora en el registro, y sus seis pestañas se abren para documentación detallada: **Vista general**, **Despliegues**, **Interfaces**, **Operaciones**, **Conformidad** y **Relaciones**.
 
-Luego complete lo esencial en el encabezado y el panel de propiedades:
+Luego complete lo esencial en el encabezado y en el panel de propiedades:
 
 | Campo | Qué introducir | Ejemplo |
 |-------|----------------|---------|

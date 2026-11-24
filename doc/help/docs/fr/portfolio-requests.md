@@ -72,7 +72,7 @@ La grille standard met en évidence les champs qui comptent pendant l'intake et 
 L'espace de travail utilise un modèle divisé :
 
 - La zone principale contient les onglets opérationnels : **Synthèse**, **Analyse**, **Évaluation**, **Relations**, **Connaissances** et **Historique** (les modifications de la demande, voir [Historique des fiches](record-history.md)).
-- Un panneau Propriétés persistant sur le bord droit contient les métadonnées stables de la demande, l'assignation d'équipe et les projets résultants. Ouvrez ou fermez-le à l'aide de l'onglet vertical sur le bord droit.
+- Un panneau **Propriétés** persistant sur le bord droit contient les métadonnées stables de la demande, l'assignation d'équipe et les projets résultants. Ouvrez ou fermez-le à l'aide de l'onglet vertical sur le bord droit.
 
 Cela compte parce que tout n'est pas enregistré de la même manière :
 

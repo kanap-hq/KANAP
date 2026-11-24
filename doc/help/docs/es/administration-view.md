@@ -9,7 +9,7 @@ La página Zonas de administración muestra quién administra qué. Sigue el mod
 La página lee lo que usted registra en otros lugares:
 
 1. Defina sus zonas de administración y complete sus dominios en **Panorama IT > Configuración**. Ponga las zonas en orden: la primera es la más sensible. Consulte [Zonas de administración](it-ops-settings.md#zonas-de-administracion) y [Dominios](it-ops-settings.md#dominios).
-2. Sitúe cada activo en su zona, aquí en bloque (consulte [Asignar una zona](#asignar-una-zona)) o con el campo **Zona de administración** del panel de propiedades del activo. Consulte [Activos](assets.md#panel-de-propiedades-panel-derecho).
+2. Sitúe cada activo en su zona, aquí en bloque (consulte [Asignar una zona](#asignar-una-zona)) o con el campo **Zona de administración** del panel de propiedades del activo. Consulte [Activos](assets.md#panel-de-propiedades).
 3. Vincule las tecnologías de directorio, como Active Directory, a los servidores que las llevan. Consulte [Vincular una tecnología a un servidor](technologies.md#vincular-una-tecnologia-a-un-servidor).
 4. Un servicio de directorio que no se ejecuta en ninguno de sus servidores, como Entra ID, toma su zona del campo **Zona de administración** de su panel de propiedades. Consulte [Tecnologías](technologies.md#panel-de-propiedades).
 
