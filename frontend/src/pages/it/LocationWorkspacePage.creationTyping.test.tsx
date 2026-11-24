@@ -42,6 +42,7 @@ vi.mock('./workspace/LocationRelationsTab', () => ({ default: () => null }));
 import api from '../../api';
 import LocationWorkspacePage from './LocationWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
+import { PAGE_FIELD, pressInto } from '../../test/creationHold';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -143,7 +144,7 @@ describe('LocationWorkspacePage typing while the site is created', () => {
   it('keeps the city being typed, letter by letter, across the move to the site: same field, same focus, saved on blur', async () => {
     const { drawer, finish } = await startWrite();
     const city = within(drawer).getByPlaceholderText('workspace.location.fields.cityPlaceholder');
-    act(() => city.focus());
+    pressInto(city);
     fireEvent.change(city, { target: { value: 'Lo' } });
     await finish();
 
@@ -167,7 +168,7 @@ describe('LocationWorkspacePage typing while the site is created', () => {
   it('saves on the new site a city committed while the site is written', async () => {
     const { drawer, finish } = await startWrite();
     const city = within(drawer).getByPlaceholderText('workspace.location.fields.cityPlaceholder');
-    act(() => city.focus());
+    pressInto(city);
     fireEvent.change(city, { target: { value: 'Lorient' } });
     fireEvent.blur(city);
     await finish();
@@ -178,12 +179,12 @@ describe('LocationWorkspacePage typing while the site is created', () => {
 
   it('keeps the notes typed while the site is written: same editor, same focus, saved on the new site', async () => {
     const { finish } = await startWrite();
-    const notes = screen.getByLabelText('markdown-editor');
-    act(() => notes.focus());
+    const notes = screen.getByLabelText('markdown-editor', { selector: PAGE_FIELD });
+    pressInto(notes);
     fireEvent.change(notes, { target: { value: 'Rack 4' } });
     await finish();
 
-    const shown = screen.getByLabelText('markdown-editor') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('markdown-editor', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     expect(shown === notes).toBe(true);
     expect(document.activeElement === shown).toBe(true);
     expect(shown.value).toBe('Rack 4');
@@ -195,7 +196,7 @@ describe('LocationWorkspacePage typing while the site is created', () => {
   it('saves the notes typed in the last second when Done is clicked, once', async () => {
     const { finish } = await startWrite();
     await finish();
-    const notes = screen.getByLabelText('markdown-editor');
+    const notes = screen.getByLabelText('markdown-editor', { selector: PAGE_FIELD });
     fireEvent.change(notes, { target: { value: 'Rack 4' } });
     expect(patchesWith('additional_info', 'Rack 4')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.done' }));
@@ -214,7 +215,7 @@ describe('LocationWorkspacePage typing while the site is created', () => {
       return { data: [] };
     });
     mocked.delete.mockResolvedValue({ data: {} });
-    fireEvent.change(screen.getByLabelText('markdown-editor'), { target: { value: 'Rack 4' } });
+    fireEvent.change(screen.getByLabelText('markdown-editor', { selector: PAGE_FIELD }), { target: { value: 'Rack 4' } });
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel' }));
     // The notes are saved first, so the confirmation lists them.
     await screen.findByRole('dialog');

@@ -269,6 +269,8 @@ In a workspace where [Microsoft Entra ID](#microsoft-entra-id) is connected, the
 
 The account shows **Invited** until the person's first sign-in. A password reset link, sent by **Send password reset** or from the sign-in page, stays valid for 1 hour.
 
+One way in is valid at a time: a **With Microsoft** invitation cancels the password links sent to the person earlier, the link of a password invitation and a password reset link alike. A cancelled link is refused, like an expired one.
+
 ### Multi-Role Assignment
 
 Users can be assigned multiple roles. Their effective permissions are the combination of all assigned roles: if any role grants access to a resource, the user has that access.

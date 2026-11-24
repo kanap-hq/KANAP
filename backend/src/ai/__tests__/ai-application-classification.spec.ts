@@ -67,7 +67,7 @@ function application(overrides: Record<string, unknown> = {}) {
 
 function mutationHarness() {
   let live: Record<string, unknown> = application();
-  const calls = { create: [] as any[], update: [] as any[], audit: [] as any[] };
+  const calls = { create: [] as any[], update: [] as any[] };
   const applications = {
     get: async () => ({ ...live }),
     create: async (fields: any, userId: string, options: any) => {
@@ -83,7 +83,6 @@ function mutationHarness() {
   };
   const service = new AiBusinessRecordMutationSupportService(
     applications as any, {} as any,
-    { log: async (...args: any[]) => calls.audit.push(args) } as any,
     {} as any, {} as any, {} as any, {} as any,
     { getClassificationCatalog: async () => catalog } as any,
     {} as any, {} as any, {} as any,
@@ -226,7 +225,8 @@ async function testExecutionControlsConflictsAndUndoInputs() {
   assert.equal(calls.update.length, 1);
   assert.deepEqual(calls.update[0].fields, { criticality: 'stop_now', cyber_criticality: null });
   assert.equal(calls.update[0].fields.classification_review, undefined);
-  assert.equal(calls.audit.length, 1);
+  // The service writes the one audit row, with the card's source; Kad writes none of its own (lot K2a).
+  assert.deepEqual(calls.update[0].options.audit, { source: 'ai_chat', sourceRef: 'preview-update' });
 
   setLive(application({ cyber_criticality: 'custom_peak' }));
   await assert.rejects(() => service.executePreview(executionContext as any, preview), ConflictException);

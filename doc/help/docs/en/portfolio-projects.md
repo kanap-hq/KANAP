@@ -78,9 +78,9 @@ Direct project creation is for work that should enter execution without a separa
 2. Type the name of the project.
 3. Press Enter or Tab, or click **Create**. Kadratis creates the project at once, with the origin **Fast-track**. Its reference (`PRJ-12`) shows and all tabs open.
 
-Then fill in the Properties drawer and the **Purpose**. The name is edited in the header only. Pressing Escape in the title, clicking **Cancel** or leaving the page creates nothing, even with a name typed.
+Then fill in the Properties panel and the **Purpose**. The name is edited in the header only. Pressing Escape in the title, clicking **Cancel** or leaving the page creates nothing, even with a name typed.
 
-A project created this way can switch between **Fast-track** and **Legacy** in the Properties drawer. A project converted from a request keeps the **Request** origin and its source linkage.
+A project created this way can switch between **Fast-track** and **Legacy** in the Properties panel. A project converted from a request keeps the **Request** origin and its source linkage.
 
 Use **Fast-track** for work that is genuinely being introduced directly into delivery. Use **Legacy** for work that already exists outside the normal intake history. That distinction affects reporting and makes later portfolio analysis much less confusing.
 
@@ -99,11 +99,11 @@ While the project is being created, its header shows **Create** and **Cancel**. 
 The project workspace has two layers:
 
 - The **main content area** for the operational tabs: **Summary**, **Tasks**, **Timeline**, **Effort**, **Scoring**, **Relations**, **Knowledge**, and **History** (the changes made to the project, see [Record history](record-history.md))
-- A persistent **Properties** drawer on the right edge for core properties, team assignment, and source requests
+- A persistent **Properties** panel on the right edge for core properties, team assignment, and source requests
 
-Open or close the Properties drawer using the vertical tab on the right edge.
+Open or close the Properties panel using the vertical tab on the right edge.
 
-For existing projects, the Properties drawer behaves like a live property panel: changes there are saved immediately. The main tab content follows the usual **Save** / **Reset** workflow when that tab contains draft changes. If you switch tabs or move to the previous or next project with unsaved workspace changes, Kadratis asks whether to save first.
+For existing projects, changes in the Properties panel are saved immediately. The main tab content follows the usual **Save** / **Reset** workflow when that tab contains draft changes. If you switch tabs or move to the previous or next project with unsaved workspace changes, Kadratis asks whether to save first.
 
 ## Header and metadata
 
@@ -129,9 +129,9 @@ The workflow is intentionally controlled:
 - **On Hold** can return to **Waiting List**, **Planned**, or **In Progress**, or be **Cancelled**
 - **Done** and **Cancelled** are terminal states
 
-## Properties drawer
+## Properties panel
 
-Treat the Properties drawer as the project's persistent identity card. It is grouped into three sections.
+Treat the Properties panel as the project's persistent identity card. It is grouped into three sections.
 
 ### Core properties
 
@@ -145,7 +145,7 @@ These fields drive reporting, planning, filtering, and default portfolio context
 
 ### Team
 
-Team assignment lives in the drawer so it stays available while you work on schedule, effort, or tasks.
+Team assignment lives in the panel so it stays available while you work on schedule, effort, or tasks.
 
 - **Business Sponsor** / **IT Sponsor** capture executive accountability
 - **Business Lead** / **IT Lead** identify day-to-day leadership
@@ -167,7 +167,7 @@ The same requests also appear on the **Relations** tab, with dependencies, linke
 
 ## Summary
 
-The **Summary** tab is the project cockpit. It is meant to answer the current state of the project in a single pass, not to duplicate every field in the drawer.
+The **Summary** tab is the project cockpit. It is meant to answer the current state of the project in a single pass, not to duplicate every field in the Properties panel.
 
 ### Purpose
 
@@ -226,7 +226,7 @@ The **Timeline** tab is where the delivery structure becomes explicit.
 The bottom of the tab shows three lines:
 
 - **Actual**: dates captured by execution events (when the project moved to In Progress and when it reached Done). Read-only in the workspace.
-- **Planned**: the intended delivery window. Edit these in the Properties drawer.
+- **Planned**: the intended delivery window. Edit these in the Properties panel.
 - **Baseline**: a snapshot of planned dates captured when the project moved to **In Progress**. Variance against the baseline is displayed as `Nd late` or `Nd early`.
 
 ### Phases
@@ -279,7 +279,7 @@ The **Effort** tab separates estimated effort into:
 - **IT effort**
 - **Business effort**
 
-Each side can be allocated across the relevant lead and contributors. Allocations depend on the team configured in the Properties drawer, so team changes have planning consequences here as well.
+Each side can be allocated across the relevant lead and contributors. Allocations depend on the team configured in the Properties panel, so team changes have planning consequences here as well.
 
 ### Actual effort and time log
 
@@ -420,7 +420,7 @@ Again, sending a link does not grant access. It only saves people from hunting f
 
 ## Practical guidance
 
-- Use the Properties drawer for structural data that should stay visible while you work.
+- Use the Properties panel for structural data that should stay visible while you work.
 - Use **Summary** for the project narrative, latest activity, and high-level operating picture.
 - Use **Timeline** to define delivery structure before task volume grows.
 - Use **Effort** regularly, otherwise effort variance arrives as a surprise even though the data was already warning you.

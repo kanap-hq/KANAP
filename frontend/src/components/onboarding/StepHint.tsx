@@ -17,13 +17,25 @@ export const STEP_OBJECT_POLL_MS = 5000;
 const CORNER = 16;
 
 /**
+ * Pixels the side menu keeps clear at its bottom while the hint is shown, so the last entry can
+ * scroll fully above the hint. The hint's height changes with the step, so the room follows the
+ * measured box plus the corner it sits off the window edge.
+ */
+export function stepHintScrollReserve(hintHeightPx: number): number {
+  return Math.ceil(hintHeightPx) + CORNER;
+}
+
+/**
  * The hint of a step opened from the first steps: one sentence says what to look at. On the
  * example, opening the step marks it done; with your own data, the object the step creates does,
  * or "Done" for a step that creates none. It stays on every screen until it is closed
  * (`activeStep.ts`); once the step is done, it opens the next step, or the home page at the end of
  * the path.
  */
-export default function StepHint() {
+export default function StepHint({ onReserveChange }: {
+  /** Room the side menu keeps at its bottom, in pixels. Zero when the hint is closed. */
+  onReserveChange?: (reservePx: number) => void;
+} = {}) {
   const { t, i18n } = useTranslation('common');
   const location = useLocation();
   const navigate = useNavigate();
@@ -85,25 +97,52 @@ export default function StepHint() {
     navigate('/');
   }, [navigate]);
 
-  if (!step || !screen || !state) return null;
   // A record opened by its step is named in the hint, when the step has a sentence for it.
-  const record = (location.state as StepLocationState | null)?.onboardingRecord;
-  const recordKey = `onboarding.firstSteps.steps.${step.key}.hintRecord`;
-  const hint = record && i18n.exists(`common:${recordKey}`)
-    ? t(recordKey, { record })
-    : t(stepHintKey(step.key, state.angle));
+  const record = step ? (location.state as StepLocationState | null)?.onboardingRecord : undefined;
+  const recordKey = step ? `onboarding.firstSteps.steps.${step.key}.hintRecord` : '';
+  const hint = step && state
+    ? (record && i18n.exists(`common:${recordKey}`)
+      ? t(recordKey, { record })
+      : t(stepHintKey(step.key, state.angle)))
+    : '';
+
+  // The menu's spare room follows this box. Measured after layout, and again when the sentence
+  // wraps or the buttons change. Nothing is reserved once the hint closes.
+  const hintRef = React.useRef<HTMLDivElement>(null);
+  React.useLayoutEffect(() => {
+    const node = hintRef.current;
+    if (!node) {
+      onReserveChange?.(0);
+      return undefined;
+    }
+    const publish = () => {
+      const current = hintRef.current;
+      if (!current) return;
+      onReserveChange?.(stepHintScrollReserve(current.getBoundingClientRect().height));
+    };
+    publish();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(publish);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [onReserveChange, hint, step?.key]);
+
+  if (!step || !screen || !state) return null;
 
   return (
-    // In the bottom-left corner of the window, where it stays: it never moves. A modal dialog
-    // stands above it.
+    // In the bottom-left corner of the window, where it stays: it never moves. An open drawer
+    // and a modal dialog stand above it. The permanent side menu is one step lower.
     <Paper
+      ref={hintRef}
       role="dialog"
       aria-label={t(stepTitleKey(step.key, state.angle))}
       sx={(theme) => ({
         position: 'fixed',
         left: CORNER,
         bottom: CORNER,
-        zIndex: theme.zIndex.modal - 1,
+        // Under a temporary drawer (`theme.zIndex.drawer`) and a dialog (`modal`). Layout keeps
+        // the permanent menu one step under this, so the hint stays in front of the menu.
+        zIndex: theme.zIndex.drawer - 1,
         boxSizing: 'border-box',
         // Inside the window on a narrow screen.
         maxWidth: `min(360px, calc(100vw - ${2 * CORNER}px))`,

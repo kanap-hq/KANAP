@@ -185,7 +185,7 @@ Der Bereich ist einklappbar (klicken Sie auf die vertikale Registerkarte **Eigen
   - **Assets**: Hardware-/Cloud-Assets, auf die sich diese Aufgabe bezieht
   - **Wissensdatenbank**: Verknüpfte Wissensdokumente und ein Schnellzugriff zum Erstellen neuer (erfordert `knowledge:member` für die Erstellung)
 
-**Hinweis**: Das Bearbeiten von Feldern im Bereich speichert sofort. Es gibt dort keine Speichern-Schaltfläche.
+**Hinweis**: Das Bearbeiten von Feldern im Eigenschaftenbereich speichert sofort. Es gibt dort keine Speichern-Schaltfläche.
 
 ### Aufgaben-Kontext ändern
 
@@ -325,7 +325,7 @@ Die Schaltfläche „Exportieren" ist nur aktiviert, wenn die Beschreibung Inhal
 
 ### Verlauf anzeigen
 
-Der Tab **Verlauf**, der letzte Tab der Aufgabe, listet die Änderungen an der Aufgabe auf (siehe [Verlauf der Datensätze](record-history.md)). Der **Eigenschaftenbereich** bleibt dort verfügbar. Der Verlauf zeigt:
+Der Reiter **Verlauf**, der letzte Reiter der Aufgabe, listet die Änderungen an der Aufgabe auf (siehe [Verlauf der Datensätze](record-history.md)). Der **Eigenschaftenbereich** bleibt dort verfügbar. Der Verlauf zeigt:
   - Statusänderungen
   - Feldänderungen
   - Verknüpfungen und Anhänge

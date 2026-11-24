@@ -27,6 +27,7 @@ vi.mock('../../components/fields/SupplierSelect', () => ({
 
 import api from '../../api';
 import ContactWorkspacePage from './ContactWorkspacePage';
+import { PAGE_FIELD, pressInto } from '../../test/creationHold';
 
 const mocked = api as unknown as Record<'get' | 'post' | 'patch' | 'delete', ReturnType<typeof vi.fn>>;
 
@@ -118,7 +119,7 @@ describe('ContactWorkspacePage typing while the contact is created', () => {
   it('keeps the job title being typed while the contact is written: same field, same focus, saved on the new contact', async () => {
     const { drawer, finish } = await startWrite();
     const job = within(drawer).getByLabelText('contacts.fields.jobTitle');
-    act(() => job.focus());
+    pressInto(job);
     fireEvent.change(job, { target: { value: 'CT' } });
     await finish();
 
@@ -134,7 +135,7 @@ describe('ContactWorkspacePage typing while the contact is created', () => {
   it('saves on the new contact a field committed while the contact is written', async () => {
     const { drawer, finish } = await startWrite();
     const job = within(drawer).getByLabelText('contacts.fields.jobTitle');
-    act(() => job.focus());
+    pressInto(job);
     fireEvent.change(job, { target: { value: 'CTO' } });
     fireEvent.blur(job);
     await finish();
@@ -148,13 +149,13 @@ describe('ContactWorkspacePage typing while the contact is created', () => {
 
   it('saves on the new contact the notes typed while the contact is written, with the same field and focus', async () => {
     const { finish } = await startWrite();
-    const notes = screen.getByLabelText('contacts.fields.notes');
-    act(() => notes.focus());
+    const notes = screen.getByLabelText('contacts.fields.notes', { selector: PAGE_FIELD });
+    pressInto(notes);
     fireEvent.change(notes, { target: { value: 'Prefers email' } });
     await finish();
 
     // Nothing more is typed: the text scheduled on the draft is saved on the contact.
-    const shown = screen.getByLabelText('contacts.fields.notes') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('contacts.fields.notes', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     expect(shown === notes).toBe(true);
     expect(document.activeElement === shown).toBe(true);
     expect(shown.value).toBe('Prefers email');

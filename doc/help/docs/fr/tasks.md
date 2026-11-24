@@ -20,7 +20,7 @@ Lorsque vous cliquez sur **Nouvelle**, la page de la tâche s'ouvre avec un titr
    - **Lié à** : l'élément depuis lequel vous avez commencé, et sa phase lorsque vous avez commencé depuis une phase. Une tâche commencée depuis la page Tâches est autonome
    - **Classification** (tâches autonomes et de projet) : pour les tâches de projet, **Source**, **Catégorie**, **Stream** et **Société** proviennent du projet parent. Pour les tâches autonomes, les valeurs de classification par défaut de votre organisation sont utilisées lorsqu'elles existent
 
-3. **Remplissez les détails**. Tous les onglets et tous les champs sont maintenant disponibles, avec le tiroir Propriétés à droite :
+3. **Remplissez les détails**. Tous les onglets et tous les champs sont maintenant disponibles, avec le panneau Propriétés à droite :
    - **Lié à** : Gardez **Autonome**, ou sélectionnez **Projet**, **Budget** (une ligne OPEX ou CAPEX), **Contrat** ou **Incident**, puis choisissez l'élément spécifique
    - **Type de tâche** : Une catégorie pour le travail (ex. : Tâche, Bug, Problème, Incident)
    - **Étiquettes** : Mots libres, par exemple urgent ou suivi. Saisissez-en un et appuyez sur Entrée
@@ -126,7 +126,7 @@ La grille Tâches affiche toutes les tâches de votre organisation.
 
 ## L'espace de travail Tâche
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail de la tâche. L'espace de travail place le contenu de la tâche (description, pièces jointes, activité) au centre et expose un tiroir **Propriétés** sur le bord droit que vous pouvez afficher ou masquer.
+Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail de la tâche. L'espace de travail place le contenu de la tâche (description, pièces jointes, activité) au centre et expose un panneau Propriétés sur le bord droit que vous pouvez afficher ou masquer.
 
 ### Barre d'outils de l'en-tête
 
@@ -157,9 +157,9 @@ L'onglet **Vue d'ensemble** contient le contenu de la tâche.
   - **Commentaires** : Un formulaire d'activité unifié (commentaire + changement de statut optionnel + saisie de temps optionnelle en une seule soumission) plus le fil de commentaires. Un commentaire écrit en changeant le statut affiche ce changement
   - **Journal de temps** : Entrées de temps (disponible pour les tâches autonomes et de projet uniquement)
 
-### Tiroir des propriétés
+### Panneau Propriétés
 
-Le tiroir est rétractable (cliquez sur l'onglet vertical **Propriétés** sur le bord droit pour ouvrir ou fermer ; appuyez sur **P** comme raccourci). Faites glisser son bord gauche pour l'élargir ; un double-clic sur ce bord lui rend sa largeur habituelle. Sa largeur et son état d'ouverture sont mémorisés localement. Le tiroir contient quatre groupes, séparés par des séparateurs :
+Le panneau est rétractable (cliquez sur l'onglet vertical **Propriétés** sur le bord droit pour ouvrir ou fermer ; appuyez sur **P** comme raccourci). Faites glisser son bord gauche pour l'élargir ; un double-clic sur ce bord lui rend sa largeur habituelle. Sa largeur et son état d'ouverture sont mémorisés localement. Le panneau contient quatre groupes, séparés par des séparateurs :
 
 **Contexte** :
   - **Lié à** : Autonome, Projet, Budget (une ligne OPEX ou CAPEX), Contrat ou Incident. Vous pouvez changer le type et choisir un nouvel élément ; à l'enregistrement, Kadratis applique tous les effets secondaires associés (voir [Changer le contexte d'une tâche](#changer-le-contexte-dune-tache))
@@ -185,7 +185,7 @@ Le tiroir est rétractable (cliquez sur l'onglet vertical **Propriétés** sur l
   - **Actifs** : Actifs matériels/cloud auxquels cette tâche se rapporte
   - **Connaissances** : Documents de connaissances liés et un raccourci pour en créer de nouveaux (nécessite `knowledge:member` pour la création)
 
-**Note** : Modifier les champs dans le tiroir enregistre immédiatement. Il n'y a pas de bouton Enregistrer sur le tiroir.
+**Note** : Modifier les champs dans le panneau enregistre immédiatement. Il n'y a pas de bouton Enregistrer dans le panneau.
 
 ### Changer le contexte d'une tâche
 
@@ -233,7 +233,7 @@ Les tâches autonomes et les tâches de projet prennent en charge un suivi déta
 
 ### Enregistrer du temps
 
-1. Cliquez sur **+ Enregistrer du temps** dans le tiroir Propriétés (groupe Suivi), ou ouvrez l'onglet **Journal de temps** dans la section activité
+1. Cliquez sur **+ Enregistrer du temps** dans le panneau Propriétés (groupe Suivi), ou ouvrez l'onglet **Journal de temps** dans la section activité
 2. Sélectionnez la **Catégorie** : IT ou Métier (détermine comment le temps contribue à la charge du projet)
 3. Saisissez la date à laquelle le travail a été effectué
 4. Saisissez le temps en jours et/ou heures
@@ -321,11 +321,11 @@ Le bouton d'export n'est activé que lorsque la description a du contenu.
   - Enregistrement de temps seul
   - Commentaire + statut + temps ensemble
 - Pour les tâches de projet, définir le statut sur **Terminée** nécessite du temps enregistré (existant + nouvellement ajouté)
-- Le menu déroulant de statut dans le tiroir Propriétés fonctionne toujours indépendamment si vous préférez ce flux
+- Le menu déroulant de statut dans le panneau Propriétés fonctionne toujours indépendamment si vous préférez ce flux
 
 ### Consulter l'historique
 
-L'onglet **Historique**, le dernier onglet de la tâche, liste les modifications de la tâche (voir [Historique des fiches](record-history.md)). Le tiroir **Propriétés** y reste disponible. L'historique montre :
+L'onglet **Historique**, le dernier onglet de la tâche, liste les modifications de la tâche (voir [Historique des fiches](record-history.md)). Le panneau Propriétés y reste disponible. L'historique montre :
   - Changements de statut
   - Modifications de champs
   - Liens et pièces jointes
@@ -349,16 +349,16 @@ Lorsque les notifications de tâches sont activées, les mises à jour de statut
 
 ## Lier des applications et des actifs
 
-Les tâches peuvent être liées à une ou plusieurs **Applications** (Apps et services) et **Actifs** (ressources matérielles ou cloud). Les liens vivent dans le groupe **Suivi** du tiroir Propriétés.
+Les tâches peuvent être liées à une ou plusieurs **Applications** (Apps et services) et **Actifs** (ressources matérielles ou cloud). Les liens vivent dans le groupe **Suivi** du panneau Propriétés.
 
 - Utilisez **Applications** pour signaler le travail qui touche des apps spécifiques de votre cartographie SI (ex. : un déploiement, un changement de configuration, un incident limité à cette app)
 - Utilisez **Actifs** pour le travail limité à des serveurs, équipements ou actifs cloud spécifiques
 
-Les liens sont bidirectionnels : depuis l'espace de travail de l'Application ou de l'Actif lié, la tâche apparaît dans la relation **Tâches** dans le tiroir Propriétés de cet espace de travail. Cela facilite le pivotement de « que se passe-t-il avec cette app/cet actif ? » au travail réellement en cours.
+Les liens sont bidirectionnels : depuis l'espace de travail de l'Application ou de l'Actif lié, la tâche apparaît dans la relation **Tâches** dans le panneau Propriétés de cet espace de travail. Cela facilite le pivotement de « que se passe-t-il avec cette app/cet actif ? » au travail réellement en cours.
 
 **Conseil** : Réservez ces liens aux tâches qui concernent opérationnellement l'app ou l'actif, pas à chaque tâche qui mentionne l'un d'eux en passant. Sinon la relation devient du bruit au lieu d'un signal.
 
-Vous ne voyez chaque fiche liée que si vous pouvez lire son module : les applications demandent les applications, les actifs l'infrastructure. Il en va de même pour la fiche à laquelle appartient une tâche : un projet demande les projets, une ligne budgétaire le budget, un contrat les contrats, un incident les incidents. Sinon le champ est absent du tiroir, de la liste et de Kad, et la tâche garde son lien. Un Business Contributor ne voit en outre le projet, sa phase, la demande créée à partir de la tâche et les applications que s'il y participe : une seule application hors de sa participation masque le champ **Applications**.
+Vous ne voyez chaque fiche liée que si vous pouvez lire son module : les applications demandent les applications, les actifs l'infrastructure. Il en va de même pour la fiche à laquelle appartient une tâche : un projet demande les projets, une ligne budgétaire le budget, un contrat les contrats, un incident les incidents. Sinon le champ est absent du panneau Propriétés, de la liste et de Kad, et la tâche garde son lien. Un Business Contributor ne voit en outre le projet, sa phase, la demande créée à partir de la tâche et les applications que s'il y participe : une seule application hors de sa participation masque le champ **Applications**.
 
 ---
 
@@ -407,7 +407,7 @@ Les tâches autonomes sont des éléments de travail indépendants non liés à 
 
 1. Cliquez sur **Nouvelle** dans la page Tâches
 2. Saisissez le titre et appuyez sur Entrée : la tâche est créée comme autonome
-3. Le tiroir Propriétés affiche « Tâche autonome » dans le groupe Contexte
+3. Le panneau Propriétés affiche « Tâche autonome » dans le groupe Contexte
 4. Remplissez la description et les autres détails
 5. Cliquez sur **Créer**
 
@@ -420,7 +420,7 @@ Les tâches autonomes et les tâches de projet ont des champs de classification 
 - **Stream** : Le stream spécifique au sein de la catégorie (filtré par catégorie sélectionnée)
 - **Société** : La société à laquelle ce travail se rapporte
 
-Ces champs apparaissent dans le groupe **Classification** du tiroir Propriétés et peuvent être modifiés à tout moment. Lors de la création d'une nouvelle tâche autonome, les valeurs de classification par défaut de votre organisation sont pré-remplies automatiquement si configurées.
+Ces champs apparaissent dans le groupe **Classification** du panneau Propriétés et peuvent être modifiés à tout moment. Lors de la création d'une nouvelle tâche autonome, les valeurs de classification par défaut de votre organisation sont pré-remplies automatiquement si configurées.
 
 Pour les **tâches de projet**, la classification provient par défaut du projet parent lorsque la tâche est créée mais peut être changée indépendamment. Cela permet, par exemple, à une tâche d'infrastructure d'exister au sein d'un projet métier, ou à une tâche de conformité au sein d'un projet IT. Si la classification d'une tâche n'est pas explicitement définie, elle hérite et affiche la classification du projet.
 
@@ -636,7 +636,7 @@ Ces champs sont inclus dans **Export complet** à des fins de reporting mais exc
   - **Observateurs et responsables** : l'export écrit autant de colonnes `viewer_email_N` et `owner_email_N` que la plus longue liste, quatre au moins. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing)
   - **Classification pour tâches autonomes et de projet uniquement** : Source, Catégorie, Stream et Société peuvent être définis sur les tâches autonomes et de projet (pas sur les tâches OPEX, Contrat ou CAPEX)
   - **Phase nécessite un projet** : L'assignation de phase ne fonctionne que pour les tâches de projet
-  - **Liens Application/Actif non dans CSV** : Utilisez le tiroir Propriétés de l'espace de travail pour lier les tâches aux applications et actifs
+  - **Liens Application/Actif non dans CSV** : Utilisez le panneau Propriétés de l'espace de travail pour lier les tâches aux applications et actifs
   - **Commentaires non inclus** : Les commentaires et l'historique des tâches doivent être gérés dans l'espace de travail
   - **Journal de temps non inclus** : Les entrées de temps doivent être enregistrées dans l'espace de travail
   - **Pièces jointes non incluses** : Les pièces jointes nécessitent une gestion dans l'espace de travail
@@ -738,7 +738,7 @@ Lorsque le focus n'est pas sur un champ de saisie, vous pouvez utiliser :
 
 - **J** ou **←** : Tâche précédente dans la liste actuelle
 - **K** ou **→** : Tâche suivante dans la liste actuelle
-- **P** : Basculer le tiroir Propriétés
+- **P** : Basculer le panneau Propriétés
 - **Échap** : Fermer et retourner à la liste
 - **Ctrl+S** / **Cmd+S** : Enregistrer
 
@@ -751,9 +751,9 @@ Lorsque le focus n'est pas sur un champ de saisie, vous pouvez utiliser :
   - **Enregistrez le temps régulièrement** : Le suivi du temps aide pour l'estimation future des projets.
   - **Filtrez par statut** : Le filtre par défaut affiche uniquement les statuts actifs (`Ouverte`, `En cours`, `En attente`, `En test`). Incluez `Terminée` et `Annulée` lors de la revue des tâches historiques.
   - **Créez depuis le contexte** : Créer des tâches depuis d'autres espaces de travail (projet, OPEX, contrat, CAPEX) les lie automatiquement.
-  - **Liez apps et actifs** : Utilisez les champs **Applications** et **Actifs** dans le tiroir Propriétés lorsqu'une tâche concerne opérationnellement une app ou un actif spécifique. Le lien apparaît également dans l'espace de travail de l'entité liée.
+  - **Liez apps et actifs** : Utilisez les champs **Applications** et **Actifs** dans le panneau Propriétés lorsqu'une tâche concerne opérationnellement une app ou un actif spécifique. Le lien apparaît également dans l'espace de travail de l'entité liée.
   - **Utilisez la priorité judicieusement** : Réservez **Bloquant** aux problèmes véritablement bloquants.
   - **Utilisez des mises à jour en une seule soumission** : Dans l'onglet Commentaires, combinez commentaire + statut + temps en une seule action pour garder l'historique et les notifications alignés.
   - **Importez des documents** : Utilisez le bouton **Importer** pour importer des fichiers `.docx` comme contenu de description au lieu de copier-coller.
   - **Raccourci clavier** : Appuyez sur **Ctrl+S** (ou **Cmd+S** sur Mac) pour enregistrer aussitôt les modifications en attente, par exemple une description que vous venez de saisir.
-  - **Liez des articles de connaissances** : Utilisez le groupe Connaissances dans le tiroir Propriétés pour connecter de la documentation pertinente à vos tâches.
+  - **Liez des articles de connaissances** : Utilisez le groupe Connaissances dans le panneau Propriétés pour connecter de la documentation pertinente à vos tâches.

@@ -260,7 +260,7 @@ export const de: EmailStrings = {
     userInvite: {
       subject: 'Einladung zu {{organisation}}',
       intro: '{{inviterName}} lädt Sie ein, {{place}} beizutreten.',
-      introNoInviter: 'Sie können jetzt {{place}} beitreten.',
+      introNoInviter: 'Sie sind eingeladen, {{place}} beizutreten.',
       placeWorkspace: `dem Arbeitsbereich {{organisation}} in ${PRODUCT_NAME}`,
       placeProduct: PRODUCT_NAME,
       password: 'Wählen Sie Ihr Passwort, um Ihr Konto zu aktivieren. Dieser Link bleibt {{duration}} gültig.',
@@ -290,12 +290,12 @@ export const de: EmailStrings = {
     angleChosen: {
       budget: 'die Verwaltung des IT-Budgets',
       cartography: 'die IT-Landkarte',
-      portfolio: 'die Steuerung der Projekte und Anfragen',
+      portfolio: 'die Steuerung des Portfolios',
     },
     pathNames: {
       budget: 'das IT-Budget',
       cartography: 'die IT-Landkarte',
-      portfolio: 'die Projekte und Anfragen',
+      portfolio: 'das Portfolio',
     },
     billingPath: 'Administration › Abrechnung',
     installGuide: 'Installationsanleitung',

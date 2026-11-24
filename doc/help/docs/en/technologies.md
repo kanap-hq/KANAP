@@ -107,7 +107,7 @@ When vulnerabilities are followed, the **Publisher** column also opens the Vulne
 
 ## The technology workspace
 
-The workspace has a header, a properties drawer on the right, and seven tabs: **Overview**, **Servers**, **Applications**, **Operations**, **Compliance**, **Relations** and **History** (the changes made to the technology, see [Record history](record-history.md)). The **Servers**, **Applications** and **Relations** tabs show a badge with their count.
+The workspace has a header, a properties panel on the right, and seven tabs: **Overview**, **Servers**, **Applications**, **Operations**, **Compliance**, **Relations** and **History** (the changes made to the technology, see [Record history](record-history.md)). The **Servers**, **Applications** and **Relations** tabs show a badge with their count.
 
 ### Header
 
@@ -117,7 +117,7 @@ The workspace has a header, a properties drawer on the right, and seven tabs: **
 - **Family**.
 - **Delete**, a trash icon (`infrastructure:admin`): the confirmation names what goes with the technology.
 
-### Properties drawer
+### Properties panel
 
 - **Publisher**, **Family** and **Hosting type**.
 - **Administration zone**: shown for the technologies of the **Directory and identity** family only. It places a directory service in a zone of your administration model, for example Tier 0 for Entra ID, which runs on no server of yours. The zones come from **IT Landscape > Settings**, and the [Administration zones](administration-view.md) page lists the directory services with their zone. The other technologies take no zone: place the servers that carry them instead. A zone set earlier on a technology of another family stays shown, read only, with a note that the value is no longer used.

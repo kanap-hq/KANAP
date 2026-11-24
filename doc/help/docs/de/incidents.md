@@ -108,7 +108,7 @@ Die Metadatenzeile darunter zeigt **Status**, **Schweregrad**, **Verantwortliche
 
 ### Eigenschaftenbereich
 
-Der Bereich bleibt auf jedem Tab sichtbar und speichert während der Bearbeitung.
+Der Bereich bleibt in jedem Reiter sichtbar und speichert während der Bearbeitung.
 
 **Klassifizierung**:
 

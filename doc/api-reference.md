@@ -894,6 +894,12 @@ GET `/locations/:id/relation-counts` (`locations:reader`) → `{ relations }`: t
 ## IT Ops Settings
 Tenant-scoped configuration for IT Landscape dropdowns and enums.
 
+- GET `/it-ops/catalog-labels`
+  - Guards: `JwtAuthGuard` only: every signed-in member of the workspace, no module right.
+  - Returns the label of every catalog value, so screens name stored codes for people without the settings right: one array per catalog list (`applicationCategories`, `networkSegments`, `entities`, `serverKinds`, `serverProviders`, `serverRoles`, `hostingTypes`, `lifecycleStates`, the interface lists, `connectionTypes`, `domains`, `ipAddressTypes`, `accessMethods`, `pathHopFunctions`, `incidentCategories`, `technologyFamilies`, `adminZones`, and the four classification lists), in the order of the settings.
+  - Each row holds `{ code, label, deprecated?, translations? }`, plus `description` for the classification levels and waves. No subnets, DNS suffixes, forests, trusts, counts, administration groups, ports, `lockedCodes` or `protectedCodes`.
+  - A person with `settings:reader` keeps reading `GET /it-ops/settings`.
+
 - GET `/it-ops/settings`
   - Guards: `JwtAuthGuard`, `PermissionGuard`, `@RequireLevel('settings', 'reader')`
   - Returns merged settings with defaults: `{ dataClasses, networkSegments, entities, serverKinds, serverProviders, serverRoles, hostingTypes, lifecycleStates, interfaceProtocols, interfaceDataCategories, interfaceTriggerTypes, interfacePatterns, interfaceFormats, interfaceAuthModes, connectionTypes, subnets, domains, ipAddressTypes, accessMethods }`
@@ -1222,6 +1228,7 @@ Budget-file export takes the same filtering and file options as the existing exp
   - `allocation_method` defaults to `default`; `allocation_driver` defaults to `headcount`
 - PATCH `/spend-items/:id/versions` with `{ id, ...updates }`
   - `budget_year` immutable; `allocation_method` can change
+  - `allocation_method` and `allocation_driver` are saved as the Allocations tab saves them (`PUT …/versions/:id/allocations`, `changeAllocationMethod`): an automatic method removes a stored manual split with its audit row, a new driver computes a split by company again; a driver applies to `manual_company` only, and a driver not sent keeps the stored one
 
 ## Native budget line detail and writes
 
@@ -1356,7 +1363,8 @@ An asset is written from the line with the asset's audit shape. The table is `as
 - POST `/capex-items/:id/versions` with `{ version_name, as_of_date, input_grain, budget_year?, allocation_method?, allocation_driver? }`
   - `allocation_method` defaults to `default`; `allocation_driver` defaults to `headcount`
   - One version per (item, budget_year)
-- PATCH `/capex-items/:id/versions` with `{ id, input_grain?, notes?, allocation_method? }`
+- PATCH `/capex-items/:id/versions` with `{ id, input_grain?, notes?, allocation_method?, allocation_driver? }`
+  - `allocation_method` and `allocation_driver` are saved as the Allocations tab saves them (`PUT …/versions/:id/allocations`, `changeAllocationMethod`): an automatic method removes a stored manual split with its audit row, a new driver computes a split by company again; a driver applies to `manual_company` only, and a driver not sent keeps the stored one
 
 ## Amounts (CAPEX)
 - POST `/capex-versions/:id/amounts/bulk-upsert` → annual or monthly payload; server writes the appropriate rows to `spend_amounts` (audited as `capex_amounts`)
@@ -1634,6 +1642,8 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - DELETE `/tasks/bulk` — bulk delete `{ ids: string[] }` → `{ deleted: string[], failed: { id, name, reason }[] }` **[Requires: tasks:admin]**
 
 ## Portfolio Requests
+- POST `/portfolio/requests/:id/convert` — create a project from an approved request **[Requires: portfolio_projects:member]**
+  - The request must be Approved. A request that is already Converted is refused (`400`, `This request has already been converted to a project.`) and no project is created. Any other status is refused (`400`). `actual_start` and `actual_end` in the body are refused (`400`), as on project creation.
 - GET `/portfolio/requests/:id?include=activities` — load request (include activity feed via `include=activities`) **[Requires: portfolio_requests:reader]**
   - Activity rows are ordered newest-first and tenant-scoped in SQL (`a.tenant_id = app_current_tenant()`).
 - PATCH `/portfolio/requests/:id` — update request **[Requires: portfolio_requests:member]**
@@ -1992,7 +2002,7 @@ PATCH /spend-items/9a2f…/versions
 {
   "id": "v-2025",
   "allocation_method": "manual_company",
-  "allocation_driver": "it_users"   // optional, defaults to "headcount"
+  "allocation_driver": "it_users"   // optional, keeps the stored driver
 }
 
 POST  /spend-versions/v-2025/allocations/bulk-upsert
@@ -2002,7 +2012,7 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert
 ]
 ```
 - Send only the companies you want to keep. `allocation_pct` is optional and ignored—percentages are recomputed from the latest company metrics using the stored `allocation_driver`.
-- `allocation_driver` may be `headcount`, `it_users`, or `turnover`. Omit it to fall back to headcount.
+- `allocation_driver` may be `headcount`, `it_users`, or `turnover`. Omit it to keep the stored driver (headcount on a new version).
 
 ### Auto (headcount) allocations (empty payload → full materialization)
 ```

@@ -34,7 +34,10 @@ vi.mock('../../api', () => ({
 }));
 
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: (resource: string, level: string) => auth.admin && resource === 'users' && level === 'admin' }),
+  useAuth: () => ({
+    hasLevel: (resource: string, level: string) => auth.admin
+      && ((resource === 'users' && level === 'admin') || (resource === 'settings' && level === 'reader')),
+  }),
 }));
 
 vi.mock('../../components/PageHeader', () => ({
@@ -411,6 +414,73 @@ describe('AuditLogsPage', () => {
     expect(screen.queryByText('Record: APP-12')).toBeNull();
     expect(screen.queryByText(assetId)).toBeNull();
     expect(screen.queryByText(/Tenant:/)).toBeNull();
+  });
+
+  it('lists the fields in alphabetical order of their label, in the reader language', async () => {
+    const entry = auditRow({
+      table_name: 'applications',
+      before_json: { status: 'draft', name: 'Old', description: 'a', lifecycle: 'active', criticality: 'low' },
+      after_json: { status: 'active', name: 'New', description: 'b', lifecycle: 'retired', criticality: 'high' },
+    });
+    const labels = () => Array.from(document.querySelectorAll('tbody tr td:first-child')).map((cell) => cell.textContent);
+    const sorted = (values: Array<string | null>, locale: string) => [...values].sort((a, b) => new Intl.Collator(locale, { sensitivity: 'base' }).compare(a ?? '', b ?? ''));
+
+    await openDetail(entry);
+    const english = labels();
+    expect(english).toHaveLength(5);
+    expect(english).toEqual(sorted(english, 'en'));
+    cleanup();
+
+    await i18n.changeLanguage('fr');
+    getMock.mockResolvedValue({ data: entry } as any);
+    renderPage();
+    act(() => {
+      grid.props?.onCellClicked({ data: entry });
+    });
+    await waitFor(() => expect(labels()).toHaveLength(5));
+    const french = labels();
+    expect(french).toEqual(sorted(french, 'fr'));
+    expect(french).not.toEqual(english);
+  });
+
+  it("names a workspace catalog value with the workspace's label", async () => {
+    const entry = auditRow({
+      table_name: 'applications',
+      before_json: { category: 'line_of_business' },
+      after_json: { category: 'custom_cat' },
+    });
+    getMock.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') {
+        return { data: { applicationCategories: [{ code: 'custom_cat', label: 'Shop floor' }], accessMethods: [], serverRoles: [] } } as never;
+      }
+      return { data: entry } as never;
+    });
+    renderPage();
+    act(() => {
+      grid.props?.onCellClicked({ data: entry });
+    });
+
+    expect(await screen.findByText('Shop floor')).toBeTruthy();
+    expect(screen.queryByText('custom_cat')).toBeNull();
+  });
+
+  it("names the records of a budget line's links, with no id and no raw JSON", async () => {
+    const technology = '33333333-3333-4333-8333-333333333333';
+    const gone = '55555555-5555-4555-8555-555555555555';
+    const entry = auditRow({
+      table_name: 'technology_spend_items',
+      before_json: [gone],
+      after_json: [gone, technology],
+      linked_records: { [technology]: { ref: 'TEC-4', name: 'Oracle Database' } },
+    });
+    await openDetail(entry);
+
+    expect(screen.getByText('Linked records')).toBeTruthy();
+    expect(screen.getByText(/TEC-4 Oracle Database/)).toBeTruthy();
+    expect(screen.getAllByText(/Deleted record/)).toHaveLength(2);
+    expect(document.body.textContent).not.toContain(technology);
+    expect(document.body.textContent).not.toContain(gone);
+    expect(document.querySelector('pre')).toBeNull();
   });
 
   it('shows the raw JSON directly when a payload is not an object', async () => {

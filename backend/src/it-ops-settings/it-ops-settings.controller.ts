@@ -3,7 +3,7 @@ import { Body, Controller, Get, Patch, Post, Query, Req, UseGuards } from '@nest
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
-import { ItOpsSettings, ItOpsSettingsService } from './it-ops-settings.service';
+import { ItOpsCatalogLabels, ItOpsSettings, ItOpsSettingsService } from './it-ops-settings.service';
 
 type FieldReader = (row: any) => unknown;
 /** A code may be absent: the server generates it from the name (absent code = new entry). */
@@ -50,6 +50,13 @@ export class ItOpsSettingsController {
       throw new Error('Tenant context is required for IT Ops settings');
     }
     return tenantId;
+  }
+
+  /** Catalog labels, readable by every signed-in member: values are named, never shown as raw codes. */
+  @Get('catalog-labels')
+  async getCatalogLabels(@Req() req: any): Promise<ItOpsCatalogLabels> {
+    const tenantId = this.requireTenantId(req);
+    return this.settings.getCatalogLabels(tenantId, { manager: req?.queryRunner?.manager });
   }
 
   @UseGuards(PermissionGuard)

@@ -15,7 +15,7 @@ Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pou
 
 **Cartographie SI > Sites**
 
-**Le geste.** Cliquez sur **Ajouter un site** et créez vos salles serveurs, datacenters ou clouds : un code, un nom et un type d'hébergement.
+**Le geste.** Cliquez sur **Ajouter un site** et créez vos salles serveurs, datacenters ou clouds : un nom et un type d'hébergement.
 
 **Ce que vous lisez.** Chaque actif est rattaché à un site, qui lui donne son fournisseur, son type d'hébergement et son pays. Un site qui manque plus tard se crée aussi depuis le champ **Site** d'un actif.
 
@@ -26,7 +26,7 @@ Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pou
 **Le geste.** Importez la liste de vos applications, ou créez-les une à une.
 
 - **Importer un fichier.** Cliquez sur **Importer**, puis **Télécharger un exemple** : un classeur avec quelques applications et ce que prend chaque colonne. Remplissez les vôtres, puis **Importer** le fichier.
-- **Créer une application.** Cliquez sur **Nouvelle application**, tapez son nom dans le titre et appuyez sur Entrée. Remplissez le panneau des propriétés, puis cliquez sur **Terminé**. **Annuler** l'abandonne.
+- **Créer une application.** Cliquez sur **Nouvelle application**, tapez son nom dans le titre et appuyez sur Entrée. Remplissez le panneau Propriétés, puis cliquez sur **Terminé**. **Annuler** l'abandonne.
 
 **Ce que vous lisez.** Une fiche par application. Complétez d'abord la criticité et les **Responsables IT** des plus importantes.
 

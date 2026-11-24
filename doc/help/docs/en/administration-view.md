@@ -9,9 +9,9 @@ Open it from **IT Landscape > Administration zones**, in the **Infrastructure** 
 The page reads what you record elsewhere:
 
 1. Define your administration zones and complete your domains in **IT Landscape > Settings**. Put the zones in order: the first one is the most sensitive. See [Administration zones](it-ops-settings.md#administration-zones) and [Domains](it-ops-settings.md#domains).
-2. Place each asset in its zone, here in bulk (see [Assigning a zone](#assigning-a-zone)) or with the **Administration zone** field of the asset's properties drawer. See [Assets](assets.md#properties-drawer-right-panel).
+2. Place each asset in its zone, here in bulk (see [Assigning a zone](#assigning-a-zone)) or with the **Administration zone** field of the asset's properties panel. See [Assets](assets.md#properties-panel).
 3. Link the directory technologies, such as Active Directory, to the servers that carry them. See [Linking a technology to a server](technologies.md#linking-a-technology-to-a-server).
-4. A directory service with no server of yours, such as Entra ID, takes its zone from the **Administration zone** field of its properties drawer. See [Technologies](technologies.md#properties-drawer).
+4. A directory service with no server of yours, such as Entra ID, takes its zone from the **Administration zone** field of its properties panel. See [Technologies](technologies.md#properties-panel).
 
 ## Why the zones matter
 

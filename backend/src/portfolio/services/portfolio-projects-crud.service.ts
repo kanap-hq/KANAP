@@ -19,7 +19,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { displayName } from '../../common/display-name';
-import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
+import { captureBaselineOnce, PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { computeAutoAllocations } from '../utils/allocation-utils';
 import { formatItemLabel } from '../utils/activity-labels';
 import { detectChanges, PROJECT_TRACKED_FIELDS, resolveDisplayNames } from '../../common/change-detection';
@@ -399,7 +399,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         purpose: purposeContent,
       },
       userId,
-      { manager: mg },
+      { manager: mg, audit: opts?.audit },
     );
 
     await this.audit.log({
@@ -409,13 +409,15 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       before: null,
       after: saved,
       userId,
+      ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
     }, { manager: mg });
 
     return saved;
   }
 
   /**
-   * Convert a request to a project.
+   * Convert an approved request to a project. A request that is already converted is refused:
+   * a further project for the same need is created from the portfolio and linked to the request.
    */
   async convertFromRequest(
     requestId: string,
@@ -433,7 +435,12 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const request = await requestRepo.findOne({ where: { id: requestId } });
     if (!request) throw new NotFoundException('Request not found');
 
-    if (request.status !== 'approved' && request.status !== 'converted') {
+    // A converted request already has its project. A further project for the same need is
+    // created from the portfolio and linked to the request.
+    if (request.status === 'converted') {
+      throw new BadRequestException('This request has already been converted to a project.');
+    }
+    if (request.status !== 'approved') {
       throw new BadRequestException(
         `Cannot convert request with status '${request.status}'. Request must be Approved.`
       );
@@ -485,32 +492,29 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       project_id: savedProject.id,
     }));
 
-    // Update request status to 'converted' if not already
-    if (request.status === 'approved') {
-      const requestBefore = { ...request };
-      request.status = 'converted';
-      request.converted_date = new Date();
-      request.updated_at = new Date();
-      await requestRepo.save(request);
-      // The request's row names the project it became (`converted_to_project_id`, beside the saved
-      // row): its history reads "Converted to project: PRJ-7".
-      await this.audit.log({
-        table: 'portfolio_requests',
-        recordId: request.id,
-        action: 'update',
-        before: requestBefore,
-        after: { ...request, converted_to_project_id: savedProject.id },
-        userId,
-      }, { manager: mg });
+    const requestBefore = { ...request };
+    request.status = 'converted';
+    request.converted_date = new Date();
+    request.updated_at = new Date();
+    await requestRepo.save(request);
+    // The request's row names the project it became (`converted_to_project_id`, beside the saved
+    // row): its history reads "Converted to project: PRJ-7".
+    await this.audit.log({
+      table: 'portfolio_requests',
+      recordId: request.id,
+      action: 'update',
+      before: requestBefore,
+      after: { ...request, converted_to_project_id: savedProject.id },
+      userId,
+    }, { manager: mg });
 
-      await this.logActivity(mg, {
-        request_id: requestId,
-        tenant_id: tenantId,
-        author_id: userId,
-        type: 'change',
-        changed_fields: { status: ['approved', 'converted'] },
-      });
-    }
+    await this.logActivity(mg, {
+      request_id: requestId,
+      tenant_id: tenantId,
+      author_id: userId,
+      type: 'change',
+      changed_fields: { status: ['approved', 'converted'] },
+    });
 
     await this.integratedDocuments.createProjectPurposeFromRequest(
       {
@@ -608,10 +612,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
           existing.estimated_effort_business = 0;
         }
 
-        existing.baseline_start_date = existing.planned_start;
-        existing.baseline_end_date = existing.planned_end;
-        existing.baseline_effort_it = existing.estimated_effort_it;
-        existing.baseline_effort_business = existing.estimated_effort_business;
+        captureBaselineOnce(existing);
         // The actual start is set once, the first time the project moves to In progress.
         if (existing.actual_start == null) {
           existing.actual_start = new Date();
@@ -693,11 +694,11 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         'purpose',
         nextPurpose,
         userId,
-        { manager: mg, logSourceActivity: true },
+        { manager: mg, logSourceActivity: true, audit: opts?.audit },
       );
     }
     if (before.name !== saved.name) {
-      await this.integratedDocuments.syncTitles('projects', sourceDescriptor, userId, { manager: mg });
+      await this.integratedDocuments.syncTitles('projects', sourceDescriptor, userId, { manager: mg, audit: opts?.audit });
     }
 
     // Log status change as activity (optionally as decision)
@@ -799,6 +800,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       before,
       after: saved,
       userId,
+      ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
     }, { manager: mg });
 
     return saved;

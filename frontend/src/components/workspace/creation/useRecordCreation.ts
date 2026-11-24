@@ -7,6 +7,7 @@ import api from '../../../api';
 import { useKanapDialogs } from '../../design';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { ONBOARDING_QUERY_KEY } from '../../onboarding/useOnboarding';
+import { armCreatedRecordFocus } from './creationFieldFocus';
 import {
   cancelCreationClear,
   clearCreation,
@@ -116,8 +117,13 @@ export default function useRecordCreation({
     return () => scheduleCreationClear(key);
   }, [key]);
 
-  /** `reference`: the record's business reference (`COMP-5`), when its page may open by it. */
+  /**
+   * The record is written and the person is on it. `reference`: the record's business reference
+   * (`COMP-5`), when its page may open by it. The page that shows the record puts the cursor in its
+   * description, else its first field (`useCreationFieldFocus`).
+   */
   const startCreation = React.useCallback((created: { recordId: string; token: string; returnTo: string; reference?: string | null }) => {
+    armCreatedRecordFocus();
     setCreation(
       creationKey(family, created.recordId),
       { token: created.token, returnTo: created.returnTo },

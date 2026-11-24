@@ -42,6 +42,7 @@ vi.mock('../../hooks/useAccountNav', () => ({
 import { markedLabels } from '../../test/missingMarks';
 import api from '../../api';
 import AccountWorkspacePage from './AccountWorkspacePage';
+import { findCreatedRecordField } from '../../components/workspace/creation/creationFieldFocus';
 import { STATUS_SCOPE_PARAM } from '../../utils/statusScopeParams';
 import { TITLE_FIELD } from '../../test/titleField';
 
@@ -143,6 +144,12 @@ describe('AccountWorkspacePage', () => {
       store.account = { ...store.account, ...body };
       return { data: store.account };
     });
+  });
+
+  it('declares its description as the place of the cursor once an account is created', async () => {
+    renderAt('/master-data/accounts/acc-1/overview');
+    await waitFor(() => expect(screen.getByLabelText('accounts.fields.description')).toHaveValue('Licences and subscriptions'));
+    expect(findCreatedRecordField(document.body)).toBe(screen.getByLabelText('accounts.fields.description'));
   });
 
   it('shows the account with no save or reset button', async () => {

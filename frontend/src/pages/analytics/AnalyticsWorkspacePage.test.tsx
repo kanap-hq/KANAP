@@ -71,6 +71,7 @@ import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/analytics';
 import AnalyticsWorkspacePage from './AnalyticsWorkspacePage';
 import AnalyticsDimensionWorkspacePage from './AnalyticsDimensionWorkspacePage';
+import { findCreatedRecordField } from '../../components/workspace/creation/creationFieldFocus';
 import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = service as unknown as {
@@ -163,6 +164,12 @@ describe('AnalyticsWorkspacePage', () => {
     expect(mocked.updateAnalyticsValue).not.toHaveBeenCalled();
     fireEvent.blur(input);
     await waitFor(() => expect(mocked.updateAnalyticsValue).toHaveBeenCalledWith('v-1', { name: 'Software licenses' }));
+  });
+
+  it('declares its description as the place of the cursor once a value is created', async () => {
+    renderAt('/master-data/analytics/v-1/overview?axis=ax-nature');
+    const description = await screen.findByLabelText('analytics.fields.description');
+    expect(findCreatedRecordField(document.body)).toBe(description);
   });
 
   it('saves the description on blur and the lifecycle on change', async () => {

@@ -2,8 +2,12 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes, createRoutesFromChildren } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import Drawer from '@mui/material/Drawer';
+import { ThemeProvider, type Theme } from '@mui/material/styles';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import Layout from './Layout';
+import { stepHintScrollReserve } from './onboarding/StepHint';
+import { writeActiveStep } from './onboarding/activeStep';
 import { aiAgentControlApi } from '../ai/aiApi';
 import { registerLeaveGuard } from '../hooks/leaveGuard';
 import { DeferredPageLocation } from '../lib/deferredPage';
@@ -37,7 +41,17 @@ const access = vi.hoisted(() => ({
     trial_days_remaining: number | null;
     access_allowed?: boolean;
   },
-  profile: { first_name: 'Ada' as string | null, last_name: 'Lovelace' as string | null, email: 'ada@example.com' as string | null },
+  profile: {
+    id: null as string | null,
+    first_name: 'Ada' as string | null,
+    last_name: 'Lovelace' as string | null,
+    email: 'ada@example.com' as string | null,
+  } as {
+    id?: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+  },
 }));
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
@@ -50,10 +64,23 @@ vi.mock('../auth/AuthContext', () => ({
     },
     claims: { isGlobalAdmin: access.isGlobalAdmin, isPlatformAdmin: false, isBillingAdmin: false },
     profile: access.profile,
+    refreshMe: vi.fn(),
     // A trial in progress by default: the subscription banner shows. A test may replace it.
     subscription: access.subscription,
   }),
 }));
+
+const onboardingGet = vi.hoisted(() => vi.fn());
+vi.mock('./onboarding/onboardingApi', async () => {
+  const actual = await vi.importActual<typeof import('./onboarding/onboardingApi')>('./onboarding/onboardingApi');
+  return {
+    ...actual,
+    onboardingApi: {
+      ...actual.onboardingApi,
+      get: () => onboardingGet(),
+    },
+  };
+});
 
 const tenant = vi.hoisted(() => ({ logoUrl: null as string | null }));
 
@@ -955,5 +982,131 @@ describe('Layout agent badges', () => {
     access.subscription = null;
     renderShell();
     await waitFor(() => expect(aiAgentControlApi.getBadges).toHaveBeenCalled());
+  });
+});
+
+describe('Layout first-steps hint', () => {
+  const HINT_HEIGHT = 137.4;
+  let appTheme: Theme;
+
+  beforeAll(async () => {
+    // This file mocks ThemeContext for `useThemeMode`. The hint reads `palette.kanap` from the app theme.
+    const actual = await vi.importActual<typeof import('../config/ThemeContext')>('../config/ThemeContext');
+    appTheme = actual.createAppTheme('light');
+  });
+
+  afterEach(() => {
+    access.profile.id = null;
+    onboardingGet.mockReset();
+    writeActiveStep(null);
+  });
+
+  function renderIt(path: string) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={appTheme}>
+          <MemoryRouter initialEntries={[path]}>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="/it/*" element={<div>it page</div>} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  /** The side menu's scroll box: the drawer's content under the toolbar spacer. */
+  function navScroll(container: HTMLElement): HTMLElement {
+    const paper = container.querySelector('.MuiDrawer-paper');
+    if (!paper) throw new Error('side menu missing');
+    const box = [...paper.children].find((child) => getComputedStyle(child).overflowY === 'auto');
+    if (!(box instanceof HTMLElement)) throw new Error('menu scroll area missing');
+    return box;
+  }
+
+  function hintState() {
+    return {
+      angle: 'cartography' as const,
+      mode: 'own_data' as const,
+      chosen_at: '2026-11-02T09:00:00.000Z',
+      can_choose: true,
+      steps: [{ key: 'own_applications', done_at: '2026-11-02T09:20:00.000Z', automatic: true }],
+      next_step: null,
+      completed: true,
+      dismissed_at: null,
+      sample_data: { status: 'idle', step: null },
+      reset_in_progress: false,
+    };
+  }
+
+  function bottomPadding(container: HTMLElement): number {
+    return Number.parseFloat(getComputedStyle(navScroll(container)).paddingBottom) || 0;
+  }
+
+  it('reserves room at the bottom of the menu for a hint, and none when no hint is shown', async () => {
+    const plain = renderIt('/it/applications');
+    expect(bottomPadding(plain.container)).toBe(0);
+    plain.unmount();
+
+    access.profile.id = 'user-1';
+    onboardingGet.mockResolvedValue(hintState());
+    const realRect = HTMLElement.prototype.getBoundingClientRect;
+    const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      if (this.getAttribute('role') === 'dialog') {
+        return {
+          x: 0, y: 0, top: 0, left: 16, right: 376, bottom: HINT_HEIGHT, width: 360, height: HINT_HEIGHT, toJSON() { return {}; },
+        } as DOMRect;
+      }
+      return realRect.call(this);
+    });
+    try {
+      const hinted = renderIt('/it/applications?step=own_applications');
+      await screen.findByRole('dialog', { name: 'onboarding.firstSteps.steps.own_applications.title' });
+      // The room is the hint's real height, not a fixed guess: 137.4px measures as 154px.
+      expect(stepHintScrollReserve(HINT_HEIGHT)).toBe(154);
+      await waitFor(() => expect(bottomPadding(hinted.container)).toBe(154));
+
+      fireEvent.click(screen.getByRole('button', { name: 'onboarding.firstSteps.gotIt' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(bottomPadding(hinted.container)).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('puts an open drawer in front of the hint and the hint in front of the side menu', async () => {
+    access.profile.id = 'user-1';
+    onboardingGet.mockResolvedValue(hintState());
+    const { container } = renderIt('/it/applications?step=own_applications');
+    const hint = await screen.findByRole('dialog', { name: 'onboarding.firstSteps.steps.own_applications.title' });
+    const menu = container.querySelector('.MuiDrawer-paper') as HTMLElement;
+    const appBar = container.querySelector('.MuiAppBar-root') as HTMLElement;
+    const drawer = render(
+      <ThemeProvider theme={appTheme}>
+        <Drawer anchor="right" open>
+          <div>detail</div>
+        </Drawer>
+      </ThemeProvider>,
+    );
+    const modal = document.querySelector('.MuiModal-root') as HTMLElement;
+    const z = appTheme.zIndex;
+    const menuZ = Number(getComputedStyle(menu).zIndex);
+    const hintZ = Number(getComputedStyle(hint).zIndex);
+    const drawerZ = Number(getComputedStyle(modal).zIndex);
+    const appBarZ = Number(getComputedStyle(appBar).zIndex);
+
+    expect(menuZ).toBe(z.drawer - 2);
+    expect(hintZ).toBe(z.drawer - 1);
+    expect(drawerZ).toBe(z.drawer);
+    expect(appBarZ).toBe(z.drawer + 1);
+    expect(menuZ).toBeLessThan(hintZ);
+    expect(hintZ).toBeLessThan(drawerZ);
+    expect(hintZ).toBeLessThan(z.modal);
+    expect(appBarZ).toBeGreaterThan(menuZ);
+    expect(hint).toHaveStyle({ position: 'fixed', left: '16px', bottom: '16px' });
+    drawer.unmount();
   });
 });

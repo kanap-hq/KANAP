@@ -145,7 +145,7 @@ Diese Felder treiben Berichterstattung, Planung, Filterung und den standardmäß
 
 ### Team
 
-Die Teamzuweisung lebt im Eigenschaftenbereich, sodass sie verfügbar bleibt, während Sie an Zeitplan, Aufwand oder Aufgaben arbeiten.
+Die Teamzuweisung liegt im Eigenschaftenbereich, sodass sie verfügbar bleibt, während Sie an Zeitplan, Aufwand oder Aufgaben arbeiten.
 
 - **Fachbereichssponsor** / **IT-Sponsor** erfassen die Verantwortlichkeit auf Führungsebene
 - **Fachbereichsleiter** / **IT-Leiter** identifizieren die tägliche Führung

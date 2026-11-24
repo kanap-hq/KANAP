@@ -47,10 +47,20 @@ export default function LocationOverviewTab({
   const [status, setStatus] = React.useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [error, setError] = React.useState<string | null>(null);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedStatusTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // True from the moment the tab is shown until it goes. A save that finishes after that
+  // (including notes the unmount clean-up still writes) must not start the "saved" timer.
+  const mountedRef = React.useRef(false);
   const latestRef = React.useRef(initialNotes);
   const baselineRef = React.useRef(initialNotes);
   const locationIdRef = React.useRef(locationId);
   locationIdRef.current = locationId;
+
+  const clearSavedStatusTimer = () => {
+    if (savedStatusTimerRef.current == null) return;
+    clearTimeout(savedStatusTimerRef.current);
+    savedStatusTimerRef.current = null;
+  };
 
   // The notes shown start again from the page's text when the site changes, or when that text is not
   // what this tab saved last (the page handing the saved text back changes nothing: a newer text
@@ -68,17 +78,24 @@ export default function LocationOverviewTab({
   const persist = React.useCallback(
     async (next: string) => {
       if (next === baselineRef.current) return;
-      setStatus('saving');
-      setError(null);
+      // A new save takes the place of the previous "saved" timer.
+      clearSavedStatusTimer();
+      if (mountedRef.current) {
+        setStatus('saving');
+        setError(null);
+      }
       try {
         await writeNotes(locationId, next);
         baselineRef.current = next;
-        setStatus('saved');
         onNotesSaved?.(next, locationId);
-        setTimeout(() => {
+        if (!mountedRef.current) return;
+        setStatus('saved');
+        savedStatusTimerRef.current = setTimeout(() => {
+          savedStatusTimerRef.current = null;
           setStatus((current) => (current === 'saved' ? 'idle' : current));
         }, 1500);
       } catch (e: any) {
+        if (!mountedRef.current) return;
         setStatus('error');
         setError(getApiErrorMessage(e, t, t('messages.saveLocationFailed')));
       }
@@ -103,6 +120,16 @@ export default function LocationOverviewTab({
       void persist(latestRef.current);
     }, NOTES_DEBOUNCE_MS);
   };
+
+  // Before the clean-up that writes notes still waiting, so that write keeps the text
+  // and does not start the "saved" timer. Setup runs again after the development double mount.
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      clearSavedStatusTimer();
+    };
+  }, []);
 
   // Notes still waiting for their delay are written when the tab goes (the site closes, Create, another
   // tab or page) or shows another site: once, with the last text, to the site they were typed on.
@@ -131,7 +158,7 @@ export default function LocationOverviewTab({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Box data-creation-description="">
+      <Box data-creation-description={canManage ? '' : undefined}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mb: 1 }}>
           <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>
             {t('it:common.notes')}

@@ -40,7 +40,8 @@ export default function InterfaceOverviewTab({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <Box data-creation-description="">
+      {/* The interface just written shows the draft's editor until it has loaded: its own takes the cursor. */}
+      <Box data-creation-description={canManage && (isCreate || !!data?.id) ? '' : undefined}>
         <SectionHeader>{t('it:workspace.interface.overview.specification')}</SectionHeader>
         <IntegratedDocumentEditor
           ref={specificationEditorRef as React.Ref<IntegratedDocumentEditorHandle>}

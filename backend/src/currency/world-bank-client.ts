@@ -44,6 +44,8 @@ export class WorldBankClient {
   private readonly liveApiKey: string | null;
   private readonly liveRateTtlMs: number;
   private readonly liveRateCache = new Map<string, { timestamp: number; rate: number }>();
+  /** Positive `WB_RETRY_DELAY_MS`, or null so each call keeps its own base. */
+  private readonly configuredRetryDelayMs: number | null;
 
   constructor() {
     const override = process.env.WB_BASE_URL?.trim();
@@ -64,6 +66,8 @@ export class WorldBankClient {
     this.liveApiKey = process.env.FX_SPOT_API_KEY?.trim() || null;
     const liveTtlParsed = Number(process.env.FX_SPOT_CACHE_TTL_MS);
     this.liveRateTtlMs = Number.isFinite(liveTtlParsed) && liveTtlParsed > 0 ? liveTtlParsed : 30 * 24 * 60 * 60 * 1000; // 30 days (aligns with login refresh interval)
+    const retryParsed = Number(process.env.WB_RETRY_DELAY_MS);
+    this.configuredRetryDelayMs = Number.isFinite(retryParsed) && retryParsed > 0 ? retryParsed : null;
   }
 
   resolveCode(currency: string): string | null {
@@ -313,7 +317,7 @@ export class WorldBankClient {
   ): Promise<Buffer> {
     const timeoutMs = options.timeoutMs ?? 60000;
     const retries = options.retries ?? 1;
-    const retryDelayMs = options.retryDelayMs ?? 1000;
+    const retryDelayMs = this.configuredRetryDelayMs ?? options.retryDelayMs ?? 1000;
     let lastError: Error | null = null;
     for (let attempt = 1; attempt <= retries; attempt += 1) {
       try {
@@ -412,7 +416,7 @@ export class WorldBankClient {
   ): Promise<any> {
     const timeoutMs = options.timeoutMs ?? 30000;
     const retries = options.retries ?? 1;
-    const retryDelayMs = options.retryDelayMs ?? 1000;
+    const retryDelayMs = this.configuredRetryDelayMs ?? options.retryDelayMs ?? 1000;
     let lastError: Error | null = null;
     for (let attempt = 1; attempt <= retries; attempt += 1) {
       try {

@@ -373,6 +373,9 @@ export default function Layout() {
     () => (isPlatformHost ? 'admin' : workspaceOfPath(shownPath)),
     [shownPath, isPlatformHost],
   );
+  // Spare room at the bottom of the side menu while a first-steps hint covers that corner.
+  // Zero when no hint is shown, so the menu ends where it does today.
+  const [hintReserve, setHintReserve] = React.useState(0);
   const [navOpen, setNavOpen] = React.useState<boolean>(() => {
     // Default to open unless explicitly stored as 'false'
     try {
@@ -621,6 +624,9 @@ export default function Layout() {
             width: navOpen ? drawerWidth : `calc(${theme.spacing(7)} + 1px)`,
             boxSizing: 'border-box',
             overflowX: 'hidden',
+            // One step under the first-steps hint (`drawer - 1`), which stays under an open
+            // temporary drawer (`drawer`). The app bar stays at `drawer + 1`, above this menu.
+            zIndex: theme.zIndex.drawer - 2,
             transition: theme.transitions.create('width', {
               easing: theme.transitions.easing.sharp,
               duration: navOpen ? theme.transitions.duration.enteringScreen : theme.transitions.duration.leavingScreen,
@@ -629,7 +635,13 @@ export default function Layout() {
         }}
       >
         <Toolbar />
-        <Box sx={{ overflowY: 'auto', overflowX: 'hidden' }}>
+        <Box sx={{
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          // While the hint covers the bottom of the menu, the last entry can scroll above it.
+          // The room follows the hint's height and is absent when no hint is shown.
+          ...(hintReserve > 0 ? { pb: `${hintReserve}px` } : {}),
+        }}>
           {(() => {
             // Determine which nav entries to render
             let entries: NavEntry[];
@@ -832,7 +844,7 @@ export default function Layout() {
       <NavigationTracker />
       {/* The name prompt is mounted last, so it comes first when both are open. */}
       <FirstOpenDialog />
-      <StepHint />
+      <StepHint onReserveChange={setHintReserve} />
       <NamePromptDialog />
     </Box>
     </NotifyProvider>

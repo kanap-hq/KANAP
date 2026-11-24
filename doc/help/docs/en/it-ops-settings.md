@@ -79,7 +79,7 @@ Other is a built-in value. It can be retired but not removed, and a saved list t
 **Columns**: Name, No longer offered
 
 **Where used**:
-- Assets workspace → properties drawer → **Cloud provider** (read-only, derived from the location)
+- Assets workspace → properties panel → **Cloud provider** (read-only, derived from the location)
 - Locations workspace → Overview tab → **Cloud provider** (when hosting type is cloud)
 
 ### Hosting types
@@ -90,7 +90,7 @@ Where locations and technologies are hosted. Defaults: On-prem, Colocation, Publ
 
 **Where used**:
 - Locations workspace → Overview tab → **Hosting Type** field
-- Technologies workspace → properties drawer → **Hosting type**, and the new technology window. See [Technologies](technologies.md#hosting-type).
+- Technologies workspace → properties panel → **Hosting type**, and the new technology window. See [Technologies](technologies.md#hosting-type).
 
 A type a technology uses cannot be removed: mark it **No longer offered** instead.
 
@@ -119,8 +119,8 @@ The order of the list matters: the first zone is the most sensitive. Drag a row 
 - **Administrator group**: the directory group or the team that administers the zone, for example "Domain admins".
 
 **Where used**:
-- Assets workspace → properties drawer → **Administration zone**
-- Technologies workspace → properties drawer → **Administration zone**, for the technologies of the **Directory and identity** family
+- Assets workspace → properties panel → **Administration zone**
+- Technologies workspace → properties panel → **Administration zone**, for the technologies of the **Directory and identity** family
 - **IT Landscape > Administration zones**, which counts the assets and directory services of each zone, runs the control points and assigns zones in bulk. See [Administration zones](administration-view.md).
 
 A zone marked **No longer offered** stays on the technologies and assets already placed in it.
@@ -132,7 +132,7 @@ What kind of technology each one is: database, hypervisor, directory and identit
 **Columns**: Name, No longer offered
 
 **Where used**:
-- Technologies workspace → header and properties drawer → **Family**, and the new technology window
+- Technologies workspace → header and properties panel → **Family**, and the new technology window
 
 The **Operating system** family marks the operating systems: a technology of that family added to a server without one becomes its operating system. See [Technologies](technologies.md#operating-systems).
 
@@ -260,7 +260,7 @@ Logical types for servers and infrastructure assets (e.g., Physical server, Virt
 **Columns**: Name, Physical, No longer offered
 
 **Where used**:
-- Assets workspace → properties drawer → **Asset type** field
+- Assets workspace → properties panel → **Asset type** field
 
 ---
 
@@ -418,7 +418,7 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 |------|-----------------|
 | **Access methods** | Applications (Technical & Support tab → Access Methods) |
 | **Application categories** | Applications (Category) |
-| **Administration zones** | Assets (properties drawer → Administration zone), Technologies of the Directory and identity family (properties drawer → Administration zone), Administration zones page |
+| **Administration zones** | Assets (properties panel → Administration zone), Technologies of the Directory and identity family (properties panel → Administration zone), Administration zones page |
 | **Cloud providers** | Assets (Provider), Locations (Cloud provider) |
 | **Connection types** | Connections (Connection Type) |
 | **Domains** | Assets (Network tab → Domain, FQDN), Administration zones page |
@@ -436,7 +436,7 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 | **Network zones** | Subnets (Network Zone), Assets (auto-populated from subnet) |
 | **Subnets** | Assets (Network tab → IP Addresses → Subnet selector) |
 | **Server roles** | Applications → Servers tab (role when linking asset to app), Connection Map (graph tier placement) |
-| **Asset types** | Assets (properties drawer → Asset type) |
+| **Asset types** | Assets (properties panel → Asset type) |
 | **Technology families** | Technologies (Family), Administration zones page (directory services) |
 
 ---

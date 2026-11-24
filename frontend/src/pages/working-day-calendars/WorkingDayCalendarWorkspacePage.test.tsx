@@ -52,6 +52,7 @@ vi.mock('../../components/history/RecordHistory', () => ({
 import { markedLabels } from '../../test/missingMarks';
 import * as service from '../../services/workingDayProfiles';
 import WorkingDayCalendarWorkspacePage from './WorkingDayCalendarWorkspacePage';
+import { findCreatedRecordField } from '../../components/workspace/creation/creationFieldFocus';
 import { TITLE_FIELD } from '../../test/titleField';
 
 const mocked = service as unknown as {
@@ -169,6 +170,12 @@ describe('WorkingDayCalendarWorkspacePage', () => {
       code: 'CAL-02', name: 'Contractors', description: null, status: 'enabled', disabled_at: null, days_by_year: {},
     }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/working-day-calendars/wd-new/overview?sort=name%3AASC', { replace: true }));
+  });
+
+  it('declares its description as the place of the cursor once a calendar is created', async () => {
+    renderAt('/master-data/working-day-calendars/wd-1/overview');
+    const description = await screen.findByLabelText('workingDayCalendars.fields.description');
+    expect(findCreatedRecordField(document.body)).toBe(description);
   });
 
   it('reads the calendar with its names in the UI language, and no year route for a custom calendar', async () => {

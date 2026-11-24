@@ -1658,7 +1658,7 @@
         },
         "map_application": {
           "title": "Une fiche d'application",
-          "hint": "Voici la fiche d'une application. Explorez le panneau des propriétés et les différents onglets pour découvrir toutes les facettes de cet objet clé."
+          "hint": "Voici la fiche d'une application. Explorez le panneau Propriétés et les différents onglets pour découvrir toutes les facettes de cet objet clé."
         },
         "map_technologies": {
           "title": "Les technologies, fins de support et failles",

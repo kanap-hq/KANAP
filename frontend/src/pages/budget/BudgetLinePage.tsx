@@ -1585,7 +1585,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
           ) : (
             <Stack spacing={3} sx={{ pt: 1 }}>
               <LineLineage lineage={data?.lineage} onOpen={(line) => { void openLineageLine(line); }} />
-              <Box>
+              <Box data-creation-description={canEdit ? '' : undefined}>
                 <Typography component="label" sx={sectionLabelSx}>{t('opex.fields.description')}</Typography>
                 <TextField
                   value={form.description}

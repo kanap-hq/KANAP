@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 
 const stableT = vi.hoisted(() => (key: string) => key);
@@ -20,6 +20,7 @@ vi.mock('./LocationSubItemsTable', () => ({ default: () => null }));
 
 import api from '../../../api';
 import LocationOverviewTab from './LocationOverviewTab';
+import { findCreatedRecordField } from '../../../components/workspace/creation/creationFieldFocus';
 
 const patch = (api as unknown as { patch: ReturnType<typeof vi.fn> }).patch;
 const pause = (ms: number) => act(async () => { await new Promise((resolve) => setTimeout(resolve, ms)); });
@@ -163,5 +164,98 @@ describe('LocationOverviewTab notes waiting to be saved', () => {
     await pause(50);
     expect(onNotesSaved).toHaveBeenCalledWith('one, typed', 'loc-1');
     expect(onNotesSaved).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('LocationOverviewTab place of the cursor once a site is created', () => {
+  it('declares its notes when the person may change them, and nothing otherwise', () => {
+    const view = render(wrap({}));
+    expect(findCreatedRecordField(document.body)).toBe(screen.getByLabelText('markdown-editor'));
+    view.rerender(wrap({ canManage: false }));
+    expect(document.querySelector('[data-creation-description]')).toBeNull();
+  });
+});
+
+describe('LocationOverviewTab saved status timer', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    patch.mockResolvedValue({ data: {} });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The editor is lazy: let it paint on real timers, then control the save timers. */
+  async function editorReady(node: React.ReactElement) {
+    const view = render(node);
+    const editor = await screen.findByLabelText('markdown-editor');
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    return { view, editor };
+  }
+
+  it('drops the saved timer when the tab goes before the status returns to idle', async () => {
+    const { view, editor } = await editorReady(wrap({}));
+    fireEvent.change(editor, { target: { value: 'Rack 4' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(900); });
+    expect(patch).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('common:status.saved')).toBeInTheDocument();
+    const pending = vi.getTimerCount();
+    expect(pending).toBeGreaterThan(0);
+    view.unmount();
+    expect(vi.getTimerCount()).toBe(0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1500); });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('writes notes still waiting when the tab goes, and leaves no saved timer after that write', async () => {
+    const onNotesSaved = vi.fn();
+    const { view, editor } = await editorReady(wrap({ onNotesSaved }));
+    fireEvent.change(editor, { target: { value: 'Rack 4' } });
+    expect(patch).not.toHaveBeenCalled();
+    view.unmount();
+    await act(async () => { await Promise.resolve(); });
+    expect(patch).toHaveBeenCalledTimes(1);
+    expect(patch).toHaveBeenCalledWith('/locations/loc-1', { additional_info: 'Rack 4' });
+    expect(onNotesSaved).toHaveBeenCalledWith('Rack 4', 'loc-1');
+    expect(vi.getTimerCount()).toBe(0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1500); });
+    expect(patch).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('replaces the saved timer when another save starts, so the status stays until that save has settled', async () => {
+    const { editor } = await editorReady(wrap({}));
+    fireEvent.change(editor, { target: { value: 'Rack' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(900); });
+    expect(screen.getByText('common:status.saved')).toBeInTheDocument();
+    fireEvent.change(editor, { target: { value: 'Rack 4' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(900); });
+    expect(patch).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('common:status.saved')).toBeInTheDocument();
+    // The first save's timer would already have fired; the second one's has not.
+    await act(async () => { await vi.advanceTimersByTimeAsync(1499); });
+    expect(screen.getByText('common:status.saved')).toBeInTheDocument();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(screen.queryByText('common:status.saved')).not.toBeInTheDocument();
+  });
+
+  it('shows saved, then idle, when development mounts the tab twice', async () => {
+    const { editor } = await editorReady(
+      <React.StrictMode>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <LocationOverviewTab locationId="loc-1" initialNotes="" canManage />
+        </ThemeProvider>
+      </React.StrictMode>,
+    );
+    fireEvent.change(editor, { target: { value: 'Rack 4' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(900); });
+    expect(screen.queryByText('common:status.saving')).not.toBeInTheDocument();
+    expect(screen.getByText('common:status.saved')).toBeInTheDocument();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1499); });
+    expect(screen.getByText('common:status.saved')).toBeInTheDocument();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(screen.queryByText('common:status.saved')).not.toBeInTheDocument();
+    expect(patch).toHaveBeenCalledTimes(1);
   });
 });
