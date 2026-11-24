@@ -37,6 +37,7 @@ vi.mock('../../hooks/useAnalyticsNav', () => ({
 import * as service from '../../services/analytics';
 import AnalyticsDimensionWorkspacePage from './AnalyticsDimensionWorkspacePage';
 import { TITLE_FIELD } from '../../test/titleField';
+import { PAGE_FIELD, pressInto } from '../../test/creationHold';
 
 const mocked = service as unknown as {
   getAnalyticsAxis: ReturnType<typeof vi.fn>;
@@ -123,8 +124,8 @@ describe('AnalyticsDimensionWorkspacePage typing while the dimension is created'
 
   it('saves once on the new dimension the description committed while the dimension is written', async () => {
     const { finish } = await startWrite();
-    const description = screen.getByLabelText('analytics.fields.description');
-    act(() => description.focus());
+    const description = screen.getByLabelText('analytics.fields.description', { selector: PAGE_FIELD });
+    pressInto(description);
     fireEvent.change(description, { target: { value: 'What the money buys' } });
     fireEvent.blur(description);
     await finish();
@@ -135,12 +136,12 @@ describe('AnalyticsDimensionWorkspacePage typing while the dimension is created'
 
   it('keeps the description being typed while the dimension is written: same field, same focus, saved on the new dimension', async () => {
     const { finish } = await startWrite();
-    const description = screen.getByLabelText('analytics.fields.description');
-    act(() => description.focus());
+    const description = screen.getByLabelText('analytics.fields.description', { selector: PAGE_FIELD });
+    pressInto(description);
     fireEvent.change(description, { target: { value: 'What' } });
     await finish();
 
-    const shown = screen.getByLabelText('analytics.fields.description') as HTMLTextAreaElement;
+    const shown = screen.getByLabelText('analytics.fields.description', { selector: PAGE_FIELD }) as HTMLTextAreaElement;
     expect(shown === description).toBe(true);
     expect(document.activeElement === shown).toBe(true);
     fireEvent.change(shown, { target: { value: 'What the money buys' } });
@@ -161,7 +162,7 @@ describe('AnalyticsDimensionWorkspacePage typing while the dimension is created'
   it('keeps the code being typed while the dimension is written: same field, same focus', async () => {
     const { finish } = await startWrite();
     const code = screen.getByLabelText('analytics.fields.code') as HTMLInputElement;
-    act(() => code.focus());
+    pressInto(code);
     fireEvent.change(code, { target: { value: 'nature-2' } });
     await finish();
 

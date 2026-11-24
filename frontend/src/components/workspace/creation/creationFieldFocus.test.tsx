@@ -1,5 +1,5 @@
 import { describe, expect, it, afterEach } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import React from 'react';
 import {
   armCreatedRecordFocus,
@@ -8,6 +8,7 @@ import {
   noteCreationWrite,
   useCreationFieldFocus,
 } from './creationFieldFocus';
+import { pressInto } from '../../../test/creationHold';
 
 /**
  * A new record's title with a name typed, whose Tab the page takes for its own step (an interface
@@ -31,12 +32,6 @@ function tabFromTitle() {
 }
 
 /** A press that puts the cursor in `field`, as a click does. */
-function pressInto(field: HTMLElement) {
-  fireEvent.pointerDown(field);
-  act(() => field.focus());
-  fireEvent.pointerUp(field);
-}
-
 /** A description shown as text, which opens its editor once it takes the focus (an integrated document). */
 function OpensOnFocus() {
   const [open, setOpen] = React.useState(false);

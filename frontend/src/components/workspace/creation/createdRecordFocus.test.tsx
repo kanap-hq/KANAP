@@ -19,6 +19,7 @@ import useDraftCreation from './useDraftCreation';
 import useCreationTitle from './useCreationTitle';
 import MarkdownEditor from '../../MarkdownEditor';
 import '../../markdownEditorTestSupport';
+import { pressInto } from '../../../test/creationHold';
 
 const stableT = vi.hoisted(() => (key: string) => key);
 vi.mock('react-i18next', () => ({
@@ -227,12 +228,6 @@ function TypedChoice({ onChoose }: { onChoose: (value: string) => void }) {
 }
 
 /** A press that puts the cursor in `field`, as a click does. */
-function pressInto(field: HTMLElement) {
-  fireEvent.pointerDown(field);
-  act(() => field.focus());
-  fireEvent.pointerUp(field);
-}
-
 function Where() {
   const navigate = useNavigate();
   return (
