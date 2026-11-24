@@ -35,7 +35,6 @@ import {
   dateProblem,
   dayChangeText,
   followsLines,
-  formatFteValue,
   formatMoney,
   hasLines,
   isDateLine,
@@ -46,6 +45,7 @@ import {
   trimDecimal,
   wholeYear,
 } from './roundPeriod';
+import { formatFte } from './amountColumns';
 
 const CALENDARS_PATH = '/master-data/working-day-calendars';
 
@@ -164,7 +164,7 @@ export function PanelPeriod({ children }: { children: React.ReactNode }) {
   return <Box sx={{ display: 'flex', alignItems: 'flex-end', columnGap: 1.5 }}>{children}</Box>;
 }
 
-/** A line as typed. It is saved once complete; until then it stays here only. */
+/** A line as typed. It is saved once complete; until then the server keeps its last complete version, if any. */
 export type LineDraft = {
   key: string;
   label: string;
@@ -243,6 +243,11 @@ function payloadOf(draft: LineDraft): LinePayload {
   });
 }
 
+/** Each draft's line as the server holds it, by draft key (`lines` in the order of `drafts`). */
+function keptLines(drafts: LineDraft[], lines: LinePayload[]): Map<string, LinePayload> {
+  return new Map(drafts.flatMap((d, index) => (lines[index] ? [[d.key, lines[index]] as const] : [])));
+}
+
 /**
  * The calendar a new line starts with: the standard calendar of the paying company's country (the
  * whole country, not a region), else the first enabled calendar, else none.
@@ -317,7 +322,8 @@ const LAYOUT_MIN_WIDTHS = [LINES_OFTEN_FIRST_MIN_WIDTH, LINES_TABLE_MIN_WIDTH] a
 /**
  * "Quantity and price": the column as a table of lines, each a quantity times a unit price. Every
  * committed field saves the column's complete lines at once (no button); the amounts come from the
- * server. A line that is not complete yet stays here until it is.
+ * server. A new line that is not complete yet stays here until it is; a saved line made incomplete
+ * is sent as it was last saved until it is complete again.
  */
 export default function LinesPanel({
   year, record, period, itemStart, itemEnd, frozen, frozenHint, waiting = false, reloadSignal = 0, startLines,
@@ -336,6 +342,11 @@ export default function LinesPanel({
   const readOnly = frozen || reference;
   const [drafts, setDrafts] = React.useState<LineDraft[]>(() => (startLines ? startLines.map((line) => draftOf(line as RoundLine)) : storedLines.map(draftOf)));
   const draftsRef = React.useRef(drafts);
+  // The last complete version of each line the server was asked to hold, by draft: a line that is no
+  // longer complete (Full time unticked before its days are typed, a price erased) is sent as it was,
+  // so the column never loses it meanwhile. A new line has none: it stays here until complete.
+  const keptRef = React.useRef<Map<string, LinePayload> | null>(null);
+  if (keptRef.current === null) keptRef.current = keptLines(drafts, (startLines ?? storedLines).map(linePayloadOf));
   // What the server holds (or was last asked to hold): a commit that would send the same lines writes nothing.
   const sentRef = React.useRef(JSON.stringify((startLines ?? storedLines).map(linePayloadOf)));
   // The stored lines the drafts started from: the base of the next write (someone else's change meanwhile is a conflict).
@@ -348,6 +359,11 @@ export default function LinesPanel({
   const queuedRef = React.useRef<{ force?: boolean } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
+  // What a commit sends for each draft: the line, its last complete version, or nothing.
+  const linesToSend = (next: LineDraft[]): Array<LinePayload | null> => next.map((d) => (
+    lineProblem(year, d) ? keptRef.current?.get(d.key) ?? null : payloadOf(d)
+  ));
+
   const update = (change: (prev: LineDraft[]) => LineDraft[]): LineDraft[] => {
     const next = change(draftsRef.current);
     draftsRef.current = next;
@@ -357,8 +373,9 @@ export default function LinesPanel({
 
   const send = (next: LineDraft[], options: { force?: boolean } = {}) => {
     if (frozen) return;
-    const rows = next.flatMap((d, index) => (lineProblem(year, d) ? [] : [index]));
-    const lines = rows.map((index) => payloadOf(next[index]));
+    const sendable = linesToSend(next);
+    const rows = sendable.flatMap((line, index) => (line ? [index] : []));
+    const lines = rows.map((index) => sendable[index] as LinePayload);
     // Lines that are all incomplete stay here: only removing the last line clears the column's lines.
     if (lines.length === 0 && next.length > 0) return;
     const signature = JSON.stringify(lines);
@@ -369,6 +386,7 @@ export default function LinesPanel({
       return;
     }
     sentRef.current = signature;
+    rows.forEach((index, i) => keptRef.current?.set(next[index].key, lines[i]));
     inFlightRef.current += 1;
     void onSave(lines, startedFromRef.current).then((result) => {
       inFlightRef.current -= 1;
@@ -420,7 +438,8 @@ export default function LinesPanel({
       }
     }
     const previous = draftsRef.current;
-    update(() => (record?.lines ?? []).map((line, index) => ({ ...draftOf(line), key: previous[index]?.key ?? draftOf(line).key })));
+    const next = update(() => (record?.lines ?? []).map((line, index) => ({ ...draftOf(line), key: previous[index]?.key ?? draftOf(line).key })));
+    keptRef.current = keptLines(next, stored);
     sentRef.current = storedSignature;
     startedFromRef.current = stored;
     setError(null);
@@ -543,12 +562,16 @@ export default function LinesPanel({
   const amounts = React.useMemo(() => {
     let index = 0;
     return drafts.map((draft) => {
-      if (lineProblem(year, draft)) return '';
+      if (lineProblem(year, draft)) {
+        // A line sent as it was last saved keeps its place in the stored lines.
+        if (keptRef.current?.has(draft.key)) index += 1;
+        return '';
+      }
       const stored = calc?.lines?.[index];
       index += 1;
-      return stored && sameLine(payloadOf(draft), linePayloadOf(stored)) ? formatMoney(stored.total) : '';
+      return stored && sameLine(payloadOf(draft), linePayloadOf(stored)) ? formatMoney(stored.total, locale) : '';
     });
-  }, [drafts, calc, year]);
+  }, [drafts, calc, year, locale]);
 
   // Working days of the calendars the stored per-day lines use, now: one query per calendar.
   const perDayLines = React.useMemo(() => (calc?.lines ?? [])
@@ -605,7 +628,7 @@ export default function LinesPanel({
 
   // The column shows the total; under the table only the FTE, when a line counts days or people.
   const fteText = calc && drafts.length > 0 && countsFte(calc.lines) && calc.fte != null && calc.fte_period != null
-    ? t('budgetTab.lines.fte', { fte_period: formatFteValue(calc.fte_period), fte: formatFteValue(calc.fte) })
+    ? t('budgetTab.lines.fte', { fte_period: formatFte(calc.fte_period, locale), fte: formatFte(calc.fte, locale) })
     : '';
 
   const captionSx = { fontSize: 12, color: 'kanap.text.tertiary', lineHeight: 1.4 } as const;

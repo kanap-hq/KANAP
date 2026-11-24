@@ -48,7 +48,7 @@ const MonthCell = React.memo(function MonthCell({ month, col, label, value, disa
 });
 
 /** A month as the table reads it: grouped thousands, cents only when there are some. */
-const cellText = (value: number) => formatMoney(centsToDecimal(toCents(value)));
+const cellText = (value: number, locale: string) => formatMoney(centsToDecimal(toCents(value)), locale);
 
 /** A difference with the reference column: "+12 000 (+1.8%)", "-500", "0"; the percentage only over a total that is not zero. */
 export function differenceText(locale: string, total: number, reference: number): string {
@@ -185,7 +185,7 @@ export default function MonthlyResult({ tab, i18nPrefix, currency }: { tab: Budg
                             ...(clickable ? { cursor: 'text', '&:hover': { bgcolor: waits ? conflictTint : 'kanap.bg.hover' } } : {}),
                           }}
                         >
-                          {cellText(value)}
+                          {cellText(value, locale)}
                         </Box>
                       );
                     })}
