@@ -166,6 +166,8 @@ Une adresse qui ne désigne aucun actif ouvre une page **Actif introuvable**, av
 
 Les onglets sont **Vue d'ensemble**, **Exploitation**, **Réseau**, **Matériel** (types d'actifs physiques uniquement), **Dépendances**, **Relations** et **Historique** (les modifications apportées à l'actif, voir [Historique des fiches](record-history.md)). Un nouvel actif n'affiche que son titre, son type et son site. Tous les onglets s'ouvrent dès que l'actif est créé.
 
+**Valeurs qui ne sont plus proposées** : le type, le cycle de vie, le domaine, la zone d'administration, le type et le sous-réseau d'une adresse IP, et le rôle d'un serveur dans un déploiement listent les valeurs encore proposées dans les [Paramètres de la Cartographie SI](it-ops-settings.md). Une valeur marquée **Ne plus proposer** reste sur les actifs qui l'ont déjà, et ils la gardent quand ils sont enregistrés. Les autres actifs ne peuvent pas la prendre, sur cette page, dans un import CSV ou par Kad.
+
 ### En-tête
 
 L'en-tête affiche :

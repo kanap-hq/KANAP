@@ -98,6 +98,8 @@ Der Reiter [Netzwerk](assets.md#network) jedes Mitglieds listet die Verbindungen
 
 Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Er hat drei Reiter: **Übersicht**, **Pfad** und **Verlauf** (die Änderungen an der Verbindung, siehe [Verlauf der Datensätze](record-history.md)). Der Eigenschaftenbereich rechts enthält **Lebenszyklus**, **Topologie**, **Risikomodus**, **Kritikalität**, **Datenklasse**, **Enthält PII** und **Erstellt am**. Änderungen werden automatisch gespeichert.
 
+**Nicht mehr angebotene Werte**: Lebenszyklus, Protokolle, die Entität an jedem Ende sowie Funktion, Protokolle und Entität eines Hops bieten die Werte an, die in den [IT-Landschaft-Einstellungen](it-ops-settings.md) noch angeboten werden. Ein als **Nicht mehr anbieten** markierter Wert bleibt bei den Verbindungen und Hops, die ihn bereits haben, und sie behalten ihn beim Speichern. Andere können ihn nicht übernehmen, weder auf dieser Seite noch über Kad. Ein neuer Hop übernimmt die Protokolle der Verbindung, die noch angeboten werden.
+
 **Löschen**, ein Papierkorbsymbol in der Kopfzeile, löscht die Verbindung nach einer Bestätigung (`infrastructure:member`). Die Bestätigung zählt die Hops, die mit ihr gelöscht werden, und die Schnittstellen-Bindungen, von denen sie gelöst wird. Die Schnittstellen selbst bleiben.
 
 ### Übersicht

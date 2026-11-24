@@ -98,6 +98,8 @@ The [Network](assets.md#network) tab of each member lists the connections of its
 
 Click any row to open the workspace. It has three tabs: **Overview**, **Path** and **History** (the changes made to the connection, see [Record history](record-history.md)). The properties panel on the right holds **Lifecycle**, **Topology**, **Risk mode**, **Criticality**, **Data class**, **Contains PII** and **Created on**. Edits save automatically.
 
+**Values no longer offered**: The lifecycle, the protocols, the entity at each end, and the function, the protocols and the entity of a hop list the values still offered in [IT Landscape Settings](it-ops-settings.md). A value marked **No longer offered** stays on the connections and hops that already have it, which keep it when they are saved. The others cannot take it, on this page or through Kad. A new hop takes the protocols of the connection that are still offered.
+
 **Delete**, a trash icon in the header, deletes the connection after a confirmation (`infrastructure:member`). The confirmation counts the hops deleted with the connection and the interface bindings it is unlinked from. The interfaces themselves stay.
 
 ### Overview

@@ -98,6 +98,8 @@ L'onglet [Réseau](assets.md#network) de chaque membre liste les connexions de s
 
 Cliquez sur une ligne pour ouvrir l'espace de travail. Il a trois onglets : **Vue d'ensemble**, **Chemin** et **Historique** (les modifications apportées à la connexion, voir [Historique des fiches](record-history.md)). Le panneau Propriétés, à droite, porte **Cycle de vie**, **Topologie**, **Mode de risque**, **Criticité**, **Classification des données**, **Contient des PII** et **Créé le**. Les modifications s'enregistrent automatiquement.
 
+**Valeurs qui ne sont plus proposées** : le cycle de vie, les protocoles, l'entité de chaque extrémité, ainsi que la fonction, les protocoles et l'entité d'un saut listent les valeurs encore proposées dans les [Paramètres de la Cartographie SI](it-ops-settings.md). Une valeur marquée **Ne plus proposer** reste sur les connexions et les sauts qui l'ont déjà, et ils la gardent quand ils sont enregistrés. Les autres ne peuvent pas la prendre, sur cette page ou par Kad. Un nouveau saut prend les protocoles de la connexion qui sont encore proposés.
+
 **Supprimer**, une icône de corbeille dans l'en-tête, supprime la connexion après confirmation (`infrastructure:member`). La confirmation compte les sauts supprimés avec elle et les liaisons d'interfaces dont elle est détachée. Les interfaces elles-mêmes restent.
 
 ### Vue d'ensemble
