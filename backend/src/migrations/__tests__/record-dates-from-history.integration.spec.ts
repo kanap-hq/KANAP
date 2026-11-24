@@ -188,6 +188,7 @@ async function testDirtyDatabase() {
     const none = await seedContract(runner, tenantA, 'none', T0);
     const future = await seedContract(runner, tenantA, 'future', T0);
     const hidden = await seedContract(runner, tenantA, 'hidden', T0);
+    const earlier = await seedContract(runner, tenantA, 'earlier', T0);
     const contact = await insertId(runner, `INSERT INTO contacts (tenant_id, email) VALUES ($1, $2)`, [tenantA, `dates-${tenantA.slice(0, 8)}@example.test`]);
     await setDate(runner, 'contacts', contact, T0);
     const line = await seedItem(runner, 'opex', tenantA, 1, 'Dated line');
@@ -214,6 +215,9 @@ async function testDirtyDatabase() {
     // Rows the history does not show: a save that changed nothing, an export.
     await audit(runner, tenantA, { table: 'contracts', recordId: hidden, action: 'update', before: { name: 'Same' }, after: { name: 'Same' }, at: T_HIDDEN });
     await audit(runner, tenantA, { table: 'export', recordId: hidden, action: 'export', after: { format: 'csv' }, at: T_HIDDEN });
+    // The latest update shows no change, an earlier one does: the earlier one dates the record.
+    await audit(runner, tenantA, { table: 'contracts', recordId: earlier, action: 'update', before: { name: 'A' }, after: { name: 'B' }, at: T_OWN });
+    await audit(runner, tenantA, { table: 'contracts', recordId: earlier, action: 'update', before: { name: 'B' }, after: { name: 'B' }, at: T_HIDDEN });
     // Rows naming deleted records, and a row of tenant A naming tenant B's contract.
     await audit(runner, tenantA, { table: 'contracts', recordId: randomUUID(), action: 'update', before: { name: 'A' }, after: { name: 'B' }, at: T_HIDDEN });
     await audit(runner, tenantA, { table: 'contract_contacts', action: 'delete', before: { contract_id: randomUUID(), contact_id: randomUUID() }, parent: { table: 'contracts', id: randomUUID() }, at: T_HIDDEN });
@@ -233,11 +237,12 @@ async function testDirtyDatabase() {
     assert.equal(await dateOf(runner, 'contracts', none), T0, 'a record without an entry keeps its date');
     assert.equal(await dateOf(runner, 'contracts', future), now, 'an entry in the future is capped at now()');
     assert.equal(await dateOf(runner, 'contracts', hidden), T0, 'a save that changed nothing and an export date nothing');
+    assert.equal(await dateOf(runner, 'contracts', earlier), T_OWN, 'under a latest update that shows no change, an earlier one dates the record');
     await setTenant(runner, tenantB);
     assert.equal(await dateOf(runner, 'contracts', contractB), T_B, "a tenant's rows never date another tenant's record");
 
     const dated = new Map<string, string>([
-      [`contracts:${child}`, T_CHILD], [`contracts:${own}`, T_OWN], [`contracts:${future}`, now],
+      [`contracts:${child}`, T_CHILD], [`contracts:${own}`, T_OWN], [`contracts:${future}`, now], [`contracts:${earlier}`, T_OWN],
       [`contacts:${contact}`, T_CHILD], [`spend_items:${line}`, T_AMOUNT], [`contracts:${contractB}`, T_B],
     ]);
     const indexAfter = await searchIndex(runner, [tenantA, tenantB]);
