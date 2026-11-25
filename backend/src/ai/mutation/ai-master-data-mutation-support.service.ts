@@ -34,6 +34,7 @@ import { nameWithoutLeadingReference } from './name-without-leading-reference';
 import { familyReference, familyReferenceNumber } from '../ai-entity-reference.util';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
+import { assertMemberMoveAllowed } from '../../common/record-membership-moves';
 
 export const AI_MASTER_DATA_ENTITY_TYPES = [
   'companies',
@@ -1283,6 +1284,10 @@ export class AiMasterDataMutationSupportService {
     const changedFieldNames = [...changedRecordFieldNames, ...changedMetricFieldNames];
     if (changedFieldNames.length === 0) {
       throw new BadRequestException(`${this.getConfig(entityType).labelSingular} already has the requested values.`);
+    }
+    if (entityType === 'departments' && changedRecordFieldNames.includes('company_id')) {
+      // A department that records carry stays in its company: refused before the card, as the save is.
+      await assertMemberMoveAllowed(context.manager, 'department', target.id, String(recordFields.company_id), { tenantId: context.tenantId, lock: false });
     }
 
     const nextFields: Record<string, unknown> = {};

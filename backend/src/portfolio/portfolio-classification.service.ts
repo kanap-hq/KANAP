@@ -8,6 +8,7 @@ import { ensureStartingPortfolioClassification } from './starting-classification
 import { tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { PortfolioTaskType, DEFAULT_TASK_TYPES } from './portfolio-task-type.entity';
 import { checkIds, RecordInUseException, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
+import { assertMemberMoveAllowed } from '../common/record-membership-moves';
 
 /** A built-in classification item cannot be deleted (`BUILT_IN_RECORD`): disable it instead. */
 function builtInRefusal(entity: string, name: string): RecordInUseException {
@@ -456,6 +457,8 @@ export class PortfolioClassificationService {
       if (!category) {
         throw new BadRequestException('Category not found');
       }
+      // A stream that records carry stays in its category (`record-membership-moves.ts`).
+      await assertMemberMoveAllowed(mg, 'stream', id, category.id, { tenantId, lock: true });
     }
 
     // Check for duplicate name if changing name or category
