@@ -55,6 +55,8 @@ Eine wiederhergestellte Spalte listet sie auf dieselbe Weise. Ältere Einträge 
 
 Bei den anderen Datensätzen listet der Verlauf ebenso ihre Verknüpfungen und Bestandteile: Budgetzeilen, Anwendungen, Assets, Verträge, Teammitglieder, Kontakte, Abhängigkeiten, Weblinks, eingebettete Dokumente, Anhänge, Aufgaben, Bereitstellungen und Bewertungen nach Kriterien.
 
+Eine Verknüpfung zwischen einem Projekt und einer Anwendung, einem Asset oder einer Budgetzeile oder zwischen einer Anwendung und einer Budgetzeile erscheint im Verlauf beider Datensätze, unabhängig davon, bei welchem der beiden sie hinzugefügt oder entfernt wurde. Ändern Sie mehrere Verknüpfungen auf einmal, erhält jeder verknüpfte Datensatz einen eigenen Eintrag.
+
 ## Datensätze, die Sie nicht lesen können
 
 Ein Eintrag kann einen anderen Datensatz nennen, zum Beispiel einen mit der Zeile verknüpften Vertrag. Wenn Sie diesen Datensatz nicht öffnen können, nennt der Eintrag nur seine Art, zum Beispiel „ein Vertrag“. Ein inzwischen gelöschter Datensatz erscheint als „ein gelöschter Vertrag“.
