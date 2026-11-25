@@ -13,6 +13,8 @@ const SHARED_SCREENS = new Set([
   'common:statuses', 'master-data:contacts.status', 'ops:contracts.list.states', 'it:enums.environment',
   // Objects of a screen whose list words sit among its other words.
   'it:classification', 'master-data:coa.createDialog', 'admin:dataAccess', 'ops:reports', 'ops:operations.currency',
+  // The Allocations tab's drivers.
+  'ops:opex.allocations',
   // A data access node's type and a cost center node's kind share the dialog's Type words.
   'admin:dataAccess.types',
 ]);

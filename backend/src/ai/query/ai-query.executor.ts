@@ -3279,8 +3279,12 @@ export class AiQueryExecutor {
         }))
         .sort((a, b) => String(a.company_name ?? '').localeCompare(String(b.company_name ?? ''))
           || String(a.department_name ?? '').localeCompare(String(b.department_name ?? '')));
+      // The driver weighs the chosen companies of a manual split by company, the only method whose
+      // Allocations tab shows it ("Allocate by"): the other methods do not read it, nor does Kad.
+      const { allocation_driver: driver, ...stored } = version;
       return {
-        ...version,
+        ...stored,
+        ...(version.allocation_method === 'manual_company' ? { allocation_driver: driver } : {}),
         amounts: amountsByVersion[version.id] ?? [],
         resolved_allocation_method: allocation?.resolvedMethod ?? null,
         allocation_warning: allocation?.error ?? (allocation?.warning ? describeAllocationWarning(allocation.warning) : null),

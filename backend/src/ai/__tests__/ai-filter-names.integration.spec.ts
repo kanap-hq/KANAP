@@ -141,6 +141,11 @@ async function run() {
     const onDefault = await tools.execute(context(everyone), 'get_entity_detail', { entity_type: 'budget_lines', entity_id: 'BL-1' });
     const thisYear = (onDefault.data.allocation_by_year as any[]).find((year) => year.budget_year === Y);
     assert.deepEqual([thisYear.allocation_method, thisYear.default, thisYear.version, thisYear.allocation_method_name], ['headcount', true, true, 'Headcount']);
+    // The driver weighs a split by company only, the one method whose Allocations tab shows it.
+    const splitVersion = (detail.data.financial_versions as any[]).find((version) => version.budget_year === Y);
+    assert.deepEqual([splitVersion.allocation_driver, splitVersion.allocation_driver_name], ['headcount', 'Effectif']);
+    const defaultVersion = (onDefault.data.financial_versions as any[]).find((version) => version.budget_year === Y);
+    assert.ok(defaultVersion && !('allocation_driver' in defaultVersion) && !('allocation_driver_name' in defaultVersion), JSON.stringify(defaultVersion));
     // A workspace default for next year: the line without a version follows it.
     await runner.query(
       `INSERT INTO allocation_rules (tenant_id, fiscal_year, method, mode) VALUES ($1, $2, 'turnover', 'auto')`,
@@ -149,7 +154,7 @@ async function run() {
     const ruled = await tools.execute(context(everyone), 'get_entity_detail', { entity_type: 'budget_lines', entity_id: 'BL-1' });
     const nextYear = (ruled.data.allocation_by_year as any[]).find((year) => year.budget_year === Y + 1);
     assert.deepEqual([nextYear.allocation_method, nextYear.default, nextYear.version, nextYear.allocation_method_name], ['turnover', true, false, 'Turnover']);
-    console.log('  the method of each year, the workspace default for a year without a version: OK');
+    console.log('  the method of each year, the workspace default for a year without a version; the driver of a split by company only: OK');
   } finally {
     await runner.rollbackTransaction().catch(() => undefined);
     await runner.release();

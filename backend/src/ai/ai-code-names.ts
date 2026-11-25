@@ -152,6 +152,13 @@ export const ALLOCATION_METHOD_LABELS = codeLabels({
   manual_pct: ['Manual percentages', 'Pourcentages manuels', 'Manuelle Prozentsätze', 'Porcentajes manuales'],
 });
 
+/** What weighs the companies of a manual split by company, as the Allocations tab's "Allocate by" names it. */
+export const ALLOCATION_DRIVER_LABELS = codeLabels({
+  headcount: ['Headcount', 'Effectif', 'Mitarbeiterzahl', 'Plantilla'],
+  it_users: ['IT users', 'Utilisateurs IT', 'IT-Benutzer', 'Usuarios IT'],
+  turnover: ['Turnover', "Chiffre d'affaires", 'Umsatz', 'Facturación'],
+});
+
 /** An application owner's type. */
 export const OWNER_TYPE_LABELS = codeLabels({
   business: ['Business', 'Métier', 'Fachbereich', 'Negocio'],
@@ -359,6 +366,7 @@ export const AI_CODE_LISTS = {
     keys: camelKeys(ALLOCATION_METHOD_LABELS),
     aliases: ALLOCATION_METHOD_ALIASES,
   }),
+  allocationDriver: fixed('ops:opex.allocations', ALLOCATION_DRIVER_LABELS, { keys: camelKeys(ALLOCATION_DRIVER_LABELS) }),
   budgetNature: fixed('admin:auditLogs.values.nature', BUDGET_NATURE_LABELS),
   lineUsage: fixed('admin:auditLogs.values.lineTypeUsage', LINE_USAGE_LABELS),
   runBuild: fixed('admin:auditLogs.values.runBuild', RUN_BUILD_LABELS),
@@ -660,7 +668,11 @@ export const AI_NAMED_CHILD_FIELDS: Readonly<Record<string, Readonly<Record<stri
   budget_lines: {
     // A line's contacts are typed by the contact types (`contacts.roles`), as the screen shows them.
     contacts: { role: one(L.contactRole), country: one(L.country) },
-    financial_versions: { allocation_method: one(L.allocationMethod), resolved_allocation_method: one(L.allocationMethod) },
+    financial_versions: {
+      allocation_method: one(L.allocationMethod),
+      resolved_allocation_method: one(L.allocationMethod),
+      allocation_driver: one(L.allocationDriver),
+    },
     allocation_by_year: { allocation_method: one(L.allocationMethod) },
   },
   contracts: {
