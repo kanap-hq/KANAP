@@ -473,7 +473,7 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
   ): Promise<void> {
     const given = givenMembership([STREAM_PAIR], fields);
     if (Object.keys(given).length === 0) return;
-    const values = await settleRecordMembership(context.manager, [STREAM_PAIR], given, await this.shownClassification(context, task), context.tenantId);
+    const values = await settleRecordMembership(context.manager, [STREAM_PAIR], given, await this.shownClassification(context, task), context.tenantId, { lock: false });
     for (const [key, value] of Object.entries(values)) {
       if (Object.prototype.hasOwnProperty.call(fields, key)) continue;
       const config = FIELD_CONFIG[key];

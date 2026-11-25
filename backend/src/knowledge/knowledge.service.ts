@@ -22,6 +22,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'crypto';
 import * as path from 'path';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
+import { parentReadLock } from '../common/record-membership';
 import { codedForbidden, moduleRightRequired, outsideParticipation, requestContextMissing } from '../auth/module-right-required';
 import { AuditService } from '../audit/audit.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
@@ -5890,7 +5891,7 @@ export class KnowledgeService {
            WHERE id = $1
              AND tenant_id = app_current_tenant()
              AND category_id = $2
-           LIMIT 1`,
+           LIMIT 1${parentReadLock(manager)}`,
           [row.stream_id, row.category_id],
         );
         if (!streamRows.length) {

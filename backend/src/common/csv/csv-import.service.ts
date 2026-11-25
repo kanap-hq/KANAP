@@ -190,10 +190,12 @@ export class CsvImportService {
     const importFields = config.fields.filter((f) => f.importable !== false);
 
     // Preload FK resolvers
+    // The load locks the departments and streams it reads, the check nothing (`parentReadLock`).
     const resolverCache = await this.resolver.preloadResolvers(
       opts.tenantId,
       importFields,
       opts.manager,
+      { lock: !params.dryRun },
     );
 
     // Create import context

@@ -1261,7 +1261,7 @@ export class AiBusinessRecordMutationSupportService {
     fieldLabels: Record<string, string>,
     existing?: Record<string, unknown> | null,
   ): Promise<void> {
-    const values = await settleRecordMembership(context.manager, PORTFOLIO_PAIRS, givenMembership(PORTFOLIO_PAIRS, fields), existing ?? null, context.tenantId);
+    const values = await settleRecordMembership(context.manager, PORTFOLIO_PAIRS, givenMembership(PORTFOLIO_PAIRS, fields), existing ?? null, context.tenantId, { lock: false });
     const config = this.getConfig(entityType);
     for (const [key, value] of Object.entries(values)) {
       if (Object.prototype.hasOwnProperty.call(fields, key)) continue;

@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { CsvCallerAccess, CsvFieldDefinition, CsvFieldType } from './csv-field.types';
 import { SHIPPED_TASK_TYPE_LABELS } from '../../it-ops-settings/catalog-shipped-labels.data';
 import { accentFreeKey, AMBIGUOUS_NAMES_SHOWN, type MatchHow } from '../name-matching';
+import { parentReadLock } from '../record-membership';
 
 /**
  * Supported FK entity types for resolution
@@ -177,6 +178,8 @@ export class CsvResolverService {
     tenantId: string,
     fieldDefs: CsvFieldDefinition[],
     manager: EntityManager,
+    /** An import that writes (`lock`): the families with a parent are read `FOR KEY SHARE` (`parentReadLock`). */
+    opts?: { lock?: boolean },
   ): Promise<Map<string, Map<string, FkCacheEntry>>> {
     const cache = new Map<string, Map<string, FkCacheEntry>>();
 
@@ -185,7 +188,7 @@ export class CsvResolverService {
 
     // One after the other: the request's single connection runs its queries in turn anyway.
     for (const entityType of fkTypes) {
-      const entityCache = await this.loadEntityCache(tenantId, entityType, manager);
+      const entityCache = await this.loadEntityCache(tenantId, entityType, manager, opts?.lock === true);
       cache.set(entityType, entityCache);
     }
 
@@ -422,6 +425,7 @@ export class CsvResolverService {
     tenantId: string,
     entityType: FkEntityType,
     manager: EntityManager,
+    lock = false,
   ): Promise<Map<string, FkCacheEntry>> {
     const cache = new Map<string, FkCacheEntry>();
     const config = this.entityConfigs[entityType];
@@ -437,7 +441,9 @@ export class CsvResolverService {
     }
 
     // Build query
-    const query = `SELECT ${columns.join(', ')} FROM ${config.tableName} WHERE tenant_id = $1`;
+    // A department or a stream an import writes on a record cannot move to another parent before the
+    // import commits (lot I7a of 26.12.1): the rows of a family with a parent are read `FOR KEY SHARE`.
+    const query = `SELECT ${columns.join(', ')} FROM ${config.tableName} WHERE tenant_id = $1${config.parent ? parentReadLock(manager, lock) : ''}`;
     const rows = await manager.query(query, [tenantId]);
     // Every record read, by its own name, for the accent-free index (the cache keeps one per name).
     const read: Array<[string, FkCacheEntry]> = [];

@@ -117,13 +117,24 @@ function childIds(pairs: readonly MembershipPair[], ...records: Array<object | n
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type Queryable = { query: (sql: string, params?: unknown[]) => Promise<any> };
+type Queryable = { query: (sql: string, params?: unknown[]) => Promise<any>; queryRunner?: { isTransactionActive?: boolean } | null };
+
+/**
+ * The read of a write's parents: `FOR KEY SHARE` in a transaction (`lock`, the default), so that the
+ * department or stream cannot move (`record-membership-moves.ts`, which locks it `FOR UPDATE`) between
+ * this read and the write: the move waits for the write, or the read waits for the move and sees the
+ * new parent. A preview that writes nothing (Kad's card, an import's check) passes `lock: false`.
+ */
+export function parentReadLock(manager: { queryRunner?: { isTransactionActive?: boolean } | null }, lock = true): string {
+  return lock && manager.queryRunner?.isTransactionActive ? ' FOR KEY SHARE' : '';
+}
 
 /** The parents of the children named, read in the tenant (`app.current_tenant` when no tenant is given). */
 export async function loadMembershipParents(
   manager: Queryable,
   ids: Map<MembershipKind, string[]>,
   tenantId?: string | null,
+  opts?: { lock?: boolean },
 ): Promise<ParentOf> {
   const parents = new Map<string, string | null>();
   for (const [kind, list] of ids) {
@@ -132,7 +143,7 @@ export async function loadMembershipParents(
     const { table, parentColumn } = KINDS[kind];
     const rows: Array<{ id: string; parent: string | null }> = await manager.query(
       `SELECT id::text AS id, ${parentColumn}::text AS parent FROM ${table}
-        WHERE tenant_id = ${tenantId ? '$2' : 'app_current_tenant()'} AND id = ANY($1::uuid[])`,
+        WHERE tenant_id = ${tenantId ? '$2' : 'app_current_tenant()'} AND id = ANY($1::uuid[])${parentReadLock(manager, opts?.lock)}`,
       tenantId ? [uuids, tenantId] : [uuids],
     );
     for (const row of rows) parents.set(`${kind}:${row.id.toLowerCase()}`, row.parent);
@@ -181,9 +192,11 @@ export async function settleRecordMembership(
   given: Record<string, unknown>,
   stored: object | null | undefined,
   tenantId?: string | null,
+  /** `lock: false` for a preview that writes nothing (`parentReadLock`). */
+  opts?: { lock?: boolean },
 ): Promise<MembershipValues> {
   if (!pairs.some((pair) => has(given, pair.child) || has(given, pair.parent))) return {};
-  const parentOf = await loadMembershipParents(manager, childIds(pairs, given, stored), tenantId);
+  const parentOf = await loadMembershipParents(manager, childIds(pairs, given, stored), tenantId, opts);
   const { values, conflict } = settleMembership(pairs, given, stored, parentOf);
   if (conflict) throw new BadRequestException({ statusCode: 400, error: 'Bad Request', ...(await membershipRefusal(manager, conflict, tenantId)) });
   return values;
