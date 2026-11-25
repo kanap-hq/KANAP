@@ -333,7 +333,8 @@ const HYGIENE_FILTERS = [
   { owner_it_id: { filterType: 'text', type: 'blank' } },
   { owner_business_id: { filterType: 'text', type: 'blank' } },
   { paying_company_id: { filterType: 'text', type: 'blank' } },
-  { account_warning: { filterType: 'text', type: 'notBlank' } },
+  { to_check: { filterType: 'set', values: ['coa_mismatch'] } },
+  { to_check: { filterType: 'set', values: ['quantity_price'] } },
 ];
 /** The report opens of the load mix: [scenario, report, scope]. */
 const REPORT_OPENS = [

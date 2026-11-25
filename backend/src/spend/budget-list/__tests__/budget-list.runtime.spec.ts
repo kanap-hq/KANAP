@@ -1,6 +1,8 @@
 import * as assert from 'node:assert/strict';
 import type { EntityManager } from 'typeorm';
-import { loadBudgetRuntime } from '../budget-list.runtime';
+import { loadBudgetRuntime, mergeNeeds } from '../budget-list.runtime';
+import { budgetRuntimeNeeds } from '../budget-list.config';
+import { checksNamedByFilter } from '../../budget-line-checks';
 
 /**
  * `loadBudgetRuntime` reads on the request's transaction manager, one connection: no two of its
@@ -37,7 +39,37 @@ function managerStub() {
   return { manager, seen, peak: () => peak };
 }
 
+/**
+ * `to_check` (D12): a statement whose only use of the field is a filter on some checks evaluates
+ * those alone, and loads the quantity and price settings only when that check is among them.
+ */
+async function testChecksNeeded() {
+  const set = (values: unknown[], extra: Record<string, unknown> = {}) => ({ filterType: 'set', values, ...extra });
+  assert.deepEqual(checksNamedByFilter(set(['coa_mismatch'])), ['coa_mismatch']);
+  assert.deepEqual(checksNamedByFilter(set(['coa_mismatch', 'quantity_price'])), ['quantity_price', 'coa_mismatch'], 'in the table\'s order');
+  assert.deepEqual(checksNamedByFilter(set([])), [], 'no box: no check');
+  for (const model of [set([null]), set(['coa_mismatch', null]), set(['coa_mismatch'], { mode: 'exclude' }), set(['other']),
+    { filterType: 'text', type: 'contains', filter: 'coa' }, { operator: 'OR', conditions: [set(['coa_mismatch'])] }, null, 'coa_mismatch']) {
+    assert.equal(checksNamedByFilter(model), null, `every check for ${JSON.stringify(model)}`);
+  }
+  const filters = { to_check: set(['coa_mismatch']) };
+  assert.deepEqual(budgetRuntimeNeeds(2026, ['product_name', 'to_check'], false, filters).checks, ['coa_mismatch'], 'the filter alone: its check');
+  assert.deepEqual(budgetRuntimeNeeds(2026, ['to_check', 'to_check'], false, filters).checks, ['quantity_price', 'coa_mismatch'], 'sorted on it too: every check');
+  assert.deepEqual(budgetRuntimeNeeds(2026, ['to_check'], false).checks, ['quantity_price', 'coa_mismatch'], 'no filter on it: every check');
+  assert.equal(budgetRuntimeNeeds(2026, ['product_name'], false, filters).checks, undefined, 'the field not read: nothing');
+  assert.deepEqual(mergeNeeds(budgetRuntimeNeeds(2026, ['to_check'], false, filters), budgetRuntimeNeeds(2026, ['to_check'], false)).checks,
+    ['quantity_price', 'coa_mismatch'], 'merged with the filter values of the field: every check');
+
+  const fxRates = {} as any;
+  const coaOnly = managerStub();
+  const runtime = await loadBudgetRuntime(SCOPE, { fxRates }, coaOnly.manager, TENANT, 2026, { checks: ['coa_mismatch'] });
+  assert.deepEqual(runtime.checks, ['coa_mismatch']);
+  assert.equal(runtime.entryCheck, undefined, 'the quantity and price settings are not read');
+  assert.equal(coaOnly.seen.length, 0);
+}
+
 async function run() {
+  await testChecksNeeded();
   const { manager, seen, peak } = managerStub();
   const fxRates = {
     resolveRates: async () => ({ map: new Map(), settings: { reportingCurrency: 'EUR' } }),

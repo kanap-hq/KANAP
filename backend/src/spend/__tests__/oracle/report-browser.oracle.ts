@@ -389,7 +389,10 @@ export const HYGIENE_CHECKS = [
   { key: 'noItOwner', filter: { owner_it_id: { filterType: 'text', type: 'blank' } } },
   { key: 'noBusinessOwner', filter: { owner_business_id: { filterType: 'text', type: 'blank' } } },
   { key: 'noPayingCompany', filter: { paying_company_id: { filterType: 'text', type: 'blank' } } },
-  { key: 'accountOutsideChart', filter: { account_warning: { filterType: 'text', type: 'notBlank' } } },
+  // The two checks of the list's "To check" column (D12), one value each.
+  { key: 'accountOutsideChart', filter: { to_check: { filterType: 'set', values: ['coa_mismatch'] } } },
+  // Quantity and price expected (lot B12a): the lines to check.
+  { key: 'entryToCheck', filter: { to_check: { filterType: 'set', values: ['quantity_price'] } } },
 ] as const;
 
 // ----- budget operations pages -----

@@ -1178,7 +1178,8 @@
     "total": "Total",
     "yes": "yes",
     "no": "no",
-    "accountCheck": "Account check",
+    "toCheck": "To check",
+    "quantityPrice": "Quantity and price",
     "accountOutsideChart": "Account not in the company's chart",
     "amountColumnHeader": "{{column}} {{slot}} ({{year}})",
     "fteColumnHeader": "{{column}} FTE ({{year}})",
@@ -1786,6 +1787,13 @@
     "card": {
       "frozen": "Frozen",
       "waiting": "Waiting for your choice"
+    },
+    "entryCheck": {
+      "account": "The line's account expects quantity and price entry",
+      "consolidationNamed": "The consolidation account {{account}} expects quantity and price entry",
+      "consolidation": "The consolidation account expects quantity and price entry",
+      "sentence": "{{reason}}.",
+      "withColumns": "{{reason}}: {{columns}}."
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "How the column is built",

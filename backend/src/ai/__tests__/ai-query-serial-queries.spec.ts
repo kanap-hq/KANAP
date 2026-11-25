@@ -57,7 +57,13 @@ async function reads(query: (sql: string) => Promise<unknown>) {
     await query('SELECT 1');
     return true;
   };
-  return { canReadEntityType: hit };
+  // The budget line detail reads the person's rights once (the consolidation account of its
+  // quantity and price entry check is named for a reader of the accounts only).
+  const effectiveAccess = async () => {
+    await query('SELECT access');
+    return { isAdmin: false, permissions: {} };
+  };
+  return { canReadEntityType: hit, effectiveAccess };
 }
 
 async function testBudgetLineDetailIsSerial() {

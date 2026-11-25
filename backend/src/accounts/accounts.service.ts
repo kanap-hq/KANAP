@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, EntityManager, Equal, ILike, IsNull, Raw, Repository } from 'typeorm';
-import { Account, ACCOUNT_NATURES, AccountNature } from './account.entity';
+import { Account, ACCOUNT_NATURES, AccountNature, expectedSetting } from './account.entity';
 import { Company } from '../companies/company.entity';
 import { assertEntityFilterFields, buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
 import { sortedFindQuery } from '../common/list-sort';
@@ -16,6 +16,9 @@ import {
   clearedValueCount,
   clearRefusals,
   CsvDataRow,
+  formatCsvBoolean,
+  parseCsvBoolean,
+  rowError,
   CsvDateOrder,
   CsvImportMode,
   CsvLanguage,
@@ -111,6 +114,7 @@ const IMPORT_COMPARED_FIELDS = [
   'consolidation_account_description',
   'status',
   'nature',
+  'quantity_price_expected',
 ] as const;
 
 /** True when every column the row carries already holds its value: re-importing it writes nothing. */
@@ -139,14 +143,21 @@ function consolidationNumberEquals(where: any, value: number) {
   return where.consolidation_account_number === undefined ? value : andCondition(where.consolidation_account_number, Equal(value));
 }
 
+/** A set filter's values on `field`, each mapped by `map`; the filters unchanged without one. */
+function mapSetValues(filters: any, field: string, map: (value: unknown) => unknown) {
+  const model = filters?.[field];
+  if (!model || model.filterType !== 'set' || !Array.isArray(model.values)) return filters;
+  return { ...filters, [field]: { ...model, values: model.values.map(map) } };
+}
+
 /**
- * The grid's set filter on `nature`: a blank value ('') means "OPEX and CAPEX", stored as NULL,
- * which the set filter matches through a null value.
+ * The grid's set filters on the two settings stored as NULL when not set. `nature`: a blank value
+ * ('') means "OPEX and CAPEX". `quantity_price_expected`: true is the accounts that expect quantity
+ * and price; anything else (null, '', false) the accounts without the setting, never stored false.
  */
 function withNatureBlanks(filters: any) {
-  const model = filters?.nature;
-  if (!model || model.filterType !== 'set' || !Array.isArray(model.values)) return filters;
-  return { ...filters, nature: { ...model, values: model.values.map((value: unknown) => (value === '' ? null : value)) } };
+  const natures = mapSetValues(filters, 'nature', (value) => (value === '' ? null : value));
+  return mapSetValues(natures, 'quantity_price_expected', (value) => (value === true || String(value).toLowerCase() === 'true' ? true : null));
 }
 
 /** A CSV `nature` cell: '' is null (OPEX and CAPEX), undefined an invalid value. */
@@ -160,6 +171,7 @@ const CLEARABLE_ACCOUNT_FIELDS = [
   'consolidation_account_name',
   'consolidation_account_description',
   'nature',
+  'quantity_price_expected',
 ] as const;
 
 function csvNature(raw: string): AccountNature | null | undefined {
@@ -525,6 +537,7 @@ export class AccountsService {
       account_number: rest.account_number != null ? String(rest.account_number) : undefined,
       consolidation_account_number:
         rest.consolidation_account_number != null ? rest.consolidation_account_number : null,
+      quantity_price_expected: expectedSetting(rest.quantity_price_expected),
     };
     const lifecycle = resolveLifecycleState({ nextStatus: statusInput, nextDisabledAt: disabled_at });
     const entity = repo.create({
@@ -585,6 +598,9 @@ export class AccountsService {
     }
     if (body?.consolidation_account_number !== undefined) {
       existing.consolidation_account_number = body.consolidation_account_number ?? null;
+    }
+    if (body?.quantity_price_expected !== undefined) {
+      existing.quantity_price_expected = expectedSetting(body.quantity_price_expected);
     }
     const lifecycle = resolveLifecycleState({
       currentDisabledAt: before.disabled_at,
@@ -769,6 +785,7 @@ export class AccountsService {
       'consolidation_account_description',
       'status',
       'nature',
+      'quantity_price_expected',
     ];
     return includeCoaCode ? ['coa_code', ...base] : base;
   }
@@ -811,6 +828,8 @@ export class AccountsService {
           a.consolidation_account_description ?? '',
           String(a.status ?? 'enabled'),
           a.nature ?? '',
+          // Yes in the file's language when set, blank otherwise (the setting is never stored false).
+          a.quantity_price_expected === true ? formatCsvBoolean(true, language) : '',
         ];
         rows.push(includeCoa ? [codeById.get(a.coa_id || '') || '', ...baseRow] : baseRow);
       }
@@ -875,6 +894,9 @@ export class AccountsService {
     // Each row, with its line, for the values a stored account keeps (`storedRecordValues`).
     const rowOf = new Map<object, CsvDataRow>();
     const coaCodes: Set<string> = new Set();
+    // The first line of each account number: a second row of the same account is refused and named,
+    // as in the other imports (`CSV_DUPLICATE_KEY`), so that two rows never settle it in silence.
+    const firstLineByNumber = new Map<number, number>();
     read.rows.forEach((row) => {
       const line = row.line;
       const problems = rowProblemErrors(row);
@@ -903,6 +925,17 @@ export class AccountsService {
         errors.push({ row: line, message: 'account_number is required and must be an integer', code: 'CSV_ACCOUNT_NUMBER_REQUIRED' });
       }
       if (numberCell.leadingZeros) warnings.push(numberCell.leadingZeros);
+      // The chart templates (`replace`) keep the first row of a number, as they always loaded.
+      if (account_number != null && mode === 'enrich') {
+        const firstRow = firstLineByNumber.get(account_number);
+        if (firstRow === undefined) firstLineByNumber.set(account_number, line);
+        else {
+          errors.push(rowError(line, 'account_number', 'CSV_DUPLICATE_KEY', `Same account number as row ${firstRow}.`, {
+            columns: 'account_number',
+            firstRow,
+          }));
+        }
+      }
       // A blank name the row would write is refused here; one a stored account may keep (`enrich`,
       // or the column absent) once the row is matched.
       if (!name && !keepsStoredValue(row, read.present, 'account_name', mode)) {
@@ -937,6 +970,13 @@ export class AccountsService {
           params: { value: natureRaw },
         });
       }
+      // Yes or no in any language: yes sets it, no (or `-`) clears it; never stored false.
+      const expectedRaw = cellText(row, 'quantity_price_expected', mode);
+      const expected = has('quantity_price_expected') ? parseCsvBoolean(expectedRaw) : undefined;
+      if (has('quantity_price_expected') && expected === undefined) {
+        // The shared coded error (`errors:CSV_BOOLEAN_INVALID`): the dialog words it in the interface language.
+        errors.push(rowError(line, 'quantity_price_expected', 'CSV_BOOLEAN_INVALID', `Invalid value '${expectedRaw}'. Use yes or no.`, { value: expectedRaw }));
+      }
       // An absent column stays undefined: an update keeps the stored value, a new account takes the default.
       const text = (column: string) => (has(column) ? cellText(row, column, mode) || null : undefined);
       const item = {
@@ -949,10 +989,19 @@ export class AccountsService {
         consolidation_account_description: text('consolidation_account_description'),
         ...(has('status') ? { status: statusRaw === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED } : {}),
         ...(has('nature') ? { nature: nature ?? null } : {}),
+        ...(has('quantity_price_expected') ? { quantity_price_expected: expectedSetting(expected) } : {}),
       };
       normalized.push(item);
       rowOf.set(item, row);
     });
+    const coaCodeMixed = () => ({
+      ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0,
+      errors: [{ row: 0, message: 'All rows must specify the same coa_code or provide ?coaId parameter', code: 'CSV_ACCOUNT_COA_CODE_MIXED' }],
+      ignoredColumns: read.ignoredColumns, notices: read.notices,
+    });
+    // A file of several charts is refused for that first: a number repeated across its charts is
+    // not a repeated row of one chart.
+    if (!opts?.targetCoaId && opts?.allowCoaCodeColumn && coaCodes.size > 1) return coaCodeMixed();
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
@@ -961,9 +1010,7 @@ export class AccountsService {
       // Resolve unique coa_code to id
       const codes = Array.from(coaCodes.values()).filter(Boolean);
       const uniqCodes = Array.from(new Set(codes));
-      if (uniqCodes.length !== 1) {
-        return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: 'All rows must specify the same coa_code or provide ?coaId parameter', code: 'CSV_ACCOUNT_COA_CODE_MIXED' }], ignoredColumns: read.ignoredColumns, notices: read.notices };
-      }
+      if (uniqCodes.length !== 1) return coaCodeMixed();
       const code = uniqCodes[0];
       const found = await repo.manager.query(`SELECT id FROM chart_of_accounts WHERE code = $1 AND tenant_id = current_setting('app.current_tenant', true)::uuid LIMIT 1`, [code]);
       if (!found?.[0]?.id) {
@@ -974,7 +1021,8 @@ export class AccountsService {
     if (!targetCoaId) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors: [{ row: 0, message: 'Target CoA is required (use ?coaId or include coa_code column)', code: 'CSV_ACCOUNT_COA_REQUIRED' }], ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
-    // Deduplicate by account_number: keep first occurrence
+    // One row per account number: the import rule refused a second one above; the chart templates
+    // (`replace`) keep the first.
     const uniqueByNumber = new Map<string, AccountUpsertDto>();
     for (const item of normalized) {
       const key = item.account_number as string;
