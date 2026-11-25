@@ -197,7 +197,8 @@ const REFERENCE_DATA_FAMILIES_SENTENCE = 'The reference data are families too: o
   + 'on `analytics_axes` (the analytics dimensions and their settings), `required_for` is where a value is required now, an enabled dimension only; '
   + '`exchange_rates` gives each currency\'s rate for a year in the reporting currency for 1 unit of that currency, '
   + 'with `inverse_rate` and, with the `against` filter, `cross_rate` computed by the server; '
-  + 'a pair with the reporting currency reads on the row of the other currency (`rate` and `inverse_rate`), and `against` serves a pair of two other currencies.';
+  + 'a pair with the reporting currency reads on the row of the other currency (`rate` and `inverse_rate`), and `against` serves a pair of two other currencies. '
+  + 'On `contributors` (Portfolio › Contributors, MEM-4), a row is a person with a portfolio profile: their team, manager, contract type, availability in days per month and skills with their level.';
 
 const DescribeEntityFiltersInputSchema = z.object({
   entity_type: AiQueryEntityTypeSchema.describe('The entity family to describe.'),

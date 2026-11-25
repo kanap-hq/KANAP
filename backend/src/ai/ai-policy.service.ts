@@ -90,6 +90,8 @@ const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> =
   // Master data › Working-day calendars and Analytics dimensions, read with the right of their page.
   working_day_calendars: 'working_day_profiles',
   analytics_axes: 'analytics',
+  // Portfolio › Contributors, read with the right of its page (`GET /portfolio/team-members`).
+  contributors: 'portfolio_settings',
   // The exchange rates and the currency settings, read with the budget right as their routes
   // (`GET /currency/rates`, `/rates/missing`, `/settings`), limited access included.
   exchange_rates: 'budget',
@@ -126,6 +128,7 @@ const ENTITY_SCREEN: Partial<Record<AiQueryEntityType | AiContextEntityType, str
   cost_centers: 'Master data › Cost centers',
   working_day_calendars: 'Master data › Working-day calendars',
   analytics_axes: 'Master data › Analytics dimensions',
+  contributors: 'Portfolio › Contributors',
 };
 
 /**
@@ -173,6 +176,7 @@ const READ_RIGHT_PLAIN_NAMES: Record<string, string> = {
   reporting: 'the reports',
   cost_centers: 'cost centers',
   working_day_profiles: 'working-day calendars',
+  portfolio_settings: 'portfolio settings',
 };
 
 const LEVEL_PLAIN_VERBS: Record<PermissionLevel, string> = {

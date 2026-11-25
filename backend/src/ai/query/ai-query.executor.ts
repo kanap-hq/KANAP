@@ -77,7 +77,7 @@ import type { BudgetListAccess } from '../../spend/budget-list/budget-list.runti
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
 import { hiddenContractLineCount } from '../../contracts/contract-relations';
 import { contractMismatchesAgainstLine, lineMismatchesAgainstContract } from '../../contracts/contract-line-match';
-import { AiReadProbe, analyticsAxisFields, resolveAiEntityRegistry } from './registries';
+import { AiReadProbe, analyticsAxisFields, getAiEntityRegistry, resolveAiEntityRegistry } from './registries';
 import { taskRelatedFamily } from './registries/tasks.registry';
 import { budgetFteFields, budgetLineTotalFieldsOf, budgetPairOfKey, isBudgetMoneyKey } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
@@ -144,6 +144,23 @@ import {
   type AiWorkingDayCalendarOpts,
   type AiWorkingDayCalendarRow,
 } from './ai-working-day-calendars.query';
+import { PortfolioClassificationService } from '../../portfolio/portfolio-classification.service';
+import { PortfolioSkillsService } from '../../portfolio/portfolio-skills.service';
+import { TeamMemberConfigService } from '../../portfolio/team-member-config.service';
+import {
+  AI_CONTRIBUTOR_COMPANY_WITHHELD,
+  AI_CONTRIBUTOR_NOTE,
+  contributorDetail,
+  contributorFieldValues,
+  contributorRefNumber,
+  contributorSkillsText,
+  findContributor,
+  listAiContributors,
+  readContributors,
+  readsCompanyLookup,
+  type AiContributorOpts,
+  type AiContributorRow,
+} from './ai-contributors.query';
 import { AI_AXIS_VALUES_NOTE, listAiAnalyticsAxes, toAiAnalyticsAxisRow, type AiAnalyticsAxisRow } from './ai-analytics-axes.query';
 import { CurrencySettingsService } from '../../currency/currency-settings.service';
 import { ManualRatesService } from '../../currency/manual-rates.service';
@@ -701,6 +718,10 @@ export class AiQueryExecutor {
     @Optional() private readonly manualRates?: ManualRatesService,
     /** The currency settings, in every `exchange_rates` response. */
     @Optional() private readonly currencySettings?: CurrencySettingsService,
+    /** Portfolio › Contributors and the reads of its drawer, which the `contributors` family reads. */
+    @Optional() private readonly teamMembers?: TeamMemberConfigService,
+    @Optional() private readonly portfolioSkills?: PortfolioSkillsService,
+    @Optional() private readonly portfolioClassification?: PortfolioClassificationService,
   ) {
     // Absent, the technology figures close (no application count, no detail): say so once, at start.
     const logger = new Logger(AiQueryExecutor.name);
@@ -1612,6 +1633,60 @@ export class AiQueryExecutor {
     return { services: { calendars: this.workingDayProfiles }, opts };
   }
 
+  /** A contributor of Portfolio › Contributors, `ref` its MEM-n, `label` the person. */
+  private mapContributor(row: AiContributorRow): AiEntitySummaryDto {
+    return toEntitySummary('contributors', {
+      id: row.id,
+      reference: row.ref,
+      label: row.name,
+      status: null,
+      summary: row.notes,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      metadata: {
+        name: row.name,
+        job_title: row.job_title,
+        team: row.team,
+        manager: row.manager,
+        manager_ref: row.manager_ref,
+        employment_type: row.employment_type,
+        availability_days: row.availability_days,
+        skills: contributorSkillsText(row),
+        skill_count: row.skill_count,
+        avg_project_days: row.avg_project_days,
+        default_source: row.default_source,
+        default_category: row.default_category,
+        default_stream: row.default_stream,
+        default_company: row.default_company,
+      },
+    });
+  }
+
+  /**
+   * The services of Portfolio › Contributors, read with the right of its page (the portfolio
+   * settings, `GET /portfolio/team-members`): checked again here, the database not guarding it,
+   * refused in words (the right and the screen). The default company is named for a person who
+   * reads the company lookup, as the drawer's company field.
+   */
+  private async contributorServices(context: AiExecutionContextWithManager, checked?: ReferenceSearchChecked) {
+    if (!this.policy || !this.teamMembers || !this.portfolioSkills || !this.portfolioClassification) {
+      throw new BadRequestException('The contributors are not available.');
+    }
+    if (!checked) await this.policy.assertEntityTypeReadRight(context, 'contributors', context.manager);
+    const language = checked ? checked.language : await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    const opts: AiContributorOpts = {
+      manager: context.manager,
+      tenantId: context.tenantId,
+      language,
+      readsCompanies: readsCompanyLookup(await this.policy.effectiveAccess(context, context.manager)),
+    };
+    return {
+      services: { members: this.teamMembers, skills: this.portfolioSkills, classification: this.portfolioClassification },
+      opts,
+      withheld: opts.readsCompanies ? [] : [AI_CONTRIBUTOR_COMPANY_WITHHELD],
+    };
+  }
+
   private async analyticsAxesServices(context: AiExecutionContextWithManager, checked?: ReferenceSearchChecked) {
     if (!this.policy || !this.analyticsAxes) throw new BadRequestException('The analytics dimensions are not available.');
     if (!checked) await this.policy.assertEntityTypeReadRight(context, 'analytics_axes', context.manager);
@@ -1703,6 +1778,14 @@ export class AiQueryExecutor {
       const { services, opts } = await this.workingDayCalendarServices(context, null, checked);
       const found = await listAiWorkingDayCalendars(services, {}, opts, true);
       rows = found.items.map((row) => ({ code: row.code, name: row.name, item: this.mapWorkingDayCalendar(row) }));
+    } else if (entityType === 'contributors') {
+      const { services, opts } = await this.contributorServices(context, checked);
+      const found = await readContributors(services, opts);
+      // A reference names one contributor exactly: MEM-1 never brings MEM-12.
+      const number = contributorRefNumber(rest);
+      rows = found
+        .filter((row) => number == null || row.item_number === number)
+        .map((row) => ({ code: row.ref, name: row.name, item: this.mapContributor(row) }));
     } else {
       const { services, opts } = await this.analyticsAxesServices(context, checked);
       const found = await listAiAnalyticsAxes(services, {}, opts, true);
@@ -2926,6 +3009,27 @@ export class AiQueryExecutor {
       };
     }
 
+    if (input.entity_type === 'contributors') {
+      const { services, opts, withheld } = await this.contributorServices(context);
+      const result = await listAiContributors(services, scoped.query, opts);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        contributor_note: AI_CONTRIBUTOR_NOTE,
+        ...(withheld.length ? { fields_withheld: withheld } : {}),
+        items: result.items.map((row) => this.mapContributor(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'analytics_axes') {
       const { services, opts } = await this.analyticsAxesServices(context);
       const result = await listAiAnalyticsAxes(services, scoped.query, opts);
@@ -3682,6 +3786,7 @@ export class AiQueryExecutor {
     }
     if (entityType === 'working_day_calendars') return this.workingDayCalendarDetail(context, entityId, input.year);
     if (entityType === 'analytics_axes') return this.analyticsAxisDetail(context, entityId);
+    if (entityType === 'contributors') return this.contributorDetail(context, entityId);
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 
     if (entityType === 'tasks') {
@@ -4237,6 +4342,20 @@ export class AiQueryExecutor {
   }
 
   /**
+   * A contributor as its page (`GET /portfolio/team-members/:id`, `:id/time-stats`): the row of
+   * the list, its skills with their level, and the time it logged. Found among the tenant's
+   * contributors, by uuid or MEM-n: another tenant's id is not found.
+   */
+  private async contributorDetail(context: AiExecutionContextWithManager, idOrRef: string): Promise<AiEntityDetailDto> {
+    const { services, opts, withheld } = await this.contributorServices(context);
+    const row = findContributor(await readContributors(services, opts), idOrRef);
+    return {
+      ...this.toDetailResult(this.mapContributor(row), { ...await contributorDetail(services, opts, row), contributor_note: AI_CONTRIBUTOR_NOTE }),
+      ...(withheld.length ? { fields_withheld: withheld } : {}),
+    };
+  }
+
+  /**
    * An analytics dimension as its page (`GET /analytics-axes/:id`): its settings, its number of
    * values, the OPEX and CAPEX lines holding a value on it and without one (within the person's
    * access), and the natures on which no enabled value can be chosen.
@@ -4418,6 +4537,34 @@ export class AiQueryExecutor {
     return values;
   }
 
+  /**
+   * The values of the discoverable fields of the contributors (team, manager, contract type, skill,
+   * classification defaults): the names the tenant's contributors hold, null when one lacks it.
+   * Read with the right of the page, as the list.
+   */
+  private async contributorFilterValues(context: AiExecutionContextWithManager, fields: string[]): Promise<AiFilterValuesResult> {
+    const { services, opts, withheld } = await this.contributorServices(context);
+    const registry = getAiEntityRegistry('contributors');
+    const requested = Array.from(new Set((fields || []).map((field) => String(field || '').trim()).filter(Boolean)));
+    const rows = await readContributors(services, opts);
+    const values: Record<string, Array<string | boolean | null>> = {};
+    const ignored: string[] = [];
+    for (const field of requested) {
+      if (registry.fields[field]?.discoverable === true) values[field] = contributorFieldValues(rows, field);
+      else ignored.push(field);
+    }
+    const fieldsWithheld = withheld.filter((entry) => requested.includes(entry.field));
+    return {
+      values,
+      fields_ignored: ignored,
+      ...(fieldsWithheld.length ? { fields_withheld: fieldsWithheld } : {}),
+      total: requested.length,
+      returned: Object.keys(values).length,
+      truncated: false,
+      complete: ignored.length === 0,
+    };
+  }
+
   async executeFilterValues(
     context: AiExecutionContextWithManager,
     input: {
@@ -4425,6 +4572,7 @@ export class AiQueryExecutor {
       fields: string[];
     },
   ): Promise<AiFilterValuesResult> {
+    if (input.entity_type === 'contributors') return this.contributorFilterValues(context, input.fields);
     const registry = await resolveAiEntityRegistry(context, input.entity_type, this.readProbe(context));
     const requestedFields = Array.from(
       new Set(

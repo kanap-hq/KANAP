@@ -39,6 +39,7 @@ export type AiQueryEntityType =
   | 'vulnerabilities'
   | 'cost_centers'
   | 'working_day_calendars'
+  | 'contributors'
   | 'analytics_axes';
 
 export type AiSetFilterValue = Array<string | null>;
@@ -305,6 +306,8 @@ export type AiQueryResult = {
   /** `working_day_calendars`: the year whose working days the rows give (null without the year filter), and what they mean. */
   calendar_year?: number | null;
   calendar_note?: string;
+  /** `contributors`: what the availability and the logged days of a row mean. */
+  contributor_note?: string;
   /** `analytics_axes`: where the values of a dimension and a line's value on it are read. */
   values_note?: string;
   /** `exchange_rates`: the currency settings, the pairs in use without a rate, the cross-rate currency and the notes on the rates. */
@@ -368,6 +371,8 @@ export type AiAggregateResult = {
   /** `working_day_calendars`: the year whose working days the rows give (null without the year filter), and what they mean. */
   calendar_year?: number | null;
   calendar_note?: string;
+  /** `contributors`: what the availability and the logged days of a row mean. */
+  contributor_note?: string;
   /** `analytics_axes`: where the values of a dimension and a line's value on it are read. */
   values_note?: string;
   /** `exchange_rates`: the currency settings, the pairs in use without a rate, the cross-rate currency and the notes on the rates. */

@@ -134,6 +134,7 @@ const REFERENCE_FAMILY_WORDS: Record<AiSearchReferenceEntityType, string> = {
   cost_centers: 'cost centers',
   working_day_calendars: 'working-day calendars',
   analytics_axes: 'analytics dimensions',
+  contributors: 'contributors',
 };
 
 /** The rows of one page, the index's and the reference data's, by score; the index first on a tie. */

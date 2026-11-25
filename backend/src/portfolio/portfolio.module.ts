@@ -250,6 +250,9 @@ const entities = [
     PortfolioProjectsCsvService,
     // The Entra directory sync writes the reporting line through it.
     TeamMemberConfigService,
+    // The assistant reads the contributors' skills and classification defaults through them.
+    PortfolioSkillsService,
+    PortfolioClassificationService,
     TypeOrmModule,
     UserTimeAggregateService,
   ],

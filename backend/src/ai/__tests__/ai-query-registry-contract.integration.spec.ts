@@ -51,13 +51,13 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 /**
  * The families the assistant reads in memory from the screen's service (the two End of support
  * report lists, the roles and their rights, Admin › Data access, the chargeback reports, the tree of
- * cost centers): their filters and sorts change the rows, never the
+ * cost centers, the portfolio contributors): their filters and sorts change the rows, never the
  * statements they send. Their behaviour is asserted on `filters_applied` and the result, and by
  * their own spec.
  */
 const IN_MEMORY_FAMILIES = new Set([
   'support_gaps', 'support_deadlines', 'roles', 'role_permissions', 'data_access', 'chargeback', 'chargeback_lines',
-  'cost_centers', 'working_day_calendars', 'analytics_axes', 'exchange_rates',
+  'cost_centers', 'working_day_calendars', 'analytics_axes', 'exchange_rates', 'contributors',
 ]);
 
 /** The year of the seeded chargeback: outside the window of the budget line fields (y-2 to y+2). */
@@ -266,6 +266,10 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
       [tenantId, year],
     );
   }
+  // The two seeded users as portfolio contributors (MEM-1, MEM-2), read through the screen's list route.
+  await pair('contributors', (n, at) => insertId(runner,
+    `INSERT INTO portfolio_team_member_configs (tenant_id, user_id, item_number, created_at, updated_at) VALUES ($1, $2, $3, $4, $4)`,
+    [tenantId, n === 1 ? rows.users.older : rows.users.newer, n, at]));
   await pair('projects', (n, at) => insertId(runner,
     `INSERT INTO portfolio_projects (tenant_id, name, item_number, created_at, updated_at) VALUES ($1, $2, $3, $4, $4)`,
     [tenantId, `Project ${n}`, n, at]));
