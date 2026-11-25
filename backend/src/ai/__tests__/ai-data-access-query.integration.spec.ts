@@ -232,9 +232,10 @@ async function testFiltersAndGroups(h: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual(
     byType.groups,
     [
-      { key: 'company', count: 3, distinct_count: 3 },
-      { key: 'cost_center', count: 2, distinct_count: 2 },
-      { key: 'all', count: 1, distinct_count: 1 },
+      // Each type with its name (lot K2d); a person without a node has neither.
+      { key: 'company', count: 3, distinct_count: 3, key_name: 'Company' },
+      { key: 'cost_center', count: 2, distinct_count: 2, key_name: 'Cost center' },
+      { key: 'all', count: 1, distinct_count: 1, key_name: 'Everything' },
       { key: null, count: 1, distinct_count: 1 },
     ],
     'nodes by type',
@@ -273,7 +274,11 @@ async function testUsersRolesAndMode(h: Harness, runner: QueryRunner, s: Seed) {
   const limited = await h.tools.execute(ctx(runner, s, 'ulla'), 'query_entities', { entity_type: 'users', filters: { data_access: ['limited'] }, limit: 50 });
   assert.equal(limited.total, 6, 'the six persons the screen lists');
   const byMode = await h.tools.execute(ctx(runner, s, 'ulla'), 'aggregate_entities', { entity_type: 'users', group_by: 'data_access' });
-  assert.deepEqual(byMode.groups, [{ key: 'limited', count: 6 }, { key: 'all', count: 3 }], 'people by mode');
+  // Each mode with the words of the person's Data access panel (lot K2d).
+  assert.deepEqual(byMode.groups, [
+    { key: 'limited', count: 6, key_name: 'Limited to' },
+    { key: 'all', count: 3, key_name: 'All data' },
+  ], 'people by mode');
   const byRole = await h.tools.execute(ctx(runner, s, 'ulla'), 'aggregate_entities', { entity_type: 'users', group_by: 'roles' });
   assert.deepEqual(byRole.groups.find((group: any) => group.key === 'Budget Member'), { key: 'Budget Member', count: 5 }, 'a person counts in each of their roles');
   assert.deepEqual(byRole.groups.find((group: any) => group.key === 'IT Landscape Member'), { key: 'IT Landscape Member', count: 1 });
