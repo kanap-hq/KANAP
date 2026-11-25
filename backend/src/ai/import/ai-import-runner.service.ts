@@ -377,6 +377,7 @@ function message(item: AiImportReportMessage, lines: readonly number[]): AiImpor
     message: item.message,
     ...(item.code ? { code: item.code } : {}),
     ...(params ? { params } : {}),
+    ...(item.usages?.length ? { usages: item.usages } : {}),
   };
 }
 

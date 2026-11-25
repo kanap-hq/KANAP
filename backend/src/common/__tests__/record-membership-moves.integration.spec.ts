@@ -13,6 +13,7 @@ import { PortfolioStream } from '../../portfolio/portfolio-stream.entity';
 import { PortfolioTaskType } from '../../portfolio/portfolio-task-type.entity';
 import { AiMasterDataMutationSupportService } from '../../ai/mutation/ai-master-data-mutation-support.service';
 import { applyDataAccess } from '../../data-access/data-access';
+import { rowsBilan } from '../../ai/import/ai-import-runner.service';
 import {
   assert,
   captureAudit,
@@ -229,6 +230,11 @@ async function testDepartmentsFile() {
       assert.match(error.message, /^The department "Used" is used by 2 users\. It cannot change company\.$/);
       assert.equal(await companyOf(used), alpha);
       assert.equal(await companyOf(empty), alpha, 'nothing written');
+      // Kad's card of the same file keeps the counts, for the card to word them.
+      const card = rowsBilan(result as any, dryRun, [1, 2, 3, 4]);
+      assert.equal(card.report.kind, 'rows');
+      const [shown] = (card.report as any).errors;
+      assert.deepEqual([shown.code, shown.usages], ['DEPARTMENT_MOVE_IN_USE', [{ type: 'users', total: 2 }]], 'Kad\'s card keeps the counts');
     }
     // An unused department moves by the file.
     const moved = await svc.importCsv({ file: fileOf([{ reference: 'DEPT-2', company_name: 'Beta', name: 'Empty' }]), dryRun: false, language: 'en' }, { manager: m });

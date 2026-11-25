@@ -556,6 +556,8 @@ export type AiImportReportMessage = {
   /** The code the interface translates, with the values its sentence names, as on the import's screen. */
   code?: string;
   params?: Record<string, string | number>;
+  /** What still uses the record, counted per kind (`{{usages}}` in the sentence of `code`), as the import's screen shows them. */
+  usages?: Array<{ type: string; total: number }>;
 };
 
 /**
