@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { getApiErrorMessage, getDocumentSaveErrorMessage, isDataAccessRefusal } from './apiErrorMessage';
 import { appQueryClient } from '../lib/appQueryClient';
 import { csvMessageText } from '../components/csv/csvMessage';
+import { withCatalogValueName } from './catalogReportMessage';
 import './itOpsSettingsLocalization';
 import { AGENT_NAME, PRODUCT_NAME } from '../config/product';
 
@@ -796,7 +797,7 @@ describe('a rich text refused for the address of a link', () => {
         expect(text, language).not.toMatch(/development|{{|analytics/);
       }
       // The import report keeps the values allowed, and names the value as the selector does.
-      expect(csvMessageText({ row: 2, column: 'category', message: 'server words', code: 'catalog_value_retired', params }, fr))
+      expect(csvMessageText(withCatalogValueName({ row: 2, column: 'category', message: 'server words', code: 'catalog_value_retired', params }, fr), fr))
         .toBe('Analytique n\'est plus proposé\u00a0: seule une fiche qui le porte déjà le garde. Valeurs possibles\u00a0: development (Development).');
     } finally {
       appQueryClient.clear();
