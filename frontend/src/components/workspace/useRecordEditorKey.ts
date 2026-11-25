@@ -6,16 +6,18 @@ import { useQueryClient } from '@tanstack/react-query';
  * belong to the record they were typed on). The address may name one record several ways: its uuid
  * or `sup-12`, which the page reads, then puts under its reference (`SUP-12`) and moves to. The key
  * stays the same through that move, so the editor stays mounted with what is typed; another record
- * gets a new key. `family` is the first part of the page's cache key (`['suppliers', address]`).
+ * gets a new key. `family` is the first part of the page's cache key (`['suppliers', address]`);
+ * `rest`, the parts that follow the address when the page's key has more
+ * (`['portfolio-project', address, include]`).
  */
-export default function useRecordEditorKey(family: string, address: string): string {
+export default function useRecordEditorKey(family: string, address: string, rest: readonly unknown[] = []): string {
   const queryClient = useQueryClient();
   const last = React.useRef<{ address: string; key: string } | null>(null);
   const previous = last.current;
   let key = address;
   if (previous && previous.address === address) key = previous.key;
   else if (previous) {
-    const recordAt = (at: string) => queryClient.getQueryData<{ id?: string }>([family, at])?.id;
+    const recordAt = (at: string) => queryClient.getQueryData<{ id?: string }>([family, at, ...rest])?.id;
     const before = recordAt(previous.address);
     if (before && before === recordAt(address)) key = previous.key;
   }

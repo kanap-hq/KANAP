@@ -475,7 +475,6 @@ export class InterfaceBindingsService {
     if (!hadLinks && conn.risk_mode === 'manual') {
       const before = { ...conn };
       conn.risk_mode = 'derived';
-      conn.updated_at = new Date();
       const updated = await connRepo.save(conn);
       await this.audit.log(
         {
@@ -520,7 +519,6 @@ export class InterfaceBindingsService {
         if (conn && conn.risk_mode === 'derived') {
           const before = { ...conn };
           conn.risk_mode = 'manual';
-          conn.updated_at = new Date();
           const saved = await connRepo.save(conn);
           await this.audit.log(
             {

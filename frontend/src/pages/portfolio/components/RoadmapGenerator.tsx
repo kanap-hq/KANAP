@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -46,6 +46,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 import api from '../../../api';
+import { buildItemPath, itemAddress } from '../../../utils/item-ref';
 import { useAuth } from '../../../auth/AuthContext';
 import { KanapDialog, StatusDot } from '../../../components/design';
 import LightModeIsland from '../../../components/LightModeIsland';
@@ -351,6 +352,8 @@ type RoadmapResponse = {
   explanations: ProjectExplanation[];
   scenarioWarnings: ScenarioWarning[];
   impactSummary: RoadmapImpactSummary | null;
+  /** The number of each project the response names, for its address (`PRJ-12`). */
+  projectItemNumbers?: Record<string, number>;
   bottlenecks: BottleneckEntry[];
   occupation: OccupationEntry[];
   teamOccupation: TeamOccupationEntry[];
@@ -1104,6 +1107,12 @@ export default function RoadmapGenerator({ onApplied }: Props) {
 
   const scheduledProjects = response?.schedule ?? [];
   const reservationProjects = response?.reservations ?? [];
+  const projectItemNumbers = response?.projectItemNumbers;
+  // A project's Progress tab, at the address of its reference (its uuid when the number is missing).
+  const projectEffortPath = useCallback(
+    (projectId: string) => `${buildItemPath('project', itemAddress('project', { id: projectId, item_number: projectItemNumbers?.[projectId] }))}/effort`,
+    [projectItemNumbers],
+  );
   const filteredScheduledProjects = useMemo(
     () => (ganttCategoryId
       ? scheduledProjects.filter((project) => project.categoryId === ganttCategoryId)
@@ -2462,7 +2471,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                               <TableCell>
                                 <Link
                                   component={RouterLink}
-                                  to={`/portfolio/projects/${project.projectId}/effort`}
+                                  to={projectEffortPath(project.projectId)}
                                   underline="hover"
                                   color="inherit"
                                 >
@@ -2655,7 +2664,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                   <TableCell>
                                     <Link
                                       component={RouterLink}
-                                      to={`/portfolio/projects/${project.projectId}/effort`}
+                                      to={projectEffortPath(project.projectId)}
                                       underline="hover"
                                       color="inherit"
                                     >
@@ -2753,7 +2762,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                                     <TableCell>
                                       <Link
                                         component={RouterLink}
-                                        to={`/portfolio/projects/${row.projectId}/effort`}
+                                        to={projectEffortPath(row.projectId)}
                                         underline="hover"
                                         color="inherit"
                                       >

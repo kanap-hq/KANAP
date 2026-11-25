@@ -404,7 +404,7 @@ export class TechnologyCatalogService {
                 cve_names = $5::jsonb,
                 editor = COALESCE(editor, $6),
                 description = COALESCE(NULLIF(btrim(description), ''), $7), catalog_state = $8::jsonb,
-                vulnerability_alerts = vulnerability_alerts AND $9::boolean, updated_at = now()
+                vulnerability_alerts = vulnerability_alerts AND $9::boolean
           WHERE tenant_id = $1 AND id = $2`,
         [tenantId, technologyId, product.key, product.cpe_products, JSON.stringify(mergedNames(before.cve_names)), product.editor, description, stateFor(before.cpe_products, heldNames),
           defaultVulnerabilityAlerts({ catalogKey: product.key })],

@@ -19,6 +19,8 @@ interface ServiceOptions {
 
 export interface MyLeadershipProject {
   id: string;
+  /** The project's number, for its address (`PRJ-12`). */
+  item_number: number;
   name: string;
   status: string;
   role: 'it_lead' | 'business_lead' | 'it_sponsor' | 'business_sponsor';
@@ -32,6 +34,8 @@ export interface MyLeadershipProject {
 
 export interface MyContributionProject {
   id: string;
+  /** The project's number, for its address (`PRJ-12`). */
+  item_number: number;
   name: string;
   status: string;
   team: 'it_team' | 'business_team';
@@ -55,6 +59,8 @@ export interface TimeSummary {
 export interface TeamActivityItem {
   id: string;
   projectId: string;
+  /** The project's number, for its address (`PRJ-12`). */
+  projectItemNumber: number;
   projectName: string;
   type: 'change' | 'comment' | 'decision';
   content: string | null;
@@ -66,6 +72,8 @@ export interface TeamActivityItem {
 export interface ProjectStatusChangeItem {
   id: string;
   projectId: string;
+  /** The project's number, for its address (`PRJ-12`). */
+  projectItemNumber: number;
   projectName: string;
   previousStatus: string | null;
   nextStatus: string | null;
@@ -117,6 +125,7 @@ export class DashboardDataService {
       WITH leadership_projects AS (
         SELECT
           p.id,
+          p.item_number,
           p.name,
           p.status,
           p.planned_end,
@@ -134,6 +143,7 @@ export class DashboardDataService {
           OR p.business_sponsor_id = $1
         )
         AND p.status NOT IN ('done', 'cancelled')
+        AND p.tenant_id = app_current_tenant()
         ORDER BY p.name ASC
         LIMIT $2
       )
@@ -147,6 +157,7 @@ export class DashboardDataService {
         SELECT id, name, target_date
         FROM portfolio_project_milestones
         WHERE project_id = lp.id
+          AND tenant_id = app_current_tenant()
           AND status NOT IN ('completed', 'cancelled')
         ORDER BY target_date ASC NULLS LAST
         LIMIT 1
@@ -157,6 +168,7 @@ export class DashboardDataService {
 
     return projects.map((p: any) => ({
       id: p.id,
+      item_number: p.item_number,
       name: p.name,
       status: p.status,
       role: p.role,
@@ -186,6 +198,7 @@ export class DashboardDataService {
       `
       SELECT
         p.id,
+        p.item_number,
         p.name,
         p.status,
         ppt.role as team,
@@ -193,16 +206,19 @@ export class DashboardDataService {
       FROM portfolio_projects p
       JOIN portfolio_project_team ppt
         ON ppt.project_id = p.id
+        AND ppt.tenant_id = p.tenant_id
         AND ppt.user_id = $1
       LEFT JOIN LATERAL (
         SELECT COUNT(*)::int as count
         FROM tasks t
         WHERE t.related_object_type = 'project'
           AND t.related_object_id = p.id
+          AND t.tenant_id = p.tenant_id
           AND t.assignee_user_id = $1
           AND t.status NOT IN ('done', 'cancelled')
       ) task_counts ON true
       WHERE p.status NOT IN ('done', 'cancelled')
+        AND p.tenant_id = app_current_tenant()
         AND p.it_lead_id IS DISTINCT FROM $1
         AND p.business_lead_id IS DISTINCT FROM $1
         AND p.it_sponsor_id IS DISTINCT FROM $1
@@ -215,6 +231,7 @@ export class DashboardDataService {
 
     return projects.map((p: any) => ({
       id: p.id,
+      item_number: p.item_number,
       name: p.name,
       status: p.status,
       team: p.team,
@@ -354,11 +371,13 @@ export class DashboardDataService {
         SELECT p.id
         FROM portfolio_projects p
         WHERE p.status NOT IN ('done', 'cancelled')
+          AND p.tenant_id = app_current_tenant()
           AND ${projectParticipantCondition('p', '$1')}
       )
       SELECT
         a.id,
         a.project_id,
+        p.item_number AS project_item_number,
         p.name AS project_name,
         a.type,
         a.content,
@@ -367,9 +386,10 @@ export class DashboardDataService {
         COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email, 'Someone') AS author_name
       FROM portfolio_activities a
       JOIN involved_projects ip ON ip.id = a.project_id
-      JOIN portfolio_projects p ON p.id = a.project_id
+      JOIN portfolio_projects p ON p.id = a.project_id AND p.tenant_id = a.tenant_id
       LEFT JOIN users u ON u.id = a.author_id AND u.tenant_id = p.tenant_id
       WHERE a.project_id IS NOT NULL
+        AND a.tenant_id = app_current_tenant()
         AND a.created_at >= NOW() - ($3 || ' days')::interval
         AND (
           a.type IN ('comment', 'decision')
@@ -400,6 +420,7 @@ export class DashboardDataService {
     return rows.map((row: any) => ({
       id: row.id,
       projectId: row.project_id,
+      projectItemNumber: row.project_item_number,
       projectName: row.project_name,
       type: row.type,
       content: row.content || null,
@@ -429,15 +450,17 @@ export class DashboardDataService {
       SELECT
         a.id,
         a.project_id,
+        p.item_number AS project_item_number,
         p.name AS project_name,
         a.changed_fields->'status'->>0 AS previous_status,
         a.changed_fields->'status'->>1 AS next_status,
         a.created_at,
         COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email, 'Someone') AS author_name
       FROM portfolio_activities a
-      JOIN portfolio_projects p ON p.id = a.project_id
+      JOIN portfolio_projects p ON p.id = a.project_id AND p.tenant_id = a.tenant_id
       LEFT JOIN users u ON u.id = a.author_id AND u.tenant_id = p.tenant_id
       WHERE a.project_id IS NOT NULL
+        AND a.tenant_id = app_current_tenant()
         AND a.type = 'change'
         AND a.changed_fields ? 'status'
         AND a.created_at >= NOW() - ($1 || ' days')::interval
@@ -451,6 +474,7 @@ export class DashboardDataService {
     return rows.map((row: any) => ({
       id: row.id,
       projectId: row.project_id,
+      projectItemNumber: row.project_item_number,
       projectName: row.project_name,
       previousStatus: row.previous_status || null,
       nextStatus: row.next_status || null,

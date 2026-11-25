@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
+import { writeAuditLog } from '../../audit/audit.service';
 
 // Lot L3: Plaid deletes one task, contact, location, budget line, connection or interface under
 // preview.
@@ -778,7 +779,27 @@ async function testLocationDelete(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(failed.status, 'failed');
   assert.equal(failed.error_message, 'Cannot delete location "Delft DC": it still holds 1 asset. Move it to another location first.');
   assert.equal(await count(runner, 'locations', 'tenant_id = $1 AND id = $2', [s.tenantId, empty]), 1);
-  console.log('  location with assets refused at the preview and at the run; without them, deleted by a member, audit names the preview: OK');
+
+  // A child changed between the preview and the run, with an entry in the location's history (a
+  // web link here, counted the same): the entry dates the location (audit/record-dating.ts), and
+  // the run is refused like a changed record.
+  const dated = (await runner.query(
+    `INSERT INTO locations (tenant_id, location_reference, name, hosting_type, updated_at)
+     VALUES ($1, 'LOC-5', 'Leiden DC', 'cloud', '2020-01-02T03:04:05Z') RETURNING id`,
+    [s.tenantId],
+  ))[0].id as string;
+  const childLate = await h.previews.createPreview(context, 'delete_record', { entity_type: 'locations', ref: 'LOC-5' });
+  await writeAuditLog(runner.manager, {
+    table: 'location_links', recordId: randomUUID(), action: 'update',
+    before: { location_id: dated, url: 'https://old.example.test', description: null },
+    after: { location_id: dated, url: 'https://new.example.test', description: null },
+    userId: s.users.member,
+  });
+  const childRefused = await h.previews.executePreview(context, childLate.preview_id);
+  assert.equal(childRefused.status, 'failed');
+  assert.match(childRefused.error_message ?? '', /changed after the preview was created/);
+  assert.equal(await count(runner, 'locations', 'tenant_id = $1 AND id = $2', [s.tenantId, dated]), 1);
+  console.log('  location with assets refused at the preview and at the run; without them, deleted by a member, audit names the preview; a child changed after the preview refuses the run: OK');
 }
 
 async function testOpexLineDelete(h: Harness, runner: QueryRunner, s: Seed) {

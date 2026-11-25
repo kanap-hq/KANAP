@@ -174,7 +174,12 @@ async function testRolesListMatchesTheRoute(h: Harness, runner: QueryRunner, s: 
   assert.deepEqual(custom.items.map((item: any) => item.label), ['People admin', 'Finance custom'], 'custom roles, most given first');
   assert.deepEqual(custom.filters_applied, ['type']);
   const byType = await h.tools.execute(ctx(runner, s, 'unlimited'), 'aggregate_entities', { entity_type: 'roles', group_by: 'type' });
-  assert.deepEqual(byType.groups, [{ key: 'custom', count: 2 }, { key: 'system', count: 2 }, { key: 'built_in', count: 1 }], 'roles by kind');
+  // A kind with its badge's name (lot K2d); a custom role shows no badge and has no name.
+  assert.deepEqual(byType.groups, [
+    { key: 'custom', count: 2 },
+    { key: 'system', count: 2, key_name: 'System' },
+    { key: 'built_in', count: 1, key_name: 'Built-in' },
+  ], 'roles by kind');
 }
 
 async function testRoleDetailIsTheMatrix(h: Harness, runner: QueryRunner, s: Seed) {

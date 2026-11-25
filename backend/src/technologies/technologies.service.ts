@@ -378,7 +378,7 @@ export class TechnologiesService {
     const keys = Object.keys(values);
     if (keys.length) {
       await mg.query(
-        `UPDATE technologies SET ${keys.map((key, i) => `${key} = ${bindColumn(key, i + 3)}`).join(', ')}, updated_at = now()
+        `UPDATE technologies SET ${keys.map((key, i) => `${key} = ${bindColumn(key, i + 3)}`).join(', ')}
           WHERE tenant_id = $1 AND id = $2`,
         [tenantId, before.id, ...Object.values(values)],
       );
@@ -420,7 +420,7 @@ export class TechnologiesService {
     );
     if (before.vulnerability_alerts !== enabled) {
       await mg.query(
-        `UPDATE technologies SET vulnerability_alerts = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2`,
+        `UPDATE technologies SET vulnerability_alerts = $3 WHERE tenant_id = $1 AND id = $2`,
         [tenantId, before.id, enabled],
       );
       const after = await readTechnology(mg, tenantId, before.id);
@@ -432,7 +432,7 @@ export class TechnologiesService {
     if (exceptions.length) {
       const ids = exceptions.map((row) => row.id);
       await mg.query(
-        `UPDATE technology_versions SET vulnerability_alerts = NULL, updated_at = now()
+        `UPDATE technology_versions SET vulnerability_alerts = NULL
           WHERE tenant_id = $1 AND technology_id = $2 AND id = ANY($3::uuid[])`,
         [tenantId, before.id, ids],
       );
@@ -661,7 +661,7 @@ export class TechnologiesService {
         throw new BadRequestException('The extended support cannot end before the standard support.');
       }
       await mg.query(
-        `UPDATE technology_versions SET ${keys.map((key, i) => `${key} = $${i + 4}`).join(', ')}, updated_at = now()
+        `UPDATE technology_versions SET ${keys.map((key, i) => `${key} = $${i + 4}`).join(', ')}
           WHERE tenant_id = $1 AND technology_id = $2 AND id = $3`,
         [tenantId, tech.id, before.id, ...Object.values(values)],
       );
@@ -712,7 +712,7 @@ export class TechnologiesService {
     if (!targets.length) return [];
     const ids = targets.map((row) => row.id);
     await mg.query(
-      `UPDATE technology_versions SET vulnerability_alerts = $4, updated_at = now()
+      `UPDATE technology_versions SET vulnerability_alerts = $4
         WHERE tenant_id = $1 AND technology_id = $2 AND id = ANY($3::uuid[])`,
       [tenantId, tech.id, ids, value],
     );

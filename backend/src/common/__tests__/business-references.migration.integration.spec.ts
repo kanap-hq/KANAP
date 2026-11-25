@@ -4,6 +4,9 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { BusinessReferences1856240000000 } from '../../migrations/1856240000000-business-references';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../updated-at-trigger';
 
 // Business references of the suppliers, companies, contacts, departments and contracts (migration
 // 1856240000000), against a real database, each test in one transaction rolled back at the end:
@@ -128,6 +131,7 @@ async function search(runner: QueryRunner, tenantId: string, entityType: string,
 
 async function testMigrationRepairsAndNumbers() {
   await inRollback(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const migration = new BusinessReferences1856240000000();
     await logged(() => migration.down(runner));
     const rlsBefore = await rlsStates(runner);
@@ -254,6 +258,7 @@ async function testMigrationRepairsAndNumbers() {
 /** Rows created in one transaction share `created_at`: the name (and a supplier's ERP ID first) orders them, never the uuid. */
 async function testTiesFollowTheName() {
   await inRollback(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const migration = new BusinessReferences1856240000000();
     await logged(() => migration.down(runner));
     const t = await seedTenant(runner, 'bref-ties');
@@ -297,6 +302,7 @@ async function testTiesFollowTheName() {
 
 async function testTriggerNumbersInserts() {
   await inRollback(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const a = await seedTenant(runner, 'bref-trg-a');
     const b = await seedTenant(runner, 'bref-trg-b');
     const number = async (tenantId: string, values: Record<string, unknown>) => {

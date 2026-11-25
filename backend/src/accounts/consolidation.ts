@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { And, EntityManager, Equal, FindOperator, Raw } from 'typeorm';
 import { AuditSourceOptions } from '../audit/audit.service';
+import { dateHistoryRecords } from '../audit/record-dating';
 
 /**
  * The consolidation chart (plan planning/coa-consolidation-chart.md): at most one chart per
@@ -152,7 +153,9 @@ function actorParams(actor: AuditActor): [string | null, string, string | null] 
 
 /**
  * The audit line of each account rewritten by the `changed` CTE of a statement (columns `id`,
- * `before`, `after`), in the shape `AuditService.log` writes. `$user`, `$source` and `$ref` are
+ * `before`, `after`), in the shape `AuditService.log` writes. The same statement changes the
+ * consolidation columns of those accounts, which the trigger dates: the line needs no dating of
+ * its own (`audit/record-dating.ts`). `$user`, `$source` and `$ref` are
  * the placeholders of the actor's parameters.
  */
 function auditChangedSql(user: string, source: string, ref: string) {
@@ -189,8 +192,7 @@ export async function resyncFromChart(mg: EntityManager, chartId: string, actor:
      changed AS (
        UPDATE accounts a
        SET consolidation_account_name = src.account_name,
-           consolidation_account_description = src.description,
-           updated_at = now()
+           consolidation_account_description = src.description
        FROM prev
        JOIN src ON src.account_number = prev.consolidation_account_number
        WHERE a.id = prev.id AND a.tenant_id = ${CURRENT_TENANT}
@@ -233,8 +235,7 @@ export async function remapToConsolidationAccount(
        UPDATE accounts a
        SET consolidation_account_number = $3::bigint,
            consolidation_account_name = $4::text,
-           consolidation_account_description = $5::text,
-           updated_at = now()
+           consolidation_account_description = $5::text
        FROM prev
        WHERE a.id = prev.id AND a.tenant_id = ${CURRENT_TENANT}
        RETURNING a.id, to_jsonb(prev) AS before, to_jsonb(a) AS after
@@ -265,4 +266,6 @@ export async function insertAccountAudits(mg: EntityManager, rows: AccountAuditR
       ...actorParams(actor),
     ],
   );
+  // The accounts these lines show in their history take their date (`audit/record-dating.ts`).
+  await dateHistoryRecords(mg, rows.map((row) => ({ table: 'accounts', ...row })));
 }

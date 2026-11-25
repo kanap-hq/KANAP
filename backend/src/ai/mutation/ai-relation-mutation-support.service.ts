@@ -64,7 +64,8 @@ import {
 } from '../../portfolio/portfolio-relations.service';
 import { LINKED_MODULE_RESOURCES, linkedParticipationScope } from '../../common/relations/linked-reads';
 import { idsInScope } from '../../portfolio/portfolio-linked-reads';
-import { supplierContactRoleOf } from '../import/ai-import-code-labels';
+import { SUPPLIER_CONTACT_ROLE_LABELS, supplierContactRoleOf } from '../import/ai-import-code-labels';
+import { aiNamesLanguage } from '../ai-code-names';
 import { resolveAiEntityReference } from '../ai-entity-reference.util';
 
 export const AI_RELATION_ENTITY_TYPES = [
@@ -290,26 +291,71 @@ function roleTextOf(item: Record<string, unknown>): string | null {
   return textOrNull(value);
 }
 
-/** The roles of a supplier's, a contract's or a budget line's contact, for the refusals the model reads. */
-const SUPPLIER_CONTACT_ROLES_TEXT = 'commercial, technical, support or other';
+/**
+ * The roles of a supplier's, a contract's or a budget line's contact as the refusals the model reads
+ * name them: by the words of the contact's page in the person's language (`contacts.roles`), never
+ * by their codes, so that the model asks with the words the person sees. `of` names one role, and
+ * keeps a text no role is (an application's support role) as it is.
+ */
+type ContactRoleWords = { all: string; of: (role: string | null | undefined) => string };
+
+async function contactRoleWords(context: AiExecutionContextWithManager): Promise<ContactRoleWords> {
+  const language = await aiNamesLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
+  const names = SUPPLIER_CONTACT_ROLE_LABELS[language];
+  return {
+    all: Object.values(names).join(', '),
+    of: (role) => (role ? (Object.hasOwn(names, role) ? names[role] : role) : 'none'),
+  };
+}
+
+/** A text as its words compare: case and accents aside. */
+function plainWords(value: string): string {
+  return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
+/**
+ * Whether the person said this contact role in the conversation (Kad's chat): the role's code or
+ * one of its words in the four languages begins a word of one of their messages, on its first six
+ * letters (`technisch` says `Technik`, `autres` says `Autre`). The model sometimes picks a role the
+ * person never said (lot K2d, browser pass of 24/11): the addition then reads as one without a role,
+ * so that the person is asked. Outside a conversation (the MCP server, an agent), the role given is
+ * taken.
+ */
+async function personSaidContactRole(context: AiExecutionContextWithManager, code: string): Promise<boolean> {
+  if (context.surface !== 'chat' || !context.conversationId) return true;
+  const rows: Array<{ content: string | null }> = await context.manager.query(
+    `SELECT content FROM ai_messages WHERE tenant_id = $1 AND conversation_id = $2 AND role = 'user'`,
+    [context.tenantId, context.conversationId],
+  );
+  const said = plainWords(rows.map((row) => row.content ?? '').join('\n'));
+  const stems = [code, ...Object.values(SUPPLIER_CONTACT_ROLE_LABELS).map((labels) => labels[code])]
+    .filter((word): word is string => !!word)
+    .map((word) => plainWords(word).slice(0, 6).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return stems.some((stem) => new RegExp(`(^|[^\\p{L}\\p{N}])${stem}`, 'u').test(said));
+}
 
 /**
  * The role of a supplier's, a contract's or a budget line's contact: its code, read from the code or
  * from its word in any of the four languages (`supplierContactRoleOf`). Their screens ask it in the
- * dialog, with nothing chosen beforehand: an addition without a role, or with another word, is
- * refused before the card, so that the model asks for it. A removal reads the role said, as given
- * when it is none of the four (it names a link the record may not have), and null when none is said.
+ * dialog, with nothing chosen beforehand: an addition without a role, with another word, or with a
+ * role the person did not say in the conversation (`personSaidContactRole`), is refused before the
+ * card, so that the model asks for it. A removal reads the role said, as given when it is none of
+ * the four (it names a link the record may not have), and null when none is said.
  */
-function supplierContactRole(item: Record<string, unknown>, mode: 'add' | 'remove'): string | null {
-  const said = roleTextOf(item);
+async function supplierContactRole(context: AiExecutionContextWithManager, item: Record<string, unknown>, mode: 'add' | 'remove'): Promise<string | null> {
+  const given = roleTextOf(item);
+  const givenCode = given ? supplierContactRoleOf(given) : null;
+  const said = mode === 'add' && givenCode && !(await personSaidContactRole(context, givenCode)) ? null : given;
   if (!said) {
     if (mode === 'remove') return null;
-    throw new BadRequestException(`A contact role is required: ${SUPPLIER_CONTACT_ROLES_TEXT}. Ask the person which one; nothing was prepared.`);
+    const words = await contactRoleWords(context);
+    throw new BadRequestException(`A contact role is required, one of: ${words.all}. Ask the person which one with these words; nothing was prepared.`);
   }
   const code = supplierContactRoleOf(said);
   if (code) return code;
   if (mode === 'remove') return said;
-  throw new BadRequestException(`"${said}" is not a contact role. The roles are ${SUPPLIER_CONTACT_ROLES_TEXT}; nothing was prepared.`);
+  const words = await contactRoleWords(context);
+  throw new BadRequestException(`"${said}" is not a contact role. The roles are: ${words.all}; nothing was prepared.`);
 }
 
 /**
@@ -1079,15 +1125,16 @@ export class AiRelationMutationSupportService {
     if (links.length === 0) throw new BadRequestException(`${contact.label} is not linked to this record: there is nothing to remove.`);
     if (links.length === 1) return links;
     const item = objectValue(raw);
-    const said = config.kind === 'supplier_contacts' || SUPPLIER_ROLE_CONTACT_SOURCES.has(config.sourceEntity)
-      ? supplierContactRole(item, 'remove')
-      : roleTextOf(item);
+    const supplierRoles = config.kind === 'supplier_contacts' || SUPPLIER_ROLE_CONTACT_SOURCES.has(config.sourceEntity);
+    const said = supplierRoles ? await supplierContactRole(context, item, 'remove') : roleTextOf(item);
     if (said) {
       const matching = links.filter((link) => String(link.payload.role ?? '').toLowerCase() === said.toLowerCase());
       if (matching.length > 0) return matching;
-      const roles = links.map((link) => textOrNull(link.payload.role) ?? 'none').join(', ');
+      // The four roles by their words; an application's or an asset's support role is a text, given as typed.
+      const name = supplierRoles ? (await contactRoleWords(context)).of : (role: string | null) => role ?? 'none';
+      const roles = links.map((link) => name(textOrNull(link.payload.role))).join(', ');
       throw new BadRequestException(
-        `${contact.label} is linked to this record with the roles ${roles}, not ${said}: name one of them, or no role to remove the links added by hand.`,
+        `${contact.label} is linked to this record with the roles ${roles}, not ${name(said)}: name one of them, or no role to remove the links added by hand.`,
       );
     }
     const byHand = links.filter((link) => link.payload.origin !== 'supplier');
@@ -1116,7 +1163,7 @@ export class AiRelationMutationSupportService {
     const contact = await this.resolveReference(context, 'contacts', ref);
     // A contract's or a line's contact takes one of the four roles; an application's or an asset's
     // Support panel takes any text, or none.
-    const role = supplierOriginCapable ? supplierContactRole(item, mode) : roleTextOf(item);
+    const role = supplierOriginCapable ? await supplierContactRole(context, item, mode) : roleTextOf(item);
     const origin = supplierOriginCapable ? textOrNull(item.origin) ?? 'manual' : null;
     const stored = supplierOriginCapable
       ? currentItems.find((current) => current.payload.contact_id === contact.id && (current.payload.role ?? null) === role)
@@ -1130,8 +1177,9 @@ export class AiRelationMutationSupportService {
         [context.tenantId, sourceId],
       );
       const by = supplier?.name ? `by its supplier ${supplier.name}` : 'by its supplier';
+      const words = await contactRoleWords(context);
       throw new BadRequestException(
-        `${contact.label} is already linked to this ${record} ${by}, with the role ${role ?? 'none'}: there is nothing to do. Another role can be added.`,
+        `${contact.label} is already linked to this ${record} ${by}, with the role ${words.of(role)}: there is nothing to do. Another role can be added.`,
       );
     }
     return {
@@ -1146,7 +1194,7 @@ export class AiRelationMutationSupportService {
     const ref = itemRefOf(raw, CONTACT_REF_KEYS);
     if (!ref) throw new BadRequestException('Contact reference is required (contact_ref: its CTCT-n reference, email or name).');
     const contact = await this.resolveReference(context, 'contacts', ref);
-    const role = supplierContactRole(item, mode);
+    const role = await supplierContactRole(context, item, mode);
     return {
       key: `${contact.id}:${role}`,
       label: `${contact.label} - ${role}`,
@@ -1891,7 +1939,7 @@ export class AiRelationMutationSupportService {
       if (currentKeys.has(item.key)) continue;
       // A card made before the role was required (none was asked then) refuses in words.
       if (table.includeOrigin && !supplierContactRoleOf(String(item.payload.role ?? ''))) {
-        throw new BadRequestException(`A contact role is required: ${SUPPLIER_CONTACT_ROLES_TEXT}; nothing was changed.`);
+        throw new BadRequestException(`A contact role is required, one of: ${(await contactRoleWords(context)).all}; nothing was changed.`);
       }
       const columns = table.includeOrigin
         ? `(tenant_id, ${table.sourceColumn}, contact_id, role, origin)`

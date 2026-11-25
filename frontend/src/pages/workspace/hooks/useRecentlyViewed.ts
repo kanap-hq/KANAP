@@ -116,13 +116,13 @@ export const ENTITY_TYPE_CONFIG: Record<
   { route: (id: string, ref?: string) => string; resource: string; icon: string; labelKey: string }
 > = {
   project: {
-    route: (id) => `/portfolio/projects/${id}`,
+    route: (id, ref) => `/portfolio/projects/${ref || id}`,
     resource: 'portfolio_projects',
     icon: 'FolderOpen',
     labelKey: 'dashboard.tiles.entityTypes.project',
   },
   request: {
-    route: (id) => `/portfolio/requests/${id}`,
+    route: (id, ref) => `/portfolio/requests/${ref || id}`,
     resource: 'portfolio_requests',
     icon: 'Inbox',
     labelKey: 'dashboard.tiles.entityTypes.request',
@@ -158,7 +158,7 @@ export const ENTITY_TYPE_CONFIG: Record<
     labelKey: 'dashboard.tiles.entityTypes.contract',
   },
   task: {
-    route: (id) => `/portfolio/tasks/${id}`,
+    route: (id, ref) => `/portfolio/tasks/${ref || id}`,
     resource: 'tasks',
     icon: 'Task',
     labelKey: 'dashboard.tiles.entityTypes.task',

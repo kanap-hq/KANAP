@@ -56,8 +56,6 @@ function writers(race: Race, s: Seeded, round: number): Array<[string, (manager:
   const allocations = new SpendAllocationsService(undefined as any, undefined as any, undefined as any, captureAudit() as any);
   const ai = new AiFinancialPlanMutationSupportService(
     undefined as any, undefined as any, undefined as any, undefined as any, amountsService('opex') as any, versions as any,
-    // The rights read by a card that names companies: all of them here.
-    { readableResources: async (_context: unknown, resources: string[]) => new Set(resources) } as any,
   );
   const pct = 50 + (round % 3) * 10;
   return [

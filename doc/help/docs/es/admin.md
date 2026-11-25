@@ -345,6 +345,8 @@ Los recursos están organizados en grupos para facilitar la gestión:
 
 El recurso Presupuesto cubre por igual las líneas OPEX y CAPEX. Un rol que antes tenía niveles distintos en OPEX y CAPEX conserva el más alto de los dos en Presupuesto.
 
+Los nombres del proveedor, de las empresas y de los departamentos que lleva una línea presupuestaria que usted puede leer siguen siendo legibles, aunque su rol no pueda abrir esas listas.
+
 **Gestión del Portafolio**
 | Recurso | Qué controla |
 |---------|--------------|

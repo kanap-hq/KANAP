@@ -910,7 +910,6 @@ export class IncidentsService extends IncidentsBaseService {
     this.applyFields(incident, dto);
     const now = new Date();
     incident.updated_by = userId;
-    incident.updated_at = now;
     this.applyStatusTimestamps(incident, now);
 
     // The review document is titled `INC-N - <title> - Incident review`: a rename
@@ -993,7 +992,6 @@ export class IncidentsService extends IncidentsBaseService {
     incident.resolved_at = null;
     incident.closed_at = null;
     incident.updated_by = userId;
-    incident.updated_at = now;
     const saved = await mg.getRepository(Incident).save(incident);
 
     const changed: IncidentChangedFields = { status: { from: before.status, to: saved.status } };
@@ -1019,7 +1017,6 @@ export class IncidentsService extends IncidentsBaseService {
     const now = new Date();
     incident.status = 'cancelled';
     incident.updated_by = userId;
-    incident.updated_at = now;
 
     // Freeze the review with the cancellation, in the same transaction (§3.3).
     const reviewVersion = await this.captureReviewVersion(mg, incident.id, 'cancelled', userId);
@@ -1064,7 +1061,6 @@ export class IncidentsService extends IncidentsBaseService {
     const now = new Date();
     incident.confidential = confidential;
     incident.updated_by = userId;
-    incident.updated_at = now;
     const saved = await mg.getRepository(Incident).save(incident);
 
     await this.addEntry(mg, saved, {

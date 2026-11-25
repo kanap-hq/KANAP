@@ -9,7 +9,7 @@ import RelationsSectionTitle from '../../portfolio/components/RelationsSectionTi
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { CONTRACT_COMPLIANCE_STATE_COLORS, getDotColor } from '../../../utils/statusColors';
 import { toCatalogLocale } from '../../../utils/catalogLocalization';
-import { formatShortDate } from '../../../lib/dateFormat';
+import { formatShortInstantDate } from '../../../lib/dateFormat';
 import { useLocale } from '../../../i18n/useLocale';
 import { compactSelectMenuProps, drawerMenuItemSx, drawerSelectSx, inlineControlSx, tableCellTextFieldSx } from '../../../theme/formSx';
 import {
@@ -143,8 +143,8 @@ function RequirementRow({ item, reasons, readOnly, onSave }: {
   const dot = stateKey ? getDotColor(CONTRACT_COMPLIANCE_STATE_COLORS[stateKey], theme.palette.mode) : null;
   const updated = item.updated_at
     ? (item.updated_by?.name
-      ? t('contracts.compliance.updatedBy', { date: formatShortDate(item.updated_at, locale, { year: 'always' }), name: item.updated_by.name })
-      : t('contracts.compliance.updatedOn', { date: formatShortDate(item.updated_at, locale, { year: 'always' }) }))
+      ? t('contracts.compliance.updatedBy', { date: formatShortInstantDate(item.updated_at, locale, { year: 'always' }), name: item.updated_by.name })
+      : t('contracts.compliance.updatedOn', { date: formatShortInstantDate(item.updated_at, locale, { year: 'always' }) }))
     : undefined;
 
   const commitReference = () => {

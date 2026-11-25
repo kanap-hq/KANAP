@@ -819,7 +819,8 @@ function SortablePhaseRow({
               <MenuItem
                 onClick={() => {
                   setAddMenuAnchor(null);
-                  onNavigateToTask(`/portfolio/tasks/new/overview?projectId=${projectId}&phaseId=${phase.id}`);
+                  // The project's page adds the project, by its reference, and the way back.
+                  onNavigateToTask(`/portfolio/tasks/new/overview?phaseId=${phase.id}`);
                 }}
               >
                 <ListItemIcon><NoteAddIcon fontSize="small" /></ListItemIcon>

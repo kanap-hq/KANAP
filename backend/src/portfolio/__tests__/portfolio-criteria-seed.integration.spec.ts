@@ -169,7 +169,41 @@ async function testSeedLanguage() {
   }
 }
 
-runSpecs('portfolio-criteria-seed.integration.spec', [testSeedLanguage]).catch((err) => {
+/**
+ * A criterion changed in the settings recomputes the requests' scores: a computed score is no edit
+ * of the request, whose modification date stays (migration 1856270000000).
+ */
+async function testRecalculatedScoreKeepsTheDate() {
+  const OLD_DATE = '2020-01-02T03:04:05.000Z';
+  const svc = buildServices();
+  const tenants: ActivatedTenant[] = [];
+  try {
+    const t = await createActivatedTenant(svc, { tag: 'cr-date', orgName: 'Criteria date' });
+    tenants.push(t);
+    const [criterion] = await inTenant(t.tenantId, (manager) => service().list(t.tenantId, { manager }));
+    const requestId = await inTenant(t.tenantId, async (manager) => {
+      const [row] = await manager.query(
+        `INSERT INTO portfolio_requests (tenant_id, name, item_number, criteria_values)
+         VALUES ($1, 'Scored request', 1, jsonb_build_object($2::text, $3::text)) RETURNING id`,
+        [t.tenantId, criterion.id, criterion.values[0].id],
+      );
+      await manager.query(`UPDATE portfolio_requests SET updated_at = $2 WHERE id = $1`, [row.id, OLD_DATE]);
+      return row.id as string;
+    });
+    const read = () => inTenant(t.tenantId, async (manager) =>
+      (await manager.query(`SELECT priority_score::float AS score, updated_at FROM portfolio_requests WHERE id = $1`, [requestId]))[0]);
+    const before = await read();
+
+    await inTenant(t.tenantId, (manager) => service().update(criterion.id, { inverted: !criterion.inverted }, t.tenantId, null, { manager }));
+    const after = await read();
+    assert.notEqual(after.score, before.score, 'the score is recomputed');
+    assert.equal(after.updated_at.toISOString(), OLD_DATE, 'the request keeps its modification date');
+  } finally {
+    await cleanupTenants(tenants.map((t) => t.tenantId));
+  }
+}
+
+runSpecs('portfolio-criteria-seed.integration.spec', [testSeedLanguage, testRecalculatedScoreKeepsTheDate]).catch((err) => {
   console.error(err);
   process.exitCode = 1;
 });

@@ -114,6 +114,7 @@ export class TaskTimeEntriesService {
     const result = await manager.query(
       `SELECT tte.*,
               t.title as task_title,
+              t.item_number as task_item_number,
               u.email as user_email, u.first_name as user_first_name, u.last_name as user_last_name,
               lb.email as logged_by_email, lb.first_name as logged_by_first_name, lb.last_name as logged_by_last_name
        FROM task_time_entries tte

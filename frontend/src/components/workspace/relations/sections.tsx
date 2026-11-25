@@ -8,7 +8,7 @@ import ContractLineMismatchMark, { type ContractLineMismatch } from '../../finan
 import FxMissingNotice, { FxMissingLocalAmount } from '../../finance/FxMissingNotice';
 import { fxMissingOfLines } from '../../finance/fxMissing';
 import { formatAmount } from '../../../i18n/formatters';
-import { formatShortDate } from '../../../lib/dateFormat';
+import { formatShortDate, formatShortInstantDate } from '../../../lib/dateFormat';
 import { isIncidentLocked } from '../../../pages/it/workspace/incidentWorkspace';
 import { buildItemPath, formatItemRef, itemAddress } from '../../../utils/item-ref';
 import { getDotColor, INCIDENT_SEVERITY_COLORS } from '../../../utils/statusColors';
@@ -354,7 +354,7 @@ export function incidentsSection({
         header: t('components.incidentRelations.columns.detected'),
         width: 110,
         hideOrder: 1,
-        render: (row) => relationDate(row.detected_at, lang),
+        render: (row) => row.detected_at ? formatShortInstantDate(row.detected_at, lang) : DASH,
       },
     ],
     search: async (q, signal) => {

@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { KanapDialog, PropertyRow } from '../design';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { normalizeWebsiteUrl } from '../design/RelevantWebsitesList';
-import { formatShortDate } from '../../lib/dateFormat';
+import { formatShortInstantDate } from '../../lib/dateFormat';
 import { drawerFieldValueSx } from '../../theme/formSx';
 import { RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from './RelationsTable';
 
@@ -130,7 +130,7 @@ export default function LinksAndFilesSection({
     else onOpenFile(row.file);
   };
 
-  const date = (value?: string | null) => (value ? formatShortDate(value, lang) : '—');
+  const date = (value?: string | null) => (value ? formatShortInstantDate(value, lang) : '—');
   const iconSx = { fontSize: 16, color: 'kanap.text.tertiary', verticalAlign: 'middle' } as const;
   const columns: Array<RelationsColumn<Row>> = [
     {

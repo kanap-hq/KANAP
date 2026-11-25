@@ -24,7 +24,7 @@ import api from '../../api';
 import { useKanapDialogs } from '../design';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { useLocale } from '../../i18n/useLocale';
-import { formatShortDate } from '../../lib/dateFormat';
+import { formatShortInstantDate } from '../../lib/dateFormat';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDocPageUrl } from '../../utils/docUrls';
 import DataAccessNodePicker from './DataAccessNodePicker';
@@ -363,7 +363,7 @@ const DataAccessPanel = React.forwardRef<DataAccessPanelHandle, Props>(function 
             <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
               {t('admin:dataAccess.modified', {
                 name: data.updated_by_name,
-                date: formatShortDate(data.updated_at, locale, { year: 'always' }),
+                date: formatShortInstantDate(data.updated_at, locale, { year: 'always' }),
               })}
             </Typography>
           )}

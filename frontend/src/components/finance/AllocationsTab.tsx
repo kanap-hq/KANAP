@@ -35,9 +35,11 @@ type PickerOption = { id: string; label: string };
  * One click opens; a second selects. Optionally auto-opens (e.g. on "Add row").
  */
 function InlinePicker({
-  value, options, placeholder, emptyLabel, disabled, error, autoOpen, onSelect, onAutoOpened,
+  value, valueLabel, options, placeholder, emptyLabel, disabled, error, autoOpen, onSelect, onAutoOpened,
 }: {
   value: string | null;
+  /** The value's name when the options do not hold it (a name the line carries, the list not readable). */
+  valueLabel?: string | null;
   options: PickerOption[];
   placeholder: string;
   emptyLabel: string;
@@ -55,7 +57,7 @@ function InlinePicker({
       onAutoOpened?.();
     }
   }, [autoOpen]); // eslint-disable-line react-hooks/exhaustive-deps
-  const label = options.find((o) => o.id === value)?.label ?? null;
+  const label = options.find((o) => o.id === value)?.label ?? valueLabel ?? null;
   return (
     <>
       <Box
@@ -141,7 +143,10 @@ type Row = { company_id: string | null; department_id: string | null; allocation
 type Company = { id: string; name: string; base_currency?: string | null; headcount_year?: number; it_users_year?: number; turnover_year?: number };
 type Department = { id: string; name: string; company_id: string };
 
-type ComputedItem = { company_id: string; department_id: string | null; allocation_pct: number };
+/** A row as stored, with the names the line carries (readable without the companies or departments lists). */
+type ComputedItem = {
+  company_id: string; company_name?: string | null; department_id: string | null; department_name?: string | null; allocation_pct: number;
+};
 type YearTotals = Partial<Record<AmountMeasure, number | string>>;
 /**
  * The line's allocation for one year, as stored: the tab's server state (React Query). `signature`
@@ -243,18 +248,23 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   const budgetTotal = num(yearTotals[defaultColumn.measure]);
   // Companies (headcount, IT users, turnover of the year) and departments: the full lists, read once per
   // year for every line. A tenant has a bounded set of them, and every driver needs all their metrics.
+  // Read only with the right to read them: without it, the rows show the names the line carries.
+  const canReadCompanies = hasLevel('companies', 'reader');
+  const canReadDepartments = hasLevel('departments', 'reader');
   const companiesQuery = useQuery({
     queryKey: allocationCompaniesKey(year),
     queryFn: async ({ signal }) => (await api.get<{ items: Company[] }>(`/companies`, { params: { year, page: 1, limit: 1000, sort: 'name:ASC' }, signal })).data?.items || [],
     staleTime: ORGANISATION_STALE_MS,
+    enabled: canReadCompanies,
   });
-  // Departments are optional here (a role may not read them): a failed read leaves the list empty for
-  // this visit, and is not cached, so the next visit reads them again.
+  // A failed read of the departments leaves the list empty for this visit, and is not cached, so the
+  // next visit reads them again.
   const departmentsQuery = useQuery({
     queryKey: allocationDepartmentsKey(year),
     queryFn: async ({ signal }) => (await api.get<{ items: Department[] }>(`/departments`, { params: { year, page: 1, limit: 1000, sort: 'name:ASC' }, signal })).data?.items || [],
     staleTime: ORGANISATION_STALE_MS,
     retry: false,
+    enabled: canReadDepartments,
   });
   const companies = React.useMemo(() => companiesQuery.data ?? [], [companiesQuery.data]);
   const departments = React.useMemo(() => departmentsQuery.data ?? [], [departmentsQuery.data]);
@@ -264,8 +274,17 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     queryKey: snapshotKey,
     queryFn: ({ signal }) => fetchAllocationsSnapshot(config, id, year, signal),
   });
-  // Loading until the allocation and the companies are read, or one of them failed (the error shows).
-  const loading = (!snapshotQuery.data && !snapshotQuery.error) || (!companiesQuery.data && !companiesQuery.error);
+  // Loading until the allocation and the companies (when readable) are read, or one of them failed (the error shows).
+  const loading = (!snapshotQuery.data && !snapshotQuery.error) || (canReadCompanies && !companiesQuery.data && !companiesQuery.error);
+  // The names the stored rows carry, for the companies and departments the lists do not hold.
+  const carriedNames = React.useMemo(() => {
+    const names = { companies: new Map<string, string>(), departments: new Map<string, string>() };
+    for (const item of snapshotQuery.data?.computed ?? []) {
+      if (item.company_id && item.company_name) names.companies.set(item.company_id, item.company_name);
+      if (item.department_id && item.department_name) names.departments.set(item.department_id, item.department_name);
+    }
+    return names;
+  }, [snapshotQuery.data]);
   const [autoOpenIdx, setAutoOpenIdx] = React.useState<number | null>(null);
 
   const isManualPct = method === 'manual_pct';
@@ -307,7 +326,10 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   const rowsRef = React.useRef(rows); rowsRef.current = rows;
   const versionRef = React.useRef(version); versionRef.current = version;
 
-  const companyName = React.useCallback((cid: string | null) => companies.find((c) => c.id === cid)?.name ?? '—', [companies]);
+  const companyName = React.useCallback((cid: string | null) =>
+    companies.find((c) => c.id === cid)?.name ?? (cid ? carriedNames.companies.get(cid) : undefined) ?? '—', [companies, carriedNames]);
+  const departmentName = (did: string | null): string | null =>
+    departments.find((d) => d.id === did)?.name ?? (did ? carriedNames.departments.get(did) ?? null : null);
   const companyOptions = React.useMemo<PickerOption[]>(() => companies.map((c) => ({ id: c.id, label: c.name })), [companies]);
   const deptOptionsFor = React.useCallback((companyId: string | null): PickerOption[] =>
     departments.filter((d) => !companyId || d.company_id === companyId).map((d) => ({ id: d.id, label: d.name })), [departments]);
@@ -689,7 +711,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     const manual = view.method === 'manual_pct' || view.method === 'manual_company' || view.method === 'manual_department';
     if (!manual || !view.rows?.length) return label;
     const parts = view.rows.map((r) => {
-      const department = r.department_id ? departments.find((d) => d.id === r.department_id)?.name : null;
+      const department = departmentName(r.department_id);
       return `${companyName(r.company_id)}${department ? ` / ${department}` : ''} ${round2(num(r.allocation_pct))} %`;
     });
     return `${label} · ${parts.join(', ')}`;
@@ -774,6 +796,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', minWidth: 0 }}>
                       <InlinePicker
                         value={r.company_id}
+                        valueLabel={r.company_id ? carriedNames.companies.get(r.company_id) : null}
                         options={companyOptions}
                         placeholder={t(`${config.i18nPrefix}.allocations.selectCompany`)}
                         emptyLabel={t(`${config.i18nPrefix}.allocations.noCompanies`)}
@@ -786,6 +809,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
                       {isManualDept && (
                         <InlinePicker
                           value={r.department_id}
+                          valueLabel={r.department_id ? carriedNames.departments.get(r.department_id) : null}
                           options={deptOptionsFor(r.company_id)}
                           placeholder={t(`${config.i18nPrefix}.allocations.selectDepartment`)}
                           emptyLabel={t(`${config.i18nPrefix}.allocations.noDepartments`)}

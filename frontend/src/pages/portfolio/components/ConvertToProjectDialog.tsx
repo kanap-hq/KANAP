@@ -8,6 +8,7 @@ import FormattedNumberField from '../../../components/inputs/FormattedNumberFiel
 import { decimalMark } from '../../../i18n/formatters';
 import { useLocale } from '../../../i18n/useLocale';
 import api from '../../../api';
+import { itemAddress } from '../../../utils/item-ref';
 import { MarkdownContent } from '../../../components/MarkdownContent';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
@@ -19,7 +20,8 @@ interface ConvertToProjectDialogProps {
     name: string;
     target_delivery_date?: string | null;
   };
-  onSuccess: (projectId: string) => void;
+  /** The new project's address segment: its reference (`PRJ-12`), else its uuid. */
+  onSuccess: (projectAddress: string) => void;
 }
 
 export default function ConvertToProjectDialog({
@@ -101,7 +103,7 @@ export default function ConvertToProjectDialog({
 
       const res = await api.post(`/portfolio/requests/${request.id}/convert`, body);
 
-      onSuccess(res.data.id);
+      onSuccess(itemAddress('project', res.data));
     } catch (e: any) {
       setError(getApiErrorMessage(
         e,

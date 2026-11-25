@@ -90,11 +90,28 @@ export class UsersDeleteService extends BaseDeleteService<User> {
 
     try {
       // The task owner and viewer lists name users without a foreign key: the user leaves them here.
-      await manager.query(
-        `UPDATE tasks SET owner_ids = owner_ids - $2::text, viewer_ids = viewer_ids - $2::text
-          WHERE tenant_id = $1 AND (owner_ids @> to_jsonb($2::text) OR viewer_ids @> to_jsonb($2::text))`,
+      // A person leaving is no edit of the task: the second statement writes back the modification
+      // date the first one read, and a statement that writes the date keeps it (migration 1856270000000).
+      const [left]: [Array<{ id: string; updated_at: string }>, number] = await manager.query(
+        `WITH named AS (
+           SELECT id, updated_at::text AS updated_at FROM tasks
+            WHERE tenant_id = $1 AND (owner_ids @> to_jsonb($2::text) OR viewer_ids @> to_jsonb($2::text))
+            FOR UPDATE
+         )
+         UPDATE tasks t SET owner_ids = t.owner_ids - $2::text, viewer_ids = t.viewer_ids - $2::text
+           FROM named
+          WHERE t.tenant_id = $1 AND t.id = named.id
+         RETURNING t.id, named.updated_at`,
         [user.tenant_id, id],
       );
+      if (left.length > 0) {
+        await manager.query(
+          `UPDATE tasks t SET updated_at = v.updated_at::timestamptz
+             FROM unnest($2::uuid[], $3::text[]) AS v(id, updated_at)
+            WHERE t.tenant_id = $1 AND t.id = v.id`,
+          [user.tenant_id, left.map((row) => row.id), left.map((row) => row.updated_at)],
+        );
+      }
       await repo.delete({ id } as any);
     } catch (error: any) {
       if (error?.code === '23503' || error?.message?.includes('foreign key constraint')) {

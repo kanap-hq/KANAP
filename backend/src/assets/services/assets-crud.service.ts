@@ -423,7 +423,6 @@ export class AssetsCrudService extends AssetsBaseService {
       existing.end_of_life_date = this.normalizeNullable((body as any).end_of_life_date);
     }
 
-    existing.updated_at = new Date();
     const saved = await repo.save(existing);
     await this.audit.log(
       { table: 'assets', recordId: saved.id, action: 'update', before, after: saved, userId, ...this.auditSource(opts) },
@@ -431,9 +430,9 @@ export class AssetsCrudService extends AssetsBaseService {
     );
     // Retired or back in service: its technologies are matched again with the vulnerabilities.
     if (before.status !== saved.status) await this.cpeEvents?.emitForSubjects(opts?.manager ?? repo.manager, tenant, 'asset', [saved.id]);
-    if (has('operating_system')) {
-      await this.applyOperatingSystem(tenant, saved.id, (body as any).operating_system, userId, opts);
-    }
+    // The operating system is a link of its own: its change writes the asset's history entry
+    // (asset_technologies), which dates it (audit/record-dating.ts).
+    if (has('operating_system')) await this.applyOperatingSystem(tenant, saved.id, (body as any).operating_system, userId, opts);
     return this.attachOperatingSystem(saved, tenant, opts);
   }
 
@@ -588,8 +587,8 @@ export class AssetsCrudService extends AssetsBaseService {
         );
         await repo.save(payload);
       }
-      await this.getRepo(trx).update({ id: clusterId, tenant_id: tenant } as any, { updated_at: new Date() } as any);
-
+      // The members are rows of their own: their change shows in the cluster's history entry below,
+      // which dates it (audit/record-dating.ts); an unchanged set shows nothing.
       await this.audit.log(
         {
           table: 'asset_cluster_members',
