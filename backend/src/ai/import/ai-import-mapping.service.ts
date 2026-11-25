@@ -196,7 +196,8 @@ export class AiImportMappingService {
       ...converted.preview.columns.map((column): [string, string] => [column.column, column.title]),
     ]);
     const onApproval = budgetFacts ?? (checked.report.kind === 'rows' ? rowsApprovalFacts(checked, { titles, language }) : undefined);
-    return { target, mapping: { ...(onApproval ? { on_approval: onApproval } : {}), ...converted.preview, validation: checked } };
+    const preview = withoutUndoneNotes(converted.preview, checked, input.choices ?? []);
+    return { target, mapping: { ...(onApproval ? { on_approval: onApproval } : {}), ...preview, validation: checked } };
   }
 
   /**
@@ -301,6 +302,23 @@ export class AiImportMappingService {
     }
     return attachment;
   }
+}
+
+/**
+ * The card as the person's choices leave it (lot I6a of 26.12.1): a column with a match the person
+ * undid has no note, the model's reason for a match the card no longer makes. The mapping keeps the
+ * note (`columns` of the input): matched again, the column shows it again. The choices are those the
+ * check followed: a budget file drops an undone match its file no longer makes (`matching.choices`).
+ */
+function withoutUndoneNotes(
+  preview: AiImportMappingPreviewDto,
+  check: AiImportRunDto,
+  choices: readonly ImportCardChoice[],
+): AiImportMappingPreviewDto {
+  const followed: readonly ImportCardChoice[] = check.matching ? check.matching.choices : choices;
+  const undone = new Set(followed.flatMap((choice) => (choice.kind === 'unmatch' ? [choice.column] : [])));
+  if (undone.size === 0) return preview;
+  return { ...preview, columns: preview.columns.map((column) => (undone.has(column.column) && column.note ? { ...column, note: null } : column)) };
 }
 
 /** The columns whose cell holds several names, separated by commas, each one matched on its own. */
