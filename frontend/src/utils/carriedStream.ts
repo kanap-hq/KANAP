@@ -10,9 +10,25 @@ type CatalogCategory = { id: string; name: string };
 
 /** The full lists of the portfolio classification (`/portfolio/classification/all`), inactive values included. */
 export type ClassificationCatalog = {
+  sources?: CatalogCategory[];
   streams?: CatalogStream[];
   categories?: CatalogCategory[];
 } | null | undefined;
+
+/**
+ * The values a picker offers (the active ones), plus the one the record carries when it is not among
+ * them (an inactive source or category): the record shows it by its name and keeps it until it changes;
+ * the other records are not offered it.
+ */
+export function withCarriedValue<T extends { id: string; name: string }>(
+  offered: T[],
+  currentId: string | null | undefined,
+  all: CatalogCategory[] | undefined,
+): Array<{ id: string; name: string }> {
+  if (!currentId || offered.some((item) => item.id === currentId)) return offered;
+  // A value the person cannot name stays blank: never its raw id.
+  return [...offered, { id: currentId, name: all?.find((item) => item.id === currentId)?.name ?? '' }];
+}
 
 /** The name of a stream, with its own category in parentheses when the record's category is another one. */
 export function carriedStreamLabel(

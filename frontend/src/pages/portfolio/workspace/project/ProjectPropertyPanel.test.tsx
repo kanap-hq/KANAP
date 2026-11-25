@@ -26,8 +26,15 @@ const IT = 'cat-it';
 const BUSINESS = 'cat-business';
 const OPS_IT = 'stream-ops-it';
 const RUN_BUSINESS = 'stream-run-business';
+const LEGACY = 'cat-legacy';
+const OLD_SOURCE = 'source-old';
 const CATALOG = {
-  categories: [{ id: IT, name: 'Infrastructure', is_active: true }, { id: BUSINESS, name: 'Business applications', is_active: true }],
+  sources: [{ id: OLD_SOURCE, name: 'Old intake', is_active: false }],
+  categories: [
+    { id: IT, name: 'Infrastructure', is_active: true },
+    { id: BUSINESS, name: 'Business applications', is_active: true },
+    { id: LEGACY, name: 'Legacy', is_active: false },
+  ],
   streams: [
     { id: OPS_IT, name: 'Ops', category_id: IT, is_active: true },
     { id: RUN_BUSINESS, name: 'Run', category_id: BUSINESS, is_active: true },
@@ -42,7 +49,7 @@ function renderPanel(form: Record<string, unknown>, handlers: { onCategoryChange
         <MemoryRouter>
           <ProjectPropertyPanel
             canManage
-            categories={CATALOG.categories}
+            categories={CATALOG.categories.filter((category) => category.is_active)}
             classification={CATALOG}
             form={{ id: 'proj-1', status: 'in_progress', origin: 'fast_track', ...form }}
             onCategoryChange={handlers.onCategoryChange ?? (() => {})}
@@ -110,5 +117,20 @@ describe('ProjectPropertyPanel, a stream of another category kept from before th
     fireEvent.mouseDown(within(fieldRow('workspace.project.fields.category')).getByRole('combobox'));
     fireEvent.click(within(screen.getByRole('listbox')).getByText('Infrastructure'));
     expect(onCategoryChange).toHaveBeenCalledWith(IT);
+  });
+
+  it('shows an inactive category and source it carries by their names, without a warning', () => {
+    renderPanel({ category_id: LEGACY, source_id: OLD_SOURCE, stream_id: null });
+    expect(within(fieldRow('workspace.project.fields.category')).getByText('Legacy')).toBeTruthy();
+    expect(within(fieldRow('workspace.project.fields.source')).getByText('Old intake')).toBeTruthy();
+    const warnings = [...warn.mock.calls, ...error.mock.calls].map((call) => String(call[0]));
+    expect(warnings.filter((text) => /out-of-range|MUI/.test(text))).toEqual([]);
+  });
+
+  it('does not offer an inactive category to a record that does not carry it', () => {
+    renderPanel({ category_id: BUSINESS, stream_id: RUN_BUSINESS });
+    fireEvent.mouseDown(within(fieldRow('workspace.project.fields.category')).getByRole('combobox'));
+    const options = within(screen.getByRole('listbox')).getAllByRole('option').map((option) => option.textContent);
+    expect(options).toEqual(['common:labels.none', 'Infrastructure', 'Business applications']);
   });
 });
