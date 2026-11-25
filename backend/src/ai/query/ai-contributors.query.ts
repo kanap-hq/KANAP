@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { codeLabels } from '../import/ai-import-code-labels';
+import { LOOKUP_MAX_IDS } from '../../common/lookup/reference-lookup';
 import { COMPANY_LOOKUP, lookupReference } from '../../common/lookup/reference-lookups';
 import { ORGANISATION_LOOKUP_READERS } from '../../common/lookup/lookup-requirements';
 import type { PermissionLevel } from '../../permissions/permissions.service';
@@ -153,8 +154,10 @@ export async function readContributors(services: AiContributorServices, opts: Ai
 
   const companies = new Map<string, string>();
   const companyIds = Array.from(new Set(items.map((item) => item.default_company_id).filter((id): id is string => !!id)));
-  if (opts.readsCompanies && companyIds.length > 0) {
-    const found = await lookupReference({ manager: opts.manager, tenantId: opts.tenantId }, COMPANY_LOOKUP, { ids: companyIds.join(',') });
+  // The drawer's company lookup takes 100 ids a call: as many calls as needed, one after the other.
+  for (let start = 0; opts.readsCompanies && start < companyIds.length; start += LOOKUP_MAX_IDS) {
+    const ids = companyIds.slice(start, start + LOOKUP_MAX_IDS).join(',');
+    const found = await lookupReference({ manager: opts.manager, tenantId: opts.tenantId }, COMPANY_LOOKUP, { ids });
     for (const company of found.items as Array<{ id: string; name: string }>) companies.set(company.id, company.name);
   }
 
