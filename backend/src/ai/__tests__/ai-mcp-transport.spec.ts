@@ -158,7 +158,8 @@ async function testInitializeAdvertisesTools(url: string) {
     assert.ok(instructions.includes(family), family);
   }
   // The reference data are read (Plaid L9): searched by search_all, the rates by query_entities only.
-  assert.match(instructions, /start with search_all \(names, codes and references such as APP-4; cost centers, calendars and dimensions included\)/);
+  // The contributors too (lot I7d of 26.12.1), by MEM-n.
+  assert.match(instructions, /start with search_all \(names, codes, references like APP-4 or MEM-4; cost centers, calendars, dimensions, contributors included\)/);
   assert.match(instructions, /Exchange rates: query_entities on exchange_rates\./);
   assert.doesNotMatch(instructions, /does not read cost centers|does not read[^.]*(calendars|exchange rates)/);
   // Roles and data access are read only for an administrator of users with access to all data.
