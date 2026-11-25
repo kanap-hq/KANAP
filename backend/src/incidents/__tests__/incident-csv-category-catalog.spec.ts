@@ -70,8 +70,9 @@ async function testRetiredCategory(): Promise<void> {
   });
   const category = result.errors.filter((error: any) => error.column === 'category');
   assert.deepEqual(category.map((error: any) => [error.row, error.code, error.params]), [
-    [2, 'catalog_value_retired', { value: 'Legacy outage', allowed: 'outage (Service outage)' }],
-    [4, 'catalog_value_retired', { value: 'legacy', allowed: 'outage (Service outage)' }],
+    // The refused value by its catalog name, also when the cell gives its code, with its code and list.
+    [2, 'catalog_value_retired', { value: 'Legacy outage', allowed: 'outage (Service outage)', valueCode: 'legacy', list: 'incidentCategories' }],
+    [4, 'catalog_value_retired', { value: 'Legacy outage', allowed: 'outage (Service outage)', valueCode: 'legacy', list: 'incidentCategories' }],
   ], 'the new incident and INC-13 are refused; INC-12, which holds it, passes');
   assert.deepEqual(result.errors.filter((error: any) => error.row === 3), [], 'INC-12 repeats what it holds: no error');
 }

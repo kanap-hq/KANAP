@@ -253,7 +253,7 @@ export abstract class ConnectionsBaseService {
     const normalized = String(value ?? '').trim();
     const fallbackCode = allowed.includes(fallback) ? fallback : allowed[0] || 'active';
     if (!normalized) return fallbackCode;
-    return resolveOfferedCatalogCode(normalized, settings.lifecycleStates || [], { held, what: 'lifecycle' });
+    return resolveOfferedCatalogCode(normalized, settings.lifecycleStates || [], { held, what: 'lifecycle', list: 'lifecycleStates' });
   }
 
   protected normalizeEnvironment(value: unknown): EnvironmentValue {
@@ -344,7 +344,7 @@ export abstract class ConnectionsBaseService {
    */
   protected async validateEntityCode(code: string, tenantId: string, manager?: EntityManager, held?: string | null) {
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    resolveOfferedCatalogCode(code, settings.entities || [], { held, what: 'entity' });
+    resolveOfferedCatalogCode(code, settings.entities || [], { held, what: 'entity', list: 'entities' });
   }
 
   protected async normalizeProtocolCodes(
@@ -359,7 +359,7 @@ export abstract class ConnectionsBaseService {
       throw new BadRequestException('At least one protocol is required');
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    return resolveOfferedCatalogCodes(list, settings.connectionTypes || [], { held, what: 'protocol' });
+    return resolveOfferedCatalogCodes(list, settings.connectionTypes || [], { held, what: 'protocol', list: 'connectionTypes' });
   }
 
   /**
@@ -398,7 +398,7 @@ export abstract class ConnectionsBaseService {
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
     const resolved = new Map<string, string | null>();
     for (const [code, portOverride] of byCode.entries()) {
-      resolved.set(resolveOfferedCatalogCode(code, settings.connectionTypes || [], { held, what: 'protocol' }), portOverride);
+      resolved.set(resolveOfferedCatalogCode(code, settings.connectionTypes || [], { held, what: 'protocol', list: 'connectionTypes' }), portOverride);
     }
     return Array.from(resolved.entries()).map(([code, port_override]) => ({ code, port_override }));
   }
@@ -417,7 +417,7 @@ export abstract class ConnectionsBaseService {
     const normalized = String(value).trim();
     if (!normalized) return null;
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    return resolveOfferedCatalogCode(normalized, settings.pathHopFunctions || [], { held, what: 'path-hop function' });
+    return resolveOfferedCatalogCode(normalized, settings.pathHopFunctions || [], { held, what: 'path-hop function', list: 'pathHopFunctions' });
   }
 
   protected normalizeLegOrderIndex(value: unknown): number {
@@ -436,7 +436,7 @@ export abstract class ConnectionsBaseService {
       throw new BadRequestException('At least one protocol is required for each leg');
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    return resolveOfferedCatalogCodes(normalized, settings.connectionTypes || [], { held, what: 'protocol' });
+    return resolveOfferedCatalogCodes(normalized, settings.connectionTypes || [], { held, what: 'protocol', list: 'connectionTypes' });
   }
 
   /**

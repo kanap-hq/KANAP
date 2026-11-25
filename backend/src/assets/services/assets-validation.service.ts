@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { resolveOfferedCatalogCode } from '../../it-ops-settings/catalog-resolve';
+import { catalogValueRefusal, resolveOfferedCatalogCode } from '../../it-ops-settings/catalog-resolve';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { assetBadRequest, assetFqdnOf } from '../asset-rules';
 import { isValidHostname } from '../hostname.util';
@@ -34,7 +34,7 @@ export class AssetsValidationService {
       throw new BadRequestException('kind is required');
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    return resolveOfferedCatalogCode(value, settings.serverKinds || [], { held, what: 'asset type' });
+    return resolveOfferedCatalogCode(value, settings.serverKinds || [], { held, what: 'asset type', list: 'serverKinds' });
   }
 
   async resolveProvider(
@@ -47,7 +47,7 @@ export class AssetsValidationService {
       throw new BadRequestException('provider is required');
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    return resolveOfferedCatalogCode(value, settings.serverProviders || [], { held, what: 'provider' });
+    return resolveOfferedCatalogCode(value, settings.serverProviders || [], { held, what: 'provider', list: 'serverProviders' });
   }
 
   /**
@@ -86,7 +86,7 @@ export class AssetsValidationService {
     const normalized = this.normalizeNullable(value);
     if (!normalized) return null;
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    return resolveOfferedCatalogCode(normalized, settings.domains || [], { held, what: 'domain' });
+    return resolveOfferedCatalogCode(normalized, settings.domains || [], { held, what: 'domain', list: 'domains' });
   }
 
   async resolveAdminZone(
@@ -101,7 +101,7 @@ export class AssetsValidationService {
     return resolveOfferedCatalogCode(normalized, settings.adminZones || [], {
       held,
       what: 'administration zone',
-      refuse: (message, refusal) => new BadRequestException(refusal.retired ? message : `Unknown administration zone: ${normalized}. Use one of: ${refusal.allowed}.`),
+      list: 'adminZones',
     });
   }
 
@@ -192,13 +192,17 @@ export class AssetsValidationService {
       }
 
       if (!type) throw new BadRequestException('Invalid IP address type ""');
-      const typeCode = resolveOfferedCatalogCode(type, settings.ipAddressTypes || [], { held: heldTypes, what: 'IP address type' });
+      const typeCode = resolveOfferedCatalogCode(type, settings.ipAddressTypes || [], { held: heldTypes, what: 'IP address type', list: 'ipAddressTypes' });
 
       if (subnet_cidr && !allowedSubnets.has(subnet_cidr)) {
         const retired = (settings.subnets || []).some((s) => s.cidr === subnet_cidr);
-        throw new BadRequestException(retired
-          ? `The subnet "${subnet_cidr}" is retired: only a record that already holds it keeps it.`
-          : `Invalid subnet "${subnet_cidr}"`);
+        if (!retired) throw new BadRequestException(`Invalid subnet "${subnet_cidr}"`);
+        // A subnet is named by its CIDR, on the screen as here.
+        const allowed = [...allowedSubnets].join(', ');
+        throw catalogValueRefusal(
+          { value: subnet_cidr, allowed, retired: true },
+          `The subnet "${subnet_cidr}" is retired: only a record that already holds it keeps it. Use one of: ${allowed}.`,
+        );
       }
 
       if (subnet_cidr && !this.ipBelongsToSubnet(ip, subnet_cidr)) {
@@ -261,7 +265,7 @@ export class AssetsValidationService {
     if (value === undefined || value === null || String(value).trim() === '') {
       return fallbackCode;
     }
-    return resolveOfferedCatalogCode(value, settings.lifecycleStates || [], { held, what: 'lifecycle' });
+    return resolveOfferedCatalogCode(value, settings.lifecycleStates || [], { held, what: 'lifecycle', list: 'lifecycleStates' });
   }
 
   private pickLifecycleFallback(candidate: string | undefined, allowed: string[]): string {

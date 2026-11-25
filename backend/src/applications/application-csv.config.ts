@@ -1,6 +1,6 @@
 import type { CsvLanguage } from '../common/csv-sheet';
 import { catalogFromMetadata, catalogToMetadata } from '../it-ops-settings/classification-catalog';
-import { CatalogOptionLike, CatalogRefusal, offeredCatalogList, requireImportCatalogs, resolveCatalogCode, resolveOfferedCatalogCodes } from '../it-ops-settings/catalog-resolve';
+import { CatalogOptionLike, offeredCatalogList, requireImportCatalogs, resolveCatalogCode, resolveOfferedCatalogCodes } from '../it-ops-settings/catalog-resolve';
 import { APPLICATION_NAME_MAX, applicationNameKey, assertApplicationDates, codedErrorOf } from './application-rules';
 import { CLASSIFICATION_INPUT_FIELDS, classificationPatch } from './services/application-classification';
 import {
@@ -143,10 +143,10 @@ async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportC
 
     // Rule P7: a value the catalog does not know, or one it retired, is refused unless the
     // application the row updates already holds it.
-    for (const [column, options, code] of [
-      ['lifecycle', settings.lifecycleStates, 'lifecycle_invalid'],
-      ['category', settings.applicationCategories, 'category_invalid'],
-      ['access_methods', settings.accessMethods, 'access_method_invalid'],
+    for (const [column, options, code, list] of [
+      ['lifecycle', settings.lifecycleStates, 'lifecycle_invalid', 'lifecycleStates'],
+      ['category', settings.applicationCategories, 'category_invalid', 'applicationCategories'],
+      ['access_methods', settings.accessMethods, 'access_method_invalid', 'accessMethods'],
     ] as const) {
       // A blank cell keeps the value; `-` on these values that cannot be empty is refused by the import.
       const value = cellText(row, column);
@@ -156,15 +156,17 @@ async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportC
         resolveOfferedCatalogCodes(values, options as CatalogOptionLike[], {
           held: existing?.[column],
           what: column === 'access_methods' ? 'access method' : column,
-          refuse: (message, refusal) => Object.assign(new Error(message), { refusal }),
+          list,
+          unknownCode: code,
         });
       } catch (error: any) {
-        const refusal = error?.refusal as CatalogRefusal | undefined;
-        if (!refusal) {
+        // The refusal is coded (`catalogValueRefusal`); an ambiguous name is not, and lists the values allowed.
+        const refusal = codedErrorOf(error);
+        if (!refusal.code) {
           fail(row, code, error.message, { value, allowed: offeredCatalogList(options as CatalogOptionLike[], existing?.[column]) }, column);
           continue;
         }
-        fail(row, refusal.retired ? 'catalog_value_retired' : code, error.message, { value: refusal.value, allowed: refusal.allowed }, column);
+        fail(row, refusal.code, error.message, refusal.params as Record<string, string>, column);
       }
     }
 

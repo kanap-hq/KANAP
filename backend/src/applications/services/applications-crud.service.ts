@@ -18,7 +18,7 @@ import { ApplicationAttachment } from '../application-attachment.entity';
 import { ApplicationDataResidency } from '../application-data-residency.entity';
 import { AuditService } from '../../audit/audit.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
-import { CatalogRefusal, resolveOfferedCatalogCode, resolveOfferedCatalogCodes } from '../../it-ops-settings/catalog-resolve';
+import { resolveOfferedCatalogCode, resolveOfferedCatalogCodes } from '../../it-ops-settings/catalog-resolve';
 import { StorageService } from '../../common/storage/storage.service';
 import { unreferencedPaths } from '../../common/storage-path-refs';
 import { randomUUID } from 'crypto';
@@ -45,15 +45,6 @@ import {
   lockApplicationNames,
   normalizeApplicationName,
 } from '../application-rules';
-
-/** A coded refusal of a catalog value: unknown (`code`) or retired (`catalog_value_retired`), with the values allowed. */
-function catalogRefusal(code: string) {
-  return (message: string, refusal: CatalogRefusal) => applicationBadRequest(
-    refusal.retired ? 'catalog_value_retired' : code,
-    message,
-    { value: refusal.value, allowed: refusal.allowed },
-  );
-}
 
 type OwnerQueryRow = ApplicationOwner & {
   email?: string | null;
@@ -624,7 +615,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       return fallbackCode;
     }
     return resolveOfferedCatalogCode(value, settings.lifecycleStates || [], {
-      held, what: 'lifecycle', refuse: catalogRefusal('lifecycle_invalid'),
+      held, what: 'lifecycle', list: 'lifecycleStates', unknownCode: 'lifecycle_invalid',
     });
   }
 
@@ -634,7 +625,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const values = Array.isArray(value) ? value : String(value).split(',');
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
     return resolveOfferedCatalogCodes(values, settings.accessMethods || [], {
-      held, what: 'access method', refuse: catalogRefusal('access_method_invalid'),
+      held, what: 'access method', list: 'accessMethods', unknownCode: 'access_method_invalid',
     });
   }
 
@@ -659,7 +650,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       manager,
       useDefaultForEmpty: opts?.useDefaultForEmpty,
       current: opts?.current,
-      refuse: catalogRefusal('category_invalid'),
+      unknownCode: 'category_invalid',
     });
   }
 

@@ -342,11 +342,8 @@ export class AppInstancesService {
     return resolveOfferedCatalogCode(value, settings.lifecycleStates || [], {
       held,
       what: 'lifecycle',
-      refuse: (message, refusal) => applicationBadRequest(
-        refusal.retired ? 'catalog_value_retired' : 'deployment_lifecycle_invalid',
-        message,
-        { value: refusal.value, allowed: refusal.allowed },
-      ),
+      list: 'lifecycleStates',
+      unknownCode: 'deployment_lifecycle_invalid',
     });
   }
 

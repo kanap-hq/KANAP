@@ -80,7 +80,7 @@ export class InterfaceBindingsService {
       return fallbackCode;
     }
     // Rule P7: a retired state only on the binding that holds it.
-    return resolveOfferedCatalogCode(normalizeBindingLifecycle(value), settings.lifecycleStates || [], { held, what: 'status' });
+    return resolveOfferedCatalogCode(normalizeBindingLifecycle(value), settings.lifecycleStates || [], { held, what: 'status', list: 'lifecycleStates' });
   }
 
   private normalizeNullable(value: unknown): string | null {
@@ -100,7 +100,7 @@ export class InterfaceBindingsService {
     const code = String(value || '').trim();
     if (!code) return null;
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    return resolveOfferedCatalogCode(code, settings.interfaceAuthModes || [], { held, what: 'authentication mode' });
+    return resolveOfferedCatalogCode(code, settings.interfaceAuthModes || [], { held, what: 'authentication mode', list: 'interfaceAuthModes' });
   }
 
   private async ensureInterface(id: string, manager?: EntityManager) {

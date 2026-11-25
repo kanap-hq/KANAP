@@ -457,12 +457,13 @@ async function refuseUnknownCategories(rows: CsvImportRow[], context: CsvImportC
       const held = row.isInsert ? null : row.existingEntity?.category ?? null;
       if (!resolved.deprecated || held === resolved.code) continue;
       const allowed = offeredCatalogList(categories, held);
+      const name = resolved.label || resolved.code;
       row.errors.push({
         row: row.rowNumber,
         column: 'category',
-        message: `${label}: the category "${resolved.label || resolved.code}" is no longer offered. Use one of ${allowed}.`,
+        message: `${label}: the category "${name}" is no longer offered. Use one of ${allowed}.`,
         code: 'catalog_value_retired',
-        params: { value: category, allowed },
+        params: { value: name, allowed, valueCode: resolved.code, list: 'incidentCategories' },
       });
       continue;
     }

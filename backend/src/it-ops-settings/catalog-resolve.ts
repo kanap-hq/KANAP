@@ -59,20 +59,39 @@ export function offeredCatalogList(options: CatalogOptionLike[], held?: unknown)
     .join(', ');
 }
 
-export type CatalogRefusal = { value: string; allowed: string; retired: boolean };
+/** Where a refused value comes from: the settings list (`connectionTypes`) the screens name it from. */
+export type CatalogRefusalOptions = { held?: unknown; what: string; list?: string; unknownCode?: string };
+
+/**
+ * The refusal of a catalog value (rule P7), always coded so that the screens say it in the person's
+ * language: `catalog_value_retired` for a retired value, `unknownCode` (by default
+ * `catalog_value_unknown`) for one the catalog does not know. Its params: `value` (a retired value by
+ * its catalog name, an unknown one as typed), `allowed` (the values the record may take, which Plaid,
+ * the API and the import report show), and for a retired value its code and its list (`valueCode`,
+ * `list`), from which a screen names it as the field's selector does. `message` is the English text
+ * Plaid and the API read.
+ */
+export function catalogValueRefusal(
+  refusal: { value: string; allowed: string; retired: boolean; valueCode?: string; list?: string },
+  message: string,
+  unknownCode = 'catalog_value_unknown',
+): BadRequestException {
+  const { value, allowed, retired, valueCode, list } = refusal;
+  return new BadRequestException({
+    code: retired ? 'catalog_value_retired' : unknownCode,
+    message,
+    params: { value, allowed, ...(retired && valueCode ? { valueCode } : {}), ...(retired && list ? { list } : {}) },
+  });
+}
 
 /**
  * Rule P7 on a write: `input` (a code or an exact name) resolves to the code of an offered entry.
  * A retired entry is refused unless the record already holds it; a value the catalog does not know
  * is refused too, unless the record already holds it (a value stored before the catalog changed
- * stays on its record). Both refusals list the values the record may take. `refuse` lets a service
- * build its own error (a coded refusal); the default is a 400 with that list.
+ * stays on its record). Both refusals are coded (`catalogValueRefusal`) and list the values the
+ * record may take.
  */
-export function resolveOfferedCatalogCode(
-  input: unknown,
-  options: CatalogOptionLike[],
-  opts: { held?: unknown; what: string; refuse?: (message: string, refusal: CatalogRefusal) => Error },
-): string {
+export function resolveOfferedCatalogCode(input: unknown, options: CatalogOptionLike[], opts: CatalogRefusalOptions): string {
   const value = String(input ?? '').trim();
   const option = findCatalogOption(value, options);
   const keys = heldKeys(opts.held);
@@ -82,32 +101,16 @@ export function resolveOfferedCatalogCode(
     return String(held);
   }
   const allowed = offeredCatalogList(options, opts.held);
-  const refusal: CatalogRefusal = { value, allowed, retired: !!option };
-  const message = option
-    ? `The ${opts.what} "${option.label || option.code}" is retired: only a record that already holds it keeps it. Use one of: ${allowed}.`
-    : `Unknown ${opts.what} "${value}". Use one of: ${allowed}.`;
-  throw opts.refuse ? opts.refuse(message, refusal) : new BadRequestException(message);
-}
-
-/**
- * The coded refusal of `resolveOfferedCatalogCode` the screens translate: `catalog_value_retired` for a
- * retired value, `unknownCode` for a value the catalog does not know, both with the value and the
- * values the record may take.
- */
-export function codedCatalogRefusal(unknownCode = 'catalog_value_unknown') {
-  return (message: string, refusal: CatalogRefusal) => new BadRequestException({
-    code: refusal.retired ? 'catalog_value_retired' : unknownCode,
-    message,
-    params: { value: refusal.value, allowed: refusal.allowed },
-  });
+  if (!option) throw catalogValueRefusal({ value, allowed, retired: false }, `Unknown ${opts.what} "${value}". Use one of: ${allowed}.`, opts.unknownCode);
+  const name = String(option.label || '').trim() || option.code;
+  throw catalogValueRefusal(
+    { value: name, allowed, retired: true, valueCode: option.code, list: opts.list },
+    `The ${opts.what} "${name}" is retired: only a record that already holds it keeps it. Use one of: ${allowed}.`,
+  );
 }
 
 /** `resolveOfferedCatalogCode` for each value of a list field (access methods, protocols), duplicates dropped. */
-export function resolveOfferedCatalogCodes(
-  inputs: unknown,
-  options: CatalogOptionLike[],
-  opts: { held?: unknown; what: string; refuse?: (message: string, refusal: CatalogRefusal) => Error },
-): string[] {
+export function resolveOfferedCatalogCodes(inputs: unknown, options: CatalogOptionLike[], opts: CatalogRefusalOptions): string[] {
   const values = Array.isArray(inputs) ? inputs : inputs == null ? [] : [inputs];
   const codes = values
     .filter((item) => String(item ?? '').trim() !== '')

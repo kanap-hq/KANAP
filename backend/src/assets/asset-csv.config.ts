@@ -1,6 +1,7 @@
 import type { CsvLanguage } from '../common/csv-sheet';
 import { assetEnvironmentCode } from './asset-environments';
-import { CatalogOptionLike, findCatalogOption, offeredCatalogList, requireImportCatalogs, resolveCatalogCode, resolveOfferedCatalogCode } from '../it-ops-settings/catalog-resolve';
+import { codedErrorOf } from '../applications/application-rules';
+import { CatalogOptionLike, findCatalogOption, requireImportCatalogs, resolveCatalogCode, resolveOfferedCatalogCode } from '../it-ops-settings/catalog-resolve';
 import { shippedLabelIn } from '../it-ops-settings/catalog-shipped-labels';
 import {
   ArrayStrategy,
@@ -44,9 +45,9 @@ import {
   type ClusterSwitch,
 } from './asset-rules';
 
-/** The entry a value names, or null (an ambiguous value names none). */
-function findCatalogOptionSafe(value: string, options: CatalogOptionLike[]): CatalogOptionLike | null {
-  try { return findCatalogOption(value, options); } catch { return null; }
+/** A catalog list of the settings by its name (`serverKinds`), empty when absent. */
+function catalogList(settings: ItOpsSettings, list: string): CatalogOptionLike[] {
+  return (settings as unknown as Record<string, CatalogOptionLike[] | undefined>)[list] ?? [];
 }
 
 /**
@@ -593,19 +594,20 @@ async function validateAssetRows(rows: CsvImportRow[], context: CsvImportContext
   const fail = (row: CsvImportRow, code: string, message: string, params: Record<string, string | number>, column: string) =>
     row.errors.push({ row: row.rowNumber, column, message, code, params });
   // Rule P7: a value the catalog does not know, or one it retired, unless the asset the row updates holds it.
-  const offered = (row: CsvImportRow, column: string, value: string, options: CatalogOptionLike[], held: unknown, code: string, label: string) => {
+  const offered = (row: CsvImportRow, column: string, value: string, list: string, held: unknown, code: string, label: string) => {
     try {
-      resolveOfferedCatalogCode(value, options, { held, what: label });
+      resolveOfferedCatalogCode(value, catalogList(settings, list), { held, what: label, list });
     } catch (error: any) {
-      const retired = !!findCatalogOptionSafe(value, options);
-      if (retired) fail(row, 'catalog_value_retired', error.message, { value, allowed: offeredCatalogList(options, held) }, column);
+      // A retired value: the coded refusal, which names it by its catalog name with the values allowed.
+      const refusal = codedErrorOf(error);
+      if (refusal.code === 'catalog_value_retired') fail(row, refusal.code, error.message, refusal.params as Record<string, string>, column);
       else fail(row, code, `Unknown ${label} "${value}"`, { value }, column);
     }
   };
-  const catalog = (row: CsvImportRow, column: string, options: CatalogOptionLike[], code: string, label: string) => {
+  const catalog = (row: CsvImportRow, column: string, list: string, code: string, label: string) => {
     const value = cellText(row, column);
     if (!value || value === '-') return;
-    offered(row, column, value, options, (row.existingEntity as Record<string, unknown> | undefined)?.[column], code, label);
+    offered(row, column, value, list, (row.existingEntity as Record<string, unknown> | undefined)?.[column], code, label);
   };
 
   for (const row of rows) {
@@ -619,10 +621,10 @@ async function validateAssetRows(rows: CsvImportRow[], context: CsvImportContext
     if (environment && !assetEnvironmentCode(environment)) {
       fail(row, 'asset_environment_invalid', `Unknown environment "${environment}"`, { value: environment }, 'environment');
     }
-    catalog(row, 'kind', settings.serverKinds ?? [], 'asset_kind_invalid', 'asset type');
-    catalog(row, 'domain', settings.domains ?? [], 'asset_domain_invalid', 'domain');
-    catalog(row, 'status', settings.lifecycleStates ?? [], 'asset_lifecycle_invalid', 'lifecycle');
-    catalog(row, 'admin_zone', settings.adminZones ?? [], 'asset_admin_zone_invalid', 'administration zone');
+    catalog(row, 'kind', 'serverKinds', 'asset_kind_invalid', 'asset type');
+    catalog(row, 'domain', 'domains', 'asset_domain_invalid', 'domain');
+    catalog(row, 'status', 'lifecycleStates', 'asset_lifecycle_invalid', 'lifecycle');
+    catalog(row, 'admin_zone', 'adminZones', 'asset_admin_zone_invalid', 'administration zone');
 
     for (let slot = 1; slot <= 4; slot++) {
       const typeColumn = `ip_${slot}_type`;
@@ -630,7 +632,7 @@ async function validateAssetRows(rows: CsvImportRow[], context: CsvImportContext
       const type = cellText(row, typeColumn);
       if (type && type !== '-') {
         const heldTypes = (Array.isArray(existing?.ip_addresses) ? existing.ip_addresses : []).map((item: any) => item?.type);
-        offered(row, typeColumn, type, settings.ipAddressTypes ?? [], heldTypes, 'asset_ip_type_invalid', 'IP address type');
+        offered(row, typeColumn, type, 'ipAddressTypes', heldTypes, 'asset_ip_type_invalid', 'IP address type');
       }
       // Rule P7, as the API: a retired subnet only on the asset that already holds it.
       const subnetColumn = `ip_${slot}_subnet_cidr`;

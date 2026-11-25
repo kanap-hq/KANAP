@@ -22,7 +22,7 @@ import { IncidentViewer, incidentVisibilitySql, isFrozenIncidentStatus } from '.
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import { binder } from '../../common/relations/related-objects';
 import { assertSetFilterModes } from '../../common/ag-grid-filtering';
-import { codedCatalogRefusal, resolveOfferedCatalogCode } from '../../it-ops-settings/catalog-resolve';
+import { resolveOfferedCatalogCode } from '../../it-ops-settings/catalog-resolve';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 
 const DEFAULT_SORT: Sort = { field: 'detected_at', direction: 'DESC' };
@@ -256,7 +256,8 @@ export class IncidentsService extends IncidentsBaseService {
     return resolveOfferedCatalogCode(text, settings.incidentCategories || [], {
       held,
       what: 'category',
-      refuse: codedCatalogRefusal('category_invalid'),
+      list: 'incidentCategories',
+      unknownCode: 'category_invalid',
     });
   }
 

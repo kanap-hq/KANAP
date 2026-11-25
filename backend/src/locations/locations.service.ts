@@ -10,7 +10,7 @@ import { buildWhereFromAgFilters, parsePagination } from '../common/pagination';
 import { compileAgFilterCondition, createParamNameGenerator, assertSetFilterModes } from '../common/ag-grid-filtering';
 import { AuditService, AuditSourceOptions, writeAuditLogs } from '../audit/audit.service';
 import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
-import { codedCatalogRefusal, resolveOfferedCatalogCode } from '../it-ops-settings/catalog-resolve';
+import { resolveOfferedCatalogCode } from '../it-ops-settings/catalog-resolve';
 import { Company } from '../companies/company.entity';
 import { User } from '../users/user.entity';
 import { ExternalContact } from '../contacts/external-contact.entity';
@@ -160,7 +160,7 @@ export class LocationsService {
     return resolveOfferedCatalogCode(normalized, settings.hostingTypes || [], {
       held: opts?.held,
       what: 'hosting type',
-      refuse: codedCatalogRefusal(),
+      list: 'hostingTypes',
     });
   }
 
@@ -188,7 +188,7 @@ export class LocationsService {
     return resolveOfferedCatalogCode(text, settings.serverProviders || [], {
       held: opts?.held,
       what: 'provider',
-      refuse: codedCatalogRefusal(),
+      list: 'serverProviders',
     });
   }
 

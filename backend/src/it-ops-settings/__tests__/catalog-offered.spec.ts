@@ -38,15 +38,28 @@ assert.equal(resolveOfferedCatalogCode('Kiosk', options, { what: 'access method'
 assert.equal(resolveOfferedCatalogCode('citrix', options, { what: 'access method', held: ['Citrix'] }), 'Citrix');
 assert.throws(() => resolveOfferedCatalogCode('Citrix', options, { what: 'access method', held: ['web'] }), /Unknown access method/);
 
-// A coded refusal built by the caller, which knows whether the value was retired.
-const refusals: Array<{ retired: boolean; value: string; allowed: string }> = [];
-const refuse = (message: string, refusal: { retired: boolean; value: string; allowed: string }) => {
-  refusals.push(refusal);
-  return new Error(`coded: ${message}`);
-};
-assert.throws(() => resolveOfferedCatalogCode('kiosk', options, { what: 'access method', refuse }), /^Error: coded: The access method/);
-assert.throws(() => resolveOfferedCatalogCode('nope', options, { what: 'access method', refuse }), /^Error: coded: Unknown/);
-assert.deepEqual(refusals.map((r) => [r.retired, r.value]), [[true, 'kiosk'], [false, 'nope']]);
+// Every refusal is coded, so that the screens say it in the person's language: a retired value by its
+// catalog name with its code and its list (the screen names it as the field's selector does), an
+// unknown one as typed; both with the values allowed, which Plaid, the API and the import report show.
+function responseOf(run: () => unknown): Record<string, any> {
+  try {
+    run();
+  } catch (error: any) {
+    assert.equal(error?.getStatus?.(), 400);
+    return error.getResponse();
+  }
+  throw new Error('expected a refusal');
+}
+const allowed = 'web (Web), vdi (VDI / Remote Desktop)';
+const retired = responseOf(() => resolveOfferedCatalogCode('kiosk', options, { what: 'access method', list: 'accessMethods', unknownCode: 'access_method_invalid' }));
+assert.equal(retired.code, 'catalog_value_retired');
+assert.deepEqual(retired.params, { value: 'Kiosk', allowed, valueCode: 'kiosk', list: 'accessMethods' });
+assert.match(retired.message, /The access method "Kiosk" is retired: only a record that already holds it keeps it\. Use one of: web \(Web\)/);
+const unknown = responseOf(() => resolveOfferedCatalogCode('nope', options, { what: 'access method', list: 'accessMethods', unknownCode: 'access_method_invalid' }));
+assert.equal(unknown.code, 'access_method_invalid');
+assert.deepEqual(unknown.params, { value: 'nope', allowed });
+assert.equal(responseOf(() => resolveOfferedCatalogCode('nope', options, { what: 'protocol' })).code, 'catalog_value_unknown');
+assert.equal(responseOf(() => resolveOfferedCatalogCodes(['web', 'kiosk'], options, { what: 'protocol' })).code, 'catalog_value_retired');
 
 // Lists: each value resolved, duplicates and blanks dropped; the record's held values kept.
 assert.deepEqual(resolveOfferedCatalogCodes(['Web', 'web', '', 'Bureau à distance'], options, { what: 'access method' }), ['web', 'vdi']);

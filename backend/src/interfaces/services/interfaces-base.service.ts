@@ -204,7 +204,7 @@ export abstract class InterfacesBaseService {
       throw new BadRequestException('data_category is required');
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    return resolveOfferedCatalogCode(value, settings.interfaceDataCategories || [], { held, what: 'data category' });
+    return resolveOfferedCatalogCode(value, settings.interfaceDataCategories || [], { held, what: 'data category', list: 'interfaceDataCategories' });
   }
 
   protected normalizeRouteType(value: unknown): RouteType {
@@ -259,7 +259,7 @@ export abstract class InterfacesBaseService {
     if (value === undefined || value === null || String(value).trim() === '') {
       return fallbackCode;
     }
-    return resolveOfferedCatalogCode(value, settings.lifecycleStates || [], { held, what: 'lifecycle' }) as Lifecycle;
+    return resolveOfferedCatalogCode(value, settings.lifecycleStates || [], { held, what: 'lifecycle', list: 'lifecycleStates' }) as Lifecycle;
   }
 
   protected pickLifecycleFallback(candidate: string, allowed: string[]): string {
@@ -285,7 +285,7 @@ export abstract class InterfacesBaseService {
       throw new BadRequestException(`${label} is required`);
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    return resolveOfferedCatalogCode(value, settings[settingsKey] || [], { held, what: label.replace(/_/g, ' ') });
+    return resolveOfferedCatalogCode(value, settings[settingsKey] || [], { held, what: label.replace(/_/g, ' '), list: String(settingsKey) });
   }
 
   protected parseInclude(raw: any): Set<string> {

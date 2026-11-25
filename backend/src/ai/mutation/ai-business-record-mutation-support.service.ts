@@ -15,7 +15,7 @@ import { InterfacesService } from '../../interfaces/services/interfaces.service'
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { TechnologyCatalogService } from '../../technologies/catalog/technology-catalog.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
-import { findCatalogOption, resolveOfferedCatalogCodes } from '../../it-ops-settings/catalog-resolve';
+import { catalogValueRefusal, findCatalogOption, resolveOfferedCatalogCodes } from '../../it-ops-settings/catalog-resolve';
 import { withShippedLabels } from '../../it-ops-settings/catalog-shipped-labels';
 import { ClassificationCatalog, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
@@ -883,9 +883,13 @@ export class AiBusinessRecordMutationSupportService {
           .map((item) => item.label || item.code)
           .join(', ');
         const retired = findCatalogOption(rawValue, options);
-        throw new BadRequestException(retired
-          ? `The ${field.label.toLowerCase()} "${retired.label || retired.code}" is retired: only a record that already holds it keeps it. Valid values: ${allowed}.`
-          : `Unknown ${field.label.toLowerCase()} "${String(rawValue).trim()}". Valid values: ${allowed}.`);
+        const name = retired ? retired.label || retired.code : String(rawValue).trim();
+        throw catalogValueRefusal(
+          { value: name, allowed, retired: !!retired, valueCode: retired?.code, list: field.itCatalog },
+          retired
+            ? `The ${field.label.toLowerCase()} "${name}" is retired: only a record that already holds it keeps it. Valid values: ${allowed}.`
+            : `Unknown ${field.label.toLowerCase()} "${name}". Valid values: ${allowed}.`,
+        );
       }
       // The card shows the code: the frontend names it from the same list in the person's language.
       return { value: option.code, displayValue: option.code };
@@ -900,6 +904,7 @@ export class AiBusinessRecordMutationSupportService {
       const codes = resolveOfferedCatalogCodes(values, options, {
         held: Array.isArray(existing?.[fieldName]) ? existing?.[fieldName] : [],
         what: field.label.toLowerCase().replace(/s$/, ''),
+        list: field.itCatalog,
       });
       // The card shows the codes: the frontend names them from the same list in the person's language.
       return { value: codes, displayValue: codes.join(', ') };

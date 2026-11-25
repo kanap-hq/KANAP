@@ -1,7 +1,7 @@
 import { AuditService } from '../audit/audit.service';
 import { ClassificationCatalog, ClassificationLevel, CLASSIFICATION_CATALOG_KEYS, OBSOLETE_CATALOG_METADATA_KEYS, catalogFromMetadata, catalogToMetadata, validateClassificationCatalog } from './classification-catalog';
 import { CatalogTranslations, normalizeTranslations, prepareCatalogListForWrite } from './catalog-codes';
-import { CatalogRefusal, findCatalogOption, offeredCatalogList, resolveOfferedCatalogCode } from './catalog-resolve';
+import { catalogValueRefusal, findCatalogOption, offeredCatalogList, resolveOfferedCatalogCode } from './catalog-resolve';
 import { CATALOG_USAGE, CatalogUsageItem, UsageKey, countCatalogUsage } from './catalog-usage';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { englishList, RecordInUseException } from '../common/record-in-use';
@@ -135,8 +135,8 @@ export const DEFAULT_ADMIN_ZONES: AdminZoneOption[] = [
   },
 ];
 
-/** What a saved subnet list checks its network zones against (rule P7): the retired zones, each stored subnet's zone, the zones offered. */
-type SubnetZoneRule = { retired: Set<string>; held: Map<string, string>; offered: string };
+/** What a saved subnet list checks its network zones against (rule P7): the retired zones, each stored subnet's zone, the zones offered, each zone's name. */
+type SubnetZoneRule = { retired: Set<string>; held: Map<string, string>; offered: string; names: Map<string, string> };
 
 export type SubnetOption = {
   location_id: string;    // Mandatory, references locations table
@@ -856,12 +856,11 @@ export class ItOpsSettingsService {
         // Rule P7 on a saved list: a retired network zone only on the subnet that already has it.
         if (strict && opts?.zones?.retired.has(network_zone)
           && opts.zones.held.get(`${location_id}:${cidr}`) !== network_zone) {
-          const allowed = opts.zones.offered;
-          throw new BadRequestException({
-            code: 'catalog_value_retired',
-            message: `The network zone "${network_zone}" of subnet ${cidr} is retired: only a subnet that already has it keeps it. Use one of: ${allowed}.`,
-            params: { value: network_zone, allowed },
-          });
+          const name = opts.zones.names.get(network_zone) || network_zone;
+          throw catalogValueRefusal(
+            { value: name, allowed: opts.zones.offered, retired: true, valueCode: network_zone, list: 'networkSegments' },
+            `The network zone "${name}" of subnet ${cidr} is retired: only a subnet that already has it keeps it. Use one of: ${opts.zones.offered}.`,
+          );
         }
 
         const vlan_number =
@@ -1177,7 +1176,7 @@ export class ItOpsSettingsService {
       manager?: EntityManager;
       useDefaultForEmpty?: boolean;
       current?: string | null;
-      refuse?: (message: string, refusal: CatalogRefusal) => Error;
+      unknownCode?: string;
     },
   ): Promise<ItOpsEnumOption> {
     const options = await this.getApplicationCategoryOptions(tenantId, { manager: opts?.manager });
@@ -1189,15 +1188,14 @@ export class ItOpsSettingsService {
         if (fallback) return fallback;
       }
       const allowed = offeredCatalogList(options, opts?.current);
-      const message = `Application category is required. Use one of: ${allowed}.`;
-      throw opts?.refuse ? opts.refuse(message, { value: '', allowed, retired: false }) : new BadRequestException(message);
+      throw catalogValueRefusal({ value: '', allowed, retired: false }, `Application category is required. Use one of: ${allowed}.`, opts?.unknownCode);
     }
     // A code or a name typed with spaces for its underscores or dashes ("line of business") still names it.
     const key = this.normalizeLookupKey(text);
     const loose = findCatalogOption(text, options)
       ? null
       : options.find((option) => this.normalizeLookupKey(option.code) === key || this.normalizeLookupKey(option.label) === key);
-    const code = resolveOfferedCatalogCode(loose?.code ?? text, options, { held: opts?.current, what: 'application category', refuse: opts?.refuse });
+    const code = resolveOfferedCatalogCode(loose?.code ?? text, options, { held: opts?.current, what: 'application category', list: 'applicationCategories', unknownCode: opts?.unknownCode });
     return options.find((option) => option.code === code) ?? { code, label: code };
   }
 
@@ -1208,7 +1206,7 @@ export class ItOpsSettingsService {
       manager?: EntityManager;
       useDefaultForEmpty?: boolean;
       current?: string | null;
-      refuse?: (message: string, refusal: CatalogRefusal) => Error;
+      unknownCode?: string;
     },
   ): Promise<string> {
     return (await this.resolveApplicationCategoryOption(tenantId, value, opts)).code;
@@ -1320,6 +1318,7 @@ export class ItOpsSettingsService {
         retired: new Set(next.networkSegments.filter((n) => n.deprecated).map((n) => n.code)),
         held: new Map((current.subnets || []).map((subnet) => [`${subnet.location_id}:${subnet.cidr}`, subnet.network_zone])),
         offered: offeredCatalogList(next.networkSegments),
+        names: new Map(next.networkSegments.map((n) => [n.code, n.label || n.code])),
       };
       next.subnets = this.normalizeSubnets(
         patch.subnets,

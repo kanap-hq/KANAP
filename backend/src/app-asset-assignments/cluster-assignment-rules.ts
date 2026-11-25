@@ -145,11 +145,8 @@ export function normalizeServerRole(
   return resolveOfferedCatalogCode(value, options, {
     held,
     what: 'role',
-    refuse: (message, refusal) => applicationBadRequest(
-      refusal.retired ? 'catalog_value_retired' : 'assignment_role_invalid',
-      message,
-      { value: refusal.value, allowed: refusal.allowed },
-    ),
+    list: 'serverRoles',
+    unknownCode: 'assignment_role_invalid',
   });
 }
 
