@@ -193,7 +193,28 @@ function testDetailChildRowsWithNamedFields() {
   assert.deepEqual([app.suites[0].lifecycle_name, app.suites[0].criticality_name, app.linked_budget_lines[0].nature_name], ['Im Einsatz', 'Hoch', 'OPEX']);
   const contract = detail('contracts', { tasks: [{ status: 'open', priority_level: 'high' }], linked_budget_lines: [{ nature: 'capex' }] }, 'en');
   assert.deepEqual([contract.tasks[0].status_name, contract.tasks[0].priority_level_name, contract.linked_budget_lines[0].nature_name], ['Open', 'High', 'CAPEX']);
-  console.log('  the child rows of a detail holding a named field: versions, phases, milestones, deployments, suites, tasks: OK');
+  // The replay of 25/11: a version's driver and grain, a contact's origin, a task's subject, and the
+  // single child records (a line's summary, a contract's latest task and supplier).
+  const line = detail('budget_lines', {
+    financial_versions: [{ allocation_method: 'manual_company', allocation_driver: 'headcount', input_grain: 'annual' }],
+    contacts: [{ role: 'technical', origin: 'supplier' }],
+    financial_summary: { nature: 'opex', run_build: 'run', status: 'enabled', spread_mode_for_y: 'flat' },
+  });
+  assert.deepEqual([line.financial_versions[0].allocation_driver_name, line.financial_versions[0].input_grain_name], ['Effectif', 'Annuel']);
+  assert.equal(line.contacts[0].origin_name, 'Du fournisseur');
+  assert.deepEqual(line.financial_summary, {
+    nature: 'opex', run_build: 'run', status: 'enabled', spread_mode_for_y: 'flat', nature_name: 'OPEX', run_build_name: 'Run', status_name: 'Activé',
+  });
+  const supplied = detail('contracts', {
+    contacts: [{ origin: 'manual' }],
+    tasks: [{ related_object_type: 'contract' }],
+    latest_task: { status: 'open', priority_level: 'high' },
+    supplier_option: { status: 'enabled' },
+  }, 'de');
+  assert.deepEqual([supplied.contacts[0].origin_name, supplied.tasks[0].related_object_type_name], ['Manuell hinzugefügt', 'Vertrag']);
+  assert.deepEqual([supplied.latest_task.status_name, supplied.latest_task.priority_level_name, supplied.supplier_option.status_name], ['Offen', 'Hoch', 'Aktiviert']);
+  assert.equal(detail('budget_lines', { financial_versions: [{ allocation_driver: 'turnover' }] }, 'es').financial_versions[0].allocation_driver_name, 'Facturación');
+  console.log('  the child rows of a detail holding a named field: versions, phases, milestones, deployments, suites, tasks, a line\'s and a contract\'s single records: OK');
 }
 
 /**

@@ -190,6 +190,8 @@ export const RECORD_HISTORY_LISTS: {
   },
   children: {
     vulnerability_state: L.vulnerabilityState,
+    // A server's role on an application, wherever its assignment appears.
+    server_role: L.serverRole,
   },
 };
 

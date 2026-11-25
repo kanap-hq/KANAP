@@ -96,7 +96,11 @@ function testDeploymentsByTheirEnvironment() {
   const added = withStateLabels({ field: 'instance', event: 'added', after: 'prod' }, 'applications', { kind: 'instance' } as any, namer) as any;
   assert.equal(added.after_label, 'Prod');
   assert.equal((withStateLabels({ field: 'environment', after: 'qa' }, 'applications', record, namer) as any).after_label, 'QA');
-  console.log('  a deployment by its environment, in its title, its line and the record\'s field: OK');
+  // A server's role on a deployment: the workspace's catalog, shipped word in the reader's language.
+  const roles = new AiCodeNamer('fr', { serverRoles: [{ code: 'app', label: 'Application server' }] } as any);
+  const role = withStateLabels({ field: 'server_role', before: null, after: 'app' }, 'applications', { kind: 'assignment' } as any, roles) as any;
+  assert.equal(role.after_label, "Serveur d'applications");
+  console.log('  a deployment by its environment, in its title, its line and the record\'s field; a server\'s role: OK');
 }
 
 function testListsAreTheHistoryTabs() {

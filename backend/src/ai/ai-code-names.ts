@@ -245,6 +245,19 @@ export const TASK_RELATED_LABELS = codeLabels({
   incident: ['Incident', 'Incident', 'Vorfall', 'Incidente'],
 });
 
+/** The grain a budget version is entered in, as the history names it. */
+export const INPUT_GRAIN_LABELS = codeLabels({
+  annual: ['Annual', 'Annuel', 'Jährlich', 'Anual'],
+  quarterly: ['Quarterly', 'Trimestriel', 'Vierteljährlich', 'Trimestral'],
+  monthly: ['Monthly', 'Mensuel', 'Monatlich', 'Mensual'],
+});
+
+/** Where a record's contact comes from, as its contacts section says it. */
+export const CONTACT_ORIGIN_LABELS = codeLabels({
+  supplier: ['From supplier', 'Du fournisseur', 'Vom Lieferanten', 'Del proveedor'],
+  manual: ['Manually added', 'Ajouté manuellement', 'Manuell hinzugefügt', 'Añadido manualmente'],
+});
+
 /** A technology's or a version's support state, as the versions of a technology name it. */
 export const SUPPORT_STATUS_LABELS = codeLabels({
   supported: ['Supported', 'Supportée', 'Unterstützt', 'Con soporte'],
@@ -383,6 +396,7 @@ export const AI_CODE_LISTS = {
   country: { kind: 'country' },
   language: { kind: 'language' },
   serverProvider: catalog('serverProviders'),
+  serverRole: catalog('serverRoles'),
   assetProvider: { kind: 'firstOf', lists: [catalog('serverProviders'), catalog('hostingTypes')] },
   chartScope: fixed('master-data:coa.createDialog', CHART_SCOPE_LABELS, { keys: { COUNTRY: 'scopeCountry', GLOBAL: 'scopeGlobal' } }),
   topology: fixed('it:enums.topology', TOPOLOGY_LABELS, { keys: camelKeys(TOPOLOGY_LABELS) }),
@@ -419,6 +433,8 @@ export const AI_CODE_LISTS = {
     },
   }),
   taskRelated: fixed('common:relatedObject.types', TASK_RELATED_LABELS, { keys: camelKeys(TASK_RELATED_LABELS) }),
+  inputGrain: fixed('admin:auditLogs.values.inputGrain', INPUT_GRAIN_LABELS),
+  contactOrigin: fixed('common:contacts', CONTACT_ORIGIN_LABELS, { keys: { supplier: 'fromSupplier', manual: 'manuallyAdded' } }),
   supportStatus: fixed('it:workspace.technology.versions.status', SUPPORT_STATUS_LABELS, {
     keys: { supported: 'supported', ending_soon: 'ending_soon', extended_support: 'extended', out_of_support: 'ended', unknown: 'unknown' },
   }),
@@ -639,7 +655,7 @@ export const AI_NAMED_FIELDS: Readonly<Record<string, Readonly<Record<string, Ai
 
 /**
  * The child rows of a detail whose fields hold codes: family, then the key of the list in `data`
- * (an array, or an object with `items`), then the field.
+ * (an array, an object with `items`, or a single record), then the field.
  */
 export const AI_NAMED_CHILD_FIELDS: Readonly<Record<string, Readonly<Record<string, Readonly<Record<string, AiCodeField>>>>>> = {
   applications: {
@@ -667,17 +683,22 @@ export const AI_NAMED_CHILD_FIELDS: Readonly<Record<string, Readonly<Record<stri
   },
   budget_lines: {
     // A line's contacts are typed by the contact types (`contacts.roles`), as the screen shows them.
-    contacts: { role: one(L.contactRole), country: one(L.country) },
+    contacts: { role: one(L.contactRole), country: one(L.country), origin: one(L.contactOrigin) },
     financial_versions: {
       allocation_method: one(L.allocationMethod),
       resolved_allocation_method: one(L.allocationMethod),
       allocation_driver: one(L.allocationDriver),
+      input_grain: one(L.inputGrain),
     },
     allocation_by_year: { allocation_method: one(L.allocationMethod) },
+    // The line's summary repeats its status, nature and run or build.
+    financial_summary: AI_NAMED_FIELDS.budget_lines,
   },
   contracts: {
-    contacts: { role: one(L.contactRole), country: one(L.country) },
-    tasks: { status: one(L.taskStatus), priority_level: one(L.taskPriority) },
+    contacts: { role: one(L.contactRole), country: one(L.country), origin: one(L.contactOrigin) },
+    tasks: { status: one(L.taskStatus), priority_level: one(L.taskPriority), related_object_type: one(L.taskRelated) },
+    latest_task: { status: one(L.taskStatus), priority_level: one(L.taskPriority) },
+    supplier_option: { status: one(L.enabled) },
     linked_budget_lines: { nature: one(L.budgetNature) },
   },
 };
@@ -970,6 +991,8 @@ function nameSummaries(value: unknown, namer: AiCodeNamer): unknown {
 function nameRows(rows: unknown, fields: Readonly<Record<string, AiCodeField>>, namer: AiCodeNamer): unknown {
   if (Array.isArray(rows)) return rows.map((row) => (isObject(row) ? withNames(row, fields, namer) : row));
   if (isObject(rows) && Array.isArray(rows.items)) return { ...rows, items: nameRows(rows.items, fields, namer) };
+  // A single child record (a contract's latest task, a line's summary).
+  if (isObject(rows)) return withNames(rows, fields, namer);
   return rows;
 }
 
