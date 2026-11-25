@@ -312,7 +312,13 @@ async function testStreams() {
     }
     const project_ = await refusal(runner, () => svc.updateStream(byProject, tenantId, { category_id: biz.id }, { manager: m }));
     assert.match(project_.message, /^The stream "By project" is used by 1 project\. It cannot change category\.$/, 'the inheriting task is not counted');
-    // The same category sent back, a rename: they pass.
+    // The same category sent back, whatever its case, a rename: they pass, even with a record already
+    // out of line (no move, nothing counted).
+    await runner.query(
+      `INSERT INTO portfolio_requests (tenant_id, item_number, name, status, category_id, stream_id) VALUES ($1, 2, 'Out of line', 'pending_review', $2, $3)`,
+      [tenantId, biz.id, byRequest],
+    );
+    await svc.updateStream(byRequest, tenantId, { category_id: it.id.toUpperCase() }, { manager: m });
     await svc.updateStream(byRequest, tenantId, { category_id: it.id, name: 'Requests' }, { manager: m });
     assert.equal(await categoryOf(byRequest), it.id);
     // An unused stream moves.

@@ -448,9 +448,10 @@ export class PortfolioClassificationService {
       throw new NotFoundException('Stream not found');
     }
 
-    // If changing category, verify new category
+    // If changing category, verify new category (an id compares whatever its case, as a department's company does)
     const categoryId = data.category_id ?? stream.category_id;
-    if (data.category_id && data.category_id !== stream.category_id) {
+    const categoryChanged = !!data.category_id && String(data.category_id).toLowerCase() !== stream.category_id.toLowerCase();
+    if (categoryChanged) {
       const category = await categoryRepoLocal.findOne({
         where: { id: data.category_id, tenant_id: tenantId },
       });
@@ -462,7 +463,7 @@ export class PortfolioClassificationService {
     }
 
     // Check for duplicate name if changing name or category
-    if ((data.name && data.name !== stream.name) || (data.category_id && data.category_id !== stream.category_id)) {
+    if ((data.name && data.name !== stream.name) || categoryChanged) {
       const existing = await streamRepoLocal.findOne({
         where: {
           tenant_id: tenantId,
