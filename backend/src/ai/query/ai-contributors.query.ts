@@ -150,14 +150,6 @@ export async function readContributors(services: AiContributorServices, opts: Ai
   const classification = await services.classification.getAll(opts.tenantId, serviceOpts);
 
   const skillsById = new Map(skills.map((skill) => [skill.id, skill]));
-  const sources = new Map(classification.sources.map((source) => [source.id, source.name]));
-  const categories = new Map(classification.categories.map((category) => [category.id, category.name]));
-  const streams = new Map(classification.streams.map((stream) => [stream.id, stream.name]));
-  const refByUser = new Map(items.map((item) => [String(item.user_id), contributorRef(Number(item.item_number))]));
-
-  const companies = new Map<string, string>();
-  const companyIds = Array.from(new Set(items.map((item) => item.default_company_id).filter((id): id is string => !!id)));
-  // The drawer's company lookup takes 100 ids a call: as many calls as needed, one after the other.
   // A name two skills of the workspace share is told apart by its category.
   const nameCounts = new Map<string, number>();
   for (const skill of skills) {
@@ -169,6 +161,14 @@ export async function readContributors(services: AiContributorServices, opts: Ai
       ? `${skill.category} / ${skill.name}`
       : skill.name
   );
+  const sources = new Map(classification.sources.map((source) => [source.id, source.name]));
+  const categories = new Map(classification.categories.map((category) => [category.id, category.name]));
+  const streams = new Map(classification.streams.map((stream) => [stream.id, stream.name]));
+  const refByUser = new Map(items.map((item) => [String(item.user_id), contributorRef(Number(item.item_number))]));
+
+  const companies = new Map<string, string>();
+  const companyIds = Array.from(new Set(items.map((item) => item.default_company_id).filter((id): id is string => !!id)));
+  // The drawer's company lookup takes 100 ids a call: as many calls as needed, one after the other.
   for (let start = 0; opts.readsCompanies && start < companyIds.length; start += LOOKUP_MAX_IDS) {
     const ids = companyIds.slice(start, start + LOOKUP_MAX_IDS).join(',');
     const found = await lookupReference({ manager: opts.manager, tenantId: opts.tenantId }, COMPANY_LOOKUP, { ids });
@@ -215,6 +215,11 @@ export async function readContributors(services: AiContributorServices, opts: Ai
   });
 }
 
+/** The skills of a row as they leave the server: without their id. */
+export function publicSkills(row: AiContributorRow): Array<Omit<AiContributorSkill, 'id'>> {
+  return row.skills.map(({ id: _id, ...skill }) => skill);
+}
+
 /** The skills of a row in words: "SAP (Expert), Network (Autonomous)". */
 export function contributorSkillsText(row: AiContributorRow): string | null {
   return row.skills.map((skill) => `${skill.skill} (${skill.level_name})`).join(', ') || null;
@@ -225,11 +230,6 @@ function filtered(rows: AiContributorRow[], query: Record<string, any>): AiContr
   const q = String(query.q ?? '').trim();
   const refNumber = contributorRefNumber(q);
   const refFilter = filters?.ref ? contributorRefNumber(filters.ref.filter) : null;
-/** The skills of a row as they leave the server: without their id. */
-export function publicSkills(row: AiContributorRow): Array<Omit<AiContributorSkill, 'id'>> {
-  return row.skills.map(({ id: _id, ...skill }) => skill);
-}
-
   const needle = q.toLowerCase();
   return rows.filter((row) => (filters?.ref ? (refFilter != null ? row.item_number === refFilter : textMatch(row.ref, filters.ref)) : true)
     && textMatch(row.name, filters?.name)
