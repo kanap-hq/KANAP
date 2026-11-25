@@ -126,6 +126,7 @@ Typing `@` opens the **mention picker** above the composer. It lets you referenc
   - `@APP backup`: applications matching "backup"
   - `@BL-12`: the budget line with the reference BL-12. `@BL` alone lists budget lines of both types. The former numbers still work: `@OPX-12` or `@CPX-3` finds its line
   - `@SUP-3`, `@COMP-1`, `@CTCT-2`, `@DEPT-4`, `@CTR-2`: the supplier, company, contact, department or contract with that reference
+  - `@MEM-4`: the contributor with that reference. `@MEM` alone lists the contributors
   - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CTCT`, `@DEPT`, `@SUP`, `@BP`
 - **Plain text**: anything else (`@payroll`, `@server-2`) runs a cross-type search ranked by relevance. It also finds budget lines by the names of their analytics values.
 
@@ -206,6 +207,8 @@ Without the right a kind of reference data needs, Kad names the missing right. W
 Kad reads the history of a cost center, a calendar or a dimension as its **History** tab shows it. `Search all` finds a cost center, a calendar or a dimension by its code or its name. It does not search exchange rates: Kad lists them instead.
 
 Ask, for example: "Which cost centers sit under Group IT?", "Who is the budget holder of FR-TRV-600?", "How many working days are there in France in 2026?", "Which dimensions are required?" or "What is the USD rate for 2026?" Assistants connected over MCP get the same answers.
+
+With read access to the portfolio settings, Kad reads the contributors as **Portfolio › Contributors** shows them: the person, their job title, team, manager and contract type, their availability in days per month, their skills with their level, their default classification, their notes and the project days they logged. Kad finds a contributor by their reference, such as `MEM-4`, or by name. Kad names a contributor's default company only when you can read the companies. Without the right on the portfolio settings, Kad says that it does not read the contributors. Ask, for example: "Who is MEM-4?" or "Which contributors are experts in SAP?" Assistants connected over MCP get the same answers.
 
 Totals come from Kadratis. A list of budget lines or contracts comes with the total of every matching record, all pages included, and with the total of the records listed, so Kad quotes one of them or asks Kadratis for a sum. Asked for the ten largest lines and their total, Kad gives the total of those ten. When your data access is limited to some companies or cost centers, Kad says that its counts and totals cover your access, and does not present them as the total of the workspace.
 

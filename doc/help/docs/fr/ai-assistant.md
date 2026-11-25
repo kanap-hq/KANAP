@@ -126,6 +126,7 @@ La saisie de `@` ouvre le **sélecteur de mentions** au-dessus du composeur. Il 
   - `@APP backup` : les applications correspondant à « backup »
   - `@BL-12` : la ligne budgétaire portant la référence BL-12. `@BL` seul liste les lignes budgétaires des deux types. Les anciens numéros fonctionnent toujours : `@OPX-12` ou `@CPX-3` trouve sa ligne
   - `@SUP-3`, `@COMP-1`, `@CTCT-2`, `@DEPT-4`, `@CTR-2` : le fournisseur, la société, le contact, le département ou le contrat qui porte cette référence
+  - `@MEM-4` : le contributeur qui porte cette référence. `@MEM` seul liste les contributeurs
   - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CTCT`, `@DEPT`, `@SUP`, `@BP`
 - **Texte libre** : tout le reste (`@payroll`, `@server-2`) lance une recherche multi-types classée par pertinence. Elle trouve aussi les lignes budgétaires par le nom de leurs valeurs analytiques.
 
@@ -206,6 +207,8 @@ Sans le droit qu'un référentiel demande, Kad nomme le droit manquant. Quand vo
 Kad lit l'historique d'un centre de coûts, d'un calendrier ou d'une dimension, tel que le montre son onglet **Historique**. `Search all` trouve un centre de coûts, un calendrier ou une dimension par son code ou son nom. Il ne cherche pas les taux de change : Kad les liste à la place.
 
 Demandez par exemple : « Quels centres de coûts dépendent de Group IT ? », « Qui est le responsable budgétaire de FR-TRV-600 ? », « Combien de jours ouvrés en France en 2026 ? », « Quelles dimensions sont obligatoires ? » ou « Quel est le taux USD pour 2026 ? » Les assistants connectés par MCP reçoivent les mêmes réponses.
+
+Avec le droit de lecture sur les paramètres du portefeuille, Kad lit les contributeurs tels que les montre **Portefeuille › Contributeurs** : la personne, son intitulé de poste, son équipe, son responsable et son type de contrat, sa disponibilité en jours par mois, ses compétences avec leur niveau, sa classification par défaut, ses notes et les jours de projet qu'il a saisis. Kad trouve un contributeur par sa référence, comme `MEM-4`, ou par son nom. Kad ne nomme la société par défaut d'un contributeur que si vous pouvez lire les sociétés. Sans le droit sur les paramètres du portefeuille, Kad dit qu'il ne lit pas les contributeurs. Demandez par exemple : « Qui est MEM-4 ? » ou « Quels contributeurs sont experts en SAP ? » Les assistants connectés par MCP reçoivent les mêmes réponses.
 
 Les totaux viennent de Kadratis. Une liste de lignes budgétaires ou de contrats est accompagnée du total de toutes les fiches qui correspondent, toutes pages comprises, et du total des fiches listées : Kad cite l'un des deux ou demande une somme à Kadratis. Si vous demandez les dix plus grosses lignes et leur total, Kad donne le total de ces dix lignes. Quand votre accès aux données est limité à certaines sociétés ou à certains centres de coûts, Kad précise que ses décomptes et ses totaux couvrent votre accès, et ne les présente pas comme le total de l'espace de travail.
 

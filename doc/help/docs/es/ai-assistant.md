@@ -126,6 +126,7 @@ Escribir `@` abre el **selector de menciones** encima del cuadro de redacción. 
   - `@APP backup`: aplicaciones que coinciden con "backup"
   - `@BL-12`: la línea presupuestaria con la referencia BL-12. `@BL` solo lista líneas presupuestarias de ambos tipos. Los antiguos números siguen funcionando: `@OPX-12` o `@CPX-3` encuentra su línea
   - `@SUP-3`, `@COMP-1`, `@CTCT-2`, `@DEPT-4`, `@CTR-2`: el proveedor, la empresa, el contacto, el departamento o el contrato con esa referencia
+  - `@MEM-4`: el colaborador con esa referencia. `@MEM` solo lista los colaboradores
   - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CTCT`, `@DEPT`, `@SUP`, `@BP`
 - **Texto simple**: cualquier otra cosa (`@payroll`, `@server-2`) ejecuta una búsqueda entre tipos ordenada por relevancia. También encuentra las líneas presupuestarias por el nombre de sus valores analíticos.
 
@@ -206,6 +207,8 @@ Sin el derecho que pide una clase de datos de referencia, Kad nombra el derecho 
 Kad lee el historial de un centro de coste, un calendario o una dimensión, tal como lo muestra su pestaña **Historial**. `Search all` encuentra un centro de coste, un calendario o una dimensión por su código o su nombre. No busca los tipos de cambio: Kad los lista en su lugar.
 
 Pregunte, por ejemplo: «¿Qué centros de coste dependen de Group IT?», «¿Quién es el responsable del presupuesto de FR-TRV-600?», «¿Cuántos días laborables tiene Francia en 2026?», «¿Qué dimensiones son obligatorias?» o «¿Cuál es el tipo del USD para 2026?» Los asistentes conectados por MCP reciben las mismas respuestas.
+
+Con el derecho de lectura sobre la configuración del portafolio, Kad lee los colaboradores tal como los muestra **Portafolio › Colaboradores**: la persona, su puesto, su equipo, su responsable y su tipo de contrato, su disponibilidad en días al mes, sus competencias con su nivel, su clasificación por defecto, sus notas y los días de proyecto registrados. Kad encuentra un colaborador por su referencia, como `MEM-4`, o por su nombre. Kad solo nombra la empresa por defecto de un colaborador si usted puede leer las empresas. Sin el derecho sobre la configuración del portafolio, Kad dice que no lee los colaboradores. Pregunte, por ejemplo: «¿Quién es MEM-4?» o «¿Qué colaboradores son expertos en SAP?» Los asistentes conectados por MCP reciben las mismas respuestas.
 
 Los totales vienen de Kadratis. Una lista de líneas presupuestarias o de contratos llega con el total de todos los registros que coinciden, todas las páginas incluidas, y con el total de los registros listados, así que Kad cita uno de los dos o pide una suma a Kadratis. Si usted pide las diez líneas más grandes y su total, Kad da el total de esas diez líneas. Cuando su acceso a los datos está limitado a algunas empresas o centros de coste, Kad indica que sus recuentos y totales cubren su acceso, y no los presenta como el total del espacio de trabajo.
 
