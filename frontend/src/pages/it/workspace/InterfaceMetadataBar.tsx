@@ -10,7 +10,7 @@ import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerMenuItemSx } from '../../../theme/formSx';
 import { CRITICALITY_COLORS, getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { classificationText } from '../../../utils/applicationClassification';
-import { isHeldUnknown, offeredCatalogOptions } from '../../../utils/catalogOffered';
+import { catalogOptionLabel, isHeldUnknown, offeredCatalogOptions } from '../../../utils/catalogOffered';
 
 type Props = {
   lifecycle: string;
@@ -60,18 +60,18 @@ export default function InterfaceMetadataBar({
     offeredCatalogOptions(byField.lifecycleStatus, lifecycle)
       .map((item) => ({
         value: item.code,
-        label: item.deprecated && !isHeldUnknown(item) ? t('it:workspace.interface.metadata.deprecated', { label: item.label }) : String(item.label),
+        label: catalogOptionLabel(item, t),
         color: getDotColor(LIFECYCLE_COLORS[item.code] || 'default', theme.palette.mode),
       }))
   ), [byField.lifecycleStatus, lifecycle, theme.palette.mode]);
 
-  const criticalityOptions = [{ value: '', label: classificationText('Not set'), color: getDotColor('default', theme.palette.mode) }, ...offeredCatalogOptions(classificationCatalog?.businessCriticalityLevels, criticality).map((item) => ({ value: item.code, label: String(item.label), color: getDotColor('default', theme.palette.mode) }))];
+  const criticalityOptions = [{ value: '', label: classificationText('Not set'), color: getDotColor('default', theme.palette.mode) }, ...offeredCatalogOptions(classificationCatalog?.businessCriticalityLevels, criticality).map((item) => ({ value: item.code, label: catalogOptionLabel(item, t), color: getDotColor('default', theme.palette.mode) }))];
 
   const dataClassOptions = React.useMemo(() => (
     offeredCatalogOptions(byField.dataClass, dataClass)
       .map((item) => ({
         value: item.code,
-        label: item.deprecated && !isHeldUnknown(item) ? t('it:workspace.interface.metadata.deprecated', { label: item.label }) : String(item.label),
+        label: catalogOptionLabel(item, t),
       }))
   ), [byField.dataClass, dataClass]);
 

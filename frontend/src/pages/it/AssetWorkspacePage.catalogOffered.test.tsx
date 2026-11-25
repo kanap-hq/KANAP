@@ -125,11 +125,11 @@ describe('Asset network: retired catalog values (rule P7)', () => {
   it('shows and keeps the retired type and subnet the asset holds', async () => {
     renderNetwork([{ type: 'ipmi', ip: '10.9.0.5', subnet_cidr: '10.9.0.0/24' }]);
     await screen.findByText('QA-C4 VM');
-    const type = await screen.findByText('common.deprecatedOption:IPMI');
-    expect(await optionsOf(type.closest('[role="combobox"]') as HTMLElement)).toEqual(['Host', 'common.deprecatedOption:IPMI']);
+    const type = await screen.findByText('IPMI (common:enumEditor.retiredSuffix)');
+    expect(await optionsOf(type.closest('[role="combobox"]') as HTMLElement)).toEqual(['Host', 'IPMI (common:enumEditor.retiredSuffix)']);
     const subnet = screen.getAllByRole('combobox').find((node) => node.textContent?.includes('10.9.0.0/24'));
     expect(subnet).toBeTruthy();
-    expect(await optionsOf(subnet!)).toEqual(['common:labels.none', '10.0.0.0/24', 'common.deprecatedOption:10.9.0.0/24']);
+    expect(await optionsOf(subnet!)).toEqual(['common:labels.none', '10.0.0.0/24', '10.9.0.0/24 (common:enumEditor.retiredSuffix)']);
   });
 
   it('does not offer them to an asset that does not hold them', async () => {

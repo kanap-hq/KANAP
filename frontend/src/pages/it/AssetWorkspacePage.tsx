@@ -65,7 +65,7 @@ import { joinNames } from '../working-day-calendars/workingDayCalendarFields';
 import { useTranslation } from 'react-i18next';
 import { screenLanguage } from '../../components/csv/readings';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { isHeldUnknown, offeredCatalogOptions } from '../../utils/catalogOffered';
+import { catalogOptionLabel, isHeldUnknown, offeredCatalogOptions } from '../../utils/catalogOffered';
 import { assetDeleteCheck } from '../../utils/deleteCheck';
 import { deleteFailureReason } from '../../utils/deleteRefusal';
 import { isValidHostname, sanitizeHostname } from '../../utils/hostname';
@@ -522,7 +522,7 @@ function AssetWorkspaceRoute() {
   const serverRoleOptions = React.useMemo(
     () => offeredCatalogOptions(byField.serverRole).map((o) => ({
       value: o.code,
-      label: o.deprecated ? t('common.deprecatedOption', { label: o.label }) : o.label,
+      label: catalogOptionLabel(o, t),
       deprecated: !!o.deprecated,
     })),
     [byField.serverRole, t],
@@ -738,7 +738,7 @@ function AssetWorkspaceRoute() {
   const lifecycleOptions = React.useMemo(
     () => offeredCatalogOptions(byField.lifecycleStatus, status).map((item) => ({
       value: item.code,
-      label: item.deprecated && !isHeldUnknown(item) ? t('common.deprecatedOption', { label: item.label }) : String(item.label),
+      label: catalogOptionLabel(item, t),
     })),
     [byField.lifecycleStatus, status, t],
   );
@@ -747,7 +747,7 @@ function AssetWorkspaceRoute() {
     () => offeredCatalogOptions(byField.serverKind, kind)
       .map((o) => ({
         value: o.code,
-        label: o.deprecated && !isHeldUnknown(o) ? t('common.deprecatedOption', { label: o.label }) : String(o.label),
+        label: catalogOptionLabel(o, t),
         deprecated: !!o.deprecated,
       }))
       .sort((a, b) => a.label.localeCompare(b.label)),
@@ -794,7 +794,7 @@ function AssetWorkspaceRoute() {
       deprecated: true,
     } : {
       value: d.code,
-      label: d.deprecated ? t('common.deprecatedOption', { label: d.label }) : d.label,
+      label: catalogOptionLabel(d, t),
       dns_suffix: d.dns_suffix,
       system: d.system,
       deprecated: !!d.deprecated,
@@ -804,7 +804,7 @@ function AssetWorkspaceRoute() {
   const adminZoneOptions = React.useMemo(
     () => offeredCatalogOptions(byField.adminZone, adminZone, (code) => t('common.legacyOption', { label: code })).map((option) => ({
       value: option.code,
-      label: option.deprecated && !isHeldUnknown(option) ? t('common.deprecatedOption', { label: option.label }) : String(option.label),
+      label: catalogOptionLabel(option, t),
     })),
     [adminZone, byField.adminZone, t],
   );
@@ -849,7 +849,7 @@ function AssetWorkspaceRoute() {
   const networkSegmentOptions = React.useMemo(
     () => (byField.networkSegment || []).map((o) => ({
       value: o.code,
-      label: o.deprecated ? t('common.deprecatedOption', { label: o.label }) : o.label,
+      label: catalogOptionLabel(o, t),
       deprecated: !!o.deprecated,
     })),
     [byField.networkSegment, t],
@@ -874,7 +874,7 @@ function AssetWorkspaceRoute() {
         ? { value: s.code, label: s.code, vlan_number: null, network_zone: null, description: null }
         : {
           value: s.cidr,
-          label: s.deprecated ? t('common.deprecatedOption', { label: s.cidr }) : s.cidr,
+          label: catalogOptionLabel(s, t),
           vlan_number: s.vlan_number,
           network_zone: s.network_zone,
           description: s.description,
@@ -887,7 +887,7 @@ function AssetWorkspaceRoute() {
   const ipAddressTypeOptions = React.useMemo(
     () => offeredCatalogOptions(byField.ipAddressType, heldIpTypes).map((o) => ({
       value: o.code,
-      label: o.deprecated && !isHeldUnknown(o) ? t('common.deprecatedOption', { label: o.label }) : String(o.label),
+      label: catalogOptionLabel(o, t),
       deprecated: !!o.deprecated,
     })),
     [byField.ipAddressType, heldIpTypes, t],

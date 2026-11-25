@@ -97,7 +97,7 @@ describe('Application classification workspace surfaces', () => {
   it('keeps a retired level selectable only for the application that already uses it', () => {
     renderPanel({ app: { ...completeApp, criticality: 'former' } });
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Business criticality' }));
-    expect(screen.getByRole('option', { name: /Former \(No longer offered\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Former \(no longer offered\)/ })).toBeInTheDocument();
   });
 
   it('warns when the RTO reaches the downtime of the chosen level, and only then', () => {

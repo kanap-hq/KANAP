@@ -38,7 +38,7 @@ import { getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { isHeldUnknown, offeredCatalogOptions } from '../../../utils/catalogOffered';
+import { catalogOptionLabel, isHeldUnknown, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import { environmentLabel } from '../../../utils/applicationEnvironments';
 import { legTypeLabel } from '../../../utils/interfaceLegType';
 const ENVIRONMENTS = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'] as const;
@@ -316,7 +316,7 @@ export default function InterfaceBindingsMatrix({
     if (list.length === 0) return [{ label: t('common:statuses.active'), value: 'active' }];
     return offeredCatalogOptions(list, heldStatus).map((item) => ({
       value: item.code,
-      label: item.deprecated && !isHeldUnknown(item) ? t('it:common.deprecatedOption', { label: item.label }) : String(item.label),
+      label: catalogOptionLabel(item, t),
     }));
   }, [byField.lifecycleStatus, heldStatus, t]);
   const [bindingSaving, setBindingSaving] = React.useState(false);
@@ -817,7 +817,7 @@ export default function InterfaceBindingsMatrix({
     // Rule P7: the modes still offered, plus the one the binding shown holds.
     return offeredCatalogOptions(source, current, (code) => labelFor('interfaceAuthMode', code) || code).map((item) => ({
       code: item.code,
-      label: item.deprecated && !isHeldUnknown(item) ? t('it:common.deprecatedOption', { label: item.label }) : String(item.label),
+      label: catalogOptionLabel(item, t),
     }));
   }, [byField.interfaceAuthMode, dialogState?.authentication_mode, labelFor, t]);
 

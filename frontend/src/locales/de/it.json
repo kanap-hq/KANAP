@@ -2905,8 +2905,7 @@
         "flow": "Fluss",
         "route": "Route",
         "data": "Daten",
-        "applicationsMissing": "Anwendungen fehlen",
-        "deprecated": "{{label}} (veraltet)"
+        "applicationsMissing": "Anwendungen fehlen"
       },
       "relations": {
         "upstream": "Vorgelagerte Schnittstellen",
@@ -3512,7 +3511,6 @@
     "notes": "Notizen",
     "role": "Rolle",
     "system": "System",
-    "deprecatedOption": "{{label}} (veraltet)",
     "legacyOption": "{{label}} (Altwert)"
   },
   "classification": {

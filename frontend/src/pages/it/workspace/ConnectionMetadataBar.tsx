@@ -7,7 +7,7 @@ import { drawerMenuItemSx } from '../../../theme/formSx';
 import { StatusDot } from '../../../components/design';
 import { CreationPreview } from '../../../components/workspace/creation';
 import { classificationText } from '../../../utils/applicationClassification';
-import { offeredCatalogOptions } from '../../../utils/catalogOffered';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import { useTranslation } from 'react-i18next';
 
 type Props = {
@@ -63,7 +63,10 @@ export default function ConnectionMetadataBar({
   const offeredProtocols = offeredCatalogOptions(connectionTypes, safeProtocolCodes);
   // Each protocol by its name in the reader's language; a value that is no known code is shown as given.
   const safeProtocolLabels = (protocolLabels && protocolLabels.length > 0 ? protocolLabels : safeProtocolCodes)
-    .map((value) => connectionTypes.find((ct: any) => ct.code === value)?.label || value);
+    .map((value) => {
+      const type = connectionTypes.find((ct: any) => ct.code === value);
+      return type ? catalogOptionLabel(type, t) : value;
+    });
 
   const [lifecycleAnchor, setLifecycleAnchor] = React.useState<HTMLElement | null>(null);
   const [topologyAnchor, setTopologyAnchor] = React.useState<HTMLElement | null>(null);
@@ -177,7 +180,7 @@ export default function ConnectionMetadataBar({
                 setLifecycleAnchor(null);
               }}
             >
-              {opt.deprecated ? `${opt.label} (${t('common:enumEditor.retiredSuffix')})` : opt.label}
+              {catalogOptionLabel(opt, t)}
             </MenuItem>
           ))}
         </Box>
@@ -261,7 +264,7 @@ export default function ConnectionMetadataBar({
                 }}
               >
                 <Checkbox size="small" checked={isChecked} sx={{ p: 0.5, mr: 1 }} />
-                <ListItemText primaryTypographyProps={{ sx: { fontSize: 13 } }} primary={ct.label || ct.code} />
+                <ListItemText primaryTypographyProps={{ sx: { fontSize: 13 } }} primary={catalogOptionLabel(ct, t)} />
               </MenuItem>
             );
           })}

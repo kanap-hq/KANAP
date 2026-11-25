@@ -141,12 +141,12 @@ describe('ConnectionPathSection', () => {
       ]);
       const [first, second] = screen.getAllByRole('button', { name: /FTP|HTTPS/ }).filter((node) => node.tagName === 'BUTTON' && !node.getAttribute('aria-label'));
       fireEvent.click(first);
-      expect(await screen.findByRole('menuitem', { name: 'FTP' })).toBeInTheDocument();
-      fireEvent.keyDown(screen.getByRole('menuitem', { name: 'FTP' }), { key: 'Escape' });
-      await waitFor(() => expect(screen.queryByRole('menuitem', { name: 'FTP' })).toBeNull());
+      expect(await screen.findByRole('menuitem', { name: 'FTP (no longer offered)' })).toBeInTheDocument();
+      fireEvent.keyDown(screen.getByRole('menuitem', { name: 'FTP (no longer offered)' }), { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('menuitem', { name: /FTP/ })).toBeNull());
       fireEvent.click(second);
       expect(await screen.findByRole('menuitem', { name: 'HTTPS' })).toBeInTheDocument();
-      expect(screen.queryByRole('menuitem', { name: 'FTP' })).toBeNull();
+      expect(screen.queryByRole('menuitem', { name: /FTP/ })).toBeNull();
     });
 
     it('gives a new hop the connection protocols still offered', async () => {

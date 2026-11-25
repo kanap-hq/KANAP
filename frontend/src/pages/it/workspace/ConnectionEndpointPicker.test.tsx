@@ -86,12 +86,12 @@ describe('ConnectionEndpointPicker', () => {
     settings.entities = [{ code: 'hq', label: 'Headquarters' }, { code: 'old_dc', label: 'Old data centre', deprecated: true }];
     const view = renderPicker({ asset_id: null, entity_code: 'old_dc' }, null, vi.fn(), 'Source');
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Source' }));
-    expect(await screen.findByRole('option', { name: 'Old data centre' })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: 'Old data centre (no longer offered)' })).toBeInTheDocument();
     view.unmount();
     renderPicker({ asset_id: null, entity_code: 'hq' }, null, vi.fn(), 'Source');
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Source' }));
     expect(await screen.findByRole('option', { name: 'Headquarters' })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Old data centre' })).toBeNull();
+    expect(screen.queryByRole('option', { name: /Old data centre/ })).toBeNull();
   });
 
   it('hands the chosen option to onChange', async () => {

@@ -6,7 +6,7 @@ import { INCIDENT_SEVERITIES, type IncidentSeverity, type IncidentStatus } from 
 import { PropertyGroup, PropertyRow, StatusDot } from '../../../components/design';
 import UserSelect from '../../../components/fields/UserSelect';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
-import { offeredCatalogOptions } from '../../../utils/catalogOffered';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDateTime } from '../../../lib/dateFormat';
 import {
@@ -125,7 +125,7 @@ export default function IncidentPropertiesDrawer({
             <MenuItem value="" sx={drawerMenuItemSx}>{t('workspace.incident.drawer.noCategory')}</MenuItem>
             {categoryOptions.map((option) => (
               <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>
-                {option.deprecated ? `${option.label} (${t('common:enumEditor.retiredSuffix')})` : option.label}
+                {catalogOptionLabel(option, t)}
               </MenuItem>
             ))}
           </TextField>

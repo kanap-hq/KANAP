@@ -7,7 +7,7 @@ import CompanySelect from '../../../components/fields/CompanySelect';
 import type { CountryOption } from '../../../constants/isoOptions';
 import { filterCountryOptions, useCountryOptions } from '../../../i18n/countries';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
-import { offeredCatalogOptions } from '../../../utils/catalogOffered';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import CommitTextField from './CommitTextField';
 
 export type LocationDrawerData = {
@@ -72,7 +72,7 @@ export default function LocationPropertiesDrawer({
           >
             {hostingOptions.map((opt) => (
               <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
-                {opt.deprecated ? t('common.deprecatedOption', { label: opt.label }) : opt.label}
+                {catalogOptionLabel(opt, t)}
               </MenuItem>
             ))}
           </TextField>
@@ -103,7 +103,7 @@ export default function LocationPropertiesDrawer({
                 <MenuItem value="" sx={drawerMenuItemSx}>—</MenuItem>
                 {providerOptions.map((opt) => (
                   <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
-                    {opt.deprecated ? t('common.deprecatedOption', { label: opt.label }) : opt.label}
+                    {catalogOptionLabel(opt, t)}
                   </MenuItem>
                 ))}
               </TextField>

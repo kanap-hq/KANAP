@@ -62,7 +62,7 @@ describe('LocationPropertiesDrawer catalog values (rule P7)', () => {
 
   it('offers them to the location that holds them', async () => {
     renderDrawer('old_cloud', 'old_provider');
-    expect(await optionsOf(0)).toEqual(['Public cloud', 'common.deprecatedOption:Old cloud']);
-    expect(await optionsOf(1)).toEqual(['—', 'AWS', 'common.deprecatedOption:Old provider']);
+    expect(await optionsOf(0)).toEqual(['Public cloud', 'Old cloud (common:enumEditor.retiredSuffix)']);
+    expect(await optionsOf(1)).toEqual(['—', 'AWS', 'Old provider (common:enumEditor.retiredSuffix)']);
   });
 });

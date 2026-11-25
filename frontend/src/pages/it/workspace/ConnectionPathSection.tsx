@@ -17,7 +17,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import api from '../../../api';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
-import { offeredCatalogOptions } from '../../../utils/catalogOffered';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import ConnectionHopEquipmentPicker from './ConnectionHopEquipmentPicker';
 import useClusterConnectionQuestion from '../components/useClusterConnectionQuestion';
 import ConnectionProtocolsTable, { type ConnectionProtocol } from './ConnectionProtocolsTable';
@@ -373,7 +373,7 @@ export default function ConnectionPathSection({
                     </MenuItem>
                     {offeredCatalogOptions<any>(pathHopFunctions, hop.function_code).map((fn: any) => (
                       <MenuItem key={fn.code} value={fn.code} sx={drawerMenuItemSx}>
-                        {fn.deprecated ? `${fn.label} (${t('common:enumEditor.retiredSuffix')})` : fn.label}
+                        {catalogOptionLabel(fn, t)}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -459,7 +459,10 @@ export default function ConnectionPathSection({
                       }}
                     >
                       {(hop.protocol_codes || [])
-                        .map((c) => connectionTypes.find((ct: any) => ct.code === c)?.label || c)
+                        .map((c) => {
+                          const type = connectionTypes.find((ct: any) => ct.code === c);
+                          return type ? catalogOptionLabel(type, t) : c;
+                        })
                         .join(', ') || 'Inherited'}
                     </Typography>
                   </Box>
@@ -572,7 +575,7 @@ export default function ConnectionPathSection({
                 }}
               >
                 <Checkbox size="small" checked={isChecked} sx={{ p: 0.5, mr: 1 }} />
-                <ListItemText primaryTypographyProps={{ sx: { fontSize: 13 } }} primary={ct.label || ct.code} />
+                <ListItemText primaryTypographyProps={{ sx: { fontSize: 13 } }} primary={catalogOptionLabel(ct, t)} />
               </MenuItem>
             );
           })}

@@ -74,7 +74,7 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
-import { isHeldUnknown, offeredCatalogOptions } from '../../utils/catalogOffered';
+import { catalogOptionLabel, isHeldUnknown, offeredCatalogOptions } from '../../utils/catalogOffered';
 
 type TabKey = 'overview' | 'deployments' | 'interfaces' | 'operations' | 'compliance' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
@@ -475,7 +475,7 @@ function ApplicationProperties({
                 disabled={isHeldUnknown(option)}
                 sx={drawerMenuItemSx}
               >
-                {option.label}
+                {catalogOptionLabel(option, t)}
               </MenuItem>
             ))}
           </Select>
@@ -1290,7 +1290,7 @@ export function OperationsTab({
               options={accessOptions}
               value={accessOptions.filter((option) => (app.access_methods || []).includes(option.code))}
               onChange={(_, value) => { void onPatch({ access_methods: value.map((item) => item.code) } as Partial<ApplicationDetail>); }}
-              getOptionLabel={(option) => option.label}
+              getOptionLabel={(option) => catalogOptionLabel(option, t)}
               disabled={!canManage}
               renderInput={(params) => (
                 <TextField
@@ -1678,10 +1678,10 @@ export default function ApplicationWorkspacePage() {
     const list = offeredCatalogOptions(byField.lifecycleStatus, heldLifecycle);
     return list.map((option) => ({
       value: option.code,
-      label: option.label,
+      label: catalogOptionLabel(option, t),
       color: getDotColor(LIFECYCLE_COLORS[option.code] || 'default', theme.palette.mode),
     }));
-  }, [byField.lifecycleStatus, heldLifecycle, theme.palette.mode]);
+  }, [byField.lifecycleStatus, heldLifecycle, theme.palette.mode, t]);
 
   // Creating an application takes the member level, as the server does.
   if (isCreate && !canManage) return <ForbiddenPage resource="applications" level="member" />;

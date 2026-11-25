@@ -22,7 +22,7 @@ import { filterCountryOptions, useCountryOptions } from '../../../i18n/countries
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerFieldValueSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { isHeldUnknown, offeredCatalogOptions } from '../../../utils/catalogOffered';
+import { catalogOptionLabel, isHeldUnknown, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import { formatShortInstantDate } from '../../../lib/dateFormat';
 import { useLocale } from '../../../i18n/useLocale';
 import type {
@@ -145,24 +145,24 @@ export default function InterfacePropertyPanel({
 
   // Rule P7: each list offers the values still offered, plus the one the interface holds.
   const dataClassOptions = React.useMemo(
-    () => offeredCatalogOptions(classificationCatalog?.dataClasses, data?.data_class).map((item) => ({ label: String(item.label), value: item.code })),
-    [classificationCatalog?.dataClasses, data?.data_class],
+    () => offeredCatalogOptions(classificationCatalog?.dataClasses, data?.data_class).map((item) => ({ label: catalogOptionLabel(item, t), value: item.code })),
+    [classificationCatalog?.dataClasses, data?.data_class, t],
   );
 
   const dataCategoryOptions = React.useMemo(
-    () => offeredCatalogOptions(byField.interfaceDataCategory, data?.data_category).map((item) => ({ label: String(item.label), value: item.code })),
-    [byField.interfaceDataCategory, data?.data_category],
+    () => offeredCatalogOptions(byField.interfaceDataCategory, data?.data_category).map((item) => ({ label: catalogOptionLabel(item, t), value: item.code })),
+    [byField.interfaceDataCategory, data?.data_category, t],
   );
 
   const lifecycleOptions = React.useMemo(
     () => offeredCatalogOptions(byField.lifecycleStatus, data?.lifecycle).map((item) => ({
-      label: item.deprecated && !isHeldUnknown(item) ? `${item.label} (${t('common:enumEditor.retiredSuffix')})` : String(item.label),
+      label: catalogOptionLabel(item, t),
       value: item.code,
     })),
     [byField.lifecycleStatus, data?.lifecycle, t],
   );
 
-  const criticalityOptions = [{ value: '', label: classificationText('Not set') }, ...offeredCatalogOptions(classificationCatalog?.businessCriticalityLevels, data?.criticality).map((item) => ({ value: item.code, label: String(item.label) }))];
+  const criticalityOptions = [{ value: '', label: classificationText('Not set') }, ...offeredCatalogOptions(classificationCatalog?.businessCriticalityLevels, data?.criticality).map((item) => ({ value: item.code, label: catalogOptionLabel(item, t) }))];
 
   const residencyCodes = React.useMemo(
     () => residency.map((item) => String(item.country_iso || '').toUpperCase()).filter((item) => item.length === 2),

@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next';
+
 /** A catalog entry as the settings lists give it. */
 export type CatalogEntry = { code: string; label?: string | null; deprecated?: boolean };
 
@@ -35,4 +37,15 @@ export function offeredCatalogOptions<T extends CatalogEntry>(
 /** True for a held code the catalog does not list. */
 export function isHeldUnknown(option: CatalogEntry | HeldUnknownEntry): option is HeldUnknownEntry {
   return (option as HeldUnknownEntry).unknown === true;
+}
+
+/**
+ * The name a control shows for a catalog entry (a selector's value and options, a chip, a header): a
+ * retired entry the record still holds carries the catalog's own word, "(no longer offered)", the name
+ * of the settings' "No longer offered" box; a held code the catalog does not list shows as it is
+ * given. Every control that shows a held retired value marks it through here.
+ */
+export function catalogOptionLabel(option: (CatalogEntry | HeldUnknownEntry) & { label?: string | null }, t: TFunction): string {
+  const label = String(option.label || option.code);
+  return option.deprecated && !isHeldUnknown(option) ? `${label} (${t('common:enumEditor.retiredSuffix')})` : label;
 }

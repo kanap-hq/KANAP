@@ -111,8 +111,9 @@ describe('connection catalog values (rule P7)', () => {
     expect(protocols).toEqual(['HTTPS']);
     cleanup();
     renderBar('active', ['ftp', 'https']);
-    fireEvent.click(screen.getByText('FTP, HTTPS'));
-    expect(screen.getAllByRole('menuitem').map((node) => node.textContent)).toEqual(['HTTPS', 'FTP']);
+    // The header and the list mark the retired protocol the connection holds.
+    fireEvent.click(screen.getByText(`${retired('FTP')}, HTTPS`));
+    expect(screen.getAllByRole('menuitem').map((node) => node.textContent)).toEqual(['HTTPS', retired('FTP')]);
   });
 
   it('the equipment of a hop offers a retired entity only to the hop that holds it', () => {
@@ -123,7 +124,7 @@ describe('connection catalog values (rule P7)', () => {
     expect(list.queryByText('Old data centre')).toBeNull();
     cleanup();
     render(<ThemeProvider theme={theme}><ConnectionHopEquipmentPicker value={{ asset_id: null, entity_code: 'old_dc' }} onChange={noop} /></ThemeProvider>);
-    fireEvent.mouseDown(screen.getAllByRole('combobox').find((node) => node.textContent?.includes('Old data centre'))!);
-    expect(within(screen.getByRole('listbox')).getByText('Old data centre')).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getAllByRole('combobox').find((node) => node.textContent?.includes(retired('Old data centre')))!);
+    expect(within(screen.getByRole('listbox')).getByText(retired('Old data centre'))).toBeInTheDocument();
   });
 });

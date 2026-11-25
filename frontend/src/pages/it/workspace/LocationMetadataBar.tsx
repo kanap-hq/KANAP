@@ -9,7 +9,7 @@ import {
 } from '../../portfolio/workspace/PortfolioMetadataBar';
 import { drawerMenuItemSx, drawerFieldValueSx, drawerSelectSx } from '../../../theme/formSx';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
-import { offeredCatalogOptions } from '../../../utils/catalogOffered';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import CommitTextField from './CommitTextField';
 
 type Props = {
@@ -137,7 +137,7 @@ export default function LocationMetadataBar({
               }}
               sx={drawerMenuItemSx}
             >
-              {opt.label}
+              {catalogOptionLabel(opt, t)}
             </MenuItem>
           ))}
       </Menu>
@@ -267,7 +267,7 @@ export default function LocationMetadataBar({
                 <MenuItem value="" sx={drawerMenuItemSx}>—</MenuItem>
                 {providerOptions.map((opt) => (
                   <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
-                    {opt.deprecated ? t('common.deprecatedOption', { label: opt.label }) : opt.label}
+                    {catalogOptionLabel(opt, t)}
                   </MenuItem>
                 ))}
               </TextField>

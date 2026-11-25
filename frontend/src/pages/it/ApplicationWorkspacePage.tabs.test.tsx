@@ -142,7 +142,7 @@ beforeEach(() => {
 });
 
 describe('Operations tab access methods', () => {
-  it('shows every access method the application holds and offers a retired one only to it (rule P7)', async () => {
+  it('shows every access method the application holds, marks a retired one and offers it only to it (rule P7)', async () => {
     enumOptions.byField.accessMethod = [
       { code: 'web', label: 'Web' },
       { code: 'vdi', label: 'VDI', deprecated: true },
@@ -153,10 +153,10 @@ describe('Operations tab access methods', () => {
     await screen.findByRole('heading', { name: 'workspace.application.technical.sectionTitle' });
     const field = screen.getByRole('combobox');
     const chips = field.closest('.MuiAutocomplete-root')!.querySelectorAll('.MuiChip-label');
-    expect([...chips].map((chip) => chip.textContent)).toEqual(['citrix', 'Web', 'VDI']);
+    expect([...chips].map((chip) => chip.textContent)).toEqual(['citrix', 'Web', 'VDI (common:enumEditor.retiredSuffix)']);
     fireEvent.mouseDown(field);
     const listbox = await screen.findByRole('listbox');
-    expect(within(listbox).getAllByRole('option').map((option) => option.textContent)).toEqual(['citrix', 'Web', 'VDI', 'Mobile']);
+    expect(within(listbox).getAllByRole('option').map((option) => option.textContent)).toEqual(['citrix', 'Web', 'VDI (common:enumEditor.retiredSuffix)', 'Mobile']);
   });
 });
 

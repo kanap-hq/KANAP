@@ -26,6 +26,7 @@ import type {
   InterfaceLeg,
 } from '../components/interface-workspace/types';
 import { legTypeLabel } from '../../../utils/interfaceLegType';
+import { catalogOptionLabel } from '../../../utils/catalogOffered';
 
 type Props = {
   canManage: boolean;
@@ -104,11 +105,11 @@ export default function InterfaceFlowTab({
     for (const code of usedCodes) {
       if (!existing.has(code)) {
         const ref = list.find((item) => item.code === code);
-        extras.push({ label: ref?.label || code, value: code });
+        extras.push({ label: ref ? catalogOptionLabel(ref, t) : code, value: code });
       }
     }
     return [...base, ...extras];
-  }, [byField.interfaceTriggerType, legs]);
+  }, [byField.interfaceTriggerType, legs, t]);
 
   const patternOptions = React.useMemo(() => {
     const list = byField.interfacePattern || [];
@@ -119,11 +120,11 @@ export default function InterfaceFlowTab({
     for (const code of usedCodes) {
       if (!existing.has(code)) {
         const ref = list.find((item) => item.code === code);
-        extras.push({ label: ref?.label || code, value: code });
+        extras.push({ label: ref ? catalogOptionLabel(ref, t) : code, value: code });
       }
     }
     return [...base, ...extras];
-  }, [byField.interfacePattern, legs]);
+  }, [byField.interfacePattern, legs, t]);
 
   const formatOptions = React.useMemo(() => {
     const list = byField.interfaceFormat || [];
@@ -134,11 +135,11 @@ export default function InterfaceFlowTab({
     for (const code of usedCodes) {
       if (!existing.has(code)) {
         const ref = list.find((item) => item.code === code);
-        extras.push({ label: ref?.label || code, value: code });
+        extras.push({ label: ref ? catalogOptionLabel(ref, t) : code, value: code });
       }
     }
     return [...base, ...extras];
-  }, [byField.interfaceFormat, legs]);
+  }, [byField.interfaceFormat, legs, t]);
 
   const routeOptions = React.useMemo(() => [
     { label: t('it:enums.routeType.direct'), value: 'direct' },

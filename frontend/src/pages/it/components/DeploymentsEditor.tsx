@@ -35,7 +35,7 @@ import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import { getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { offeredCatalogOptions } from '../../../utils/catalogOffered';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDate } from '../../../lib/dateFormat';
@@ -183,7 +183,7 @@ export default function DeploymentsEditor({
     const held = deployments.find((deployment) => deployment.id === deploymentId)?.lifecycle;
     return offeredCatalogOptions(byField.lifecycleStatus, held).map((item) => ({
       value: item.code,
-      label: item.deprecated ? t('common.deprecatedOption', { label: item.label }) : item.label,
+      label: catalogOptionLabel(item, t),
     }));
   }, [byField.lifecycleStatus, deployments, t]);
 
@@ -191,7 +191,7 @@ export default function DeploymentsEditor({
   const serverRoleOptionsFor = React.useCallback((held?: string | null) => (
     offeredCatalogOptions(byField.serverRole, held).map((item) => ({
       value: item.code,
-      label: item.deprecated ? t('common.deprecatedOption', { label: item.label }) : item.label,
+      label: catalogOptionLabel(item, t),
     }))
   ), [byField.serverRole, t]);
   const serverRoleOptions = React.useMemo(() => serverRoleOptionsFor(), [serverRoleOptionsFor]);

@@ -36,7 +36,7 @@ import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { legTypeLabel } from '../../../utils/interfaceLegType';
 import { classificationText } from '../../../utils/applicationClassification';
-import { offeredCatalogOptions } from '../../../utils/catalogOffered';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 
 const NOTES_DEBOUNCE_MS = 900;
 
@@ -174,7 +174,7 @@ export default function ConnectionOverviewTab({
   // Rule P7: the protocols still offered, plus those the connection holds.
   const connectionTypes: ConnectionTypeOption[] = offeredCatalogOptions(settings?.connectionTypes, protocols.map((p) => p.code)).map((ct: any) => ({
     code: ct.code,
-    label: ct.label || ct.code,
+    label: catalogOptionLabel(ct, t),
     typicalPorts: ct.typicalPorts || ct.typical_ports || '',
   }));
 

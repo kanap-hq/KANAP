@@ -2,7 +2,7 @@ import React from 'react';
 import { Autocomplete, Box, MenuItem, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
-import { offeredCatalogOptions } from '../../../utils/catalogOffered';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import ClusterMark from '../../../components/workspace/ClusterMark';
 import { FieldLabel } from '../../../components/design';
 import { renderServerOption, type ServerOption } from '../../../components/fields/serverOptionRender';
@@ -186,7 +186,7 @@ export default function ConnectionEndpointPicker({
           </MenuItem>
           {entities.map((ent: any) => (
             <MenuItem key={ent.code} value={ent.code} sx={drawerMenuItemSx}>
-              {ent.label || ent.code}
+              {catalogOptionLabel(ent, t)}
             </MenuItem>
           ))}
         </TextField>

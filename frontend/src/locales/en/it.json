@@ -2905,8 +2905,7 @@
         "flow": "Flow",
         "route": "Route",
         "data": "Data",
-        "applicationsMissing": "Applications missing",
-        "deprecated": "{{label}} (deprecated)"
+        "applicationsMissing": "Applications missing"
       },
       "relations": {
         "upstream": "Upstream interfaces",
@@ -3512,7 +3511,6 @@
     "notes": "Notes",
     "role": "Role",
     "system": "System",
-    "deprecatedOption": "{{label}} (deprecated)",
     "legacyOption": "{{label}} (legacy)"
   },
   "classification": {

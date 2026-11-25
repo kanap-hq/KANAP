@@ -42,7 +42,7 @@ import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { useLocale } from '../../../i18n/useLocale';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx, tealLinkSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { offeredCatalogOptions } from '../../../utils/catalogOffered';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import { formatSupportDate, supportStateColor, supportStateOf, type SupportState } from '../../../utils/supportState';
 import { EditorField } from '../components/TechnologyCreateDialog';
 import TechnologyCveNames, { type TechnologyCveName } from './TechnologyCveNames';
@@ -301,7 +301,7 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
             sx={drawerSelectSx}
           >
             {familyOptions.map((option) => (
-              <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.label}</MenuItem>
+              <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{catalogOptionLabel(option, t)}</MenuItem>
             ))}
           </Select>
         </PropertyRow>
@@ -316,12 +316,12 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
               SelectDisplayProps={{ 'aria-label': t('workspace.technology.fields.adminZone') } as React.HTMLAttributes<HTMLDivElement>}
               sx={drawerSelectSx}
               renderValue={(value) => (value
-                ? zoneOptions.find((option) => option.code === value)?.label ?? String(value)
+                ? zoneOptions.filter((option) => option.code === value).map((option) => catalogOptionLabel(option, t))[0] ?? String(value)
                 : <Box component="span" sx={(theme) => ({ color: theme.palette.kanap.text.tertiary })}>{t('workspace.technology.placeholders.noAdminZone')}</Box>)}
             >
               <MenuItem value="" sx={drawerMenuItemSx}>{t('workspace.technology.placeholders.noAdminZone')}</MenuItem>
               {zoneOptions.map((option) => (
-                <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.label}</MenuItem>
+                <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{catalogOptionLabel(option, t)}</MenuItem>
               ))}
             </Select>
           </PropertyRow>
@@ -330,7 +330,7 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
             label={t('workspace.technology.fields.adminZone')}
             helperText={t('workspace.technology.fields.adminZoneUnused')}
           >
-            <Box component="span">{zoneOptions.find((option) => option.code === technology.admin_zone)?.label ?? technology.admin_zone}</Box>
+            <Box component="span">{zoneOptions.filter((option) => option.code === technology.admin_zone).map((option) => catalogOptionLabel(option, t))[0] ?? technology.admin_zone}</Box>
           </PropertyRow>
         ) : null}
         <PropertyRow label={t('workspace.technology.fields.hostingType')}>
@@ -344,7 +344,7 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
             sx={drawerSelectSx}
           >
             {hostingTypeOptions.map((option) => (
-              <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.label}</MenuItem>
+              <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{catalogOptionLabel(option, t)}</MenuItem>
             ))}
           </Select>
         </PropertyRow>
