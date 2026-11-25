@@ -69,7 +69,7 @@ The Overview tab holds the description. The other fields are in the header and t
 
 **What you can edit**:
 - **Name**: Department name (required), in the header
-- **Company**: Parent company, linked to Companies master data (required). A company that already has a department with the same name is refused: "A department with this name already exists in the selected company."
+- **Company**: Parent company, linked to Companies master data (required). A company that already has a department with the same name is refused: "A department with this name already exists in the selected company." A department that people, requests, projects or budget line allocations use stays in its company: the change is refused, and the message counts what uses it
 - **Description**: Free-text description
 - **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. Leave the date blank to keep the department active indefinitely, or set a future date to schedule its end. Switching the department to **Disabled** ends its validity now: it is disabled at once. While a future date is set, the switch reads **Active until** and that date
 
@@ -118,7 +118,7 @@ The columns, in this order:
 **Import**:
 
 - Use **Preflight check** to validate the file before applying it, then **Load**
-- **Matching by reference**: a filled `reference` (`DEPT-12` or `12`) names the department the row updates, even when the name has changed. The department takes the name and the company the row gives: a different company moves it to that company. The preflight check lists each department that will be renamed or move to another company
+- **Matching by reference**: a filled `reference` (`DEPT-12` or `12`) names the department the row updates, even when the name has changed. The department takes the name and the company the row gives: a different company moves it to that company, unless the department is in use, as on its page (the row is then refused). The preflight check lists each department that will be renamed or move to another company
 - **Matching by name**: when `reference` is empty, or the file has no such column, a row is matched by department name and company name. It updates the department it names, and any other row creates one
 - **Unknown reference**: a reference your workspace does not know refuses the row: "\"DEPT-999\" is no reference in this workspace. Leave the cell empty to import the row without it." This happens with a file exported from another workspace
 - **Renaming or moving**: a name that another department of the row's company already has is refused, and the message names that department's reference: "\"Finance\" already belongs to DEPT-7."

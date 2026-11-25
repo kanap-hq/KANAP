@@ -69,7 +69,7 @@ La pestaña Visión general contiene la descripción. Los demás campos están e
 
 **Qué puede editar**:
 - **Nombre**: Nombre del departamento (obligatorio), en el encabezado
-- **Empresa**: Empresa matriz, vinculada a los datos maestros de Empresas (obligatorio). Una empresa que ya tiene un departamento con el mismo nombre se rechaza: "A department with this name already exists in the selected company."
+- **Empresa**: Empresa matriz, vinculada a los datos maestros de Empresas (obligatorio). Una empresa que ya tiene un departamento con el mismo nombre se rechaza: "A department with this name already exists in the selected company." Un departamento que usan personas, solicitudes, proyectos o asignaciones de líneas presupuestarias se queda en su empresa: el cambio se rechaza y el mensaje cuenta lo que lo usa
 - **Descripción**: Descripción de texto libre
 - **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Deje la fecha en blanco para que el departamento permanezca activo indefinidamente, o fije una fecha futura para programar su fin. Pasar a **Desactivado** fija el fin de validez en este momento: la desactivación es inmediata. Mientras haya una fecha futura, el interruptor muestra **Activo hasta el** y esa fecha
 
@@ -118,7 +118,7 @@ Las columnas, en este orden:
 **Importación**:
 
 - Use la **Verificación previa** para validar el archivo antes de aplicarlo y después **Cargar**
-- **Emparejamiento por referencia**: una `reference` rellenada (`DEPT-12` o `12`) designa el departamento que la fila actualiza, aunque su nombre haya cambiado. El departamento toma el nombre y la empresa que da la fila: otra empresa lo traslada a ella. La verificación previa señala cada departamento que cambiará de nombre o de empresa
+- **Emparejamiento por referencia**: una `reference` rellenada (`DEPT-12` o `12`) designa el departamento que la fila actualiza, aunque su nombre haya cambiado. El departamento toma el nombre y la empresa que da la fila: otra empresa lo traslada a ella, salvo que el departamento esté en uso, como en su página (la fila se rechaza entonces). La verificación previa señala cada departamento que cambiará de nombre o de empresa
 - **Emparejamiento por nombre**: cuando `reference` está vacía, o el archivo no tiene esa columna, una fila se empareja por nombre de departamento y nombre de empresa. Actualiza el departamento que nombra, y cualquier otra fila crea uno
 - **Referencia desconocida**: una referencia que su espacio de trabajo no conoce rechaza la fila: «“DEPT-999” no es una referencia de este espacio de trabajo. Deje la celda vacía para importar la fila sin ella.» Es el caso de un archivo exportado desde otro espacio de trabajo
 - **Cambio de nombre o traslado**: un nombre que ya tiene otro departamento de la empresa de la fila se rechaza, y el mensaje da la referencia de ese departamento: «“Finance” ya pertenece a DEPT-7.»

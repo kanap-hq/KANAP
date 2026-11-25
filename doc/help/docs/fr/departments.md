@@ -69,7 +69,7 @@ L'onglet Vue d'ensemble contient la description. Les autres champs se trouvent d
 
 **Ce que vous pouvez modifier** :
 - **Nom** : Nom du département (obligatoire), dans l'en-tête
-- **Société** : Société parente, liée aux données de référence Sociétés (obligatoire). Une société qui a déjà un département du même nom est refusée : « A department with this name already exists in the selected company. »
+- **Société** : Société parente, liée aux données de référence Sociétés (obligatoire). Une société qui a déjà un département du même nom est refusée : « A department with this name already exists in the selected company. » Un département qu'utilisent des personnes, des demandes, des projets ou des ventilations de lignes budgétaires reste dans sa société : le changement est refusé, et le message compte ce qui l'utilise
 - **Description** : Description libre
 - **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Laissez la date vide pour que le département reste actif indéfiniment, ou fixez une date future pour programmer sa fin. Passer à **Désactivé** fixe la fin de validité à maintenant : la désactivation est immédiate. Tant qu'une date future est fixée, l'interrupteur affiche **Actif jusqu'au** et cette date
 
@@ -118,7 +118,7 @@ Les colonnes, dans cet ordre :
 **Import** :
 
 - Utilisez la **Vérification préalable** pour valider le fichier avant de l'appliquer, puis **Charger**
-- **Correspondance par référence** : une `reference` remplie (`DEPT-12` ou `12`) désigne le département que la ligne met à jour, même si son nom a changé. Le département prend le nom et la société que donne la ligne : une autre société l'y déplace. La vérification préalable signale chaque département qui sera renommé ou changera de société
+- **Correspondance par référence** : une `reference` remplie (`DEPT-12` ou `12`) désigne le département que la ligne met à jour, même si son nom a changé. Le département prend le nom et la société que donne la ligne : une autre société l'y déplace, sauf si le département est utilisé, comme sur sa page (la ligne est alors refusée). La vérification préalable signale chaque département qui sera renommé ou changera de société
 - **Correspondance par nom** : quand `reference` est vide, ou que le fichier n'a pas cette colonne, une ligne est rapprochée par nom de département et nom de société. Elle met à jour le département qu'elle nomme, et toute autre ligne en crée un
 - **Référence inconnue** : une référence que votre espace de travail ne connaît pas refuse la ligne : « « DEPT-999 » n'est pas une référence de cet espace de travail. Laissez la cellule vide pour importer la ligne sans elle. » C'est le cas d'un fichier exporté d'un autre espace de travail
 - **Renommage ou déplacement** : un nom qu'un autre département de la société de la ligne porte déjà est refusé, et le message donne la référence de ce département : « « Finance » appartient déjà à DEPT-7. »
