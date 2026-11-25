@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Checkbox, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
@@ -49,6 +49,8 @@ type Account = {
   consolidation_status?: ConsolidationStatus | null;
   /** The lines that may use the account: null for OPEX and CAPEX lines. */
   nature?: AccountNature | null;
+  /** Its budget lines are expected as quantity and price: true, or null when not set (never false). */
+  quantity_price_expected?: true | null;
   /** The OPEX and CAPEX lines (all statuses) using the account; on `GET /accounts/:id` only. */
   line_counts?: AccountLineCounts;
   status: string;
@@ -59,24 +61,27 @@ type Account = {
 const NEW_ACCOUNT: Account = {
   id: '', coa_id: null, account_number: '', account_name: '', native_name: null, description: null,
   consolidation_account_number: null, consolidation_account_name: null, consolidation_account_description: null,
-  nature: null, status: STATUS_ENABLED, disabled_at: null,
+  nature: null, quantity_price_expected: null, status: STATUS_ENABLED, disabled_at: null,
 };
 
 type TextKey = 'native_name' | 'description';
 /** Fields typed in place and saved on blur: a revert must reach the server even mid-save. */
 type TypedField = TextKey | 'account_name' | 'account_number';
-type AccountField = 'account_name' | 'account_number' | 'coa_id' | 'consolidation_account_number' | 'disabled_at' | 'nature' | TextKey;
+type AccountField = 'account_name' | 'account_number' | 'coa_id' | 'consolidation_account_number' | 'disabled_at' | 'nature'
+  | 'quantity_price_expected' | TextKey;
 type FieldErrors = Partial<Record<AccountField, string>>;
 
 /** The draft's fields that Create sends and a patch can change. */
 const DRAFT_FIELDS = [
-  'account_name', 'account_number', 'coa_id', 'native_name', 'description', 'consolidation_account_number', 'nature', 'status', 'disabled_at',
+  'account_name', 'account_number', 'coa_id', 'native_name', 'description', 'consolidation_account_number', 'nature',
+  'quantity_price_expected', 'status', 'disabled_at',
 ] as const;
 
 const fetchAccount = async (accountId: string) => (await api.get<Account>(`/accounts/${accountId}`)).data;
 
 const ACCOUNT_FIELDS: ReadonlySet<string> = new Set<AccountField>([
-  'account_name', 'account_number', 'coa_id', 'consolidation_account_number', 'disabled_at', 'nature', 'native_name', 'description',
+  'account_name', 'account_number', 'coa_id', 'consolidation_account_number', 'disabled_at', 'nature', 'quantity_price_expected',
+  'native_name', 'description',
 ]);
 
 /** The field a refusal names in its 400 body (`{ message, field }`), when the form shows it. */
@@ -325,6 +330,7 @@ export default function AccountWorkspacePage() {
           description: sent.description,
           consolidation_account_number: sent.consolidation_account_number,
           nature: sent.nature,
+          quantity_price_expected: sent.quantity_price_expected ?? null,
           status: sent.status,
           disabled_at: sent.disabled_at,
         });
@@ -406,6 +412,16 @@ export default function AccountWorkspacePage() {
             }}
           />
           {!isCreate && <NatureConflictNote accountId={data.id} nature={parseAccountNature(data.nature)} lineCounts={data.line_counts} />}
+        </PropertyRow>
+        <PropertyRow label={t('accounts.fields.quantityPriceExpected')} hint={t('accounts.hints.quantityPriceExpected')}>
+          <ExpectedSettingCheckbox
+            checked={data.quantity_price_expected === true}
+            label={t('accounts.fields.quantityPriceExpected')}
+            disabled={disabled}
+            error={errors.quantity_price_expected}
+            // Ticked: true; unticked: not set (null), never false.
+            onChange={(next) => void patch({ quantity_price_expected: next ? true : null }, 'quantity_price_expected')}
+          />
         </PropertyRow>
       </PropertyGroup>
       <PropertyGroup>
@@ -564,6 +580,37 @@ function ChartSelect({
           </MenuItem>
         ))}
       </Select>
+      {error && (
+        <Typography role="alert" sx={{ mt: '3px', fontSize: 12, lineHeight: 1.35, color: 'error.main' }}>{error}</Typography>
+      )}
+    </Box>
+  );
+}
+
+/** A setting that is ticked or not set: the box alone, under its row's label. */
+function ExpectedSettingCheckbox({
+  checked,
+  label,
+  disabled,
+  error,
+  onChange,
+}: {
+  checked: boolean;
+  label: string;
+  disabled?: boolean;
+  error?: string;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <Box>
+      <Checkbox
+        size="small"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        inputProps={{ 'aria-label': label }}
+        sx={{ p: '2px', ml: '-2px' }}
+      />
       {error && (
         <Typography role="alert" sx={{ mt: '3px', fontSize: 12, lineHeight: 1.35, color: 'error.main' }}>{error}</Typography>
       )}

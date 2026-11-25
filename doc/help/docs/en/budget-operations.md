@@ -71,6 +71,7 @@ Without the Admin level on Budget administration, the page shows the states read
 - Refuses to delete a line, or to change its type, while it has amounts in a frozen column of the years concerned
 - Does **not** affect read access: data remains visible
 - Applies to hidden columns too. A frozen column stays frozen when it is hidden, and imports into it are still refused
+- A frozen column is no longer marked to check when the line's account expects quantity and price. See [When the account expects quantity and price](budget-lines.md#quantity-and-price-expected)
 
 ### Lock icons in the list
 

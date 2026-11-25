@@ -29,6 +29,7 @@ const NAMED_ELSEWHERE = 'named by its own label field (`resource_label`, `level_
 
 /** Set fields that hold no code to name, each with the reason. */
 export const AI_NOT_CODE_FIELDS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  accounts: { quantity_price_expected: 'a yes-or-no setting: true when the account sets it, null when it does not (never stored false)' },
   analytics_categories: { axis: NAME, axis_code: REFERENCE },
   applications: {
     editor: NAME, end_of_support_year: DATE_PART, supplier: NAME, it_owner: NAME, business_owner: NAME,

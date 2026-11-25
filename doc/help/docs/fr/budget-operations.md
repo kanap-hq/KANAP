@@ -71,6 +71,7 @@ Sans le niveau Admin sur l'administration budgétaire, la page affiche les état
 - Refuse de supprimer une ligne, ou de changer son type, tant qu'elle a des montants dans une colonne gelée des années concernées
 - N'affecte **pas** l'accès en lecture : les données restent visibles
 - S'applique aussi aux colonnes masquées. Une colonne gelée reste gelée quand elle est masquée, et les imports vers elle restent refusés
+- Une colonne gelée n'est plus signalée à vérifier quand le compte de la ligne attend une saisie en quantité et prix. Voir [Quand le compte attend une saisie en quantité et prix](budget-lines.md#quantity-and-price-expected)
 
 ### Cadenas dans la liste
 
