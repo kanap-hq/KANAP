@@ -11,7 +11,7 @@ import { CsvImportMode, CsvLanguage } from '../../common/csv-sheet';
 // 26.12.1), against a real database, each test in a transaction that is rolled back. The setting
 // knows two states, true and NULL: nothing ever stores false.
 // - API: create and update write true, or NULL for null and false; an update without it keeps it;
-//   the account read returns it; the history row carries it;
+//   the account read returns it; the history row carries it; a change of it dates the account;
 // - list: the set filter reads true as the accounts that set it, and null, '' or false as the
 //   others (list and listIds agree);
 // - CSV import (the import rule, `enrich`): yes in any language sets it, no or `-` clears it, a
@@ -96,7 +96,11 @@ async function testApiWrites() {
     await accounts.update(set.id, { quantity_price_expected: true }, undefined, opts);
     await accounts.update(set.id, { quantity_price_expected: null }, undefined, opts);
     assert.equal((await accounts.get(set.id, opts)).quantity_price_expected, null, 'null clears it');
+    // The setting alone dates the account: the date trigger compares the column (migration 1856280000000).
+    await runner.query(`UPDATE accounts SET updated_at = '2026-01-01T00:00:00Z' WHERE id = $1`, [plain.id]);
     await accounts.update(plain.id, { quantity_price_expected: true }, undefined, opts);
+    const [dated] = await runner.query(`SELECT updated_at = now() AS dated FROM accounts WHERE id = $1`, [plain.id]);
+    assert.equal(dated.dated, true, 'a change of the setting dates the account');
 
     assert.deepEqual(await storedSettings(runner, chartId), { 6100: null, 6200: null, 6300: true }, 'never false in the column');
     const history = await runner.query(
