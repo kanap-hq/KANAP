@@ -34,6 +34,13 @@
  *   `data-access-reserved.inventory.ts`) or from a delete of an object that is not scoped;
  * - `not_scoped`: writes a table without data-access policies (the reason says which).
  *
+ * The modification date that an audit row gives the records whose history shows it
+ * (`audit/record-dating.ts`, through `touchUpdatedAtMany` in `common/updated-at-trigger.ts`) is no
+ * site of this list: it follows a write classified here, and it is silent by design. Its UPDATE
+ * runs under the writer's policies, so a line or a contract the person may only read (a line linked
+ * from an application, which needs read access only) keeps its date and nothing fails; a refusal
+ * of the write itself surfaces where that write is classified.
+ *
  * The budget file load (`spend/budget-file/import-file.ts`) plans every row with the line rules
  * first (`budget-file/access.ts`, spec §4.2) and rolls the whole load back with the stale
  * preflight's 409 when a write is refused anyway.

@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
 import { useRelativeTime } from './useRelativeTime';
 import { useLocale } from '../../../i18n/useLocale';
-import { formatShortDate } from '../../../lib/dateFormat';
+import { formatShortInstantDate } from '../../../lib/dateFormat';
 
 interface TeamActivityItem {
   id: string;
@@ -100,7 +100,7 @@ export default function TeamActivityTile({ config }: TeamActivityTileProps) {
                         sx={{ height: 20, fontSize: '0.7rem' }}
                       />
                       <Typography variant="caption" color="text.secondary">
-                        {relativeTime(item.createdAt, () => formatShortDate(item.createdAt, locale))}
+                        {relativeTime(item.createdAt, () => formatShortInstantDate(item.createdAt, locale))}
                       </Typography>
                     </Box>
                     <Typography variant="caption" color="text.secondary">

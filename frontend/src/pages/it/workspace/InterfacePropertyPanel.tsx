@@ -22,7 +22,7 @@ import { filterCountryOptions, useCountryOptions } from '../../../i18n/countries
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerFieldValueSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { formatShortDate } from '../../../lib/dateFormat';
+import { formatShortInstantDate } from '../../../lib/dateFormat';
 import { useLocale } from '../../../i18n/useLocale';
 import type {
   InterfaceCompany,
@@ -254,10 +254,10 @@ export default function InterfacePropertyPanel({
         {!isCreate && (
           <>
             <PropertyRow label={t('it:workspace.interface.fields.created')}>
-              <ReadOnlyValue>{formatShortDate(data?.created_at, locale, { empty: classificationText('Not set') })}</ReadOnlyValue>
+              <ReadOnlyValue>{formatShortInstantDate(data?.created_at, locale, { empty: classificationText('Not set') })}</ReadOnlyValue>
             </PropertyRow>
             <PropertyRow label={t('it:workspace.interface.fields.updated')}>
-              <ReadOnlyValue>{formatShortDate(data?.updated_at, locale, { empty: classificationText('Not set') })}</ReadOnlyValue>
+              <ReadOnlyValue>{formatShortInstantDate(data?.updated_at, locale, { empty: classificationText('Not set') })}</ReadOnlyValue>
             </PropertyRow>
           </>
         )}

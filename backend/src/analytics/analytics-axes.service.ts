@@ -672,7 +672,7 @@ export class AnalyticsAxesService {
         ? await ctx.manager.query(
           `UPDATE analytics_axes
               SET code = $3, name = $4, description = $5, sort_order = $6, status = $7, disabled_at = $8,
-                  applies_to = $9, required = $10, open_values = $11, updated_at = now()
+                  applies_to = $9, required = $10, open_values = $11
             WHERE tenant_id = $1 AND id = $2
         RETURNING *`,
           [

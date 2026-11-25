@@ -1570,8 +1570,7 @@ export class VulnerabilitiesService {
             SET state = COALESCE($3, state),
                 note = CASE WHEN $4::boolean THEN $5 ELSE note END,
                 state_changed_by = CASE WHEN $6::boolean THEN $7::uuid ELSE state_changed_by END,
-                state_changed_at = CASE WHEN $6::boolean THEN now() ELSE state_changed_at END,
-                updated_at = now()
+                state_changed_at = CASE WHEN $6::boolean THEN now() ELSE state_changed_at END
           WHERE tenant_id = $1 AND id = $2
           RETURNING id, technology_id, technology_version_id, cve_id, state, note, state_changed_by, state_changed_at`,
         [tenantId, row.id, stateChanges ? patch.state : null, noteChanges, patch.note ?? null, stateChanges, opts.userId ?? null],
@@ -1675,8 +1674,7 @@ export class VulnerabilitiesService {
             SET state = $3,
                 note = CASE WHEN $4::boolean THEN $5 ELSE note END,
                 state_changed_by = CASE WHEN state <> $3 THEN $6::uuid ELSE state_changed_by END,
-                state_changed_at = CASE WHEN state <> $3 THEN now() ELSE state_changed_at END,
-                updated_at = now()
+                state_changed_at = CASE WHEN state <> $3 THEN now() ELSE state_changed_at END
           WHERE tenant_id = $1 AND id = ANY($2::uuid[])
           RETURNING id, technology_id, technology_version_id, cve_id, state, note, state_changed_by, state_changed_at`,
         [tenantId, batch.map((row) => row.id), state, noteChanges, note ?? null, opts.userId ?? null],

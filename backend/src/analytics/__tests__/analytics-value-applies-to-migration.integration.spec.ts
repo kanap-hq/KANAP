@@ -3,6 +3,9 @@ import * as assert from 'node:assert/strict';
 import { QueryRunner } from 'typeorm';
 import { AnalyticsValueAppliesTo1853910000000 as Migration } from '../../migrations/1853910000000-analytics-value-applies-to';
 import { runSpecs, seedTenant, setCurrentTenant, withRollback } from './analytics-test-helpers';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1853910000000 (which line types a value applies to), against a
 // real database, in a transaction rolled back at the end: a second up() changes
@@ -82,6 +85,7 @@ async function seedValue(runner: QueryRunner, tenantId: string, axisId: string, 
 
 async function testRerunAndDownUp() {
   await withRollback(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const tenantId = await seedTenant(runner, 'value-migration');
     const axisId = await seedAxis(runner, tenantId, 'nature', null);
     const valueId = await seedValue(runner, tenantId, axisId, 'Abonnements SaaS', 'opex');
@@ -107,6 +111,7 @@ async function testRerunAndDownUp() {
 
 async function testRepairsDirtyRows() {
   await withRollback(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const applied = await shape(runner);
     const security = await rowSecurity(runner);
     const tenantId = await seedTenant(runner, 'value-migration-dirty');

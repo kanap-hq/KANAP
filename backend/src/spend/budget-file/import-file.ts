@@ -27,6 +27,7 @@ import { auditTableOf, BUDGET_NATURES, type BudgetNature } from '../budget-natur
 import { lockCsvCostCenters } from '../item-write.util';
 import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../../common/csv-sheet';
 import { presentChild } from '../budget-line-presentation';
+import { dateHistoryRecords } from '../../audit/record-dating';
 
 /** The load refuses the file when a counter moved after the preflight. */
 export const PREFLIGHT_STALE = 'Some lines changed since the preflight. Run the preflight again.';
@@ -1032,4 +1033,6 @@ async function insertAudits(manager: EntityManager, userId: string | null, rows:
       source?.sourceRef ?? null,
     ],
   );
+  // The lines whose history shows these rows take their date, one statement (`audit/record-dating.ts`).
+  await dateHistoryRecords(manager, rows);
 }

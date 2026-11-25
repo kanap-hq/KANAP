@@ -1403,7 +1403,7 @@ export class PortfolioRequestsService {
     const beforeTask = { ...task };
     // The status and its time only, never the task read above (`tasks/task-column-write.ts`).
     const savedTask = closing
-      ? await writeTaskColumns(taskRepo, task, { status: 'done', updated_at: new Date() })
+      ? await writeTaskColumns(taskRepo, task, { status: 'done' })
       : task;
 
     // The task's own audit row names the request it became (`converted_to_request_id`, beside the
@@ -1522,8 +1522,8 @@ export class PortfolioRequestsService {
     if (has('it_sponsor_id')) existing.it_sponsor_id = body.it_sponsor_id || null;
     if (has('it_lead_id')) existing.it_lead_id = body.it_lead_id || null;
 
-    existing.updated_at = new Date();
-
+    // The purpose and the risks live in bound documents: their change writes the request's history
+    // entry (portfolio_request_documents), which dates it (audit/record-dating.ts).
     const saved = await repo.save(existing);
     const sourceDescriptor = {
       id: saved.id,

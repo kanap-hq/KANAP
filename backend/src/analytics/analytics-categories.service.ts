@@ -687,7 +687,7 @@ export class AnalyticsCategoriesService {
       const rows = existing
         ? await ctx.manager.query(
           `UPDATE analytics_categories
-              SET name = $3, description = $4, status = $5, disabled_at = $6, applies_to = $7, updated_at = now()
+              SET name = $3, description = $4, status = $5, disabled_at = $6, applies_to = $7
             WHERE tenant_id = $1 AND id = $2
         RETURNING *`,
           [ctx.tenantId, existing.id, values.name, values.description, values.status, values.disabled_at, values.applies_to],

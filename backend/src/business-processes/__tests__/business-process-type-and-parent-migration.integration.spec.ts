@@ -3,6 +3,9 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { BusinessProcessTypeAndParent1856170000000 } from '../../migrations/1856170000000-business-process-type-and-parent';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1856170000000 (26.11 H1) against a real database, in a transaction that is rolled
 // back: from the schema before it (its down()), with categories, links and a search entry that
@@ -41,6 +44,7 @@ async function refused(runner: QueryRunner, sql: string, params: unknown[], patt
 
 async function testFromCategories() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     await migration.down(runner);
     assert.deepEqual(await columns(runner), [], 'down() removes the columns');
     assert.deepEqual(await tables(runner), ['business_process_categories', 'business_process_category_links']);

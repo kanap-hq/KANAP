@@ -84,7 +84,10 @@ async function testReorder() {
     assert.deepEqual(result.items.map((axis) => axis.sort_order), [1, 2, 3, 4], 'renumbered 1..n');
     assert.deepEqual(result.items.map((axis) => axis.status), ['enabled', 'enabled', 'enabled', 'enabled'], 'in the shape of the list');
     assert.deepEqual(result, await svc.axes.list(ctx), 'the same as GET /analytics-axes');
-    assert.deepEqual(await stamps(), updatedBefore, 'the dimensions keep their updated_at');
+    // A reorder writes each moved dimension's history entry (its position), which dates it
+    // (audit/record-dating.ts); a dimension left in place keeps its date.
+    const moved = (await stamps()).filter((stamp: string) => !updatedBefore.includes(stamp)).length;
+    assert.equal(moved, 4, 'the four renumbered dimensions are dated with their history entry');
 
     const sortOrderChange = (id: string, before: number, after: number) => ({
       record_id: id, before_json: { sort_order: before }, after_json: { sort_order: after },
@@ -108,10 +111,11 @@ async function testReorder() {
 
     // The full list in the same order moves nothing: no write, no audit row.
     await runner.query(`DELETE FROM audit_log WHERE tenant_id = $1`, [tenantId]);
+    await runner.query(`UPDATE analytics_axes SET updated_at = '2020-01-01T00:00:00Z' WHERE tenant_id = $1`, [tenantId]);
     const unchanged = await svc.axes.reorder([ids.project, ids.default, ids.nature, ids.site], ctx);
     assert.deepEqual(unchanged.items.map((axis) => axis.code), ['project', 'default', 'nature', 'site']);
     assert.deepEqual(await auditRows(), [], 'nothing moved, nothing audited');
-    assert.deepEqual(await stamps(), updatedBefore, 'still the old updated_at');
+    assert.deepEqual(await stamps(), updatedBefore, 'still the old updated_at: no entry, no date');
 
     // A new dimension goes last.
     const created = await svc.axes.create({ code: 'owner', name: 'Owner' }, ctx);
