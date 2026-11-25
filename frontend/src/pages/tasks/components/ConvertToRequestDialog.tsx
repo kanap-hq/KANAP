@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
+import { itemAddress } from '../../../utils/item-ref';
 import { MarkdownContent } from '../../../components/MarkdownContent';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
@@ -27,7 +28,8 @@ interface ConvertToRequestDialogProps {
     title: string | null;
     description: string | null;
   };
-  onSuccess: (requestId: string) => void;
+  /** The new request's address segment: its reference (`REQ-12`), else its uuid. */
+  onSuccess: (requestAddress: string) => void;
 }
 
 export default function ConvertToRequestDialog({
@@ -60,7 +62,7 @@ export default function ConvertToRequestDialog({
         origin_task_url: `${window.location.origin}/portfolio/tasks/${taskLinkId}/overview`,
       };
       const res = await api.post(`/portfolio/requests/from-task/${task.id}`, body);
-      onSuccess(res.data?.id);
+      onSuccess(res.data?.id ? itemAddress('request', res.data) : '');
     } catch (e: any) {
       setError(getApiErrorMessage(
         e,

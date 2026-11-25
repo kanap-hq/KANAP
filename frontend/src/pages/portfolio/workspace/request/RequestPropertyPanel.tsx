@@ -10,6 +10,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../../../api';
+import { buildItemPath, itemAddress } from '../../../../utils/item-ref';
 import UserSelect from '../../../../components/fields/UserSelect';
 import CompanySelect from '../../../../components/fields/CompanySelect';
 import DepartmentSelect from '../../../../components/fields/DepartmentSelect';
@@ -322,7 +323,7 @@ export default function RequestPropertyPanel({
                     key={project.id}
                     component="button"
                     type="button"
-                    onClick={() => navigate(`/portfolio/projects/${project.id}/summary`)}
+                    onClick={() => navigate(`${buildItemPath('project', itemAddress('project', project))}/summary`)}
                     sx={(theme) => ({
                       border: 0,
                       background: 'transparent',

@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../api';
+import { buildItemPath, itemAddress } from '../../../utils/item-ref';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatShortDate } from '../../../lib/dateFormat';
@@ -80,7 +81,7 @@ export default function StaleTasksTile({ config }: StaleTasksTileProps) {
           {items.map((item) => (
             <ListItemButton
               key={item.id}
-              onClick={() => navigate(`/portfolio/tasks/${item.id}`)}
+              onClick={() => navigate(buildItemPath('task', itemAddress('task', { id: item.id, item_number: item.itemNumber })))}
               sx={{ py: 0.5, alignItems: 'flex-start' }}
             >
               <ListItemText

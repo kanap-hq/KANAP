@@ -20,6 +20,8 @@ import RelationsSectionTitle from '../pages/portfolio/components/RelationsSectio
 type Props = {
   entityType: EntityType;
   entityId: string;
+  /** The entity's reference (`CTR-2`): it names the entity in the address of the tasks opened here. */
+  entityAddress?: string | null;
   disabled?: boolean;
 };
 
@@ -69,12 +71,12 @@ const linkButtonSx = { p: 0, minWidth: 0, fontSize: 12, alignSelf: 'flex-start' 
  * The open tasks of an entity, compact enough for a workspace overview: reference, title,
  * assignee, due date and status; "New task"; the tasks done or cancelled on demand.
  */
-export default function EntityTasksSection({ entityType, entityId, disabled = false }: Props) {
+export default function EntityTasksSection({ entityType, entityId, entityAddress, disabled = false }: Props) {
   const { t } = useTranslation(['portfolio', 'common']);
   const { hasLevel } = useAuth();
   const theme = useTheme();
   const locale = useLocale();
-  const { tasks, isLoading, openTask, createTask } = useEntityTasks(entityType, entityId);
+  const { tasks, isLoading, openTask, createTask } = useEntityTasks(entityType, entityId, entityAddress);
   const canCreateTask = hasLevel('tasks', 'member');
   const [showClosed, setShowClosed] = React.useState(false);
 
@@ -136,8 +138,8 @@ export default function EntityTasksSection({ entityType, entityId, disabled = fa
                     key={task.id}
                     className="clickable"
                     tabIndex={0}
-                    onClick={() => openTask(task.id)}
-                    onKeyDown={(event) => { if (event.key === 'Enter') openTask(task.id); }}
+                    onClick={() => openTask(task)}
+                    onKeyDown={(event) => { if (event.key === 'Enter') openTask(task); }}
                   >
                     <Box component="td" sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: '12px !important', color: 'kanap.text.tertiary !important' }}>
                       {task.item_number ? formatItemRef('task', task.item_number) : ''}

@@ -535,6 +535,8 @@ export interface RoadmapResponse {
   explanations: ProjectExplanation[];
   scenarioWarnings: ScenarioWarning[];
   impactSummary: RoadmapImpactSummary | null;
+  /** The number of each project the schedule, the reservations and the unschedulable list name, for its address (`PRJ-12`). */
+  projectItemNumbers: Record<string, number>;
   options: RoadmapGenerateDto;
   diagnostics: RoadmapDiagnostics;
 }

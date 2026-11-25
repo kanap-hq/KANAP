@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../../i18n/useLocale';
 import api from '../../../api';
+import { buildItemPath, itemAddress } from '../../../utils/item-ref';
 import { useAuth } from '../../../auth/AuthContext';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
 import { taskPriorityLabel } from './tileLabels';
@@ -19,6 +20,7 @@ import { ACTIVE_TASK_STATUSES } from '../../tasks/task.constants';
 
 interface Task {
   id: string;
+  item_number?: number | null;
   title: string;
   status: string;
   due_date: string | null;
@@ -107,7 +109,7 @@ export default function MyTasksTile({ config }: MyTasksTileProps) {
         {items.map((task) => (
           <ListItemButton
             key={task.id}
-            onClick={() => navigate(`/portfolio/tasks/${task.id}`)}
+            onClick={() => navigate(buildItemPath('task', itemAddress('task', task)))}
             sx={{ py: 0.5 }}
           >
             <ListItemText

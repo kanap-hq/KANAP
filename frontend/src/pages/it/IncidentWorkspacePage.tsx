@@ -815,6 +815,7 @@ export function IncidentWorkspacePage() {
               <IncidentRelationsTab
                 key={data.id}
                 incidentId={data.id}
+                incidentReference={reference}
                 readOnly={!editable}
                 onLinksChange={(kind, count) => setIncidentCache((current) => ({
                   ...current,

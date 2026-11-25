@@ -1019,7 +1019,7 @@ export class PortfolioRequestsService {
         result.resulting_projects = null;
       } else {
         const projects: Array<{ id: string }> = await mg.query(
-          `SELECT p.id, p.name, p.status
+          `SELECT p.id, p.item_number, p.name, p.status
            FROM portfolio_request_projects rp
            JOIN portfolio_projects p ON p.id = rp.project_id
            WHERE rp.request_id = $1`,

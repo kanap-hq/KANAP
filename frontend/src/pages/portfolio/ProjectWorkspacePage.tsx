@@ -17,7 +17,8 @@ import { type ProjectScoringEditorHandle } from './editors/ProjectScoringEditor'
 import { type EffortAllocationData } from './components/EffortAllocationTable';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { buildInlineImageUrl, resolveInlineImageTenantSlug } from '../../utils/inlineImageUrls';
-import { formatItemRef } from '../../utils/item-ref';
+import { buildItemPath, formatItemRef, itemAddress } from '../../utils/item-ref';
+import useRecordEditorKey from '../../components/workspace/useRecordEditorKey';
 import { getDotColor, PROJECT_STATUS_COLORS } from '../../utils/statusColors';
 import { type IntegratedDocumentEditorHandle } from '../../components/IntegratedDocumentEditor';
 import MetadataUserPicker, { formatMetadataUserName } from '../../components/workspace/MetadataUserPicker';
@@ -180,20 +181,6 @@ export default function ProjectWorkspacePage() {
   // Browser tab title
   useRecordTitle(data?.item_number && data?.name ? `PRJ-${data.item_number} ${data.name}` : null);
 
-  // URL replaceState: swap UUID for human-readable ref
-  React.useEffect(() => {
-    if (!data?.item_number) return;
-    const currentParam = params.id || '';
-    const isUuid = /^[0-9a-f]{8}-/.test(currentParam);
-    // Only rewrite once the loaded data matches the current route id — during a
-    // placeholderData nav, `data` is briefly still the previous item.
-    if (isUuid && data.id === currentParam) {
-      const ref = formatItemRef('project', data.item_number);
-      const newPath = location.pathname.replace(currentParam, ref);
-      window.history.replaceState(null, '', newPath + location.search);
-    }
-  }, [data?.id, data?.item_number, params.id, location.pathname, location.search]);
-
   const projectMatchesCurrentRoute = React.useMemo(() => {
     const raw = String(idParam || '').trim();
     if (!data || !raw) return false;
@@ -202,6 +189,23 @@ export default function ProjectWorkspacePage() {
     if (data.item_number != null && raw.toUpperCase() === formatItemRef('project', data.item_number)) return true;
     return false;
   }, [data?.id, data?.item_number, idParam]);
+  // The project's own reads (effort, timeline) are keyed by its uuid, never by the address: the
+  // gestures that change them elsewhere (a lead, the team, a task moved to another project) invalidate
+  // them by the uuid they know, and the address is the reference (`PRJ-7`).
+  const loadedProjectId: string | undefined = !isCreate && projectMatchesCurrentRoute && data?.id ? String(data.id) : undefined;
+  // The editors are keyed by project: the same key through the move from a legacy address to the reference.
+  const recordKey = useRecordEditorKey('portfolio-project', id, [projectInclude]);
+
+  // A legacy address (a uuid, `prj-3`, `3`) becomes the project's reference through the router, tab, query
+  // and hash kept: the project read is put under the reference's entry first, so the page shows it at once
+  // (one quiet refresh follows) and the editors stay mounted (`recordKey`). Back and reload then show the reference.
+  React.useEffect(() => {
+    if (isCreate || !data?.item_number || !projectMatchesCurrentRoute) return;
+    const reference = formatItemRef('project', data.item_number);
+    if (id === reference) return;
+    queryClient.setQueryData(['portfolio-project', reference, projectInclude], data);
+    navigate(`${buildItemPath('project', reference)}${params.tab ? `/${params.tab}` : ''}${location.search}${location.hash}`, { replace: true });
+  }, [data, id, isCreate, location.hash, location.search, navigate, params.tab, projectInclude, queryClient, projectMatchesCurrentRoute]);
 
   // Fetch classification data (types, categories, streams)
   const { data: classificationData, isError: classificationFailed } = useQuery({
@@ -232,42 +236,42 @@ export default function ProjectWorkspacePage() {
 
   // Fetch task time summary for progress breakdown
   const { data: taskTimeSummary } = useQuery({
-    queryKey: ['portfolio-project-task-time', id],
+    queryKey: ['portfolio-project-task-time', loadedProjectId],
     queryFn: async () => {
-      const res = await api.get(`/portfolio/projects/${id}/tasks/time-summary`);
+      const res = await api.get(`/portfolio/projects/${loadedProjectId}/tasks/time-summary`);
       return res.data as { it_hours: number; business_hours: number; total_hours: number };
     },
-    enabled: !isCreate && routeTab === 'effort',
+    enabled: !!loadedProjectId && routeTab === 'effort',
   });
 
   // Fetch task time entries for Time Log display
   const { data: taskTimeEntries = [] } = useQuery({
-    queryKey: ['portfolio-project-task-time-entries', id],
+    queryKey: ['portfolio-project-task-time-entries', loadedProjectId],
     queryFn: async () => {
-      const res = await api.get(`/portfolio/projects/${id}/tasks/time-entries`);
+      const res = await api.get(`/portfolio/projects/${loadedProjectId}/tasks/time-entries`);
       return res.data as any[];
     },
-    enabled: !isCreate && routeTab === 'effort',
+    enabled: !!loadedProjectId && routeTab === 'effort',
   });
 
   // Fetch effort allocations for IT
   const { data: itAllocationData, refetch: refetchItAlloc } = useQuery({
-    queryKey: ['project-effort-allocations', id, 'it'],
+    queryKey: ['project-effort-allocations', loadedProjectId, 'it'],
     queryFn: async () => {
-      const res = await api.get(`/portfolio/projects/${id}/effort-allocations/it`);
+      const res = await api.get(`/portfolio/projects/${loadedProjectId}/effort-allocations/it`);
       return res.data as EffortAllocationData;
     },
-    enabled: !!id && !isCreate && routeTab === 'effort',
+    enabled: !!loadedProjectId && routeTab === 'effort',
   });
 
   // Fetch effort allocations for Business
   const { data: businessAllocationData, refetch: refetchBusinessAlloc } = useQuery({
-    queryKey: ['project-effort-allocations', id, 'business'],
+    queryKey: ['project-effort-allocations', loadedProjectId, 'business'],
     queryFn: async () => {
-      const res = await api.get(`/portfolio/projects/${id}/effort-allocations/business`);
+      const res = await api.get(`/portfolio/projects/${loadedProjectId}/effort-allocations/business`);
       return res.data as EffortAllocationData;
     },
-    enabled: !!id && !isCreate && routeTab === 'effort',
+    enabled: !!loadedProjectId && routeTab === 'effort',
   });
 
   const sources = classificationData?.sources?.filter((t) => t.is_active) || [];
@@ -333,7 +337,7 @@ export default function ProjectWorkspacePage() {
     scoringAutosaveInFlightRef.current = false;
     scoringEditorRef.current?.reset?.();
     void purposeEditorRef.current?.reset?.();
-  }, [id, isCreate]);
+  }, [recordKey, isCreate]);
 
   React.useEffect(() => () => {
     if (scoringAutosaveTimerRef.current !== null) {
@@ -741,7 +745,8 @@ export default function ProjectWorkspacePage() {
     const projectScope = searchParams.get('projectScope');
     const involvedUserId = searchParams.get('involvedUserId');
     const involvedTeamId = searchParams.get('involvedTeamId');
-    sp.set('projectId', form?.id || id);
+    // The project by its reference (`PRJ-3`), as its own address names it.
+    sp.set('projectId', projectMatchesCurrentRoute && data?.item_number ? formatItemRef('project', data.item_number) : (form?.id || id));
     if (sort) sp.set('projectSort', sort);
     if (q) sp.set('projectQ', q);
     if (filters) sp.set('projectFilters', filters);
@@ -750,7 +755,7 @@ export default function ProjectWorkspacePage() {
     if (involvedTeamId) sp.set('projectInvolvedTeamId', involvedTeamId);
     sp.set('projectTab', routeTab || 'tasks');
     return sp;
-  }, [form?.id, id, routeTab, searchParams]);
+  }, [data?.item_number, form?.id, id, projectMatchesCurrentRoute, routeTab, searchParams]);
 
   const navigateWithTaskWorkspaceContext = React.useCallback((path: string) => {
     if (!path.startsWith('/portfolio/tasks/')) {
@@ -1032,7 +1037,7 @@ export default function ProjectWorkspacePage() {
             {originLabel && (
               <PortfolioMetadataItem
                 label={t('portfolio:workspace.project.fields.origin')}
-                onClick={sourceRequest?.id ? () => navigate(`/portfolio/requests/${sourceRequest.id}/summary`) : undefined}
+                onClick={sourceRequest?.id ? () => navigate(`${buildItemPath('request', itemAddress('request', sourceRequest))}/summary`) : undefined}
                 title={sourceRequest?.id ? t('portfolio:workspace.project.origin.viewSourceRequest', { name: sourceRequest.name }) : undefined}
                 mono={!!sourceRequestReference}
               >
@@ -1134,7 +1139,7 @@ export default function ProjectWorkspacePage() {
             <ProjectSummaryTab
               canEditManagedDocs={canContributeToProject}
               form={form}
-              id={id}
+              id={recordKey}
               isCreate
               onPurposeDirtyChange={ignoreDraftChange}
               onPurposeDraftChange={ignoreDraftChange}
@@ -1147,7 +1152,7 @@ export default function ProjectWorkspacePage() {
             <ProjectSummaryTab
               canEditManagedDocs={canContributeToProject}
               form={form}
-              id={id}
+              id={recordKey}
               isCreate={isCreate}
               onPurposeDirtyChange={setPurposeDirty}
               onPurposeDraftChange={(value) => updateManagedDocDraft({ purpose: value })}
@@ -1191,7 +1196,7 @@ export default function ProjectWorkspacePage() {
             <ProjectTimelineTab
               canManage={canManage}
               form={form}
-              projectId={id}
+              projectId={loadedProjectId || id}
               onError={setSaveError}
               onNavigateToTask={navigateWithTaskWorkspaceContext}
               onRefetch={refetch}
@@ -1216,7 +1221,7 @@ export default function ProjectWorkspacePage() {
               onRefetchItAlloc={refetchItAlloc}
               onUpdate={(patch) => { void persistPanelPatch(patch); }}
               profileId={profile?.id}
-              projectId={id}
+              projectId={loadedProjectId || id}
               taskTimeEntries={taskTimeEntries}
               taskTimeSummary={taskTimeSummary}
             />
@@ -1227,6 +1232,7 @@ export default function ProjectWorkspacePage() {
           <React.Suspense fallback={<WorkspaceTabLoadingFallback label={t('portfolio:workspace.project.loadingTabs.tasks')} />}>
             <ProjectTasksPanel
               projectId={form?.id || id}
+              projectAddress={projectMatchesCurrentRoute && data?.item_number ? formatItemRef('project', data.item_number) : null}
               phases={form?.phases || []}
               disabled={!canContributeToProject}
               onTasksChange={() => {
