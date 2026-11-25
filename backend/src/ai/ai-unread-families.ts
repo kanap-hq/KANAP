@@ -95,8 +95,10 @@ export type AiUnreadFamily = {
    * Admin › Roles names it): left out for them, and said with the right for the others
    * (`AiUnreadFamiliesReach.readable`). `searched` false: read by query_entities but not searched
    * by search_all (the exchange rates), which a search that asks for it says (`not_searched_here`).
+   * `level`: the level of the right, named when the page asks for less than the right's use
+   * ("the Portfolio settings right at reader level"), as other refusals name a level.
    */
-  readAs?: { entityType: string; right: string; searched: boolean };
+  readAs?: { entityType: string; right: string; level?: 'reader'; searched: boolean };
   /**
    * For a family search_all searches by code or name: the words of a search that name the family
    * ("centre de coûts", "calendar", "dimension"), written without accents, taken out of the text
@@ -139,7 +141,8 @@ function reportingGapHint(reports: boolean | undefined): string {
 /** What a person lacks to read a family read with the right of its page, in words. */
 function readAsGapHint(readAs: NonNullable<AiUnreadFamily['readAs']>, reach: AiUnreadFamiliesReach | undefined): string {
   const known = reach?.readable !== undefined;
-  return `The tools read it (the family ${readAs.entityType}) for a person with the ${readAs.right} right${known ? ', which this person\'s role does not give.' : ' only.'}`;
+  const right = `the ${readAs.right} right${readAs.level ? ` at ${readAs.level} level` : ''}`;
+  return `The tools read it (the family ${readAs.entityType}) for a person with ${right}${known ? ', which this person\'s role does not give.' : ' only.'}`;
 }
 
 /** Whether the person reads the family of an entry read as a family (`readAs`). */
@@ -257,7 +260,7 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
       String.raw`\bcolaborador(?:es)?\b(?![\s-]+(?:de\s+negocio|it)\b)`,
       String.raw`\bMEM-\d+\b`,
     ].join('|'), 'i'),
-    readAs: { entityType: 'contributors', right: 'Portfolio settings', searched: true },
+    readAs: { entityType: 'contributors', right: 'Portfolio settings', level: 'reader', searched: true },
     searchWords: /\bcontribut(?:or|eur)s?\b|\bmitwirkende[nr]?\b|\bcolaborador(?:es)?\b/g,
   },
 ];
