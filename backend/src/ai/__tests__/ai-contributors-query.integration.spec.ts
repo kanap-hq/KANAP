@@ -7,6 +7,7 @@ import { INestApplicationContext } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 import { PgClient, seedNodes, seedPerson, seedRole } from '../../data-access/__tests__/data-access-test-helpers';
+import { assertLocaleLabels } from '../../common/report-export/__tests__/locale-labels';
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -28,7 +29,12 @@ process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 // - a person without the right on the portfolio settings is refused in words naming the screen,
 //   and search_all says it does not read the contributors for them (never "none");
 // - a person in limited access sees every contributor, as the screen (the page is not bounded by
-//   the companies);
+//   the companies), under the limited role (`applyDataAccess`, as a request);
+// - more than 100 distinct default companies are named (the company lookup takes 100 ids a call);
+// - no modification date is kept for a contributor, said in the note; the stream field quotes the
+//   screen's label, and the time logged says which figure covers six months and which twelve;
+// - a person without a name is named by their MEM-n, never by their email;
+// - two skills of the same name in two categories stay two skills, named "category / name";
 // - another tenant's contributor never shows, by reference nor by id;
 // - a contributor has no History tab: get_record_history says so.
 //
@@ -248,6 +254,10 @@ async function testTheAdministratorReadsThemAsTheScreen(): Promise<void> {
       },
     );
     assert.doesNotMatch(JSON.stringify(all.items), /@example\.invalid/, 'a person with a name is named, never by email');
+    // No modification date is kept for a contributor: none given, and the note says so.
+    assert.ok(all.items.every((item: any) => item.updated_at == null), 'no modification date in the list');
+    assert.match(all.contributor_note, /no modification date/);
+    assert.match(all.contributor_note, /no History tab/);
 
     // Filters, the quick search and a sort.
     const platform: any = await query.execute(ctx, { entity_type: 'contributors', filters: { team: 'Platf' } });
@@ -277,6 +287,13 @@ async function testTheAdministratorReadsThemAsTheScreen(): Promise<void> {
     assert.deepEqual(detail.data.time_logged.monthly.map((month: any) => month.project_days), screen.monthly.map((month: any) => month.projectDays));
     assert.equal(detail.data.notes, 'Available on Mondays');
     assert.equal(detail.data.id, undefined, 'no uuid in the data');
+    assert.equal(detail.entity.updated_at ?? null, null, 'no modification date in the detail');
+    assert.equal(detail.data.updated_at, undefined);
+    assert.match(detail.data.contributor_note, /no modification date/);
+    // The average covers six months, the months twelve, as the General tab shows them.
+    assert.match(detail.data.time_logged.note, /`average_project_days`[^.;]*last six months/);
+    assert.match(detail.data.time_logged.note, /`monthly`[^.;]*last twelve months/);
+    assert.doesNotMatch(detail.data.time_logged.note, /six months, and the last twelve/);
     const byPerson: any = await query.executeDetail(ctx, { entity_type: 'contributors', entity_id: 'Carl Petit' });
     assert.equal(byPerson.entity.ref, 'MEM-3');
 
@@ -332,12 +349,6 @@ async function testTheRightsOfThePage(): Promise<void> {
     assert.equal(readerDetail.fields_withheld[0].field, 'default_company');
     assert.equal(readerDetail.data.manager_ref, 'MEM-2', 'the manager is a contributor, which the page links');
 
-    // In limited access: every contributor, as the screen; this role reads the companies.
-    const limited: any = await query.execute(context(runner, s, s.limited), { entity_type: 'contributors' });
-    assert.deepEqual(refs(limited), ['MEM-1', 'MEM-2', 'MEM-3']);
-    assert.equal(limited.items[0].metadata.default_company, 'Fromagerie Alpha');
-    assert.equal(limited.fields_withheld, undefined);
-
     // Without the right on the portfolio settings: refused in words, naming the screen.
     const ctx = context(runner, s, s.noRight);
     for (const run of [
@@ -358,6 +369,125 @@ async function testTheRightsOfThePage(): Promise<void> {
     assert.match(notRead, /Portfolio settings right/, notRead);
   });
   console.log('ok - contributors: the page\'s right, the company withheld without the companies, limited access as the screen, search says not read');
+}
+
+async function testLimitedAccessUnderTheLimitedRole(): Promise<void> {
+  await inTransaction(async (runner) => {
+    const s = await seed(runner);
+    const { query } = executors();
+    const { applyDataAccess } = require('../../data-access/data-access');
+    // As a request of a person in limited access: the transaction takes the limited role.
+    assert.equal(await applyDataAccess(runner.manager, s.limited), 'limited');
+    const [{ role }] = await runner.query('SELECT current_user AS role');
+    assert.equal(role, 'kanap_data_limited');
+
+    // Every contributor, as the screen; this role reads the companies.
+    const limited: any = await query.execute(context(runner, s, s.limited), { entity_type: 'contributors' });
+    assert.deepEqual(refs(limited), ['MEM-1', 'MEM-2', 'MEM-3']);
+    assert.equal(limited.items[0].metadata.default_company, 'Fromagerie Alpha');
+    assert.equal(limited.fields_withheld, undefined);
+    const detail: any = await query.executeDetail(context(runner, s, s.limited), { entity_type: 'contributors', entity_id: 'MEM-1' });
+    assert.equal(detail.data.time_logged.average_project_days, 10);
+  });
+  console.log('ok - contributors: limited access under the limited role, as the screen');
+}
+
+async function testManyDefaultCompanies(): Promise<void> {
+  await inTransaction(async (runner) => {
+    const s = await seed(runner);
+    const { query, aggregates } = executors();
+    const client = pg(runner);
+    const role = await seedRole(client, s.tenantId, 'Many');
+    // 104 distinct default companies with Alice's: more than the 100 ids of one company lookup.
+    for (let index = 0; index < 103; index += 1) {
+      const [{ id: companyId }] = await runner.query(
+        `INSERT INTO companies (tenant_id, name, country_iso, city, item_number) VALUES ($1, $2, 'FR', 'Lyon', $3) RETURNING id`,
+        [s.tenantId, `Company ${index}`, 100 + index]);
+      const user = await seedPerson(client, s.tenantId, 'all', role);
+      await runner.query(
+        `INSERT INTO portfolio_team_member_configs (tenant_id, user_id, item_number, default_company_id) VALUES ($1, $2, $3, $4)`,
+        [s.tenantId, user, 100 + index, companyId]);
+    }
+    const ctx = context(runner, s, s.admin);
+    const all: any = await query.execute(ctx, { entity_type: 'contributors' });
+    assert.equal(all.total, 106);
+    const byCompany: any = await aggregates.execute(ctx, { entity_type: 'contributors', group_by: 'default_company' });
+    assert.equal(byCompany.groups.filter((group: any) => group.key != null).length, 104, 'every default company is named');
+    const one: any = await query.executeDetail(ctx, { entity_type: 'contributors', entity_id: 'MEM-100' });
+    assert.equal(one.data.default_company, 'Company 0');
+  });
+  console.log('ok - contributors: more than 100 distinct default companies');
+}
+
+async function testAPersonWithoutANameIsNamedByReference(): Promise<void> {
+  await inTransaction(async (runner) => {
+    const s = await seed(runner);
+    const { query, entities } = executors();
+    const [{ user_id: carlUser }] = await runner.query('SELECT user_id FROM portfolio_team_member_configs WHERE id = $1', [s.ids.carl]);
+    // Carl has no name; he manages Bob. A manager who is no contributor and has no name is said so.
+    await named(runner, carlUser, '', '');
+    await runner.query('UPDATE portfolio_team_member_configs SET manager_user_id = $2 WHERE id = $1', [s.ids.bob, carlUser]);
+    const outsider = await seedPerson(pg(runner), s.tenantId, 'all', await seedRole(pg(runner), s.tenantId, 'Outsider'));
+    await named(runner, outsider, '', '');
+    await runner.query('UPDATE portfolio_team_member_configs SET manager_user_id = $2 WHERE id = $1', [s.ids.alice, outsider]);
+    const ctx = context(runner, s, s.admin);
+
+    const all: any = await query.execute(ctx, { entity_type: 'contributors' });
+    const carl = all.items.find((item: any) => item.ref === 'MEM-3');
+    assert.equal(carl.label, 'MEM-3');
+    assert.equal(carl.metadata.name, 'MEM-3');
+    const bob = all.items.find((item: any) => item.ref === 'MEM-2');
+    assert.deepEqual([bob.metadata.manager, bob.metadata.manager_ref], ['MEM-3', 'MEM-3']);
+    const alice = all.items.find((item: any) => item.ref === 'MEM-1');
+    assert.deepEqual([alice.metadata.manager, alice.metadata.manager_ref], ['(person without a name)', null]);
+    const detail: any = await query.executeDetail(ctx, { entity_type: 'contributors', entity_id: 'MEM-3' });
+    assert.equal(detail.entity.label, 'MEM-3');
+    assert.equal(detail.data.name, 'MEM-3');
+    const searched: any = await withoutSurfaceChecks(() => entities.searchAll(ctx, { query: 'MEM-3' }));
+    assert.deepEqual(searched.items.filter((item: any) => item.type === 'contributors').map((item: any) => [item.ref, item.label]), [['MEM-3', 'MEM-3']]);
+    const mentioned: any = await withoutSurfaceChecks(() => entities.searchMentionCandidates(ctx, { query: 'MEM-3', entity_types: ['contributors'], limit: 20 }));
+    assert.deepEqual(mentioned.items.map((item: any) => [item.ref, item.label]), [['MEM-3', 'MEM-3']]);
+    assert.doesNotMatch(JSON.stringify([all, detail, searched, mentioned]), /@/, 'no email address');
+  });
+  console.log('ok - contributors: a person without a name is named by their MEM-n');
+}
+
+async function testSkillsOfTheSameNameStayApart(): Promise<void> {
+  await inTransaction(async (runner) => {
+    const s = await seed(runner);
+    const { query, aggregates } = executors();
+    // A second SAP, in another category, held by Bob.
+    const [{ id: hostingSap }] = await runner.query(`INSERT INTO portfolio_skills (tenant_id, category, name) VALUES ($1, 'Hosting', 'SAP') RETURNING id`, [s.tenantId]);
+    await runner.query(`UPDATE portfolio_team_member_configs SET skills = $2::jsonb WHERE id = $1`, [s.ids.bob, JSON.stringify([{ skill_id: hostingSap, proficiency: 3 }])]);
+    const ctx = context(runner, s, s.admin);
+
+    const bySkill: any = await aggregates.execute(ctx, { entity_type: 'contributors', group_by: 'skill' });
+    assert.deepEqual(bySkill.groups.map((group: any) => [group.key, group.count]), [['ERP / SAP', 1], ['Hosting / SAP', 1], ['Network', 1], [null, 1]]);
+    const values: any = await query.executeFilterValues(ctx, { entity_type: 'contributors', fields: ['skill'] });
+    assert.deepEqual(values.values.skill, ['ERP / SAP', 'Hosting / SAP', 'Network', null]);
+    const erp: any = await query.execute(ctx, { entity_type: 'contributors', filters: { skill: 'ERP / SAP' } });
+    assert.deepEqual(refs(erp), ['MEM-1']);
+    const either: any = await query.execute(ctx, { entity_type: 'contributors', filters: { skill: 'SAP' } });
+    assert.deepEqual(refs(either), ['MEM-1', 'MEM-2']);
+    const detail: any = await query.executeDetail(ctx, { entity_type: 'contributors', entity_id: 'MEM-2' });
+    assert.deepEqual(detail.data.skills, [{ skill: 'Hosting / SAP', category: 'Hosting', level: 3, level_name: 'Autonomous' }]);
+  });
+  console.log('ok - contributors: two skills of the same name stay two skills');
+}
+
+/** The stream field quotes the label of the contributor's page, in the four languages of its locale files. */
+function testTheStreamFieldQuotesTheScreen(): void {
+  const { CONTRIBUTOR_STREAM_LABEL, CONTRIBUTOR_STREAM_LABEL_KEY } = require('../query/ai-contributors.query');
+  assertLocaleLabels('portfolio', { stream: CONTRIBUTOR_STREAM_LABEL_KEY }, {
+    en: { stream: CONTRIBUTOR_STREAM_LABEL.en },
+    fr: { stream: CONTRIBUTOR_STREAM_LABEL.fr },
+    de: { stream: CONTRIBUTOR_STREAM_LABEL.de },
+    es: { stream: CONTRIBUTOR_STREAM_LABEL.es },
+  });
+  const { getAiEntityRegistry } = require('../query/registries');
+  const description: string = getAiEntityRegistry('contributors').fields.default_stream.description;
+  for (const word of ['"Filière"', '"Línea"', '"Stream"']) assert.ok(description.includes(word), `${word} in: ${description}`);
+  console.log('ok - contributors: the stream field quotes the screen');
 }
 
 async function testTenantAndHistory(): Promise<void> {
@@ -393,6 +523,11 @@ async function run(): Promise<void> {
       ['language and search', testTheLanguageAndTheSearch],
       ['rights of the page', testTheRightsOfThePage],
       ['tenant and history', testTenantAndHistory],
+      ['limited role', testLimitedAccessUnderTheLimitedRole],
+      ['many default companies', testManyDefaultCompanies],
+      ['person without a name', testAPersonWithoutANameIsNamedByReference],
+      ['skills of the same name', testSkillsOfTheSameNameStayApart],
+      ['stream label', async () => testTheStreamFieldQuotesTheScreen()],
     ] as Array<[string, () => Promise<void>]>) {
       try {
         await test();
