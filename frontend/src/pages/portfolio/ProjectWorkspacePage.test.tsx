@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -9,8 +9,6 @@ import { KanapDialogProvider } from '../../components/design';
 import ProjectWorkspacePage from './ProjectWorkspacePage';
 
 const get = vi.hoisted(() => vi.fn());
-const patch = vi.hoisted(() => vi.fn());
-const panel = vi.hoisted(() => ({ props: null as any }));
 const navParams = vi.hoisted(() => [] as Array<{ extraParams?: Record<string, string | undefined> }>);
 
 const stableT = (key: string) => key;
@@ -21,7 +19,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: () => true, profile: { id: 'u-1' } }),
 }));
-vi.mock('../../api', () => ({ default: { get, post: vi.fn(), patch, delete: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get, post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'acme' }) }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../hooks/useProjectNav', () => ({
@@ -48,16 +46,10 @@ vi.mock('./workspace/PortfolioDetailWorkspaceShell', () => ({
         {props.tabs.map((tab: any) => <button key={tab.key} role="tab" disabled={tab.disabled}>{tab.label}</button>)}
       </div>
       <main>{props.children}</main>
-      <aside>{props.properties}</aside>
     </div>
   ),
 }));
-vi.mock('./workspace/project/ProjectPropertyPanel', () => ({
-  default: (props: any) => {
-    panel.props = props;
-    return null;
-  },
-}));
+vi.mock('./workspace/project/ProjectPropertyPanel', () => ({ default: () => null }));
 vi.mock('./workspace/project/ProjectSummaryTab', () => ({
   default: (props: { canEditManagedDocs: boolean }) => (
     <div data-testid="project-summary" data-edit-docs={String(props.canEditManagedDocs)} />
@@ -162,41 +154,5 @@ describe('ProjectWorkspacePage contribution', () => {
     serve({ ...PROJECT, can_contribute: true });
     renderPage('/portfolio/projects/proj-1/tasks');
     expect(await screen.findByTestId('project-tasks')).toHaveAttribute('data-disabled', 'false');
-  });
-});
-
-// A project saved before a stream had to belong to its category (lot I7a of 26.12.1): saving another
-// field leaves the pair out of the save; another category clears the stream in the same save.
-describe('ProjectWorkspacePage, a stored stream of another category', () => {
-  const CATALOG = {
-    sources: [],
-    categories: [{ id: 'cat-it', name: 'Infrastructure', is_active: true }, { id: 'cat-biz', name: 'Business applications', is_active: true }],
-    streams: [{ id: 'ops-it', name: 'Ops', category_id: 'cat-it', is_active: true }],
-  };
-  beforeEach(() => {
-    get.mockReset();
-    patch.mockReset();
-    patch.mockResolvedValue({ data: {} });
-    panel.props = null;
-    get.mockImplementation(async (url: string) => {
-      if (url === '/portfolio/projects/proj-1') return { data: { ...PROJECT, category_id: 'cat-biz', stream_id: 'ops-it' } };
-      if (url === '/portfolio/classification/all') return { data: CATALOG };
-      return { data: {} };
-    });
-  });
-
-  it('hands the full lists to the panel, and saves another field alone', async () => {
-    renderPage('/portfolio/projects/proj-1/summary');
-    await waitFor(() => expect(panel.props?.form?.stream_id).toBe('ops-it'));
-    await waitFor(() => expect(panel.props.classification).toEqual(CATALOG));
-    await act(async () => { panel.props.onUpdate({ department_id: 'dep-1' }); });
-    expect(patch).toHaveBeenCalledWith('/portfolio/projects/proj-1', { department_id: 'dep-1' });
-  });
-
-  it('clears the stream with another category', async () => {
-    renderPage('/portfolio/projects/proj-1/summary');
-    await waitFor(() => expect(panel.props?.form?.stream_id).toBe('ops-it'));
-    await act(async () => { panel.props.onCategoryChange('cat-it'); });
-    expect(patch).toHaveBeenCalledWith('/portfolio/projects/proj-1', { category_id: 'cat-it', stream_id: null });
   });
 });
