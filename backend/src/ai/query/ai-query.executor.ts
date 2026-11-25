@@ -1642,7 +1642,8 @@ export class AiQueryExecutor {
       status: null,
       summary: row.notes,
       created_at: row.created_at,
-      // No modification date: the table keeps none of its own (common/updated-at.inventory.ts).
+      // No modification date: the table keeps none of its own (common/updated-at.inventory.ts). The
+      // summary type requires the key; AI_CONTRIBUTOR_NOTE tells the model it is always null.
       updated_at: null,
       metadata: {
         name: row.name,

@@ -1,4 +1,7 @@
 import { AiEntityFilterRegistry } from '../ai-filter.types';
+import { CONTRIBUTOR_STREAM_LABEL } from '../ai-contributors.query';
+
+const STREAM = CONTRIBUTOR_STREAM_LABEL;
 
 /**
  * Portfolio › Contributors, read through the screen's services (`query/ai-contributors.query.ts`):
@@ -115,7 +118,7 @@ export const contributorsRegistry: AiEntityFilterRegistry = {
       ai: 'default_stream',
       grid: 'default_stream',
       type: 'text',
-      description: 'Default stream of the contributor, by name, in their default category.',
+      description: `Default stream of the contributor, by name, in their default category. The contributor's page labels the field "${STREAM.en}" (fr "${STREAM.fr}", de "${STREAM.de}", es "${STREAM.es}"): the answer uses that word in the person's language.`,
       discoverable: true,
       sortable: false,
       groupable: true,

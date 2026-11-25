@@ -45,7 +45,15 @@ const SKILL_LEVEL_MAX = 4;
 /** What a contributor's figures mean, with every result. */
 export const AI_CONTRIBUTOR_NOTE = '`availability_days` is the project availability the contributor declares, in days per month. '
   + '`avg_project_days` is the average of the project days logged per month over the last six months, as the list card shows it; null when nothing was logged. '
-  + 'A contributor is a person of the workspace with a portfolio profile: `name` is that person.';
+  + 'A contributor is a person of the workspace with a portfolio profile: `name` is that person, their MEM-n when the person has no name. '
+  + 'Kadratis keeps no modification date for a contributor (`updated_at` is always null, which says nothing of changes) and a contributor has no History tab.';
+
+/** The key of the stream field's label on the contributor's page, and its words (checked against the locale files by a spec). */
+export const CONTRIBUTOR_STREAM_LABEL_KEY = 'workspace.contributor.fields.stream';
+export const CONTRIBUTOR_STREAM_LABEL: Record<AiScreenLanguage, string> = { en: 'Stream', fr: 'Filière', de: 'Stream', es: 'Línea' };
+
+/** A manager whose profile has no name and who is no contributor (no MEM-n to name them by). */
+const PERSON_WITHOUT_NAME = '(person without a name)';
 
 /** Why the default company is withheld from a person who does not read the company lookup. */
 export const AI_CONTRIBUTOR_COMPANY_WITHHELD: AiWithheldField = {
@@ -382,7 +390,7 @@ export async function contributorDetail(
         other_days: month.otherDays,
         total_days: month.totalDays,
       })),
-      note: 'Days logged on tasks and projects, 8 hours a day: the average of the project days per month over the last six months, and the last twelve months.',
+      note: 'Days logged on tasks and projects, 8 hours a day, as the General tab shows them: `average_project_days` is the average of the project days per month over the last six months; `monthly` gives the project, other and total days of each of the last twelve months.',
     },
   };
 }
