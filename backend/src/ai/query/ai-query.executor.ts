@@ -1642,7 +1642,8 @@ export class AiQueryExecutor {
       status: null,
       summary: row.notes,
       created_at: row.created_at,
-      updated_at: row.updated_at,
+      // No modification date: the table keeps none of its own (common/updated-at.inventory.ts).
+      updated_at: null,
       metadata: {
         name: row.name,
         job_title: row.job_title,

@@ -82,6 +82,7 @@ export const UPDATED_AT_FAMILIES: Readonly<Record<AiQueryEntityType, string | { 
   connections: 'connections',
   contacts: 'contacts',
   contracts: 'contracts',
+  contributors: { none: 'the summaries carry no modification date: portfolio_team_member_configs has no trigger, its service dates every save, a save without a change included' },
   cost_centers: { none: 'the summaries carry no modification date' },
   data_access: { none: 'shows the date of the access settings (users.data_access_updated_at)' },
   departments: 'departments',

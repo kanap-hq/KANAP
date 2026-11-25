@@ -72,7 +72,6 @@ export type AiContributorRow = {
   default_company: string | null;
   notes: string | null;
   created_at: string | null;
-  updated_at: string | null;
 };
 
 export type AiContributorServices = {
@@ -93,7 +92,7 @@ export type AiContributorOpts = {
 export type AiContributorList = { items: AiContributorRow[]; total: number; page: number; limit: number };
 
 export const CONTRIBUTOR_SORTS = new Set([
-  'name', 'ref', 'team', 'manager', 'employment_type', 'availability_days', 'skill_count', 'avg_project_days', 'created_at', 'updated_at',
+  'name', 'ref', 'team', 'manager', 'employment_type', 'availability_days', 'skill_count', 'avg_project_days', 'created_at',
 ]);
 
 const RANK: Record<PermissionLevel, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
@@ -189,7 +188,6 @@ export async function readContributors(services: AiContributorServices, opts: Ai
       default_company: opts.readsCompanies && item.default_company_id ? companies.get(item.default_company_id) ?? null : null,
       notes: nameOrNull(item.notes),
       created_at: toIso(item.created_at),
-      updated_at: toIso(item.updated_at),
     };
   });
 }
@@ -221,7 +219,6 @@ function filtered(rows: AiContributorRow[], query: Record<string, any>): AiContr
     && textMatch(row.default_company, filters?.default_company)
     && textMatch(row.notes, filters?.notes)
     && dateMatch(row.created_at, filters?.created_at)
-    && dateMatch(row.updated_at, filters?.updated_at)
     // A reference names one contributor exactly (MEM-1 never keeps MEM-12); a word searches the
     // name, the job title, the team and the skills.
     && (!q || (refNumber != null
@@ -241,7 +238,6 @@ function sortValue(row: AiContributorRow, field: string): string | number | null
     case 'skill_count': return row.skill_count;
     case 'avg_project_days': return row.avg_project_days;
     case 'created_at': return row.created_at;
-    case 'updated_at': return row.updated_at;
     default: return null;
   }
 }

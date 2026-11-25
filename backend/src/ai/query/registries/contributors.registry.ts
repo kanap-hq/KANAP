@@ -144,14 +144,6 @@ export const contributorsRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: false,
     },
-    updated_at: {
-      ai: 'updated_at',
-      grid: 'updated_at',
-      type: 'date',
-      description: 'When the contributor was last changed.',
-      sortable: true,
-      groupable: false,
-    },
   },
   sortFields: {
     name: 'name',
@@ -163,7 +155,6 @@ export const contributorsRegistry: AiEntityFilterRegistry = {
     skill_count: 'skill_count',
     avg_project_days: 'avg_project_days',
     created_at: 'created_at',
-    updated_at: 'updated_at',
   },
   defaultSort: {
     field: 'name',
