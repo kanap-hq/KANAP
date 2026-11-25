@@ -1342,7 +1342,8 @@ An asset is written from the line with the asset's audit shape. The table is `as
 
 ## Allocations (OPEX)
 - GET `/spend-versions/:id/allocations` → `{ items: AllocationRow[], total_pct, resolved_method, method, driver, base_signature, budget_rev, totals }` (`budget_rev`: the version's counter, read with the signature; `totals`: the year's five column totals, read after it; the PUT of the same path answers the same after its write)
-  - `AllocationRow`: `{ id|null, company_id, department_id|null, allocation_pct, source: 'manual'|'auto' }`
+  - `AllocationRow`: `{ id|null, company_id, company_name, department_id|null, department_name|null, allocation_pct, source: 'manual'|'auto' }`
+  - `company_name` and `department_name` are carried by the line: a person who reads the budget without the `companies` or `departments` right reads them too (the Allocations tab then does not read those lists)
   - Percentages are recomputed on the fly from the active allocation method and latest company metrics. Manual rows surface as `source: 'manual'` with their persisted percentage; auto rows are derived each request.
 - POST `/spend-versions/:id/allocations/bulk-upsert`
   - Auto methods (`default|headcount|it_users|turnover`) ignore the payload; the endpoint validates data/metrics and clears any persisted rows so the distribution is always derived dynamically.

@@ -932,6 +932,60 @@ async function testIdenticalExportCountsUnchanged() {
   });
 }
 
+/** The column an import edits, per table: a free text that is not the row's key. */
+const EDITED_BY_IMPORT: Record<string, string> = {
+  companies: 'notes',
+  departments: 'description',
+  users: 'first_name',
+  suppliers: 'notes',
+  accounts: 'description',
+  analytics_categories: 'description',
+  working_day_profiles: 'description',
+  contacts: 'notes',
+  contracts: 'notes',
+  business_processes: 'description',
+};
+
+/**
+ * The modification date through the import (migration 1856270000000): re-importing the export
+ * leaves every row's date; a file that changes one row dates that row only. Cost centers keep
+ * their date by hand, out of this list.
+ */
+async function testImportDatesItsChanges() {
+  const OLD_DATE = '2020-01-02T03:04:05.000Z';
+  await each('updated-at', async (importer, runner, tenantId) => {
+    const column = EDITED_BY_IMPORT[importer.table];
+    if (!column) return;
+    const edited = importer.key(`${importer.label} edited`);
+    const kept = importer.key(`${importer.label} kept`);
+    // An account is found by its number: the second one takes its own.
+    const keptRow = importer.table === 'accounts' ? { ...importer.base(kept), account_number: '6101' } : importer.base(kept);
+    const seeded = await importer.importCsv(await fileFor(importer, [importer.base(edited), keptRow]));
+    assert.deepEqual([seeded.ok, seeded.errors], [true, []], `${importer.label} seed: ${JSON.stringify(seeded.errors)}`);
+    await runner.query(`UPDATE ${importer.table} SET updated_at = $1 WHERE tenant_id = $2`, [OLD_DATE, tenantId]);
+    const dates = async () => {
+      const rows: Array<{ key: string; updated_at: Date }> = await runner.query(
+        `SELECT ${importer.nameColumn} AS key, updated_at FROM ${importer.table} WHERE tenant_id = $1 AND ${importer.nameColumn} = ANY($2)`,
+        [tenantId, [edited, kept]],
+      );
+      return Object.fromEntries(rows.map((row) => [row.key, row.updated_at.toISOString()]));
+    };
+
+    const same = await importer.importCsv(await importer.exportCsv('en'), { language: 'en' });
+    assert.deepEqual([same.ok, same.errors, same.updated], [true, [], 0], `${importer.label} same file: ${JSON.stringify(same.errors)}`);
+    assert.deepEqual(await dates(), { [edited]: OLD_DATE, [kept]: OLD_DATE }, `${importer.label}: identical rows keep their date`);
+
+    const changed = await importer.importCsv(await fileFor(importer, [{ ...importer.base(edited), [column]: 'Changed by the import' }]));
+    assert.deepEqual([changed.ok, changed.errors, changed.updated], [true, [], 1], `${importer.label} changed row: ${JSON.stringify(changed.errors)}`);
+    const [{ now }] = await runner.query(`SELECT now() AS now`);
+    assert.deepEqual(
+      await dates(),
+      { [edited]: (now as Date).toISOString(), [kept]: OLD_DATE },
+      `${importer.label}: the changed row takes the date of the import, the other keeps its own`,
+    );
+  });
+}
+
 /**
  * An end of validity with a time of day (the switch disables at the server's clock). The export
  * writes the day only, the language's way. Re-importing that day keeps the stored instant: the
@@ -1211,6 +1265,7 @@ async function main() {
     ['testFrenchRoundTripChangesNothing', testFrenchRoundTripChangesNothing],
     ['testIdenticalExportCountsUnchanged', testIdenticalExportCountsUnchanged],
     ['testPreciseEndOfValidityRoundTrip', testPreciseEndOfValidityRoundTrip],
+    ['testImportDatesItsChanges', testImportDatesItsChanges],
     ['testMoreCellsThanTheHeader', testMoreCellsThanTheHeader],
     ['testUnreadableFileIsRefused', testUnreadableFileIsRefused],
     ['testAccountNatureColumn', testAccountNatureColumn],

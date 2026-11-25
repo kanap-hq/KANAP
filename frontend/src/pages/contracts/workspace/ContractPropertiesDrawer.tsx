@@ -12,7 +12,7 @@ import { useCostCenterNode } from '../../../hooks/useCostCenterTree';
 import { useContractPlacementFilter } from '../../../hooks/usePlacementOptions';
 import { STATUS_DISABLED, deriveStatusFromDisabledAt, normalizeDisabledAtInput, type StatusValue } from '../../../constants/status';
 import { useLocale } from '../../../i18n/useLocale';
-import { formatShortDate } from '../../../lib/dateFormat';
+import { formatShortInstantDate } from '../../../lib/dateFormat';
 import type { BillingFrequency, ContractPatch } from '../contractForm';
 import { BillingField, CurrencyField, NumberField, RenewalField } from './ContractFields';
 
@@ -251,10 +251,10 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, mis
         {!isCreate && (
         <Box sx={twoColumnsSx}>
           <PropertyRow label={t('contracts.fields.created')}>
-            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(values.created_at, locale, { year: 'always', empty: '-' })}</Typography>
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortInstantDate(values.created_at, locale, { year: 'always', empty: '-' })}</Typography>
           </PropertyRow>
           <PropertyRow label={t('contracts.fields.updated')}>
-            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(values.updated_at, locale, { year: 'always', empty: '-' })}</Typography>
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortInstantDate(values.updated_at, locale, { year: 'always', empty: '-' })}</Typography>
           </PropertyRow>
         </Box>
         )}

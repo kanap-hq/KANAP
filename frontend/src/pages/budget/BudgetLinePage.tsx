@@ -1609,7 +1609,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
                   sx={composerSx}
                 />
               </Box>
-              {!stale && uuid && <EntityTasksPanel key={uuid} entityType={config.taskType} entityId={uuid} disabled={!hasLevel('tasks', 'member') || !lineEditable} />}
+              {!stale && uuid && <EntityTasksPanel key={uuid} entityType={config.taskType} entityId={uuid} entityAddress={data?.item_number ? formatItemRef('budget', data.item_number) : null} disabled={!hasLevel('tasks', 'member') || !lineEditable} />}
             </Stack>
           )
         )}

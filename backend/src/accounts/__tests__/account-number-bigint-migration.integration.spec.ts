@@ -4,6 +4,9 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { AccountNumberBigint1854060000000 as Migration } from '../../migrations/1854060000000-account-number-bigint';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1854060000000 (account numbers as bigint), against a real database, each test in a
 // transaction that is rolled back. The database is put back in the state before the migration
@@ -90,6 +93,7 @@ const INSERT = `INSERT INTO accounts (tenant_id, coa_id, account_number, account
 
 async function testUp() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     await migration.down(runner);
     assert.deepEqual(await columnTypes(runner), { account_number: 'integer', consolidation_account_number: 'integer' });
     const { tenantId, chartId, accountId } = await seed(runner);
@@ -123,6 +127,7 @@ async function testUp() {
 
 async function testRerun() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     await captureLog(() => migration.up(runner));
     const { lines } = await captureLog(() => migration.up(runner));
     assert.ok(lines.includes(`${LOG_PREFIX} 0 column(s) changed to bigint.`), lines.join(' | '));
@@ -132,6 +137,7 @@ async function testRerun() {
 
 async function testDown() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     await captureLog(() => migration.up(runner));
     const { tenantId, chartId } = await seed(runner);
     await runner.query(INSERT, [tenantId, chartId, LONG, null]);

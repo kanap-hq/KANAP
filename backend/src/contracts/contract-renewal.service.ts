@@ -513,7 +513,7 @@ export class ContractRenewalService implements OnModuleInit {
   private async writeRenewal(mg: EntityManager, contract: Contract, autoRenewal: boolean, disabledAt: Date | null): Promise<Contract> {
     const status = deriveStatusFromDisabledAt(disabledAt);
     await mg.query(
-      `UPDATE contracts SET auto_renewal = $3, disabled_at = $4, status = $5, updated_at = now() WHERE tenant_id = $1 AND id = $2`,
+      `UPDATE contracts SET auto_renewal = $3, disabled_at = $4, status = $5 WHERE tenant_id = $1 AND id = $2`,
       [contract.tenant_id, contract.id, autoRenewal, disabledAt, status],
     );
     const [saved] = await mg.getRepository(Contract).find({ where: { id: contract.id, tenant_id: contract.tenant_id }, take: 1 });

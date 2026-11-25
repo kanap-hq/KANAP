@@ -107,6 +107,7 @@ export class Incident {
   @Column('timestamptz', { default: () => 'now()' })
   created_at!: Date;
 
-  @Column('timestamptz', { default: () => 'now()' })
+  /** Kept by the database (migration 1856270000000): never written by TypeORM, see touchUpdatedAt. */
+  @Column({ type: 'timestamptz', default: () => 'now()', update: false })
   updated_at!: Date;
 }

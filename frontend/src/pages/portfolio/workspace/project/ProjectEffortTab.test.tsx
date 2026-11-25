@@ -83,11 +83,13 @@ function renderEffortTab({
   form = baseForm,
   onUpdate = vi.fn<(patch: any) => void>(),
   taskTimeSummary = { it_hours: 0, business_hours: 0, total_hours: 0 },
+  taskTimeEntries = [],
 }: {
   canManage?: boolean;
   form?: any;
   onUpdate?: ReturnType<typeof vi.fn<(patch: any) => void>>;
   taskTimeSummary?: { it_hours: number; business_hours: number; total_hours: number };
+  taskTimeEntries?: any[];
 } = {}) {
   const result = render(
     <ThemeProvider theme={theme}>
@@ -105,7 +107,7 @@ function renderEffortTab({
         onUpdate={onUpdate}
         profileId="user-1"
         projectId="project-1"
-        taskTimeEntries={[]}
+        taskTimeEntries={taskTimeEntries}
         taskTimeSummary={taskTimeSummary}
       />
     </ThemeProvider>,
@@ -248,5 +250,17 @@ describe('ProjectEffortTab', () => {
 
     expect(screen.getByText('No time logged yet.')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('links the time of a task to the task by its reference, by its uuid without one', () => {
+    const entry = { category: 'it', hours: 2, logged_at: '2026-11-03T00:00:00Z', user_id: 'user-1' };
+    renderEffortTab({
+      taskTimeEntries: [
+        { ...entry, id: 'te-1', task_id: 'task-1', task_item_number: 9, task_title: 'Order cheese' },
+        { ...entry, id: 'te-2', task_id: 'task-2', task_item_number: null, task_title: 'Taste cheese' },
+      ],
+    });
+    expect(screen.getByRole('link', { name: 'Order cheese' })).toHaveAttribute('href', '/portfolio/tasks/T-9');
+    expect(screen.getByRole('link', { name: 'Taste cheese' })).toHaveAttribute('href', '/portfolio/tasks/task-2');
   });
 });

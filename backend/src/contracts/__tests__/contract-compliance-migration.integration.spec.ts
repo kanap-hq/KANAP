@@ -7,6 +7,9 @@ import { Vulnerabilities1854260000000 } from '../../migrations/1854260000000-vul
 import { TechnologySupport1854270000000 } from '../../migrations/1854270000000-technology-support';
 import { BusinessProcessTypeAndParent1856170000000 } from '../../migrations/1856170000000-business-process-type-and-parent';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1854040000000 (the contracts' compliance register), against a real database, in
 // transactions rolled back at the end:
@@ -63,6 +66,7 @@ function assertShape(s: Awaited<ReturnType<typeof shape>>, label: string) {
 
 async function testMigratedAndRerun() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const before = await shape(runner);
     assertShape(before, 'migrated');
     await migration.up(runner);
@@ -84,6 +88,7 @@ async function seedContract(runner: QueryRunner, tag: string) {
 
 async function testDownUp(seeded: boolean) {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const contracts = seeded ? [await seedContract(runner, 'ccm-a'), await seedContract(runner, 'ccm-b')] : [];
     // The technology links (1854190000000) need the contracts' key, and the vulnerabilities
     // (1854260000000) the technology versions, as the support contacts (1854270000000) the

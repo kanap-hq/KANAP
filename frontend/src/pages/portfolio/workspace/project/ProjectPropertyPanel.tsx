@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../../api';
+import { buildItemPath, itemAddress } from '../../../../utils/item-ref';
 import UserSelect from '../../../../components/fields/UserSelect';
 import CompanySelect from '../../../../components/fields/CompanySelect';
 import DepartmentSelect from '../../../../components/fields/DepartmentSelect';
@@ -363,7 +364,7 @@ export default function ProjectPropertyPanel({
                     key={request.id}
                     component="button"
                     type="button"
-                    onClick={() => navigate(`/portfolio/requests/${request.id}/summary`)}
+                    onClick={() => navigate(`${buildItemPath('request', itemAddress('request', request))}/summary`)}
                     sx={(theme) => ({
                       border: 0,
                       background: 'transparent',

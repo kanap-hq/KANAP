@@ -13,6 +13,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { useTranslation } from 'react-i18next';
 import api from '../../../../api';
+import { buildItemPath, itemAddress } from '../../../../utils/item-ref';
 import { getApiErrorMessage } from '../../../../utils/apiErrorMessage';
 import { useLocale } from '../../../../i18n/useLocale';
 import { formatShortDate } from '../../../../lib/dateFormat';
@@ -759,7 +760,7 @@ export default function ProjectEffortTab({
                       const sourceContent = entry.source === 'task' && entry.task_id ? (
                         <a
                           className="kanap-link-subtle"
-                          href={`/portfolio/tasks/${entry.task_id}`}
+                          href={buildItemPath('task', itemAddress('task', { id: entry.task_id, item_number: entry.task_item_number }))}
                           title={entry.source_label}
                         >
                           {entry.source_label}

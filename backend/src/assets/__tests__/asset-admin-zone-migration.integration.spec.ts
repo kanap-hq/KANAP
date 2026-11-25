@@ -3,6 +3,9 @@ import 'dotenv/config';
 import { QueryRunner } from 'typeorm';
 import { AssetAdminZone1854340000000 as Migration } from '../../migrations/1854340000000-asset-admin-zone';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1854340000000 (`assets.admin_zone`), against a real database, in transactions
 // rolled back at the end:
@@ -33,6 +36,7 @@ const EXPECTED = { data_type: 'text', is_nullable: 'YES', column_default: null }
 
 async function testMigratedAndRerun() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     assert.deepEqual(await column(runner), EXPECTED);
     const tenantId = await seedTenant(runner, 'adz-asset-rerun');
     const id = await asset(runner, tenantId, 'dc1');
@@ -47,6 +51,7 @@ async function testMigratedAndRerun() {
 
 async function testDirtyDatabase() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     await runner.query(`ALTER TABLE assets DROP COLUMN admin_zone`);
     await runner.query(`ALTER TABLE assets ADD COLUMN admin_zone varchar(20) NOT NULL DEFAULT ''`);
     const a = await seedTenant(runner, 'adz-asset-dirty-a');

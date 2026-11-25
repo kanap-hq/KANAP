@@ -1026,7 +1026,7 @@ async function withSplitWorld(harness: Harness, play: (w: {
 /**
  * The cards of a split name the companies and departments, never an id (item 1 of the K2a
  * leftovers): a `replace_allocations` card and its "Undo". A person who does not read the companies
- * and departments sees no name, as on their Allocations tab.
+ * and departments lists sees the names the line carries, as on their Allocations tab (K2d).
  */
 async function allocationCardsName(harness: Harness) {
   await withSplitWorld(harness, async ({ runner, s, ctx, logistics, card, approve, splitLine }) => {
@@ -1048,10 +1048,14 @@ async function allocationCardsName(harness: Harness) {
     names(await harness.previews.createReversePreview(ctx, departments.preview_id), ['History company / Finance', 'Second company / Logistics'], 'its undo');
 
     const narrow = await personWithout(runner, s, ['companies', 'departments'], randomUUID());
-    for (const [lineId, allocations] of [[byCompany, [s.companyId]], [byDepartment, [logistics]]] as const) {
+    for (const [lineId, allocations, expected] of [
+      [byCompany, [s.companyId], ['History company']],
+      [byDepartment, [logistics], ['Second company / Logistics']],
+    ] as const) {
       const preview = await card(narrow, lineId, { action: 'replace_allocations', allocations });
       assert.doesNotMatch(cardText(preview), UUID_IN_TEXT, `the card shows no id: ${cardText(preview)}`);
-      assert.doesNotMatch(cardText(preview), /History company|Second company|Finance|Logistics/, `no name the person does not read: ${cardText(preview)}`);
+      assert.doesNotMatch(cardText(preview), /—/, `no name left out: ${cardText(preview)}`);
+      for (const name of expected) assert.ok(cardText(preview).includes(name), `the names the line carries (${name}): ${cardText(preview)}`);
     }
   });
 }

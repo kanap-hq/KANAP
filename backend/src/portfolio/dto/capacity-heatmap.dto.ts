@@ -32,6 +32,8 @@ export interface TeamCapacityRow {
 
 export interface ProjectBreakdownRow {
   projectId: string;
+  /** The project's number, for its address (`PRJ-12`). */
+  projectItemNumber: number;
   projectName: string;
   status: ProjectStatus;
   estimatedEffort: number;

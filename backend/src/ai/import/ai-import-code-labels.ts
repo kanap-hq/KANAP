@@ -16,7 +16,7 @@ import { accentFreeKey } from '../../common/name-matching';
 export type AiImportCodeLabels = Readonly<Record<CsvLanguage, Readonly<Record<string, string>>>>;
 
 /** `names` is en, fr, de, es. */
-function codeLabels(entries: Record<string, readonly [string, string, string, string]>): AiImportCodeLabels {
+export function codeLabels(entries: Record<string, readonly [string, string, string, string]>): AiImportCodeLabels {
   const labels: Record<CsvLanguage, Record<string, string>> = { en: {}, fr: {}, de: {}, es: {} };
   for (const [code, [en, fr, de, es]] of Object.entries(entries)) {
     labels.en[code] = en;

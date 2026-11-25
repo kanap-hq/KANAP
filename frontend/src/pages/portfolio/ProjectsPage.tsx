@@ -16,7 +16,7 @@ import api from '../../api';
 import { useGridScopePreference } from '../../hooks/useGridScopePreference';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../i18n/useLocale';
-import { formatShortDate } from '../../lib/dateFormat';
+import { formatShortDate, formatShortInstantDate } from '../../lib/dateFormat';
 import { getDotColor, PROJECT_STATUS_COLORS } from '../../utils/statusColors';
 import { useTheme } from '@mui/material/styles';
 import { StatusDot } from '../../components/design';
@@ -466,7 +466,7 @@ export default function ProjectsPage() {
       headerName: t('projects.columns.created'),
       width: 110,
       filter: 'agDateColumnFilter',
-      valueFormatter: (params: any) => formatShortDate(params.value, locale),
+      valueFormatter: (params: any) => formatShortInstantDate(params.value, locale),
       cellRenderer: clickableCellRenderer,
     },
     {
@@ -474,7 +474,7 @@ export default function ProjectsPage() {
       headerName: t('projects.columns.lastChanged'),
       width: 130,
       filter: 'agDateColumnFilter',
-      valueFormatter: (params: any) => formatShortDate(params.value, locale),
+      valueFormatter: (params: any) => formatShortInstantDate(params.value, locale),
       cellRenderer: clickableCellRenderer,
       hide: true,
     },

@@ -24,7 +24,7 @@ const UpdateEntityRelationsInputSchema = z.object({
   relation: z.string().trim().min(1)
     .describe('The supported relation name for the selected entity type, such as companies, contacts, owners, links, projects, assets, budget_lines or a site\'s sub_locations.'),
   add: z.array(z.unknown()).optional()
-    .describe('Relation entries to add. Simple relations accept strings or objects with ref/id; role-bearing relations accept objects with role/owner_type and contact/user/asset refs. A contact of a supplier, a contract or a budget line is { contact_ref: its CTCT-n reference, email or name, role: commercial, technical, support or other }: the role is required, ask the person when they gave none.'),
+    .describe('Relation entries to add. Simple relations accept strings or objects with ref/id; role-bearing relations accept objects with role/owner_type and contact/user/asset refs. A contact of a supplier, a contract or a budget line is { contact_ref: its CTCT-n reference, email or name, role: the role the person said, by its name or its code }. When the person said no role, call this tool without one and relay the question its refusal gives, with the names it gives: never choose a role for them and never list the roles yourself.'),
   remove: z.array(z.unknown()).optional()
     .describe('Relation entries to remove. Use the same reference shape as add, or an existing link/sub-location/assignment id where applicable.'),
 });
@@ -38,7 +38,7 @@ export class UpdateEntityRelationsAiMutationOperation implements AiMutationOpera
     entity_type: `One of ${AI_RELATION_ENTITY_TYPES.join(', ')}.`,
     ref: 'Exact source record reference. Prefer UUIDs from prior tool results internally; use exact business references/names when unique.',
     relation: 'Supported relation for the source entity. Query details first if unsure.',
-    add: 'Optional array of entries to add. Simple relations accept exact refs; role-bearing relations use objects with ref/contact_ref/user_ref/asset_ref plus role or owner_type. The contacts of suppliers, contracts and budget lines need a role: commercial, technical, support or other.',
+    add: 'Optional array of entries to add. Simple relations accept exact refs; role-bearing relations use objects with ref/contact_ref/user_ref/asset_ref plus role or owner_type. The contacts of suppliers, contracts and budget lines take the role the person said; without one, call the tool without a role and relay its question.',
     remove: 'Optional array of entries to remove. Use exact refs or existing link/sub-location/assignment ids where relevant.',
   };
   readonly businessResource = 'applications';

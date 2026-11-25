@@ -10,6 +10,7 @@ import { Asset } from '../../assets/asset.entity';
 import { AuditService, AuditSourceOptions } from '../../audit/audit.service';
 import { BulkDeleteResult } from '../../common/delete.types';
 import { normalizeMarkdownRichText } from '../../common/markdown-worker';
+import { touchUpdatedAt } from '../../common/updated-at-trigger';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import {
   assetSummary,
@@ -460,9 +461,19 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     existing.data_class = data_class;
     existing.contains_pii = contains_pii;
     existing.risk_mode = risk_mode;
-    existing.updated_at = new Date();
+    // The protocols and the servers are rows of their own, which the trigger of the connection does
+    // not see: their change dates the connection, after the save (migration 1856270000000).
+    const protocolsOf = (rows: Array<{ code: string; port_override: string | null }>) =>
+      rows.map((row) => `${row.code}|${row.port_override ?? ''}`).sort().join(',');
+    let childrenChanged = protocolsOf(nextProtocols)
+      !== protocolsOf(existingProtocols.map((row) => ({ code: row.connection_type_code, port_override: row.port_override ?? null })));
+    if (!childrenChanged && topology === 'multi_server' && before.topology === 'multi_server' && multiAssetIds) {
+      const stored = (await this.getConnServerRepo(mg).find({ where: { connection_id: id } })).map((row) => row.asset_id);
+      childrenChanged = [...stored].sort().join(',') !== [...multiAssetIds].sort().join(',');
+    }
 
     const saved = await repo.save(existing);
+    if (childrenChanged) await touchUpdatedAt(repo.manager, 'connections', saved.id);
 
     // Replace protocols
     await protoRepo.delete({ connection_id: id } as any);
