@@ -942,8 +942,7 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
                 extended_support_end = u.extended_support_end::date,
                 cpe_version = u.cpe_version,
                 build_prefixes = CASE WHEN u.build_prefixes IS NULL THEN v.build_prefixes
-                                      ELSE ARRAY(SELECT jsonb_array_elements_text(u.build_prefixes)) END,
-                updated_at = now()
+                                      ELSE ARRAY(SELECT jsonb_array_elements_text(u.build_prefixes)) END
            FROM jsonb_to_recordset($2::jsonb) AS u(id uuid, catalog_key text, standard_support_end text, extended_support_end text,
                                                    cpe_version text, build_prefixes jsonb, attach boolean, seen jsonb)
           WHERE v.tenant_id = $1 AND v.id = u.id
@@ -986,13 +985,7 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
                      ORDER BY 1)
                   END,
                 description = CASE WHEN u.description_applied THEN u.description ELSE t.description END,
-                cve_names = CASE WHEN u.cve_names IS NULL THEN t.cve_names ELSE u.cve_names END,
-                updated_at = CASE
-                  WHEN jsonb_array_length(u.cpe_added) = 0 AND jsonb_array_length(u.cpe_removed) = 0
-                   AND u.cve_names IS NULL
-                   AND NOT u.description_applied AND u.state = t.catalog_state THEN t.updated_at
-                  ELSE now()
-                  END
+                cve_names = CASE WHEN u.cve_names IS NULL THEN t.cve_names ELSE u.cve_names END
            FROM (
              SELECT u.*,
                     (u.description IS NOT NULL AND (

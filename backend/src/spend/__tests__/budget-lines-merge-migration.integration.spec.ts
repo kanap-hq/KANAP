@@ -6,6 +6,9 @@ import dataSource from '../../data-source';
 import { BudgetLinesNature1853960000000 as NatureMigration } from '../../migrations/1853960000000-budget-lines-nature';
 import { BudgetLinesMerge1853970000000 as MergeMigration } from '../../migrations/1853970000000-budget-lines-merge';
 import { undoLotZ1 } from './undo-lot-z1.fixtures';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migrations 1853960000000 and 1853970000000 (lot Z1 of plan planning/budget-unifie.md: the CAPEX
 // lines move from the capex_* tables into spend_*), against a real database, each test in a
@@ -351,6 +354,7 @@ const storedTotals = (runner: QueryRunner, tenantId: string, table: 'capex_versi
 
 async function testUp() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const world = await seedBeforeMigration(runner);
     const sourceSums = await monthsSum(runner, world.a, 'capex_amounts', world.v1);
     const v1Totals = await storedTotals(runner, world.a, 'capex_version_totals', world.v1);
@@ -471,6 +475,7 @@ async function testUp() {
 
 async function testSecondRun() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const world = await seedBeforeMigration(runner);
     await captureLog(() => natureMigration.up(runner));
     await captureLog(() => mergeMigration.up(runner));
@@ -511,6 +516,7 @@ async function testSecondRun() {
 /** Refusals before any write: each in a savepoint, the world untouched afterwards. */
 async function testRefusals() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const world = await seedBeforeMigration(runner);
     await captureLog(() => natureMigration.up(runner));
     const refused = async (label: string, prepare: () => Promise<void>, pattern: RegExp, run: () => Promise<unknown> = () => mergeMigration.up(runner)) => {
@@ -595,6 +601,7 @@ async function testRefusals() {
 /** down() after writes made once moved, then up() again: nothing lost, legacy numbers kept, new BL numbers. */
 async function testRoundTrip() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const world = await seedBeforeMigration(runner);
     await captureLog(() => natureMigration.up(runner));
     await captureLog(() => mergeMigration.up(runner));

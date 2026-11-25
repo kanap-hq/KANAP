@@ -20,7 +20,7 @@ import { ACTIVE_TASK_STATUSES, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from './
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../i18n/useLocale';
 import { useLocalizedTaskTypes, useTaskTypeLabel } from '../hooks/useLocalizedTaskTypes';
-import { formatShortDate } from '../lib/dateFormat';
+import { formatShortDate, formatShortInstantDate } from '../lib/dateFormat';
 import { getDotColor } from '../utils/statusColors';
 import { useTheme } from '@mui/material/styles';
 import { StatusDot } from '../components/design';
@@ -561,7 +561,7 @@ export default function TasksPage() {
       headerName: t('tasks.columns.created'),
       width: 120,
       filter: 'agDateColumnFilter',
-      valueFormatter: (params) => formatShortDate(params.value, locale),
+      valueFormatter: (params) => formatShortInstantDate(params.value, locale),
       cellRenderer: clickableCellRenderer,
       hide: true,
     },
@@ -570,7 +570,7 @@ export default function TasksPage() {
       headerName: t('tasks.columns.lastChanged'),
       width: 130,
       filter: 'agDateColumnFilter',
-      valueFormatter: (params) => formatShortDate(params.value, locale),
+      valueFormatter: (params) => formatShortInstantDate(params.value, locale),
       cellRenderer: clickableCellRenderer,
       hide: true,
     },

@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { AccountNature1853890000000 as Migration } from '../../migrations/1853890000000-account-nature';
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1853890000000 (the OPEX/CAPEX nature of accounts), against a real
 // database, each test in a transaction that is rolled back. The database is put
@@ -50,6 +51,8 @@ async function inRolledBackTransaction(fn: (runner: QueryRunner) => Promise<void
   const runner = dataSource.createQueryRunner();
   await runner.connect();
   await runner.startTransaction();
+  // The database of this migration's time: the modification date trigger (1856270000000) came later.
+  await dropUpdatedAtTriggers(runner, ['accounts', 'spend_items']);
   try {
     await fn(runner);
   } finally {

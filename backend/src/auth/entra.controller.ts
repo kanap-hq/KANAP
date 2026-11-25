@@ -610,7 +610,7 @@ export class EntraController {
       try {
         changed = await manager.query(
           `WITH changed AS (
-             UPDATE users SET external_auth_provider = 'entra', external_subject = $3, updated_at = now()
+             UPDATE users SET external_auth_provider = 'entra', external_subject = $3
              WHERE tenant_id = $1 AND id = $2 AND external_auth_provider IS NULL
              RETURNING 1
            )

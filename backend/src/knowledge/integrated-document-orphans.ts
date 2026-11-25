@@ -61,7 +61,7 @@ export async function releaseOrphanedManagedDocuments(
       const { binding_id: bindingId, folder_id: folderId, ...document } = orphan;
       if (!opts.dryRun) {
         await manager.query(`DELETE FROM integrated_document_bindings WHERE tenant_id = $1 AND id = $2`, [tenantId, bindingId]);
-        await manager.query(`UPDATE documents SET folder_id = NULL, updated_at = now() WHERE tenant_id = $1 AND id = $2`, [
+        await manager.query(`UPDATE documents SET folder_id = NULL WHERE tenant_id = $1 AND id = $2`, [
           tenantId,
           document.document_id,
         ]);

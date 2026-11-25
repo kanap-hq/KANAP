@@ -10,7 +10,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../../i18n/useLocale';
-import { formatShortDate } from '../../../lib/dateFormat';
+import { formatShortInstantDate } from '../../../lib/dateFormat';
 import api from '../../../api';
 import { buildItemPath, itemAddress } from '../../../utils/item-ref';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
@@ -101,7 +101,7 @@ export default function GlobalStatusChangesTile({ config }: GlobalStatusChangesT
                       </Box>
                     </Box>
                     <Typography variant="caption" color="text.secondary">
-                      {t('dashboard.tiles.authorOnDate', { author: item.authorName, date: formatShortDate(item.createdAt, locale) })}
+                      {t('dashboard.tiles.authorOnDate', { author: item.authorName, date: formatShortInstantDate(item.createdAt, locale) })}
                     </Typography>
                   </Box>
                 )}
