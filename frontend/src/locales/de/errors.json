@@ -290,6 +290,8 @@
   "DEPARTMENT_IN_USE": "Diese Abteilung wird in den Zuordnungen von {{usages}} verwendet. Deaktivieren Sie sie, statt sie zu löschen.",
   "DEPARTMENT_OUTSIDE_COMPANY": "Die Abteilung „{{child}}“ gehört zum Unternehmen „{{childParent}}“. Sie passt nicht zum Unternehmen „{{parent}}“.",
   "STREAM_OUTSIDE_CATEGORY": "Der Stream „{{child}}“ gehört zur Kategorie „{{childParent}}“. Er passt nicht zur Kategorie „{{parent}}“.",
+  "DEPARTMENT_MOVE_IN_USE": "Die Abteilung „{{name}}“ wird von {{usages}} verwendet. Sie kann das Unternehmen nicht wechseln.",
+  "STREAM_MOVE_IN_USE": "Der Stream „{{name}}“ wird von {{usages}} verwendet. Er kann die Kategorie nicht wechseln.",
   "BUSINESS_PROCESS_IN_USE": "Dieser Geschäftsprozess wird noch verwendet: {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
   "BUSINESS_PROCESS_OWN_PARENT": "Ein Geschäftsprozess kann nicht sein eigener übergeordneter Prozess sein.",
   "BUSINESS_PROCESS_PARENT_NOT_FOUND": "Der übergeordnete Prozess existiert nicht mehr.",

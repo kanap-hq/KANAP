@@ -290,6 +290,8 @@
   "DEPARTMENT_IN_USE": "Ce département est utilisé dans les ventilations de {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "DEPARTMENT_OUTSIDE_COMPANY": "Le département « {{child}} » appartient à la société « {{childParent}} ». Il ne peut pas aller avec la société « {{parent}} ».",
   "STREAM_OUTSIDE_CATEGORY": "La filière « {{child}} » appartient à la catégorie « {{childParent}} ». Elle ne peut pas aller avec la catégorie « {{parent}} ».",
+  "DEPARTMENT_MOVE_IN_USE": "Le département « {{name}} » est utilisé par {{usages}}. Il ne peut pas changer de société.",
+  "STREAM_MOVE_IN_USE": "La filière « {{name}} » est utilisée par {{usages}}. Elle ne peut pas changer de catégorie.",
   "BUSINESS_PROCESS_IN_USE": "Ce processus métier est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "BUSINESS_PROCESS_OWN_PARENT": "Un processus métier ne peut pas être son propre parent.",
   "BUSINESS_PROCESS_PARENT_NOT_FOUND": "Le processus parent n’existe plus.",

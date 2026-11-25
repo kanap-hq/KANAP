@@ -290,6 +290,8 @@
   "DEPARTMENT_IN_USE": "This department is used in the allocations of {{usages}}. Disable it instead of deleting it.",
   "DEPARTMENT_OUTSIDE_COMPANY": "The department \"{{child}}\" belongs to the company \"{{childParent}}\". It cannot go with the company \"{{parent}}\".",
   "STREAM_OUTSIDE_CATEGORY": "The stream \"{{child}}\" belongs to the category \"{{childParent}}\". It cannot go with the category \"{{parent}}\".",
+  "DEPARTMENT_MOVE_IN_USE": "The department \"{{name}}\" is used by {{usages}}. It cannot change company.",
+  "STREAM_MOVE_IN_USE": "The stream \"{{name}}\" is used by {{usages}}. It cannot change category.",
   "BUSINESS_PROCESS_IN_USE": "This business process is used by {{usages}}. Disable it instead of deleting it.",
   "BUSINESS_PROCESS_OWN_PARENT": "A business process cannot be its own parent.",
   "BUSINESS_PROCESS_PARENT_NOT_FOUND": "The parent process no longer exists.",
