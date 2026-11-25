@@ -72,7 +72,7 @@ export const contributorsRegistry: AiEntityFilterRegistry = {
       ai: 'skill',
       grid: 'skill',
       type: 'text',
-      description: 'A skill of the contributor, by name: a part of one skill\'s name matches. Rows carry `skills`, each with its level (1 to 4) and the level\'s name; grouped by skill, a contributor counts in each of their skills.',
+      description: 'A skill of the contributor, by name: a part of one skill\'s name matches. A name two skills of the workspace share (one per category) is given as "category / name", and grouped or filtered that way. Rows carry `skills`, each with its category, level (1 to 4) and the level\'s name; grouped by skill, a contributor counts in each of their skills.',
       discoverable: true,
       sortable: false,
       groupable: true,

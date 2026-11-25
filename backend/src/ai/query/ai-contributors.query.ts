@@ -19,10 +19,12 @@ import { compareText, dateMatch, numberMatch, paged, textMatch } from './ai-supp
  * classification of the drawer, the company lookup of its company field), never a second query.
  * Read with the right of the page, the portfolio settings at reader level.
  *
- * The person is named as the list names them (their name, else their email), with the job title
- * of their profile; the team, the manager and the contract type by the names the list route
- * gives. A manager who is a contributor too carries their `MEM-n`, as the page links them. The
- * skills come by name with their level in the person's language, as the Skills tab. The default
+ * The person is named as the list names them, with the job title of their profile; a person
+ * without a name by their `MEM-n` (their email stays out). The team, the manager and the contract
+ * type come by the names the list route gives. A manager who is a contributor too carries their
+ * `MEM-n`, as the page links them. The skills come by name with their level in the person's
+ * language, as the Skills tab; two skills of the same name in two categories are named
+ * "category / name", as the Skills tab files them under their category. The default
  * company of the drawer is named only for a person who reads the company lookup, as its field
  * (`/companies/lookup`, `ORGANISATION_LOOKUP_READERS`); for the others it is withheld, said so.
  *
@@ -51,7 +53,8 @@ export const AI_CONTRIBUTOR_COMPANY_WITHHELD: AiWithheldField = {
   reason: 'This person does not read the companies: the default company of a contributor is not read here, which does not mean there is none.',
 };
 
-export type AiContributorSkill = { skill: string; category: string | null; level: number; level_name: string };
+/** A skill of a contributor; `id` groups by skill and never leaves the server (`publicSkills`). */
+export type AiContributorSkill = { id: string; skill: string; category: string | null; level: number; level_name: string };
 
 export type AiContributorRow = {
   id: string;
@@ -155,6 +158,17 @@ export async function readContributors(services: AiContributorServices, opts: Ai
   const companies = new Map<string, string>();
   const companyIds = Array.from(new Set(items.map((item) => item.default_company_id).filter((id): id is string => !!id)));
   // The drawer's company lookup takes 100 ids a call: as many calls as needed, one after the other.
+  // A name two skills of the workspace share is told apart by its category.
+  const nameCounts = new Map<string, number>();
+  for (const skill of skills) {
+    const key = String(skill.name ?? '').trim().toLowerCase();
+    nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1);
+  }
+  const skillLabel = (skill: { name: string; category?: string | null }) => (
+    (nameCounts.get(String(skill.name ?? '').trim().toLowerCase()) ?? 0) > 1 && skill.category
+      ? `${skill.category} / ${skill.name}`
+      : skill.name
+  );
   for (let start = 0; opts.readsCompanies && start < companyIds.length; start += LOOKUP_MAX_IDS) {
     const ids = companyIds.slice(start, start + LOOKUP_MAX_IDS).join(',');
     const found = await lookupReference({ manager: opts.manager, tenantId: opts.tenantId }, COMPANY_LOOKUP, { ids });
@@ -168,7 +182,13 @@ export async function readContributors(services: AiContributorServices, opts: Ai
       const skill = skillsById.get(entry.skill_id);
       if (!skill) return [];
       const level = skillLevel(entry.proficiency);
-      return [{ skill: skill.name, category: skill.category ?? null, level, level_name: CONTRIBUTOR_SKILL_LEVEL_LABELS[language][String(level)] }];
+      return [{
+        id: String(skill.id),
+        skill: skillLabel(skill),
+        category: skill.category ?? null,
+        level,
+        level_name: CONTRIBUTOR_SKILL_LEVEL_LABELS[language][String(level)],
+      }];
     });
     const average = stats[item.id]?.avgProjectDays;
     return {
@@ -205,6 +225,11 @@ function filtered(rows: AiContributorRow[], query: Record<string, any>): AiContr
   const q = String(query.q ?? '').trim();
   const refNumber = contributorRefNumber(q);
   const refFilter = filters?.ref ? contributorRefNumber(filters.ref.filter) : null;
+/** The skills of a row as they leave the server: without their id. */
+export function publicSkills(row: AiContributorRow): Array<Omit<AiContributorSkill, 'id'>> {
+  return row.skills.map(({ id: _id, ...skill }) => skill);
+}
+
   const needle = q.toLowerCase();
   return rows.filter((row) => (filters?.ref ? (refFilter != null ? row.item_number === refFilter : textMatch(row.ref, filters.ref)) : true)
     && textMatch(row.name, filters?.name)
@@ -289,14 +314,26 @@ export function contributorGroupValues(row: AiContributorRow, groupBy: string): 
   }
 }
 
-/** The contributors of each group of the filtered rows, most first; a contributor counts in each of their skills. */
+/**
+ * The contributors of each group of the filtered rows, most first; a contributor counts in each of
+ * their skills, grouped by skill (its id), named by its label.
+ */
 export function aggregateContributorRows(rows: AiContributorRow[], groupBy: string): Array<{ key: string | null; count: number }> {
-  const groups = new Map<string | null, number>();
+  const groups = new Map<string | null, { key: string | null; count: number }>();
+  const add = (id: string | null, key: string | null) => {
+    const group = groups.get(id) ?? { key, count: 0 };
+    group.count += 1;
+    groups.set(id, group);
+  };
   for (const row of rows) {
-    for (const key of contributorGroupValues(row, groupBy)) groups.set(key, (groups.get(key) ?? 0) + 1);
+    if (groupBy === 'skill') {
+      if (!row.skills.length) add(null, null);
+      for (const skill of new Map(row.skills.map((entry) => [entry.id, entry])).values()) add(skill.id, skill.skill);
+    } else {
+      for (const key of contributorGroupValues(row, groupBy)) add(key, key);
+    }
   }
-  return [...groups.entries()]
-    .map(([key, count]) => ({ key, count }))
+  return [...groups.values()]
     .sort((a, b) => b.count - a.count || compareText(a.key, b.key));
 }
 
@@ -336,7 +373,7 @@ export async function contributorDetail(
   const { id: _id, item_number: _number, ...rest } = row;
   return {
     ...rest,
-    skills: row.skills,
+    skills: publicSkills(row),
     time_logged: {
       average_project_days: time.averageProjectDays,
       monthly: time.monthly.map((month) => ({
