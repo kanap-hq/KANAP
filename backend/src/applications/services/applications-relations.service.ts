@@ -542,6 +542,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
         link: kind === 'budget_lines' ? LINE_LINK : PROJECT_LINK,
         projectScope: ctx.scopes.project,
         audit: this.audit,
+        otherEnd: this.audit,
       });
     }
     const id = parseTargetId(targetId);

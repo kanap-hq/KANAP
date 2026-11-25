@@ -2,6 +2,7 @@ import { PortfolioLinkedReads, idsInScope } from './portfolio-linked-reads';
 import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { codedForbidden } from '../auth/module-right-required';
 import { webLinkUrlsOf } from '../common/web-link-url';
+import { markLinkedEnds } from '../common/relations/linked-ends';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, ILike, In, IsNull, Repository, SelectQueryBuilder } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -2038,7 +2039,7 @@ export class PortfolioRequestsService {
         type: 'change',
         changed_fields: { capex_items: [beforeLabels, afterLabels] },
       });
-      await this.auditBudgetLines(mg, 'capex', requestId, beforeSorted, afterSorted, actorId, opts?.audit);
+      await this.auditBudgetLines(mg, 'capex', requestId, beforeSorted, afterSorted, actorId, opts?.audit, request.tenant_id);
     }
 
     return { ok: true, added: written.added.length, removed: written.removed.length };
@@ -2098,7 +2099,7 @@ export class PortfolioRequestsService {
         type: 'change',
         changed_fields: { opex_items: [beforeLabels, afterLabels] },
       });
-      await this.auditBudgetLines(mg, 'opex', requestId, beforeSorted, afterSorted, actorId, opts?.audit);
+      await this.auditBudgetLines(mg, 'opex', requestId, beforeSorted, afterSorted, actorId, opts?.audit, request.tenant_id);
     }
 
     return { ok: true, added: written.added.length, removed: written.removed.length };
@@ -2117,7 +2118,8 @@ export class PortfolioRequestsService {
     beforeIds: string[],
     afterIds: string[],
     userId: string,
-    source?: AuditSourceOptions,
+    source: AuditSourceOptions | undefined,
+    tenantId: string,
   ): Promise<void> {
     const hidden = await hiddenLineCount(mg, 'request', requestId);
     const lineId = singleChangedId(beforeIds, afterIds);
@@ -2132,6 +2134,14 @@ export class PortfolioRequestsService {
       sourceRef: source?.sourceRef,
       parent: lineId ? { table: 'spend_items', id: lineId } : null,
     }, { manager: mg });
+    // The other end: each line the set gained or lost, but the one named as parent above.
+    const beforeSet = new Set(beforeIds);
+    const afterSet = new Set(afterIds);
+    await markLinkedEnds({
+      manager: mg, audit: this.audit, table: 'portfolio_request_opex', end: 'budget_line', from: requestId, tenantId,
+      written: { added: afterIds.filter((id) => !beforeSet.has(id)), removed: beforeIds.filter((id) => !afterSet.has(id)) },
+      userId, source, covered: lineId,
+    });
   }
 
   // ==================== BUSINESS PROCESSES MANAGEMENT ====================

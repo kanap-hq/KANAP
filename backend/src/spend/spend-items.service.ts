@@ -55,6 +55,8 @@ import {
 } from './item-analytics.util';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-budget-links.util';
+import { markLinkedEnds } from '../common/relations/linked-ends';
+import { appliedLinks, wroteLinks } from '../portfolio/portfolio-link-writes.util';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { countItemRelations, loadItemReferences } from './item-workspace.util';
 import { readBudgetLineMeta } from './item-meta';
@@ -865,9 +867,12 @@ export class SpendItemsService {
 
   /**
    * `removable`: the stored links the replacement may remove (those the person reads); every stored
-   * link when absent. The others stay, never deleted nor written again.
+   * link when absent. The others stay, never deleted nor written again. One audit row on the line
+   * when this call wrote a link (the label of its nature, the sorted project ids, the line as
+   * parent: its Relations tab's form), then one per project it reached
+   * (`common/relations/linked-ends.ts`).
    */
-  async bulkReplaceProjects(itemId: string, projectIds: string[], opts?: { manager?: EntityManager; removable?: string[] }) {
+  async bulkReplaceProjects(itemId: string, projectIds: string[], opts?: { manager?: EntityManager; removable?: string[]; userId?: string | null }) {
     const mg = opts?.manager ?? this.repo.manager;
     const line = await this.findItem(itemId, mg);
     const lineId = line.id;
@@ -885,14 +890,34 @@ export class SpendItemsService {
       `SELECT project_id::text AS id FROM portfolio_project_opex WHERE tenant_id = $1 AND opex_id = $2`,
       [tenantId, lineId],
     );
-    const { removed, added } = replacedLinks(stored.map((row) => row.id), cleanIds, opts?.removable);
-    if (removed.length) {
-      await mg.query(
-        `DELETE FROM portfolio_project_opex WHERE tenant_id = $1 AND opex_id = $2 AND project_id = ANY($3::uuid[])`,
-        [tenantId, lineId, removed],
-      );
+    const beforeIds = stored.map((row) => row.id.toLowerCase()).sort();
+    const { removed, added } = replacedLinks(beforeIds, cleanIds, opts?.removable);
+    // Only what this call wrote counts: a link the project's side stored or removed meanwhile is
+    // neither audited nor marked twice.
+    const gone: Array<{ id: string }> = removed.length === 0 ? [] : await mg.query(
+      `WITH gone AS (
+         DELETE FROM portfolio_project_opex WHERE tenant_id = $1 AND opex_id = $2 AND project_id = ANY($3::uuid[])
+         RETURNING project_id::text AS id
+       ) SELECT id FROM gone`,
+      [tenantId, lineId, removed],
+    );
+    const put = await insertProjectBudgetLinks(mg, this.nature, tenantId, added.map((projectId) => ({ projectId, itemId: lineId })));
+    const written = { removed: gone.map((row) => row.id.toLowerCase()), added: put.map((link) => String(link.projectId).toLowerCase()) };
+    if (wroteLinks(written)) {
+      const userId = opts?.userId ?? null;
+      await this.audit.log({
+        table: auditTableOf(this.nature, 'portfolio_project_opex'),
+        recordId: lineId,
+        action: 'update',
+        before: beforeIds,
+        after: appliedLinks(beforeIds, written),
+        userId,
+        parent: { table: 'spend_items', id: lineId },
+      }, { manager: mg });
+      await markLinkedEnds({
+        manager: mg, audit: this.audit, table: 'portfolio_project_opex', end: 'project', from: lineId, tenantId, written, userId,
+      });
     }
-    await insertProjectBudgetLinks(mg, this.nature, tenantId, added.map((projectId) => ({ projectId, itemId: lineId })));
     return this.listProjects(lineId, { manager: mg });
   }
 }

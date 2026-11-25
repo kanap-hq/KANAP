@@ -1,6 +1,7 @@
 import { idsInScope } from '../portfolio-linked-reads';
 import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { linkedLineOf } from '../../spend/budget-nature';
+import { markLinkedEnds } from '../../common/relations/linked-ends';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { PortfolioProject, ProjectStatus, ProjectOrigin } from '../portfolio-project.entity';
@@ -536,8 +537,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     // Copy related data from request to project
     await this.copyTeamFromRequest(requestId, savedProject.id, tenantId, mg);
     await this.copyContactsFromRequest(requestId, savedProject.id, tenantId, mg);
-    await this.copyCapexFromRequest(requestId, savedProject.id, tenantId, mg);
-    await this.copyOpexFromRequest(requestId, savedProject.id, tenantId, mg);
+    await this.copyCapexFromRequest(requestId, savedProject.id, tenantId, mg, userId);
+    await this.copyOpexFromRequest(requestId, savedProject.id, tenantId, mg, userId);
     await this.copyDependenciesFromRequest(requestId, savedProject.id, tenantId, mg);
 
     // The new project starts with a single history entry: where it came from.
@@ -1006,7 +1007,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         type: 'change',
         changed_fields: { capex_items: [beforeLabels, afterLabels] },
       });
-      await this.auditBudgetLines(mg, 'capex', projectId, beforeSorted, afterSorted, actorId, opts?.audit);
+      await this.auditBudgetLines(mg, 'capex', projectId, beforeSorted, afterSorted, actorId, opts?.audit, project.tenant_id);
     }
 
     return { ok: true, added: written.added.length, removed: written.removed.length };
@@ -1067,7 +1068,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         type: 'change',
         changed_fields: { opex_items: [beforeLabels, afterLabels] },
       });
-      await this.auditBudgetLines(mg, 'opex', projectId, beforeSorted, afterSorted, actorId, opts?.audit);
+      await this.auditBudgetLines(mg, 'opex', projectId, beforeSorted, afterSorted, actorId, opts?.audit, project.tenant_id);
     }
 
     return { ok: true, added: written.added.length, removed: written.removed.length };
@@ -1085,8 +1086,9 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     projectId: string,
     beforeIds: string[],
     afterIds: string[],
-    userId: string,
-    source?: AuditSourceOptions,
+    userId: string | null,
+    source: AuditSourceOptions | undefined,
+    tenantId: string,
   ): Promise<void> {
     const hidden = await hiddenLineCount(mg, 'project', projectId);
     const lineId = singleChangedId(beforeIds, afterIds);
@@ -1101,6 +1103,15 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       sourceRef: source?.sourceRef,
       parent: lineId ? { table: 'spend_items', id: lineId } : null,
     }, { manager: mg });
+    // The other end: each line the set gained or lost, but the one named as parent above.
+    const beforeSet = new Set(beforeIds);
+    const afterSet = new Set(afterIds);
+    await markLinkedEnds({
+      manager: mg, audit: this.audit, table: 'portfolio_project_opex', end: 'budget_line', from: projectId,
+      tenantId,
+      written: { added: afterIds.filter((id) => !beforeSet.has(id)), removed: beforeIds.filter((id) => !afterSet.has(id)) },
+      userId, source, covered: lineId,
+    });
   }
 
   /** The stored effort allocations of one type, and its mode, as the history reads them. */
@@ -1431,6 +1442,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     projectId: string,
     tenantId: string,
     mg: EntityManager,
+    userId: string | null,
   ) {
     // The request's links to CAPEX lines only (one table with the OPEX ones since lot Z1).
     const capexItems = await mg.query(
@@ -1447,6 +1459,9 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         opex_id: item.opex_id,
       }));
     }
+    // The new project's lines, on its History and on each line's (`common/relations/linked-ends.ts`).
+    const copied: string[] = Array.from(new Set<string>(capexItems.map((item: { opex_id: string }) => String(item.opex_id).toLowerCase()))).sort();
+    if (copied.length > 0) await this.auditBudgetLines(mg, 'capex', projectId, [], copied, userId, undefined, tenantId);
   }
 
   private async copyOpexFromRequest(
@@ -1454,6 +1469,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     projectId: string,
     tenantId: string,
     mg: EntityManager,
+    userId: string | null,
   ) {
     // The request's links to OPEX lines only (`spend/budget-nature.ts`).
     const opexItems = await mg.query(
@@ -1470,6 +1486,9 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         opex_id: item.opex_id,
       }));
     }
+    // The new project's lines, on its History and on each line's (`common/relations/linked-ends.ts`).
+    const copied: string[] = Array.from(new Set<string>(opexItems.map((item: { opex_id: string }) => String(item.opex_id).toLowerCase()))).sort();
+    if (copied.length > 0) await this.auditBudgetLines(mg, 'opex', projectId, [], copied, userId, undefined, tenantId);
   }
 
   private async copyDependenciesFromRequest(

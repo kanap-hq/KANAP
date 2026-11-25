@@ -11,6 +11,7 @@ import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-
 import { AuditService } from '../../audit/audit.service';
 import { singleChangedId } from '../../audit/audit-parent-rules';
 import { replacedLinks } from '../../common/relations/linked-reads';
+import { markLinkedEnds } from '../../common/relations/linked-ends';
 import { appliedLinks, OwnerLinkTable, writeOwnerLinks, wroteLinks } from '../portfolio-link-writes.util';
 
 const PROJECT_APPLICATION_LINKS: OwnerLinkTable = { table: 'application_projects', owner: 'project_id', target: 'application_id' };
@@ -390,6 +391,11 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
         sourceRef: opts?.audit?.sourceRef,
         parent: changedId ? { table: 'applications', id: changedId } : null,
       }, { manager: mg });
+      // The other end: each application the set gained or lost, but the one named as parent above.
+      await markLinkedEnds({
+        manager: mg, audit: this.audit, table: 'application_projects', end: 'application', from: projectId, tenantId: project.tenant_id,
+        written, userId: actorId, source: opts?.audit, covered: changedId,
+      });
     }
 
     return { ...(await this.listLinkedApplications(projectId, { manager: mg })), added: written.added.length, removed: written.removed.length };
@@ -481,6 +487,11 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
         sourceRef: opts?.audit?.sourceRef,
         parent: changedId ? { table: 'assets', id: changedId } : null,
       }, { manager: mg });
+      // The other end: each asset the set gained or lost, but the one named as parent above.
+      await markLinkedEnds({
+        manager: mg, audit: this.audit, table: 'asset_projects', end: 'asset', from: projectId, tenantId: project.tenant_id,
+        written, userId: actorId, source: opts?.audit, covered: changedId,
+      });
     }
 
     return { ...(await this.listLinkedAssets(projectId, { manager: mg })), added: written.added.length, removed: written.removed.length };

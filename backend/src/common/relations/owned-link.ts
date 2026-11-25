@@ -5,6 +5,8 @@ import { applicationParticipantCondition, ParticipationAccessScope, projectParti
 import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
 import { assertLinesEditable, DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE, isLimitedTransaction } from '../../data-access/line-write-checks';
 import { auditedLinkSet, hiddenLineCount, type HiddenLineOwner } from '../../data-access/hidden-links';
+import type { AuditService } from '../../audit/audit.service';
+import { linkedEndOf, markLinkedEnds } from './linked-ends';
 import { binder } from './related-objects';
 import { parseTargetId } from './relation-target';
 
@@ -125,6 +127,11 @@ export async function setOwnedLink(args: {
   /** A Business Contributor's applications: linked and unlinked inside their participation only. */
   applicationScope?: ParticipationAccessScope;
   audit: OwnedLinkAudit;
+  /**
+   * The audit service the other end's row is written with, for a link both of whose records read it
+   * (`linked-ends.ts`: a project with an application, an asset or a line; an application with a line).
+   */
+  otherEnd?: Pick<AuditService, 'log'>;
 }): Promise<{ ok: true; changed: boolean }> {
   if (!args.allowed) throw moduleRightRequired(OWNED_LINK_RESOURCES[args.kind], 'reader', 'You cannot read this module.');
   const id = parseTargetId(args.targetId);
@@ -201,5 +208,18 @@ export async function setOwnedLink(args: {
     { table: auditTable, recordId: loaded.id, action: 'update', before: auditedLinkSet(before, hidden), after: auditedLinkSet(after, hidden), userId: args.userId },
     { manager: args.manager },
   );
+  const linked = linkedEndOf(args.link.table, args.link.targetColumn);
+  if (linked) {
+    if (!args.otherEnd) throw new Error(`setOwnedLink: ${args.link.table} marks both ends, give its otherEnd.`);
+    await markLinkedEnds({
+      manager: args.manager,
+      audit: args.otherEnd,
+      ...linked,
+      from: loaded.id,
+      tenantId,
+      written: args.add ? { added: [id], removed: [] } : { added: [], removed: [id] },
+      userId: args.userId,
+    });
+  }
   return { ok: true, changed: true };
 }

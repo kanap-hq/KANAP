@@ -339,7 +339,18 @@ async function testOwnedLinks() {
       const start = audit.entries.length;
       assert.deepEqual(await http.linkRelation(seed.asset.reference, c.kind, { id: c.target.toUpperCase() }, writer), { ok: true, changed: true }, c.label);
       assert.deepEqual(await http.linkRelation(seed.asset.id, c.kind, { id: c.target }, writer), { ok: true, changed: false }, `${c.label} again`);
-      assert.deepEqual(audit.entries.slice(start), [{
+      // A project linked has its own row too (the other end, `common/relations/linked-ends.ts`).
+      const marks = c.kind === 'projects' ? 1 : 0;
+      const added = audit.entries.slice(start);
+      assert.equal(added.length, 1 + marks, `${c.label}: rows`);
+      if (marks) {
+        assert.deepEqual(
+          [added[1].table, added[1].recordId, added[1].before, added[1].after, added[1].parent],
+          ['asset_projects', c.target, { ids: [] }, { ids: [seed.asset.id] }, null],
+          `${c.label}: the project's row`,
+        );
+      }
+      assert.deepEqual(added.slice(0, 1), [{
         table: c.label, recordId: seed.asset.id, action: 'update',
         before: { ids: c.before }, after: { ids: sorted(...c.before, c.target) }, userId: seed.userId,
         // A link set that gains a single line names it, for the line's history.
@@ -348,8 +359,8 @@ async function testOwnedLinks() {
       assert.ok((await ids(runner, `SELECT ${c.column} AS id FROM ${c.table} WHERE asset_id = $1`, [seed.asset.id])).includes(c.target));
       assert.deepEqual(await http.unlinkRelation(seed.asset.id, c.kind, c.target, writer), { ok: true, changed: true });
       assert.deepEqual(await http.unlinkRelation(seed.asset.id, c.kind, c.target, writer), { ok: true, changed: false });
-      assert.equal(audit.entries.length, start + 2, `${c.label} unlink audited once`);
-      assert.deepEqual(audit.entries.at(-1)?.after, { ids: c.before });
+      assert.equal(audit.entries.length, start + 2 * (1 + marks), `${c.label} unlink audited once`);
+      assert.deepEqual(audit.entries.at(-1 - marks)?.after, { ids: c.before });
     }
   });
 }

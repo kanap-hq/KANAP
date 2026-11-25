@@ -327,7 +327,7 @@ export class SpendItemsController {
     // Only the links to projects the person reads may leave; the answer names no other project.
     const stored = (await this.svc.listProjects(id, { manager: ctx.manager })).items.map((row: { id: string }) => row.id);
     const removable = await removableLinks(ctx, 'projects', stored);
-    const answer = await this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], { manager: ctx.manager, removable });
+    const answer = await this.svc.bulkReplaceProjects(id, body?.project_ids ?? [], { manager: ctx.manager, removable, userId: ctx.userId || null });
     return { ...answer, items: await readableLinkedItems(ctx, 'projects', answer.items) };
   }
 

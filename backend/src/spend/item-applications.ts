@@ -5,6 +5,8 @@ import { AmountScope } from './amounts-write.util';
 import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from './budget-nature';
 import { assertLinesEditable } from '../data-access/line-write-checks';
 import { replacedLinks } from '../common/relations/linked-reads';
+import { markLinkedEnds } from '../common/relations/linked-ends';
+import { appliedLinks, wroteLinks } from '../portfolio/portfolio-link-writes.util';
 
 /**
  * Applications linked to an OPEX or CAPEX line, from the line's side: list and
@@ -53,8 +55,9 @@ export async function listItemApplications(manager: EntityManager, scope: Amount
 /**
  * Replace the line's applications with `applicationIds` (trimmed, deduplicated).
  * Every id must name an application of the tenant (400 otherwise). One audit
- * row on the link table when the set changes: `recordId` the line, before and
- * after the sorted application ids, as the AI relation path writes it.
+ * row on the link table when this call wrote a link: `recordId` the line, before
+ * and after the sorted application ids, as the AI relation path writes it; then
+ * one row per application it reached, on that application's History.
  */
 export async function replaceItemApplications(
   deps: ItemApplicationsDeps,
@@ -90,34 +93,37 @@ export async function replaceItemApplications(
     `SELECT DISTINCT application_id FROM ${t.links} WHERE tenant_id = $1 AND ${t.itemFk} = $2`,
     [item.tenant_id, item.id],
   );
-  const beforeIds = current.map((r) => r.application_id).sort();
+  const beforeIds = current.map((r) => String(r.application_id).toLowerCase()).sort();
   // Only the stored links the person may remove leave (`removable`); the others stay untouched.
-  const { removed, added, after } = replacedLinks(beforeIds, nextIds, removable);
-  const afterIds = [...after].sort();
+  const { removed, added } = replacedLinks(beforeIds, nextIds, removable);
 
-  if (removed.length) {
-    await manager.query(
-      `DELETE FROM ${t.links} WHERE tenant_id = $1 AND ${t.itemFk} = $2 AND application_id = ANY($3::uuid[])`,
-      [item.tenant_id, item.id, removed],
-    );
-  }
-  if (added.length) {
-    await manager.query(
-      `INSERT INTO ${t.links} (tenant_id, ${t.itemFk}, application_id)
-       SELECT $1, $2, app_id FROM unnest($3::uuid[]) AS app_id
-       ON CONFLICT (tenant_id, application_id, ${t.itemFk}) DO NOTHING`,
-      [item.tenant_id, item.id, added],
-    );
-  }
+  // Only what this call wrote counts: a link the application's side stored or removed meanwhile is
+  // neither audited nor marked twice.
+  const gone: Array<{ id: string }> = removed.length === 0 ? [] : await manager.query(
+    `WITH gone AS (
+       DELETE FROM ${t.links} WHERE tenant_id = $1 AND ${t.itemFk} = $2 AND application_id = ANY($3::uuid[])
+       RETURNING application_id::text AS id
+     ) SELECT id FROM gone`,
+    [item.tenant_id, item.id, removed],
+  );
+  // An INSERT through the query runner returns its rows (only an UPDATE or a DELETE returns a count).
+  const put: Array<{ id: string }> = added.length === 0 ? [] : await manager.query(
+    `INSERT INTO ${t.links} (tenant_id, ${t.itemFk}, application_id)
+     SELECT $1, $2, app_id FROM unnest($3::uuid[]) AS app_id
+     ON CONFLICT (tenant_id, application_id, ${t.itemFk}) DO NOTHING
+     RETURNING application_id::text AS id`,
+    [item.tenant_id, item.id, added],
+  );
+  const written = { removed: gone.map((row) => row.id.toLowerCase()), added: put.map((row) => row.id.toLowerCase()) };
 
-  if (JSON.stringify(beforeIds) !== JSON.stringify(afterIds)) {
+  if (wroteLinks(written)) {
     await deps.audit.log(
       {
         table: auditTableOf(scope, t.links),
         recordId: item.id,
         action: 'update',
         before: beforeIds,
-        after: afterIds,
+        after: appliedLinks(beforeIds, written),
         userId,
         // The label is shared with the application side, whose record is the application: the
         // line names itself (`audit-parent-rules.ts`).
@@ -125,6 +131,11 @@ export async function replaceItemApplications(
       },
       { manager },
     );
+    // The other end: each application the line gained or lost (`common/relations/linked-ends.ts`).
+    await markLinkedEnds({
+      manager, audit: deps.audit, table: 'application_spend_items', end: 'application', from: item.id,
+      tenantId: item.tenant_id, written, userId,
+    });
   }
   return listItemApplications(manager, scope, item);
 }
