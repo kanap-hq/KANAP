@@ -205,6 +205,21 @@ function headerOf(grid: TableGrid, position: number): string | null {
   return isBlank(cell) ? null : clip(sheetCellText(cell!));
 }
 
+/**
+ * A row named by its number, in the four languages (`ligne 2`, `lignes 2 et 3`, `row #2`, `Zeile Nr. 2`,
+ * `fila 2`, `línea n° 2`): a word for a row followed by a number, nothing else (`2 lignes` counts rows,
+ * `ligne d'en-tête` names none).
+ */
+const ROW_NUMBER = /(?<![\p{L}\p{N}])(?:lines?|rows?|lignes?|zeilen?|filas?|l[ií]neas?)\s*(?:(?:n[°º]|no\.|nr\.|#)\s*)?\d/iu;
+
+/**
+ * An assumption that names a row of the file (lot I6a of 26.12.1): the card leaves it out. Assumptions
+ * speak of the whole file; what a row does is the check's, which the card shows. The input keeps it.
+ */
+export function namesARow(assumption: string): boolean {
+  return ROW_NUMBER.test(assumption);
+}
+
 /** The model's own words on the card, on one line: the input schema bounds their length. */
 function oneLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
@@ -360,7 +375,7 @@ export function buildImportMapping(
         .filter((column) => column.required && !entries.has(column.column))
         .map((column) => ({ column: column.column, title: column.title })),
       unplaced,
-      assumptions: request.assumptions.map(oneLine).filter((assumption) => assumption !== ''),
+      assumptions: request.assumptions.map(oneLine).filter((assumption) => assumption !== '' && !namesARow(assumption)),
       sample: { columns: mapped.map((column) => column.column), rows: sampleRows, unread: sampleUnread },
       rows_missing_required: rowLacksRequired.filter(Boolean).length,
     },
