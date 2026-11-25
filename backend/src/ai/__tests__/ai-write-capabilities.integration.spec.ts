@@ -661,6 +661,16 @@ async function testRelationWritesAndSupplierPropagationUndo(harness: Harness) {
     assert.equal(relationRows.length, 0);
 
     const supplierCtx = context(seed, runner, 'supplier-relations');
+    // In Kad's chat, a contact's role is the one the person said in the conversation (lot K2d).
+    await runner.query(
+      `INSERT INTO ai_conversations (id, tenant_id, user_id, title, provider, model, provider_source, created_at, updated_at)
+       VALUES ($1, $2, $3, 'AI capabilities integration', 'custom', 'capability-test-model', 'custom', now(), now())`,
+      [supplierCtx.conversationId, supplierCtx.tenantId, supplierCtx.userId],
+    );
+    await runner.query(
+      `INSERT INTO ai_messages (tenant_id, conversation_id, user_id, role, content) VALUES ($1, $2, $3, 'user', 'Add this contact to the supplier as its technical contact')`,
+      [supplierCtx.tenantId, supplierCtx.conversationId, supplierCtx.userId],
+    );
     const supplierPreview = await executeToolPreview(harness, supplierCtx, 'update_entity_relations', {
       entity_type: 'suppliers',
       ref: seed.supplierId,
