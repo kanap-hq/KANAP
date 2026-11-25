@@ -59,9 +59,36 @@ function testWordsThatAskForAFamily() {
     ['contributors of the Platform team', 'contributors'],
     ['Mitwirkende im Team Plattform', 'contributors'],
     ['colaboradores del equipo', 'contributors'],
+    ['liste les contributeurs', 'contributors'],
+    ['contributeur MEM-3', 'contributors'],
+    ['contributors of the portfolio', 'contributors'],
+    ['Mitwirkender im Portfolio', 'contributors'],
   ];
   for (const [query, family] of cases) {
     assert.ok(families(query).includes(family), `"${query}" asks for ${family}`);
+  }
+}
+
+/**
+ * The project team labels (business and IT contributors of a project) and the Business Contributor
+ * role, in the four languages as the locale files write them, never name Portfolio › Contributors.
+ */
+function testTheProjectTeamsAndTheRoleAreNotTheContributors() {
+  for (const query of [
+    'Qui sont les contributeurs métier du projet PRJ-2 ?',
+    'les contributeurs IT de PRJ-2',
+    'rôle Contributeur métier',
+    'Business  Contributor',
+    'Business contributors of PRJ-2',
+    'IT contributors of PRJ-2',
+    'Fachbereichs-Mitwirkende des Projekts PRJ-2',
+    'IT-Mitwirkende von PRJ-2',
+    'Rolle Fachbereichs-Mitwirkender',
+    'colaboradores de negocio del proyecto PRJ-2',
+    'colaboradores IT de PRJ-2',
+    'rol Colaborador de negocio',
+  ]) {
+    assert.equal(families(query).includes('contributors'), false, `"${query}" does not ask for the contributors`);
   }
 }
 
@@ -285,8 +312,17 @@ function testUnknownReachLeavesTheReferenceDataOut() {
   assert.match(sentence, /audit log/);
 }
 
+/** The contributors are read with the portfolio settings at reader level: the hint names the level, never "manage". */
+function testTheContributorsRightNamesItsLevel() {
+  const hint = 'The tools read it (the family contributors) for a person with the Portfolio settings right at reader level';
+  assert.ok(unreadFamilyLines('en', null, { readable: [] }).some((line) => line.includes(`${hint}, which this person's role does not give.`)));
+  assert.ok(unreadFamilyLines('en').some((line) => line.includes(`${hint} only.`)));
+}
+
 async function run() {
   testWordsThatAskForAFamily();
+  testTheProjectTeamsAndTheRoleAreNotTheContributors();
+  testTheContributorsRightNamesItsLevel();
   testTheWordsOfAReferenceSearch();
   testUnknownReachLeavesTheReferenceDataOut();
   await testTheReferenceDataFollowTheirRights();

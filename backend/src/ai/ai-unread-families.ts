@@ -247,8 +247,16 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
   {
     family: 'contributors',
     screen: ['portfolio', 'contributors'],
-    // A contributor of Portfolio › Contributors (MEM-4), never the Business Contributor role.
-    terms: /(?<!business[\s-])(?<!m[eé]tier[\s-])\bcontribut(?:or|eur)s?\b|\bmitwirkende[nr]?\b|\bcolaborador(?:es)?\b|\bMEM-\d+\b/i,
+    // A contributor of Portfolio › Contributors (MEM-4), never the business or IT contributors of a
+    // project's team nor the Business Contributor role, as the locale files write them: "Business
+    // contributors", "IT contributors", "contributeurs métier", "contributeurs IT",
+    // "Fachbereichs-Mitwirkende", "IT-Mitwirkende", "colaboradores de negocio", "colaboradores IT".
+    terms: new RegExp([
+      String.raw`(?<!\b(?:business|it)[\s-]+)\bcontribut(?:or|eur)s?\b(?![\s-]+(?:m[eé]tier|it)\b)`,
+      String.raw`(?<!(?:\bit|fachbereichs?)[\s-]*)\bmitwirkende[nr]?\b`,
+      String.raw`\bcolaborador(?:es)?\b(?![\s-]+(?:de\s+negocio|it)\b)`,
+      String.raw`\bMEM-\d+\b`,
+    ].join('|'), 'i'),
     readAs: { entityType: 'contributors', right: 'Portfolio settings', searched: true },
     searchWords: /\bcontribut(?:or|eur)s?\b|\bmitwirkende[nr]?\b|\bcolaborador(?:es)?\b/g,
   },
