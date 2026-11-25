@@ -222,7 +222,9 @@ export type AiEntityMetadataObject = Record<string, AiEntityMetadataScalar>;
 export type AiEntityMetadataValue =
   | AiEntityMetadataScalar
   | AiEntityMetadataObject
-  | AiEntityMetadataObject[];
+  | AiEntityMetadataObject[]
+  // A list of names or codes (a budget line's `to_check` and `to_check_names`).
+  | string[];
 export type AiEntityMetadata = Record<string, AiEntityMetadataValue>;
 
 export type AiEntitySummaryDto = {

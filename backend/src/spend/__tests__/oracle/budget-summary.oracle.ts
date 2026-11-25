@@ -12,7 +12,6 @@ import {
   FIXED_SLOTS,
   loadVersionTotals,
   parseSummaryYears,
-  PROJECT_LIST_FIELDS,
   resolveAmountField,
   resolveFteField,
   SUMMARY_COLUMNS,
@@ -22,7 +21,7 @@ import {
   versionWithinValidity,
   yearsNamedByFields,
 } from '../../spend-summary.builder';
-import { getSummaryFieldValue, summaryFieldValues } from './summary-field-value.oracle';
+import { getSummaryFieldValue, isMultiListField, summaryFieldValues } from './summary-field-value.oracle';
 
 /**
  * THE ORACLE of the SQL list engine (lot 2B, PRs A and C): the in-memory list
@@ -397,12 +396,12 @@ export class BudgetSummaryOracle {
       // ADAPTER A4: exclude mode.
       if (model.mode === 'exclude') {
         if (blank) return !hasNull;
-        if (PROJECT_LIST_FIELDS.includes(field)) return (summaryFieldValues(row, field) as string[]).some((name) => !values.includes(String(name)));
+        if (isMultiListField(field)) return (summaryFieldValues(row, field) as string[]).some((name) => !values.includes(String(name)));
         return !values.includes(String(rowVal ?? ''));
       }
       if (rawValues.length === 0) return false;
       if (hasNull && blank) return true;
-      const candidates = PROJECT_LIST_FIELDS.includes(field)
+      const candidates = isMultiListField(field)
         ? [...(summaryFieldValues(row, field) as string[]).map(String), String(rowVal ?? '')]
         : [String(rowVal ?? '')];
       return candidates.some((candidate) => values.includes(candidate));

@@ -234,7 +234,9 @@ family's list service, the one behind its grid. A registry advertises its filter
 fields (`fields`) and its sort fields (`sortFields`, which also holds `label`,
 `created_at` and `updated_at` on every family with its own record; the two End
 of support report families are computed rows and carry no `created_at`).
-`describe_entity_filters` returns both, with `sort_fields` and `default_sort`.
+`describe_entity_filters` returns both, with `sort_fields` and `default_sort`;
+it counts them as `fields_total` and `fields_returned`, never a bare `total` a
+model could read as a number of records.
 
 Nothing the model asks for is dropped silently:
 

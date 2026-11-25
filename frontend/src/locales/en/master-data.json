@@ -564,6 +564,7 @@
       "accountNumber": "Account #",
       "accountName": "Name",
       "nature": "Used for",
+      "quantityPriceExpected": "Quantity and price entry",
       "nativeName": "Native name",
       "consolAccountNumber": "Consol. account #",
       "consolAccountName": "Consol. name",
@@ -702,6 +703,7 @@
       "accountNumber": "Account number",
       "accountName": "Account name",
       "nature": "Used for",
+      "quantityPriceExpected": "Quantity and price entry",
       "nativeName": "Native name (local language)",
       "description": "Description",
       "consolidationAccount": "Consolidation account",
@@ -711,6 +713,9 @@
       "selectChart": "Select a chart of accounts",
       "lifecycle": "Lifecycle",
       "loadCoAsError": "Failed to load charts of accounts"
+    },
+    "hints": {
+      "quantityPriceExpected": "Budget lines on this account are expected as quantity and price. On a consolidation account, the setting applies to the accounts attached to it."
     },
     "placeholders": {
       "chartOfAccounts": "e.g., COA-FR",

@@ -20,6 +20,8 @@ import { realSummaryDeps } from './oracle/oracle-deps';
 import { prng, seedListFixture } from './oracle/budget-list.fixture';
 import { budgetReadService } from './budget-lines.fixtures';
 import { getSummaryFieldValue, summaryFieldValues } from './oracle/summary-field-value.oracle';
+import { readAiScreenLanguage } from '../../ai/ai-unread-families';
+import { budgetLineCheckKeyName } from '../../ai/query/ai-line-check-names';
 
 // Differential test of the list engine's aggregate (lot 2B, PR D), on the
 // OPEX and the CAPEX list:
@@ -593,7 +595,13 @@ async function runAiCase(env: Env, c: Extract<Case, { kind: 'ai' }>): Promise<vo
         const [row] = key == null ? [] : await env.rowsOf([key]);
         return { key: row ? `BL-${row.item_number}` : null, title: row?.product_name || null, ...rest };
       }))
-      : found;
+      // Grouped by the line checks, a group also names them as the screen, in the person's language.
+      : input.group_by === 'to_check'
+        ? await (async () => {
+          const language = await readAiScreenLanguage(m, env.context.tenantId, env.context.userId);
+          return found.map(({ key, ...rest }) => ({ key, key_name: budgetLineCheckKeyName(key, language), ...rest }));
+        })()
+        : found;
     return { status: undefined, groups, total: scoped.total, returned: groups.length, truncated: scoped.ids.length < scoped.total, complete: true, filters_applied: adapted.applied };
   });
   if (failed(label, e, o)) return;

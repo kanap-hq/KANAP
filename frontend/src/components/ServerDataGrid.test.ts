@@ -22,6 +22,14 @@ describe('mergeSavedColumnState', () => {
     expect(merged.find((c) => c.colId === 'yForecast')?.hide).toBe(true);
   });
 
+  it('drops the budget list\'s two former check columns from a saved layout, the one "To check" column taking its default place hidden (D12)', () => {
+    const budgetDefaults = [col('product_name'), col('account_display'), col('account_id', true), col('to_check', true), col('allocation_label', true)];
+    const saved = [col('product_name'), col('account_display'), col('account_warning', false), col('entry_check', false), col('allocation_label', true)];
+    const merged = mergeSavedColumnState(saved, budgetDefaults);
+    expect(ids(merged)).toEqual(['product_name', 'account_display', 'account_id', 'to_check', 'allocation_label']);
+    expect(merged.find((c) => c.colId === 'to_check')?.hide).toBe(true);
+  });
+
   it('puts a new first column first and drops columns that no longer exist', () => {
     const saved = [col('name'), col('project_id'), col('yBudget'), col('yRevision'), col('yForecast'), col('yLanding'), col('created')];
     expect(ids(mergeSavedColumnState(saved, defaults))).toEqual(['ref', 'name', 'yBudget', 'yRevision', 'yForecast', 'yLanding', 'created']);

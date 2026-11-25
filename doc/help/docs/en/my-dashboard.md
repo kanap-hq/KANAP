@@ -295,9 +295,9 @@ Use the **All** / **OPEX** / **CAPEX** tabs to choose the type. **Open** opens t
 
 The five most recently edited budget lines, OPEX and CAPEX together. Each row shows the date of the last edit, the line's reference, its name and its type. Click a row to open the line.
 
-### Data hygiene
+### Data hygiene { #data-hygiene }
 
-Checks that help you spot incomplete lines at a glance. The tile shows one column of counts per type: **OPEX** and **CAPEX** side by side. The counts cover the lines the list shows by default (**Show: Enabled**).
+Checks that help you spot incomplete lines at a glance. The tile is off by default: add it in the [customize mode](#customizing-the-budget-section). It shows one column of counts per type: **OPEX** and **CAPEX** side by side. The counts cover the lines the list shows by default (**Show: Enabled**).
 
 - **No IT owner**: lines missing an IT owner
 - **No business owner**: lines missing a business owner
@@ -305,8 +305,9 @@ Checks that help you spot incomplete lines at a glance. The tile shows one colum
 - **No cost center**: lines without a cost center
 - **No Budget for next year**: lines whose default column is zero or empty for next year. The check names your default column
 - **Account not in the company's chart**: lines whose account does not belong to the paying company's chart of accounts
+- **Quantity and price to check**: lines whose account expects quantity and price, with a column entered another way. It shows only when it counts at least one line. See [When the account expects quantity and price](budget-lines.md#quantity-and-price-expected)
 
-A count turns orange (red for the chart check) when it is above zero. Click a count to open the list on exactly the lines it counts.
+A count turns orange (red for the chart check) when it is above zero. Click a count to open the list on exactly the lines it counts. The two account checks open it with its **To check** column shown and filtered on that check alone.
 
 ### My budget
 

@@ -1126,7 +1126,9 @@ async function testAccountNatureColumn() {
     const importer = importers(runner.manager, tenantId, seeds).find((entry) => entry.label === 'accounts');
     assert.ok(importer, 'the accounts importer');
     const headers = await importer.headers('en');
-    assert.equal(headers[headers.length - 1], 'nature', 'the export writes nature last');
+    // Each optional column added since goes after the one before it: nature, then the
+    // quantity and price entry (lot B12a of 26.12.1).
+    assert.deepEqual(headers.slice(-2), ['nature', 'quantity_price_expected'], 'the export writes nature, then the quantity and price entry, last');
     const natures = async () => Object.fromEntries(
       (await importer.snapshot(runner, tenantId)).map((row) => [row.account_name, [row.nature, row.description]]),
     );
