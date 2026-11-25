@@ -169,6 +169,34 @@ function testDetailCountriesAndYearlyMethods() {
 }
 
 /**
+ * Lot K2d: the child rows of a detail that hold a named field carry its name too. The rows are those
+ * the details of the 24/11 browser pass returned without a name (a technology's versions, a
+ * project's phases and milestones, an application's deployments and suites, a contract's tasks).
+ */
+function testDetailChildRowsWithNamedFields() {
+  const detail = (family: string, data: Record<string, unknown>, language: 'en' | 'fr' | 'de' | 'es' = 'fr') =>
+    (withCodeNames('get_entity_detail', { entity_type: family }, { entity: summary(family, null, {}), data }, namer(language)) as any).data;
+  assert.deepEqual(detail('technologies', { versions: [{ label: '2019', support_status: 'out_of_support' }] }).versions[0].support_status_name, 'Hors support');
+  const project = detail('projects', {
+    phases: [{ status: 'in_progress' }], milestones: [{ status: 'missed' }], opex_items: [{ status: 'enabled' }],
+  }, 'es');
+  assert.deepEqual([project.phases[0].status_name, project.milestones[0].status_name, project.opex_items[0].status_name], ['En curso', 'No alcanzado', 'Activado']);
+  assert.equal(detail('requests', { capex_items: [{ status: 'disabled' }] }).capex_items[0].status_name, 'Désactivé');
+  const app = detail('applications', {
+    instances: [{ environment: 'prod', lifecycle: 'active', status: 'enabled' }],
+    deployments: [{ environment: 'qa', lifecycle: 'retired', status: 'disabled' }],
+    suites: [{ lifecycle: 'active', criticality: 'high' }],
+    linked_budget_lines: [{ nature: 'opex' }],
+  }, 'de');
+  assert.deepEqual([app.instances[0].environment_name, app.instances[0].lifecycle_name, app.instances[0].status_name], ['Prod', 'Im Einsatz', 'Aktiviert']);
+  assert.deepEqual([app.deployments[0].lifecycle_name, app.deployments[0].status_name], ['Außer Betrieb', 'Deaktiviert']);
+  assert.deepEqual([app.suites[0].lifecycle_name, app.suites[0].criticality_name, app.linked_budget_lines[0].nature_name], ['Im Einsatz', 'Hoch', 'OPEX']);
+  const contract = detail('contracts', { tasks: [{ status: 'open', priority_level: 'high' }], linked_budget_lines: [{ nature: 'capex' }] }, 'en');
+  assert.deepEqual([contract.tasks[0].status_name, contract.tasks[0].priority_level_name, contract.linked_budget_lines[0].nature_name], ['Open', 'High', 'CAPEX']);
+  console.log('  the child rows of a detail holding a named field: versions, phases, milestones, deployments, suites, tasks: OK');
+}
+
+/**
  * Lot K2d, browser pass of 24/11: a set filter on a named field takes the name, in the reader's
  * language or another of the four, as the code; a field read in its stored form (the budget lines'
  * allocation method, "Headcount") takes that form; an unknown name stays, listed with the accepted
@@ -455,6 +483,7 @@ async function run() {
   testAllocationMethodAndContactRole();
   testDetailAndChildRows();
   testDetailCountriesAndYearlyMethods();
+  testDetailChildRowsWithNamedFields();
   testFiltersTakeNames();
   testAggregateAndFilterValues();
   testSecondPassFixedLists();

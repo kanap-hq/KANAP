@@ -285,6 +285,20 @@ export const LANGUAGE_NATIVE_NAMES: Readonly<Record<AiNamesLanguage, string>> = 
   es: 'Español',
 };
 
+/** A project phase's status, as the project's timeline names it. */
+export const PHASE_STATUS_LABELS = codeLabels({
+  pending: ['Pending', 'En attente', 'Ausstehend', 'Pendiente'],
+  in_progress: ['In progress', 'En cours', 'In Bearbeitung', 'En curso'],
+  completed: ['Completed', 'Terminé', 'Abgeschlossen', 'Completada'],
+});
+
+/** A project milestone's status, as the project's timeline names it. */
+export const MILESTONE_STATUS_LABELS = codeLabels({
+  pending: ['Pending', 'En attente', 'Ausstehend', 'Pendiente'],
+  achieved: ['Achieved', 'Atteint', 'Erreicht', 'Alcanzado'],
+  missed: ['Missed', 'Manqué', 'Verfehlt', 'No alcanzado'],
+});
+
 /** The state of a contract's current term, as the State column of the Contracts list names it. */
 export const CONTRACT_TERM_STATE_LABELS = codeLabels({
   to_decide: ['To decide', 'À décider', 'Zu entscheiden', 'Por decidir'],
@@ -330,6 +344,8 @@ export const AI_CODE_LISTS = {
   hostingModel: fixed('it:enums.hostingModel', HOSTING_MODEL_LABELS, { keys: camelKeys(HOSTING_MODEL_LABELS) }),
   projectStatus: fixed('portfolio:statuses.project', PROJECT_STATUS_LABELS),
   projectOrigin: fixed('portfolio:origin', PROJECT_ORIGIN_LABELS),
+  phaseStatus: fixed('portfolio:statuses.phase', PHASE_STATUS_LABELS),
+  milestoneStatus: fixed('portfolio:statuses.milestone', MILESTONE_STATUS_LABELS),
   requestStatus: fixed('portfolio:statuses.request', REQUEST_STATUS_LABELS),
   taskStatus: fixed('portfolio:statuses.task', TASK_STATUS_LABELS),
   taskPriority: fixed('portfolio:priority', TASK_PRIORITY_LABELS),
@@ -620,13 +636,26 @@ export const AI_NAMED_FIELDS: Readonly<Record<string, Readonly<Record<string, Ai
 export const AI_NAMED_CHILD_FIELDS: Readonly<Record<string, Readonly<Record<string, Readonly<Record<string, AiCodeField>>>>>> = {
   applications: {
     owners: { owner_type: one(L.ownerType) },
-    instances: { environment: one(L.environment) },
-    deployments: { environment: one(L.environment) },
+    instances: { environment: one(L.environment), lifecycle: one(L.lifecycle), status: one(L.enabled) },
+    deployments: { environment: one(L.environment), lifecycle: one(L.lifecycle), status: one(L.enabled) },
     // The data residency rows: a country each.
     data_residency: { country_iso: one(L.country) },
+    suites: { lifecycle: one(L.lifecycle), criticality: one(L.businessCriticality) },
+    linked_budget_lines: { nature: one(L.budgetNature) },
   },
   interfaces: {
     data_residency: { country_iso: one(L.country) },
+  },
+  technologies: {
+    versions: { support_status: one(L.supportStatus) },
+  },
+  projects: {
+    phases: { status: one(L.phaseStatus) },
+    milestones: { status: one(L.milestoneStatus) },
+    opex_items: { status: one(L.enabled) },
+  },
+  requests: {
+    capex_items: { status: one(L.enabled) },
   },
   budget_lines: {
     // A line's contacts are typed by the contact types (`contacts.roles`), as the screen shows them.
@@ -636,6 +665,8 @@ export const AI_NAMED_CHILD_FIELDS: Readonly<Record<string, Readonly<Record<stri
   },
   contracts: {
     contacts: { role: one(L.contactRole), country: one(L.country) },
+    tasks: { status: one(L.taskStatus), priority_level: one(L.taskPriority) },
+    linked_budget_lines: { nature: one(L.budgetNature) },
   },
 };
 
