@@ -218,7 +218,7 @@ const AggregateEntitiesInputSchema = z.object({
 
 const GetFilterValuesInputSchema = z.object({
   entity_type: AiQueryEntityTypeSchema.describe('The entity family.'),
-  fields: z.array(z.string().trim().min(1)).min(1).max(10).describe('Up to 10 filter field names to list values for.'),
+  fields: z.array(z.string().trim().min(1)).min(1).max(10).describe('Up to 10 filter field names to list values for. The source, category and stream of requests, projects and tasks also list every active value the portfolio settings offer, carried by a record or not: to set one, give its name to the write, which reads a stream in the record\'s category and names the offered ones when it knows no such name.'),
 });
 
 const GetApplicationClassificationCatalogInputSchema = z.object({}).strict();
@@ -478,7 +478,7 @@ export class AiToolRegistry {
         {
           name: 'get_filter_values',
           category: 'authoritative',
-          description: 'Returns the exact values that exist for set-like filter fields of one entity family (statuses, categories, owners and similar), as accepted by the filters of query_entities and aggregate_entities. `fields_ignored` lists the requested fields this family cannot filter on; `fields_withheld` names those this person may not read, for lack of a right, with the reason: their values are withheld, not empty. For the source, category and stream of requests, projects and tasks, the values also hold every active value the portfolio settings offer, carried by a record or not: to set one, give its name to the write, which reads a stream in the record\'s category and names the offered ones when it knows no such name.',
+          description: 'Returns the exact values that exist for set-like filter fields of one entity family (statuses, categories, owners and similar), as accepted by the filters of query_entities and aggregate_entities. `fields_ignored` lists the requested fields this family cannot filter on; `fields_withheld` names those this person may not read, for lack of a right, with the reason: their values are withheld, not empty.',
           inputSchema: GetFilterValuesInputSchema,
           inputSummary: fieldDescriptions(GetFilterValuesInputSchema),
           surfaces: ['chat', 'mcp'],

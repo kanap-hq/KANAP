@@ -4,6 +4,7 @@ import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
 import { AnalyticsCategoriesService } from '../../analytics/analytics-categories.service';
 import { ApplicationsService } from '../../applications/services';
+import { addOfferedClassification, AI_PORTFOLIO_CLASSIFIED_TYPES, withClassificationNames } from './ai-portfolio-classification';
 import { AssetsService } from '../../assets/services';
 import { BusinessProcessesService } from '../../business-processes/business-processes.service';
 import { CompaniesService } from '../../companies/companies.service';
@@ -901,21 +902,6 @@ export class AiQueryExecutor {
         planned_end: scalar(row.planned_end),
       },
     });
-  }
-
-  /**
-   * The names of a request's or a project's source, category and stream: the record's read leaves
-   * them as ids, which the list names (`include=classification`). One read, in the tenant.
-   */
-  private async withClassificationNames(context: AiExecutionContextWithManager, row: any): Promise<any> {
-    if (!row) return row;
-    const [names] = await context.manager.query(
-      `SELECT (SELECT name FROM portfolio_sources WHERE tenant_id = $1 AND id = $2::uuid) AS source_name,
-              (SELECT name FROM portfolio_categories WHERE tenant_id = $1 AND id = $3::uuid) AS category_name,
-              (SELECT name FROM portfolio_streams WHERE tenant_id = $1 AND id = $4::uuid) AS stream_name`,
-      [context.tenantId, row.source_id ?? null, row.category_id ?? null, row.stream_id ?? null],
-    );
-    return { ...row, ...(names ?? {}) };
   }
 
   private mapRequest(row: any): AiEntitySummaryDto {
@@ -3683,7 +3669,7 @@ export class AiQueryExecutor {
     }
 
     if (entityType === 'projects') {
-      const row = await this.withClassificationNames(context, await this.projects.get(
+      const row = await withClassificationNames(context.manager, context.tenantId, await this.projects.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,source_requests,urls,dependencies,attachments,phases,milestones,financials' },
         {
@@ -3698,7 +3684,7 @@ export class AiQueryExecutor {
     }
 
     if (entityType === 'requests') {
-      const row = await this.withClassificationNames(context, await this.requests.get(
+      const row = await withClassificationNames(context.manager, context.tenantId, await this.requests.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,origin_task,urls,attachments,projects,dependencies,financials,business_processes' },
         {
@@ -4398,31 +4384,6 @@ export class AiQueryExecutor {
     return values;
   }
 
-  /**
-   * The source, category and stream values of requests, projects and tasks: the ones records carry,
-   * and every active one the portfolio settings offer, as a record's picker offers them to whoever
-   * reads the family. A value no record carries yet is still one Kad can set by its name (the write
-   * reads a stream in the record's category); an inactive one appears only while a record carries it.
-   */
-  private async addOfferedClassification(
-    context: AiExecutionContextWithManager,
-    raw: Record<string, Array<string | boolean | null>>,
-    grids: Map<string, string[]>,
-  ): Promise<void> {
-    const tables: Record<string, string> = { source_name: 'portfolio_sources', category_name: 'portfolio_categories', stream_name: 'portfolio_streams' };
-    for (const [grid, table] of Object.entries(tables)) {
-      if (!grids.has(grid)) continue;
-      const offered: Array<{ name: string }> = await context.manager.query(
-        `SELECT DISTINCT name FROM ${table} WHERE tenant_id = $1 AND is_active`,
-        [context.tenantId],
-      );
-      const carried = raw[grid] ?? [];
-      const names = new Set(carried.filter((value): value is string => typeof value === 'string'));
-      for (const row of offered) names.add(row.name);
-      raw[grid] = [...[...names].sort((left, right) => left.localeCompare(right)), ...(carried.includes(null) ? [null] : [])];
-    }
-  }
-
   async executeFilterValues(
     context: AiExecutionContextWithManager,
     input: {
@@ -4614,8 +4575,8 @@ export class AiQueryExecutor {
       }
     }
 
-    if (input.entity_type === 'requests' || input.entity_type === 'projects' || input.entity_type === 'tasks') {
-      await this.addOfferedClassification(context, raw, dynamicFieldMap);
+    if (AI_PORTFOLIO_CLASSIFIED_TYPES.has(input.entity_type)) {
+      await addOfferedClassification(context.manager, context.tenantId, raw, dynamicFieldMap);
     }
 
     for (const [gridField, aiFields] of dynamicFieldMap.entries()) {
