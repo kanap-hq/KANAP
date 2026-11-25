@@ -8,6 +8,11 @@ import { DataSource, QueryRunner } from 'typeorm';
 //
 // - The detail of a request, a project and a task names its source, category and stream, as the list
 //   does (the record's read left them as ids, so Kad saw none).
+// - `get_filter_values` on their source, category and stream gives the values records carry and every
+//   active one the settings offer, as the record's picker does: a stream no record carries is one Kad
+//   can set. An inactive one appears only while a record carries it.
+// - A stream name no stream has is refused naming the streams of the record's category, ten then how
+//   many more, so that Kad offers them instead of saying there is none.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -97,6 +102,48 @@ async function testDetails(harness: Harness, runner: QueryRunner, s: Seed) {
   console.log('  details name their source, category and stream: OK');
 }
 
+async function testFilterValues(harness: Harness, runner: QueryRunner, s: Seed) {
+  for (const entity_type of ['requests', 'projects', 'tasks']) {
+    const { values } = await harness.executor.executeFilterValues(context(runner, s), { entity_type, fields: ['source', 'category', 'stream'] });
+    assert.ok(values.stream.includes('R12 Ops'), `${entity_type}: an active stream no record carries is offered`);
+    assert.equal(values.stream.filter((value: unknown) => value === 'R12 Ops').length, 1, `${entity_type}: a shared name once`);
+    assert.ok(values.stream.includes('Customer experience'), `${entity_type}: a carried stream stays`);
+    assert.ok(!values.stream.includes('Retired stream'), `${entity_type}: an inactive stream no record carries is not offered`);
+    assert.ok(values.source.includes('Partner'), `${entity_type}: an active source no record carries is offered`);
+    assert.ok(values.category.includes('Infrastructure'), `${entity_type}: an active category no record carries is offered`);
+  }
+  // Reading the requests is enough, as the record's picker shows the streams to whoever reads it.
+  const { values } = await harness.executor.executeFilterValues(context(runner, s, s.requestsOnly), { entity_type: 'requests', fields: ['stream'] });
+  assert.ok(values.stream.includes('R12 Ops'), 'a reader of requests without the settings read');
+  console.log('  filter values offer the active classification: OK');
+}
+
+async function testUnknownStreamNamesTheOffered(harness: Harness, runner: QueryRunner, s: Seed) {
+  const ctx = { ...context(runner, s), surface: 'chat' as const, authMethod: 'jwt' as const };
+  await runner.query('SAVEPOINT unknown_stream');
+  let body: any = null;
+  try {
+    await harness.support.prepareUpdatePreview(ctx, { entity_type: 'requests', ref: 'REQ-4', fields: { stream_id: 'R12 Nowhere' } });
+  } catch (error) {
+    body = (error as any)?.getResponse?.();
+  }
+  await runner.query('ROLLBACK TO SAVEPOINT unknown_stream');
+  assert.equal(body?.code, 'STREAM_NOT_FOUND', JSON.stringify(body));
+  assert.equal(body.message, 'No stream is named "R12 Nowhere" in the category "Business applications". The streams offered in the category "Business applications": Customer experience, R12 Ops.');
+
+  await runner.query(`UPDATE portfolio_requests SET category_id = $2, stream_id = NULL WHERE id = $1`, [s.ids.request, s.ids.infra]);
+  await runner.query('SAVEPOINT unknown_stream');
+  body = null;
+  try {
+    await harness.support.prepareUpdatePreview(ctx, { entity_type: 'requests', ref: 'REQ-4', fields: { stream_id: 'R12 Nowhere' } });
+  } catch (error) {
+    body = (error as any)?.getResponse?.();
+  }
+  await runner.query('ROLLBACK TO SAVEPOINT unknown_stream');
+  assert.equal(body?.params?.offered, 'Infra 01, Infra 02, Infra 03, Infra 04, Infra 05, Infra 06, Infra 07, Infra 08, Infra 09, Infra 10 +2', 'ten, then how many more; the inactive one left out');
+  console.log('  an unknown stream name is refused naming the offered ones: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -106,6 +153,8 @@ async function run() {
     try {
       const s = await seed(runner);
       await testDetails(harness, runner, s);
+      await testFilterValues(harness, runner, s);
+      await testUnknownStreamNamesTheOffered(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

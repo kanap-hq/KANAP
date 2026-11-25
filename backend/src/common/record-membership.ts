@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 /**
  * A stream belongs to its category, a department to its company (lot I7a of 26.12.1, rules P12 and
@@ -24,13 +24,13 @@ export interface MembershipPair {
 }
 
 /** Where each kind of child is stored, and the refusal that names it. */
-const KINDS: Record<MembershipKind, { table: string; parentColumn: string; parentTable: string; code: string; noun: string; parentNoun: string }> = {
+const KINDS: Record<MembershipKind, { table: string; parentColumn: string; parentTable: string; active: string; code: string; noun: string; parentNoun: string }> = {
   stream: {
-    table: 'portfolio_streams', parentColumn: 'category_id', parentTable: 'portfolio_categories',
+    table: 'portfolio_streams', parentColumn: 'category_id', parentTable: 'portfolio_categories', active: 'is_active',
     code: 'STREAM_OUTSIDE_CATEGORY', noun: 'stream', parentNoun: 'category',
   },
   department: {
-    table: 'departments', parentColumn: 'company_id', parentTable: 'companies',
+    table: 'departments', parentColumn: 'company_id', parentTable: 'companies', active: 'disabled_at IS NULL',
     code: 'DEPARTMENT_OUTSIDE_COMPANY', noun: 'department', parentNoun: 'company',
   },
 };
@@ -312,5 +312,45 @@ export async function pickMemberByParent<T extends object>(
       ? `No ${noun} "${name}" belongs to the record's ${parentNoun}. The ${plural} that have one: ${listed}.`
       : `Several ${noun}s are named "${name}", in the ${plural} ${listed}. Ask which ${parentNoun} is meant, or set the ${parentNoun} first.`,
     params: { value: name, parents: listParents(parents.map((row) => row.name)) },
+  });
+}
+
+/**
+ * A stream or a department name Kad gave that no record of the family has: refused, naming the active
+ * ones of the record's parent (ten, then how many more), or of the workspace when the record has no
+ * parent, so that Kad offers what the screen's picker offers instead of saying there is none.
+ */
+export async function memberNotFound(
+  manager: Queryable,
+  kind: MembershipKind,
+  name: string,
+  parentId: string | null | undefined,
+  tenantId?: string | null,
+): Promise<never> {
+  const { table, parentColumn, parentTable, active, noun, parentNoun } = KINDS[kind];
+  const tenant = tenantId ? '$2' : 'app_current_tenant()';
+  const parent = valueOf(parentId);
+  const inParent = parent && UUID_RE.test(parent);
+  const params: unknown[] = [inParent ? parent : null, ...(tenantId ? [tenantId] : [])];
+  const rows: Array<{ name: string }> = await manager.query(
+    `SELECT name FROM ${table}
+      WHERE tenant_id = ${tenant} AND ${active} AND ($1::uuid IS NULL OR ${parentColumn} = $1::uuid)
+      ORDER BY name`,
+    params,
+  );
+  const [named]: Array<{ name: string }> = inParent
+    ? await manager.query(`SELECT name FROM ${parentTable} WHERE tenant_id = ${tenant} AND id = $1::uuid`, params)
+    : [];
+  const parentName = named?.name ?? null;
+  const listed = listParents(rows.map((row) => row.name));
+  const where = parentName ? ` in the ${parentNoun} "${parentName}"` : '';
+  throw new NotFoundException({
+    statusCode: 404,
+    error: 'Not Found',
+    code: kind === 'stream' ? 'STREAM_NOT_FOUND' : 'DEPARTMENT_NOT_FOUND',
+    message: rows.length > 0
+      ? `No ${noun} is named "${name}"${where}. The ${noun}s offered${where}: ${listed}.`
+      : `No ${noun} is named "${name}"${where}, and none is offered there.`,
+    params: { value: name, parent: parentName ?? '', offered: listed },
   });
 }

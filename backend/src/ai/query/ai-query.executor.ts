@@ -4398,6 +4398,31 @@ export class AiQueryExecutor {
     return values;
   }
 
+  /**
+   * The source, category and stream values of requests, projects and tasks: the ones records carry,
+   * and every active one the portfolio settings offer, as a record's picker offers them to whoever
+   * reads the family. A value no record carries yet is still one Kad can set by its name (the write
+   * reads a stream in the record's category); an inactive one appears only while a record carries it.
+   */
+  private async addOfferedClassification(
+    context: AiExecutionContextWithManager,
+    raw: Record<string, Array<string | boolean | null>>,
+    grids: Map<string, string[]>,
+  ): Promise<void> {
+    const tables: Record<string, string> = { source_name: 'portfolio_sources', category_name: 'portfolio_categories', stream_name: 'portfolio_streams' };
+    for (const [grid, table] of Object.entries(tables)) {
+      if (!grids.has(grid)) continue;
+      const offered: Array<{ name: string }> = await context.manager.query(
+        `SELECT DISTINCT name FROM ${table} WHERE tenant_id = $1 AND is_active`,
+        [context.tenantId],
+      );
+      const carried = raw[grid] ?? [];
+      const names = new Set(carried.filter((value): value is string => typeof value === 'string'));
+      for (const row of offered) names.add(row.name);
+      raw[grid] = [...[...names].sort((left, right) => left.localeCompare(right)), ...(carried.includes(null) ? [null] : [])];
+    }
+  }
+
   async executeFilterValues(
     context: AiExecutionContextWithManager,
     input: {
@@ -4587,6 +4612,10 @@ export class AiQueryExecutor {
         const field = registry.fields[aiField];
         if (field) raw[field.grid] = fieldValues;
       }
+    }
+
+    if (input.entity_type === 'requests' || input.entity_type === 'projects' || input.entity_type === 'tasks') {
+      await this.addOfferedClassification(context, raw, dynamicFieldMap);
     }
 
     for (const [gridField, aiFields] of dynamicFieldMap.entries()) {

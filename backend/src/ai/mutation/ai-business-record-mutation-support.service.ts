@@ -70,7 +70,7 @@ import {
   resolveIncidentViewer,
 } from '../../incidents/incident-visibility';
 import { IncidentsService } from '../../incidents/services/incidents.service';
-import { givenMembership, memberLabel, pickMemberByParent, PORTFOLIO_PAIRS, settleRecordMembership } from '../../common/record-membership';
+import { givenMembership, memberLabel, memberNotFound, pickMemberByParent, PORTFOLIO_PAIRS, settleRecordMembership } from '../../common/record-membership';
 import {
   AiWriteLanguage,
   PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE,
@@ -1236,9 +1236,10 @@ export class AiBusinessRecordMutationSupportService {
     const target = field.relationTarget!;
     const { kind, parent } = MEMBER_PARENT_FIELDS[target]!;
     const rows = await this.queryReferenceCandidates(context, target, ref);
-    if (rows.length === 0) throw new NotFoundException(`${field.label} not found.`);
-    const exact = rows.filter((row) => String(row.id).toLowerCase() === ref.toLowerCase());
     const parentId = Object.prototype.hasOwnProperty.call(fieldsSoFar, parent) ? fieldsSoFar[parent] : existing?.[parent];
+    // A name no record has: the refusal names the ones the record's parent offers.
+    if (rows.length === 0) return memberNotFound(context.manager, kind, ref, textOrNull(parentId), context.tenantId);
+    const exact = rows.filter((row) => String(row.id).toLowerCase() === ref.toLowerCase());
     const row = exact.length === 1
       ? exact[0]
       : await pickMemberByParent(context.manager, kind, rows, ref, textOrNull(parentId), context.tenantId);

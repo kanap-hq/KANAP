@@ -21,7 +21,7 @@ import { BUDGET_NATURES, naturesAnd } from '../../../spend/budget-nature';
 import { linkedModuleNotReadable, linkedParticipationScope, loadLinkedReads } from '../../../common/relations/linked-reads';
 import { idsInScope } from '../../../portfolio/portfolio-linked-reads';
 import { AiWriteLanguage, previewSummaryText, writeActionText } from '../../ai-write-texts';
-import { givenMembership, memberLabel, pickMemberByParent, settleRecordMembership, STREAM_PAIR } from '../../../common/record-membership';
+import { givenMembership, memberLabel, memberNotFound, pickMemberByParent, settleRecordMembership, STREAM_PAIR } from '../../../common/record-membership';
 import { shownTaskClassification } from '../../../tasks/task-shown-classification';
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -448,10 +448,11 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
       `SELECT * FROM portfolio_streams WHERE tenant_id = $1 AND (${isUuid(ref) ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`,
       [context.tenantId, ref],
     );
-    if (rows.length === 0) throw new NotFoundException(`portfolio streams "${ref}" not found.`);
     const category = Object.prototype.hasOwnProperty.call(fieldsSoFar, 'category_id')
       ? fieldsSoFar.category_id
       : (await this.shownClassification(context, task)).category_id;
+    // A name no stream has: the refusal names the streams the task's category offers.
+    if (rows.length === 0) return memberNotFound(context.manager, 'stream', ref, textOrNull(category), context.tenantId);
     const exact = rows.filter((row) => String(row.id).toLowerCase() === ref.toLowerCase());
     const row = exact.length === 1 ? exact[0] : await pickMemberByParent(context.manager, 'stream', rows, ref, textOrNull(category), context.tenantId);
     // A name other streams share shows its category on the card ("Ops (Infrastructure)").
