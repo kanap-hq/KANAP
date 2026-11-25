@@ -201,6 +201,9 @@ function testFiltersTakeNames() {
     { lifecycle: ['active'], data_residency: 'NL' });
   assert.deepEqual(withFilterCodes('projects', { status: ['Suspendu'] }, namer('fr'), declared(['waiting_list', 'in_progress', 'on_hold'])).filters,
     { status: ['on_hold'] });
+  // Accents count: `active` is not the French `Activé`, and the status filter refuses it itself.
+  assert.deepEqual(withFilterCodes('applications', { status: ['active', 'Activé'] }, namer('en'), declared(['enabled', 'disabled'])).filters,
+    { status: ['active', 'enabled'] });
   // A field that is not a set field, or not named, is left alone.
   assert.deepEqual(withFilterCodes('budget_lines', { allocation_method: ['Effectif'] }, namer('fr'), () => null).filters, { allocation_method: ['Effectif'] });
   console.log('  filters take names in the four languages, codes and stored forms; an unknown name is listed: OK');

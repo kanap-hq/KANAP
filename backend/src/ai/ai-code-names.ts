@@ -767,9 +767,12 @@ export class AiCodeNamer {
 
 const AI_NAMES_LANGUAGES: readonly AiNamesLanguage[] = ['en', 'fr', 'de', 'es'];
 
-/** A name as compared with what a person writes: case, accents and spaces aside. */
+/**
+ * A name as compared with what a person writes: case and spaces aside. Accents count: without them
+ * `active` would read as the French `Activé` (enabled), a value the status filter refuses.
+ */
 function nameKey(value: string): string {
-  return value.normalize('NFD').replace(/\p{M}/gu, '').trim().toLowerCase().replace(/\s+/g, ' ');
+  return value.normalize('NFC').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 /** The accepted values a refusal lists at most: a longer list is left to `get_filter_values`. */
