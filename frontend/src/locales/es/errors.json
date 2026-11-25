@@ -330,6 +330,7 @@
   "lifecycle_invalid": "Ciclo de vida desconocido: {{value}}. Use un ciclo de vida de la lista, por su nombre o su código. Valores posibles: {{allowed}}.",
   "category_invalid": "Categoría desconocida: {{value}}. Use una categoría de la lista, por su nombre o su código. Valores posibles: {{allowed}}.",
   "catalog_value_retired": "{{value}} ya no se ofrece: solo un registro que ya lo tiene lo conserva. Valores posibles: {{allowed}}.",
+  "catalog_value_no_longer_offered": "{{value}} ya no se ofrece: solo un registro que ya lo tiene lo conserva.",
   "catalog_value_unknown": "Valor desconocido: {{value}}. Valores posibles: {{allowed}}.",
   "access_method_invalid": "Método de acceso desconocido: {{value}}. Use un método de acceso de la lista, por su nombre o su código. Valores posibles: {{allowed}}.",
   "classification_unknown": "Valor desconocido: {{value}}. Use un nivel de la configuración de clasificación, por su nombre o su código.",

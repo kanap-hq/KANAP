@@ -2,6 +2,9 @@ import '../i18n';
 import i18n from 'i18next';
 import { describe, expect, it } from 'vitest';
 import { getApiErrorMessage, getDocumentSaveErrorMessage, isDataAccessRefusal } from './apiErrorMessage';
+import { appQueryClient } from '../lib/appQueryClient';
+import { csvMessageText } from '../components/csv/csvMessage';
+import './itOpsSettingsLocalization';
 import { AGENT_NAME, PRODUCT_NAME } from '../config/product';
 
 const t = i18n.getFixedT('en');
@@ -772,5 +775,37 @@ describe('a rich text refused for the address of a link', () => {
   it('says the same for a document', () => {
     expect(getDocumentSaveErrorMessage(refused, t, 'fallback'))
       .toBe('This link is not accepted. Use a web address, an email address, a phone number or a page of the application.');
+  });
+
+  it('names a retired catalog value as its selector does, without the list, on screen (rule P7)', () => {
+    const fr = i18n.getFixedT('fr');
+    const refusal = (params: Record<string, string>) => ({ response: { status: 400, data: { code: 'catalog_value_retired', message: 'The application category "Analytics" is retired: only a record that already holds it keeps it. Use one of: development (Development).', params } } });
+    const params = { value: 'Analytics', allowed: 'development (Development)', valueCode: 'analytics', list: 'applicationCategories' };
+    appQueryClient.setQueryData(['it-ops-settings'], {
+      applicationCategories: [{ code: 'analytics', label: 'Analytics', deprecated: true }, { code: 'development', label: 'Development' }],
+      connectionTypes: [{ code: 'veeam', label: 'Veeam', deprecated: true }],
+    });
+    try {
+      // The name the selector shows in the person's language (a shipped value), no list of values.
+      expect(getApiErrorMessage(refusal(params), fr, 'fallback')).toBe('Analytique n\'est plus proposé\u00a0: seule une fiche qui le porte déjà le garde.');
+      expect(getApiErrorMessage(refusal(params), t, 'fallback')).toBe('Analytics is no longer offered: only a record that already holds it keeps it.');
+      expect(getApiErrorMessage(refusal({ value: 'Veeam', allowed: 'https (HTTPS)', valueCode: 'veeam', list: 'connectionTypes' }), fr, 'fallback'))
+        .toBe('Veeam n\'est plus proposé\u00a0: seule une fiche qui le porte déjà le garde.');
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage(refusal(params), i18n.getFixedT(language), 'fallback');
+        expect(text, language).not.toMatch(/development|{{|analytics/);
+      }
+      // The import report keeps the values allowed, and names the value as the selector does.
+      expect(csvMessageText({ row: 2, column: 'category', message: 'server words', code: 'catalog_value_retired', params }, fr))
+        .toBe('Analytique n\'est plus proposé\u00a0: seule une fiche qui le porte déjà le garde. Valeurs possibles\u00a0: development (Development).');
+    } finally {
+      appQueryClient.clear();
+    }
+    // No catalog loaded, or a value with no list (a subnet): the name the server gave.
+    expect(getApiErrorMessage(refusal(params), t, 'fallback')).toBe('Analytics is no longer offered: only a record that already holds it keeps it.');
+    expect(getApiErrorMessage(refusal({ value: '10.9.0.0/24', allowed: '10.0.0.0/24' }), t, 'fallback')).toBe('10.9.0.0/24 is no longer offered: only a record that already holds it keeps it.');
+    // A value the catalog does not know keeps the list: the person needs the values allowed.
+    const unknown = { response: { status: 400, data: { code: 'catalog_value_unknown', message: 'server words', params: { value: 'Telnet', allowed: 'https (HTTPS)' } } } };
+    expect(getApiErrorMessage(unknown, t, 'fallback')).toBe('Unknown value: Telnet. Use one of: https (HTTPS).');
   });
 });

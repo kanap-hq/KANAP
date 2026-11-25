@@ -1,4 +1,5 @@
-import type { TFunction } from 'i18next';
+import i18next, { type TFunction } from 'i18next';
+import { catalogValueName } from '../../utils/catalogValueName';
 
 /**
  * An error or warning of a CSV import report. `code` is the key the interface
@@ -27,7 +28,12 @@ function namedColumns(item: CsvReportMessage): string[] {
 export function csvMessageText(item: CsvReportMessage, t: TFunction, columnName?: (column: string) => string): string {
   if (!item.code) return item.message;
   const columns = namedColumns(item);
-  const params = columnName && columns.length > 0 ? { ...item.params, columns: columns.map(columnName).join(', ') } : item.params;
+  const params: Record<string, unknown> = columnName && columns.length > 0 ? { ...item.params, columns: columns.map(columnName).join(', ') } : { ...item.params };
+  // A retired catalog value is named as the field's selector names it (the list allowed stays).
+  if (item.code === 'catalog_value_retired') {
+    const language = (t as { lng?: string }).lng || i18next.resolvedLanguage || i18next.language || 'en';
+    params.value = catalogValueName(params, language) ?? params.value;
+  }
   return t(`errors:${item.code}`, { ...params, defaultValue: item.message });
 }
 

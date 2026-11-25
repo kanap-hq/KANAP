@@ -330,6 +330,7 @@
   "lifecycle_invalid": "Cycle de vie inconnu : {{value}}. Utilisez un cycle de vie de la liste, par son nom ou son code. Valeurs possibles : {{allowed}}.",
   "category_invalid": "Catégorie inconnue : {{value}}. Utilisez une catégorie de la liste, par son nom ou son code. Valeurs possibles : {{allowed}}.",
   "catalog_value_retired": "{{value}} n'est plus proposé : seule une fiche qui le porte déjà le garde. Valeurs possibles : {{allowed}}.",
+  "catalog_value_no_longer_offered": "{{value}} n'est plus proposé : seule une fiche qui le porte déjà le garde.",
   "catalog_value_unknown": "Valeur inconnue : {{value}}. Valeurs possibles : {{allowed}}.",
   "access_method_invalid": "Méthode d'accès inconnue : {{value}}. Utilisez une méthode d'accès de la liste, par son nom ou son code. Valeurs possibles : {{allowed}}.",
   "classification_unknown": "Valeur inconnue : {{value}}. Utilisez un niveau des paramètres de classification, par son nom ou son code.",
