@@ -903,6 +903,21 @@ export class AiQueryExecutor {
     });
   }
 
+  /**
+   * The names of a request's or a project's source, category and stream: the record's read leaves
+   * them as ids, which the list names (`include=classification`). One read, in the tenant.
+   */
+  private async withClassificationNames(context: AiExecutionContextWithManager, row: any): Promise<any> {
+    if (!row) return row;
+    const [names] = await context.manager.query(
+      `SELECT (SELECT name FROM portfolio_sources WHERE tenant_id = $1 AND id = $2::uuid) AS source_name,
+              (SELECT name FROM portfolio_categories WHERE tenant_id = $1 AND id = $3::uuid) AS category_name,
+              (SELECT name FROM portfolio_streams WHERE tenant_id = $1 AND id = $4::uuid) AS stream_name`,
+      [context.tenantId, row.source_id ?? null, row.category_id ?? null, row.stream_id ?? null],
+    );
+    return { ...row, ...(names ?? {}) };
+  }
+
   private mapRequest(row: any): AiEntitySummaryDto {
     return toEntitySummary('requests', {
       id: row.id,
@@ -3668,7 +3683,7 @@ export class AiQueryExecutor {
     }
 
     if (entityType === 'projects') {
-      const row = await this.projects.get(
+      const row = await this.withClassificationNames(context, await this.projects.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,source_requests,urls,dependencies,attachments,phases,milestones,financials' },
         {
@@ -3678,12 +3693,12 @@ export class AiQueryExecutor {
           readsBudget: await this.readsBudget(context),
           linked: await this.portfolioLinkedReads(context),
         },
-      );
+      ));
       return this.toDetailResult(this.mapProject(row), row);
     }
 
     if (entityType === 'requests') {
-      const row = await this.requests.get(
+      const row = await this.withClassificationNames(context, await this.requests.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,origin_task,urls,attachments,projects,dependencies,financials,business_processes' },
         {
@@ -3693,7 +3708,7 @@ export class AiQueryExecutor {
           viewer: await resolveAiIncidentViewer(context),
           linked: await this.portfolioLinkedReads(context),
         },
-      );
+      ));
       return this.toDetailResult(this.mapRequest(row), row);
     }
 
