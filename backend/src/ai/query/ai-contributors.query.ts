@@ -199,15 +199,17 @@ export async function readContributors(services: AiContributorServices, opts: Ai
       }];
     });
     const average = stats[item.id]?.avgProjectDays;
+    const ref = contributorRef(Number(item.item_number));
+    const managerRef = item.manager_user_id ? refByUser.get(String(item.manager_user_id)) ?? null : null;
     return {
       id: String(item.id),
       item_number: Number(item.item_number),
-      ref: contributorRef(Number(item.item_number)),
-      name: nameOrNull(item.user_display_name) ?? nameOrNull(item.user_email) ?? '',
+      ref,
+      name: nameOrNull(item.user_display_name) ?? ref,
       job_title: nameOrNull(item.job_title),
       team: nameOrNull(item.team_name),
-      manager: nameOrNull(item.manager_name),
-      manager_ref: item.manager_user_id ? refByUser.get(String(item.manager_user_id)) ?? null : null,
+      manager: nameOrNull(item.manager_name) ?? managerRef ?? (item.manager_user_id ? PERSON_WITHOUT_NAME : null),
+      manager_ref: managerRef,
       employment_type: nameOrNull(item.employment_type_name),
       availability_days: Number.isFinite(Number(item.project_availability)) ? Number(item.project_availability) : 5,
       skills: named,
