@@ -16,6 +16,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
 import { AI_BUDGET_DELTA_DEFAULT_LIMIT, AI_BUDGET_GROUP_LIMIT, AiAggregateExecutor } from './query/ai-aggregate.executor';
 import { AI_QUERY_DEFAULT_LIMIT, AI_QUERY_FAMILY_MAX_LIMIT, AI_QUERY_MAX_LIMIT, AiQueryExecutor } from './query/ai-query.executor';
 import { describeAiEntityFilters } from './query/ai-filter-description.util';
+import { AI_CONTRIBUTOR_COMPANY_WITHHELD, readsCompanyLookup } from './query/ai-contributors.query';
 import { getAiEntityRegistry, resolveAiEntityRegistry } from './query/registries';
 import { readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { localizedBudgetColumnsAiContext } from '../budget-columns/budget-column-labels';
@@ -445,6 +446,10 @@ export class AiToolRegistry {
                 await unreadFamiliesReachOf(this.policy, context, context.manager),
               ),
             };
+            if (input.entity_type === 'contributors' && !readsCompanyLookup(await this.policy.effectiveAccess(context, context.manager))) {
+              // The default company is read with the company lookup, as the drawer's field: withheld, said so.
+              return { ...description, fields_withheld: [...(description.fields_withheld ?? []), AI_CONTRIBUTOR_COMPANY_WITHHELD] };
+            }
             if (input.entity_type !== 'budget_lines') return description;
             // Amount field descriptions are positional; the column names come with them, in the person's language
             // (MCP clients have no system prompt). A workspace name wins over the product name.
