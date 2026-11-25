@@ -7,6 +7,7 @@ import { auditTableOf, BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNatu
 import type { AiMutationAuditOptions } from './ai-mutation-audit.util';
 import { lockApplicationRow } from '../../applications/application-rules';
 import { lockClusterForMembers } from '../../assets/asset-rules';
+import { linkedEndOf, markLinkedEnds } from '../../common/relations/linked-ends';
 
 /**
  * The audit trace a relation the assistant replaces leaves, in the form the screen writes for the
@@ -24,7 +25,9 @@ import { lockClusterForMembers } from '../../assets/asset-rules';
  *   removals first, each from the set the previous one left. A budget line's link is labelled by
  *   the line's nature (`auditTableOf`) and counts the lines the person cannot read
  *   (`auditedLinkSet`); the row names the parent the screen names (from an asset, the line toggled;
- *   from a line, the line itself);
+ *   from a line, the line itself). A link both of whose records read it (an application's or an
+ *   asset's project, an application's line, a line's project or application) then marks the other
+ *   record, one row per link, as the tab does (`common/relations/linked-ends.ts`);
  * - the rows the screen writes one per link (web links, server assignments, the contacts of a
  *   supplier, a contract or a line, a site's contacts and sub-locations) are audited row by row by
  *   the writer itself (`ROW_AUDITED_RELATIONS`).
@@ -70,7 +73,14 @@ const stateList = (sql: string) => async (context: TraceContext, sourceId: strin
  * set of budget lines (the lines the person cannot read are counted). `parent`: the record the
  * screen names for the link toggled (`id`) from the source (`sourceId`).
  */
-type ToggleSet = { label: string; sql: string; line: boolean; parent?: (sourceId: string, id: string) => AuditParent };
+type ToggleSet = {
+  label: string;
+  sql: string;
+  line: boolean;
+  parent?: (sourceId: string, id: string) => AuditParent;
+  /** The other end, when its History reads the link too (`linked-ends.ts`): marked as the screen marks it. */
+  other?: ReturnType<typeof linkedEndOf>;
+};
 
 /**
  * One row per link added or removed (`setOwnedLink`): each one from the set the previous one left,
@@ -123,6 +133,13 @@ function toggles(
           },
           { manager: context.manager },
         );
+        if (step.set.other) {
+          await markLinkedEnds({
+            manager: context.manager, audit, ...step.set.other, from: sourceId, tenantId: context.tenantId,
+            written: step.add ? { added: [step.id], removed: [] } : { added: [], removed: [step.id] },
+            userId: context.userId, source,
+          });
+        }
       }
     },
   };
@@ -141,11 +158,18 @@ function lineSets(table: string, ownerColumn: string, lineColumn: string, parent
     sql: `SELECT l.${lineColumn} AS id FROM ${table} l WHERE l.tenant_id = $1 AND l.${ownerColumn} = $2${linkedLineOf('l.tenant_id', `l.${lineColumn}`, nature)}`,
     line: true,
     parent,
+    other: linkedEndOf(table, lineColumn),
   }));
 }
 
 function plainSet(table: string, ownerColumn: string, targetColumn: string, parent?: ToggleSet['parent']): ToggleSet[] {
-  return [{ label: table, sql: `SELECT l.${targetColumn} AS id FROM ${table} l WHERE l.tenant_id = $1 AND l.${ownerColumn} = $2`, line: false, parent }];
+  return [{
+    label: table,
+    sql: `SELECT l.${targetColumn} AS id FROM ${table} l WHERE l.tenant_id = $1 AND l.${ownerColumn} = $2`,
+    line: false,
+    parent,
+    other: linkedEndOf(table, targetColumn),
+  }];
 }
 
 /**
