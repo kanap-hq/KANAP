@@ -98,7 +98,7 @@ const GRID_ITEM_KEYS: Record<SummaryScopeConfig['scope'], string[]> = {
 const GRID_DERIVED_KEYS = [
   'cost_center_id', 'run_build', 'latest_contract_id', 'latest_contract_name', 'supplier_name', 'paying_company_name', 'account_display',
   'allocation_method_label', 'owner_it_name', 'owner_business_name', 'cost_center_label', 'cost_center_path', 'budget_holder_name',
-  'project_name', 'analytics_category_name', 'has_fte',
+  'project_name', 'analytics_category_name', 'has_fte', 'to_check',
 ];
 const GRID_SLOTS = ['yMinus1', 'y', 'yPlus1', 'yPlus2'];
 
@@ -126,7 +126,7 @@ function fieldCatalogue(scope: SummaryScopeConfig, axisIds: string[]) {
     ],
     uuid: ['id', 'supplier_id', 'owner_it_id', 'cost_center_id', 'project_id', 'analytics_category_id', 'budget_holder_id', 'latest_contract_id',
       ...(scope.scope === 'opex' ? ['contract_id'] : []), 'account_id'],
-    multi: ['project_name', 'project_stream_name', 'project_category_name'],
+    multi: ['project_name', 'project_stream_name', 'project_category_name', 'to_check'],
     int: ['item_number', 'account_number'],
     money,
     fte: money.map((key) => `fte_${key}`),

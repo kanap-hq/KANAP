@@ -564,6 +564,7 @@
       "accountNumber": "N.º de cuenta",
       "accountName": "Nombre",
       "nature": "Usada para",
+      "quantityPriceExpected": "Introducción por cantidad y precio",
       "nativeName": "Nombre local",
       "consolAccountNumber": "N.º cuenta consol.",
       "consolAccountName": "Nombre consol.",
@@ -702,6 +703,7 @@
       "accountNumber": "Número de cuenta",
       "accountName": "Nombre de la cuenta",
       "nature": "Usada para",
+      "quantityPriceExpected": "Introducción por cantidad y precio",
       "nativeName": "Nombre local (idioma local)",
       "description": "Descripción",
       "consolidationAccount": "Cuenta de consolidación",
@@ -711,6 +713,9 @@
       "selectChart": "Elija un plan de cuentas",
       "lifecycle": "Ciclo de vida",
       "loadCoAsError": "Error al cargar los planes de cuentas"
+    },
+    "hints": {
+      "quantityPriceExpected": "Las líneas presupuestarias de esta cuenta se esperan por cantidad y precio. En una cuenta de consolidación, el ajuste se aplica a las cuentas vinculadas a ella."
     },
     "placeholders": {
       "chartOfAccounts": "p. ej., COA-FR",

@@ -247,6 +247,22 @@ describe('CoaPage summary and consolidation health', () => {
     expect([null, 'opex', 'capex'].map((value) => column.valueFormatter({ value }))).toEqual(['OPEX and CAPEX', 'OPEX only', 'CAPEX only']);
   });
 
+  it('has a hidden quantity and price entry column, filtered on yes and not set', async () => {
+    renderPage();
+    await screen.findByTestId('coa-summary');
+    await waitFor(() => expect(grid.props).not.toBeNull());
+    const column = (grid.props!.columns as any[]).find((col) => col.field === 'quantity_price_expected');
+    expect(column.headerName).toBe('Quantity and price entry');
+    expect(column.defaultHidden).toBe(true);
+    expect(grid.props!.defaultHiddenColumns).toContain('quantity_price_expected');
+    // The setting is true or not set (null): "No" is the accounts without it.
+    expect(column.filterParams).toEqual({
+      values: [{ value: 'true', label: 'Yes' }, { value: null, label: 'No' }],
+      searchable: false,
+    });
+    expect([true, null].map((value) => column.valueFormatter({ value }))).toEqual(['Yes', '']);
+  });
+
   it('flags the grid rows outside the consolidation chart next to their consolidation number', async () => {
     renderPage();
     await screen.findByTestId('coa-summary');

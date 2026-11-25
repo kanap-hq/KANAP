@@ -437,6 +437,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       number('consolidation_account_number', 'a whole number'), text('consolidation_account_name'),
       text('consolidation_account_description'), status,
       { column: 'nature', kind: 'codes', codes: ['opex', 'capex'], labels: LINE_USAGE_LABELS },
+      { column: 'quantity_price_expected', kind: 'boolean', hint: 'yes when the account\'s budget lines are expected as quantity and price; no clears it' },
     ],
   },
   analytics_categories: {

@@ -71,6 +71,7 @@ Ohne die Administratorstufe für die Budget-Administration zeigt die Seite die Z
 - Verweigert das Löschen einer Zeile oder die Änderung ihres Typs, solange sie Beträge in einer eingefrorenen Spalte der betroffenen Jahre hat
 - Beeinflusst **nicht** den Lesezugriff: Die Daten bleiben sichtbar
 - Gilt auch für ausgeblendete Spalten. Eine eingefrorene Spalte bleibt eingefroren, wenn sie ausgeblendet wird, und Importe in sie werden weiterhin abgelehnt
+- Eine eingefrorene Spalte wird nicht mehr als zu prüfen markiert, wenn das Konto der Zeile eine Erfassung nach Menge und Preis erwartet. Siehe [Wenn das Konto eine Erfassung nach Menge und Preis erwartet](budget-lines.md#quantity-and-price-expected)
 
 ### Schloss-Symbole in der Liste
 

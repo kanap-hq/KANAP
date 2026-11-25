@@ -9,6 +9,7 @@ import type { FieldSql } from './list-engine.types';
 export class SqlStatement {
   readonly params: unknown[] = [];
   private readonly ctes = new Map<string, string>();
+  private readonly materialized = new Set<string>();
   private readonly joins = new Map<string, { sql: string | (() => string); deps: string[] }>();
   private readonly shared = new Map<string, unknown>();
   readonly fieldCache = new Map<string, FieldSql>();
@@ -27,12 +28,20 @@ export class SqlStatement {
     return `$${this.params.length}${cast ? `::${cast}` : ''}`;
   }
 
-  /** Registers a CTE once; returns its name. */
-  cte(name: string, build: () => string): string {
+  /**
+   * Registers a CTE once; returns its name. `materialized`: computed once per statement
+   * (`AS MATERIALIZED`), never inlined. PostgreSQL inlines a CTE read once, and on statistics that
+   * do not know the tenant's rows yet (a workspace just filled, before the next ANALYZE) it may put
+   * the inlined body inside a nested loop and run it again for every row of the list.
+   */
+  cte(name: string, build: () => string, opts: { materialized?: boolean } = {}): string {
     if (!this.ctes.has(name)) {
       // Build first: the body may register the CTEs it reads, which must come before it.
       const sql = build();
-      if (!this.ctes.has(name)) this.ctes.set(name, sql);
+      if (!this.ctes.has(name)) {
+        this.ctes.set(name, sql);
+        if (opts.materialized) this.materialized.add(name);
+      }
     }
     return name;
   }
@@ -110,7 +119,7 @@ export class SqlStatement {
   withClause(extra: Array<[string, string]> = []): string {
     const all = [...Array.from(this.ctes.entries()), ...extra];
     if (!all.length) return '';
-    return `WITH ${all.map(([name, sql]) => `${name} AS (${sql})`).join(',\n')}\n`;
+    return `WITH ${all.map(([name, sql]) => `${name} AS ${this.materialized.has(name) ? 'MATERIALIZED ' : ''}(${sql})`).join(',\n')}\n`;
   }
 }
 

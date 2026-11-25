@@ -12,6 +12,7 @@ import type { BudgetColumn } from '../spend/amounts-write.util';
 import { CHARGEBACK_EXPORT_LABELS } from '../spend/chargeback-report.export';
 import { END_OF_SUPPORT_EXPORT_LABELS } from '../technologies/reports/end-of-support-export-labels';
 import { aiScreenLanguage } from './ai-unread-families';
+import { BUDGET_LINE_CHECK_LABEL_KEYS, BUDGET_LINE_CHECK_LABELS } from './query/ai-line-check-names';
 import { VULNERABILITY_STATE_LABELS } from './ai-write-texts';
 import { countryCode, countryNameIn } from './import/ai-import-countries';
 import {
@@ -441,6 +442,13 @@ export const AI_CODE_LISTS = {
   vulnerabilitySeverity: fixed('it:pages.vulnerabilities.severities', VULNERABILITY_SEVERITY_LABELS),
   vulnerabilityFeed: fixed('it:pages.vulnerabilities.feeds.badge', VULNERABILITY_FEED_LABELS),
   budgetColumn: { kind: 'budgetColumn', aliases: { review: 'revision', actual: 'follow_up' } },
+  // A budget line's checks (`to_check`), as the budget list's "To check" column names them.
+  budgetLineCheck: fixed('ops:', BUDGET_LINE_CHECK_LABELS, { keys: BUDGET_LINE_CHECK_LABEL_KEYS }),
+  // The `status` of a line's `quantity_price_entry` and `account_chart`: only "To check" has a word
+  // on screen (the column's title); the other states are said by their `explanation`.
+  lineCheckState: fixed('ops:', codeLabels({ to_check: ['To check', 'À vérifier', 'Zu prüfen', 'Por verificar'] }), {
+    keys: { to_check: 'shared.toCheck' },
+  }),
   // A chargeback row's level, as the report's columns and its common costs row name it.
   chargebackLevel: fixed('ops:reports', fromExport(CHARGEBACK_EXPORT_LABELS, {
     company: 'company', department: 'department', common: 'commonCosts',
@@ -572,6 +580,7 @@ export const AI_NAMED_FIELDS: Readonly<Record<string, Readonly<Record<string, Ai
     next_year_allocation_method: one(L.allocationMethod),
     allocation_method_label: one(L.allocationMethod),
     next_year_allocation_method_label: one(L.allocationMethod),
+    to_check: many(L.budgetLineCheck),
   },
   chargeback: {
     // A chargeback row's `status` is its level.
@@ -691,6 +700,9 @@ export const AI_NAMED_CHILD_FIELDS: Readonly<Record<string, Readonly<Record<stri
       input_grain: one(L.inputGrain),
     },
     allocation_by_year: { allocation_method: one(L.allocationMethod) },
+    // Why the line is to check (lot B12a): the quantity and price rule, the account's chart.
+    quantity_price_entry: { status: one(L.lineCheckState) },
+    account_chart: { status: one(L.lineCheckState) },
     // The line's summary repeats its status, nature and run or build.
     financial_summary: AI_NAMED_FIELDS.budget_lines,
   },
@@ -1055,8 +1067,9 @@ function nameAggregate(family: string, args: Json, output: Json, namer: AiCodeNa
   if (!byField && !thenField) return output;
   const groups = output.groups.map((group) => {
     if (!isObject(group)) return group;
-    const key = byField ? namer.fieldName(byField, group.key) : null;
-    const thenKey = thenField ? namer.fieldName(thenField, group.then_key) : null;
+    // A name the executor already gave (the budget line checks, `ai-line-check-names.ts`) is kept.
+    const key = byField && !Object.hasOwn(group, 'key_name') ? namer.fieldName(byField, group.key) : null;
+    const thenKey = thenField && !Object.hasOwn(group, 'then_key_name') ? namer.fieldName(thenField, group.then_key) : null;
     if (key === null && thenKey === null) return group;
     return { ...group, ...(key !== null ? { key_name: key } : {}), ...(thenKey !== null ? { then_key_name: thenKey } : {}) };
   });

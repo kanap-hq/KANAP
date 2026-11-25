@@ -51,7 +51,7 @@ Provide an at-a-glance, actionable home for Budget Management users with consist
 - My tasks: `GET /tasks` with filters: `assignee_user_id = me`, `status notContains 'done'`, `due_date notBlank`, `sort=due_date:ASC`, `limit=5`
 - Renewals: `GET /contracts` filtered on `next_due_date` on or after today, `sort=next_due_date:ASC`, the contract list's order (`backend/src/contracts/contract-terms.ts`): a contract that renews at the end of its current term shows its next cancellation deadline, tacit renewals included; any other contract shows its end, so one that stops before its deadline shows the day it stops. Ended contracts have no next due date and leave the tile.
 - Data hygiene counts: `GET /spend-items/summary?limit=1&filters=...` using response `total` for each chip
-  - `owner_it_id blank`, `owner_business_id blank`, `paying_company_id blank`, `account_warning notBlank`
+  - `owner_it_id blank`, `owner_business_id blank`, `paying_company_id blank`, and one value each of `to_check` (the list's "To check" column): `coa_mismatch`, `quantity_price`
 - Recent OPEX updates: `GET /spend-items/summary?sort=updated_at:DESC&limit=5`
 - Top OPEX Y: `GET /spend-items/summary?years=Y-1,Y&sort=yBudget:DESC&limit=5`
 - Top increases: `GET /spend-items/summary?years=Y-1,Y&sort=created_at:DESC&limit=1000000` then compute deltas client‑side and take 5
@@ -88,4 +88,4 @@ Provide an at-a-glance, actionable home for Budget Management users with consist
 - Frontend page: `frontend/src/pages/DashboardPage.tsx:1`
 - OPEX/CAPEX totals: `backend/src/spend/spend-items.service.ts:312` (summaryTotals), `CapexItemsService` in the same file (the CAPEX lines)
 - OPEX summary row shape: `backend/src/spend/spend-summary.builder.ts:398`
-  - Derived `account_warning` field for CoA mismatch: `backend/src/spend/spend-summary.builder.ts:420`
+  - Derived `to_check` field, the checks a line fails (`coa_mismatch`, `quantity_price`): `backend/src/spend/budget-line-checks.ts`; `account_warning` keeps the CoA mismatch alone
