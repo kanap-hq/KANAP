@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import type { AiImportRunDto } from '../ai.types';
 import { TABLE_ATTACHMENT_KIND } from '../attachments/table-attachment';
 import type { AiImportKey } from '../import/ai-import-access';
-import { AiImportMappingService } from '../import/ai-import-mapping.service';
+import { AI_IMPORT_MATCH_SOURCE_COLUMNS, AiImportMappingService } from '../import/ai-import-mapping.service';
 import { AI_IMPORT_MATCHED_COLUMNS, AI_IMPORT_TARGETS, isImportMatchedColumn, type ImportCardChoice } from '../import/ai-import-targets';
 
 // Lot I6a of 26.12.1: Kad's import card says the state of the moment. The note the model wrote for a
@@ -105,6 +105,42 @@ async function testUndoneMatchHidesTheColumnsNote() {
   console.log(`  ${keys.length} imports: a match undone hides its column's note, matched again shows it: OK`);
 }
 
+/**
+ * Passe 2 (browser pass C4a): a match listed under one column may take its value from another column of
+ * the file (an application's supplier found by its publisher). Mapped without the column the match is
+ * listed under, the column that made the match loses its note when it is undone; another value leaves it.
+ * Driven by the table of those columns (`AI_IMPORT_MATCH_SOURCE_COLUMNS`).
+ */
+async function testUndoneMatchHidesTheNoteOfTheColumnThatMadeIt() {
+  let cases = 0;
+  for (const [key, byColumn] of Object.entries(AI_IMPORT_MATCH_SOURCE_COLUMNS) as Array<[AiImportKey, Record<string, readonly string[]>]>) {
+    for (const [listed, sources] of Object.entries(byColumn)) {
+      for (const source of sources) {
+        const s = service();
+        const { columns } = await s.mapping.templateColumns(s.context, AI_IMPORT_TARGETS[key], 'en');
+        assert.ok(isImportMatchedColumn(key, listed), `${key}: ${listed} is a column the import matches`);
+        assert.ok(columns.some((column) => column.column === source), `${key}: ${source} is a column of the template`);
+        const plain = columns.find((column) => column.column !== source && column.column !== listed && column.kind === 'text')!.column;
+        const mapped = [source, plain];
+        s.setFile(['c1,c2', `${VALUE},Other`].join('\n'));
+        const notes = async (choices: ImportCardChoice[]) => {
+          const { mapping } = await s.mapping.prepareMapping(s.context, {
+            attachment_id: FILE, entity_type: key, choices,
+            columns: mapped.map((column, index) => ({ column, source: index + 1, confidence: 'high' as const, note: `note of ${column}` })),
+          }, 'en');
+          return Object.fromEntries(mapping.columns.map((column) => [column.column, column.note]));
+        };
+        assert.deepEqual(await notes([{ kind: 'unmatch', column: listed, value: VALUE.toUpperCase() }]), { ...everyNote(mapped), [source]: null }, `${key}: ${listed} undone from ${source}`);
+        assert.deepEqual(await notes([{ kind: 'unmatch', column: listed, value: 'Not in the file' }]), everyNote(mapped), `${key}: another value of ${listed}`);
+        assert.deepEqual(await notes([]), everyNote(mapped), `${key}: ${listed} matched again`);
+        cases += 1;
+      }
+    }
+  }
+  assert.ok(AI_IMPORT_MATCH_SOURCE_COLUMNS.applications?.supplier_name?.includes('editor'), 'an application\'s supplier found by its publisher');
+  console.log(`  ${cases} columns that make a match listed under another: the undone match hides their note: OK`);
+}
+
 async function testChoicesThatUndoNoMatchKeepTheNotes() {
   // An application row created anyway, the "Create missing suppliers" box unticked: every note stays.
   const apps = await cardOf('applications', service());
@@ -135,6 +171,7 @@ async function testTheModelsAssumptionsStayOnItsCard() {
 
 (async () => {
   await testUndoneMatchHidesTheColumnsNote();
+  await testUndoneMatchHidesTheNoteOfTheColumnThatMadeIt();
   await testChoicesThatUndoNoMatchKeepTheNotes();
   await testBudgetFileFollowsTheChoicesItKept();
   await testTheModelsAssumptionsStayOnItsCard();

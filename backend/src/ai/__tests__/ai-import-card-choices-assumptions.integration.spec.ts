@@ -137,6 +137,34 @@ async function testApplications(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  applications: undone, matched again, a row chosen: notes follow the matches, no assumptions after a choice: OK');
 }
 
+/**
+ * Passe 2, browser pass C4a: a file with a publisher column and no supplier column. The supplier is
+ * found by the publisher, a match listed under the supplier (`supplier_name`, origin editor): undoing
+ * it drops the note of the publisher's column, the column that made the match.
+ */
+async function testApplicationsSupplierByPublisher(h: Harness, runner: QueryRunner, s: Seed) {
+  const admin = ctx(runner, s);
+  const attachment = attach(h, 'applications-vendor.xlsx', [
+    ['Name', 'Vendor', 'Description'],
+    ['Atlas', 'cegid', 'Cartes'],
+    ['Boussole', 'Microsoft', 'Pilotage'],
+  ]);
+  const columns = [
+    { column: 'name', source: 1, confidence: 'high' },
+    { column: 'editor', source: 2, confidence: 'high', note: 'La colonne Vendor est lue comme éditeur.' },
+    { column: 'description', source: 3, confidence: 'high', note: 'La description.' },
+  ];
+  const notes = { name: null, editor: 'La colonne Vendor est lue comme éditeur.', description: 'La description.' };
+  const first = await h.previews.createPreview(admin, 'prepare_import_mapping', { attachment_id: attachment, entity_type: 'applications', columns });
+  assert.deepEqual(first.import_mapping.validation.report.matches.map((match: any) => [match.column, match.value, match.origin]), [['supplier_name', 'cegid', 'editor']]);
+  assert.deepEqual(notesOf(first), notes);
+  const undone = await h.previews.replaceImportChoices(admin, first.preview_id, [{ kind: 'unmatch', column: 'supplier_name', value: 'cegid' }]);
+  assert.deepEqual(notesOf(undone), { ...notes, editor: null }, 'the publisher\'s note goes with the match it made');
+  const again = await h.previews.replaceImportChoices(admin, undone.preview_id, []);
+  assert.deepEqual(notesOf(again), notes);
+  console.log('  applications: a supplier found by the publisher, undone then matched again: the publisher\'s note follows: OK');
+}
+
 /** The budget file: the supplier "CEGID" matched to Cégid; the "Create missing suppliers" box. */
 async function testBudgetFile(h: Harness, runner: QueryRunner, s: Seed) {
   const admin = ctx(runner, s);
@@ -196,6 +224,7 @@ async function run() {
   const harness = await createHarness();
   try {
     await inTenant(harness, testApplications);
+    await inTenant(harness, testApplicationsSupplierByPublisher);
     await inTenant(harness, testBudgetFile);
   } finally {
     await harness.app.close();

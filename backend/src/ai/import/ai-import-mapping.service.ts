@@ -196,7 +196,7 @@ export class AiImportMappingService {
       ...converted.preview.columns.map((column): [string, string] => [column.column, column.title]),
     ]);
     const onApproval = budgetFacts ?? (checked.report.kind === 'rows' ? rowsApprovalFacts(checked, { titles, language }) : undefined);
-    const preview = withoutUndoneNotes(converted.preview, checked, input.choices ?? []);
+    const preview = withoutUndoneNotes(target.key, converted, checked, input.choices ?? []);
     return { target, mapping: { ...(onApproval ? { on_approval: onApproval } : {}), ...preview, validation: checked } };
   }
 
@@ -309,17 +309,40 @@ export class AiImportMappingService {
  * undid has no note, the model's reason for a match the card no longer makes. The mapping keeps the
  * note (`columns` of the input): matched again, the column shows it again. The choices are those the
  * check followed: a budget file drops an undone match its file no longer makes (`matching.choices`).
+ * A match listed under one column may come from another (`AI_IMPORT_MATCH_SOURCE_COLUMNS`): the
+ * column whose cells hold the undone value loses its note too.
  */
 function withoutUndoneNotes(
-  preview: AiImportMappingPreviewDto,
+  key: AiImportKey,
+  converted: AiImportMappingResult,
   check: AiImportRunDto,
   choices: readonly ImportCardChoice[],
 ): AiImportMappingPreviewDto {
+  const { preview, file } = converted;
   const followed: readonly ImportCardChoice[] = check.matching ? check.matching.choices : choices;
-  const undone = new Set(followed.flatMap((choice) => (choice.kind === 'unmatch' ? [choice.column] : [])));
+  const undone = new Set<string>();
+  for (const choice of followed) {
+    if (choice.kind !== 'unmatch') continue;
+    undone.add(choice.column);
+    // A match listed under its column whose value another column of the file holds: that column made it.
+    for (const source of AI_IMPORT_MATCH_SOURCE_COLUMNS[key]?.[choice.column] ?? []) {
+      const index = file.columns.findIndex((column) => column.column === source);
+      const value = cellKey(source, choice.value);
+      if (index >= 0 && file.rows.some((row) => typeof row[index] === 'string' && cellKey(source, row[index] as string) === value)) undone.add(source);
+    }
+  }
   if (undone.size === 0) return preview;
   return { ...preview, columns: preview.columns.map((column) => (undone.has(column.column) && column.note ? { ...column, note: null } : column)) };
 }
+
+/**
+ * The columns of the file a match of another column may take its value from, by import and by the
+ * column the match is listed under (lot I6a of 26.12.1): an application's supplier found by its
+ * publisher (`origin: 'editor'`). Every other match is listed under the column whose cell it reads.
+ */
+export const AI_IMPORT_MATCH_SOURCE_COLUMNS: Readonly<Partial<Record<AiImportKey, Readonly<Record<string, readonly string[]>>>>> = {
+  applications: { supplier_name: ['editor'] },
+};
 
 /** The columns whose cell holds several names, separated by commas, each one matched on its own. */
 const NAME_LIST_COLUMNS: Partial<Record<AiImportKey, readonly string[]>> = { assets: ['cluster'] };
