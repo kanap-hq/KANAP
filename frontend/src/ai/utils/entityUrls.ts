@@ -32,6 +32,8 @@ const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
   // A CVE id: the vulnerabilities page searched on it, every state and alert setting (the
   // backend links the assistant's vulnerabilities through their `page_url`).
   vulnerabilities: (cveId) => `/it/vulnerabilities?${new URLSearchParams({ q: cveId, state: 'all', alerts: 'all' }).toString()}`,
+  // A contributor's page opens by its id and by its MEM-n reference.
+  contributors: (id) => `/portfolio/contributors/${id}`,
 };
 
 export function buildEntityUrl(entityType: string, id: string): string | null {
@@ -72,6 +74,7 @@ const TYPE_PREFIX_TO_ENTITY_TYPE: Record<string, string> = {
   CTCT: 'contacts',
   DEPT: 'departments',
   CTR: 'contracts',
+  MEM: 'contributors',
   // References stored as text on the record
   APP: 'applications',
   AST: 'assets',
