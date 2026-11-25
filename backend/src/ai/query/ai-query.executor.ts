@@ -1688,6 +1688,34 @@ export class AiQueryExecutor {
     };
   }
 
+  /**
+   * The values of the discoverable fields of the contributors (team, manager, contract type, skill,
+   * classification defaults): the names the tenant's contributors hold, null when one lacks it.
+   * Read with the right of the page, as the list.
+   */
+  private async contributorFilterValues(context: AiExecutionContextWithManager, fields: string[]): Promise<AiFilterValuesResult> {
+    const { services, opts, withheld } = await this.contributorServices(context);
+    const registry = getAiEntityRegistry('contributors');
+    const requested = Array.from(new Set((fields || []).map((field) => String(field || '').trim()).filter(Boolean)));
+    const rows = await readContributors(services, opts);
+    const values: Record<string, Array<string | boolean | null>> = {};
+    const ignored: string[] = [];
+    for (const field of requested) {
+      if (registry.fields[field]?.discoverable === true) values[field] = contributorFieldValues(rows, field);
+      else ignored.push(field);
+    }
+    const fieldsWithheld = withheld.filter((entry) => requested.includes(entry.field));
+    return {
+      values,
+      fields_ignored: ignored,
+      ...(fieldsWithheld.length ? { fields_withheld: fieldsWithheld } : {}),
+      total: requested.length,
+      returned: Object.keys(values).length,
+      truncated: false,
+      complete: ignored.length === 0,
+    };
+  }
+
   private async analyticsAxesServices(context: AiExecutionContextWithManager, checked?: ReferenceSearchChecked) {
     if (!this.policy || !this.analyticsAxes) throw new BadRequestException('The analytics dimensions are not available.');
     if (!checked) await this.policy.assertEntityTypeReadRight(context, 'analytics_axes', context.manager);
@@ -4536,34 +4564,6 @@ export class AiQueryExecutor {
     }
 
     return values;
-  }
-
-  /**
-   * The values of the discoverable fields of the contributors (team, manager, contract type, skill,
-   * classification defaults): the names the tenant's contributors hold, null when one lacks it.
-   * Read with the right of the page, as the list.
-   */
-  private async contributorFilterValues(context: AiExecutionContextWithManager, fields: string[]): Promise<AiFilterValuesResult> {
-    const { services, opts, withheld } = await this.contributorServices(context);
-    const registry = getAiEntityRegistry('contributors');
-    const requested = Array.from(new Set((fields || []).map((field) => String(field || '').trim()).filter(Boolean)));
-    const rows = await readContributors(services, opts);
-    const values: Record<string, Array<string | boolean | null>> = {};
-    const ignored: string[] = [];
-    for (const field of requested) {
-      if (registry.fields[field]?.discoverable === true) values[field] = contributorFieldValues(rows, field);
-      else ignored.push(field);
-    }
-    const fieldsWithheld = withheld.filter((entry) => requested.includes(entry.field));
-    return {
-      values,
-      fields_ignored: ignored,
-      ...(fieldsWithheld.length ? { fields_withheld: fieldsWithheld } : {}),
-      total: requested.length,
-      returned: Object.keys(values).length,
-      truncated: false,
-      complete: ignored.length === 0,
-    };
   }
 
   async executeFilterValues(
