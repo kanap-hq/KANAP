@@ -1,4 +1,4 @@
-import { catalogRefusalForModel } from './ai-catalog-refusal';
+import { catalogRefusalForModel, hasPreviewCatalogCodes, previewCatalogNamesForModel } from './ai-catalog-refusal';
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { describeZodIssues, invalidInputMessage } from './control-plane/dispatcher/ai-input-validation.util';
 import { legacyFlattenError } from '../common/zod-error';
@@ -1202,6 +1202,16 @@ export class AiToolRegistry {
     return unknownValues.length > 0 && named && typeof named === 'object' && !Array.isArray(named)
       ? { ...(named as Record<string, unknown>), filter_values_unknown: unknownValues }
       : named;
+  }
+
+  /**
+   * A tool result as the model reads it: the catalog codes a preview's card shows reach it by their
+   * names (`previewCatalogNamesForModel`); the user's card keeps them. Any other result as it is.
+   */
+  async resultForModel(context: AiExecutionContextWithManager, result: unknown): Promise<unknown> {
+    return hasPreviewCatalogCodes(result)
+      ? previewCatalogNamesForModel(result, await this.codeNamer(context, undefined))
+      : result;
   }
 
   /**

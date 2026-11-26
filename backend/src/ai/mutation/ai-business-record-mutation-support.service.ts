@@ -549,6 +549,22 @@ export function aiBusinessRecordUpdateFields(entityType: AiBusinessRecordEntityT
   return Object.entries(ENTITY_CONFIG[entityType].fields).filter(([, field]) => !field.createOnly && !field.writesAs).map(([name]) => name);
 }
 
+/**
+ * The tenant's catalog a field of the family writes by code (rule P7), whose card shows the code for
+ * the frontend to name: null for any other field.
+ */
+export function aiBusinessRecordCatalogList(entityType: unknown, fieldName: string): { list: string; many: boolean } | null {
+  const config = ENTITY_CONFIG[String(entityType || '') as AiBusinessRecordEntityType];
+  const field = config && Object.prototype.hasOwnProperty.call(config.fields, fieldName) ? config.fields[fieldName] : null;
+  if (!field) return null;
+  if ((field.kind === 'it_catalog' || field.kind === 'it_catalog_list') && field.itCatalog) {
+    return { list: field.itCatalog, many: field.kind === 'it_catalog_list' };
+  }
+  if (field.kind === 'application_category') return { list: 'applicationCategories', many: false };
+  if (field.kind === 'incident_category') return { list: 'incidentCategories', many: false };
+  return null;
+}
+
 export const AI_BUSINESS_RECORD_BUSINESS_RESOURCES = Array.from(
   new Set(AI_BUSINESS_RECORD_ENTITY_TYPES.map((entityType) => ENTITY_CONFIG[entityType].businessResource)),
 );

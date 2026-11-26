@@ -3,7 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { normalizeServerRole } from '../../app-asset-assignments/cluster-assignment-rules';
 import { catalogValueRefusal, resolveOfferedCatalogCode } from '../../it-ops-settings/catalog-resolve';
 import { AiCodeNamer } from '../ai-code-names';
-import { catalogRefusalForModel } from '../ai-catalog-refusal';
+import { catalogRefusalForModel, previewCatalogNamesForModel } from '../ai-catalog-refusal';
 
 // Lot K2c (rejeu du pilote): a refusal of a catalog value reaches the model with the names the
 // screen's selector shows, in the person's language, without codes (rule of lot K2d: Plaid names
@@ -84,5 +84,38 @@ assert.equal((catalogRefusalForModel(incident, categoryNamer)!.getResponse() as 
 // Any other error passes as it is.
 assert.equal(catalogRefusalForModel(new BadRequestException('Body is required'), namer), null);
 assert.equal(catalogRefusalForModel(new Error('boom'), namer), null);
+
+// A preview Kad prepared (rejeu du pilote): the card keeps the code, the model reads the name.
+const connectionTypes = [
+  { code: 'ipsec', label: 'IPSec' },
+  { code: 'zabbix', label: 'Zabbix agent', translations: { fr: { label: 'Agent Zabbix' } } },
+  { code: 'https', label: 'HTTPS' },
+];
+const previewNamer = new AiCodeNamer('fr', { connectionTypes, applicationCategories: [{ code: 'erp', label: 'ERP suite', translations: { fr: { label: 'Progiciel de gestion' } } }] } as any);
+const preview = {
+  preview_id: 'p1',
+  tool_name: 'update_business_record',
+  status: 'pending',
+  target: { entity_type: 'connections', id: 'c1', label: 'VPN Paris-NYC' },
+  changes: {
+    protocol_codes: { label: 'Protocol Codes', from: 'ipsec', to: 'zabbix', format: 'text' },
+    name: { label: 'Name', from: 'VPN', to: 'zabbix', format: 'text' },
+  },
+};
+const card = JSON.parse(JSON.stringify(preview));
+const read = previewCatalogNamesForModel({ previews: [preview], message: 'ok' }, previewNamer) as any;
+assert.equal(read.previews[0].changes.protocol_codes.from, 'IPSec');
+assert.equal(read.previews[0].changes.protocol_codes.to, 'Agent Zabbix');
+assert.equal(read.previews[0].changes.name.to, 'zabbix', 'a field outside the catalogs stays as typed');
+assert.equal(read.message, 'ok');
+assert.deepEqual(preview, card, 'the card keeps the codes');
+// A list of values, a single preview, an application category, a code the catalog does not name.
+const many = previewCatalogNamesForModel({ ...preview, changes: { protocol_codes: { label: 'Protocol Codes', from: null, to: 'zabbix, https, legacy' } } }, previewNamer) as any;
+assert.equal(many.changes.protocol_codes.to, 'Agent Zabbix, HTTPS, legacy');
+const category = previewCatalogNamesForModel({ results: [{ ...preview, target: { entity_type: 'applications' }, changes: { category: { label: 'Category', from: null, to: 'erp' } } }] }, previewNamer) as any;
+assert.equal(category.results[0].changes.category.to, 'Progiciel de gestion');
+// Any other result is the same object.
+const other = { items: [{ code: 'zabbix' }] };
+assert.equal(previewCatalogNamesForModel(other, previewNamer), other);
 
 console.log('ai-catalog-refusal.spec.ts passed');
