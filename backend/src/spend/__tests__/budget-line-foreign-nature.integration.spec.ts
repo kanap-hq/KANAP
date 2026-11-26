@@ -686,7 +686,9 @@ async function testAi() {
     // Replacing an application's budget lines is one relation now: a line left out of the set goes,
     // whichever nature it has.
     const kept = await inSavepoint(runner, async () => {
-      await rel.replaceSimpleRelation(context, appBudgetLines, w.applicationId, [
+      // From the links compared with the card (K2f): the stored ones.
+      const compared = await rel.loadRelationItems(context, appBudgetLines, w.applicationId);
+      await rel.replaceSimpleRelation(context, appBudgetLines, w.applicationId, compared, [
         { key: w.opex.id, label: 'OPEX line', payload: { spend_item_id: w.opex.id } },
       ]);
       return (await runner.query(`SELECT spend_item_id FROM application_spend_items WHERE tenant_id = $1 AND application_id = $2`, [w.tenantId, w.applicationId]))

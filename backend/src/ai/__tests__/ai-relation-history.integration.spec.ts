@@ -847,6 +847,7 @@ function activityShape(rows: ActivityRow[], name: Namer) {
 const LINKED_END_TABLES = new Set([
   'application_projects', 'asset_projects', 'portfolio_project_opex', 'portfolio_project_capex',
   'application_spend_items', 'application_capex_items', 'portfolio_request_opex', 'portfolio_request_capex',
+  'portfolio_request_applications', 'portfolio_request_assets',
 ]);
 
 /** The ids of a stored link set (a list, or `{ ids }`), or null for another value. */

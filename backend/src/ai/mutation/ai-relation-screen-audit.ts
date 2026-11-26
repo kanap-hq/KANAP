@@ -41,7 +41,12 @@ type TraceContext = { manager: EntityManager; tenantId: string; userId: string |
 
 type ScreenTrace = {
   read: (context: TraceContext, sourceId: string) => Promise<unknown>;
-  log: (context: TraceContext, audit: AuditService, source: AiMutationAuditOptions, sourceId: string, before: unknown) => Promise<void>;
+  /**
+   * `written`: the target ids the writer really wrote, when it says so (a simple relation): the
+   * trace writes its steps for those only, so a link another gesture posted meanwhile is not
+   * written as the assistant's.
+   */
+  log: (context: TraceContext, audit: AuditService, source: AiMutationAuditOptions, sourceId: string, before: unknown, written?: ReadonlySet<string> | null) => Promise<void>;
 };
 
 function sortedIds(rows: Array<{ id: string }>): string[] {
@@ -99,15 +104,16 @@ function toggles(
   };
   return {
     read,
-    log: async (context, audit, source, sourceId, beforeValue) => {
+    log: async (context, audit, source, sourceId, beforeValue, written) => {
       const before = beforeValue as Record<string, string[]>;
       const after = await read(context, sourceId);
+      const wrote = (id: string) => !written || written.has(id.toLowerCase());
       const steps: Array<{ set: ToggleSet; id: string; add: boolean }> = [];
       for (const add of [false, true]) {
         for (const set of sets) {
           const from = new Set(before[set.label]);
           const to = new Set(after[set.label]);
-          const changed = add ? after[set.label].filter((id) => !from.has(id)) : before[set.label].filter((id) => !to.has(id));
+          const changed = (add ? after[set.label].filter((id) => !from.has(id)) : before[set.label].filter((id) => !to.has(id))).filter(wrote);
           for (const id of changed) steps.push({ set, id, add });
         }
       }
@@ -197,9 +203,9 @@ function fromLine(table: string, lineColumn: string, targetColumn: string): Scre
       const nature = await natureOf(context, lineId);
       return { nature, set: await traces.get(nature)!.read(context, lineId) };
     },
-    log: async (context, audit, source, lineId, before) => {
+    log: async (context, audit, source, lineId, before, written) => {
       const { nature, set } = before as { nature: BudgetNature; set: unknown };
-      await traces.get(nature)!.log(context, audit, source, lineId, set);
+      await traces.get(nature)!.log(context, audit, source, lineId, set, written);
     },
   };
 }

@@ -247,7 +247,7 @@ async function main() {
         assert.equal(o.waited, true, 'the request tab waits for the application tab');
         assert.deepEqual(second, { ok: true, changed: false }, 'the request tab wrote nothing');
         assert.equal(await requestLinks(a.id, r), 1, 'one link');
-        assert.equal(await linkAudits('portfolio_request_applications', a.id, r), 1, 'one audit row');
+        assert.equal(await linkAudits('portfolio_request_applications', a.id, r), 2, 'two audit rows by the gesture that wrote: the request and the application');
         // The application tab writes the request's list through the request's own replacement: its
         // activity is the only one.
         assert.equal(await requestActivities(r), 1, 'one activity: the application tab');
@@ -263,7 +263,7 @@ async function main() {
         noDeadlock(o);
         assert.deepEqual(second, { ok: true, changed: false }, 'the application tab wrote nothing');
         assert.equal(await requestLinks(a.id, r), 1, 'one link');
-        assert.equal(await linkAudits('portfolio_request_applications', a.id, r), 1, 'one audit row');
+        assert.equal(await linkAudits('portfolio_request_applications', a.id, r), 2, 'two audit rows by the gesture that wrote: the request and the application');
         assert.equal(await requestActivities(r), 1, 'one activity: the request tab');
       }],
     ];
