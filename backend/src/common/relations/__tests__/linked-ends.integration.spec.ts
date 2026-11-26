@@ -28,7 +28,7 @@ const FULL: Record<string, string> = {
 
 type Rec = { id: string; ref: string; table: string };
 type Expect = { rec: Rec; other: Rec; event: 'added' | 'removed' };
-type Outcome = { ok: boolean; error?: any; waited: boolean };
+type Outcome = { ok: boolean; error?: any; waited: boolean; dates?: Map<string, string> };
 
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for linked-ends.integration.spec.ts.');
@@ -46,6 +46,7 @@ async function main() {
   const { AssetRelationsTabService } = require('../../../assets/asset-relations-tab.service');
   const { AssetsService } = require('../../../assets/services/assets.service');
   const { BudgetLinesService } = require('../../../spend/budget-lines.service');
+  const { AiRelationMutationSupportService } = require('../../../ai/mutation/ai-relation-mutation-support.service');
   const { SpendItemsService } = require('../../../spend/spend-items.service');
   const { purgeTenantTables } = require('../../../admin/tenants/tenant-data-purge');
   const { TENANT_PURGE_TABLES } = require('../../../admin/tenants/tenant-purge.inventory');
@@ -64,6 +65,7 @@ async function main() {
   const assets = app.get(AssetsService);
   const lines = app.get(BudgetLinesService);
   const opexItems = app.get(SpendItemsService);
+  const support = app.get(AiRelationMutationSupportService, { strict: false });
   const tenantId = randomUUID();
   const otherTenantId = randomUUID();
   const failures: string[] = [];
@@ -123,7 +125,7 @@ async function main() {
     const request = async (status = 'approved'): Promise<Rec> => {
       n += 1;
       const rid = await inTenant((m) => id(m, `INSERT INTO portfolio_requests (tenant_id, item_number, name, status) VALUES ($1, $2, $3, $4)`, [tenantId, 1000 + n, `Demande ${n}`, status]));
-      return { id: rid, ref: `REQ-${n}`, table: 'portfolio_requests' };
+      return { id: rid, ref: `REQ-${1000 + n}`, table: 'portfolio_requests' };
     };
     const asset = async (): Promise<Rec> => {
       n += 1;
@@ -151,6 +153,29 @@ async function main() {
       `SELECT updated_at::text AS d FROM ${rec.table} WHERE tenant_id = $1 AND id = $2`, [tenant, rec.id]))[0]?.d), tenant);
     const auditCount = (tenant = tenantId) => inTenant(async (m) => Number((await m.query(
       `SELECT count(*)::int AS n FROM audit_log WHERE tenant_id = $1`, [tenant]))[0].n), tenant);
+
+    /** An older date, so that a dating in the same second shows. */
+    const age = (rec: Rec) => inTenant((m) => m.query(`UPDATE ${rec.table} SET updated_at = now() - interval '1 day' WHERE tenant_id = $1 AND id = $2`, [tenantId, rec.id]));
+    const linkCount = (table: string, a: string, aId: string, b: string, bId: string) => inTenant(async (m) => Number((await m.query(
+      `SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1 AND ${a} = $2 AND ${b} = $3`, [tenantId, aId, bId]))[0].n));
+    /** The assistant's approval runs `meanwhile` (another connection) between its comparison and its write. */
+    const original = (support as any).replaceRelationItems;
+    const approveWith = async (input: Record<string, unknown>, meanwhile: () => Promise<unknown>): Promise<string> => {
+      let hook: null | (() => Promise<unknown>) = meanwhile;
+      (support as any).replaceRelationItems = async function (...args: unknown[]) {
+        if (hook) { const run = hook; hook = null; await run(); }
+        return original.apply(this, args);
+      };
+      try {
+        return await inTenant(async (m) => {
+          const preview = await previews.createPreview(kadCtx(m), 'update_entity_relations', input);
+          const executed = await previews.executePreview(kadCtx(m), preview.preview_id);
+          return `${executed.status} ${executed.error_message ?? ''}`;
+        });
+      } finally {
+        (support as any).replaceRelationItems = original;
+      }
+    };
 
     const projCtx = (m: EntityManager) => ({ manager: m, tenantId, userId: writer, access: { budget_lines: true, applications: true, assets: true, technologies: true, source_requests: true } });
     const owner = (rec: Rec) => async () => ({ id: rec.id, tenantId });
@@ -330,7 +355,9 @@ async function main() {
     ];
 
     // Two connections: `first` holds its transaction while `second` starts.
-    const race = async (first: (m: EntityManager) => Promise<unknown>, second: (m: EntityManager) => Promise<unknown>): Promise<Outcome> => {
+    const race = async (first: (m: EntityManager) => Promise<unknown>, second: (m: EntityManager) => Promise<unknown>, recs: Rec[]): Promise<Outcome> => {
+      for (const rec of recs) await age(rec);
+      const dates = new Map(await Promise.all(recs.map(async (rec) => [rec.id, await dateOf(rec)] as [string, string])));
       let settled = false;
       let waited = false;
       let other: Promise<{ ok: boolean; error?: any }> | null = null;
@@ -342,54 +369,147 @@ async function main() {
         waited = !settled;
       });
       const outcome = await (other as unknown as Promise<{ ok: boolean; error?: any }>);
-      return { ...outcome, waited };
+      return { ...outcome, waited, dates };
     };
-    const linkCount = (table: string, a: string, aId: string, b: string, bId: string) => inTenant(async (m) => Number((await m.query(
-      `SELECT count(*)::int AS n FROM ${table} WHERE tenant_id = $1 AND ${a} = $2 AND ${b} = $3`, [tenantId, aId, bId]))[0].n));
-    /** Both records show the link once, whoever wrote it. */
+    /** Both records show the link once, whoever wrote it, and both are dated. */
     const once = async (o: Outcome, pairs: Array<[Rec, Rec]>) => {
       assert.notEqual(o.error?.code, '40P01', 'no deadlock');
       assert.equal(o.ok, true, `the second gesture answers (${o.error?.message ?? ''})`);
       for (const [rec, other] of pairs) {
         assert.equal((await entries(rec, other, 'added')).length, 1, `${rec.ref}: one entry "${other.ref} added"`);
+        assert.notEqual(await dateOf(rec), o.dates?.get(rec.id), `${rec.ref}: its modification date moves`);
       }
     };
     cells.push(
       ['race: the application tab and the project tab link the same pair at once', async () => {
         const p = await project(); const a = await application();
-        const o = await race((m) => appTabs.setLink('projects', a.id, p.id, true, appCtx(m)), (m) => portfolio.setProjectLink('applications', a.id, true, projCtx(m), owner(p)));
+        const o = await race((m) => appTabs.setLink('projects', a.id, p.id, true, appCtx(m)), (m) => portfolio.setProjectLink('applications', a.id, true, projCtx(m), owner(p)), [p, a]);
         await once(o, [[p, a], [a, p]]);
         assert.equal(await linkCount('application_projects', 'application_id', a.id, 'project_id', p.id), 1, 'one link');
       }],
       ['race: the project tab, then the application tab, link the same pair', async () => {
         const p = await project(); const a = await application();
-        const o = await race((m) => portfolio.setProjectLink('applications', a.id, true, projCtx(m), owner(p)), (m) => appTabs.setLink('projects', a.id, p.id, true, appCtx(m)));
+        const o = await race((m) => portfolio.setProjectLink('applications', a.id, true, projCtx(m), owner(p)), (m) => appTabs.setLink('projects', a.id, p.id, true, appCtx(m)), [p, a]);
         await once(o, [[p, a], [a, p]]);
       }],
       ['race: an application bulk replacement crosses a link added from the project', async () => {
         const p1 = await project(); const p2 = await project(); const a = await application();
-        const o = await race((m) => apps.bulkReplaceProjects(a.id, [p1.id, p2.id], writer, { manager: m }), (m) => portfolio.setProjectLink('applications', a.id, true, projCtx(m), owner(p1)));
+        const o = await race((m) => apps.bulkReplaceProjects(a.id, [p1.id, p2.id], writer, { manager: m }), (m) => portfolio.setProjectLink('applications', a.id, true, projCtx(m), owner(p1)), [p1, a, p2]);
         await once(o, [[p1, a], [p2, a], [a, p1], [a, p2]]);
       }],
       ['race: a link added from the project crosses an application bulk replacement', async () => {
         const p1 = await project(); const p2 = await project(); const a = await application();
-        const o = await race((m) => portfolio.setProjectLink('applications', a.id, true, projCtx(m), owner(p1)), (m) => apps.bulkReplaceProjects(a.id, [p1.id, p2.id], writer, { manager: m }));
+        const o = await race((m) => portfolio.setProjectLink('applications', a.id, true, projCtx(m), owner(p1)), (m) => apps.bulkReplaceProjects(a.id, [p1.id, p2.id], writer, { manager: m }), [p1, a, p2]);
         await once(o, [[p1, a], [p2, a], [a, p1], [a, p2]]);
       }],
       ['race: a project bulk replacement crosses a link added from the asset', async () => {
         const p = await project(); const s1 = await asset(); const s2 = await asset();
-        const o = await race((m) => projects.bulkReplaceLinkedAssets(p.id, [s1.id, s2.id], { manager: m, userId: writer }), (m) => assetTab.setLink('projects', s1.id, p.id, true, assetCtx(m)));
+        const o = await race((m) => projects.bulkReplaceLinkedAssets(p.id, [s1.id, s2.id], { manager: m, userId: writer }), (m) => assetTab.setLink('projects', s1.id, p.id, true, assetCtx(m)), [p, s1, s2]);
         await once(o, [[p, s1], [p, s2], [s1, p], [s2, p]]);
       }],
       ['race: the line tab and the project tab link the same pair at once', async () => {
         const p = await project(); const l = await line();
-        const o = await race((m) => lines.setRelation('projects', l.id, p.id, true, lineCtx(m)), (m) => portfolio.setProjectLink('budget_lines', l.id, true, projCtx(m), owner(p)));
+        const o = await race((m) => lines.setRelation('projects', l.id, p.id, true, lineCtx(m)), (m) => portfolio.setProjectLink('budget_lines', l.id, true, projCtx(m), owner(p)), [p, l]);
         await once(o, [[p, l], [l, p]]);
       }],
       ['race: the application tab and the line tab link the same pair at once', async () => {
         const a = await application(); const l = await line();
-        const o = await race((m) => appTabs.setLink('budget_lines', a.id, l.id, true, appCtx(m)), (m) => lines.setRelation('applications', l.id, a.id, true, lineCtx(m)));
+        const o = await race((m) => appTabs.setLink('budget_lines', a.id, l.id, true, appCtx(m)), (m) => lines.setRelation('applications', l.id, a.id, true, lineCtx(m)), [a, l]);
         await once(o, [[a, l], [l, a]]);
+      }],
+      // The same link posted from the other end while this gesture holds its record: the other
+      // end's dating skips the record; this gesture, finding the link there, dates it.
+      ['mirror: the application tab posts the link while the project tab holds its project', async () => {
+        const p = await project(); const a = await application();
+        await age(p); await age(a);
+        const before = await dateOf(p);
+        let answer: unknown;
+        await inTenant(async (x) => {
+          await x.query(`SELECT 1 FROM portfolio_projects WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, p.id]);
+          await inTenant((y) => appTabs.setLink('projects', a.id, p.id, true, appCtx(y)));
+          answer = await portfolio.setProjectLink('applications', a.id, true, projCtx(x), owner(p));
+        });
+        assert.deepEqual(answer, { ok: true, changed: false }, 'the project tab writes nothing');
+        assert.equal((await entries(p, a, 'added')).length, 1, 'one entry on the project');
+        assert.notEqual(await dateOf(p), before, 'the project is dated');
+      }],
+      ['mirror: the project tab posts the link while the line tab holds its line', async () => {
+        const p = await project(); const l = await line();
+        await age(l);
+        const before = await dateOf(l);
+        await inTenant(async (x) => {
+          await x.query(`SELECT 1 FROM spend_items WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, l.id]);
+          await inTenant((y) => portfolio.setProjectLink('budget_lines', l.id, true, projCtx(y), owner(p)));
+          await lines.setRelation('projects', l.id, p.id, true, lineCtx(x));
+        });
+        assert.equal((await entries(l, p, 'added')).length, 1, 'one entry on the line');
+        assert.notEqual(await dateOf(l), before, 'the line is dated');
+      }],
+      ['an application bulk replacement keeps a link a project posted after its read', async () => {
+        const p1 = await project(); const p2 = await project(); const p3 = await project(); const a = await application();
+        await inTenant((m) => appTabs.setLink('projects', a.id, p1.id, true, appCtx(m)));
+        let armed = true;
+        await inTenant(async (m) => {
+          const wrapped: any = Object.create(m);
+          wrapped.query = async (sql: string, params?: unknown[]) => {
+            if (armed && /DELETE FROM application_projects/.test(sql)) {
+              armed = false;
+              await inTenant((o) => portfolio.setProjectLink('applications', a.id, true, projCtx(o), owner(p3)));
+            }
+            return m.query(sql, params);
+          };
+          await apps.bulkReplaceProjects(a.id, [p2.id], writer, { manager: wrapped });
+        });
+        assert.equal(armed, false, 'the project posted its link during the replacement');
+        assert.equal(await linkCount('application_projects', 'application_id', a.id, 'project_id', p3.id), 1, 'the link the replacement did not read stays');
+        assert.equal((await entries(a, p3, 'removed')).length + (await entries(p3, a, 'removed')).length, 0, 'no removal anywhere');
+        assert.equal((await entries(a, p1, 'removed')).length, 1, 'the link read is removed');
+      }],
+      ['the assistant and the project tab post the same link: one entry on each record', async () => {
+        const p = await project(); const a = await application();
+        const status = await approveWith({ entity_type: 'applications', ref: a.ref, relation: 'projects', add: [p.ref] },
+          () => inTenant((o) => portfolio.setProjectLink('applications', a.id, true, projCtx(o), owner(p))));
+        assert.match(status, /relation changed after the preview/, `the card is refused (${status})`);
+        for (const [rec, other] of [[a, p], [p, a]] as Array<[Rec, Rec]>) {
+          const found = await entries(rec, other, 'added');
+          assert.deepEqual(found.map((e: any) => e.actor?.kind), ['user'], `${rec.ref}: one entry, by the project tab`);
+        }
+      }],
+      ['the assistant never removes a link its card did not show', async () => {
+        const p1 = await project(); const p2 = await project(); const p3 = await project(); const a = await application();
+        await inTenant((m) => appTabs.setLink('projects', a.id, p1.id, true, appCtx(m)));
+        const status = await approveWith({ entity_type: 'applications', ref: a.ref, relation: 'projects', add: [p2.ref] },
+          () => inTenant((o) => portfolio.setProjectLink('applications', a.id, true, projCtx(o), owner(p3))));
+        assert.match(status, /^executed/, `the card runs (${status})`);
+        assert.equal(await linkCount('application_projects', 'application_id', a.id, 'project_id', p3.id), 1, 'the link posted meanwhile stays');
+        assert.deepEqual((await entries(a, p3, 'added')).map((e: any) => e.actor?.kind), ['user'], 'the application reads it once, by the project tab');
+        assert.deepEqual((await entries(a, p2, 'added')).map((e: any) => e.actor?.kind), ['assistant'], 'and the assistant\'s own link');
+      }],
+      // A request's applications and assets (`portfolio_request_applications`, `portfolio_request_assets`).
+      ['request replacements mark each application and asset, the application tab too', async () => {
+        const r = await request(); const a1 = await application(); const a2 = await application(); const s = await asset();
+        await marked((m) => requests.bulkReplaceApplications(r.id, [a1.id], { manager: m, userId: writer }), [{ rec: a1, other: r, event: 'added' }, { rec: r, other: a1, event: 'added' }]);
+        await marked((m) => appTabs.setLink('requests', a2.id, r.id, true, appCtx(m)), [{ rec: a2, other: r, event: 'added' }, { rec: r, other: a2, event: 'added' }]);
+        await marked((m) => requests.bulkReplaceApplications(r.id, [a2.id], { manager: m, userId: writer }), [{ rec: a1, other: r, event: 'removed' }]);
+        await marked((m) => requests.bulkReplaceAssets(r.id, [s.id.toUpperCase()], { manager: m, userId: writer }), [{ rec: s, other: r, event: 'added' }, { rec: r, other: s, event: 'added' }]);
+        await unchanged((m) => requests.bulkReplaceAssets(r.id, [s.id, s.id.toUpperCase()], { manager: m, userId: writer }), [s, r]);
+      }],
+      ['the assistant links an application to a request', async () => {
+        const r = await request(); const a = await application();
+        await marked(kad({ entity_type: 'requests', ref: r.ref, relation: 'applications', add: [a.ref] }), [{ rec: a, other: r, event: 'added' }, { rec: r, other: a, event: 'added' }], 'assistant');
+      }],
+      ['a project bulk replacement reads an upper-case asset id as the stored one', async () => {
+        const p = await project(); const s = await asset();
+        await marked((m) => projects.bulkReplaceLinkedAssets(p.id, [s.id.toUpperCase(), s.id], { manager: m, userId: writer }), [{ rec: s, other: p, event: 'added' }, { rec: p, other: s, event: 'added' }]);
+        await unchanged((m) => projects.bulkReplaceLinkedAssets(p.id, [s.id.toUpperCase()], { manager: m, userId: writer }), [s, p]);
+      }],
+      ['a new version of an application marks each budget line it copies', async () => {
+        const a = await application(); const l1 = await line(); const c = await line('capex');
+        await inTenant((m) => apps.bulkReplaceLinkedSpendItems(a.id, [l1.id], writer, { manager: m }));
+        await inTenant((m) => apps.bulkReplaceLinkedCapexItems(a.id, [c.id], writer, { manager: m }));
+        const copy: any = await inTenant((m) => apps.createVersion(a.id, { name: `${a.ref} v2`, copyOwners: false }, writer, { manager: m }));
+        const v2: Rec = { id: copy.id, ref: 'the new version', table: 'applications' };
+        for (const l of [l1, c]) assert.equal((await entries(l, v2, 'added')).length, 1, `${l.ref}: one entry "new version added"`);
       }],
     );
 

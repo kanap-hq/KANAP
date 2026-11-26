@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { markLinkedEnds, type LinkedEnd, type LinkedTable } from '../common/relations/linked-ends';
 import { ItemNumberService } from '../common/item-number.service';
 import { EDIT_CONFLICT_CODE } from '../common/edit-conflicts';
 import { deriveStatusFromDisabledAt, isActiveAt, parseEndOfValidityInput } from '../common/status';
@@ -194,6 +195,13 @@ const COPIED_LINKS: ReadonlyArray<{ table: string; key: string; owner: string; c
   { table: 'contract_spend_items', key: 'contracts', owner: 'spend_item_id', columns: ['contract_id'], target: 'contracts', name: 'o.name', scope: ` AND EXISTS (SELECT 1 FROM contracts c WHERE c.tenant_id = $1 AND c.id = contract_spend_items.contract_id)` },
   { table: 'portfolio_project_opex', key: 'projects', owner: 'opex_id', columns: ['project_id'], target: 'portfolio_projects', name: `'PRJ-' || o.item_number || ': ' || o.name` },
   { table: 'portfolio_request_opex', key: 'requests', owner: 'opex_id', columns: ['request_id'], target: 'portfolio_requests', name: `'REQ-' || o.item_number || ': ' || o.name` },
+];
+
+/** The copied families whose other record reads the link in its History too. */
+const COPIED_LINKED_ENDS: ReadonlyArray<readonly [string, LinkedTable, LinkedEnd]> = [
+  ['projects', 'portfolio_project_opex', 'project'],
+  ['applications', 'application_spend_items', 'application'],
+  ['requests', 'portfolio_request_opex', 'request'],
 ];
 
 /** What a dated change copied, per family, as its audit row records it: how many, and which. */
@@ -576,6 +584,13 @@ export class BudgetLineTypeChangeService {
       },
       userId,
     }, { manager });
+    // The projects, applications and requests the new line is linked to read it in their History
+    // too, each from the links this change really copied (`common/relations/linked-ends.ts`).
+    for (const [key, table, end] of COPIED_LINKED_ENDS) {
+      const added = copied[key]?.items.map((item) => item.id) ?? [];
+      if (added.length === 0) continue;
+      await markLinkedEnds({ manager, audit: this.audit, table, end, from: newId, tenantId, written: { added, removed: [] }, userId });
+    }
     return { id: newId, reference: budgetLineReference(newLine.item_number), nature: target, predecessor_id: line.id };
   }
 

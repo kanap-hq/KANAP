@@ -1894,6 +1894,11 @@ export class PortfolioRequestsService {
         source: opts?.audit?.source,
         sourceRef: opts?.audit?.sourceRef,
       }, { manager: mg });
+      // The other end: each application the set gained or lost (`common/relations/linked-ends.ts`).
+      await markLinkedEnds({
+        manager: mg, audit: this.audit, table: 'portfolio_request_applications', end: 'application', from: requestId, tenantId: request.tenant_id,
+        written, userId: actorId, source: opts?.audit,
+      });
     }
 
     return { ok: true, count: unique.length, added: written.added.length, removed: written.removed.length };
@@ -1928,7 +1933,8 @@ export class PortfolioRequestsService {
     const actorId = this.requireActivityAuthor(opts?.userId);
     const request = await this.getRequestOrThrow(requestId, mg);
 
-    const unique = Array.from(new Set((assetIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
+    // Stored ids are lower case: an upper-case id names the same asset (as for the applications).
+    const unique = Array.from(new Set((assetIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean)));
     if (unique.length > 0) {
       const rows = await mg.query<Array<{ id: string }>>(
         `SELECT id
@@ -1980,6 +1986,11 @@ export class PortfolioRequestsService {
         source: opts?.audit?.source,
         sourceRef: opts?.audit?.sourceRef,
       }, { manager: mg });
+      // The other end: each asset the set gained or lost (`common/relations/linked-ends.ts`).
+      await markLinkedEnds({
+        manager: mg, audit: this.audit, table: 'portfolio_request_assets', end: 'asset', from: requestId, tenantId: request.tenant_id,
+        written, userId: actorId, source: opts?.audit,
+      });
     }
 
     return { ok: true, count: unique.length, added: written.added.length, removed: written.removed.length };

@@ -127,6 +127,17 @@ async function testFromYear() {
     assert.equal(result.predecessor_id, line.id);
     const newId = result.id as string;
     assert.notEqual(newId, line.id, 'a new line');
+    // The project, the application and the request the new line is linked to read it in their
+    // History too, under the label of its nature (K2f, `common/relations/linked-ends.ts`).
+    const marks: Array<{ table_name: string; record_id: string; after_json: unknown }> = await runner.query(
+      `SELECT table_name, record_id::text AS record_id, after_json FROM audit_log WHERE tenant_id = $1 AND record_id = ANY($2::uuid[]) ORDER BY table_name`,
+      [tenantId, [w.projectId, w.applicationId, w.requestId]],
+    );
+    assert.deepEqual(
+      marks.map((row) => [row.table_name, row.record_id, JSON.stringify(row.after_json).includes(newId)]),
+      [['application_capex_items', w.applicationId, true], ['portfolio_project_capex', w.projectId, true], ['portfolio_request_capex', w.requestId, true]],
+      'one row on each record the new line is linked to',
+    );
 
     // The old line: 2025 only, ended on 31 December 2025, its own children kept.
     const old = (await storedLine(runner, tenantId, line.id))!;
