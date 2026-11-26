@@ -2011,7 +2011,12 @@ export class AiBusinessRecordMutationSupportService {
     }
     const requestedFieldNames = Object.keys(normalized.fields);
     const currentValues = this.pickFieldValues(entityType, target.row, requestedFieldNames);
-    const changedFieldNames = requestedFieldNames.filter((fieldName) => !sameValue(currentValues[fieldName], normalized.fields[fieldName]));
+    // An operating system is compared by what the server will hold, the label its text resolves to
+    // ("Debian 12" on a server with "Debian 12 (Bookworm)" changes nothing).
+    const requested = (fieldName: string) => (entityType === 'assets' && fieldName === 'operating_system'
+      ? normalized.displayValues[fieldName]
+      : normalized.fields[fieldName]);
+    const changedFieldNames = requestedFieldNames.filter((fieldName) => !sameValue(currentValues[fieldName], requested(fieldName)));
     if (changedFieldNames.length === 0) {
       throw new BadRequestException(`${this.getConfig(entityType).labelSingular} already has the requested values.`);
     }

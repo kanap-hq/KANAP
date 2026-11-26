@@ -242,6 +242,13 @@ async function testOperatingSystem(harness: Harness) {
     };
     // 1. A known version: the catalog's label.
     await written('Debian 12', 'Debian 12 (Bookworm)');
+    // What the server already holds, typed another way, is no change: no card, nothing written.
+    await refused(
+      () => card(harness, ctx, 'update_business_record', { entity_type: 'assets', ref: server, fields: { operating_system: 'Debian 12' } }),
+      /already has the requested values/,
+    );
+    const unchanged = await card(harness, ctx, 'update_business_record', { entity_type: 'assets', ref: server, fields: { operating_system: 'debian 12', name: 'srv-os-2' } });
+    assert.deepEqual(Object.keys(unchanged.changes), ['name'], 'the operating system is no line of the card');
     // 2. No known system: the write creates the technology and its version, as typed.
     await written('Zorglub OS 3', 'Zorglub OS 3');
     // 3. A name alone, several versions: the write picks none, the technology without a version.
