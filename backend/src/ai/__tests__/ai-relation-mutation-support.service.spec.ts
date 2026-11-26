@@ -186,7 +186,7 @@ async function runRelation(input: {
         return lineLinked && /nature = 'opex'/.test(text) ? [{ id: LINE_ID }] : [];
       }
       if (/FROM\s+users\b|FROM\s+user_roles\b|assigned_roles/.test(text)) return [];
-      if (/FOR NO KEY UPDATE/.test(text)) return [{ ok: 1 }];
+      if (/FOR NO KEY UPDATE/.test(text)) return [{ ok: 1, locked_at: '2026-01-01 00:00:00+00' }];
       if (/SELECT DISTINCT nature FROM spend_items/.test(text)) return [{ nature: 'opex' }];
       if (/SELECT \* FROM spend_items/.test(text)) {
         return [{ id: LINE_ID, item_number: 7, product_name: 'Licences', nature: 'opex' }];
