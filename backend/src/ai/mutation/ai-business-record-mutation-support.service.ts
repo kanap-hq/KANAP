@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { PRODUCT_NAME } from '../../config/product';
@@ -14,6 +14,7 @@ import { ContractsService } from '../../contracts/contracts.service';
 import { InterfacesService } from '../../interfaces/services/interfaces.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { TechnologyCatalogService } from '../../technologies/catalog/technology-catalog.service';
+import { OperatingSystemService } from '../../technologies/operating-system.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
 import { catalogValueRefusal, findCatalogOption, resolveOfferedCatalogCodes, type CatalogRefusalDetail } from '../../it-ops-settings/catalog-resolve';
 import { withShippedLabels } from '../../it-ops-settings/catalog-shipped-labels';
@@ -726,6 +727,7 @@ export class AiBusinessRecordMutationSupportService {
     private readonly incidents: IncidentsService,
     private readonly technologies: TechnologiesService,
     private readonly technologyCatalog: TechnologyCatalogService,
+    @Optional() private readonly operatingSystems?: OperatingSystemService,
   ) {}
 
   getBusinessResource(entityType: unknown): string {
@@ -982,6 +984,13 @@ export class AiBusinessRecordMutationSupportService {
     if (field.kind === 'upper3') {
       text = text.toUpperCase();
       if (text.length !== 3) throw new BadRequestException(`${field.label} must be 3 letters.`);
+    }
+    if (entityType === 'assets' && fieldName === 'operating_system' && this.operatingSystems) {
+      // The card shows what the server will hold ("Debian 12 (Bookworm)" for "Debian 12"): the
+      // preview of the resolution the write runs (`OperatingSystemService.resolve`, with create),
+      // writing nothing. The write still resolves the text as typed.
+      const shown = await this.operatingSystems.preview(context.manager, context.tenantId, text);
+      return { value: text, displayValue: shown?.label ?? text };
     }
     return { value: text, displayValue: text };
   }

@@ -232,6 +232,20 @@ async function testOperatingSystem(harness: Harness) {
     await approve(harness, ctx, preview);
     const snapshot = await harness.support.getRecordSnapshot(ctx, 'assets', server);
     assert.match(String(snapshot.operating_system), /Windows Server 2022/);
+
+    // The card shows what the server will hold, as the write resolves the text (rejeu du pilote, K2c).
+    const written = async (typed: string, shown: string) => {
+      const os = await card(harness, ctx, 'update_business_record', { entity_type: 'assets', ref: server, fields: { operating_system: typed } });
+      assert.equal(os.changes.operating_system.to, shown, `the card of "${typed}"`);
+      await approve(harness, ctx, os);
+      assert.equal((await harness.support.getRecordSnapshot(ctx, 'assets', server)).operating_system, shown, `the server after "${typed}"`);
+    };
+    // 1. A known version: the catalog's label.
+    await written('Debian 12', 'Debian 12 (Bookworm)');
+    // 2. No known system: the write creates the technology and its version, as typed.
+    await written('Zorglub OS 3', 'Zorglub OS 3');
+    // 3. A name alone, several versions: the write picks none, the technology without a version.
+    await written('Debian', 'Debian');
   });
 }
 
