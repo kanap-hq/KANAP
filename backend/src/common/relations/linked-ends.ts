@@ -1,5 +1,6 @@
 import type { EntityManager } from 'typeorm';
 import { touchUpdatedAt } from '../updated-at-trigger';
+import { recordsToDate } from '../../audit/record-dating';
 import type { AuditService, AuditSourceOptions } from '../../audit/audit.service';
 import { auditedLinkSet, hiddenLineCounts, type HiddenLineOwner } from '../../data-access/hidden-links';
 import { auditTableOf, BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
@@ -34,8 +35,9 @@ import { auditTableOf, BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNatu
  * of the link table decides), the other writes nothing, so neither record gets a second entry, and
  * no gesture waits on a lock taken without waiting: there is no deadlock.
  * When the other end is held by a gesture posted from it, the dating skips it: that gesture, once
- * its own write found nothing to do, dates its record when an entry of its History is newer than
- * its date (`dateRecordMarkedMeanwhile`), so in both orders the two records end dated. A record
+ * its own write found nothing to do, dates its record when an entry of its History was written
+ * since it took the lock (`dateRecordMarkedMeanwhile`), so in both orders the two records end
+ * dated. A record
  * held otherwise at that instant (saved without a change, a budget operation holding its lines)
  * keeps its date, the gap `doc/architecture.md` accepts for the dating.
  * `__tests__/linked-ends.integration.spec.ts` races them.
@@ -93,24 +95,34 @@ const END_TABLES: Record<LinkedEnd, string> = {
 /**
  * Called by a gesture that holds the lock of the record it was posted from and wrote no link: a
  * gesture from the other end may have marked that record meanwhile, its dating skipping the row this
- * lock held. The record is dated when an entry of its History (its own row, or one naming it as
- * parent) is newer than its date and was written after the record's row: by a later transaction
- * (`age(xmin)`, the entries of the transaction that dated the record are always a little newer
- * than its date, which is that transaction's start). Otherwise nothing is written, as for any save
- * without a change.
+ * lock held. `lockedAt` is the instant that lock was held (`withLockedAt`, `locked-at.ts`): the
+ * window in which a dating skipped the record because of it. The record is dated when an entry of
+ * its History (its own row, or one naming it as parent) was written since that instant, is newer
+ * than its date, and is one the History shows as a change (the filter of the dating,
+ * `recordsToDate`). An entry written before the lock was dated by its writer (or skipped by another
+ * holder, the accepted gap); a record saved unchanged writes nothing.
  */
-export async function dateRecordMarkedMeanwhile(manager: EntityManager, end: LinkedEnd, tenantId: string, id: string): Promise<void> {
+export async function dateRecordMarkedMeanwhile(manager: EntityManager, end: LinkedEnd, tenantId: string, id: string, lockedAt: string): Promise<void> {
   const table = END_TABLES[end];
-  const marked: unknown[] = await manager.query(
-    `SELECT 1 FROM ${table} r
+  const rows: Array<{ table_name: string; record_id: string | null; action: string; before: unknown; after: unknown; parent_table: string | null; parent_id: string | null }> = await manager.query(
+    `SELECT a.table_name, a.record_id::text AS record_id, a.action, a.before_json AS before, a.after_json AS after,
+            a.parent_table, a.parent_id::text AS parent_id
+       FROM ${table} r
+       JOIN audit_log a ON a.tenant_id = r.tenant_id
       WHERE r.tenant_id = $1 AND r.id = $2
-        AND EXISTS (SELECT 1 FROM audit_log a
-                     WHERE a.tenant_id = r.tenant_id AND a.created_at > r.updated_at
-                       AND age(a.xmin) < age(r.xmin)
-                       AND (a.record_id = r.id OR (a.parent_table = $3 AND a.parent_id = r.id)))`,
-    [tenantId, id, table],
+        AND a.created_at >= $4::timestamptz AND a.created_at > r.updated_at
+        AND (a.record_id = r.id OR (a.parent_table = $3 AND a.parent_id = r.id))`,
+    [tenantId, id, table, lockedAt],
   );
-  if (marked.length > 0) await touchUpdatedAt(manager, table, id);
+  const shown = recordsToDate(rows.map((row) => ({
+    table: row.table_name,
+    recordId: row.record_id,
+    action: row.action,
+    before: row.before,
+    after: row.after,
+    parent: row.parent_table && row.parent_id ? { table: row.parent_table, id: row.parent_id } : null,
+  })));
+  if (shown.get(table)?.includes(id.toLowerCase())) await touchUpdatedAt(manager, table, id);
 }
 
 /** The end of `table` stored in `column`'s record, for a writer that knows only its own column. */

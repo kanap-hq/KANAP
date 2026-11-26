@@ -971,7 +971,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     // Two saves of the project's lines take turns (the last one wins) and the set is read
     // under the lock; a link the line side stored meanwhile is kept, never a unique
     // violation. See project-budget-links.util.ts.
-    if (!(await lockProject(mg, project.tenant_id, projectId))) throw new NotFoundException('Project not found');
+    const lockedAt = await lockProject(mg, project.tenant_id, projectId);
+    if (!lockedAt) throw new NotFoundException('Project not found');
     // The project's links to CAPEX lines only (one table with the OPEX ones since lot Z1,
     // `spend/budget-nature.ts`): a link to an OPEX line is neither replaced nor removed. Every id
     // given names a CAPEX line of the tenant, or the request is refused before anything is written.
@@ -1012,7 +1013,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     } else {
       // Nothing written: a line may have posted a link meanwhile, its dating skipping the project this
       // replacement held (`common/relations/linked-ends.ts`).
-      await dateRecordMarkedMeanwhile(mg, 'project', project.tenant_id, projectId);
+      await dateRecordMarkedMeanwhile(mg, 'project', project.tenant_id, projectId, lockedAt);
     }
 
     return { ok: true, added: written.added.length, removed: written.removed.length };
@@ -1036,7 +1037,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     // Two saves of the project's lines take turns (the last one wins) and the set is read
     // under the lock; a link the line side stored meanwhile is kept, never a unique
     // violation. See project-budget-links.util.ts.
-    if (!(await lockProject(mg, project.tenant_id, projectId))) throw new NotFoundException('Project not found');
+    const lockedAt = await lockProject(mg, project.tenant_id, projectId);
+    if (!lockedAt) throw new NotFoundException('Project not found');
     // The project's links to OPEX lines only (`spend/budget-nature.ts`): a link to a line of another
     // nature is neither replaced nor removed. Every id given names an OPEX line of the tenant, or
     // the request is refused before anything is written.
@@ -1077,7 +1079,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     } else {
       // Nothing written: a line may have posted a link meanwhile, its dating skipping the project this
       // replacement held (`common/relations/linked-ends.ts`).
-      await dateRecordMarkedMeanwhile(mg, 'project', project.tenant_id, projectId);
+      await dateRecordMarkedMeanwhile(mg, 'project', project.tenant_id, projectId, lockedAt);
     }
 
     return { ok: true, added: written.added.length, removed: written.removed.length };

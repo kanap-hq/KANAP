@@ -250,7 +250,8 @@ export class PortfolioRelationsService {
     const id = parseTargetId(targetId);
     const owner = await loadOwner();
     const mg = ctx.manager;
-    if (!(await lockProject(mg, owner.tenantId, owner.id))) throw new NotFoundException('Project not found');
+    const lockedAt = await lockProject(mg, owner.tenantId, owner.id);
+    if (!lockedAt) throw new NotFoundException('Project not found');
     const opts = { manager: mg, userId: ctx.userId, audit: ctx.audit };
     const result = await (async () => {
       if (kind === 'budget_lines') return this.setProjectBudgetLine(mg, owner.tenantId, owner.id, id, add, opts);
@@ -265,7 +266,7 @@ export class PortfolioRelationsService {
     })();
     // Nothing written: the other end may have posted the link meanwhile, its dating skipping the
     // project this gesture held (`common/relations/linked-ends.ts`).
-    if (!result.changed) await dateRecordMarkedMeanwhile(mg, 'project', owner.tenantId, owner.id);
+    if (!result.changed) await dateRecordMarkedMeanwhile(mg, 'project', owner.tenantId, owner.id, lockedAt);
     return result;
   }
 

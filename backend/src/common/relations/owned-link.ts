@@ -7,6 +7,7 @@ import { assertLinesEditable, DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE, isLimitedT
 import { auditedLinkSet, hiddenLineCount, type HiddenLineOwner } from '../../data-access/hidden-links';
 import type { AuditService } from '../../audit/audit.service';
 import { dateRecordMarkedMeanwhile, linkedEndOf, markLinkedEnds } from './linked-ends';
+import { withLockedAt } from './locked-at';
 import { binder } from './related-objects';
 import { parseTargetId } from './relation-target';
 
@@ -137,8 +138,8 @@ export async function setOwnedLink(args: {
   const id = parseTargetId(args.targetId);
   const loaded = await args.loadOwner();
   const tenantId = loaded.tenantId;
-  const locked: unknown[] = await args.manager.query(
-    `SELECT 1 FROM ${args.owner.table} WHERE tenant_id = $1 AND ${args.owner.idColumn} = $2 FOR NO KEY UPDATE`,
+  const locked: Array<{ locked_at: string }> = await args.manager.query(
+    withLockedAt(`SELECT 1 FROM ${args.owner.table} WHERE tenant_id = $1 AND ${args.owner.idColumn} = $2 FOR NO KEY UPDATE`),
     [tenantId, loaded.id],
   );
   if (locked.length === 0) {
@@ -190,7 +191,7 @@ export async function setOwnedLink(args: {
   // this record, whose lock this gesture held): dated when its History says so (`linked-ends.ts`).
   const ownEnd = linkedEndOf(args.link.table, args.link.ownerColumn)?.end ?? null;
   const unchanged = async (): Promise<{ ok: true; changed: false }> => {
-    if (ownEnd) await dateRecordMarkedMeanwhile(args.manager, ownEnd, tenantId, loaded.id);
+    if (ownEnd) await dateRecordMarkedMeanwhile(args.manager, ownEnd, tenantId, loaded.id, locked[0].locked_at);
     return { ok: true, changed: false };
   };
   if (before.includes(id) === args.add) return unchanged();

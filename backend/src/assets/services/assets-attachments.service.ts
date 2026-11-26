@@ -17,6 +17,7 @@ import { validateUploadedFile } from '../../common/upload-validation';
 import { fixMulterFilename } from '../../common/upload';
 import { replacedLinks } from '../../common/relations/linked-reads';
 import { dateRecordMarkedMeanwhile, markLinkedEnds } from '../../common/relations/linked-ends';
+import { withLockedAt } from '../../common/relations/locked-at';
 import { appliedLinks, writeOwnerLinks, wroteLinks } from '../../portfolio/portfolio-link-writes.util';
 
 /**
@@ -274,8 +275,8 @@ export class AssetsAttachmentsService extends AssetsBaseService {
       });
       if (projects.length !== cleanIds.length) throw new BadRequestException('One or more projects not found');
     }
-    const locked: unknown[] = await mg.query(
-      `SELECT 1 FROM assets WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+    const locked: Array<{ locked_at: string }> = await mg.query(
+      withLockedAt(`SELECT 1 FROM assets WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`),
       [asset.tenant_id, asset.id],
     );
     if (locked.length === 0) throw new NotFoundException('Asset not found');
@@ -306,7 +307,7 @@ export class AssetsAttachmentsService extends AssetsBaseService {
     } else {
       // Nothing written: a project may have posted a link meanwhile, its dating skipping the asset
       // this replacement held (`common/relations/linked-ends.ts`).
-      await dateRecordMarkedMeanwhile(mg, 'asset', asset.tenant_id, asset.id);
+      await dateRecordMarkedMeanwhile(mg, 'asset', asset.tenant_id, asset.id, locked[0].locked_at);
     }
 
     return this.listProjects(assetId, { manager: mg, tenantId: tenant });

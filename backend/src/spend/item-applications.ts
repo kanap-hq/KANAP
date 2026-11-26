@@ -6,6 +6,7 @@ import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from '
 import { assertLinesEditable } from '../data-access/line-write-checks';
 import { replacedLinks } from '../common/relations/linked-reads';
 import { dateRecordMarkedMeanwhile, markLinkedEnds } from '../common/relations/linked-ends';
+import { withLockedAt } from '../common/relations/locked-at';
 import { appliedLinks, wroteLinks } from '../portfolio/portfolio-link-writes.util';
 
 /**
@@ -72,8 +73,8 @@ export async function replaceItemApplications(
   // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
   const nextIds = Array.from(new Set((applicationIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean))).sort();
   if (nextIds.some((id) => !UUID_RE.test(id))) throw new BadRequestException(APPLICATIONS_NOT_FOUND);
-  const locked = await manager.query(
-    `SELECT 1 FROM ${t.items} WHERE tenant_id = $1 AND id = $2${natureAnd(null, t.nature)} FOR NO KEY UPDATE`,
+  const locked: Array<{ locked_at: string }> = await manager.query(
+    withLockedAt(`SELECT 1 FROM ${t.items} WHERE tenant_id = $1 AND id = $2${natureAnd(null, t.nature)} FOR NO KEY UPDATE`),
     [item.tenant_id, item.id],
   );
   if (locked.length === 0) {
@@ -139,7 +140,7 @@ export async function replaceItemApplications(
   } else {
     // Nothing written: an application may have posted a link meanwhile, its dating skipping the line
     // this replacement held (`common/relations/linked-ends.ts`).
-    await dateRecordMarkedMeanwhile(manager, 'budget_line', item.tenant_id, item.id);
+    await dateRecordMarkedMeanwhile(manager, 'budget_line', item.tenant_id, item.id, locked[0].locked_at);
   }
   return listItemApplications(manager, scope, item);
 }

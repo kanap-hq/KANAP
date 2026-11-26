@@ -885,7 +885,8 @@ export class SpendItemsService {
     }
     // Two saves of the line's projects take turns (the last one wins); a link the project
     // side stored meanwhile is kept, never a unique violation. See project-budget-links.util.ts.
-    if (!(await lockBudgetLine(mg, this.nature, tenantId, lineId))) throw new NotFoundException(this.contract.notFound);
+    const lockedAt = await lockBudgetLine(mg, this.nature, tenantId, lineId);
+    if (!lockedAt) throw new NotFoundException(this.contract.notFound);
     const stored: Array<{ id: string }> = await mg.query(
       `SELECT project_id::text AS id FROM portfolio_project_opex WHERE tenant_id = $1 AND opex_id = $2`,
       [tenantId, lineId],
@@ -920,7 +921,7 @@ export class SpendItemsService {
     } else {
       // Nothing written: a project may have posted a link meanwhile, its dating skipping the line
       // this replacement held (`common/relations/linked-ends.ts`).
-      await dateRecordMarkedMeanwhile(mg, 'budget_line', tenantId, lineId);
+      await dateRecordMarkedMeanwhile(mg, 'budget_line', tenantId, lineId, lockedAt);
     }
     return this.listProjects(lineId, { manager: mg });
   }

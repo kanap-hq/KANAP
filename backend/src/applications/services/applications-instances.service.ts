@@ -11,6 +11,7 @@ import { assertScopeNatures, auditTableOf, linkedLineOf, natureAnd, type BudgetN
 import { UUID_RE } from '../../common/relations/relation-target';
 import { auditedLinkSet, hiddenLineCount } from '../../data-access/hidden-links';
 import { dateRecordMarkedMeanwhile, markLinkedEnds, type LinkedEnd, type LinkedTable } from '../../common/relations/linked-ends';
+import { withLockedAt } from '../../common/relations/locked-at';
 import { appliedLinks } from '../../portfolio/portfolio-link-writes.util';
 
 type LinkedItemKind = 'spend' | 'capex' | 'contract' | 'project';
@@ -170,8 +171,8 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
     // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
     let nextIds = Array.from(new Set((itemIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean))).sort();
     if (nextIds.some((id) => !UUID_RE.test(id))) throw new BadRequestException(t.notFound);
-    const locked = await mg.query(
-      `SELECT 1 FROM applications WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+    const locked: Array<{ locked_at: string }> = await mg.query(
+      withLockedAt(`SELECT 1 FROM applications WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`),
       [tenantId, resolvedAppId],
     );
     if (locked.length === 0) throw new NotFoundException('Application not found');
@@ -247,7 +248,7 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
     } else if (t.end) {
       // Nothing written: the other end may have posted a link meanwhile, its dating skipping the
       // application this replacement held (`linked-ends.ts`).
-      await dateRecordMarkedMeanwhile(mg, 'application', tenantId, resolvedAppId);
+      await dateRecordMarkedMeanwhile(mg, 'application', tenantId, resolvedAppId, locked[0].locked_at);
     }
     return { ok: true, added, removed };
   }

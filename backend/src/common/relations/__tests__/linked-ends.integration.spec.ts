@@ -48,6 +48,8 @@ async function main() {
   const { BudgetLinesService } = require('../../../spend/budget-lines.service');
   const { AiRelationMutationSupportService } = require('../../../ai/mutation/ai-relation-mutation-support.service');
   const { SpendItemsService } = require('../../../spend/spend-items.service');
+  const { dateRecordMarkedMeanwhile } = require('../linked-ends');
+  const { withLockedAt } = require('../locked-at');
   const { purgeTenantTables } = require('../../../admin/tenants/tenant-data-purge');
   const { TENANT_PURGE_TABLES } = require('../../../admin/tenants/tenant-purge.inventory');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
@@ -222,6 +224,58 @@ async function main() {
       await inTenant(gesture);
       assert.equal(await auditCount(), rows, 'no audit row');
       for (const [i, rec] of recs.entries()) assert.equal(await dateOf(rec), dates[i], `${rec.ref}: its date stays`);
+    };
+
+    /** A transaction of the tenant on its own connection, left open until `end` (committed once). */
+    const open = async () => {
+      const runner = dataSource.createQueryRunner();
+      await runner.connect();
+      await runner.startTransaction();
+      await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+      let ended = false;
+      const end = async () => {
+        if (ended) return;
+        ended = true;
+        try { await runner.commitTransaction(); } finally { await runner.release(); }
+      };
+      return { m: runner.manager, end };
+    };
+    /** The gestures' own lock of `rec`, and the instant it is held. */
+    const lockOf = async (m: EntityManager, rec: Rec): Promise<string> =>
+      (await m.query(withLockedAt(`SELECT 1 FROM ${rec.table} WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`), [tenantId, rec.id]))[0].locked_at;
+    /** An entry of an application's History (its own row of a link to a project): a change, or none when `same`. */
+    const entryOn = (m: EntityManager, rec: Rec, same = false) => {
+      const after = [randomUUID()];
+      return m.query(
+        `INSERT INTO audit_log (tenant_id, table_name, record_id, action, before_json, after_json, created_at)
+         VALUES ($1, 'application_projects', $2, 'update', $3, $4, clock_timestamp())`,
+        [tenantId, rec.id, JSON.stringify(same ? after : []), JSON.stringify(after)],
+      );
+    };
+    const stamp = (rec: Rec) => inTenant(async (m) => Number((await m.query(
+      `SELECT extract(epoch FROM updated_at)::float8 AS t FROM ${rec.table} WHERE tenant_id = $1 AND id = $2`, [tenantId, rec.id]))[0].t));
+    /** `rec` held by a gesture's lock while `during` runs, then the gesture's check, committed. */
+    const holds = async (rec: Rec, during: (m: EntityManager) => Promise<unknown>) => {
+      const b = await open();
+      try {
+        const at = await lockOf(b.m, rec);
+        await during(b.m);
+        await dateRecordMarkedMeanwhile(b.m, 'application', tenantId, rec.id, at);
+      } finally {
+        await b.end();
+      }
+    };
+    /** `m`, running `meanwhile` (another connection) right after the first lock of a `table` row. */
+    const afterLock = (m: EntityManager, table: string, meanwhile: () => Promise<unknown>): EntityManager => {
+      let armed = true;
+      const lock = new RegExp(`FROM ${table} WHERE[\\s\\S]*FOR NO KEY UPDATE`);
+      const wrapped: any = Object.create(m);
+      wrapped.query = async (sql: string, params?: unknown[]) => {
+        const rows = await m.query(sql, params);
+        if (armed && lock.test(sql)) { armed = false; await meanwhile(); }
+        return rows;
+      };
+      return wrapped;
     };
 
     const cells: Array<[string, () => Promise<void>]> = [
@@ -417,17 +471,17 @@ async function main() {
         const o = await race((m) => appTabs.setLink('budget_lines', a.id, l.id, true, appCtx(m)), (m) => lines.setRelation('applications', l.id, a.id, true, lineCtx(m)), [a, l]);
         await once(o, [[a, l], [l, a]]);
       }],
-      // The same link posted from the other end while this gesture holds its record: the other
-      // end's dating skips the record; this gesture, finding the link there, dates it.
+      // The same link posted from the other end while this gesture holds its record (right after
+      // its own lock): the other end's dating skips the record; this gesture, finding the link
+      // there, dates it.
       ['mirror: the application tab posts the link while the project tab holds its project', async () => {
         const p = await project(); const a = await application();
         await age(p); await age(a);
         const before = await dateOf(p);
         let answer: unknown;
         await inTenant(async (x) => {
-          await x.query(`SELECT 1 FROM portfolio_projects WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, p.id]);
-          await inTenant((y) => appTabs.setLink('projects', a.id, p.id, true, appCtx(y)));
-          answer = await portfolio.setProjectLink('applications', a.id, true, projCtx(x), owner(p));
+          answer = await portfolio.setProjectLink('applications', a.id, true, projCtx(afterLock(x, 'portfolio_projects',
+            () => inTenant((y) => appTabs.setLink('projects', a.id, p.id, true, appCtx(y))))), owner(p));
         });
         assert.deepEqual(answer, { ok: true, changed: false }, 'the project tab writes nothing');
         assert.equal((await entries(p, a, 'added')).length, 1, 'one entry on the project');
@@ -438,12 +492,98 @@ async function main() {
         await age(l);
         const before = await dateOf(l);
         await inTenant(async (x) => {
-          await x.query(`SELECT 1 FROM spend_items WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, l.id]);
-          await inTenant((y) => portfolio.setProjectLink('budget_lines', l.id, true, projCtx(y), owner(p)));
-          await lines.setRelation('projects', l.id, p.id, true, lineCtx(x));
+          await lines.setRelation('projects', l.id, p.id, true, lineCtx(afterLock(x, 'spend_items',
+            () => inTenant((y) => portfolio.setProjectLink('budget_lines', l.id, true, projCtx(y), owner(p))))));
         });
         assert.equal((await entries(l, p, 'added')).length, 1, 'one entry on the line');
         assert.notEqual(await dateOf(l), before, 'the line is dated');
+      }],
+      // The holder's own check (`dateRecordMarkedMeanwhile`), case by case (second review of K2f):
+      // an entry counts when it was written since the holder took its lock and its History shows it.
+      ['holder: an entry written during the hold dates the record', async () => {
+        const a = await application(); await age(a);
+        const before = await stamp(a);
+        await holds(a, () => inTenant((m) => entryOn(m, a)));
+        assert.ok(await stamp(a) > before, 'dated');
+      }],
+      ['holder: an update of the record that keeps its date does not hide the entry (case 5)', async () => {
+        const a = await application(); await age(a);
+        const before = await stamp(a);
+        await holds(a, async (b) => {
+          await inTenant((m) => entryOn(m, a));
+          // In a savepoint, as an approval of the assistant runs: the row's new version is younger
+          // than the entry.
+          await b.query(`SAVEPOINT s`);
+          await b.query(`UPDATE applications SET name = name WHERE tenant_id = $1 AND id = $2`, [tenantId, a.id]);
+          await b.query(`RELEASE SAVEPOINT s`);
+          const kept: Array<{ t: number }> = await b.query(`SELECT extract(epoch FROM updated_at)::float8 AS t FROM applications WHERE tenant_id = $1 AND id = $2`, [tenantId, a.id]);
+          assert.equal(kept[0].t, before, 'the update keeps the date');
+        });
+        assert.ok(await stamp(a) > before, 'dated');
+      }],
+      ['holder: the marker\'s transaction older than the record\'s last writer (case 6)', async () => {
+        const a = await application(); await age(a);
+        const marker = await open();
+        try {
+          await marker.m.query(`SELECT txid_current()`);
+          await inTenant((m) => m.query(`UPDATE applications SET description = 'c' WHERE tenant_id = $1 AND id = $2`, [tenantId, a.id]));
+          const dated = await stamp(a);
+          await holds(a, async () => {
+            await entryOn(marker.m, a);
+            await marker.end();
+          });
+          assert.ok(await stamp(a) > dated, 'dated after the last writer');
+        } finally {
+          await marker.end();
+        }
+      }],
+      ['holder: an entry shown as no change dates nothing, its own included (cases 7 and 10)', async () => {
+        const a = await application(); await age(a);
+        const before = await stamp(a);
+        await holds(a, async (b) => {
+          await inTenant((m) => entryOn(m, a, true));
+          await entryOn(b, a, true);
+        });
+        assert.equal(await stamp(a), before, 'its date stays');
+      }],
+      ['holder: what the previous holder wrote before the lock dates nothing, a savepoint included (case 3)', async () => {
+        const a = await application(); await age(a);
+        const h = await open();
+        const b = await open();
+        try {
+          await h.m.query(`UPDATE applications SET description = 'h' WHERE tenant_id = $1 AND id = $2`, [tenantId, a.id]);
+          await h.m.query(`SAVEPOINT s`);
+          await entryOn(h.m, a);
+          await h.m.query(`RELEASE SAVEPOINT s`);
+          const locking = lockOf(b.m, a);
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          await h.end();
+          const at = await locking;
+          const dated = await stamp(a);
+          await dateRecordMarkedMeanwhile(b.m, 'application', tenantId, a.id, at);
+          await b.end();
+          assert.equal(await stamp(a), dated, 'its date stays');
+        } finally {
+          await h.end();
+          await b.end();
+        }
+      }],
+      ['holder: a holder older than the last dating never moves the date back (case 11)', async () => {
+        const a = await application(); await age(a);
+        const b = await open();
+        try {
+          await b.m.query(`SELECT txid_current()`);
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          await inTenant((m) => m.query(`UPDATE applications SET description = 'r' WHERE tenant_id = $1 AND id = $2`, [tenantId, a.id]));
+          const dated = await stamp(a);
+          const at = await lockOf(b.m, a);
+          await inTenant((m) => entryOn(m, a));
+          await dateRecordMarkedMeanwhile(b.m, 'application', tenantId, a.id, at);
+          await b.end();
+          assert.ok(await stamp(a) >= dated, `never moved back (${dated} -> ${await stamp(a)})`);
+        } finally {
+          await b.end();
+        }
       }],
       ['an application bulk replacement keeps a link a project posted after its read', async () => {
         const p1 = await project(); const p2 = await project(); const p3 = await project(); const a = await application();
@@ -465,8 +605,12 @@ async function main() {
         assert.equal((await entries(a, p3, 'removed')).length + (await entries(p3, a, 'removed')).length, 0, 'no removal anywhere');
         assert.equal((await entries(a, p1, 'removed')).length, 1, 'the link read is removed');
       }],
+      // A refused card (409) still dates its record when the other end marked it during the hold:
+      // after the rollback to the savepoint, in the approval's transaction, which commits.
       ['the assistant and the project tab post the same link: one entry on each record', async () => {
         const p = await project(); const a = await application();
+        await age(a);
+        const before = await dateOf(a);
         const status = await approveWith({ entity_type: 'applications', ref: a.ref, relation: 'projects', add: [p.ref] },
           () => inTenant((o) => portfolio.setProjectLink('applications', a.id, true, projCtx(o), owner(p))));
         assert.match(status, /relation changed after the preview/, `the card is refused (${status})`);
@@ -474,6 +618,17 @@ async function main() {
           const found = await entries(rec, other, 'added');
           assert.deepEqual(found.map((e: any) => e.actor?.kind), ['user'], `${rec.ref}: one entry, by the project tab`);
         }
+        assert.notEqual(await dateOf(a), before, 'the card\'s application is dated');
+      }],
+      ['the assistant on the project and the application tab post the same link: the refused card dates its project', async () => {
+        const p = await project(); const a = await application();
+        await age(p);
+        const before = await dateOf(p);
+        const status = await approveWith({ entity_type: 'projects', ref: p.ref, relation: 'applications', add: [a.ref] },
+          () => inTenant((o) => appTabs.setLink('projects', a.id, p.id, true, appCtx(o))));
+        assert.match(status, /^failed .*relation changed after the preview/, `the card is refused (${status})`);
+        assert.deepEqual((await entries(p, a, 'added')).map((e: any) => e.actor?.kind), ['user'], 'one entry on the project, by the application tab');
+        assert.notEqual(await dateOf(p), before, 'the card\'s project is dated');
       }],
       ['the assistant never removes a link its card did not show', async () => {
         const p1 = await project(); const p2 = await project(); const p3 = await project(); const a = await application();
