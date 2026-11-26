@@ -15,7 +15,7 @@ import { InterfacesService } from '../../interfaces/services/interfaces.service'
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { TechnologyCatalogService } from '../../technologies/catalog/technology-catalog.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
-import { catalogValueRefusal, findCatalogOption, resolveOfferedCatalogCodes } from '../../it-ops-settings/catalog-resolve';
+import { catalogValueRefusal, findCatalogOption, resolveOfferedCatalogCodes, type CatalogRefusalDetail } from '../../it-ops-settings/catalog-resolve';
 import { withShippedLabels } from '../../it-ops-settings/catalog-shipped-labels';
 import { ClassificationCatalog, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
@@ -877,18 +877,18 @@ export class AiBusinessRecordMutationSupportService {
       const current = existing?.[fieldName] == null ? null : String(existing[fieldName]);
       const option = findCatalogOption(rawValue, options, current, true);
       if (!option) {
-        const allowed = options
-          .filter((item) => !item.deprecated || item.code === current)
-          .slice(0, 10)
-          .map((item) => item.label || item.code)
-          .join(', ');
+        const offered = options.filter((item) => !item.deprecated || item.code === current).slice(0, 10);
+        const allowed = offered.map((item) => item.label || item.code).join(', ');
         const retired = findCatalogOption(rawValue, options);
         const name = retired ? retired.label || retired.code : String(rawValue).trim();
+        const what = field.label.toLowerCase();
         throw catalogValueRefusal(
           { value: name, allowed, retired: !!retired, valueCode: retired?.code, list: field.itCatalog },
           retired
-            ? `The ${field.label.toLowerCase()} "${name}" is retired: only a record that already holds it keeps it. Valid values: ${allowed}.`
-            : `Unknown ${field.label.toLowerCase()} "${name}". Valid values: ${allowed}.`,
+            ? `The ${what} "${name}" is retired: only a record that already holds it keeps it. Valid values: ${allowed}.`
+            : `Unknown ${what} "${name}". Valid values: ${allowed}.`,
+          undefined,
+          { what, list: field.itCatalog, retired: !!retired, value: name, valueCode: retired?.code, offered: offered.map(({ code, label }) => ({ code, label })) },
         );
       }
       // The card shows the code: the frontend names it from the same list in the person's language.
@@ -916,11 +916,18 @@ export class AiBusinessRecordMutationSupportService {
       // refusal lists only the categories a new value may take, as the screen's selector does.
       const option = findCatalogOption(rawValue, settings.incidentCategories, current, true);
       if (!option) {
-        const allowed = settings.incidentCategories
-          .filter((item) => !item.deprecated || item.code === current)
-          .map((item) => item.label || item.code)
-          .join(', ');
-        throw new BadRequestException(`Unknown incident category "${String(rawValue).trim()}". Valid incident categories: ${allowed}.`);
+        const offered = settings.incidentCategories.filter((item) => !item.deprecated || item.code === current);
+        const allowed = offered.map((item) => item.label || item.code).join(', ');
+        const typed = String(rawValue).trim();
+        const retired = findCatalogOption(rawValue, settings.incidentCategories);
+        // Plaid reads the categories by their names in the person's language (`catalogRefusalForModel`).
+        throw Object.assign(new BadRequestException(`Unknown incident category "${typed}". Valid incident categories: ${allowed}.`), {
+          catalogRefusal: {
+            what: 'incident category', list: 'incidentCategories', retired: !!retired,
+            value: retired ? retired.label || retired.code : typed, valueCode: retired?.code,
+            offered: offered.map(({ code, label }) => ({ code, label })),
+          } satisfies CatalogRefusalDetail,
+        });
       }
       // The card names the category from the tenant's own list in the person's language: keep the code.
       return { value: option.code, displayValue: option.code };

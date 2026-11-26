@@ -182,7 +182,8 @@ async function testAccessMethods(harness: Harness) {
     assert.deepEqual((await appRow(runner, s)).access_methods, ['web', 'vdi']);
     await refused(
       () => card(harness, ctx, 'update_business_record', { entity_type: 'applications', ref: s.appId, fields: { access_methods: ['Citrix'] } }),
-      /Unknown access method "Citrix"\. Use one of: web \(Web\), local .*vdi \(VDI \/ Remote Desktop\)/,
+      // Kad reads the values by the names the person's selector shows, without their codes (rejeu du pilote).
+      /^Unknown access method "Citrix"\. Use one of: Web, Application installée localement, Application mobile, IHM propriétaire \(interface industrielle\), Terminal \/ ligne de commande, VDI \/ bureau à distance, Borne\.$/,
     );
     const created = await card(harness, ctx, 'create_business_record', { entity_type: 'applications', fields: { name: 'Zulu', access_methods: 'mobile, kiosk' } });
     assert.equal(created.changes.access_methods.to, 'mobile, kiosk');
@@ -317,7 +318,8 @@ async function testCatalogFieldsByName(harness: Harness) {
     const roles = async () => (await runner.query(
       `SELECT role FROM app_asset_assignments WHERE tenant_id = $1 ORDER BY role`, [s.tenantId])).map((row: any) => row.role);
     assert.deepEqual(await roles(), ['app']);
-    await refused(() => assign([{ environment: 'prod', asset_ref: 'srv-billing', role: 'backup' }]), /retired/);
+    // The refusal Kad reads, French profile: the names of the selector, no code, no English label.
+    await refused(() => assign([{ environment: 'prod', asset_ref: 'srv-billing', role: 'backup' }]), /^The role "Serveur de sauvegarde" is retired: only a record that already holds it keeps it\. Use one of: (?!.*\(app\)|.*Application server).*Serveur d'applications/);
     await runner.query(
       `INSERT INTO app_asset_assignments (tenant_id, app_instance_id, asset_id, role)
        SELECT $1, id, $3, 'backup' FROM app_instances WHERE tenant_id = $1 AND application_id = $2`, [s.tenantId, s.appId, s.targetAssetId]);
@@ -327,7 +329,7 @@ async function testCatalogFieldsByName(harness: Harness) {
       { environment: 'prod', asset_ref: 'srv-billing', role: 'app' },
     ]));
     assert.deepEqual(await roles(), ['app', 'app', 'backup']);
-    await refused(() => assign([{ environment: 'prod', asset_ref: 'srv-orders', role: 'Citrix' }]), /Unknown role "Citrix"\. Use one of: .*app \(Application server\)/);
+    await refused(() => assign([{ environment: 'prod', asset_ref: 'srv-orders', role: 'Citrix' }]), /^(?!.*\(app\)|.*Application server)Unknown role "Citrix"\. Use one of: .*Serveur d'applications/);
   });
 }
 

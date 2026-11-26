@@ -75,13 +75,35 @@ export function catalogValueRefusal(
   refusal: { value: string; allowed: string; retired: boolean; valueCode?: string; list?: string },
   message: string,
   unknownCode = 'catalog_value_unknown',
+  detail?: CatalogRefusalDetail,
 ): BadRequestException {
   const { value, allowed, retired, valueCode, list } = refusal;
-  return new BadRequestException({
+  const error = new BadRequestException({
     code: retired ? 'catalog_value_retired' : unknownCode,
     message,
     params: { value, allowed, ...(retired && valueCode ? { valueCode } : {}), ...(retired && list ? { list } : {}) },
   });
+  return detail ? Object.assign(error, { catalogRefusal: detail }) : error;
+}
+
+/**
+ * What Plaid needs to say a catalog refusal with the names the person reads (`ai-catalog-refusal.ts`):
+ * the field, its list, the refused value and the entries the record may take. It rides on the
+ * exception, outside its response: the API and the import keep their answer.
+ */
+export type CatalogRefusalDetail = {
+  what: string;
+  list?: string;
+  retired: boolean;
+  value: string;
+  valueCode?: string;
+  offered: Array<{ code: string; label?: string | null }>;
+};
+
+/** The detail a catalog refusal carries for Plaid, if any. */
+export function catalogRefusalDetailOf(error: unknown): CatalogRefusalDetail | null {
+  const detail = (error as { catalogRefusal?: CatalogRefusalDetail } | null)?.catalogRefusal;
+  return detail && Array.isArray(detail.offered) ? detail : null;
 }
 
 /**
@@ -101,11 +123,18 @@ export function resolveOfferedCatalogCode(input: unknown, options: CatalogOption
     return String(held);
   }
   const allowed = offeredCatalogList(options, opts.held);
-  if (!option) throw catalogValueRefusal({ value, allowed, retired: false }, `Unknown ${opts.what} "${value}". Use one of: ${allowed}.`, opts.unknownCode);
+  const offered = offeredCatalogOptions(options, opts.held).map(({ code, label }) => ({ code, label }));
+  if (!option) {
+    throw catalogValueRefusal({ value, allowed, retired: false }, `Unknown ${opts.what} "${value}". Use one of: ${allowed}.`, opts.unknownCode, {
+      what: opts.what, list: opts.list, retired: false, value, offered,
+    });
+  }
   const name = String(option.label || '').trim() || option.code;
   throw catalogValueRefusal(
     { value: name, allowed, retired: true, valueCode: option.code, list: opts.list },
     `The ${opts.what} "${name}" is retired: only a record that already holds it keeps it. Use one of: ${allowed}.`,
+    undefined,
+    { what: opts.what, list: opts.list, retired: true, value: name, valueCode: option.code, offered },
   );
 }
 

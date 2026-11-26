@@ -1,7 +1,7 @@
 import { AuditService } from '../audit/audit.service';
 import { ClassificationCatalog, ClassificationLevel, CLASSIFICATION_CATALOG_KEYS, OBSOLETE_CATALOG_METADATA_KEYS, catalogFromMetadata, catalogToMetadata, validateClassificationCatalog } from './classification-catalog';
 import { CatalogTranslations, normalizeTranslations, prepareCatalogListForWrite } from './catalog-codes';
-import { catalogValueRefusal, findCatalogOption, offeredCatalogList, resolveOfferedCatalogCode } from './catalog-resolve';
+import { catalogValueRefusal, findCatalogOption, offeredCatalogList, offeredCatalogOptions, resolveOfferedCatalogCode } from './catalog-resolve';
 import { CATALOG_USAGE, CatalogUsageItem, UsageKey, countCatalogUsage } from './catalog-usage';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { englishList, RecordInUseException } from '../common/record-in-use';
@@ -1188,7 +1188,10 @@ export class ItOpsSettingsService {
         if (fallback) return fallback;
       }
       const allowed = offeredCatalogList(options, opts?.current);
-      throw catalogValueRefusal({ value: '', allowed, retired: false }, `Application category is required. Use one of: ${allowed}.`, opts?.unknownCode);
+      throw catalogValueRefusal({ value: '', allowed, retired: false }, `Application category is required. Use one of: ${allowed}.`, opts?.unknownCode, {
+        what: 'application category', list: 'applicationCategories', retired: false, value: '',
+        offered: offeredCatalogOptions(options, opts?.current).map(({ code, label }) => ({ code, label })),
+      });
     }
     // A code or a name typed with spaces for its underscores or dashes ("line of business") still names it.
     const key = this.normalizeLookupKey(text);
