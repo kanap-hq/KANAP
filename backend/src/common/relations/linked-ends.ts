@@ -56,8 +56,10 @@ const LINKED_TABLES = {
   asset_projects: { project: 'project_id', asset: 'asset_id' },
   portfolio_project_opex: { project: 'project_id', budget_line: 'opex_id' },
   application_spend_items: { application: 'application_id', budget_line: 'spend_item_id' },
-  // A request's links are written by the request's replacements only (its tab, the application's
-  // tab through them, the assistant): the request is never the end marked.
+  // A request's links are posted from the request (its tab, the application's tab through the
+  // request's replacements, the assistant), which marks the other end; the request is the end
+  // marked when a line whose type changes from a year hands it the new line
+  // (`spend/budget-line-type-change.service.ts`).
   portfolio_request_opex: { request: 'request_id', budget_line: 'opex_id' },
   portfolio_request_applications: { request: 'request_id', application: 'application_id' },
   portfolio_request_assets: { request: 'request_id', asset: 'asset_id' },
