@@ -463,7 +463,8 @@ function ApplicationProperties({
         <PropertyRow label={t('workspace.application.overview.category')}>
           <Select
             value={app.category || ''}
-            onChange={(event) => { void onPatch({ category: event.target.value }); }}
+            // The save shows its own refusal (a category retired meanwhile, rule P7): nothing left to throw.
+            onChange={(event) => { void onPatch({ category: event.target.value }).catch(() => undefined); }}
             variant="standard"
             disabled={!canManage}
             sx={drawerSelectSx}
