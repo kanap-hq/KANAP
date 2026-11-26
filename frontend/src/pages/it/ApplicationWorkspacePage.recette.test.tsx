@@ -52,7 +52,7 @@ vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({
   default: () => ({ data: { businessCriticalityLevels: [{ code: 'high', label: 'High', rank: 1 }], cyberCriticalityLevels: [], dataClasses: [], recoveryWaves: [] } }),
 }));
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({
-  default: () => ({ byField: { accessMethod: [], applicationCategory: [{ code: 'business', label: 'Business' }, { code: 'erp', label: 'ERP suite' }], lifecycleStatus: [{ code: 'active', label: 'Active' }] }, labelFor: (_f: string, code: string) => code }),
+  default: () => ({ byField: { accessMethod: [], applicationCategory: [{ code: 'business', label: 'Business' }, { code: 'erp', label: 'ERP suite' }], lifecycleStatus: [{ code: 'active', label: 'Active' }, { code: 'retired', label: 'Retired' }] }, labelFor: (_f: string, code: string) => code }),
 }));
 
 const mocked = vi.mocked(api);
@@ -207,6 +207,28 @@ describe('Application workspace, recette C1a', () => {
       fireEvent.click(await screen.findByRole('option', { name: 'ERP suite' }));
       await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/applications/app-1', { category: 'erp' }));
       expect((await screen.findAllByText('errors:catalog_value_no_longer_offered(value=ERP suite,allowed=Business)')).length).toBeGreaterThan(0);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(unhandled).toEqual([]);
+    } finally {
+      nodeProcess.off('unhandledRejection', onUnhandled);
+    }
+  });
+
+  it('shows a refused lifecycle without an unhandled rejection', async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => { unhandled.push(reason); };
+    const nodeProcess = (globalThis as unknown as { process: {
+      on(event: 'unhandledRejection', listener: (reason: unknown) => void): void;
+      off(event: 'unhandledRejection', listener: (reason: unknown) => void): void;
+    } }).process;
+    nodeProcess.on('unhandledRejection', onUnhandled);
+    try {
+      mocked.patch.mockRejectedValueOnce({ response: { status: 400, data: { code: 'catalog_value_retired', message: 'retired', params: { value: 'Retired', allowed: 'Active' } } } });
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: 'Active' }));
+      fireEvent.click(await screen.findByText('Retired'));
+      await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/applications/app-1', { lifecycle: 'retired' }));
+      expect((await screen.findAllByText('errors:catalog_value_no_longer_offered(value=Retired,allowed=Active)')).length).toBeGreaterThan(0);
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect(unhandled).toEqual([]);
     } finally {

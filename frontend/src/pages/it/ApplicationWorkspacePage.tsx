@@ -1290,7 +1290,8 @@ export function OperationsTab({
               multiple
               options={accessOptions}
               value={accessOptions.filter((option) => (app.access_methods || []).includes(option.code))}
-              onChange={(_, value) => { void onPatch({ access_methods: value.map((item) => item.code) } as Partial<ApplicationDetail>); }}
+              // The save shows its own refusal (a method retired meanwhile, rule P7): nothing left to throw.
+              onChange={(_, value) => { void onPatch({ access_methods: value.map((item) => item.code) } as Partial<ApplicationDetail>).catch(() => undefined); }}
               getOptionLabel={(option) => catalogOptionLabel(option, t)}
               disabled={!canManage}
               renderInput={(params) => (
@@ -1798,7 +1799,8 @@ export default function ApplicationWorkspacePage() {
                 label={lifecycleOptions.find((option) => option.value === app.lifecycle)?.label || humanize(app.lifecycle, t('common:selects.notSet'))}
                 color={getDotColor(LIFECYCLE_COLORS[app.lifecycle] || 'default', theme.palette.mode)}
                 options={lifecycleOptions}
-                onChange={(value) => { void patchApplication({ lifecycle: value }); }}
+                // The save shows its own refusal (a state retired meanwhile, rule P7): nothing left to throw.
+                onChange={(value) => { void patchApplication({ lifecycle: value }).catch(() => undefined); }}
               />
             ) : (
               // Read only: the status is text, not a button that opens nothing.
