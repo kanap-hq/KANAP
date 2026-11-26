@@ -100,7 +100,9 @@ const END_TABLES: Record<LinkedEnd, string> = {
  * its History (its own row, or one naming it as parent) was written since that instant, is newer
  * than its date, and is one the History shows as a change (the filter of the dating,
  * `recordsToDate`). An entry written before the lock was dated by its writer (or skipped by another
- * holder, the accepted gap); a record saved unchanged writes nothing.
+ * holder, the accepted gap); a record saved unchanged writes nothing. The date never moves back: it
+ * is this transaction's `now()` (`touchUpdatedAt`), so a record dated since this transaction began
+ * keeps its date (`touchUpdatedAt` itself only skips a date equal to `now()`, for every caller).
  */
 export async function dateRecordMarkedMeanwhile(manager: EntityManager, end: LinkedEnd, tenantId: string, id: string, lockedAt: string): Promise<void> {
   const table = END_TABLES[end];
@@ -109,7 +111,7 @@ export async function dateRecordMarkedMeanwhile(manager: EntityManager, end: Lin
             a.parent_table, a.parent_id::text AS parent_id
        FROM ${table} r
        JOIN audit_log a ON a.tenant_id = r.tenant_id
-      WHERE r.tenant_id = $1 AND r.id = $2
+      WHERE r.tenant_id = $1 AND r.id = $2 AND r.updated_at < now()
         AND a.created_at >= $4::timestamptz AND a.created_at > r.updated_at
         AND (a.record_id = r.id OR (a.parent_table = $3 AND a.parent_id = r.id))`,
     [tenantId, id, table, lockedAt],
