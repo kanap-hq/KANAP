@@ -98,6 +98,8 @@ export type CatalogRefusalDetail = {
   value: string;
   valueCode?: string;
   offered: Array<{ code: string; label?: string | null }>;
+  /** What the field also takes besides the values (`or null (not set)` for a filter). */
+  orElse?: string;
 };
 
 /** The detail a catalog refusal carries for Plaid, if any. */

@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, HttpException } from '@nestjs/common';
 import { catalogRefusalDetailOf, type CatalogRefusalDetail } from '../it-ops-settings/catalog-resolve';
 import type { AiCatalogListName, AiCodeNamer } from './ai-code-names';
 import { aiBusinessRecordCatalogList } from './mutation/ai-business-record-mutation-support.service';
@@ -10,9 +10,9 @@ import { aiBusinessRecordCatalogList } from './mutation/ai-business-record-mutat
  * keeps its code, so the model can still tell them apart. The response (its code and params) stays
  * as the API answers it; only the sentence the model reads changes. Null for any other error.
  */
-export function catalogRefusalForModel(error: unknown, namer: AiCodeNamer): BadRequestException | null {
+export function catalogRefusalForModel(error: unknown, namer: AiCodeNamer): HttpException | null {
   const detail = catalogRefusalDetailOf(error);
-  if (!detail || !(error instanceof BadRequestException)) return null;
+  if (!detail || !(error instanceof HttpException)) return null;
   const nameOf = (entry: { code: string; label?: string | null }) => catalogName(detail, entry, namer);
   const names = detail.offered.map(nameOf);
   const shared = new Set(names.filter((name, index) => names.findIndex((other) => other.toLowerCase() === name.toLowerCase()) !== index).map((name) => name.toLowerCase()));
@@ -23,13 +23,16 @@ export function catalogRefusalForModel(error: unknown, namer: AiCodeNamer): BadR
   const message = detail.retired
     ? `The ${detail.what} "${value}" is retired: only a record that already holds it keeps it. Use one of: ${allowed}.`
     : value
-      ? `Unknown ${detail.what} "${value}". Use one of: ${allowed}.`
+      ? `Unknown ${detail.what} "${value}". Use one of: ${allowed}${detail.orElse ? `, ${detail.orElse}` : ''}.`
       : `The ${detail.what} is required. Use one of: ${allowed}.`;
   const response = error.getResponse();
   const kept = typeof response === 'object' && response ? response as Record<string, unknown> : {};
   // The refusal keeps its code (a plain sentence gets the shared one): only its sentence changes.
   const code = kept.code ?? (detail.retired ? 'catalog_value_retired' : 'catalog_value_unknown');
-  return Object.assign(new BadRequestException({ ...kept, code, message }), { catalogRefusal: detail });
+  // Same status (a refused input stays one for the repairs of the chat), its sentence named.
+  const body = { ...kept, code, message };
+  const named = error instanceof BadRequestException ? new BadRequestException(body) : new HttpException(body, error.getStatus());
+  return Object.assign(named, { catalogRefusal: detail });
 }
 
 function catalogName(detail: CatalogRefusalDetail, entry: { code: string; label?: string | null }, namer: AiCodeNamer): string {

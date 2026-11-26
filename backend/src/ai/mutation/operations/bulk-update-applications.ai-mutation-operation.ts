@@ -6,6 +6,7 @@ import { ApplicationsService } from '../../../applications/services/applications
 import { BULK_MAX_ROWS, type BulkChanges, type BulkEditResult } from '../../../common/bulk-edit/bulk-edit';
 import { CATALOG_LOCALES, matchCatalogAliases, normalizeAlias, type CatalogTranslations } from '../../../it-ops-settings/catalog-codes';
 import { shippedLabelIn, shippedLabelsOf } from '../../../it-ops-settings/catalog-shipped-labels';
+import type { CatalogRefusalDetail } from '../../../it-ops-settings/catalog-resolve';
 import { ItOpsSettingsService } from '../../../it-ops-settings/it-ops-settings.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiPolicyService } from '../../ai-policy.service';
@@ -91,6 +92,15 @@ const FIELD_CATALOG = {
 const OWNER_TYPES = { owners_business: 'business', owners_it: 'it' } as const;
 
 /** The fields that take a value still offered by the workspace's catalog, by its name or its code. */
+/**
+ * A refusal of a catalog value with the detail Plaid names it from (`catalogRefusalForModel`): the
+ * model reads the values by the names the person reads, without codes; the sentence stays as it is.
+ */
+function withCatalogRefusal<T extends Error>(error: T, detail: CatalogRefusalDetail): T {
+  const offered = detail.offered.map(({ code, label }) => ({ code, label }));
+  return Object.assign(error, { catalogRefusal: { ...detail, offered } });
+}
+
 const OFFERED_FIELDS = {
   category: { list: 'applicationCategories', what: 'category', all: 'categories', emptied: false },
   criticality: { list: 'businessCriticalityLevels', what: 'business criticality level', all: 'levels', emptied: true },
@@ -586,7 +596,10 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
       const states = await this.catalog(context, 'lifecycleStates');
       const found = matchCatalogAliases(states, normalizeAlias(value));
       if (found.length !== 1) {
-        throw new NotFoundException(`"${value}" is not a lifecycle state of this workspace. The states: ${states.map((state) => `${state.label} (${state.code})`).join(', ')}.`);
+        throw withCatalogRefusal(
+          new NotFoundException(`"${value}" is not a lifecycle state of this workspace. The states: ${states.map((state) => `${state.label} (${state.code})`).join(', ')}.`),
+          { what: 'lifecycle state', list: 'lifecycleStates', retired: false, value, offered: states },
+        );
       }
       return { changes: { lifecycle: found[0].code }, valueWords: optionWords('lifecycleStates', found[0]) };
     }
@@ -607,7 +620,11 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
     const offered = options.filter((option) => !option.deprecated);
     const found = matchCatalogAliases(options, normalizeAlias(value));
     if (found.length !== 1 || found[0].deprecated) {
-      throw new NotFoundException(`"${value}" is not a ${what} offered in this workspace. The ${all}: ${offered.map((option) => `${option.label} (${option.code})`).join(', ')}.`);
+      const retired = found.length === 1 ? found[0] : null;
+      throw withCatalogRefusal(
+        new NotFoundException(`"${value}" is not a ${what} offered in this workspace. The ${all}: ${offered.map((option) => `${option.label} (${option.code})`).join(', ')}.`),
+        { what, list, retired: !!retired, value: retired ? retired.label || retired.code : value, valueCode: retired?.code, offered },
+      );
     }
     return { changes: { [field]: found[0].code }, valueWords: optionWords(list, found[0]) };
   }
@@ -680,7 +697,10 @@ export class BulkUpdateApplicationsAiMutationOperation implements AiMutationOper
           if (entry === null && key !== 'lifecycle') return null;
           const found = entry === null ? [] : matchCatalogAliases(options, normalizeAlias(entry));
           if (found.length !== 1) {
-            throw new BadRequestException(`"${entry}" is not a value of the applications filter ${key}. It takes: ${options.map((option) => `${option.label} (${option.code})`).join(', ')}${key === 'lifecycle' ? '' : ', or null (not set)'}.`);
+            throw withCatalogRefusal(
+              new BadRequestException(`"${entry}" is not a value of the applications filter ${key}. It takes: ${options.map((option) => `${option.label} (${option.code})`).join(', ')}${key === 'lifecycle' ? '' : ', or null (not set)'}.`),
+              { what: `${key} filter value`, list, retired: false, value: String(entry), offered: options, ...(key === 'lifecycle' ? {} : { orElse: 'or null (not set)' }) },
+            );
           }
           return found[0];
         });

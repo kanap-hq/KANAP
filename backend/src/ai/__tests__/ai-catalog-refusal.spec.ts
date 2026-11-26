@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { normalizeServerRole } from '../../app-asset-assignments/cluster-assignment-rules';
 import { catalogValueRefusal, resolveOfferedCatalogCode } from '../../it-ops-settings/catalog-resolve';
 import { AiCodeNamer } from '../ai-code-names';
@@ -80,6 +80,13 @@ assert.equal(
   'The incident category "Progiciel de gestion" is retired: only a record that already holds it keeps it. Use one of: Web.',
 );
 assert.equal((catalogRefusalForModel(incident, categoryNamer)!.getResponse() as any).code, 'catalog_value_retired');
+
+// The bulk change of applications: a refusal that is no BadRequest keeps its status, a filter its "or null".
+const bulk = catalogRefusalForModel(Object.assign(new NotFoundException('"x" is not a category offered in this workspace. The categories: ERP suite (erp), Web (web).'), {
+  catalogRefusal: { what: 'category filter value', list: 'applicationCategories', retired: false, value: 'x', offered: categories, orElse: 'or null (not set)' },
+}), categoryNamer)!;
+assert.equal(bulk.getStatus(), 404);
+assert.equal(bulk.message, 'Unknown category filter value "x". Use one of: Progiciel de gestion, Web, or null (not set).');
 
 // Any other error passes as it is.
 assert.equal(catalogRefusalForModel(new BadRequestException('Body is required'), namer), null);
