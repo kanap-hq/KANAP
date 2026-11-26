@@ -43,7 +43,8 @@ function connection() {
   const manager = {
     query: (sql: string, params: unknown[] = []) => occupy(sql, () => {
       if (/current_setting\('app\.da_mode'/.test(sql)) return [{ limited: false }];
-      if (/FOR NO KEY UPDATE/.test(sql)) return [1];
+      // A lock returns the instant it is held (`withLockedAt`).
+      if (/FOR NO KEY UPDATE/.test(sql)) return [{ locked_at: '2026-01-01 00:00:00+00' }];
       // A removal returns the ids it deleted (the replacements count what they wrote).
       if (/\bDELETE FROM\b/i.test(sql)) return /RETURNING/i.test(sql) ? idList(params).map((id) => ({ id })) : [];
       if (/\bINSERT INTO\b/i.test(sql)) return [];
