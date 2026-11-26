@@ -1,3 +1,4 @@
+import type { EntityManager } from 'typeorm';
 import { z } from 'zod';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiWriteLanguage } from '../ai-write-texts';
@@ -19,6 +20,26 @@ export class AiPreviewExecutionRefusal extends Error {
   constructor(message: string, readonly kept: Record<string, unknown>) {
     super(message);
   }
+}
+
+const AFTER_ROLLBACK = Symbol('aiExecutionAfterRollback');
+
+type AfterRollback = (manager: EntityManager) => Promise<void>;
+
+/**
+ * What an approval still writes once its execution is rolled back to the savepoint, in the
+ * approval's transaction (`AiMutationPreviewService`): attached to the error the operation throws.
+ * A relation's record the other end marked while the approval held it is dated so (lot K2f,
+ * `common/relations/linked-ends.ts`).
+ */
+export function afterExecutionRollback(error: unknown, run: AfterRollback): void {
+  if (error && typeof error === 'object') (error as { [AFTER_ROLLBACK]?: AfterRollback })[AFTER_ROLLBACK] = run;
+}
+
+/** Runs what `error` carries (`afterExecutionRollback`), right after the rollback to the savepoint. */
+export async function runAfterExecutionRollback(error: unknown, manager: EntityManager): Promise<void> {
+  const run = error && typeof error === 'object' ? (error as { [AFTER_ROLLBACK]?: AfterRollback })[AFTER_ROLLBACK] : undefined;
+  if (run) await run(manager);
 }
 
 export type AiPreparedMutationPreview = {

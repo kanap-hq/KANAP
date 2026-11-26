@@ -2,7 +2,8 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException, 
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AuditService } from '../../audit/audit.service';
-import { lockBudgetLine } from '../../spend/budget-locks';
+import { lockBudgetLineAt } from '../../spend/budget-locks';
+import { dateRecordMarkedMeanwhile, linkedEndOf } from '../../common/relations/linked-ends';
 import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { assertContractReadable, assertContractsEditable } from '../../data-access/contract-write-checks';
 import { parseItemNumber } from '../../common/parse-item-number';
@@ -32,6 +33,7 @@ import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewRel
 import { AiMutationAuditOptions, buildAiMutationAudit } from './ai-mutation-audit.util';
 import { firstReturnedRow } from '../../analytics/analytics-context';
 import {
+  afterExecutionRollback,
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
@@ -695,12 +697,14 @@ export class AiRelationMutationSupportService {
     // A budget line is locked, by its stored nature, before its relations are compared and
     // replaced (lock order, `spend/budget-locks.ts`): no writer of the line changes them in between.
     let sourceNature: BudgetNature | null = null;
+    // The instant the record's lock is held (`common/relations/locked-at.ts`), for its dating if the
+    // approval is refused (below).
+    let lockedAt: string | null = null;
     if (config.sourceEntity === 'budget_lines') {
       const line = await this.resolveReference(context, 'budget_lines', preview.target_entity_id);
       sourceNature = line.row.nature === 'capex' ? 'capex' : 'opex';
-      if (!(await lockBudgetLine(context.manager, sourceNature, context.tenantId, preview.target_entity_id))) {
-        throw new NotFoundException(`${config.label}: the line was not found.`);
-      }
+      lockedAt = await lockBudgetLineAt(context.manager, sourceNature, context.tenantId, preview.target_entity_id);
+      if (!lockedAt) throw new NotFoundException(`${config.label}: the line was not found.`);
     }
     // A cluster's members follow the rules of the members endpoint (the members added read, then the
     // cluster row locked).
@@ -709,9 +713,37 @@ export class AiRelationMutationSupportService {
     // and compared with the preview (`screenLockOf`): a gesture on the screen at the same time either
     // committed first, and the links changed (409), or waits for this approval.
     const lock = screenLockOf(config.sourceEntity, config.relation);
-    if (lock && !(await lock(context.manager, context.tenantId, preview.target_entity_id))) {
-      throw new NotFoundException(`${config.label}: the record was not found.`);
+    const held = lock ? await lock(context.manager, context.tenantId, preview.target_entity_id) : true;
+    if (!held) throw new NotFoundException(`${config.label}: the record was not found.`);
+    if (typeof held === 'string') lockedAt = held;
+    // A link both of whose records read it (`common/relations/linked-ends.ts`): the other end may mark
+    // this record while the approval holds it, its dating skipping the record. Refused after the lock
+    // (a 409 when the other end posted the same link), the approval's writes are rolled back to the
+    // savepoint, the dating it would have run with them: the record is then dated from the entries
+    // written since the lock, in the approval's transaction, which goes on and commits the failed card.
+    const end = config.kind === 'simple' ? linkedEndOf(config.table, config.sourceColumn)?.end ?? null : null;
+    try {
+      await this.replaceUnderLock(context, preview, config, expectedItems, nextItems, sourceNature);
+    } catch (error) {
+      const id = preview.target_entity_id;
+      if (end && lockedAt) {
+        const since = lockedAt;
+        afterExecutionRollback(error, (manager) => dateRecordMarkedMeanwhile(manager, end, context.tenantId, id, since));
+      }
+      throw error;
     }
+  }
+
+  /** `executePreview` once the record is locked: the comparison with the card, then the writes. */
+  private async replaceUnderLock(
+    context: AiExecutionContextWithManager,
+    preview: AiMutationPreview,
+    config: RelationConfig,
+    expectedItems: RelationItem[],
+    nextItems: RelationItem[],
+    sourceNature: BudgetNature | null,
+  ): Promise<void> {
+    if (!preview.target_entity_id) throw new BadRequestException('Preview is missing the target record.');
     // Assignments: the clusters are locked and the cluster rules checked again before the rows are
     // compared; an absorption that would now differ from the preview is a change since the preview.
     const checkedItems = await this.applyAssignmentRules(context, config, expectedItems, nextItems);

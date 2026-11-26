@@ -7,6 +7,7 @@ import { auditTableOf, BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNatu
 import type { AiMutationAuditOptions } from './ai-mutation-audit.util';
 import { lockApplicationRow } from '../../applications/application-rules';
 import { lockClusterForMembers } from '../../assets/asset-rules';
+import { withLockedAt } from '../../common/relations/locked-at';
 import { linkedEndOf, markLinkedEnds } from '../../common/relations/linked-ends';
 
 /**
@@ -325,12 +326,19 @@ const SCREEN_TRACES: Readonly<Record<string, ScreenTrace>> = {
  * departments and support contacts, an asset's support contacts and web links, a supplier's, a
  * contract's and a site's contacts and links, a site's sub-locations): neither does the approval.
  */
-type ScreenLock = (manager: EntityManager, tenantId: string, id: string) => Promise<boolean>;
+/**
+ * False when the record is gone; a row lock returns the instant it is held (`withLockedAt`), which
+ * dates the record if the approval is refused (`AiRelationMutationSupportService.executePreview`).
+ */
+type ScreenLock = (manager: EntityManager, tenantId: string, id: string) => Promise<string | boolean>;
 
 const rowLock = (table: 'applications' | 'assets' | 'contracts' | 'portfolio_projects' | 'portfolio_requests'): ScreenLock =>
   async (manager, tenantId, id) => {
-    const rows: unknown[] = await manager.query(`SELECT 1 FROM ${table} WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, id]);
-    return rows.length > 0;
+    const rows: Array<{ locked_at: string }> = await manager.query(
+      withLockedAt(`SELECT 1 FROM ${table} WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`),
+      [tenantId, id],
+    );
+    return rows[0]?.locked_at ?? false;
   };
 
 const SCREEN_LOCKS: Readonly<Record<string, ScreenLock>> = {

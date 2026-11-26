@@ -37,7 +37,8 @@ import { auditTableOf, BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNatu
  * When the other end is held by a gesture posted from it, the dating skips it: that gesture, once
  * its own write found nothing to do, dates its record when an entry of its History was written
  * since it took the lock (`dateRecordMarkedMeanwhile`), so in both orders the two records end
- * dated. A record
+ * dated; an approval of the assistant refused after its lock does the same once its writes are
+ * rolled back (`afterExecutionRollback`). A record
  * held otherwise at that instant (saved without a change, a budget operation holding its lines)
  * keeps its date, the gap `doc/architecture.md` accepts for the dating.
  * `__tests__/linked-ends.integration.spec.ts` races them.
