@@ -10,7 +10,7 @@ import { projectParticipantCondition } from '../../auth/business-contributor-sco
 import { assertScopeNatures, auditTableOf, linkedLineOf, natureAnd, type BudgetNature } from '../../spend/budget-nature';
 import { UUID_RE } from '../../common/relations/relation-target';
 import { auditedLinkSet, hiddenLineCount } from '../../data-access/hidden-links';
-import { markLinkedEnds, type LinkedEnd, type LinkedTable } from '../../common/relations/linked-ends';
+import { dateRecordMarkedMeanwhile, markLinkedEnds, type LinkedEnd, type LinkedTable } from '../../common/relations/linked-ends';
 import { appliedLinks } from '../../portfolio/portfolio-link-writes.util';
 
 type LinkedItemKind = 'spend' | 'capex' | 'contract' | 'project';
@@ -29,7 +29,6 @@ type LinkedItemTable = {
   label: string;
   /** The name the list returns the label under, when not the column's own (a CAPEX title, `description`). */
   labelAs?: string;
-  unique: string;
   notFound: string;
   nature?: BudgetNature;
   /** The audit label of the link table (a CAPEX line's links keep `application_capex_items`). */
@@ -50,7 +49,6 @@ const LINKED_ITEMS: Record<LinkedItemKind, LinkedItemTable> = {
     items: 'spend_items',
     itemFk: 'spend_item_id',
     label: 'product_name',
-    unique: '(tenant_id, application_id, spend_item_id)',
     notFound: 'One or more OPEX items were not found.',
     nature: 'opex',
     audit: auditTableOf('opex', 'application_spend_items'),
@@ -62,7 +60,6 @@ const LINKED_ITEMS: Record<LinkedItemKind, LinkedItemTable> = {
     itemFk: 'spend_item_id',
     label: 'product_name',
     labelAs: 'description',
-    unique: '(tenant_id, application_id, spend_item_id)',
     notFound: 'One or more CAPEX items were not found.',
     nature: 'capex',
     audit: auditTableOf('capex', 'application_spend_items'),
@@ -73,7 +70,6 @@ const LINKED_ITEMS: Record<LinkedItemKind, LinkedItemTable> = {
     items: 'contracts',
     itemFk: 'contract_id',
     label: 'name',
-    unique: '(tenant_id, application_id, contract_id)',
     notFound: 'One or more contracts were not found.',
     audit: 'application_contracts',
   },
@@ -82,7 +78,6 @@ const LINKED_ITEMS: Record<LinkedItemKind, LinkedItemTable> = {
     items: 'portfolio_projects',
     itemFk: 'project_id',
     label: 'name',
-    unique: '(application_id, project_id)',
     notFound: 'One or more projects were not found.',
     audit: 'application_projects',
     end: 'project',
@@ -198,26 +193,31 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
       const kept = await linksOutsideScope(mg, 'projects', beforeState, opts.projectAccessScope);
       nextIds = Array.from(new Set([...nextIds, ...kept])).sort();
     }
-    // Only what this call wrote counts: a link the other end stored or removed meanwhile (this
-    // transaction waited on it) is neither audited nor marked twice.
-    const gone: Array<{ id: string }> = await mg.query(
+    // Only the links read under the lock are removed, and only the ids asked for and not read are
+    // added: a link the other end posted meanwhile is left as it is. Only what this call wrote
+    // counts: a link the other end stored or removed meanwhile is neither audited nor marked twice.
+    const nextSet = new Set(nextIds);
+    const beforeSet = new Set(beforeState.map((id) => id.toLowerCase()));
+    const toRemove = beforeState.map((id) => id.toLowerCase()).filter((id) => !nextSet.has(id));
+    const toAdd = nextIds.filter((id) => !beforeSet.has(id));
+    const gone: Array<{ id: string }> = toRemove.length === 0 ? [] : await mg.query(
       `WITH d AS (
          DELETE FROM ${t.links} l
-         WHERE l.tenant_id = $1 AND l.application_id = $2 AND l.${t.itemFk} <> ALL($3::uuid[])${linkedNature(t, 'l')}
+         WHERE l.tenant_id = $1 AND l.application_id = $2 AND l.${t.itemFk} = ANY($3::uuid[])
          RETURNING l.${t.itemFk}::text AS id
        )
        SELECT id FROM d`,
-      [tenantId, resolvedAppId, nextIds],
+      [tenantId, resolvedAppId, toRemove],
     );
-    const put: Array<{ id: string }> = await mg.query(
+    const put: Array<{ id: string }> = toAdd.length === 0 ? [] : await mg.query(
       `WITH ins AS (
          INSERT INTO ${t.links} (tenant_id, application_id, ${t.itemFk})
          SELECT $1, $2, item_id FROM unnest($3::uuid[]) AS item_id
-         ON CONFLICT ${t.unique} DO NOTHING
+         ON CONFLICT DO NOTHING
          RETURNING ${t.itemFk}::text AS id
        )
        SELECT id FROM ins`,
-      [tenantId, resolvedAppId, nextIds],
+      [tenantId, resolvedAppId, toAdd],
     );
     const written = { removed: gone.map((row) => row.id.toLowerCase()), added: put.map((row) => row.id.toLowerCase()) };
     const removed = written.removed.length;
@@ -244,6 +244,10 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
           written, userId: userId ?? null,
         });
       }
+    } else if (t.end) {
+      // Nothing written: the other end may have posted a link meanwhile, its dating skipping the
+      // application this replacement held (`linked-ends.ts`).
+      await dateRecordMarkedMeanwhile(mg, 'application', tenantId, resolvedAppId);
     }
     return { ok: true, added, removed };
   }

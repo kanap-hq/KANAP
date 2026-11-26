@@ -5,7 +5,7 @@ import { AmountScope } from './amounts-write.util';
 import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from './budget-nature';
 import { assertLinesEditable } from '../data-access/line-write-checks';
 import { replacedLinks } from '../common/relations/linked-reads';
-import { markLinkedEnds } from '../common/relations/linked-ends';
+import { dateRecordMarkedMeanwhile, markLinkedEnds } from '../common/relations/linked-ends';
 import { appliedLinks, wroteLinks } from '../portfolio/portfolio-link-writes.util';
 
 /**
@@ -136,6 +136,10 @@ export async function replaceItemApplications(
       manager, audit: deps.audit, table: 'application_spend_items', end: 'application', from: item.id,
       tenantId: item.tenant_id, written, userId,
     });
+  } else {
+    // Nothing written: an application may have posted a link meanwhile, its dating skipping the line
+    // this replacement held (`common/relations/linked-ends.ts`).
+    await dateRecordMarkedMeanwhile(manager, 'budget_line', item.tenant_id, item.id);
   }
   return listItemApplications(manager, scope, item);
 }

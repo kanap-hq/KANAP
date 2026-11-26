@@ -431,7 +431,8 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
     const mg = this.getManager(opts);
     const actorId = this.requireActivityAuthor(opts?.userId);
     const project = await this.ensureProject(projectId, mg);
-    const unique = Array.from(new Set((assetIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
+    // Stored ids are lower case: an upper-case id names the same asset (as for the applications).
+    const unique = Array.from(new Set((assetIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean)));
 
     if (unique.length > 0) {
       const rows = await mg.query<Array<{ id: string }>>(

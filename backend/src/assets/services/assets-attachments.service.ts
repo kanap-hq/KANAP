@@ -16,7 +16,7 @@ import { assertWebLinkUrl } from '../../common/web-link-url';
 import { validateUploadedFile } from '../../common/upload-validation';
 import { fixMulterFilename } from '../../common/upload';
 import { replacedLinks } from '../../common/relations/linked-reads';
-import { markLinkedEnds } from '../../common/relations/linked-ends';
+import { dateRecordMarkedMeanwhile, markLinkedEnds } from '../../common/relations/linked-ends';
 import { appliedLinks, writeOwnerLinks, wroteLinks } from '../../portfolio/portfolio-link-writes.util';
 
 /**
@@ -303,6 +303,10 @@ export class AssetsAttachmentsService extends AssetsBaseService {
         manager: mg, audit: this.audit, table: 'asset_projects', end: 'project', from: asset.id, tenantId: asset.tenant_id,
         written, userId,
       });
+    } else {
+      // Nothing written: a project may have posted a link meanwhile, its dating skipping the asset
+      // this replacement held (`common/relations/linked-ends.ts`).
+      await dateRecordMarkedMeanwhile(mg, 'asset', asset.tenant_id, asset.id);
     }
 
     return this.listProjects(assetId, { manager: mg, tenantId: tenant });

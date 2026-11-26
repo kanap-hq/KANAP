@@ -1,7 +1,7 @@
 import { idsInScope } from '../portfolio-linked-reads';
 import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { linkedLineOf } from '../../spend/budget-nature';
-import { markLinkedEnds } from '../../common/relations/linked-ends';
+import { dateRecordMarkedMeanwhile, markLinkedEnds } from '../../common/relations/linked-ends';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { PortfolioProject, ProjectStatus, ProjectOrigin } from '../portfolio-project.entity';
@@ -541,7 +541,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     await this.copyOpexFromRequest(requestId, savedProject.id, tenantId, mg, userId);
     await this.copyDependenciesFromRequest(requestId, savedProject.id, tenantId, mg);
 
-    // The new project starts with a single history entry: where it came from.
+    // The new project's activity starts with a single entry: where it came from. Its History also
+    // lists the budget lines copied, and each line's History the project (`auditBudgetLines`).
     await this.logActivity(mg, {
       project_id: savedProject.id,
       tenant_id: tenantId,
@@ -1008,6 +1009,10 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         changed_fields: { capex_items: [beforeLabels, afterLabels] },
       });
       await this.auditBudgetLines(mg, 'capex', projectId, beforeSorted, afterSorted, actorId, opts?.audit, project.tenant_id);
+    } else {
+      // Nothing written: a line may have posted a link meanwhile, its dating skipping the project this
+      // replacement held (`common/relations/linked-ends.ts`).
+      await dateRecordMarkedMeanwhile(mg, 'project', project.tenant_id, projectId);
     }
 
     return { ok: true, added: written.added.length, removed: written.removed.length };
@@ -1069,6 +1074,10 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
         changed_fields: { opex_items: [beforeLabels, afterLabels] },
       });
       await this.auditBudgetLines(mg, 'opex', projectId, beforeSorted, afterSorted, actorId, opts?.audit, project.tenant_id);
+    } else {
+      // Nothing written: a line may have posted a link meanwhile, its dating skipping the project this
+      // replacement held (`common/relations/linked-ends.ts`).
+      await dateRecordMarkedMeanwhile(mg, 'project', project.tenant_id, projectId);
     }
 
     return { ok: true, added: written.added.length, removed: written.removed.length };

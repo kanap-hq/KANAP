@@ -55,7 +55,7 @@ import {
 } from './item-analytics.util';
 import { syncSupplierContactsWithinUpdate } from '../contacts/contact-link-attach.util';
 import { insertProjectBudgetLinks, lockBudgetLine } from '../portfolio/project-budget-links.util';
-import { markLinkedEnds } from '../common/relations/linked-ends';
+import { dateRecordMarkedMeanwhile, markLinkedEnds } from '../common/relations/linked-ends';
 import { appliedLinks, wroteLinks } from '../portfolio/portfolio-link-writes.util';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { countItemRelations, loadItemReferences } from './item-workspace.util';
@@ -917,6 +917,10 @@ export class SpendItemsService {
       await markLinkedEnds({
         manager: mg, audit: this.audit, table: 'portfolio_project_opex', end: 'project', from: lineId, tenantId, written, userId,
       });
+    } else {
+      // Nothing written: a project may have posted a link meanwhile, its dating skipping the line
+      // this replacement held (`common/relations/linked-ends.ts`).
+      await dateRecordMarkedMeanwhile(mg, 'budget_line', tenantId, lineId);
     }
     return this.listProjects(lineId, { manager: mg });
   }

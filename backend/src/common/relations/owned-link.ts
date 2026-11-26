@@ -6,7 +6,7 @@ import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../
 import { assertLinesEditable, DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE, isLimitedTransaction } from '../../data-access/line-write-checks';
 import { auditedLinkSet, hiddenLineCount, type HiddenLineOwner } from '../../data-access/hidden-links';
 import type { AuditService } from '../../audit/audit.service';
-import { linkedEndOf, markLinkedEnds } from './linked-ends';
+import { dateRecordMarkedMeanwhile, linkedEndOf, markLinkedEnds } from './linked-ends';
 import { binder } from './related-objects';
 import { parseTargetId } from './relation-target';
 
@@ -186,7 +186,14 @@ export async function setOwnedLink(args: {
     [tenantId, loaded.id],
   );
   const before = Array.from(new Set(current.map((row) => String(row.id).toLowerCase()))).sort();
-  if (before.includes(id) === args.add) return { ok: true, changed: false };
+  // Nothing to write (the other end may have posted the same link meanwhile, its dating skipping
+  // this record, whose lock this gesture held): dated when its History says so (`linked-ends.ts`).
+  const ownEnd = linkedEndOf(args.link.table, args.link.ownerColumn)?.end ?? null;
+  const unchanged = async (): Promise<{ ok: true; changed: false }> => {
+    if (ownEnd) await dateRecordMarkedMeanwhile(args.manager, ownEnd, tenantId, loaded.id);
+    return { ok: true, changed: false };
+  };
+  if (before.includes(id) === args.add) return unchanged();
 
   const [{ n }]: Array<{ n: number }> = await args.manager.query(
     args.add
@@ -196,7 +203,7 @@ export async function setOwnedLink(args: {
          SELECT count(*)::int AS n FROM c`,
     [tenantId, loaded.id, id],
   );
-  if (Number(n) === 0) return { ok: true, changed: false };
+  if (Number(n) === 0) return unchanged();
   const after = (args.add ? [...before, id] : before.filter((value) => value !== id)).sort();
   const auditTable = typeof args.link.auditTable === 'function'
     ? args.link.auditTable(nature as BudgetNature)
