@@ -596,7 +596,7 @@ async function testCategoryIsResolvedByCodeOrLabel(harness: Harness) {
         entity_type: 'incidents',
         fields: { title: 'Unknown category', severity: 'minor', category: 'Nope' },
       }),
-      /Unknown incident category "Nope"\. Valid incident categories: .*Security/,
+      /^Unknown incident category "Nope"\. Use one of: Infrastructure, Sécurité, Application, Données, Fournisseur, Autre\.$/,
     );
     const preview = await executeToolPreview(harness, ctx, 'create_business_record', {
       entity_type: 'incidents',
@@ -1110,7 +1110,8 @@ async function testDeprecatedIncidentCategory(harness: Harness) {
         entity_type: 'incidents',
         fields: { title: 'Another security incident', severity: 'minor', category: 'Security' },
       }),
-      'Unknown incident category "Security". Valid incident categories: Infrastructure.',
+      // Kad reads the retired category by its name in the person's language, and the values left, without codes.
+      'The incident category "Sécurité" is retired: only a record that already holds it keeps it. Use one of: Infrastructure.',
     );
 
     // The record that already holds it can keep it while another field changes.

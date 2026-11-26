@@ -143,7 +143,7 @@ async function testUnknownStateRefused(harness: Harness) {
     assert.deepEqual(states, ['proposed', 'active', 'deprecated', 'retired'], 'the shipped lifecycle states');
     await refused(
       () => card(harness, ctx, 'update_business_record', { entity_type: 'applications', ref: 'APP-1', fields: { lifecycle: 'in_development' } }),
-      /Unknown lifecycle "in_development"\. Valid values: Proposed, Active, Deprecated, Retired\./,
+      /^Unknown lifecycle "in_development"\. Use one of: Proposé, Actif, Obsolète, Retiré\.$/,
     );
     await refused(
       () => card(harness, ctx, 'create_business_record', { entity_type: 'applications', fields: { name: 'Bravo', lifecycle: 'in_development' } }),
@@ -194,7 +194,7 @@ async function testWorkspaceStates(harness: Harness) {
     // A state marked retired in the settings is refused on an application that does not hold it.
     await refused(
       () => card(harness, ctx, 'update_business_record', { entity_type: 'applications', ref: 'APP-1', fields: { lifecycle: 'Gelé' } }),
-      /The lifecycle "Gelé" is retired: only a record that already holds it keeps it\. Valid values: Proposed, Active, Deprecated, Retired, Pilote maison\./,
+      /^The lifecycle "Gelé" is retired: only a record that already holds it keeps it\. Use one of: Proposé, Actif, Obsolète, Retiré, Pilote maison\.$/,
     );
     assert.equal(await lifecycleOf(runner, s), 'pilot');
   });
