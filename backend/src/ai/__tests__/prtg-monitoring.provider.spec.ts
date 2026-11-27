@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { PrtgService, formatPrtgDate, oleAutomationDateToUtcIso } from '../prtg/prtg.service';
+import { PrtgApiError } from '../prtg/prtg.types';
 import {
   PRTG_SCOPE_PAGE_SIZE,
   PrtgMonitoringProvider,
@@ -671,7 +672,40 @@ async function testRequestTimeSsrfGuardBlocksPrivateTargets() {
   assert.equal(requests.length, 0, 'fetch must not run for a blocked target');
 }
 
+async function testJsonAnswersAreReadUpToTheResponseLimit() {
+  const megabyte = new Uint8Array(1024 * 1024).fill(0x20);
+  let pulled = 0;
+  const service = new PrtgService((async () => new Response(
+    new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        if (pulled > 40) controller.error(new Error('the body was read on after the limit'));
+        else controller.enqueue(megabyte);
+      },
+    }),
+    { status: 200, headers: { 'content-type': 'application/json' } },
+  )) as any);
+  const connection = { baseUrl: BASE_URL, auth: { kind: 'api_token' as const, apiToken: SECRET_TOKEN } };
+  const request = { content: 'sensors' as const, columns: ['objid'], count: 100, start: 0 };
+  await assert.rejects(
+    () => service.listObjects(connection, request),
+    (error: any) => error instanceof PrtgApiError
+      && error.message === 'PRTG table.json response exceeds the 16 MB limit.',
+  );
+  assert.ok(pulled <= 20, `the body was read on after the limit (${pulled} MB)`);
+
+  // A large ordinary page (4 MB) still reads.
+  const rows = Array.from({ length: 100 }, (_, i) => ({ objid: i + 1, message: `Capteur ${i} ${'x'.repeat(40_000)}` }));
+  const big = new PrtgService((async () => new Response(JSON.stringify({ sensors: rows }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  })) as any);
+  const listed = await big.listObjects(connection, request);
+  assert.equal(listed.length, 100);
+}
+
 async function run() {
+  await testJsonAnswersAreReadUpToTheResponseLimit();
   await testApplicabilityFailsClosedWithoutRuntimeConfig();
   await testRequestTimeSsrfGuardBlocksPrivateTargets();
   await testHttpAndTransportErrorMapping();

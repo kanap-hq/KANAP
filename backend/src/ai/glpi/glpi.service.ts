@@ -30,6 +30,11 @@ import { findImgSourceValues, hasHtmlTag } from '../../common/text-scan';
 
 const GLPI_TIMEOUT_MS = 10_000;
 const GLPI_MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
+const GLPI_DOCUMENT_TOO_LARGE = 'GLPI image exceeds the 20 MB inline image limit.';
+// A JSON answer is one page of at most GLPI_TREE_PAGE_SIZE records: a page of 200
+// tickets or followups of 20 KB each is 4 MB. Same bound as the Netbox client.
+const GLPI_MAX_JSON_BYTES = 16 * 1024 * 1024;
+const GLPI_JSON_TOO_LARGE = 'GLPI response exceeds the 16 MB limit.';
 const GLPI_PAGE_SIZE = 50;
 // Tree catalogs (categories/entities) are fetched via the plain item-list endpoint
 // (no search engine), so larger pages are cheap; the row cap bounds pathological trees.
@@ -1430,7 +1435,7 @@ export class GlpiService {
   private async readDocumentResponse(response: Response, requestUrl: string, resolvedUrl: URL): Promise<GlpiDocument> {
     const contentType = textOrNull(response.headers.get('content-type'));
     if (!response.ok) {
-      const raw = await response.text();
+      const raw = await this.readResponseText(response);
       const payload = isLikelyJsonPayload(contentType, raw)
         ? this.safeParseJson(raw, {
             requestUrl,
@@ -1450,7 +1455,7 @@ export class GlpiService {
     }
 
     if (isLikelyJsonPayload(contentType, '')) {
-      const raw = await response.text();
+      const raw = await this.readResponseText(response);
       const payload = this.safeParseJson(raw, {
         requestUrl,
         responseUrl: response.url || requestUrl,
@@ -1466,10 +1471,10 @@ export class GlpiService {
 
     const declaredLength = Number(response.headers.get('content-length') || 0);
     if (Number.isFinite(declaredLength) && declaredLength > GLPI_MAX_DOCUMENT_BYTES) {
-      throw new BadRequestException('GLPI image exceeds the 20 MB inline image limit.');
+      throw new BadRequestException(GLPI_DOCUMENT_TOO_LARGE);
     }
 
-    const buffer = await this.readResponseBuffer(response, GLPI_MAX_DOCUMENT_BYTES);
+    const buffer = await this.readResponseBuffer(response, GLPI_MAX_DOCUMENT_BYTES, GLPI_DOCUMENT_TOO_LARGE);
     if (buffer.length === 0) {
       throw new BadRequestException('GLPI image is empty.');
     }
@@ -1793,7 +1798,19 @@ export class GlpiService {
   }
 
   private async requestText(url: string, init: RequestInit): Promise<{ response: Response; raw: string }> {
-    return this.request(url, init, async (response) => ({ response, raw: await response.text() }));
+    return this.request(url, init, async (response) => ({ response, raw: await this.readResponseText(response) }));
+  }
+
+  // The text of a JSON answer, read up to GLPI_MAX_JSON_BYTES. Decoded as
+  // `response.text()` does (UTF-8, byte order mark dropped).
+  private async readResponseText(response: Response): Promise<string> {
+    const declaredLength = Number(response.headers.get('content-length') || 0);
+    if (Number.isFinite(declaredLength) && declaredLength > GLPI_MAX_JSON_BYTES) {
+      await response.body?.cancel().catch(() => undefined);
+      throw new BadRequestException(GLPI_JSON_TOO_LARGE);
+    }
+    const buffer = await this.readResponseBuffer(response, GLPI_MAX_JSON_BYTES, GLPI_JSON_TOO_LARGE);
+    return new TextDecoder().decode(buffer);
   }
 
   // `read` gets the response and reads its body: the connection is released
@@ -1944,7 +1961,7 @@ export class GlpiService {
     return fallback || 'glpi-image';
   }
 
-  private async readResponseBuffer(response: Response, maxBytes: number): Promise<Buffer> {
+  private async readResponseBuffer(response: Response, maxBytes: number, tooLargeMessage: string): Promise<Buffer> {
     if (!response.body) {
       return Buffer.alloc(0);
     }
@@ -1966,7 +1983,7 @@ export class GlpiService {
           } catch {
             // Ignore cancellation failures when enforcing the size limit.
           }
-          throw new BadRequestException('GLPI image exceeds the 20 MB inline image limit.');
+          throw new BadRequestException(tooLargeMessage);
         }
 
         chunks.push(Buffer.from(value));

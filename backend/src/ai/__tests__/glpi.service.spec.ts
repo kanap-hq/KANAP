@@ -70,6 +70,71 @@ async function testInitSessionExplainsHtmlResponse() {
   }
 }
 
+function streamOf(chunks: Uint8Array[]): ReadableStream<Uint8Array> {
+  let index = 0;
+  return new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (index < chunks.length) controller.enqueue(chunks[index++]);
+      else controller.close();
+    },
+  });
+}
+
+async function testJsonAnswersAreReadUpToTheResponseLimit() {
+  const service = createService();
+  const originalFetch = global.fetch;
+  const megabyte = new Uint8Array(1024 * 1024).fill(0x20);
+  let pulled = 0;
+  const refused = (error: any) => error instanceof BadRequestException
+    && String(error.message || '') === 'GLPI response exceeds the 16 MB limit.';
+
+  try {
+    // A body streamed without a declared length stops being read past 16 MB.
+    global.fetch = (async () => new Response(
+      new ReadableStream<Uint8Array>({
+        pull(controller) {
+          pulled += 1;
+          if (pulled > 40) controller.error(new Error('the body was read on after the limit'));
+          else controller.enqueue(megabyte);
+        },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )) as typeof fetch;
+    await assert.rejects(() => service.initSession('tenant-1', {} as any), refused);
+    assert.ok(pulled <= 20, `the body was read on after the limit (${pulled} MB)`);
+
+    // A declared length above the limit is refused before the body is read.
+    pulled = 0;
+    global.fetch = (async () => new Response(
+      new ReadableStream<Uint8Array>({
+        pull(controller) {
+          pulled += 1;
+          if (pulled > 40) controller.error(new Error('the body was read on after the limit'));
+          else controller.enqueue(megabyte);
+        },
+      }),
+      { status: 200, headers: { 'content-type': 'application/json', 'content-length': String(17 * 1024 * 1024) } },
+    )) as typeof fetch;
+    await assert.rejects(() => service.initSession('tenant-1', {} as any), refused);
+    assert.ok(pulled <= 2, `the declared length was not checked first (${pulled} MB read)`);
+
+    // A large ordinary answer (a page of 200 rows of 20 KB, 4 MB) still reads, byte for byte:
+    // a byte order mark is dropped as before and multibyte text split across chunks survives.
+    const rows = Array.from({ length: 200 }, (_, i) => ({ id: i + 1, content: `Écran ${i} ${'x'.repeat(20_000)}` }));
+    const json = JSON.stringify({ session_token: 'session-big', rows });
+    const bytes = new TextEncoder().encode(`﻿${json}`);
+    const cut = bytes.indexOf(0xc3) + 1;
+    global.fetch = (async () => new Response(
+      streamOf([bytes.slice(0, cut), bytes.slice(cut)]),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    )) as typeof fetch;
+    const session = await service.initSession('tenant-1', {} as any);
+    assert.equal(session.sessionToken, 'session-big');
+  } finally {
+    global.fetch = originalFetch;
+  }
+}
+
 async function testInitSessionNormalizesApiEndpointBaseUrl() {
   const service = createService('https://glpi.internal/helpdesk/apirest.php');
   const originalFetch = global.fetch;
@@ -1825,6 +1890,7 @@ async function run() {
   await testAFollowupIsPublicOnlyWhenGlpiMarksItNotPrivate();
   await testInitSessionSendsJsonHeaders();
   await testInitSessionExplainsHtmlResponse();
+  await testJsonAnswersAreReadUpToTheResponseLimit();
   await testInitSessionNormalizesApiEndpointBaseUrl();
   await testConnectionNormalizesCopiedApiUrls();
   await testFetchDocumentUsesDocumentApiDownloadForDocumentSendUrls();
