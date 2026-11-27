@@ -1492,7 +1492,7 @@ export class CsvImportService {
       }
     }
 
-    const deleted = context.params.dryRun ? new Set<string>() : await this.lockExistingEntities(config, entities, context);
+    const deleted = context.params.dryRun ? new Set<string>() : await this.lockExistingEntities(config, entities, rows, context);
     return { entities, deleted };
   }
 
@@ -1506,14 +1506,24 @@ export class CsvImportService {
    * record's key alone, as the update itself does: rows that reference the record (time entries,
    * attachments, activities) are saved without waiting. A record deleted since the first read is
    * returned in `deleted`: its row is refused (`CSV_RECORD_DELETED`), never inserted again. The check
-   * (`dryRun`) locks nothing.
+   * (`dryRun`) locks nothing. The other records the config says the load updates (`lockAlso`) are
+   * locked in the same statement: one id order for every record the load writes.
    */
-  private async lockExistingEntities(config: CsvEntityConfig, entities: Map<string, any>, context: CsvImportContext): Promise<Set<string>> {
+  private async lockExistingEntities(
+    config: CsvEntityConfig,
+    entities: Map<string, any>,
+    rows: Record<string, string>[],
+    context: CsvImportContext,
+  ): Promise<Set<string>> {
     const ids = [...new Set([...entities.values()].map((entity) => String(entity.id)))].sort();
-    if (ids.length === 0) return new Set();
+    const also = config.lockAlso
+      ? await config.lockAlso(rows.map((raw, i) => ({ raw, rowNumber: i + 2, found: this.resolveIdentity(config, raw, entities) })), context)
+      : [];
+    const locking = [...new Set([...ids, ...also])].sort();
+    if (locking.length === 0) return new Set();
     const locked: any[] = await context.manager.query(
       `SELECT * FROM ${config.tableName} WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR NO KEY UPDATE`,
-      [context.tenantId, ids],
+      [context.tenantId, locking],
     );
     const fresh = new Map(locked.map((entity) => [String(entity.id), entity]));
     for (const [key, entity] of entities) entities.set(key, fresh.get(String(entity.id)) ?? entity);

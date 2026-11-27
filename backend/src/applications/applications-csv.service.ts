@@ -317,6 +317,8 @@ export class ApplicationsCsvService {
     const changesDescription = async (entity: any) => !(await sameApplicationDescription(descriptions.get(String(entity.id)), entity.description));
     const config = {
       ...applicationCsvConfig,
+      lockAlso: (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) =>
+        this.lookalikeTargets(rows, context),
       settleRows: async (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) =>
         this.settleDescriptions(await this.settleRows(rows, context, look), context, descriptions),
       afterValidate: async (rows: CsvImportRow[], context: CsvImportContext) => {
@@ -384,26 +386,50 @@ export class ApplicationsCsvService {
    * (`CSV_LOOKALIKE_NAME_FOUND`). A load refuses a row the check would have created that looks like an
    * application since (`CSV_LOOKALIKE_NEW`); a check lists it, left out (review 4, C6).
    */
-  private async settleRows(
+  /** The lookalike decision of each row (none in "update only": no row looks like another there). */
+  private async decideLookalikes(
     rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>,
     context: CsvImportContext,
-    look: LookalikeState,
-  ): Promise<CsvSettledRow[]> {
+  ): Promise<ReturnType<typeof decideLookalikes> | null> {
     const { params } = context;
-    if (params.operation === 'update_only') return rows.map((row) => ({ entity: row.found }));
+    if (params.operation === 'update_only') return null;
     const index = new ApplicationIndex(await storedApplications(context.manager, context.tenantId));
-    const decided = decideLookalikes(rows.map((row) => {
+    return decideLookalikes(rows.map((row) => {
       const name = cellValue(row.raw, 'name');
       const keys = !name ? null : row.found
         ? { name, supplierId: null, editor: null }
         : { name, supplierId: this.rowSupplier(row.raw, context), editor: cellValue(row.raw, 'editor') || null };
       return { line: row.rowNumber, foundId: row.found ? String(row.found.id) : null, keys };
     }), index, params.lookalikes ?? [], { updatable: params.operation !== 'insert_only' });
+  }
+
+  /**
+   * The applications the rows update as "Update APP-n" (lot I7b of 26.12.1): the load locks them with
+   * those its file finds, in one statement in id order (`lockAlso`), before any write, as the change in
+   * bulk locks its applications. Locked after those, they could meet it in the other order (40P01).
+   */
+  private async lookalikeTargets(
+    rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>,
+    context: CsvImportContext,
+  ): Promise<string[]> {
+    const decided = await this.decideLookalikes(rows, context);
+    return decided ? updateTargets(decided) : [];
+  }
+
+  private async settleRows(
+    rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>,
+    context: CsvImportContext,
+    look: LookalikeState,
+  ): Promise<CsvSettledRow[]> {
+    const { params } = context;
+    const decided = await this.decideLookalikes(rows, context);
+    if (!decided) return rows.map((row) => ({ entity: row.found }));
     look.decisions = decided.decisions;
     look.followed = decided.followed;
     // The applications updated, locked in id order (as `lockApplicationRow`, the first lock of every
     // writer of their owners), then their state read again: nothing changes them before the commit.
-    const ids = [...new Set([...decided.decisions.values()].filter((decision) => decision.action === 'update').map((decision) => decision.id))].sort();
+    // The load already holds them, with those the file finds (`lookalikeTargets`): no other order.
+    const ids = updateTargets(decided);
     const stored: any[] = ids.length === 0 ? [] : await context.manager.query(
       `SELECT * FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR UPDATE`,
       [context.tenantId, ids],
@@ -722,4 +748,9 @@ export class ApplicationsCsvService {
 
     return { fields, presets };
   }
+}
+
+/** The applications a lookalike decision updates, in id order. */
+function updateTargets(decided: ReturnType<typeof decideLookalikes>): string[] {
+  return [...new Set([...decided.decisions.values()].filter((decision) => decision.action === 'update').map((decision) => String(decision.id)))].sort();
 }

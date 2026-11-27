@@ -159,6 +159,13 @@ export interface CsvEntityConfig {
   /** Hook called before import validation */
   beforeValidate?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<void>;
   /**
+   * The other records the load will update, by id, beyond those the file finds by its id or key (the
+   * applications a row updates as "Update APP-n", lot I7b of 26.12.1): locked with them, in the same
+   * statement and the same id order (`lockExistingEntities`), so no other path that locks the same
+   * records in id order meets them in another order. Same arguments as `settleRows`.
+   */
+  lockAlso?: (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) => Promise<string[]>;
+  /**
    * Before the rows' cells are read, with the record each row was found to update by its id or key
    * (`found`, null for a row that would create one): the record each row updates instead, or a row
    * left out (lot I3 of 26.11.9, the applications' lookalikes). One entry per row, in order, with the
