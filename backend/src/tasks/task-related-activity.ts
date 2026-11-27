@@ -17,6 +17,14 @@ import { isPlainObject, isUuid } from '../audit/record-history/values';
  * Older rows stored a text (the name or reference the author read, or an id). They show the kind
  * the text tells, or `{ hidden: true }` when it tells none, to every reader: the stored text never
  * leaves the server, and the object it named then is not looked up again.
+ *
+ * A phase is a value of a project (`phase_id`, stored by its name): it shows only to a person who
+ * reads that project, as on the task's page (`withReadableTaskLinks`), and reads `{ hidden: true }`
+ * otherwise. The project of a row is the one the task was on then: in a move, the side the value
+ * belongs to (the phase left with the object left, the phase reached with the object reached);
+ * before a move, its object left; after the last move, the task's object today. A side that is no
+ * project, or not one the person reads (module, data access, participation), or an older row's text,
+ * hides the phase.
  */
 export type StoredRelatedObject = { kind: FamilyKey; id: string };
 
@@ -64,20 +72,29 @@ export type TaskActivityReader = {
   permissions?: Record<string, string>;
 };
 
-/** The activities with each side of a move named for `reader`; the other rows unchanged. */
-export async function withRelatedObjectsForReader<T extends ActivityRow>(rows: T[], reader: TaskActivityReader): Promise<T[]> {
-  const moves = rows.filter((row) => Array.isArray(row.changed_fields?.related_to));
-  if (moves.length === 0) return rows;
+/**
+ * The activities (newest first, as `listForTask` reads them) with each side of a move named for
+ * `reader`, and each phase hidden where the project it belongs to does not show; `current` is the
+ * task's object today. The other rows and fields are unchanged.
+ */
+export async function withRelatedObjectsForReader<T extends ActivityRow>(
+  rows: T[],
+  reader: TaskActivityReader,
+  current: { type: unknown; id: unknown } = { type: null, id: null },
+): Promise<T[]> {
+  const isMove = (row: T) => Array.isArray(row.changed_fields?.related_to);
+  const hasPhase = (row: T) => Array.isArray(row.changed_fields?.phase_id);
+  if (!rows.some((row) => isMove(row) || hasPhase(row))) return rows;
 
+  const today = storedRelatedObject(current.type, current.id);
   const ids = new Map<FamilyKey, Set<string>>();
-  for (const row of moves) {
-    for (const side of row.changed_fields!.related_to) {
-      const stored = asStored(side);
-      if (stored) ids.set(stored.kind, (ids.get(stored.kind) ?? new Set()).add(stored.id));
-    }
-  }
+  const want = (stored: StoredRelatedObject | null) => {
+    if (stored) ids.set(stored.kind, (ids.get(stored.kind) ?? new Set()).add(stored.id));
+  };
+  want(today);
+  for (const row of rows) if (isMove(row)) for (const side of row.changed_fields!.related_to) want(asStored(side));
   const readable = readableFamilies({ isAdmin: reader.isAdmin === true, permissions: reader.permissions });
-  // No person: nothing is named (every side by its kind).
+  // No person: nothing is named (every side by its kind, every phase hidden).
   const resolution: ReferenceResolution = reader.userId && ids.size > 0
     ? await resolveReferences({
       manager: reader.manager,
@@ -96,9 +113,30 @@ export async function withRelatedObjectsForReader<T extends ActivityRow>(rows: T
     if (!stored) return { hidden: true };
     return referenceValue(ctx, stored.kind, stored.id) ?? { hidden: true, kind: stored.kind };
   };
+  /** Whether the phases of the task on this object show: a project the person reads. */
+  const showsPhase = (side: unknown) => {
+    const stored = asStored(side);
+    if (!stored || stored.kind !== 'project') return false;
+    const reference = referenceValue(ctx, 'project', stored.id);
+    return !!reference && !('hidden' in reference);
+  };
+  const phaseValue = (value: unknown, shows: boolean) => (value === null || value === undefined || shows ? value ?? null : { hidden: true });
+
+  // Newest first: the object of the task at a row is its object today, until a move goes back past it.
+  let object: unknown = today;
   return rows.map((row) => {
-    const change = row.changed_fields?.related_to;
-    if (!Array.isArray(change)) return row;
-    return { ...row, changed_fields: { ...row.changed_fields, related_to: [named(change[0]), named(change[1])] } };
+    const changed = row.changed_fields;
+    if (!changed || (!isMove(row) && !hasPhase(row))) return row;
+    const next: Record<string, unknown> = { ...changed };
+    if (isMove(row)) {
+      const [before, after] = changed.related_to;
+      next.related_to = [named(before), named(after)];
+      if (hasPhase(row)) next.phase_id = [phaseValue(changed.phase_id[0], showsPhase(before)), phaseValue(changed.phase_id[1], showsPhase(after))];
+      object = before;
+    } else {
+      const shows = showsPhase(object);
+      next.phase_id = changed.phase_id.map((value) => phaseValue(value, shows));
+    }
+    return { ...row, changed_fields: next as T['changed_fields'] };
   });
 }

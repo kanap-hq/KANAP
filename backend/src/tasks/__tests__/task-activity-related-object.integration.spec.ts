@@ -181,6 +181,39 @@ async function run() {
     }
     console.log('  a person in limited data access gets the line and the contract outside their scope by their kind: OK');
 
+    // A phase is a value of its project: it shows only to a person who reads that project. A task of
+    // a project changes its phase, then moves to the contract (the move empties the phase).
+    const phaseProject = await insertId(runner, `INSERT INTO portfolio_projects (tenant_id, item_number, name) VALUES ($1, 8, 'Phase project')`, [tenantId]);
+    const phase = await insertId(runner, `INSERT INTO portfolio_project_phases (tenant_id, project_id, name) VALUES ($1, $2, 'Secret phase')`, [tenantId, phaseProject]);
+    const bcRole = await role('Business Contributor', { tasks: 'reader', portfolio_projects: 'reader', contracts: 'reader' });
+    const bcId = await user('bc', bcRole.id);
+    const phased = await task(3, 'project', phaseProject);
+    await runner.query(`UPDATE tasks SET viewer_ids = $3::jsonb WHERE tenant_id = $1 AND id = $2`, [tenantId, phased, JSON.stringify([bcId])]);
+    await tasks.updateById(phased, { phase_id: phase }, adminId, write);
+    // One transaction, one time: the phase change is dated before the move, as two gestures would be.
+    await runner.query(`UPDATE portfolio_activities SET created_at = created_at - interval '1 minute' WHERE tenant_id = $1 AND task_id = $2`, [tenantId, phased]);
+    await tasks.updateById(phased, { related_object_type: 'contract', related_object_id: contract }, adminId, write);
+    const phases = (rows: Activity[]) => rows
+      .map((row) => row.changed_fields?.phase_id)
+      .filter((change): change is unknown[] => Array.isArray(change));
+    const phasedFull = await read(phased, full);
+    assert.deepEqual(phases(phasedFull), [['Secret phase', null], [null, 'Secret phase']], 'project reader: the phase names');
+    const noProjectsRole = await role('Reads no projects', { tasks: 'reader', contracts: 'reader' });
+    const noProjectsId = await user('noprojects', noProjectsRole.id);
+    for (const [who, request] of [
+      ['no reader of projects', req(noProjectsId, noProjectsRole.permissions)],
+      ['Business Contributor outside the team', req(bcId, bcRole.permissions)],
+    ] as const) {
+      const rows = await read(phased, request);
+      assert.deepEqual(phases(rows), [[{ hidden: true }, null], [null, { hidden: true }]], `${who}: the phase hidden, on the move and on the change`);
+      assert.deepEqual(moves(rows), [[{ hidden: true, kind: 'project' }, contractRef]], `${who}: the project by its kind`);
+      const text = JSON.stringify(rows);
+      for (const secret of ['Secret phase', 'Phase project', 'PRJ-8', phase, phaseProject]) {
+        assert.equal(text.includes(secret), false, `${who}: no ${secret} in the answer`);
+      }
+    }
+    console.log('  a phase shows only to a person who reads its project, on a move and on a change: OK');
+
     // An older row stored a text: the kind its text tells, or a neutral mention, for every reader.
     const old = async (before: string, after: string) => insertId(runner,
       `INSERT INTO portfolio_activities (tenant_id, task_id, author_id, type, changed_fields)

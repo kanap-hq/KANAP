@@ -141,8 +141,9 @@ export class TaskActivitiesService {
     // The history of a task the person can read only (spec §5.6): the task first, under the
     // person's access (the tasks policy hides a task of a line or contract out of access), the same
     // 404 for a hidden task and an unknown id. `portfolio_activities` itself carries no policy.
-    const visible: Array<{ tenant_id: string }> = await mg.query(
-      `SELECT tenant_id::text AS tenant_id FROM tasks WHERE id = $1 AND tenant_id = app_current_tenant()`,
+    const visible: Array<{ tenant_id: string; related_object_type: string | null; related_object_id: string | null }> = await mg.query(
+      `SELECT tenant_id::text AS tenant_id, related_object_type, related_object_id::text AS related_object_id
+         FROM tasks WHERE id = $1 AND tenant_id = app_current_tenant()`,
       [taskId],
     );
     if (visible.length === 0) throw new NotFoundException('Task not found');
@@ -182,14 +183,15 @@ export class TaskActivitiesService {
       [taskId],
     );
 
-    // The object a move left or reached, named with the reader's rights (`task-related-activity.ts`).
+    // The object a move left or reached, named with the reader's rights, and the phases of a project
+    // the reader does not read hidden (`task-related-activity.ts`).
     const named = await withRelatedObjectsForReader(rows, {
       manager: mg,
       tenantId: visible[0].tenant_id,
       userId: opts?.userId,
       isAdmin: opts?.isAdmin,
       permissions: opts?.permissions,
-    });
+    }, { type: visible[0].related_object_type, id: visible[0].related_object_id });
     return this.withLinkNamesForReader(mg, named, opts?.userId);
   }
 
