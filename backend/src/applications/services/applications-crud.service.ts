@@ -330,7 +330,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const classification = classificationPatch(body, existing, catalog);
     const patch: any = { ...body, ...classification };
     delete patch.description;
-    // The column follows the document (the search index reads it).
+    // The column, the seed, follows: nothing reads it once the document exists (`application-description.ts`).
     if (description !== undefined) patch.description = description;
     // The modification date is the database's (migration 1856270000000): a date sent by the client never wins.
     for (const key of ['id', 'tenant_id', 'created_at', 'updated_at', 'sequential_id']) delete patch[key];

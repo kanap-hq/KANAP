@@ -7,8 +7,9 @@ import type { IntegratedDocumentsService } from '../knowledge/integrated-documen
  * 26.12.1): the page shows it, the import, the API and Kad write it, the export, Kad, the MCP server
  * and the delete read it. The column `applications.description` is its seed only: the text the
  * document starts from when the page first opens the application (`repairSourceSlot`), read while
- * no document exists. A writer keeps the column in step with what it writes (the search index reads
- * it); a column left behind by an edit of the document is never copied back into it.
+ * no document exists. Once the document exists nothing reads the column (the search index carries no
+ * description since migration 1856300000000): the import, the API and Kad still write it with the
+ * document, an edit of the document on the page leaves it behind, and it is never copied back into it.
  */
 export const APPLICATION_DESCRIPTION_SLOT = 'overview' as const;
 
