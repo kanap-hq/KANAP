@@ -129,6 +129,36 @@ describe('Leaving the IT landscape settings page right after typing', () => {
     expect(names).toEqual(['', 'HTTPS']);
   }, 20000);
 
+  it.each([
+    ['sends the value typed during a save in flight once that save returns', 'HTTPS', 2],
+    ['sends nothing more when nothing was typed during the save in flight', null, 1],
+  ])('%s', async (_name, further, expectedCalls) => {
+    let release: (() => void) | undefined;
+    patch.mockImplementation((_url: string, body: Partial<ItOpsSettings>) => {
+      const saved = { data: { ...pageSettings, ...body, connectionTypes: (body.connectionTypes || []).map((row) => ({ ...row, code: row.code || 'http' })) } };
+      if (patch.mock.calls.length > 1) return Promise.resolve(saved);
+      return new Promise((resolve) => { release = () => resolve(saved); });
+    });
+    const view = renderPage();
+    const section = await addRow('connectionTypes');
+    const input = await within(section).findByRole('textbox', { name: 'common:enumEditor.name' });
+    fireEvent.change(input, { target: { value: 'HTTP' } });
+    await wait(1600);
+    expect(sentLists('connectionTypes')).toHaveLength(1);
+    expect(sentLists('connectionTypes')[0].connectionTypes[0].label).toBe('HTTP');
+    if (further) await typeOutsideAct(input, further);
+    view.unmount();
+    await wait(50);
+    expect(sentLists('connectionTypes')).toHaveLength(1);
+    await act(async () => { release?.(); });
+    await wait(50);
+    const sent = sentLists('connectionTypes');
+    expect(sent).toHaveLength(expectedCalls);
+    if (further) expect(sent[1].connectionTypes[0]).toMatchObject({ code: 'http', label: further });
+    await wait(1600);
+    expect(sentLists('connectionTypes')).toHaveLength(expectedCalls);
+  }, 20000);
+
   it('sends nothing when nothing was changed', async () => {
     const view = renderPage();
     await screen.findByRole('button', { name: /pages.settings.lists.connectionTypes.title/ });

@@ -1018,39 +1018,52 @@ function ItSettingsLists() {
       if (status && status >= 400 && status < 500) dispatch({ type: 'rejected', id: variables.id, sent: variables.rows });
       dispatch({ type: 'setError', message: getApiErrorMessage(error, t, t('pages.settings.updateFailed')) });
     },
-    onSettled: () => dispatch({ type: 'setPending', id: null }),
+    onSettled: (_next, _error, variables) => {
+      dispatch({ type: 'setPending', id: null });
+      const sent = inFlightRef.current.get(variables.id);
+      inFlightRef.current.delete(variables.id);
+      // Once the page is left, rows typed while this save was in flight are sent when it returns.
+      if (!leftRef.current || sent === undefined) return;
+      const latest = latestStateRef.current;
+      const changed = JSON.stringify(stripLocalIds(listRows(latest, variables.id))) !== sent;
+      if (changed && savableLists(latest).includes(variables.id)) saveLists([variables.id]);
+    },
   });
 
   const submitting = mutation.isPending;
+  /** Per list, the rows of the save in flight, as sent. */
+  const inFlightRef = React.useRef(new Map<ListId, string>());
+  const leftRef = React.useRef(false);
+  const send = (id: ListId, rows: any[]) => {
+    dispatch({ type: 'setPending', id });
+    inFlightRef.current.set(id, JSON.stringify(rows));
+    mutation.mutate({ id, rows });
+  };
   const errorMessage = state.errorMessage;
 
   const handleSaveEnum = (id: EnumListId) => {
     const current = latestStateRef.current.enums[id] || [];
     const ordered = withLocalIds(orderOf(id, current), id);
     dispatch({ type: 'setEnum', id, items: ordered });
-    dispatch({ type: 'setPending', id });
-    mutation.mutate({ id, rows: stripLocalIds(ordered) });
+    send(id, stripLocalIds(ordered));
   };
 
   const handleSaveConnections = () => {
     const sorted = withLocalIds(sortConnectionTypes(latestStateRef.current.connectionTypes), 'ct');
     dispatch({ type: 'setConnectionTypes', items: sorted });
-    dispatch({ type: 'setPending', id: 'connectionTypes' });
-    mutation.mutate({ id: 'connectionTypes', rows: stripLocalIds(sorted) });
+    send('connectionTypes', stripLocalIds(sorted));
   };
 
   const handleSaveSubnets = () => {
     const sorted = withLocalIds(sortSubnets(latestStateRef.current.subnets), 'subnet');
     dispatch({ type: 'setSubnets', items: sorted });
-    dispatch({ type: 'setPending', id: 'subnets' });
-    mutation.mutate({ id: 'subnets', rows: stripLocalIds(sorted) });
+    send('subnets', stripLocalIds(sorted));
   };
 
   const handleSaveDomains = () => {
     const sorted = withLocalIds(sortDomains(latestStateRef.current.domains), 'domain');
     dispatch({ type: 'setDomains', items: sorted });
-    dispatch({ type: 'setPending', id: 'domains' });
-    mutation.mutate({ id: 'domains', rows: stripLocalIds(sorted) });
+    send('domains', stripLocalIds(sorted));
   };
 
   // Debounced autosave: each dirty list saves ~1.5s after the last edit, but
@@ -1082,12 +1095,13 @@ function ItSettingsLists() {
   });
 
   // The effect above clears its timer on every render and on leaving the page, so a value typed just before
-  // leaving would be dropped: send it once when the page unmounts. A save already in flight is left alone.
+  // leaving would be dropped: send it once when the page unmounts. A list whose save is in flight is sent when
+  // that save returns, if its rows changed since (`onSettled`).
   const saveOnLeaveRef = React.useRef<(() => void) | null>(null);
   React.useEffect(() => {
     saveOnLeaveRef.current = readOnly ? null : () => {
-      const latest = latestStateRef.current;
-      if (!submitting && latest.pending === null) saveLists(savableLists(latest));
+      leftRef.current = true;
+      saveLists(savableLists(latestStateRef.current).filter((id) => !inFlightRef.current.has(id)));
     };
   });
 
