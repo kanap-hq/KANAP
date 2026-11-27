@@ -197,6 +197,16 @@ describe('KnowledgePage library and folder names', () => {
       .toBe('Requests');
   });
 
+  it('names by their label the folders and libraries a restored filter selects and no document has', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Documents managés')).toBeInTheDocument());
+    await waitFor(() => expect(column('library_key')).toBeTruthy());
+    expect(column('folder_key').filterParams.labelFormatter('integrated_requests')).toBe('Demandes');
+    expect(column('folder_key').filterParams.labelFormatter(null)).toBe(frKnowledge.shared.unfiled);
+    expect(column('library_key').filterParams.labelFormatter('managed-docs')).toBe('Documents managés');
+    expect(column('status').filterParams.labelFormatter('in_review')).toBe('In review');
+  });
+
   it('filters the library column on slugs and shows the libraries in French', async () => {
     renderPage();
     await waitFor(() => expect(screen.getByText('Documents managés')).toBeInTheDocument());

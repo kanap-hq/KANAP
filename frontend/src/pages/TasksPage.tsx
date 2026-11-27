@@ -424,6 +424,8 @@ export default function TasksPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getTaskFilterValues('task_type_name', { labelMap: taskTypeLabelMap }),
+        // A type the server omits (no task has it) is still selected by a restored or linked filter.
+        labelFormatter: (value: string | null) => (value == null ? t('shared.blankValue') : (taskTypeLabelMap[value] ?? value)),
         searchable: false,
       },
       valueFormatter: (p: any) => typeLabel(p.value, p.data?.task_type_code) ?? '',
@@ -441,6 +443,8 @@ export default function TasksPage() {
           order: [null, 'project', 'spend_item', 'capex_item', 'contract', 'incident'],
           emptyLabel: t('tasks.values.standalone'),
         }),
+        // A context the server omits (no task has it) is still selected by a restored or linked filter.
+        labelFormatter: (value: string | null) => (value == null ? t('tasks.values.standalone') : (contextLabelMap[value] ?? value)),
         searchable: false,
         emptyLabel: t('tasks.values.standalone'),
       },

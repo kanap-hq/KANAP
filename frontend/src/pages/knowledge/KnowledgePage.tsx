@@ -539,6 +539,8 @@ export default function KnowledgePage() {
           labelMap: STATUS_LABELS,
           order: ['draft', 'in_review', 'published', 'archived', 'obsolete'],
         }),
+        // A value the server omits (no document has it) is still selected by a restored or linked filter.
+        labelFormatter: (value: string | null) => (value == null ? t('shared.blank') : (STATUS_LABELS[value] ?? value)),
         searchable: false,
       },
       cellRenderer: StatusCellRenderer,
@@ -589,6 +591,7 @@ export default function KnowledgePage() {
           emptyLabel: t('shared.unfiled'),
           formatLabel: (value) => knowledgeFolderKeyLabel(t, value),
         }),
+        labelFormatter: (value: string | null) => (value == null ? t('shared.unfiled') : knowledgeFolderKeyLabel(t, value)),
       },
       cellRenderer: ClickableCell,
       valueFormatter: (p: any) => (p.data?.folder_name
@@ -607,6 +610,7 @@ export default function KnowledgePage() {
       cellRenderer: ClickableCell,
       hide: true,
     });
+    const libraryKeyLabels = knowledgeLibraryKeyLabels(t, storedLibraries);
     nextColumns.push({
       field: 'library_key',
       headerName: t('columns.library'),
@@ -616,8 +620,9 @@ export default function KnowledgePage() {
       filterParams: {
         getValues: getDocFilterValues('library_key', {
           emptyLabel: t('shared.unknown'),
-          labelMap: knowledgeLibraryKeyLabels(t, storedLibraries),
+          labelMap: libraryKeyLabels,
         }),
+        labelFormatter: (value: string | null) => (value == null ? t('shared.unknown') : (libraryKeyLabels[value] ?? value)),
       },
       cellRenderer: ClickableCell,
       valueFormatter: (p: any) => knowledgeLibraryName(t, { slug: p.data?.library_slug, name: p.data?.library_name }),

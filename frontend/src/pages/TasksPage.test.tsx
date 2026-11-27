@@ -90,6 +90,23 @@ describe('TasksPage delete', () => {
     expect(empty.querySelector('button')?.textContent).toBe('tasks.actions.new');
   });
 
+  it('names by their label the types and contexts a restored filter selects and no task has', () => {
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <QueryClientProvider client={new QueryClient()}>
+          <MemoryRouter><TasksPage /></MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+    const column = (field: string) => (grid.props?.columns as Array<Record<string, any>>).find((c) => c.field === field)!;
+    const context = column('related_object_type').filterParams.labelFormatter;
+    expect(context('contract')).toBe('context.contract');
+    expect(context(null)).toBe('tasks.values.standalone');
+    const type = column('task_type_name').filterParams.labelFormatter;
+    expect(type('Unknown type')).toBe('Unknown type');
+    expect(type(null)).toBe('shared.blankValue');
+  });
+
   function statusCell(value: unknown) {
     const column = (grid.props?.columns as Array<Record<string, any>>).find((c) => c.field === 'status')!;
     const view = render(

@@ -345,6 +345,8 @@ export default function AssetsPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getAssetFilterValues('kind', { labelFn: (v) => labelFor('serverKind', v) }),
+        // A value the server omits (no asset has it) is still selected by a restored or linked filter.
+        labelFormatter: (value: string | null) => (value == null ? t('pages.assets.filters.blank') : labelFor('serverKind', value) || value),
         searchable: false,
       },
       valueFormatter: (p) => labelFor('serverKind', p.value) || p.value,
@@ -362,6 +364,7 @@ export default function AssetsPage() {
           labelFn: (v) => (v === CLUSTER_FILTER_IS_CLUSTER ? t('pages.assets.filters.isCluster') : v),
           trailing: [CLUSTER_FILTER_IS_CLUSTER, null],
         }),
+        labelFormatter: (value: string | null) => (value == null ? t('pages.assets.filters.noCluster') : (value === CLUSTER_FILTER_IS_CLUSTER ? t('pages.assets.filters.isCluster') : value)),
         searchable: false,
       },
       valueFormatter: (p) => (p.data?.is_cluster ? t('pages.assets.columns.cluster') : p.value || ''),
@@ -375,6 +378,7 @@ export default function AssetsPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getAssetFilterValues('environment', { labelMap: envLabelMap, order: ENV_ORDER }),
+        labelFormatter: (value: string | null) => (value == null ? t('pages.assets.filters.blank') : envLabelMap[value] ?? value),
         searchable: false,
       },
       valueFormatter: (p) => envLabel(p.value),
@@ -414,6 +418,7 @@ export default function AssetsPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getAssetFilterValues('hosting_type', { labelFn: (v) => labelFor('hostingType', v) }),
+        labelFormatter: (value: string | null) => (value == null ? t('pages.assets.filters.blank') : labelFor('hostingType', value) || value),
         searchable: false,
       },
       valueFormatter: (p) => labelFor('hostingType', p.value) || p.value,
@@ -440,6 +445,7 @@ export default function AssetsPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getAssetFilterValues('network_segment', { labelFn: (v) => labelFor('networkSegment', v) }),
+        labelFormatter: (value: string | null) => (value == null ? t('pages.assets.filters.blank') : labelFor('networkSegment', value) || value),
         searchable: false,
       },
       valueFormatter: (p) => labelFor('networkSegment', p.value) || p.value,
@@ -455,6 +461,7 @@ export default function AssetsPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getAssetFilterValues('admin_zone', { labelFn: (v) => labelFor('adminZone', v), emptyLabel: t('pages.assets.filters.blank') }),
+        labelFormatter: (value: string | null) => (value == null ? t('pages.assets.filters.blank') : labelFor('adminZone', value) || value),
         searchable: false,
       },
       valueFormatter: (p) => labelFor('adminZone', p.value) || p.value || '',
@@ -468,6 +475,7 @@ export default function AssetsPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getAssetFilterValues('status', { labelFn: (v) => labelFor('lifecycleStatus', v) }),
+        labelFormatter: (value: string | null) => (value == null ? t('pages.assets.filters.blank') : labelFor('lifecycleStatus', value) || value),
         searchable: false,
       },
       valueFormatter: (p) => lifecycleLabel(p.value),

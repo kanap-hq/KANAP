@@ -227,6 +227,18 @@ describe('AssetsPage clusters', () => {
     expect(empty.container.textContent).toBe('');
   });
 
+  it('names by their label the values a restored or linked filter selects and no asset has', () => {
+    renderPage();
+    const label = (field: string) => lastProps().columns.find((c) => c.field === field)!.filterParams.labelFormatter;
+    expect(label('cluster')('__cluster__')).toBe('pages.assets.filters.isCluster');
+    expect(label('cluster')(null)).toBe('pages.assets.filters.noCluster');
+    expect(label('environment')('prod')).toBe('enums.environment.prod');
+    for (const field of ['kind', 'hosting_type', 'network_segment', 'admin_zone', 'status']) {
+      expect(label(field)('code')).toBe('code');
+      expect(label(field)(null)).toBe('pages.assets.filters.blank');
+    }
+  });
+
   it('lists the filter as names, then "is a cluster", then "no cluster"', async () => {
     renderPage();
     apiGet.mockResolvedValueOnce({ data: { cluster: ['ZZ-CL', 'AA-CL', '__cluster__', null] } });

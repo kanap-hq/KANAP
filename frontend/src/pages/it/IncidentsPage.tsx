@@ -227,6 +227,8 @@ export default function IncidentsPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getIncidentFilterValues('category', { labelFn: categoryLabel, emptyLabel: t('pages.incidents.filters.noCategory') }),
+        // A value the server omits (no incident has it) is still selected by a restored or linked filter.
+        labelFormatter: (value: string | null) => (value == null ? t('pages.incidents.filters.noCategory') : categoryLabel(value) || value),
         searchable: false,
       },
       valueFormatter: (p) => categoryLabel(p.value),
@@ -240,6 +242,7 @@ export default function IncidentsPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getIncidentFilterValues('severity', { labelFn: severityLabel, order: INCIDENT_SEVERITIES }),
+        labelFormatter: (value: string | null) => (value == null ? t('pages.incidents.filters.blank') : severityLabel(value) || value),
         searchable: false,
       },
       valueFormatter: (p) => severityLabel(p.value),
@@ -253,6 +256,7 @@ export default function IncidentsPage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getIncidentFilterValues('status', { labelFn: statusLabel, order: INCIDENT_STATUSES }),
+        labelFormatter: (value: string | null) => (value == null ? t('pages.incidents.filters.blank') : statusLabel(value) || value),
         searchable: false,
       },
       valueFormatter: (p) => statusLabel(p.value),

@@ -270,6 +270,7 @@ function BudgetListPageView() {
   }), [t]);
 
   const FTE_DECLARED_LABELS: Record<string, string> = useMemo(() => ({ yes: t('shared.fteDeclaredYes') }), [t]);
+  const NATURE_LABELS: Record<string, string> = useMemo(() => ({ opex: t('budget.opex'), capex: t('budget.capex') }), [t]);
 
   const gridApiRef = useRef<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -566,7 +567,9 @@ function BudgetListPageView() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getBudgetFilterValues('nature', { labelMap: { opex: t('budget.opex'), capex: t('budget.capex') } }),
+        getValues: getBudgetFilterValues('nature', { labelMap: NATURE_LABELS }),
+        // A value the server omits (no line has it) is still selected by a restored or linked filter.
+        labelFormatter: (value: string | null) => (value == null ? t('shared.blank') : (NATURE_LABELS[value] ?? value)),
         searchable: false,
       },
       cellRenderer: (params: any) => params.node?.rowPinned || !params.value ? null : (
@@ -796,6 +799,7 @@ function BudgetListPageView() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getBudgetFilterValues('has_fte', { labelMap: FTE_DECLARED_LABELS, emptyLabel: t('shared.fteDeclaredNo') }),
+        labelFormatter: (value: string | null) => (value == null ? t('shared.fteDeclaredNo') : (FTE_DECLARED_LABELS[value] ?? value)),
         searchable: false,
       },
       cellRenderer: (params: any) => (
@@ -1024,6 +1028,7 @@ function BudgetListPageView() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getBudgetFilterValues('run_build', { labelMap: RUN_BUILD_LABELS }),
+        labelFormatter: (value: string | null) => (value == null ? t('shared.blank') : (RUN_BUILD_LABELS[value] ?? value)),
         searchable: false,
       },
       valueFormatter: (p) => (p.value != null ? (RUN_BUILD_LABELS[String(p.value)] || String(p.value)) : ''),
@@ -1097,7 +1102,7 @@ function BudgetListPageView() {
         />
       ),
     },
-  ], [Y, analyticsAxes, budgetColumns, bulk.column, canEdit, defaultAnalyticsLabel, getBudgetFilterValues, getBudgetHref, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, locale, navigate, queryClient, t]);
+  ], [Y, analyticsAxes, budgetColumns, bulk.column, canEdit, defaultAnalyticsLabel, getBudgetFilterValues, getBudgetHref, RUN_BUILD_LABELS, FTE_DECLARED_LABELS, NATURE_LABELS, locale, navigate, queryClient, t]);
 
   if (!hasLevel('budget', 'reader')) {
     return <ForbiddenPage resource="budget" level="reader" />;
