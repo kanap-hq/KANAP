@@ -405,6 +405,34 @@ async function testSearchReadsTheDocument(harness: Harness) {
   });
 }
 
+/**
+ * "Update APP-n" whose target the load did not lock (the application the row looked like when the load
+ * locked went, another looks like it since): the row is refused, the load writes nothing.
+ */
+async function testLookalikeTargetNotLocked(harness: Harness) {
+  await inSeed(harness, async (runner, s) => {
+    const target = await application(runner, s, 'Rácé one', 'Seed');
+    const csv = harness.csv as any;
+    const original = csv.lookalikeTargets;
+    // The decision the load took when it locked: no target (the one it saw is gone since).
+    csv.lookalikeTargets = async (_rows: unknown, _context: unknown, look: any) => { look.locked = new Set(); return []; };
+    try {
+      const result = await harness.csv.import(
+        { buffer: Buffer.from('name;version;description\nRace one;2.0;New text\n'), originalname: 'applications.csv' } as Express.Multer.File,
+        { dryRun: false, operation: 'upsert', lookalikes: [{ kind: 'lookalike', line: 2, action: 'update', id: target }] },
+        { manager: runner.manager, tenantId: s.tenantId, userId: s.userId, access: { isAdmin: true, permissions: {} } },
+      );
+      assert.equal(result.ok, false);
+      assert.deepEqual(result.errors.map((error: any) => error.code), ['CSV_LOOKALIKE_NEW']);
+    } finally {
+      csv.lookalikeTargets = original;
+    }
+    const [row] = await runner.query(`SELECT version, description FROM applications WHERE id = $1`, [target]);
+    assert.deepEqual(row, { version: null, description: 'Seed' }, 'nothing written');
+    assert.equal(await documentOf(runner, s, target), null);
+  });
+}
+
 /** An import of one tenant never reaches another tenant's application or document. */
 async function testOtherTenant(harness: Harness) {
   await inSeed(harness, async (runner, s) => {
@@ -434,7 +462,7 @@ async function run() {
     const failures: string[] = [];
     for (const test of [
       testImportWritesTheDocument, testUnchangedWritesNothing, testNewAndUnopenedApplications, testApiWritesTheDocument,
-      testKadWritesTheDocument, testCopyConversionDelete, testOtherTenant, testSearchReadsTheDocument,
+      testKadWritesTheDocument, testCopyConversionDelete, testOtherTenant, testSearchReadsTheDocument, testLookalikeTargetNotLocked,
     ]) {
       try {
         await test(harness);

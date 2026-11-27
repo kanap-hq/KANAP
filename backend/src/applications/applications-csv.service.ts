@@ -83,6 +83,8 @@ type LookalikeState = {
   decisions: Map<number, LookalikeDecision>;
   followed: ImportLookalikeChoice[];
   fields: Map<number, string[]>;
+  /** The applications the load locked as "Update APP-n" targets (`lookalikeTargets`); none on a check. */
+  locked?: Set<string>;
 };
 
 /** A row the load wrote: the application it saved, and its cells (by column), for its owners and data residency. */
@@ -318,7 +320,7 @@ export class ApplicationsCsvService {
     const config = {
       ...applicationCsvConfig,
       lockAlso: (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) =>
-        this.lookalikeTargets(rows, context),
+        this.lookalikeTargets(rows, context, look),
       settleRows: async (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) =>
         this.settleDescriptions(await this.settleRows(rows, context, look), context, descriptions),
       afterValidate: async (rows: CsvImportRow[], context: CsvImportContext) => {
@@ -411,9 +413,12 @@ export class ApplicationsCsvService {
   private async lookalikeTargets(
     rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>,
     context: CsvImportContext,
+    look: LookalikeState,
   ): Promise<string[]> {
     const decided = await this.decideLookalikes(rows, context);
-    return decided ? updateTargets(decided) : [];
+    const targets = decided ? updateTargets(decided) : [];
+    look.locked = new Set(targets);
+    return targets;
   }
 
   private async settleRows(
@@ -429,7 +434,9 @@ export class ApplicationsCsvService {
     // The applications updated, locked in id order (as `lockApplicationRow`, the first lock of every
     // writer of their owners), then their state read again: nothing changes them before the commit.
     // The load already holds them, with those the file finds (`lookalikeTargets`): no other order.
-    const ids = updateTargets(decided);
+    // A target the load did not lock (the application it looked like went, another one looks like
+    // its row since): never locked here, out of the id order; its row is refused below.
+    const ids = updateTargets(decided).filter((id) => !look.locked || look.locked.has(id));
     const stored: any[] = ids.length === 0 ? [] : await context.manager.query(
       `SELECT * FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR UPDATE`,
       [context.tenantId, ids],
@@ -463,6 +470,7 @@ export class ApplicationsCsvService {
         };
       }
       if (decision.action === 'create') return { entity: null };
+      if (look.locked && !look.locked.has(String(decision.id))) return refuse('CSV_LOOKALIKE_NEW', `The row looks like ${ref} since the check.`, ref);
       const entity = stored.find((app) => String(app.id) === decision.id) ?? null;
       if (!entity) return refuse('CSV_LOOKALIKE_GONE', 'The application chosen at the check no longer exists.');
       decision.state = states.get(decision.id) ?? decision.state;
