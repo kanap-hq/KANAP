@@ -99,13 +99,18 @@ async function binding(runner: QueryRunner, tenantId: string, interfaceId: strin
      VALUES ($1, $2, $3, 'prod', $4, $5, $6)`, [tenantId, interfaceId, leg, sourceInstance, targetInstance, tool]);
 }
 
-/** A managed document (the overview slot) of the application, with an attached file. */
+/**
+ * A managed document (the overview slot) of the application, with an attached file. It holds the
+ * application's description (decision P14 of 26.12.1: the column is only its seed).
+ */
 async function managedDocument(runner: QueryRunner, tenantId: string, appId: string, storage: Storage) {
   const library = await one(runner, `INSERT INTO document_libraries (tenant_id, name, slug) VALUES ($1, 'Managed Docs', $2) RETURNING id`, [tenantId, `managed-${randomUUID().slice(0, 8)}`]);
-  const document = await one(runner, `INSERT INTO documents (tenant_id, item_number, library_id, title) VALUES ($1, 1, $2, 'vSphere overview') RETURNING id`, [tenantId, library]);
+  const document = await one(runner, `INSERT INTO documents (tenant_id, item_number, library_id, title, content_markdown) VALUES ($1, 1, $2, 'vSphere overview', 'Virtualisation platform') RETURNING id`, [tenantId, library]);
   await runner.query(
     `INSERT INTO integrated_document_bindings (tenant_id, document_id, source_entity_type, source_entity_id, slot_key) VALUES ($1, $2, 'applications', $3, 'overview')`,
     [tenantId, document, appId]);
+  // A seed the document has moved away from: the conversion reads the document.
+  await runner.query(`UPDATE applications SET description = 'A seed left behind' WHERE tenant_id = $1 AND id = $2`, [tenantId, appId]);
   const key = `files/${tenantId}/documents/${document}/diagram.png`;
   storage.objects.set(key, Buffer.from('diagram'));
   await runner.query(

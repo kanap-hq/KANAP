@@ -6,6 +6,7 @@ import { DataSource, QueryRunner } from 'typeorm';
 import { ensureDefaultAnalyticsAxis } from '../../analytics/analytics-axes.util';
 import { ensureCapexDimensions } from '../../analytics/capex-dimensions.seed';
 import { AGENT_NAME } from '../../config/product';
+import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-document-seed';
 
 process.env.AI_CHAT_ENABLED = 'true';
 process.env.AI_SETTINGS_ENABLED = 'true';
@@ -146,6 +147,8 @@ async function seedTenant(runner: QueryRunner, tenantId: string, slug: string, n
     [tenantId, slug, name],
   );
   await setCurrentTenant(runner, tenantId);
+  // The documents of the records (an application's description is its document's text), as every tenant has them.
+  await seedManagedDocsKnowledgeAssets(runner.manager as any, tenantId);
   // Chat readiness now resolves through the model registry: mirror what the
   // registry backfill produces for a custom-provider tenant — one registry
   // entry assigned to chat — instead of only the legacy flat llm_* columns.
@@ -764,6 +767,12 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
     );
     assert.equal(appRow.criticality, 'high');
     assert.equal(appRow.description, `Updated app description ${seed.tag}`);
+    const [overview] = await runner.query(
+      `SELECT d.content_markdown FROM integrated_document_bindings b JOIN documents d ON d.id = b.document_id AND d.tenant_id = b.tenant_id
+        WHERE b.tenant_id = $1 AND b.source_entity_type = 'applications' AND b.source_entity_id = $2 AND b.slot_key = 'overview'`,
+      [seed.tenantId, seed.applicationId],
+    );
+    assert.equal(overview?.content_markdown, `Updated app description ${seed.tag}`, 'the description is written into its document');
     const undoBusinessPreview = await harness.tools.execute(context(seed, runner, 'business-update'), 'undo_preview', {
       preview_id: updateAppPreview.preview_id,
     }) as any;

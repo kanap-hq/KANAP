@@ -34,6 +34,7 @@
   "notSavedYet": "Votre dernière modification n'est pas encore enregistrée, car le serveur est occupé. Elle reste sur cette page et sera renvoyée avec votre prochaine modification.",
   "edit_conflict": "Une autre personne a modifié ce champ pendant que vous le modifiiez. Choisissez la valeur à garder.",
   "edit_conflict_unreadable": "Une autre personne a modifié ce que vous enregistriez, et sa réponse n'a pas pu être lue. Vos valeurs restent à l'écran, pas encore enregistrées.",
+  "document_revision_conflict": "Ce document a changé ailleurs : rechargez la page pour le voir.",
   "administrator_required": "Seul un administrateur de cet espace de travail peut faire cela.",
   "platform_admin_required": "Seul un administrateur de la plateforme peut faire cela.",
   "demo_status_conflict": "L'état des données d'exemple a changé entre-temps. Rechargez la page pour voir où il en est.",

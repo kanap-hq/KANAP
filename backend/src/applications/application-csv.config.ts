@@ -16,6 +16,7 @@ import { importCell, noteCleared, refuseClear, removedEntries } from '../common/
 import { numberedColumns } from '../common/csv/csv-numbered-lists';
 import { VULNERABILITY_CSV_HEADERS, vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
 import { richTextCell } from '../common/csv/rich-text-cell';
+import { sameApplicationDescription } from './application-description';
 import { sameStoredValue, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
 
@@ -492,7 +493,7 @@ export const applicationCsvConfig: CsvEntityConfig = {
       defaultExport: false,
       label: 'Description',
       group: 'Overview',
-      // The description is the source of the overview document: same rules as on the page.
+      // The text of the overview document (`application-description.ts`): same rules as on the page.
       importTransformFn: richTextCell('description'),
     },
     {
@@ -868,7 +869,7 @@ export const applicationCsvConfig: CsvEntityConfig = {
     const ownersById = groupKeys(owners, (o: any) => o.application_id, (o: any) => `${o.owner_type}:${o.user_id}`);
     const residencyById = groupKeys(residency, (r: any) => r.application_id, (r: any) => String(r.country_iso).trim().toUpperCase());
 
-    return rows.map((row) => {
+    const sameRow = async (row: (typeof rows)[number]): Promise<boolean> => {
       const stored = row.existingEntity;
       // The owners and the countries the row removes, announced by the check (`cleared`): this hook
       // runs at the check as at the load, on the rows that update an application.
@@ -882,13 +883,23 @@ export const applicationCsvConfig: CsvEntityConfig = {
 
       const next = { ...row.parsed };
       delete next._owners;
+      // The description is its document's text (`settleDescriptions`), compared as a write normalizes it.
+      if (next.description !== undefined) {
+        if (!(await sameApplicationDescription(stored.description, next.description))) return false;
+        delete next.description;
+      }
       try {
         resolveApplicationCatalogs(next, settings);
       } catch {
         return false;
       }
       return sameStoredValues(stored, next);
-    });
+    };
+    // One row after the other: a description is compared in the Markdown workers, which keep two calls
+    // of a person waiting at most (`markdown-worker.ts`); rows compared at once were refused past three.
+    const same: boolean[] = [];
+    for (const row of rows) same.push(await sameRow(row));
+    return same;
   },
 
   beforeCommit: async (entities: any[], context: CsvImportContext) => {

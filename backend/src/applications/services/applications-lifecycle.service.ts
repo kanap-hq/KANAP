@@ -30,6 +30,7 @@ import { ApplicationsBaseService, ServiceOpts } from './applications-base.servic
 import { InterfaceMappingsService } from '../../interfaces/services';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
+import { applicationDescriptions } from '../application-description';
 
 /**
  * Service for managing application lifecycle transitions and version management.
@@ -93,7 +94,8 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
       name,
       supplier_id: source.supplier_id,
       category: source.category,
-      description: source.description,
+      // The source's description as its page shows it (its document is copied below).
+      description: (await applicationDescriptions(mg, source.tenant_id, [source])).get(source.id) ?? null,
       editor: source.editor,
       lifecycle: 'proposed',
       environment: source.environment,

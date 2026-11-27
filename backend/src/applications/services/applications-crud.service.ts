@@ -35,6 +35,12 @@ import { projectParticipantCondition, requestParticipantCondition } from '../../
 import { buildDerivedUsersByApp } from './derived-users';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import {
+  applicationDescriptions,
+  keepApplicationSeed,
+  sameApplicationDescription,
+  writeApplicationDescription,
+} from '../application-description';
+import {
   applicationBadRequest,
   applicationNameKey,
   assertApplicationDates,
@@ -81,6 +87,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const include = new Set(includeRaw.split(',').map((s) => s.trim()).filter(Boolean));
     const app = await mg.getRepository(Application).findOne({ where: { id: appId } });
     if (!app) throw new NotFoundException('Application not found');
+    // The description is its document's text (the column is its seed until the page opens it).
+    app.description = (await applicationDescriptions(mg, app.tenant_id, [app])).get(app.id) ?? null;
     const owners = await mg.query(
       `SELECT o.id,
               o.tenant_id,
@@ -288,6 +296,10 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       table: 'applications', recordId: saved.id, action: 'create', before: null, after: saved, userId,
       ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
     }, { manager: mg });
+    // A description given at the creation is its document's first text, as for a project's purpose.
+    if (this.integratedDocuments && String(description ?? '').trim()) {
+      await writeApplicationDescription(this.integratedDocuments, { ...saved, tenant_id: tenantId }, description, { manager: mg, userId, audit: opts?.audit });
+    }
     return Object.assign(saved, classificationReadState(saved));
   }
 
@@ -303,13 +315,22 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     await mg.query('SELECT id FROM applications WHERE id = $1 AND tenant_id = $2 FOR UPDATE', [appId, tenantId]);
     const existing = await repo.findOne({ where: { id: appId, tenant_id: tenantId } });
     if (!existing) throw new NotFoundException('Application not found');
-    // Rich text: a changed description is checked as a write; a stored one is kept as it is.
-    const description = body.description === undefined
-      ? undefined
-      : await normalizeMarkdownRichText(body.description, { fieldName: 'description', storedValue: existing.description });
     const before = { ...existing };
+    // The description is its document's text: a text that repeats it writes nothing. Rich text: a
+    // changed description is checked as a write; a stored one is kept as it is.
+    let description: string | null | undefined;
+    if (body.description !== undefined) {
+      const stored = (await applicationDescriptions(mg, tenantId, [existing])).get(existing.id) ?? null;
+      const next = await normalizeMarkdownRichText(body.description, { fieldName: 'description', storedValue: stored });
+      if (!(await sameApplicationDescription(stored, next))) {
+        description = next;
+        before.description = stored;
+      }
+    }
     const classification = classificationPatch(body, existing, catalog);
     const patch: any = { ...body, ...classification };
+    delete patch.description;
+    // The column, the seed, follows: nothing reads it once the document exists (`application-description.ts`).
     if (description !== undefined) patch.description = description;
     // The modification date is the database's (migration 1856270000000): a date sent by the client never wins.
     for (const key of ['id', 'tenant_id', 'created_at', 'updated_at', 'sequential_id']) delete patch[key];
@@ -340,12 +361,19 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     if (patch.is_suite !== undefined && !patch.is_suite && existing.is_suite) {
       await assertSuiteHasNoChildren(mg, tenantId, existing.id);
     }
+    // An application with no document yet: the document of the text it replaces, first.
+    if (description !== undefined && this.integratedDocuments) {
+      await keepApplicationSeed(this.integratedDocuments, existing.id, { manager: mg, userId, audit: opts?.audit });
+    }
     Object.assign(existing, patch);
     const saved = (await repo.save(existing as any)) as Application;
     await this.audit.log({
       table: 'applications', recordId: saved.id, action: 'update', before, after: saved, userId,
       ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef } : {}),
     }, { manager: mg });
+    if (description !== undefined && this.integratedDocuments) {
+      await writeApplicationDescription(this.integratedDocuments, saved, description, { manager: mg, userId, audit: opts?.audit });
+    }
     // A renamed application: its description document's title follows (`APP-4 - New name - Overview`).
     if ((before as any).name !== saved.name) {
       await this.integratedDocuments?.syncTitles('applications', {
@@ -570,9 +598,18 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       await lockApplicationNames(manager, tenantId);
       const requested = normalizeApplicationName(String(name ?? '').trim() || fitApplicationName(source.name, ' (copy)'));
       const copyName = await freeApplicationName(manager, tenantId, requested);
-      const entity = manager.getRepository(Application).create({ ...properties, ...copyClassification(source, catalog), name: copyName });
+      // The description as the source's page shows it: its document's text, copied into the copy's own.
+      const description = (await applicationDescriptions(manager, tenantId, [source])).get(sourceId) ?? null;
+      const entity = manager.getRepository(Application).create({ ...properties, ...copyClassification(source, catalog), name: copyName, description });
       const saved = await manager.getRepository(Application).save(entity);
       await this.audit.log({ table: 'applications', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager });
+      if (this.integratedDocuments) {
+        // The reference (`APP-n`) is the database's, given on insert: the document's title carries it.
+        const [{ sequential_id }] = await manager.query(`SELECT sequential_id FROM applications WHERE id = $1 AND tenant_id = $2`, [saved.id, tenantId]);
+        await this.integratedDocuments.copyApplicationOverview(sourceId, {
+          id: saved.id, tenant_id: saved.tenant_id, item_number: null, name: saved.name, reference_label: String(sequential_id || '').trim() || saved.id,
+        }, userId, { manager });
+      }
       return saved;
     });
   }

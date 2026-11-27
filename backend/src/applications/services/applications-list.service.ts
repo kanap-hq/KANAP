@@ -25,6 +25,7 @@ import { buildDerivedUsersByApp, derivedTotalUsersSql } from './derived-users';
 import { textSortKey } from '../../common/list-sort';
 import { applicationCountsForTenantSql, applicationVulnerabilityCounts, vulnerabilityCountsEnabled } from '../../vulnerabilities/vulnerability-reach-counts';
 import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
+import { withApplicationDescriptions } from '../application-description';
 import {
   VULNERABILITIES_LIST_FIELD,
   vulnerabilityFilterPredicateSql,
@@ -668,6 +669,8 @@ export class ApplicationsListService extends ApplicationsBaseService {
       supplierNames = new Map(entities.map((app, idx) => [app.id, ((result.raw[idx] || {}) as any).s_name ?? null]));
     }
     const pageIds = entities.map((e) => e.id);
+    // Each description as its page shows it: its document's text (the column is its seed).
+    if (entities.length > 0) await withApplicationDescriptions(mg, String((entities[0] as any).tenant_id), entities);
 
     // Prepare expansions
     const expansions = await this.buildExpansions(pageIds, include, mg);
@@ -1376,6 +1379,8 @@ export class ApplicationsListService extends ApplicationsBaseService {
     await this.assertVisible(resolvedAppId, opts?.accessScope, mg);
     const app = await mg.getRepository(Application).findOne({ where: { id: resolvedAppId } });
     if (!app) throw new NotFoundException('Application not found');
+    // The description its page shows: its document's text.
+    await withApplicationDescriptions(mg, app.tenant_id, [app]);
 
     const ownerRows: Array<{ owner_type: string; user_id: string; first_name: string | null; last_name: string | null; email: string | null }> =
       await mg.query(

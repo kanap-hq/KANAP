@@ -9,6 +9,7 @@ import { incidentVisibilitySql, type IncidentViewer } from '../incidents/inciden
 import { IncidentRelationsService } from '../incidents/services/incident-relations.service';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { releaseOrphanedManagedDocuments } from '../knowledge/integrated-document-orphans';
+import { applicationDescriptionSql } from '../applications/application-description';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
 import { isActiveHostingType, resolveHostingType } from './hosting-type';
 import { TechnologiesService } from './technologies.service';
@@ -385,9 +386,10 @@ export class ApplicationConversionService {
     const id = String(applicationId || '').trim().toLowerCase();
     if (!UUID_RE.test(id)) throw new NotFoundException('Application not found');
     const rows: ApplicationRow[] = await opts.manager.query(
-      `SELECT id, name, sequential_id, editor, description, notes, lifecycle, cyber_criticality, recovery_wave,
-              rto_minutes, rpo_minutes, predecessor_id, support_notes, hosting_model
-         FROM applications WHERE tenant_id = $1 AND id = $2${lock ? ' FOR UPDATE' : ''}`,
+      // The description is the application's document's text, else its seed (`application-description.ts`).
+      `SELECT a.id, a.name, a.sequential_id, a.editor, ${applicationDescriptionSql('a')} AS description, a.notes, a.lifecycle,
+              a.cyber_criticality, a.recovery_wave, a.rto_minutes, a.rpo_minutes, a.predecessor_id, a.support_notes, a.hosting_model
+         FROM applications a WHERE a.tenant_id = $1 AND a.id = $2${lock ? ' FOR UPDATE OF a' : ''}`,
       [opts.tenantId, id],
     );
     if (!rows[0]) throw new NotFoundException('Application not found');

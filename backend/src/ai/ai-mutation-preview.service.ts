@@ -26,6 +26,7 @@ import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.re
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview, AiPreviewExecutionRefusal, runAfterExecutionRollback } from './mutation/ai-mutation-operation.types';
 import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
 import { isBudgetOperationRunning } from '../spend/budget-locks';
+import { isDocumentRevisionConflict } from '../knowledge/document-revision-conflict';
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
 import { assertLinesEditable } from '../data-access/line-write-checks';
 import { isReservedAiMutation } from './mutation/ai-mutation-reserved';
@@ -33,6 +34,7 @@ import { aiRelationTargetRequirement, aiWriteLevel, assertRecordInWriteScope } f
 import {
   AiWriteLanguage,
   PREVIEW_DATA_BUSY_MESSAGE,
+  PREVIEW_DOCUMENT_CHANGED_MESSAGE,
   PREVIEW_BUDGET_OPERATION_RUNNING_MESSAGE,
   PREVIEW_EXPIRED_MESSAGE,
   personWriteLanguage,
@@ -1365,7 +1367,10 @@ export class AiMutationPreviewService {
       if (error instanceof AiPreviewExecutionRefusal) preview.current_values = { ...(preview.current_values ?? {}), ...error.kept };
       preview.status = 'failed';
       preview.approved_at = new Date();
-      preview.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview execution failed.');
+      // A document written by someone else meanwhile: said in the person's words, never the API's.
+      preview.error_message = isDocumentRevisionConflict(error)
+        ? PREVIEW_DOCUMENT_CHANGED_MESSAGE
+        : dataAccessRefusalMessage(error) ?? (error?.message || 'Preview execution failed.');
       const saved = await repo.save(preview);
       const dto = this.toPreviewDto(saved, await this.languageOf(context));
       const followUps = await this.advanceMutationPlanAfterPreview(context, saved);
