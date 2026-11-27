@@ -575,7 +575,7 @@ describe('VulnerabilitiesPage', () => {
             servers_list: [
               { ...DETAIL.servers_list[0], alerts: true },
               { ...DETAIL.servers_list[1], alerts: false },
-              { asset_id: 'a-3', name: 'SRV-QUIET', reference: null, technology_id: 'tech-1', technology_name: 'Tomcat', version_label: '8.5', via_asset_name: null, alerts: false },
+              { asset_id: 'a-3', name: 'SRV-QUIET', reference: 'SRV-3', technology_id: 'tech-1', technology_name: 'Tomcat', version_label: '8.5', via_asset_name: null, alerts: false },
             ],
             applications_list: [
               { application_id: 'app-1', name: 'Billing', reference: 'APP-1', technology_name: 'Tomcat', version_label: '9.0.80', server_name: null, alerts: true },
@@ -597,6 +597,10 @@ describe('VulnerabilitiesPage', () => {
     expect(getComputedStyle(detail.querySelector('[title="9.0.80"]') as HTMLElement).color).not.toBe('rgb(108, 116, 130)');
     const quiet = within(detail).getByRole('link', { name: 'SRV-QUIET' });
     const loud = within(detail).getByRole('link', { name: 'SRV-WEB-01' });
+    // A server and an application open by their reference, a server without one by its id.
+    expect(quiet.getAttribute('href')).toBe('/it/assets/SRV-3');
+    expect(loud.getAttribute('href')).toBe('/it/assets/a-1');
+    expect(within(detail).getByRole('link', { name: /Billing/ }).getAttribute('href')).toBe('/it/applications/APP-1');
     expect(getComputedStyle(quiet).color).toBe('rgb(108, 116, 130)');
     expect(getComputedStyle(loud).color).not.toBe('rgb(108, 116, 130)');
     expect(getComputedStyle(within(detail).getByRole('link', { name: 'APP-2 Archive' })).color).toBe('rgb(108, 116, 130)');

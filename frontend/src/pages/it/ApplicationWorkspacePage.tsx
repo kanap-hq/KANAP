@@ -1995,7 +1995,7 @@ export default function ApplicationWorkspacePage() {
           onSuccess={(newApp) => {
             setVersionDialogOpen(false);
             feedbackRef.current.info(t('messages.versionCreated', { reference: newApp.sequential_id || newApp.name }));
-            navigate(`/it/applications/${newApp.id}/overview`);
+            navigate(`/it/applications/${newApp.sequential_id || newApp.id}/overview`);
           }}
         />
       )}

@@ -732,8 +732,8 @@ export class AssetsListService extends AssetsBaseService {
     }
 
     // Effective: a member lists what its clusters carry too (`inherited`, `via_clusters`).
-    const assignedRows: Array<{ app_id: string; app_name: string; environment: string; inherited: boolean; via_clusters: ViaCluster[] }> = await mg.query(
-      `SELECT a.id AS app_id, a.name AS app_name, ai.environment, e.inherited, e.via_clusters
+    const assignedRows: Array<{ app_id: string; app_reference: string | null; app_name: string; environment: string; inherited: boolean; via_clusters: ViaCluster[] }> = await mg.query(
+      `SELECT a.id AS app_id, a.sequential_id AS app_reference, a.name AS app_name, ai.environment, e.inherited, e.via_clusters
        FROM (${effectiveAssignmentsSql({ tenant: '$2', assets: 'ARRAY[$1::uuid]' })}) e
        JOIN app_instances ai ON ai.id = e.app_instance_id AND ai.tenant_id = e.tenant_id
        JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
@@ -743,6 +743,8 @@ export class AssetsListService extends AssetsBaseService {
 
     const assigned_applications = assignedRows.map((row) => ({
       id: row.app_id,
+      // The application's APP-n: the panel opens its page by it.
+      reference: row.app_reference ?? null,
       name: row.app_name,
       environment: row.environment,
       inherited: !!row.inherited,
@@ -763,6 +765,7 @@ export class AssetsListService extends AssetsBaseService {
 
     return {
       id: asset.id,
+      asset_reference: asset.asset_reference ?? null,
       name: asset.name,
       kind: asset.kind,
       environment: asset.environment,

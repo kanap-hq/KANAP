@@ -77,4 +77,19 @@ describe('reference data', () => {
     expect(ENTITY_TYPE_CONFIG.task.route('task-1', 'T-9')).toBe('/portfolio/tasks/T-9');
     expect(ENTITY_TYPE_CONFIG.task.route('task-1')).toBe('/portfolio/tasks/task-1');
   });
+
+  it.each([
+    ['application', 'APP-3', '/it/applications/APP-3', '/it/applications/rec-1'],
+    ['asset', 'SRV-8', '/it/assets/SRV-8', '/it/assets/rec-1'],
+    ['interface', 'INT-4', '/it/interfaces/INT-4', '/it/interfaces/rec-1'],
+    ['connection', 'CONN-2', '/it/connections/CONN-2', '/it/connections/rec-1'],
+    ['location', 'LOC-5', '/it/locations/LOC-5', '/it/locations/rec-1'],
+    ['document', 'DOC-12', '/knowledge/DOC-12', '/knowledge/rec-1'],
+    ['spend_item', 'BL-7', '/ops/budget/BL-7', '/ops/budget/rec-1'],
+    ['capex_item', 'BL-8', '/ops/budget/BL-8', '/ops/budget/rec-1'],
+    ['incident', 'INC-6', '/it/incidents/INC-6/overview', '/it/incidents/rec-1/overview'],
+  ] as const)('opens a kept %s by its reference, by its uuid when kept without one', (type, ref, byRef, byId) => {
+    expect(ENTITY_TYPE_CONFIG[type].route('rec-1', ref)).toBe(byRef);
+    expect(ENTITY_TYPE_CONFIG[type].route('rec-1')).toBe(byId);
+  });
 });

@@ -122,8 +122,9 @@ describe('Application workspace, recette C1a', () => {
   it('names the previous and next versions and the suites the application is included in', async () => {
     renderPage();
     const previous = await screen.findByRole('link', { name: 'APP-3 Atlas 1' });
-    expect(previous.getAttribute('href')).toBe('/it/applications/app-0/overview');
-    expect(screen.getByRole('link', { name: 'APP-9 Atlas 3' }).getAttribute('href')).toBe('/it/applications/app-2/overview');
+    // The versions open by their reference.
+    expect(previous.getAttribute('href')).toBe('/it/applications/APP-3/overview');
+    expect(screen.getByRole('link', { name: 'APP-9 Atlas 3' }).getAttribute('href')).toBe('/it/applications/APP-9/overview');
     expect(await screen.findByRole('link', { name: 'Office suite' })).toBeTruthy();
     expect(screen.getByLabelText('workspace.application.overview.includedIn')).toBeTruthy();
   });

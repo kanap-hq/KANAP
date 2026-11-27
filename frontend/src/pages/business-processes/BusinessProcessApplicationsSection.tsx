@@ -123,7 +123,7 @@ export default function BusinessProcessApplicationsSection({ id }: { id: string 
             columns={columns}
             rows={rows}
             rowKey={(row) => row.id}
-            rowHref={(row) => `/it/applications/${row.id}/overview`}
+            rowHref={(row) => `/it/applications/${row.reference || row.id}/overview`}
             onRemove={canEdit ? (row) => { void unlink(row.id); } : undefined}
             removeLabel={(row) => t('businessProcesses.applications.remove', { name: row.name })}
           />

@@ -135,7 +135,8 @@ type AssignmentRow = {
   role: string;
   since_date: string | null;
   notes: string | null;
-  application: { id: string; name: string };
+  /** `reference`: the application's APP-n, its page's address. */
+  application: { id: string; reference?: string | null; name: string };
   environment: string;
   /** True on a row the server gets through its cluster: `id` is then the cluster's row. */
   inherited?: boolean;
@@ -175,6 +176,8 @@ type LocationDetails = {
 
 type ClusterMember = {
   id: string;
+  /** The asset's AST-n, its page's address. */
+  asset_reference?: string | null;
   name: string;
   environment: string;
   status: string;
@@ -189,6 +192,8 @@ type LocationOption = { id: string; location_reference: string; name: string };
 
 type ClusterSummary = {
   id: string;
+  /** The asset's AST-n, its page's address. */
+  reference?: string | null;
   name: string;
   environment: string;
   status: string;
@@ -2128,7 +2133,7 @@ function AssetWorkspaceRoute() {
                 {clusterMembers.map((member) => (
                   <TableRow key={member.id} hover>
                     <TableCell>
-                      <Button size="small" onClick={() => navigate(`/it/assets/${member.id}/overview`)}>
+                      <Button size="small" onClick={() => navigate(`/it/assets/${member.asset_reference || member.id}/overview`)}>
                         {member.name}
                       </Button>
                     </TableCell>
@@ -2153,7 +2158,7 @@ function AssetWorkspaceRoute() {
               {clustersForServer.map((c) => (
                 <Stack key={c.id} direction="row" justifyContent="space-between" alignItems="center">
                   <Box>
-                    <Button size="small" onClick={() => navigate(`/it/assets/${c.id}/overview`)}>{c.name}</Button>
+                    <Button size="small" onClick={() => navigate(`/it/assets/${c.reference || c.id}/overview`)}>{c.name}</Button>
                     <Typography variant="caption" color="text.secondary" display="block">
                       {environmentLabel(c.environment)} / {labelFor('lifecycleStatus', c.status) || c.status}
                     </Typography>
@@ -2498,7 +2503,7 @@ function AssetWorkspaceRoute() {
                         {assignments.map((assignment) => (
                           <TableRow key={`${assignment.id}|${assignment.inherited ? 'via' : 'own'}`}>
                             <TableCell>
-                              <Button size="small" onClick={() => navigate(`/it/applications/${assignment.application.id}/deployments`)}>
+                              <Button size="small" onClick={() => navigate(`/it/applications/${assignment.application.reference || assignment.application.id}/deployments`)}>
                                 {assignment.application.name}
                               </Button>
                               {assignment.inherited && (assignment.via_clusters?.length ?? 0) > 0 && (
@@ -2520,7 +2525,7 @@ function AssetWorkspaceRoute() {
                                   <IconButton
                                     size="small"
                                     aria-label={t('workspace.asset.assignments.editAssignment')}
-                                    onClick={() => navigate(`/it/applications/${assignment.application.id}/deployments`)}
+                                    onClick={() => navigate(`/it/applications/${assignment.application.reference || assignment.application.id}/deployments`)}
                                   >
                                     <EditIcon fontSize="small" />
                                   </IconButton>

@@ -97,7 +97,7 @@ async function run() {
     await useTenant(runner, t);
     const opts = { manager: m, tenantId: t };
     const erp = await one(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, 'ERP') RETURNING id`, [t]);
-    const crm = await one(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, 'CRM') RETURNING id`, [t]);
+    const crm = await one(runner, `INSERT INTO applications (tenant_id, name, sequential_id) VALUES ($1, 'CRM', 'APP-2') RETURNING id`, [t]);
     const p = (await instances.create(erp, { environment: 'prod' }, null, opts)).id;
     const q = (await instances.create(crm, { environment: 'prod' }, null, opts)).id;
     const clA = await seedAsset(runner, t, 'cl-a', { cluster: true });
@@ -157,6 +157,8 @@ async function run() {
     // --- The Operations tab of a member: direct and inherited rows; of a cluster: its own.
     const ofM2 = await assignments.listByAsset(m2, opts);
     assert.deepEqual(ofM2.map((row) => [row.application.name, row.inherited]), [['CRM', false], ['ERP', true]]);
+    // The tab opens each application by its APP-n (ERP's is numbered at its creation).
+    assert.deepEqual(ofM2.map((row) => row.application.reference), ['APP-2', 'APP-1']);
     const inheritedRow = ofM2.find((row) => row.inherited)!;
     assert.equal(inheritedRow.id, onA, 'an inherited row names the cluster row');
     assert.deepEqual(inheritedRow.via_clusters.map((via) => via.name), ['cl-a', 'cl-b']);

@@ -222,6 +222,8 @@ export type PaginatedApplicationsResponse = PaginatedResponse<ApplicationListIte
  */
 export interface ApplicationMapSummaryResponse {
   id: string;
+  /** The application's APP-n, the address of its page. */
+  reference: string | null;
   name: string;
   description: string | null;
   editor: string | null;
@@ -237,6 +239,7 @@ export interface ApplicationMapSummaryResponse {
   classification_reviewed_at?: string | null;
   assigned_servers: Array<{
     id: string;
+    asset_reference: string | null;
     name: string;
     is_cluster: boolean;
     environment: string;
