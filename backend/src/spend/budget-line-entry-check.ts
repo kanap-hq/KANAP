@@ -78,6 +78,15 @@ export function columnConformsSql(round: string): string {
     WHERE ecl.tenant_id = ${round}.tenant_id AND ecl.round_input_id = ${round}.id))`;
 }
 
+/**
+ * `columnConformsSql` on a round already read (the budget file's check reads each column's method
+ * and its count of calculation lines): `computed` with lines it still has. The parity spec holds the
+ * two together.
+ */
+export function roundConforms(round: { method: string; lineCount: number } | null | undefined): boolean {
+  return !!round && round.method === 'computed' && round.lineCount > 0;
+}
+
 /** What a statement binds its values with (`SqlStatement`). */
 type Binder = Pick<SqlStatement, 'tenant' | 'bind'>;
 
@@ -116,18 +125,24 @@ export function expectedAccountsSql(stmt: Binder): string {
  *   check when the caller asks whether there is one (the list's field), where the join checked
  *   every round and every round line of the tenant.
  */
-function lineColumnsParts(stmt: Binder, line: string, settings: EntryCheckSettings): { from: string; where: string } {
+function lineColumnsParts(
+  stmt: Binder,
+  line: string,
+  settings: EntryCheckSettings,
+  sources: { versions: string; totals: string } = { versions: 'spend_versions', totals: 'spend_version_totals' },
+  anyEnd = false,
+): { from: string; where: string } {
   const t = stmt.tenant;
   // Each measure is one of the five column names (`AMOUNT_MEASURES`): never request text.
   const values = AMOUNT_MEASURES.map((measure) => `('${measure}', vt.${measure})`).join(', ');
   const conforming = `SELECT 1 FROM spend_round_inputs er
         WHERE er.tenant_id = ${t} AND er.version_id = v.id AND er.measure = m.measure AND ${columnConformsSql('er')}`;
   return {
-    from: `spend_versions v
-    JOIN spend_version_totals vt ON vt.tenant_id = ${t} AND vt.version_id = v.id
+    from: `${sources.versions} v
+    JOIN ${sources.totals} vt ON vt.tenant_id = ${t} AND vt.version_id = v.id
     CROSS JOIN LATERAL (VALUES ${values}) m(measure, total)`,
-    where: `v.tenant_id = ${t} AND v.spend_item_id = ${line}.id
-      AND (${line}.disabled_at IS NULL OR v.budget_year <= extract(year FROM ${line}.disabled_at AT TIME ZONE 'UTC'))
+    where: `v.tenant_id = ${t} AND v.spend_item_id = ${line}.id${anyEnd ? '' : `
+      AND (${line}.disabled_at IS NULL OR v.budget_year <= extract(year FROM ${line}.disabled_at AT TIME ZONE 'UTC'))`}
       AND m.measure = ANY(${stmt.bind(settings.measures, 'text[]')}) AND m.total <> 0
       AND NOT ((${line}.nature || ':' || v.budget_year || ':' || m.measure) = ANY(${stmt.bind(settings.frozen, 'text[]')}))
       AND ${settings.lineByLine ? `(${conforming}) IS NULL` : `NOT EXISTS (${conforming})`}`,
@@ -135,8 +150,14 @@ function lineColumnsParts(stmt: Binder, line: string, settings: EntryCheckSettin
 }
 
 /** The columns to check of one line (`year`, `measure`), as a subquery on `line` (`lineColumnsParts`). */
-export function lineColumnsToCheckSql(stmt: Binder, line: string, settings: EntryCheckSettings): string {
-  const { from, where } = lineColumnsParts(stmt, line, settings);
+export function lineColumnsToCheckSql(
+  stmt: Binder,
+  line: string,
+  settings: EntryCheckSettings,
+  sources?: { versions: string; totals: string },
+  anyEnd = false,
+): string {
+  const { from, where } = lineColumnsParts(stmt, line, settings, sources, anyEnd);
   return `SELECT v.budget_year AS year, m.measure FROM ${from} WHERE ${where}`;
 }
 
@@ -145,6 +166,12 @@ export function lineColumnsToCheckSql(stmt: Binder, line: string, settings: Entr
  * `expectedAccountsSql` named `accounts`. `natures`: the lines read; `itemIds`: only these lines
  * (a bound uuid array), else every line of the tenant. With every row readable, one flat join the
  * planner may hash; line by line, a subquery kept apart (`OFFSET 0`) that runs for each line.
+ *
+ * A selection first reads its versions and their totals once each (two materialised reads keyed by
+ * the selection), and the test runs on those rows. Joined to the tables themselves, statistics that
+ * do not know the tenant's rows yet (a load not analysed) let the planner scan every version of the
+ * tenant for each version of each line: 100 s for the count of a change in bulk of 500 lines (lot
+ * B12b), where these reads stay linear in the tenant's versions whatever the plan.
  */
 export function columnsToCheckSql(
   stmt: Binder,
@@ -156,15 +183,32 @@ export function columnsToCheckSql(
   const t = stmt.tenant;
   const lines = `${accounts} ea
     JOIN spend_items li ON li.tenant_id = ${t} AND li.account_id = ea.account_id${naturesAnd('li', natures)}${itemIds ? ` AND li.id = ANY(${itemIds})` : ''}`;
+  const sources = itemIds ? SELECTION_SOURCES : undefined;
+  let body: string;
   if (settings.lineByLine) {
-    return `SELECT li.id AS item_id, c.year, c.measure
+    const { from, where } = lineColumnsParts(stmt, 'li', settings, sources);
+    body = `SELECT li.id AS item_id, c.year, c.measure
     FROM ${lines}
-    CROSS JOIN LATERAL (${lineColumnsToCheckSql(stmt, 'li', settings)} OFFSET 0) c`;
-  }
-  const { from, where } = lineColumnsParts(stmt, 'li', settings);
-  return `SELECT li.id AS item_id, v.budget_year AS year, m.measure
+    CROSS JOIN LATERAL (SELECT v.budget_year AS year, m.measure FROM ${from} WHERE ${where} OFFSET 0) c`;
+  } else {
+    const { from, where } = lineColumnsParts(stmt, 'li', settings, sources);
+    body = `SELECT li.id AS item_id, v.budget_year AS year, m.measure
     FROM ${lines}, ${from}
     WHERE ${where}`;
+  }
+  return itemIds ? `SELECT ec_selection.* FROM (${selectionSourcesSql(stmt, itemIds)} ${body}) ec_selection` : body;
+}
+
+/** The versions and totals of a selection of lines, as `lineColumnsParts` reads them (`columnsToCheckSql` says why). */
+const SELECTION_SOURCES = { versions: 'ec_selection_versions', totals: 'ec_selection_totals' };
+
+/** The `WITH` that reads `SELECTION_SOURCES` once each, for the lines of `itemIds` (a bound uuid array). */
+function selectionSourcesSql(stmt: Binder, itemIds: string): string {
+  const t = stmt.tenant;
+  return `WITH ${SELECTION_SOURCES.versions} AS MATERIALIZED (SELECT * FROM spend_versions sv
+      WHERE sv.tenant_id = ${t} AND sv.spend_item_id = ANY(${itemIds})),
+    ${SELECTION_SOURCES.totals} AS MATERIALIZED (SELECT * FROM spend_version_totals st
+      WHERE st.tenant_id = ${t} AND st.version_id = ANY(ARRAY(SELECT id FROM ${SELECTION_SOURCES.versions})))`;
 }
 
 /**
@@ -241,6 +285,115 @@ export async function readEntryChecks(
       columns: toCheck,
       to_check: toCheck.length > 0,
     });
+  }
+  return result;
+}
+
+/*
+ * The same rule before a write (lot B12b): what a line will read once a write that is not yet made
+ * puts totals on it or moves it onto another account. Kad's cards and the budget file's check say
+ * it as a warning; nothing is refused. The parity spec compares each answer with `readEntryChecks`
+ * once the write is made.
+ */
+
+/**
+ * The level at which each of `accountIds` expects quantity and price (`expectedAccountsSql`): the
+ * account a write puts lines on, before they are. Every account of the tenant when `accountIds` is
+ * absent (the budget file's catalog). An account that is not expected is absent from the answer.
+ */
+export async function readAccountExpectations(
+  manager: EntityManager,
+  tenantId: string,
+  accountIds?: readonly string[],
+): Promise<Map<string, EntryCheckLevel>> {
+  const result = new Map<string, EntryCheckLevel>();
+  if (accountIds && accountIds.length === 0) return result;
+  const stmt = new SqlStatement(tenantId);
+  const only = accountIds ? ` WHERE ea.account_id = ANY(${stmt.bind(Array.from(new Set(accountIds)), 'uuid[]')})` : '';
+  const query = stmt.finalize(`WITH ea AS (${expectedAccountsSql(stmt)})
+    SELECT ea.account_id::text AS account_id, ea.level FROM ea${only}`);
+  const rows: Array<{ account_id: string; level: EntryCheckLevel }> = await manager.query(query.sql, query.params);
+  for (const row of rows) result.set(row.account_id, row.level);
+  return result;
+}
+
+/** The year of an end of validity, as the rule reads it (UTC); null without one. */
+export function endOfValidityYear(endOfValidity: string | Date | null | undefined): number | null {
+  return endOfValidity ? new Date(endOfValidity).getUTCFullYear() : null;
+}
+
+/** The columns of `columns` up to the year of `endOfValidity` (every one without an end). */
+export function withinEndOfValidity<T extends { year: number }>(columns: readonly T[], endOfValidity: string | Date | null | undefined): T[] {
+  const lastYear = endOfValidityYear(endOfValidity);
+  return lastYear === null ? [...columns] : columns.filter((column) => column.year <= lastYear);
+}
+
+/** A column of a line as a write will leave it: its year, its column, its net total for the year once written (cents or units: only zero matters). */
+export type ColumnAfterWrite = { year: number; measure: AmountMeasure; total: bigint | number };
+
+/**
+ * The columns to check, once written, of a line on an expected account (`readAccountExpectations`),
+ * among `columns`, the columns that will not be built as quantity × price: a total Kad or the budget
+ * file writes (a yearly, quarterly or monthly amount, never cost lines: `columnConformsSql`), and the
+ * columns a move onto the account leaves as they are and that do not conform. The rule of
+ * `lineColumnsParts` on values not yet stored: shown in the tenant's settings, not frozen
+ * (`nature:year:column`), not zero for the year, and not after the year of the line's end of
+ * validity. By year, then in the columns' order, without repeats.
+ */
+export function columnsLeftToCheck(
+  settings: Pick<EntryCheckSettings, 'measures' | 'frozen'>,
+  nature: BudgetNature,
+  columns: readonly ColumnAfterWrite[],
+  endOfValidity?: string | Date | null,
+): EntryCheckColumn[] {
+  const lastYear = endOfValidityYear(endOfValidity);
+  const seen = new Set<string>();
+  const left: EntryCheckColumn[] = [];
+  for (const column of columns) {
+    const key = `${column.year}:${column.measure}`;
+    if (seen.has(key)) continue;
+    if (!settings.measures.includes(column.measure)) continue;
+    if (settings.frozen.includes(`${nature}:${column.year}:${column.measure}`)) continue;
+    if (Number(column.total) === 0) continue;
+    if (lastYear !== null && column.year > lastYear) continue;
+    seen.add(key);
+    left.push({ year: column.year, measure: column.measure });
+  }
+  return left.sort((a, b) => a.year - b.year || AMOUNT_MEASURES.indexOf(a.measure) - AMOUNT_MEASURES.indexOf(b.measure));
+}
+
+/**
+ * The columns to check of lines as they stand, whatever their account (`lineColumnsToCheckSql`):
+ * what a move onto an expected account leaves to check. One statement; a line without one is absent.
+ * `anyEnd`: every year, whatever the line's end of validity (for an end the write changes:
+ * `withinEndOfValidity`).
+ */
+export async function readColumnsToCheckOnAnyAccount(
+  manager: EntityManager,
+  tenantId: string,
+  itemIds: readonly string[],
+  settings?: EntryCheckSettings,
+  anyEnd = false,
+): Promise<Map<string, EntryCheckColumn[]>> {
+  const result = new Map<string, EntryCheckColumn[]>();
+  const ids = Array.from(new Set(itemIds));
+  if (ids.length === 0) return result;
+  const rule = settings ?? await loadEntryCheckSettings(manager, tenantId);
+  const stmt = new SqlStatement(tenantId);
+  const bound = stmt.bind(ids, 'uuid[]');
+  const query = stmt.finalize(`${selectionSourcesSql(stmt, bound)}
+    SELECT li.id::text AS item_id, c.year, c.measure
+    FROM spend_items li
+    CROSS JOIN LATERAL (${lineColumnsToCheckSql(stmt, 'li', rule, SELECTION_SOURCES, anyEnd)}) c
+    WHERE li.tenant_id = ${stmt.tenant}${naturesAnd('li', BUDGET_NATURES)} AND li.id = ANY(${bound})`);
+  const rows: Array<{ item_id: string; year: number; measure: AmountMeasure }> = await manager.query(query.sql, query.params);
+  for (const row of rows) {
+    const list = result.get(row.item_id) ?? [];
+    list.push({ year: Number(row.year), measure: row.measure });
+    result.set(row.item_id, list);
+  }
+  for (const list of result.values()) {
+    list.sort((a, b) => a.year - b.year || AMOUNT_MEASURES.indexOf(a.measure) - AMOUNT_MEASURES.indexOf(b.measure));
   }
   return result;
 }

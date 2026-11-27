@@ -295,10 +295,29 @@ describe('CopyBudgetPage', () => {
     expect(cell(result, 'amountsStatus')).toBe('operations.copyBudget.status.copied');
     expect(cell(result, 'afterValue')).toBe('1 260');
     expect(cell(result, 'allocationsStatus')).toBe('operations.copyBudget.status.copied');
-    expect(screen.getByText(/^operations\.copyBudget\.summary\.done /)).toBeInTheDocument();
+    expect(screen.getByText(/^operations\.copyBudget\.summary\.done /).textContent).not.toContain('bulkEdit.toCheck');
     expect(button('copy')).toBeDisabled();
     // The table now shows what the copy did: its export (a preview) is held.
     expect(layout.tableExport.disabled).toBe(true);
+  });
+
+  it('says how many lines the copy left to check, and nothing when it left none', async () => {
+    operation.mockImplementation(async (_url: string, body: any) => {
+      if (body.dryRun) return { data: preview() };
+      const answer: any = done();
+      answer.summary.toCheck = { rows: 2, checks: { quantity_price: 2 } };
+      return { data: answer };
+    });
+    renderPage();
+    await linesLoaded();
+    fireEvent.click(button('preview'));
+    await screen.findByTestId('row-o-1');
+    await waitFor(() => expect(button('copy')).toBeEnabled());
+    fireEvent.click(button('copy'));
+    const summary = await screen.findByText(/^operations\.copyBudget\.summary\.done /);
+    expect(summary.textContent).toContain('common:bulkEdit.toCheck {"count":2}');
+    // The preview writes nothing: it never says it.
+    expect(screen.queryByText(/summary\.preview .*bulkEdit\.toCheck/)).toBeNull();
   });
 
   it('hands the server export the parameters of the preview', async () => {

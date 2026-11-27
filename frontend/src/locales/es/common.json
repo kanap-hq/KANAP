@@ -1971,6 +1971,7 @@
     "doneChanged_applications_one": "{{count}} aplicación modificada",
     "doneChanged_other": "{{count}} filas modificadas",
     "doneChanged_applications_other": "{{count}} aplicaciones modificadas",
-    "applied": "{{field}}: {{value}}"
+    "applied": "{{field}}: {{value}}",
+    "toCheck": "Por verificar: {{count}}"
   }
 }

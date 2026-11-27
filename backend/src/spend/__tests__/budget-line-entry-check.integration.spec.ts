@@ -4,7 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 import { AMOUNT_MEASURES, MEASURE_FREEZE_COLUMN, type AmountMeasure } from '../amounts-write.util';
-import { loadEntryCheckSettings, readEntryChecks } from '../budget-line-entry-check';
+import { loadEntryCheckSettings, readAccountExpectations, readColumnsToCheckOnAnyAccount, readEntryChecks } from '../budget-line-entry-check';
+import { loadCatalog } from '../budget-file/load';
 import { describeAiEntityFilters } from '../../ai/query/ai-filter-description.util';
 import { resolveAiEntityRegistry } from '../../ai/query/registries';
 
@@ -29,7 +30,10 @@ import { resolveAiEntityRegistry } from '../../ai/query/registries';
 //   the same lines, shows on each line and in the detail, for a reader of budget without accounts too;
 // - a person limited to one company reads, counts and lists the lines of that company only, with the
 //   same answers on them as with every row readable (the reader, the field, its filter, sort and
-//   values, as seeded and after each change), though both read the columns line by line then.
+//   values, as seeded and after each change), though both read the columns line by line then;
+// - before a write (lot B12b): the accounts that expect it (`readAccountExpectations`, the budget
+//   file's catalog) and the columns a move onto such an account leaves to check
+//   (`readColumnsToCheckOnAnyAccount`) are what the reader says once the write is made.
 // @database-spec: boots the application context, so run-ci-tests.js runs this file in a database lane.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -737,6 +741,46 @@ async function testLimitedPerson(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('ok - a person limited to one company reads, counts and lists the lines of that company only, as with every row readable');
 }
 
+/**
+ * The rule before a write (lot B12b), against the reader once the write is made: the level of each
+ * account (Kad's cards, the budget file's catalog), and the columns each line would have to check
+ * on an expected account, read where it stands, then read again once every line is on that account.
+ */
+async function testBeforeWrite(h: Harness, runner: QueryRunner, s: Seed) {
+  const levels = await readAccountExpectations(runner.manager, s.tenantId);
+  const byKey = Object.fromEntries(Object.entries(s.accounts).map(([key, id]) => [key, levels.get(id) ?? null]));
+  assert.deepEqual(byKey, { tick: 'account', cons: 'consolidation', both: 'account', none: null, noCons: null, outside: null, otherChart: null },
+    'the accounts that expect it, at their level');
+  const reader = await readerTable(runner, s);
+  for (const line of LINES) {
+    if (!line.account) continue;
+    assert.equal(levels.get(s.accounts[line.account]) ?? null, reader.get(line.label)!.level, `${line.label}: the account's level is the line's`);
+  }
+  const some = await readAccountExpectations(runner.manager, s.tenantId, [s.accounts.cons, s.accounts.none]);
+  assert.deepEqual([...some], [[s.accounts.cons, 'consolidation']], 'asked for some accounts: those that expect it');
+  assert.equal((await readAccountExpectations(runner.manager, s.tenantId, [])).size, 0, 'none asked: none');
+
+  const catalog = await loadCatalog(runner.manager, s.tenantId, null);
+  const flagged = catalog.accounts.filter((account) => account.quantityPrice).map((account) => account.id).sort();
+  assert.deepEqual(flagged, [...levels.keys()].sort(), 'the budget file\'s catalog flags the same accounts');
+  assert.deepEqual(catalog.shownMeasures, ['planned', 'committed', 'actual', 'expected_landing'], 'the columns shown (forecast off)');
+
+  const ids = Object.values(s.lines).map((line) => line.id);
+  const before = await readColumnsToCheckOnAnyAccount(runner.manager, s.tenantId, ids);
+  await savepoint(runner, async () => {
+    await runner.query(`UPDATE spend_items SET account_id = $2 WHERE tenant_id = $1`, [s.tenantId, s.accounts.tick]);
+    const after = await readEntryChecks(runner.manager, s.tenantId, ids);
+    const labels = labelOf(s);
+    const shape = (columns: Array<{ year: number; measure: string }> | undefined) => (columns ?? []).map((c) => `${c.year}:${c.measure}`);
+    assert.deepEqual(
+      Object.fromEntries(ids.map((id) => [labels.get(id), shape(before.get(id))])),
+      Object.fromEntries(ids.map((id) => [labels.get(id), shape(after.get(id)!.columns)])),
+      'the columns read before the move are the reader\'s once every line is on the account',
+    );
+  });
+  console.log('ok - before a write: the accounts that expect it and the columns a move leaves to check, as the reader says once written');
+}
+
 function testFreezeKeys() {
   // The settings loader maps a freeze's column key back to its column with this table.
   assert.deepEqual(AMOUNT_MEASURES.map((measure) => MEASURE_FREEZE_COLUMN[measure]), ['budget', 'revision', 'forecast', 'actual', 'landing']);
@@ -767,6 +811,7 @@ async function run() {
       await testKadDetailWords(h, runner, s);
       await testKadCheckNames(h, runner, s);
       await testDescribeCountsFields(h, runner, s);
+      await testBeforeWrite(h, runner, s);
     });
     // `data_access_apply` limits the rest of its transaction: a transaction of its own.
     await inTransaction(h, (runner, s) => testLimitedPerson(h, runner, s));

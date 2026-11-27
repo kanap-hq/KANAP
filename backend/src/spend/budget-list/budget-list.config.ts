@@ -73,6 +73,11 @@ export class BudgetListConfig implements ListConfig {
   readonly tieBreak = ['i.created_at DESC', 'i.id DESC'];
   readonly scopeFields = ['disabled_at'] as const;
   private readonly columns: Record<string, FieldSql['kind']>;
+  /**
+   * The lines the statement reads, when its caller names them (`budgetListLineChecksByIds`): the
+   * `quantity_price` check then builds the columns to check of these lines only (lot B12b).
+   */
+  lineIds?: readonly string[];
 
   constructor(private readonly rt: BudgetListRuntime) {
     this.from = `${rt.scope.itemTable} i`;
@@ -430,7 +435,10 @@ export class BudgetListConfig implements ListConfig {
     }
     const s = this.scope;
     const natures = s.nature ? [s.nature] : BUDGET_NATURES;
-    stmt.cte('ec_columns', () => columnsToCheckSql(stmt, 'ec_accounts', settings, natures));
+    // Bounded to the lines asked for when the caller names them (`lineIds`): the columns of the whole
+    // tenant otherwise, as the list needs them.
+    stmt.cte('ec_columns', () => columnsToCheckSql(stmt, 'ec_accounts', settings, natures,
+      this.lineIds ? stmt.bind(this.lineIds, 'uuid[]') : undefined));
     // Materialized: built once per statement whatever the statistics say (`SqlStatement.cte`).
     stmt.cte('ec_lines', () => 'SELECT DISTINCT item_id FROM ec_columns', { materialized: true });
     this.join(stmt, 'ecl', 'LEFT JOIN ec_lines ecl ON ecl.item_id = i.id');

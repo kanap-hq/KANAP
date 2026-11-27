@@ -25,6 +25,7 @@ import { AllocationCopyLine, AllocationCopyRun, AllocationOperationDeps, allocat
 import { formatAllocationMethodLabel } from './allocation-utils';
 import { lockBudgetLines, lockBudgetLinesOfBothNatures, lockTenantBudgetOperations } from './budget-locks';
 import { BUDGET_NATURES, budgetLineReference, type BudgetNature } from './budget-nature';
+import { BulkToCheck, countToCheckWithin } from '../common/bulk-edit/bulk-edit';
 
 /**
  * "Copy budget columns" and "Reset a column" of Budget administration, on the lines
@@ -70,7 +71,10 @@ export type CopyBudgetOperation = {
   dryRun?: boolean;
 };
 
-export type CopyBudgetDeps = BudgetOperationDeps & Pick<AllocationOperationDeps, 'calculator'>;
+export type CopyBudgetDeps = BudgetOperationDeps & Pick<AllocationOperationDeps, 'calculator'> & {
+  /** The lines written the list's "To check" column shows (the count of a change in bulk): the copy's answer says how many. */
+  toCheck?: (ids: string[]) => Promise<BulkToCheck>;
+};
 
 /** One line of a copy: its reference and nature, and what each part decided (a dry run) or did. */
 export type CopyBudgetLine = {
@@ -234,6 +238,11 @@ export async function copyBudget(deps: CopyBudgetDeps, operation: CopyBudgetOper
     }
   }
 
+  // The lines whose amounts it wrote that are to check (a column copied as amounts on an account that
+  // expects quantity and price), counted as a change in bulk counts them; never fails the copy.
+  const written = dryRun ? [] : columnRuns.flatMap(({ run }) => run.lines.filter((line) => !line.skipped).map((line) => line.itemId));
+  const toCheck = deps.toCheck && written.length > 0 ? await countToCheckWithin(mg, 'a copy of budget columns', written, deps.toCheck) : undefined;
+
   // The allocations, once the amounts are written (a version the amounts created takes the source's method here).
   const allocationRuns: Array<{ nature: BudgetNature; run: AllocationCopyRun }> = [];
   const allocationsSummary: PartSummary = { totalItems: 0, processed: 0, skipped: 0, errors: 0 };
@@ -275,6 +284,7 @@ export async function copyBudget(deps: CopyBudgetDeps, operation: CopyBudgetOper
     summary: {
       lines: byLine.size,
       ...(amounts ? { amounts: amountsSummary } : {}),
+      ...(toCheck ? { toCheck } : {}),
       ...(allocations ? { allocations: allocationsSummary } : {}),
     },
     results: Array.from(byLine.values()),

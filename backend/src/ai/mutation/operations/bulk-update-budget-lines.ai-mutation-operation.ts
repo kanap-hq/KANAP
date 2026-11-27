@@ -24,7 +24,7 @@ import {
   type BulkFilterPart,
 } from '../../ai-bulk-edit-texts';
 import { familyReference } from '../../ai-entity-reference.util';
-import { AiWriteLanguage, previewSummaryText } from '../../ai-write-texts';
+import { AiWriteLanguage, ENTRY_CHECK_WARNING_FIELD, previewSummaryText, quantityPriceExpectedWarning } from '../../ai-write-texts';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { aiBudgetListAccess } from '../../query/ai-budget-list-access.util';
 import { adaptFilters } from '../../query/ai-filter.adapter';
@@ -148,6 +148,12 @@ type ResolvedChange = { changes: BulkChanges; dimension: string | null; valueLab
 
 function text(value: unknown): string {
   return String(value ?? '').trim();
+}
+
+/** The lines to check a count or a write stored (`to_check` of the common contract); none when absent. */
+function toCheckOf(stored: Record<string, unknown>): { rows: number; checks: Record<string, number> } {
+  const raw = stored.to_check as { rows?: unknown; checks?: unknown } | undefined;
+  return { rows: Number(raw?.rows) || 0, checks: counts(raw?.checks) };
 }
 
 function counts(value: unknown): Record<string, number> {
@@ -341,7 +347,11 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
       dry,
       excluded: stillOut,
       currentValues: {
-        values: { rows: dry.rows, changes: dry.changes, unchanged: dry.unchanged, refused: dry.refused, examples, ...leftOut },
+        values: {
+          rows: dry.rows, changes: dry.changes, unchanged: dry.unchanged, refused: dry.refused, examples, ...leftOut,
+          // The lines that would change and that the list will show "To check" (lot B12b): the dry run's.
+          ...(dry.to_check ? { to_check: dry.to_check } : {}),
+        },
         ...(list ? { bulk_list: list } : {}),
       },
     };
@@ -460,6 +470,7 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
       excluded: bulkExcluded(mutation).length,
       listed: list !== null,
       done: preview.status === 'executed',
+      toCheck: toCheckOf(applied ?? values).rows,
     }, language);
     const englishField = field === 'dimension' ? fieldLabel : BUDGET_LINE_BULK_FIELD_LABELS.en[field] ?? field;
     let summary = `Preview ${preview.id} ${preview.status}.`;
@@ -478,9 +489,16 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
         { errorMessage: preview.error_message },
       );
     }
+    // A new account that expects quantity and price leaves lines to check: the pending card says so (lot B12b).
+    const expected = preview.status === 'pending' && field === 'account' && (toCheckOf(values).checks.quantity_price ?? 0) > 0;
     return {
       target: { entity_type: 'budget_lines', entity_id: null, ref: null, title: bulkEditCardTitleText('budget_lines', language, preview.status === 'executed' ? done : changes, refs) },
-      changes: { [CARD_FIELD]: { label: BULK_EDIT_CARD_LABEL[language], from: null, to: card, format: 'markdown' } },
+      changes: {
+        [CARD_FIELD]: { label: BULK_EDIT_CARD_LABEL[language], from: null, to: card, format: 'markdown' },
+        ...(expected ? {
+          [ENTRY_CHECK_WARNING_FIELD]: { label: 'To check', from: null, to: quantityPriceExpectedWarning(language, 'account', value ?? '', true), format: 'text' as const },
+        } : {}),
+      },
       summary,
       // The list goes to the screen only: the model reads the counts of the card's change.
       ...(list ? { bulkEdit: bulkEditPreviewDto(list, fieldLabel, value, language) } : {}),
@@ -517,7 +535,10 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
     });
     preview.current_values = {
       ...(preview.current_values ?? {}),
-      applied: { changed: Number(result.changed) || 0, unchanged: result.unchanged, refused: result.refused },
+      applied: {
+        changed: Number(result.changed) || 0, unchanged: result.unchanged, refused: result.refused,
+        ...(result.to_check ? { to_check: result.to_check } : {}),
+      },
       // The list stays on the card, each line it changed marked.
       ...(list ? { bulk_list: bulkListApplied(list, result.changed_ids ?? []) } : {}),
     };

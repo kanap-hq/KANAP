@@ -127,6 +127,7 @@
   "BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER_UNREAD": "{{label}} {{year}} at {{amount}}, against a median of {{median}} on {{count}} lines of the same supplier.",
   "BUDGET_FILE_START_AFTER_AMOUNTS": "The line starts on {{start}}, after its last amounts ({{year}}).",
   "BUDGET_FILE_END_BEFORE_AMOUNTS": "The line ends on {{end}}, before its first amounts ({{year}}).",
+  "BUDGET_FILE_QUANTITY_PRICE_EXPECTED": "Account {{account}} expects quantity and price entry: complete {{columns}} on the line's Budget tab.",
   "BUDGET_FILE_CURRENCY_NOT_COMPANY": "{{currency}} is not the currency of {{company}} ({{base}}).",
   "BUDGET_FILE_CURRENCY_NOT_COMPANY_UNREAD": "{{currency}} is not the currency of the paying company ({{base}}).",
   "CSV_HEADER_IGNORED_COLUMNS": "These columns are not imported: {{extra}}.",

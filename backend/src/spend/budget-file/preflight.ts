@@ -7,7 +7,8 @@ import {
   normalizeAnalyticsName,
 } from '../../analytics/analytics-context';
 import { notApplicableDimensionMessage, requiredDimensionMessage } from '../item-analytics.util';
-import { AmountMeasure, MEASURE_FREEZE_COLUMN } from '../amounts-write.util';
+import { AMOUNT_MEASURES, AmountMeasure, MEASURE_FREEZE_COLUMN } from '../amounts-write.util';
+import { columnsLeftToCheck, endOfValidityYear, roundConforms, type ColumnAfterWrite } from '../budget-line-entry-check';
 import { formatCentsFixed } from '../../common/amount';
 import { endOfValidityFromDate, isActiveAt } from '../../common/status';
 import type { BudgetNature } from '../budget-nature';
@@ -126,6 +127,16 @@ function natureLabel(nature: BudgetNature): string {
   return nature.toUpperCase();
 }
 
+/** A file column (`budget`) in the English `message`: the tenant's label, else the English product name. */
+function columnLabel(input: PreflightInput, column: string): string {
+  return input.labels[column] || column;
+}
+
+/** A file column in the parameters the screen and Kad's card translate: its name in the person's language. */
+function localColumnLabel(input: PreflightInput, column: string): string {
+  return input.localLabels?.[column] || columnLabel(input, column);
+}
+
 /** `an OPEX`, `a CAPEX`. */
 function aNature(nature: BudgetNature): string {
   return nature === 'opex' ? 'an OPEX' : 'a CAPEX';
@@ -155,8 +166,13 @@ export interface PreflightInput {
   createSuppliers: boolean;
   canCreateSuppliers: boolean;
   currentYear: number;
-  /** File column name (`budget`) to the tenant's label. */
+  /** File column name (`budget`) to the tenant's label, else the English product name: the English `message`. */
   labels: Record<string, string>;
+  /**
+   * The same in the person's language (the tenant's label first): the parameters the screen and Kad's
+   * card translate. Absent: `labels`.
+   */
+  localLabels?: Record<string, string>;
   /** A limited person's access (planning/data-scoped-access spec §4.2); absent for an unscoped person. */
   access?: BudgetFileAccess;
   /**
@@ -742,6 +758,7 @@ function resolveRow(
   if (creating || changes.length > 0) {
     bag.plans.push(toPlan(nature, row, live, creating, draft));
     checkConsistency(input, nature, row, live, draft, supplier.id, company.id, bag);
+    checkQuantityPrice(input, nature, row, live, draft, bag);
   }
   if (creating) {
     bag.created.push({ line: row.line, name: textOf(row.fields.name) || '(no name)' });
@@ -1512,8 +1529,9 @@ function resolveAmounts(
     // The freeze of the row's nature only: a column frozen for the other nature does not stop it.
     const frozenKey = `${nature}:${amount.year}:${MEASURE_FREEZE_COLUMN[amount.measure]}`;
     if (input.catalog.frozen.includes(frozenKey)) {
-      const label = input.labels[amount.column] || amount.column;
-      fail(amount.id, `${label} for ${amount.year} is frozen.`, 'BUDGET_FILE_FROZEN', { label, year: amount.year });
+      fail(amount.id, `${columnLabel(input, amount.column)} for ${amount.year} is frozen.`, 'BUDGET_FILE_FROZEN', {
+        label: localColumnLabel(input, amount.column), year: amount.year,
+      });
       continue;
     }
     const when = amount.month == null ? String(amount.year) : `${amount.year}-${String(amount.month).padStart(2, '0')}`;
@@ -1548,7 +1566,7 @@ function noteCalculationLines(
     year: amount.year,
     count: round.lineCount,
     total,
-    message: calculationLinesMessage(item, input.labels[column] || column, amount.year, round.lineCount, total),
+    message: calculationLinesMessage(item, columnLabel(input, column), amount.year, round.lineCount, total),
   });
 }
 
@@ -1591,7 +1609,8 @@ function checkConsistency(
   for (const [key, cents] of sums) {
     const [year, measure] = key.split('|');
     const column = columnOfMeasure(measure as AmountMeasure);
-    const label = input.labels[column] || column;
+    const label = columnLabel(input, column);
+    const local = localColumnLabel(input, column);
     const amount = wholeUnits(cents);
     if (look) {
       const other = (look.currency ?? '') === currency ? bag.index.totalOf(look, key) : undefined;
@@ -1599,7 +1618,7 @@ function checkConsistency(
       const ref = lineRef(look.itemNumber);
       warn({
         message: `${label} ${year} at ${amount}, against ${wholeUnits(other)} on ${ref}.`,
-        code: 'BUDGET_FILE_AMOUNT_FAR_FROM_LINE', params: { label, year: Number(year), amount, other: wholeUnits(other), ref },
+        code: 'BUDGET_FILE_AMOUNT_FAR_FROM_LINE', params: { label: local, year: Number(year), amount, other: wholeUnits(other), ref },
       });
       break;
     }
@@ -1611,7 +1630,7 @@ function checkConsistency(
       warn({
         message: `${label} ${year} at ${amount}, against a median of ${wholeUnits(median.cents)} on ${median.count} lines of the same supplier.`,
         code: 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER_UNREAD',
-        params: { label, year: Number(year), amount, median: wholeUnits(median.cents), count: median.count },
+        params: { label: local, year: Number(year), amount, median: wholeUnits(median.cents), count: median.count },
       });
       break;
     }
@@ -1619,7 +1638,7 @@ function checkConsistency(
     warn({
       message: `${label} ${year} at ${amount}, against a median of ${wholeUnits(median.cents)} on ${median.count} lines of ${supplier}.`,
       code: 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER',
-      params: { label, year: Number(year), amount, median: wholeUnits(median.cents), count: median.count, supplier },
+      params: { label: local, year: Number(year), amount, median: wholeUnits(median.cents), count: median.count, supplier },
     });
     break;
   }
@@ -1654,6 +1673,115 @@ function checkConsistency(
       });
     }
   }
+}
+
+/**
+ * The "To check" rule of a line the file creates or updates (lot B12b), a warning among the
+ * consistency checks: the file writes totals, never quantity × price, so a changed amount on an
+ * account that expects quantity and price entry (itself or through its consolidation account) will be
+ * to check, unless its column is hidden, its total for the year is zero once written, or its year
+ * follows the line's end of validity (`columnsLeftToCheck`, the rule of `readEntryChecks` on values
+ * not yet stored). A frozen column never gets here: its amount is refused (`resolveAmounts`). An
+ * unchanged amount is not written, so a column built as quantity × price stays so. A stored line the
+ * file moves onto such an account from one that expects nothing (or none) is also told of the
+ * columns it already holds that are not built as quantity × price, frozen ones left out: the line
+ * was not to check, and will be. Between two accounts that both expect it, only the amounts written
+ * count: the line already was. On such an account, an end of validity the file moves later also
+ * tells of the stored columns of the years it brings back. The account the line has once written is named by its number, as the
+ * file names it, never its consolidation account. One warning per row.
+ */
+function checkQuantityPrice(
+  input: PreflightInput,
+  nature: BudgetNature,
+  row: InterpretedRow,
+  live: StoredLine | null,
+  draft: LineDraft,
+  bag: Bag,
+): void {
+  const measures = input.catalog.shownMeasures;
+  if (!measures) return;
+  const accountOf = (id: unknown) => (typeof id === 'string' ? input.catalog.accounts.find((item) => item.id === id) : undefined);
+  const accountId = Object.prototype.hasOwnProperty.call(draft.body, 'account_id') ? draft.body.account_id : live?.accountId;
+  const account = accountOf(accountId);
+  if (!account?.quantityPrice) return;
+  // Moved onto the account from one that expects nothing: the stored columns count too.
+  const moved = !!live && accountId !== live.accountId && !accountOf(live.accountId)?.quantityPrice;
+  const endOfValidity = Object.prototype.hasOwnProperty.call(draft.body, 'disabled_at') ? draft.body.disabled_at : live?.endOfValidity;
+  // Already on such an account, an end of validity moved later: the stored columns of the years it brings back.
+  const storedEnd = endOfValidityYear(live?.endOfValidity);
+  const newEnd = endOfValidityYear(typeof endOfValidity === 'string' ? endOfValidity : null);
+  const extended = !!live && !moved && storedEnd !== null && (newEnd === null || newEnd > storedEnd);
+  if (draft.amounts.length === 0 && !moved && !extended) return;
+  const written = columnsAfterFile(draft, live);
+  const stored = moved ? storedColumnsToCheck(live!, written)
+    : extended ? storedColumnsToCheck(live!, written).filter((column) => column.year > storedEnd!) : [];
+  const columns = [...stored, ...written];
+  const left = columnsLeftToCheck(
+    { measures, frozen: frozenMeasures(input.catalog.frozen) },
+    nature,
+    columns,
+    typeof endOfValidity === 'string' ? endOfValidity : null,
+  );
+  if (left.length === 0) return;
+  const named = (label: (input: PreflightInput, column: string) => string) => left
+    .map((column) => `${label(input, columnOfMeasure(column.measure))} ${column.year}`)
+    .join(', ');
+  bag.consistency.push({
+    line: row.line,
+    message: `Account ${account.number} expects quantity and price entry: complete ${named(columnLabel)} on the line's Budget tab.`,
+    code: 'BUDGET_FILE_QUANTITY_PRICE_EXPECTED',
+    params: { account: account.number, columns: named(localColumnLabel) },
+  });
+}
+
+/**
+ * The stored columns of a line that are not built as quantity × price (`roundConforms`), with their
+ * stored total for the year, the ones the file writes left to `written`.
+ */
+function storedColumnsToCheck(live: StoredLine, written: readonly ColumnAfterWrite[]): ColumnAfterWrite[] {
+  const rewritten = new Set(written.map((column) => `${column.year}:${column.measure}`));
+  const columns: ColumnAfterWrite[] = [];
+  for (const version of live.versions) {
+    for (const measure of AMOUNT_MEASURES) {
+      if (rewritten.has(`${version.year}:${measure}`) || roundConforms(version.rounds?.[measure])) continue;
+      columns.push({ year: version.year, measure, total: yearSum(version, measure) });
+    }
+  }
+  return columns;
+}
+
+/** The catalog's freezes (`nature:year:budget`) as the rule reads them (`nature:year:planned`). */
+function frozenMeasures(frozen: readonly string[]): string[] {
+  const measureOf = new Map<string, AmountMeasure>(AMOUNT_MEASURES.map((measure) => [MEASURE_FREEZE_COLUMN[measure], measure]));
+  return frozen.flatMap((key) => {
+    const [nature, year, column] = key.split(':');
+    const measure = measureOf.get(column);
+    return measure ? [`${nature}:${year}:${measure}`] : [];
+  });
+}
+
+/**
+ * The columns the file writes on a line, each with its total for the year once written: a yearly
+ * amount replaces the year, monthly amounts replace their months among the stored ones.
+ */
+function columnsAfterFile(draft: LineDraft, live: StoredLine | null): ColumnAfterWrite[] {
+  const byColumn = new Map<string, { year: number; measure: AmountMeasure; annual: bigint | null; months: Map<number, bigint | null> }>();
+  for (const amount of draft.amounts) {
+    const key = `${amount.year}:${amount.measure}`;
+    const entry = byColumn.get(key) ?? { year: amount.year, measure: amount.measure, annual: null, months: new Map() };
+    if (amount.month == null) entry.annual = amount.cents ?? 0n;
+    else entry.months.set(amount.month, amount.cents);
+    byColumn.set(key, entry);
+  }
+  return [...byColumn.values()].map((entry) => {
+    if (entry.months.size === 0) return { year: entry.year, measure: entry.measure, total: entry.annual ?? 0n };
+    const stored = live?.versions.find((version) => version.year === entry.year)?.months[entry.measure] ?? [];
+    let total = 0n;
+    for (let month = 1; month <= 12; month += 1) {
+      total += (entry.months.has(month) ? entry.months.get(month) : stored[month - 1]?.cents) ?? 0n;
+    }
+    return { year: entry.year, measure: entry.measure, total };
+  }).sort((a, b) => a.year - b.year || AMOUNT_MEASURES.indexOf(a.measure) - AMOUNT_MEASURES.indexOf(b.measure));
 }
 
 function noteFreshness(row: InterpretedRow, live: StoredLine, bag: Bag): void {

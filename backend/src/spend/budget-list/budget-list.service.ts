@@ -35,6 +35,7 @@ import { presentLine, presentNativeLine, selectLineColumns } from '../budget-lin
 import { fxKeyCurrency, fxSetKeySql, fxTableSql, FxTable, lineCurrencySql, RequestFxRates } from './budget-fx-table';
 import { BudgetListRuntime, loadBudgetRuntime, mergeNeeds, RuntimeNeeds } from './budget-list.runtime';
 import { isLimitedTransaction, lineEditableSql } from '../../data-access/line-write-checks';
+import { BUDGET_LINE_CHECKS, TO_CHECK_FIELD, type BudgetLineCheck } from '../budget-line-checks';
 
 /**
  * Data-scoped access (spec §6.7, "Moteur de liste"): in a limited transaction, the answers say they
@@ -732,6 +733,44 @@ ${core.where}
   AND (${config.alias}.id = ANY(${stmt.bind(lineIds, 'uuid[]')}))`);
   for (const row of rows) {
     result.set(row.id, Object.fromEntries(amountKeys.map((key, i) => [key, row[`a${i}`] == null ? null : BigInt(row[`a${i}`])])));
+  }
+  return result;
+}
+
+/**
+ * The checks each of `ids` fails, as the list's "To check" column names them (`to_check`, every
+ * check of `budget-line-checks.ts`), read by the list engine's own field in one statement, under the
+ * caller's access: a change in bulk counts the lines it leaves to check (lot B12b). No lifecycle
+ * scope. A line that fails none, of another tenant or not read is absent.
+ */
+export async function budgetListLineChecksByIds(
+  scope: SummaryReadScopeConfig,
+  deps: Pick<SummaryDeps, 'fxRates' | 'access'>,
+  manager: EntityManager,
+  ids: string[],
+): Promise<Map<string, BudgetLineCheck[]>> {
+  const lineIds = Array.from(new Set(ids.filter(Boolean)));
+  const result = new Map<string, BudgetLineCheck[]>();
+  if (!lineIds.length) return result;
+  const tenantId = await summaryTenantId(manager);
+  await assertListEngineSupport(manager);
+  const currentYear = new Date().getFullYear();
+  const rt = await loadBudgetRuntime(scope, { fxRates: new RequestFxRates(deps.fxRates) }, manager, tenantId, currentYear, budgetRuntimeNeeds(currentYear, [TO_CHECK_FIELD], false), deps.access);
+  const config = new BudgetListConfig(rt);
+  // The columns to check of these lines only, not of every line of the tenant (lot B12b).
+  config.lineIds = lineIds;
+  const stmt = new SqlStatement(tenantId);
+  const state: ListState = { page: 1, limit: lineIds.length, skip: 0, sort: { field: 'id', direction: 'ASC' }, filters: {}, scope: null };
+  const field = fieldOf(stmt, config, TO_CHECK_FIELD);
+  const core = buildCore(stmt, config, state, { fields: [field] });
+  const rows: Array<{ id: string; checks: string | null }> = await run(manager, stmt, `${stmt.withClause()}SELECT ${config.alias}.id, ${field.sql} AS checks
+${core.from}
+${core.where}
+  AND (${config.alias}.id = ANY(${stmt.bind(lineIds, 'uuid[]')}))`);
+  for (const row of rows) {
+    // The names joined by ", ", as the column shows them; each one of the table's names.
+    const checks = (row.checks ?? '').split(', ').filter((name): name is BudgetLineCheck => (BUDGET_LINE_CHECKS as readonly string[]).includes(name));
+    if (checks.length) result.set(row.id, checks);
   }
   return result;
 }

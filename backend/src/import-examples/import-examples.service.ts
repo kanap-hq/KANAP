@@ -19,7 +19,7 @@ export class ImportExamplesService {
     return buildImportExample(key, language, {
       catalogs: settings,
       dimensions: axes.filter((axis) => axis.status === 'enabled').map((axis) => ({ code: axis.code, name: axis.name })),
-      amountLabels: budget ? await loadColumnLabels(ctx.manager, ctx.tenantId) : {},
+      amountLabels: budget ? await loadColumnLabels(ctx.manager, ctx.tenantId, language) : {},
       year: new Date().getFullYear(),
     });
   }

@@ -284,6 +284,7 @@ export default function CopyBudgetPage() {
       part('amounts'),
       part('allocations'),
       errors > 0 ? t('operations.copyBudget.summary.errors', { count: errors }) : null,
+      isDone && counts.toCheck?.rows ? t('common:bulkEdit.toCheck', { count: counts.toCheck.rows }) : null,
     ].filter(Boolean).join(' ');
   };
 

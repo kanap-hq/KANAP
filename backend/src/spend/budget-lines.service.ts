@@ -25,7 +25,7 @@ import { creationCancelExpired } from '../common/creation/creation-token';
 import { assertCreationToken } from '../common/creation/creation-routes';
 import { BUDGET_LINE_CREATION, hasSuccessorLine } from './budget-line-creation';
 import { lockBudgetLine } from './budget-locks';
-import { bulkUpdateBudgetLines } from './budget-line-bulk-edit';
+import { bulkUpdateBudgetLines, countLinesToCheck } from './budget-line-bulk-edit';
 import { readEntryChecks, type LineEntryCheck } from './budget-line-entry-check';
 import type { BulkEditOptions } from '../common/bulk-edit/bulk-edit';
 
@@ -166,7 +166,13 @@ export class BudgetLinesService {
       listIds: (filters) => this.summaryIds(filters, opts),
       updateLine: (line, input) => this.updateLine(line, input, userId, { manager: opts.manager, audit: opts.audit }),
       options: opts.options,
+      lineChecks: (ids) => budgetList.budgetListLineChecksByIds(SUMMARY_SCOPES.all, this.deps(opts.access), opts.manager, ids),
     });
+  }
+
+  /** The written lines of `ids` the list's "To check" column shows, per check (the count of a change in bulk). */
+  countLinesToCheck(ids: string[], opts: ReadOptions) {
+    return countLinesToCheck(ids, (lineIds) => budgetList.budgetListLineChecksByIds(SUMMARY_SCOPES.all, this.deps(opts.access), opts.manager, lineIds));
   }
 
   private deps(access?: BudgetListAccess) {

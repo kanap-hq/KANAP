@@ -201,7 +201,11 @@ export class BudgetLinesController {
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('budget-operations/copy')
   copyBudget(@Body() body: CopyBudgetOperation, @Tenant() ctx: TenantRequest) {
-    return this.budgetOps.copyBudget(body, ctx.userId || null, { manager: ctx.manager as EntityManager });
+    const manager = ctx.manager as EntityManager;
+    return this.budgetOps.copyBudget(body, ctx.userId || null, {
+      manager,
+      toCheck: (ids) => this.svc.countLinesToCheck(ids, { manager, access: budgetListAccess(ctx) }),
+    });
   }
 
   /** "Reset a column" of Budget administration, on all lines or one nature (`budget-copy.ts`). */

@@ -32,6 +32,7 @@ import { Subscription, SubscriptionStatus } from '../billing/subscription.entity
 import { evaluateSubscriptionAccess, isTrialRunning } from '../billing/subscription-freeze.util';
 import { trackBackgroundWork } from '../common/background-work';
 import { NeverRejects } from '../common/never-rejects';
+import { analyzeTables, lineImportTables } from '../spend/budget-import-statistics';
 import { throwNotAvailableInMode } from '../common/feature-gates';
 import { tenantSlugFromHost } from '../common/tenancy/request-tenancy.middleware';
 import { withTenant } from '../common/tenant-runner';
@@ -1574,6 +1575,18 @@ export class DemoDataService implements OnApplicationShutdown {
     }
   }
 
+  /**
+   * The planner's statistics of the budget tables once a load has written its lines (lot B12b):
+   * without them the budget list of a large workspace reads the new lines as a few rows until
+   * autovacuum analyses them. The loader's requests are committed; the ANALYZE runs on connections
+   * of its own, in the background, and never fails the load (`analyzeTables`, which says why it
+   * runs after the commit and how it stays clear of `data_access_sync_policies()`).
+   */
+  @NeverRejects()
+  private async analyzeAfterLoad(): Promise<void> {
+    await analyzeTables(this.dataSource, lineImportTables('opex'), 'a sample data load');
+  }
+
   private async runLoad(run: {
     tenantId: string;
     actorId: string;
@@ -1619,6 +1632,7 @@ export class DemoDataService implements OnApplicationShutdown {
           });
           if (loaded) {
             this.logger.log(`Sample data loaded into tenant ${tenantId} in ${((Date.now() - startedAt) / 1000).toFixed(1)} s`);
+            void this.analyzeAfterLoad();
             return;
           }
           const current = await this.readState(tenantId);

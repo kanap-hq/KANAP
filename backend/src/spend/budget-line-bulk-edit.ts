@@ -7,6 +7,7 @@ import {
   BulkEditList,
   BulkEditOptions,
   BulkEditResult,
+  BulkToCheck,
   bulkTooMany,
   parseBulkChanges,
   parseBulkConfirmation,
@@ -95,6 +96,11 @@ export type BudgetLineBulkDeps = {
   updateLine: (line: { id: string; nature: BudgetNature }, body: Record<string, unknown>) => Promise<void>;
   /** Options of the common contract (Kad's card asks the ids of the lines that would change). */
   options?: BulkEditOptions;
+  /**
+   * The checks each line fails, as the list's "To check" column reads them, under the person's access
+   * (`budgetListLineChecksByIds`): the answer counts the lines written that are to check.
+   */
+  lineChecks?: (ids: string[]) => Promise<Map<string, readonly string[]>>;
 };
 
 /**
@@ -191,8 +197,27 @@ export async function bulkUpdateBudgetLines(body: unknown, deps: BudgetLineBulkD
       if (refusals.valueNotApplicable.has(message)) return 'value_not_applicable';
       return null;
     },
+
+    // The lines written that the list's "To check" column will show (lot B12b): every check, those
+    // the change caused (an account whose chart is not the company's, or that expects quantity and
+    // price) and those the lines already failed.
+    ...(deps.lineChecks ? { toCheck: (ids: string[]) => countLinesToCheck(ids, deps.lineChecks!) } : {}),
   };
   return runBulkEdit(manager, list, selection, confirmation, changes, deps.options);
+}
+
+/** How many of `ids` fail a check, and how many fail each one. */
+export async function countLinesToCheck(ids: string[], lineChecks: NonNullable<BudgetLineBulkDeps['lineChecks']>): Promise<BulkToCheck> {
+  const failed = ids.length > 0 ? await lineChecks(ids) : new Map<string, readonly string[]>();
+  const checks: Record<string, number> = {};
+  let rows = 0;
+  for (const id of ids) {
+    const names = failed.get(id) ?? [];
+    if (names.length === 0) continue;
+    rows += 1;
+    for (const name of names) checks[name] = (checks[name] ?? 0) + 1;
+  }
+  return { rows, checks };
 }
 
 /**

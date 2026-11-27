@@ -233,6 +233,8 @@ With the same level, when vulnerabilities are followed, Kad changes the state of
 
 When Kad creates a budget line, it asks whether the line is OPEX or CAPEX if you did not say. It does not change the type of an existing line: use **Change type...** in the line's workspace (see [Changing the type](budget-lines.md#changing-the-type)). Kad sets the contract of OPEX lines only. A CAPEX line reaches its contracts through the links of its **Relations** tab.
 
+Kad writes totals only. When the account of a line expects quantity and price entry, its budget previews warn before approval that the line will be to check, under **To check**: the amounts of a line, a new line with amounts, a change of account or of the end of validity, and a change in bulk. Complete the quantity and price on the line's **Budget** tab. See [When the account expects quantity and price](budget-lines.md#quantity-and-price-expected).
+
 ### Changing records in bulk { #changing-records-in-bulk }
 
 Kad changes one field on many budget lines or applications at once, as **Change the selection** does on the list. It needs the same right: the Member level on budget, or on applications. Name the records with a filter of the list, such as a supplier or a cost center, or with their references (`BL-3`, `APP-7`). Use one or the other in a request. Two records that take the same value are enough: Kad prepares one preview for the whole change. A filter takes the enabled records, unless it names a status. Retired applications stay out, unless it names a lifecycle.
@@ -242,7 +244,7 @@ Kad changes one field on many budget lines or applications at once, as **Change 
 
 Ask, for example: "Move the lines of supplier Acme to cost center IT-01" or "Make Claire Martin the IT owner of APP-3 and APP-7".
 
-The preview shows the records targeted, the field and its new value, how many records change, how many already have this value and how many are refused, with the reason. It lists each record it changes, up to 200: its reference, which opens the record, its name, its value before and its value after. Beyond ten records, the link below the list shows the rest. Records you may not change are not in the list: the preview counts them with the reason.
+The preview shows the records targeted, the field and its new value, how many records change, how many already have this value and how many are refused, with the reason. On budget lines, it also says how many lines will show in the **To check** column, for example "To check: 3", and says it again after approval. It lists each record it changes, up to 200: its reference, which opens the record, its name, its value before and its value after. Beyond ten records, the link below the list shows the rest. Records you may not change are not in the list: the preview counts them with the reason.
 
 Each record in the list has a box. Clear it to leave the record out. The record stays in the list, and you can tick it again. The count above the list follows each change, such as "2 kept of 3". If more records have entered the selection since the preview and it would list more than 200, the boxes stop working: ask Kad for a new preview. **Approve** applies the change to the records you kept. When every record is left out, there is nothing to approve and the preview says so.
 

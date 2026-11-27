@@ -123,6 +123,24 @@ describe('PreviewCard in French', () => {
     expect(screen.queryByText('What goes with it')).not.toBeInTheDocument();
   });
 
+  it('warns that a budget line will be to check, under the list column\'s name, and keeps Approve (lot B12b)', () => {
+    const warning = "Le compte 621100 - Honoraires attend une saisie en quantité et prix : les montants qui ne sont pas saisis ainsi seront à vérifier, à compléter dans l'onglet Budget de la ligne.";
+    renderCard(preview({
+      tool_name: 'update_business_record',
+      target: { entity_type: 'budget_lines', entity_id: 'line-1', ref: 'BL-12', title: 'BL-12 - Audit' },
+      summary: 'Modification de la ligne « BL-12 - Audit ».',
+      changes: {
+        account_id: { label: 'Account', from: '622100 - Commissions', to: '621100 - Honoraires', format: 'text' },
+        entry_check_warning: { label: 'To check', from: null, to: warning, format: 'text' },
+      },
+    }));
+
+    expect(screen.getByText('À vérifier')).toBeInTheDocument();
+    expect(screen.getByText(warning)).toBeInTheDocument();
+    expect(screen.queryByText('To check')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approuver' })).toBeEnabled();
+  });
+
   it('shows an incident closure with its status, category, date-time and warnings, in French', () => {
     renderCard(preview({
       tool_name: 'update_business_record',

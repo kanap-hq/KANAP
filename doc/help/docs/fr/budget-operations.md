@@ -147,7 +147,7 @@ Chaque partie a son propre statut sur chaque ligne :
 
 ### Résumé
 
-Au-dessus du tableau, une bannière résume l'aperçu, par exemple « 136 lignes dans l'aperçu. 6 lignes non valides en 2027 sont laissées de côté. Montants : 120 à copier, 10 ignorés. Ventilations : 124 à copier, 6 ignorées. » Le nombre de lignes est celui du tableau. Les lignes non valides l'année de destination y figurent, et les comptes des montants et des ventilations les laissent de côté. Après la copie, elle indique « Copie terminée. » avec les mêmes comptes.
+Au-dessus du tableau, une bannière résume l'aperçu, par exemple « 136 lignes dans l'aperçu. 6 lignes non valides en 2027 sont laissées de côté. Montants : 120 à copier, 10 ignorés. Ventilations : 124 à copier, 6 ignorées. » Le nombre de lignes est celui du tableau. Les lignes non valides l'année de destination y figurent, et les comptes des montants et des ventilations les laissent de côté. Après la copie, elle indique « Copie terminée. » avec les mêmes comptes. Quand des lignes copiées figurent dans la colonne **À vérifier** de la liste des lignes budgétaires, elle dit aussi combien, par exemple « À vérifier : 3 ».
 
 Des avertissements s'affichent lorsqu'ils s'appliquent :
 

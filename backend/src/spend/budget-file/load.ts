@@ -1,10 +1,13 @@
 import { EntityManager } from 'typeorm';
 import { loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import { toCents } from '../../common/amount';
-import { budgetColumnName, readBudgetColumns } from '../../budget-columns/budget-columns.util';
+import { readBudgetColumns, type BudgetColumnsSettings } from '../../budget-columns/budget-columns.util';
+import { localizedMeasureName } from '../../budget-columns/budget-column-labels';
+import type { CsvLanguage } from '../../common/csv-sheet';
 import { ItemAnalyticsValue, loadItemAnalyticsValues } from '../item-analytics.util';
 import { BUDGET_NATURES, natureAnd, naturesAnd, type BudgetNature } from '../budget-nature';
 import { AMOUNT_MEASURES, type AmountMeasure } from '../amounts-write.util';
+import { readAccountExpectations } from '../budget-line-entry-check';
 import { buildCostCenterTree, CostCenterTreeRow } from '../../cost-centers/cost-center-tree.util';
 import { columnOfMeasure } from './columns';
 import { ItemNumberCell } from './interpret';
@@ -66,11 +69,15 @@ export async function loadFileDimensions(manager: EntityManager, tenantId: strin
   return enabled.map((axis) => ({ code: axis.code, appliesTo: axis.applies_to ?? null }));
 }
 
-export async function loadColumnLabels(manager: EntityManager, tenantId: string): Promise<Record<string, string>> {
-  const settings = await readBudgetColumns(manager, tenantId);
+/** File column name (`budget`) to the column's name: the tenant's, else the product name in `language`. */
+export function columnLabels(settings: BudgetColumnsSettings, language: CsvLanguage): Record<string, string> {
   const labels: Record<string, string> = {};
-  for (const measure of AMOUNT_MEASURES) labels[columnOfMeasure(measure)] = budgetColumnName(settings, measure);
+  for (const measure of AMOUNT_MEASURES) labels[columnOfMeasure(measure)] = localizedMeasureName(settings, measure, language);
   return labels;
+}
+
+export async function loadColumnLabels(manager: EntityManager, tenantId: string, language: CsvLanguage = 'en'): Promise<Record<string, string>> {
+  return columnLabels(await readBudgetColumns(manager, tenantId), language);
 }
 
 /**
@@ -460,6 +467,9 @@ export async function loadCatalog(
       WHERE tenant_id = $1 AND scope IN ('opex', 'capex') AND is_frozen = true`,
     [tenantId],
   );
+  // The accounts that expect quantity and price, and the columns the rule reads (lot B12b).
+  const expected = await readAccountExpectations(manager, tenantId);
+  const shown = (await readBudgetColumns(manager, tenantId)).enabled;
   const iso = (value: Date | string | null) => (value ? new Date(value).toISOString() : null);
   return {
     companies: companies.map((row) => ({
@@ -468,13 +478,17 @@ export async function loadCatalog(
     })),
     suppliers: suppliers.map((row) => ({ id: row.id, name: row.name, erpId: row.erp_supplier_id, disabledAt: iso(row.disabled_at) })),
     costCenters: centers.map((row) => ({ id: row.id, code: row.code, kind: row.kind, companyId: row.company_id, disabledAt: iso(row.disabled_at) })),
-    accounts: accounts.map((row) => ({ id: row.id, number: row.account_number, coaId: row.coa_id, disabledAt: iso(row.disabled_at), nature: row.nature })),
+    accounts: accounts.map((row) => ({
+      id: row.id, number: row.account_number, coaId: row.coa_id, disabledAt: iso(row.disabled_at), nature: row.nature,
+      ...(expected.has(row.id) ? { quantityPrice: true } : {}),
+    })),
     users: users.map((row) => ({ id: row.id, email: row.email, status: row.status })),
     projects: projects.map((row) => ({ id: row.id, itemNumber: Number(row.item_number) })),
     dimensions,
     allowedCurrencies,
     defaultCoaId: chart[0]?.id ?? null,
     frozen: frozen.map((row) => `${row.scope}:${Number(row.budget_year)}:${row.column_key}`),
+    shownMeasures: AMOUNT_MEASURES.filter((measure) => shown[measure]),
   };
 }
 

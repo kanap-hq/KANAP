@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { UUID_RE } from '../relations/relation-target';
 
@@ -239,7 +239,17 @@ export type BulkEditList<Row extends { id: string }> = {
   reach(selection: BulkSelection, asOf: string | null): Promise<Row[]>;
   apply(row: Row): Promise<BulkEditOutcome>;
   refusal(error: unknown, row: Row): string | null;
+  /**
+   * Optional: the rows written that the list's data checks flag, read after the last write, in the
+   * same transaction (the dry run's before it is rolled back, so the count is the write's). Only the
+   * budget lines declare it (their "To check" column, lot B12b); a list without it answers no `to_check`,
+   * nor does a count that fails or runs past its limit (`countToCheck`): it never fails the write.
+   */
+  toCheck?(changedIds: string[]): Promise<BulkToCheck>;
 };
+
+/** The rows written that are to check: how many, and how many fail each check (a row may fail several). */
+export type BulkToCheck = { rows: number; checks: Record<string, number> };
 
 /**
  * The answer: `rows`, the rows reached (`changes` or `changed`, plus `unchanged`, plus every refused
@@ -266,6 +276,8 @@ export type BulkEditResult<Row extends { id: string } = { id: string }> = {
    * included (no query more). Kad lists them on its card, each with its value before.
    */
   changed_rows?: Row[];
+  /** With a list that declares `toCheck` only: the rows that would change, or that changed, and are to check. */
+  to_check?: BulkToCheck;
 };
 
 export type BulkEditOptions = {
@@ -277,6 +289,46 @@ export type BulkEditOptions = {
 
 const DRY_RUN_SAVEPOINT = 'bulk_edit_dry_run';
 const ROW_SAVEPOINT = 'bulk_edit_row';
+const TO_CHECK_SAVEPOINT = 'bulk_edit_to_check';
+
+/** The longest the optional count of the rows to check may take (`countToCheckWithin`); a spec shortens it. */
+export const BULK_TO_CHECK_LIMITS = { statementTimeout: '5s' };
+
+const logger = new Logger('BulkEdit');
+
+/**
+ * An optional count of the rows written that are to check (`count`), which never fails the write: in a
+ * savepoint of its own, under a short statement timeout (the shorter of it and the transaction's),
+ * the transaction's own put back after it (a `SET LOCAL` outlives the savepoint's release; a rollback
+ * to the savepoint undoes it). On any error the write goes on without it, and a log line says so
+ * (`what`: the write). The change in bulk, and the copy of budget columns (`budget-copy.ts`).
+ */
+export async function countToCheckWithin(
+  manager: EntityManager,
+  what: string,
+  written: readonly string[],
+  count: (ids: string[]) => Promise<BulkToCheck>,
+): Promise<BulkToCheck | undefined> {
+  const before: string = (await manager.query(`SELECT current_setting('statement_timeout') AS s`))[0]?.s ?? '0';
+  await manager.query(`SAVEPOINT ${TO_CHECK_SAVEPOINT}`);
+  try {
+    await manager.query(
+      // Each parameter is typed text where it first appears (a later `::interval` would type it so).
+      `SELECT set_config('statement_timeout',
+         CASE WHEN $1::text = '0' OR ($1::text)::interval > ($2::text)::interval THEN $2::text ELSE $1::text END, true)`,
+      [before, BULK_TO_CHECK_LIMITS.statementTimeout],
+    );
+    const counted = await count([...written]);
+    await manager.query(`SELECT set_config('statement_timeout', $1, true)`, [before]);
+    await manager.query(`RELEASE SAVEPOINT ${TO_CHECK_SAVEPOINT}`);
+    return counted;
+  } catch (error) {
+    await manager.query(`ROLLBACK TO SAVEPOINT ${TO_CHECK_SAVEPOINT}`);
+    await manager.query(`RELEASE SAVEPOINT ${TO_CHECK_SAVEPOINT}`);
+    logger.warn(`The count of the rows to check of ${what} (${written.length} rows) did not finish: answered without it (${(error as Error)?.message ?? error})`);
+    return undefined;
+  }
+}
 
 /**
  * Runs a change in bulk in the request's transaction (required: the dry run is rolled back to its
@@ -317,6 +369,7 @@ export async function runBulkEdit<Row extends { id: string }>(
   let unchanged = 0;
   const changedIds: string[] = [];
   const changedRows: Row[] = [];
+  const written: string[] = [];
   for (const row of rows) {
     await manager.query(`SAVEPOINT ${ROW_SAVEPOINT}`);
     let outcome: BulkEditOutcome;
@@ -333,13 +386,17 @@ export async function runBulkEdit<Row extends { id: string }>(
     await manager.query(`RELEASE SAVEPOINT ${ROW_SAVEPOINT}`);
     if (outcome === 'changed') {
       changed += 1;
+      written.push(row.id);
       if (options.changedIds) changedIds.push(row.id);
       if (options.changedRows) changedRows.push(row);
     } else unchanged += 1;
   }
+  // Before the dry run's rollback: the rows as the write leaves them.
+  const toCheck = list.toCheck ? await countToCheckWithin(manager, 'a change in bulk', written, (ids) => list.toCheck!(ids)) : undefined;
   const listed = {
     ...(options.changedIds ? { changed_ids: changedIds } : {}),
     ...(options.changedRows ? { changed_rows: changedRows } : {}),
+    ...(toCheck ? { to_check: toCheck } : {}),
   };
   if (confirmation.dryRun) {
     await manager.query(`ROLLBACK TO SAVEPOINT ${DRY_RUN_SAVEPOINT}`);

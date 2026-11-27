@@ -147,7 +147,7 @@ Cada parte tiene su propio estado en cada línea:
 
 ### Resumen
 
-Encima de la tabla, un aviso resume la vista previa, por ejemplo «136 líneas en la vista previa. 6 líneas no válidas en 2027 quedan fuera. Importes: 120 por copiar, 10 omitidos. Asignaciones: 124 por copiar, 6 omitidas.» El número de líneas es el de la tabla. Las líneas no válidas en el año de destino figuran en ella, y los recuentos de importes y asignaciones las dejan fuera. Tras la copia indica «Copia terminada.» con los mismos recuentos.
+Encima de la tabla, un aviso resume la vista previa, por ejemplo «136 líneas en la vista previa. 6 líneas no válidas en 2027 quedan fuera. Importes: 120 por copiar, 10 omitidos. Asignaciones: 124 por copiar, 6 omitidas.» El número de líneas es el de la tabla. Las líneas no válidas en el año de destino figuran en ella, y los recuentos de importes y asignaciones las dejan fuera. Tras la copia indica «Copia terminada.» con los mismos recuentos. Cuando líneas copiadas figuran en la columna **Por verificar** de la lista de líneas presupuestarias, también dice cuántas, por ejemplo «Por verificar: 3».
 
 Aparecen advertencias cuando corresponden:
 

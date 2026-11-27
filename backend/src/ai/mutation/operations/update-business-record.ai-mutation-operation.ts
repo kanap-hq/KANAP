@@ -15,6 +15,7 @@ import {
   getAiBusinessRecordBusinessResource,
 } from '../ai-business-record-mutation-support.service';
 import { AiWriteLanguage } from '../../ai-write-texts';
+import { accountEntryCheckWarning, ENTRY_CHECK_STORE_KEY, entryCheckWarningChange } from '../ai-entry-check-warning';
 
 const UpdateBusinessRecordInputSchema = z.object({
   entity_type: z.enum(AI_BUSINESS_RECORD_ENTITY_TYPES)
@@ -50,25 +51,46 @@ export class UpdateBusinessRecordAiMutationOperation implements AiMutationOperat
     return getAiBusinessRecordBusinessResource(params.input?.entity_type ?? params.preview?.target_entity_type);
   }
 
-  prepareCreatePreview(
+  async prepareCreatePreview(
     context: AiExecutionContextWithManager,
     input: AiUpdateBusinessRecordInput,
   ): Promise<AiPreparedMutationPreview> {
-    return this.support.prepareUpdatePreview(context, input);
+    return withAccountEntryCheck(context, await this.support.prepareUpdatePreview(context, input));
   }
 
   presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
-    return this.support.presentPreview(preview, language);
+    const presentation = this.support.presentPreview(preview, language);
+    const warning = entryCheckWarningChange(preview.current_values, preview.status, language);
+    return Object.keys(warning).length > 0 ? { ...presentation, changes: { ...presentation.changes, ...warning } } : presentation;
   }
 
   executePreview(context: AiExecutionContextWithManager, preview: AiMutationPreview): Promise<void> {
     return this.support.executePreview(context, preview);
   }
 
-  prepareReversePreview(
+  async prepareReversePreview(
     context: AiExecutionContextWithManager,
     preview: AiMutationPreview,
   ): Promise<AiPreparedMutationPreview> {
-    return this.support.prepareReverseUpdatePreview(context, preview);
+    return withAccountEntryCheck(context, await this.support.prepareReverseUpdatePreview(context, preview));
   }
+}
+
+/**
+ * A budget line moved onto an account that expects quantity and price, with amounts not built so,
+ * or on such an account given an end of validity that brings back a year with them: the card warns
+ * that the line will be to check (lot B12b), reading the account and the end the card writes. Other
+ * changes and families as they are.
+ */
+async function withAccountEntryCheck(context: AiExecutionContextWithManager, prepared: AiPreparedMutationPreview): Promise<AiPreparedMutationPreview> {
+  const fields = prepared.mutationInput?.fields as Record<string, unknown> | undefined;
+  if (prepared.targetEntityType !== 'budget_lines' || !prepared.targetEntityId || !fields) return prepared;
+  const accountGiven = typeof fields.account_id === 'string';
+  const endGiven = Object.prototype.hasOwnProperty.call(fields, 'disabled_at');
+  if (!accountGiven && !endGiven) return prepared;
+  const warning = await accountEntryCheckWarning(context.manager, context.tenantId, prepared.targetEntityId, {
+    ...(accountGiven ? { accountId: fields.account_id } : {}),
+    ...(endGiven ? { endOfValidity: fields.disabled_at ?? null } : {}),
+  });
+  return warning ? { ...prepared, currentValues: { ...(prepared.currentValues ?? {}), [ENTRY_CHECK_STORE_KEY]: warning } } : prepared;
 }

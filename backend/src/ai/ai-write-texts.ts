@@ -500,6 +500,38 @@ const INCIDENT_ACCESS_WARNING: Texts = {
   es: 'Tras este cambio, solo los administradores del registro, el notificante y el responsable podrán abrirlo. Volverá al registro.',
 };
 
+/**
+ * The card's warning when its account expects quantity and price entry (lot B12b): the amounts Kad
+ * writes are totals, never quantity × price, so the line's list shows them "To check". `amounts`:
+ * Kad writes the amounts (a line's amounts, a new line with its amounts); `account`: the change
+ * moves lines with their amounts onto the account (one line, or `many` in bulk). `account` is the
+ * account as the card names it, `6100 - Software`. Nothing is refused: the card is approved as any other.
+ */
+export function quantityPriceExpectedWarning(
+  language: AiWriteLanguage,
+  kind: 'amounts' | 'account',
+  account: string,
+  many = false,
+): string {
+  if (kind === 'amounts') {
+    return {
+      en: `The account ${account} expects quantity and price entry, and Kad only writes a total: this amount will be to check, to complete on the line's Budget tab.`,
+      fr: `Le compte ${account} attend une saisie en quantité et prix, et Kad n'écrit qu'un total : ce montant sera à vérifier, à compléter dans l'onglet Budget de la ligne.`,
+      de: `Das Konto ${account} erwartet eine Erfassung nach Menge und Preis, und Kad schreibt nur einen Gesamtbetrag: Dieser Betrag ist danach zu prüfen und auf der Registerkarte Budget der Zeile zu ergänzen.`,
+      es: `La cuenta ${account} espera una introducción por cantidad y precio, y Kad solo escribe un total: este importe quedará por verificar y se completa en la pestaña Presupuesto de la línea.`,
+    }[language];
+  }
+  return {
+    en: `The account ${account} expects quantity and price entry: the amounts not entered that way will be to check, to complete on the Budget tab of ${many ? 'each line' : 'the line'}.`,
+    fr: `Le compte ${account} attend une saisie en quantité et prix : les montants qui ne sont pas saisis ainsi seront à vérifier, à compléter dans l'onglet Budget de ${many ? 'chaque ligne' : 'la ligne'}.`,
+    de: `Das Konto ${account} erwartet eine Erfassung nach Menge und Preis: Beträge, die nicht so erfasst sind, sind danach zu prüfen und auf der Registerkarte Budget ${many ? 'jeder Zeile' : 'der Zeile'} zu ergänzen.`,
+    es: `La cuenta ${account} espera una introducción por cantidad y precio: los importes que no se introducen así quedarán por verificar y se completan en la pestaña Presupuesto de ${many ? 'cada línea' : 'la línea'}.`,
+  }[language];
+}
+
+/** The card's key of that warning: the frontend labels it as the list's column, "To check" (`ai:previewCard.fields.entry_check_warning`). */
+export const ENTRY_CHECK_WARNING_FIELD = 'entry_check_warning';
+
 export function incidentClosureWarning(language: AiWriteLanguage): string {
   return INCIDENT_CLOSURE_WARNING[language];
 }

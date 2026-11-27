@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { trackBackgroundWork } from '../common/background-work';
 import { createRequestCommitThenRun } from '../common/import-connection';
+import { DATA_ACCESS_SYNC_LOCK } from '../data-access/data-access-availability';
 
 /**
  * Planner statistics after a large budget import (plan planning/perf-scale, item 4C bis).
@@ -20,7 +21,9 @@ import { createRequestCommitThenRun } from '../common/import-connection';
  * tables the import writes, on a pooled connection of its own, in the background: the answer
  * does not wait for it, a stop does (`trackBackgroundWork`). One short transaction per table:
  * ANALYZE reads a sample of it (30,000 rows at most with the default target), blocks no read or
- * write, and gives up after 5 s waiting for its lock (another ANALYZE or VACUUM on it). A table
+ * write, and gives up after 5 s waiting for its table's lock (another ANALYZE or VACUUM on it;
+ * PostgreSQL cancels an autovacuum that blocks it after `deadlock_timeout`, 1 s by default, so a
+ * shorter wait would give up whenever autovacuum runs on the table). A table
  * the KANAP role does not own is skipped and named in the log. It runs after the
  * commit, outside the request transaction: inside it, ANALYZE would hold its table locks until
  * the import commits and delay the answer, and an import that then failed would leave row
@@ -30,6 +33,19 @@ import { createRequestCommitThenRun } from '../common/import-connection';
  * It is the last call of the budget file load routes (`POST /spend-items/budget-file/import`
  * and the CAPEX twin). A budget file load approved in Kad gets the same ANALYZE once the
  * approval's transaction is committed (`AiChatOrchestratorService.analyzeLargeImportsAfterApproval`).
+ * A sample data load ends with it too, once its loader is done (`DemoDataService.analyzeAfterLoad`,
+ * lot B12b).
+ *
+ * `data_access_sync_policies()` grants and rewrites the policies of these tables in one
+ * transaction: it updates a table's `pg_class` row, then waits for the table's lock, which an
+ * ANALYZE holds while it samples before it updates that same row; the two would wait for each
+ * other (deadlock, one of them cancelled). The lead's sync holds the advisory lock
+ * `DATA_ACCESS_SYNC_LOCK` for its transaction, taken before it touches a table; each ANALYZE here
+ * tries it first, shared, in its own transaction, and skips its table while the sync holds it
+ * (logged, left to autovacuum), and the sync waits for an ANALYZE that holds it. Shared: two
+ * ANALYZE at once (two loads) both run. The migrations that run
+ * the sync do not take the lock: they run before the API starts, when no ANALYZE of this process
+ * runs (lot B12b).
  */
 export const ANALYZE_AFTER_IMPORT_ROWS = 1000;
 
@@ -78,7 +94,7 @@ export async function analyzeAfterLargeImport(req: any, tables: readonly string[
   });
 }
 
-export type AnalyzeReport = { analysed: string[]; notOwned: string[]; missing: string[]; failed: string[] };
+export type AnalyzeReport = { analysed: string[]; notOwned: string[]; missing: string[]; busy: string[]; failed: string[] };
 
 const errorCode = (error: unknown) => (error as any)?.driverError?.code ?? (error as any)?.code ?? (error as Error)?.message;
 
@@ -86,11 +102,16 @@ const errorCode = (error: unknown) => (error as any)?.driverError?.code ?? (erro
  * ANALYZE of each of `tables` the current role may analyse, one short transaction per table (a
  * table's lock is held only while it is sampled). A table the role does not own (the same check
  * as 1853820000000: owner or member of the owner role) or that does not exist is skipped and
- * logged; PostgreSQL would only warn and skip it. Never throws.
+ * logged; PostgreSQL would only warn and skip it. Never throws. `after` names what wrote the tables
+ * in the log lines: a large import (the budget file, Kad's approval), or a sample data load.
  */
-export async function analyzeTables(dataSource: DataSource, tables: readonly string[]): Promise<AnalyzeReport> {
+export async function analyzeTables(
+  dataSource: DataSource,
+  tables: readonly string[],
+  after: 'a large import' | 'a sample data load' = 'a large import',
+): Promise<AnalyzeReport> {
   const started = Date.now();
-  const report: AnalyzeReport = { analysed: [], notOwned: [], missing: [], failed: [] };
+  const report: AnalyzeReport = { analysed: [], notOwned: [], missing: [], busy: [], failed: [] };
   const runner = dataSource.createQueryRunner();
   try {
     await runner.connect();
@@ -107,6 +128,12 @@ export async function analyzeTables(dataSource: DataSource, tables: readonly str
       try {
         await runner.startTransaction();
         await runner.query(`SELECT set_config('lock_timeout', $1, true), set_config('statement_timeout', $2, true)`, [LOCK_TIMEOUT, STATEMENT_TIMEOUT]);
+        const [lock] = await runner.query(`SELECT pg_try_advisory_xact_lock_shared(hashtext($1)::bigint) AS free`, [DATA_ACCESS_SYNC_LOCK]);
+        if (lock?.free !== true) {
+          await runner.rollbackTransaction();
+          report.busy.push(state.name);
+          continue;
+        }
         await runner.query(`ANALYZE ${state.name}`);
         await runner.commitTransaction();
         report.analysed.push(state.name);
@@ -121,11 +148,14 @@ export async function analyzeTables(dataSource: DataSource, tables: readonly str
   } finally {
     if (!runner.isReleased) await runner.release().catch(() => undefined);
   }
-  if (report.analysed.length) logger.log(`ANALYZE after a large import: ${report.analysed.join(', ')} (${Date.now() - started} ms)`);
+  if (report.analysed.length) logger.log(`ANALYZE after ${after}: ${report.analysed.join(', ')} (${Date.now() - started} ms)`);
   if (report.notOwned.length) {
-    logger.warn(`ANALYZE after a large import skipped ${report.notOwned.join(', ')}: the application role does not own them (as their owner: ANALYZE ${report.notOwned.join(', ')}); autovacuum will analyse them`);
+    logger.warn(`ANALYZE after ${after} skipped ${report.notOwned.join(', ')}: the application role does not own them (as their owner: ANALYZE ${report.notOwned.join(', ')}); autovacuum will analyse them`);
   }
-  if (report.missing.length) logger.warn(`ANALYZE after a large import: no table ${report.missing.join(', ')}`);
-  if (report.failed.length) logger.warn(`ANALYZE after a large import did not run for ${report.failed.join(', ')}; autovacuum will analyse them`);
+  if (report.missing.length) logger.warn(`ANALYZE after ${after}: no table ${report.missing.join(', ')}`);
+  if (report.busy.length) {
+    logger.warn(`ANALYZE after ${after} skipped ${report.busy.join(', ')}: the data access policies were being synchronised; autovacuum will analyse them`);
+  }
+  if (report.failed.length) logger.warn(`ANALYZE after ${after} did not run for ${report.failed.join(', ')}; autovacuum will analyse them`);
   return report;
 }

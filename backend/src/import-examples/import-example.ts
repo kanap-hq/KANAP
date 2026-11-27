@@ -32,7 +32,7 @@ export interface ImportExampleWorkspace {
   catalogs: Partial<Record<CatalogList, CatalogOptionLike[]>>;
   /** The enabled dimensions, for the `analytics:<code>` columns of the budget file. */
   dimensions: Array<{ code: string; name: string | null }>;
-  /** The name of each budget column in the workspace (`budget` gives "Budget"). */
+  /** The name of each budget column in the workspace, else in the file's language (`actual` gives "Réalisé" in French). */
   amountLabels: Record<string, string>;
   /** The current year. */
   year: number;

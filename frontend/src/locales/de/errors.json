@@ -127,6 +127,7 @@
   "BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER_UNREAD": "{{label}} {{year}} mit {{amount}}, gegenüber einem Median von {{median}} aus {{count}} Budgetzeilen desselben Lieferanten.",
   "BUDGET_FILE_START_AFTER_AMOUNTS": "Die Budgetzeile beginnt am {{start}}, nach ihren letzten Beträgen ({{year}}).",
   "BUDGET_FILE_END_BEFORE_AMOUNTS": "Die Budgetzeile endet am {{end}}, vor ihren ersten Beträgen ({{year}}).",
+  "BUDGET_FILE_QUANTITY_PRICE_EXPECTED": "Das Konto {{account}} erwartet eine Erfassung nach Menge und Preis: Ergänzen Sie {{columns}} auf der Registerkarte Budget der Zeile.",
   "BUDGET_FILE_CURRENCY_NOT_COMPANY": "{{currency}} ist nicht die Währung von {{company}} ({{base}}).",
   "BUDGET_FILE_CURRENCY_NOT_COMPANY_UNREAD": "{{currency}} ist nicht die Währung der zahlenden Gesellschaft ({{base}}).",
   "CSV_HEADER_IGNORED_COLUMNS": "Diese Spalten werden nicht importiert: {{extra}}.",

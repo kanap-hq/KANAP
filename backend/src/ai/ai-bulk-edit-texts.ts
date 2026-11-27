@@ -350,7 +350,20 @@ export type BulkEditCard = {
   listed?: boolean;
   /** The card was approved: its summary says what changed, the counts made before are not shown again. */
   done?: boolean;
+  /**
+   * The rows that would change, or that changed, and that the list's "To check" column flags (lot
+   * B12b, budget lines only): said when not zero, in the words of the screen's dialog.
+   */
+  toCheck?: number;
 };
+
+/** The label of the budget lines list's "To check" column, as the change in bulk dialog says it (`common:bulkEdit.toCheck`). */
+const TO_CHECK: Words = { en: 'To check', fr: 'À vérifier', de: 'Zu prüfen', es: 'Por verificar' };
+
+/** `To check: 3`, the line of the change in bulk dialog. */
+export function bulkEditToCheckText(language: AiWriteLanguage, rows: number): string {
+  return `${TO_CHECK[language]}${COLON[language]}${rows}`;
+}
 
 /** The words of a refusal code, "Other reason" for a code the dialog does not word. */
 export function bulkEditRefusalText(language: AiWriteLanguage, code: string): string {
@@ -378,7 +391,8 @@ export function bulkEditCardText(card: BulkEditCard, language: AiWriteLanguage):
   }
   const value = card.value === null ? BULK_EDIT_EMPTIED[language] : card.value;
   blocks.push(escapeMarkdownLabel(`${card.field} → ${value}`));
-  if (card.done) return blocks.join('\n\n');
+  const toCheck = (card.toCheck ?? 0) > 0 ? bulkEditToCheckText(language, card.toCheck!) : null;
+  if (card.done) return [...blocks, ...(toCheck ? [toCheck] : [])].join('\n\n');
   const counts = [{
     en: `${words.rows(card.changes)} to change`,
     fr: `${words.rows(card.changes)} à modifier`,
@@ -418,6 +432,7 @@ export function bulkEditCardText(card: BulkEditCard, language: AiWriteLanguage):
     line = `${line}, ${head}${colon}${reasons}`;
   }
   blocks.push(line);
+  if (toCheck) blocks.push(toCheck);
   const examples = card.listed ? [] : card.examples.slice(0, 5);
   if (examples.length > 0) {
     const more = card.changes - examples.length;

@@ -1,13 +1,17 @@
 import { EntityManager } from 'typeorm';
 import { loadFileAccess, planWithAccess } from './access';
 import { interpretBudgetFile, ItemNumberCell } from './interpret';
-import { loadCatalog, loadColumnLabels, loadLinesByNumber, loadNames } from './load';
+import { readBudgetColumns } from '../../budget-columns/budget-columns.util';
+import type { CsvLanguage } from '../../common/csv-sheet';
+import { columnLabels, loadCatalog, loadLinesByNumber, loadNames } from './load';
 import { lookalikeTargets, PreflightInput } from './preflight';
 import { BudgetFileLinePlan, BudgetFileReport, lineRef, StoredLine } from './types';
 
 /** What a check reads for itself: everything but the workspace's data. */
-export type BudgetFileCheckInput = Omit<PreflightInput, 'catalog' | 'stored' | 'names' | 'labels' | 'access'> & {
+export type BudgetFileCheckInput = Omit<PreflightInput, 'catalog' | 'stored' | 'names' | 'labels' | 'localLabels' | 'access'> & {
   allowedCurrencies: string[] | null;
+  /** The person's: the language the messages' parameters name the columns in (the screen's, Kad's). */
+  language: CsvLanguage;
 };
 
 export interface CheckedBudgetFile {
@@ -33,8 +37,10 @@ export async function checkBudgetFile(manager: EntityManager, tenantId: string, 
   const amounts = rows.some((row) => row.amounts.some((amount) => amount.cell.kind === 'value'));
   const catalog = await loadCatalog(manager, tenantId, input.allowedCurrencies);
   const names = await loadNames(manager, tenantId, { years: creates || amounts });
-  const labels = await loadColumnLabels(manager, tenantId);
-  const base: PreflightInput = { ...input, catalog, names, labels, stored: [] };
+  const settings = await readBudgetColumns(manager, tenantId);
+  const labels = columnLabels(settings, 'en');
+  const localLabels = columnLabels(settings, input.language);
+  const base: PreflightInput = { ...input, catalog, names, labels, localLabels, stored: [] };
   const targets = creates ? lookalikeTargets(base) : { ids: [], updates: [] };
   const numbers: ItemNumberCell[] = [
     ...rows.map((row) => row.itemNumber),
