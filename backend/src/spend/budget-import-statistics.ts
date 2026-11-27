@@ -20,7 +20,8 @@ import { createRequestCommitThenRun } from '../common/import-connection';
  * tables the import writes, on a pooled connection of its own, in the background: the answer
  * does not wait for it, a stop does (`trackBackgroundWork`). One short transaction per table:
  * ANALYZE reads a sample of it (30,000 rows at most with the default target), blocks no read or
- * write, and gives up after 5 s waiting for its lock (another ANALYZE or VACUUM on it). A table
+ * write, and gives up after half a second waiting for a lock (another ANALYZE or VACUUM on it, or
+ * `data_access_sync_policies()`, below). A table
  * the KANAP role does not own is skipped and named in the log. It runs after the
  * commit, outside the request transaction: inside it, ANALYZE would hold its table locks until
  * the import commits and delay the answer, and an import that then failed would leave row
@@ -30,10 +31,19 @@ import { createRequestCommitThenRun } from '../common/import-connection';
  * It is the last call of the budget file load routes (`POST /spend-items/budget-file/import`
  * and the CAPEX twin). A budget file load approved in Kad gets the same ANALYZE once the
  * approval's transaction is committed (`AiChatOrchestratorService.analyzeLargeImportsAfterApproval`).
+ * A sample data load ends with it too, once its loader is done (`DemoDataService.analyzeAfterLoad`,
+ * lot B12b).
+ *
+ * `data_access_sync_policies()` (lead process start, migrations) grants and rewrites the policies of
+ * these tables in one transaction: it updates a table's `pg_class` row, then waits for the table's
+ * lock, which an ANALYZE holds while it samples before it updates that same row. The two wait for
+ * each other. The lock timeout is below PostgreSQL's `deadlock_timeout` (1 s by default), so the
+ * ANALYZE gives up first, is logged and left to autovacuum, and the sync goes on. The lead's sync
+ * runs before the process serves a request (`main.ts`), and an ANALYZE only follows a load.
  */
 export const ANALYZE_AFTER_IMPORT_ROWS = 1000;
 
-const LOCK_TIMEOUT = '5s';
+const LOCK_TIMEOUT = '500ms';
 const STATEMENT_TIMEOUT = '5min';
 
 const logger = new Logger('BudgetImportStatistics');

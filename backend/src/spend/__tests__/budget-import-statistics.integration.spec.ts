@@ -9,13 +9,17 @@ import {
   writtenRows,
 } from '../budget-import-statistics';
 import { assert, runSpecs } from './round-inputs.fixtures';
+import { DemoDataService } from '../../demo-data/demo-data.service';
 
 // Statistics after a large budget import (plan planning/perf-scale, item 4C bis;
 // budget-import-statistics.ts), against the database: below the threshold, a dry run or a
 // refused file leave the request's transaction to the interceptor; a large import commits it,
 // gives its connection back, and ANALYZE then runs on the tables it writes, in the background,
 // one transaction per table; a table the role does not own or that does not exist is skipped
-// and reported, never logged as analysed.
+// and reported, never logged as analysed. Lot B12b: a sample data load ends with the same ANALYZE
+// (`DemoDataService.analyzeAfterLoad`, in the background, never rejecting), and an ANALYZE gives up
+// on a held lock before PostgreSQL's deadlock check would run, so `data_access_sync_policies()`,
+// which waits for it, goes on.
 // @database-spec: run-ci-tests.js runs this file in its serial database lane.
 
 const written = (rows: number) => ({ ok: true, dryRun: false, inserted: rows - Math.floor(rows / 2), updated: Math.floor(rows / 2) });
@@ -96,9 +100,51 @@ async function testSkippedTables() {
   assert.ok(after.spend_items > before.spend_items, 'the owned table is analysed');
 }
 
+/** A sample data load: the budget tables analysed once it is done, in the background, without failing it. */
+async function testAfterSampleData() {
+  const tables = lineImportTables('opex');
+  const before = await analyzeCounts(tables);
+  const warnings: string[] = [];
+  const service = { dataSource, logger: { warn: (line: string) => warnings.push(line), log: () => undefined } };
+  const started = Date.now();
+  // Private to the service: called as its load calls it, once the loader is done.
+  const returned = (DemoDataService.prototype as any).analyzeAfterLoad.call(service);
+  assert.equal(await waitForBackgroundWork(Date.now() + 60000), 0, 'tracked as background work, and finished');
+  await returned;
+  const elapsed = Date.now() - started;
+  const after = await analyzeCounts(tables);
+  for (const table of tables) assert.ok(after[table] > before[table], `${table} analysed (${before[table]} -> ${after[table]})`);
+  assert.deepEqual(warnings, [], 'no failure');
+  console.log(`  ANALYZE of ${tables.join(', ')} after a sample data load: ${elapsed} ms`);
+}
+
+/**
+ * A lock held on a table (here as an ANALYZE or `data_access_sync_policies()` holds it): the ANALYZE
+ * gives up before the deadlock check of the session it waits for, reports the table, never throws.
+ */
+async function testGivesUpBeforeTheDeadlockCheck() {
+  const [{ ms }] = await dataSource.query(`SELECT setting::int AS ms FROM pg_settings WHERE name = 'deadlock_timeout'`);
+  const holder = dataSource.createQueryRunner();
+  await holder.connect();
+  await holder.startTransaction();
+  try {
+    await holder.query('LOCK TABLE spend_items IN SHARE UPDATE EXCLUSIVE MODE');
+    const started = Date.now();
+    const report = await analyzeTables(dataSource, ['spend_items']);
+    const waited = Date.now() - started;
+    assert.deepEqual([report.analysed, report.failed], [[], ['spend_items (55P03)']], 'gave up on the lock, reported');
+    assert.ok(waited < Number(ms), `gave up after ${waited} ms, before the deadlock check (${ms} ms)`);
+  } finally {
+    await holder.rollbackTransaction();
+    await holder.release();
+  }
+}
+
 void runSpecs('budget-import-statistics.integration.spec', [
   ['rows of the file written', testWrittenRows],
   ['below the threshold, a dry run, a refused file: nothing', testBelowThreshold],
   ['a large import: committed, then its tables analysed', testLargeImport],
   ['a table the role does not own, a missing table: skipped and reported', testSkippedTables],
+  ['a sample data load: its tables analysed in the background', testAfterSampleData],
+  ['a held lock: given up before the deadlock check', testGivesUpBeforeTheDeadlockCheck],
 ]);
