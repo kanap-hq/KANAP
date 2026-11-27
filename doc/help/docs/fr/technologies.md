@@ -400,7 +400,7 @@ Une fiche créée comme application peut être en réalité une technologie, par
 
 Avec le niveau Membre sur l'infrastructure, Kad écrit aussi, et chaque modification arrive sous forme d'aperçu que vous approuvez :
 
-- Adopter une entrée du catalogue, compléter une technologie du même nom saisie à la main, ou créer une technologie que le catalogue ne connaît pas.
+- Adopter une entrée du catalogue, compléter une technologie du même nom saisie à la main, ou créer une technologie que le catalogue ne connaît pas. Pour une entrée du catalogue déjà présente dans vos technologies, même renommée, Kad ne prépare pas de seconde technologie : il nomme la vôtre avec sa référence et son nom actuel, et propose de l'ouvrir ou de la modifier.
 - Modifier les champs de la technologie.
 - Ajouter des versions et changer leurs libellés, leurs dates et leurs notes.
 - Ajouter ou retirer des responsables IT, des responsables métier et des contacts de support.

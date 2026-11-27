@@ -400,7 +400,7 @@ A record created as an application may really be a technology, for example a dat
 
 With the Member level on infrastructure, Kad also writes, and every change comes as a preview that you approve:
 
-- Adopt a catalog entry, complete a technology of the same name typed by hand, or create a technology the catalog does not know.
+- Adopt a catalog entry, complete a technology of the same name typed by hand, or create a technology the catalog does not know. For a catalog entry already in your technologies, even renamed, Kad prepares no second technology: it names yours with its reference and current name, and offers to open or change it.
 - Change the fields of the technology.
 - Add versions and change their labels, dates and notes.
 - Add or remove IT owners, business owners and support contacts.
