@@ -264,7 +264,7 @@ Filtern Sie die Liste nach **Person**, **Schlüssel oder Verbindung**, **Ergebni
 
 Klicken Sie auf eine Zeile, um die Argumente des Aufrufs zu sehen, gekürzt. Bei einer Ablehnung oder einem Fehler zeigt die Zeile den Grund; die vollständige Ursache sehen die Person, die den Aufruf gemacht hat, und ein Administrator. Geheime Werte erscheinen als *Ausgeblendet*.
 
-Das Protokoll erfasst auch Aufrufe mit einem widerrufenen oder abgelaufenen Schlüssel. Es speichert nie einen Schlüssel oder ein Token.
+Das Protokoll erfasst auch Aufrufe mit einem Schlüssel oder einer Verbindung, die widerrufen oder abgelaufen ist oder deren Inhaber sich nicht mehr verbinden kann. Es speichert nie einen Schlüssel oder ein Token.
 
 ---
 
