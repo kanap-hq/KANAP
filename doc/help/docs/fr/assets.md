@@ -41,6 +41,7 @@ Tant que l'actif est en cours de création, son en-tête affiche **Créer** et *
 - **Créer** crée l'actif quand il a son nom, son type et son site. S'il en manque un, rien n'est enregistré : le libellé **Type d'actif** ou **Site** manquant passe en rouge avec une icône d'alerte, et le curseur va au premier qui manque. Avec un titre vide, le titre en demande un
 - Une fois l'actif créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ
 - **Annuler** avant la création de l'actif part sans rien enregistrer. Ensuite, il supprime l'actif. Si vous avez modifié l'actif depuis, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des actifs
+- Dès qu'une autre personne y a apporté une modification, ou qu'une autre fiche y est liée (relation d'un autre actif vers lui comprise), **Annuler** est refusé
 
 Un actif enregistré sans site par une version antérieure s'ouvre normalement, avec son libellé **Site** marqué comme manquant. Choisissez un site pour l'enregistrer.
 

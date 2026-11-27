@@ -75,6 +75,14 @@ export function describeCreationChanges(changes: CreationChanges, t: TFunction):
     .join(', ');
 }
 
+/**
+ * The refusal of Cancel (`CREATION_CANCEL_EXPIRED`) for a family that has no delete: the record
+ * stays, and the text says what to do instead of deleting it.
+ */
+const NO_DELETE_EXPIRED: Readonly<Record<string, string>> = {
+  projects: 'errors:CREATION_CANCEL_EXPIRED_PROJECT',
+};
+
 export function creationChangeCount(changes: CreationChanges): number {
   return changes.fields + Object.values(changes.children || {}).reduce((sum, total) => sum + (total || 0), 0);
 }
@@ -171,14 +179,22 @@ export default function useRecordCreation({
       void queryClient.invalidateQueries({ queryKey: ONBOARDING_QUERY_KEY });
       return true;
     } catch (err) {
-      // The creation is over (expired token): the action goes, the record is deleted as any other.
-      if ((err as { response?: { data?: { code?: unknown } } })?.response?.data?.code === 'CREATION_CANCEL_EXPIRED') clearCreation(key);
+      // The creation is over (expired token): the action goes, the record is deleted as any other;
+      // a family with no delete says what to do instead.
+      if ((err as { response?: { data?: { code?: unknown } } })?.response?.data?.code === 'CREATION_CANCEL_EXPIRED') {
+        clearCreation(key);
+        const instead = NO_DELETE_EXPIRED[family];
+        if (instead) {
+          onError?.(t(instead));
+          return false;
+        }
+      }
       onError?.(getApiErrorMessage(err, t, t('common:creation.cancelFailed')));
       return false;
     } finally {
       setCancelling(false);
     }
-  }, [apiBase, cancelling, dialogs, key, listPath, navigate, onError, queryClient, queryKeyPrefixes, recordId, recordLabel, t]);
+  }, [apiBase, cancelling, dialogs, family, key, listPath, navigate, onError, queryClient, queryKeyPrefixes, recordId, recordLabel, t]);
 
   return { beingCreated: !!entry, token: entry?.token ?? null, cancelling, startCreation, finishCreation, cancelCreation };
 }

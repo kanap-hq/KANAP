@@ -29,7 +29,7 @@ When you click **New**, the task page opens with an empty title in its header, s
    - **Dates**: Set start and due dates
    - **Assignee**, **Status**, **Priority**: Change them if needed
 
-4. Click **Done** when you have finished. You return to where you started: a task started from a project's **Tasks** tab returns to that tab. Click **Cancel** to delete the task instead. Kadratis asks first when you entered more than the title.
+4. Click **Done** when you have finished. You return to where you started: a task started from a project's **Tasks** tab returns to that tab. Click **Cancel** to delete the task instead. Once another person has changed it or commented on it, or a document is linked to it, **Cancel** is refused. Kadratis asks first when you entered more than the title.
 
 Pressing **Escape** in the title of a new task, clicking **Cancel** or leaving the page creates nothing, even with a title typed. Once the task exists, leaving it any other way than **Cancel** keeps it.
 

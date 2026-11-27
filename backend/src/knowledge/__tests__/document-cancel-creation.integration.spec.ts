@@ -118,12 +118,17 @@ async function testCreatorCancelsTheCreation() {
     const byRef = await controller.creationChanges(`DOC-${created.item_number}`, created.creation_token, asCreator);
     assert.deepEqual(byRef, fresh, 'the reference reads the same');
 
-    // The creator takes the edit lock, saves content, then adds a relation: what the confirmation lists.
+    // A relation set after the creation names no author (it may come from the other record's
+    // Knowledge panel, by anyone): Cancel is refused (lot N1b, review C2). Taken back, it passes.
+    await laterRelation(runner, tenantId, created.id, projectId);
+    await refusedAsExpired(controller.creationChanges(created.id, created.creation_token, asCreator), 'a relation set after the creation');
+    await runner.query(`DELETE FROM document_projects WHERE tenant_id = $1 AND document_id = $2`, [tenantId, created.id]);
+
+    // The creator takes the edit lock and saves content: what the confirmation lists.
     const lock: any = await knowledge.acquireLock(created.id, creatorId, { manager: runner.manager });
     await knowledge.update(created.id, { content_markdown: '# Written body', revision: created.revision, save_mode: 'autosave' }, creatorId, lock.lock_token, { manager: runner.manager });
-    await laterRelation(runner, tenantId, created.id, projectId);
     const edited = await controller.creationChanges(created.id, created.creation_token, asCreator);
-    assert.deepEqual(edited, { changes: { fields: 1, children: { relation: 1 } } }, 'the body and one relation');
+    assert.deepEqual(edited, { changes: { fields: 1, children: {} } }, 'the body');
 
     // Another person's token for this document, another document's token, none, an expired one: refused.
     const asOther = tenantContext(seed, otherId, runner.manager);

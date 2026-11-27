@@ -46,6 +46,7 @@ Solange der Vorfall erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abb
 - **Erstellen** wirkt wie die Eingabetaste: Es erstellt den Vorfall und lässt ihn geöffnet, mit seiner Referenz. Bei leerem Titel verlangt der Titel einen
 - Sobald der Vorfall erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm
 - **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstellter Vorfall wird gelöscht. Wenn Sie mehr als den Titel eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Vorfällen abbrechen
+- Sobald eine andere Person etwas daran geändert oder in sein Journal geschrieben hat oder ein Dokument damit verknüpft ist, wird **Abbrechen** abgelehnt
 
 **Vorfall abbrechen** ist ausgeblendet, solange der Vorfall erstellt wird. Das Abbrechen der Erstellung wird abgelehnt, sobald der Vorfall geschlossen oder abgebrochen ist oder Daten zur behördlichen Meldung enthält (siehe [Einen Vorfall löschen](#einen-vorfall-loschen)). Verlassen Sie den Vorfall auf andere Weise, bleibt er im Register. Die Referenz einer abgebrochenen Erstellung wird nicht wiederverwendet.
 

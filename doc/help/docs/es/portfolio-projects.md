@@ -91,6 +91,7 @@ Mientras el proyecto se está creando, su encabezado muestra **Crear** y **Cance
 - **Crear** funciona como Intro: crea el proyecto y lo deja abierto, con su referencia. Con el título vacío, el título pide uno
 - Una vez creado el proyecto, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le lleva de vuelta al punto de partida: la lista o la pantalla anterior
 - **Cancelar** cierra sin conservar nada. En un proyecto ya creado, lo elimina. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin ningún derecho de eliminación
+- En cuanto otra persona ha hecho algún cambio o un comentario, o hay otro registro vinculado, **Cancelar** se rechaza: cambie su estado a **Cancelado** en su lugar
 
 **Cancelar** es la única forma de eliminar un proyecto. Una vez que sale del proyecto, este permanece: cambie su estado a **Cancelado** si no sigue adelante. Un proyecto vinculado a una solicitud no se puede eliminar. La referencia de un proyecto cancelado no se reutiliza.
 

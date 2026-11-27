@@ -46,6 +46,7 @@ Tant que l'incident est en cours de création, son en-tête affiche **Créer** e
 - **Créer** fait comme Entrée : il crée l'incident et le laisse ouvert, avec sa référence. Avec un titre vide, le titre en demande un
 - Une fois l'incident créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ : la liste ou l'écran précédent
 - **Annuler** ferme sans rien conserver. Sur un incident déjà créé, il le supprime. Si vous avez saisi plus que le titre, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des incidents
+- Dès qu'une autre personne y a apporté une modification ou a écrit dans son journal, ou qu'un document y est lié, **Annuler** est refusé
 
 **Annuler l'incident** est masqué tant que l'incident est en cours de création. L'annulation de la création est refusée dès que l'incident est clôturé ou annulé, ou contient des données de déclaration réglementaire (voir [Supprimer un incident](#supprimer-un-incident)). Si vous quittez l'incident autrement, il reste dans le registre. La référence d'une création annulée n'est pas réutilisée.
 

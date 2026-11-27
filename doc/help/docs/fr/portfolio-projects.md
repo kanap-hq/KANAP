@@ -91,6 +91,7 @@ Tant que le projet est en cours de création, son en-tête affiche **Créer** et
 - **Créer** fait comme Entrée : il crée le projet et le laisse ouvert, avec sa référence. Avec un titre vide, le titre en demande un
 - Une fois le projet créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ : la liste ou l'écran précédent
 - **Annuler** ferme sans rien conserver. Sur un projet déjà créé, il le supprime. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans aucun droit de suppression
+- Dès qu'une autre personne y a apporté une modification ou un commentaire, ou qu'une autre fiche y est liée, **Annuler** est refusé : passez plutôt son statut à **Annulé**
 
 **Annuler** est le seul moyen de supprimer un projet. Une fois que vous quittez le projet, il reste : passez son statut à **Annulé** s'il ne se fait pas. Un projet lié à une demande ne peut pas être supprimé. La référence d'un projet annulé n'est pas réutilisée.
 

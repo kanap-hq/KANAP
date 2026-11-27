@@ -41,6 +41,7 @@ Solange das Asset erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abbre
 - **Erstellen** erstellt das Asset, wenn es Namen, Typ und Standort hat. Fehlt eines davon, wird nichts gespeichert: Die Beschriftung **Asset-Typ** oder **Standort**, die fehlt, wird rot mit einem Warnsymbol, und der Cursor springt in das erste fehlende Feld. Bei leerem Titel verlangt der Titel einen
 - Sobald das Asset erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben
 - **Abbrechen** vor dem Erstellen des Assets verlässt die Seite, ohne etwas zu speichern. Danach löscht es das Asset. Haben Sie das Asset seitdem geändert, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Assets abbrechen
+- Sobald eine andere Person etwas daran geändert hat oder ein anderer Datensatz damit verknüpft ist (auch eine Beziehung eines anderen Assets zu ihm), wird **Abbrechen** abgelehnt
 
 Ein Asset, das eine frühere Version ohne Standort gespeichert hat, öffnet sich wie gewohnt, mit der Beschriftung **Standort** als fehlend markiert. Wählen Sie einen Standort, um es zu speichern.
 

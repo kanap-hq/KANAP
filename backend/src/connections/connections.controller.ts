@@ -237,8 +237,9 @@ export class ConnectionsController {
 
   /**
    * "Cancel" of a connection being created: its creator deletes it with its token while nobody else
-   * has written on it (403 `CREATION_CANCEL_EXPIRED` otherwise, checked under its lock). Same delete
-   * as `DELETE :id`.
+   * has written on it and nothing is linked to it, an interface binding or a document (403
+   * `CREATION_CANCEL_EXPIRED` otherwise, checked under its lock: `common/creation/creation-links.ts`).
+   * Same delete as `DELETE :id`.
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')

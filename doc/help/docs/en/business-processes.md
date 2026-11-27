@@ -64,7 +64,7 @@ While the process is being created, its header shows **Create** and **Cancel**. 
 
 - **Create** does the same as Enter: it creates the process and leaves it open. With an empty title, the title asks for one.
 - Once the process is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started: the list or the previous screen.
-- **Cancel** closes without keeping anything. On a process already created, it deletes it, with the application links you added. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete processes.
+- **Cancel** closes without keeping anything. On a process already created, it deletes it, with the application links you added. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete processes. Once another person has changed it, or a request is linked to it, **Cancel** is refused.
 
 Leaving the process any other way keeps it.
 
