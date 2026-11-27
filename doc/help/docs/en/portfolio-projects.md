@@ -91,6 +91,7 @@ While the project is being created, its header shows **Create** and **Cancel**. 
 - **Create** does the same as Enter: it creates the project and leaves it open with its reference. With an empty title, the title asks for one
 - Once the project is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started: the list or the previous screen
 - **Cancel** closes without keeping anything. On a project already created, it deletes it. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without any delete right
+- Once another person has changed it, or a document is linked to it, **Cancel** is refused
 
 **Cancel** is the only way to delete a project. Once you leave the project, it stays: set its status to **Cancelled** if it does not go ahead. A project linked to a request cannot be deleted. The reference of a cancelled project is not used again.
 

@@ -63,6 +63,7 @@ Mientras la aplicación se está creando, su encabezado muestra **Crear** y **Ca
 - **Crear** funciona como Intro: crea la aplicación y la deja abierta, con su referencia. Con el título vacío, el título pide uno
 - Una vez creada la aplicación, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le lleva de vuelta al punto de partida: la lista o la pantalla anterior
 - **Cancelar** cierra sin conservar nada. En una aplicación ya creada, la elimina. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar aplicaciones
+- En cuanto otra persona ha hecho algún cambio, o un documento está vinculado, **Cancelar** se rechaza
 
 Si sale de la aplicación de otra forma, esta se conserva. Elimínela como cualquier otra aplicación. La referencia de una aplicación cancelada no se reutiliza.
 

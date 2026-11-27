@@ -63,6 +63,7 @@ Tant que l'application est en cours de création, son en-tête affiche **Créer*
 - **Créer** fait comme Entrée : il crée l'application et la laisse ouverte, avec sa référence. Avec un titre vide, le titre en demande un
 - Une fois l'application créée, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ : la liste ou l'écran précédent
 - **Annuler** ferme sans rien conserver. Sur une application déjà créée, il la supprime. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des applications
+- Dès qu'une autre personne y a apporté une modification, ou qu'un document y est lié, **Annuler** est refusé
 
 Si vous quittez l'application autrement, elle est conservée. Supprimez-la comme toute autre application. La référence d'une application annulée n'est pas réutilisée.
 

@@ -23,6 +23,7 @@ While the interface is being created, its header shows **Create** and **Cancel**
 - **Create** writes the interface when the draft is complete and leaves it open. If something is still missing, an empty title shows its message, the label of each missing field turns red with an alert icon, and the title or the first missing field gets the focus
 - Once the interface is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started
 - **Cancel** deletes the interface. If you added anything after it was created, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete interfaces
+- Once another person has changed it, or a document is linked to it, **Cancel** is refused
 
 Leaving the interface another way (the menu, the back arrow) keeps it: it is complete.
 

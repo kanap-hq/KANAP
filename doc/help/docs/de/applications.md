@@ -63,6 +63,7 @@ Solange die Anwendung erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Ab
 - **Erstellen** wirkt wie die Eingabetaste: Es erstellt die Anwendung und lässt sie geöffnet, mit ihrer Referenz. Bei leerem Titel verlangt der Titel einen
 - Sobald die Anwendung erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm
 - **Abbrechen** schließt, ohne etwas zu behalten. Eine bereits erstellte Anwendung wird gelöscht. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Anwendungen abbrechen
+- Sobald eine andere Person etwas daran geändert hat oder ein Dokument damit verknüpft ist, wird **Abbrechen** abgelehnt
 
 Verlassen Sie die Anwendung auf andere Weise, bleibt sie bestehen. Löschen Sie sie dann wie jede andere Anwendung. Die Referenz einer abgebrochenen Anwendung wird nicht wiederverwendet.
 

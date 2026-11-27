@@ -29,7 +29,7 @@ Lorsque vous cliquez sur **Nouvelle**, la page de la tâche s'ouvre avec un titr
    - **Dates** : Définir les dates de début et d'échéance
    - **Assignée à**, **Statut**, **Priorité** : Modifiez-les si nécessaire
 
-4. Cliquez sur **Terminé** une fois la saisie finie. Vous revenez là où vous avez commencé : une tâche commencée depuis l'onglet **Tâches** d'un projet revient à cet onglet. Cliquez sur **Annuler** pour supprimer la tâche à la place. Kadratis demande d'abord confirmation lorsque vous avez saisi plus que le titre.
+4. Cliquez sur **Terminé** une fois la saisie finie. Vous revenez là où vous avez commencé : une tâche commencée depuis l'onglet **Tâches** d'un projet revient à cet onglet. Cliquez sur **Annuler** pour supprimer la tâche à la place. Dès qu'une autre personne y a apporté une modification, ou qu'un document y est lié, **Annuler** est refusé. Kadratis demande d'abord confirmation lorsque vous avez saisi plus que le titre.
 
 Appuyer sur **Échap** dans le titre d'une nouvelle tâche, cliquer sur **Annuler** ou quitter la page ne crée rien, même avec un titre saisi. Une fois la tâche créée, la quitter autrement que par **Annuler** la conserve.
 

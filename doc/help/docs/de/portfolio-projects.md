@@ -91,6 +91,7 @@ Solange das Projekt erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abb
 - **Erstellen** wirkt wie die Eingabetaste: Es erstellt das Projekt und lässt es geöffnet, mit seiner Referenz. Bei leerem Titel verlangt der Titel einen
 - Sobald das Projekt erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm
 - **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstelltes Projekt wird gelöscht. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne jedes Löschrecht abbrechen
+- Sobald eine andere Person etwas daran geändert hat oder ein Dokument damit verknüpft ist, wird **Abbrechen** abgelehnt
 
 Nur mit **Abbrechen** lässt sich ein Projekt löschen. Sobald Sie das Projekt verlassen, bleibt es bestehen: Setzen Sie seinen Status auf **Abgebrochen**, wenn es nicht zustande kommt. Ein mit einer Anfrage verknüpftes Projekt kann nicht gelöscht werden. Die Referenz eines abgebrochenen Projekts wird nicht wiederverwendet.
 

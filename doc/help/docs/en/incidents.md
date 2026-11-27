@@ -46,6 +46,7 @@ While the incident is being created, its header shows **Create** and **Cancel**.
 - **Create** does the same as Enter: it creates the incident and leaves it open with its reference. With an empty title, the title asks for one
 - Once the incident is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started: the list or the previous screen
 - **Cancel** closes without keeping anything. On an incident already created, it deletes it. If you entered more than the title, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete incidents
+- Once another person has changed it or written in its journal, or a document is linked to it, **Cancel** is refused
 
 **Cancel incident** is hidden while the incident is being created. Cancelling a creation is refused once the incident is closed or cancelled, or holds regulatory reporting data (see [Deleting an incident](#deleting-an-incident)). Leaving the incident any other way keeps it in the register. The reference of a cancelled creation is not used again.
 

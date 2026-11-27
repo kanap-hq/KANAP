@@ -29,7 +29,7 @@ Al hacer clic en **Nuevo**, la página de la tarea se abre con un título vacío
    - **Fechas**: Establezca fechas de inicio y vencimiento
    - **Asignado**, **Estado**, **Prioridad**: Cámbielos si es necesario
 
-4. Haga clic en **Listo** cuando haya terminado. Vuelve al lugar donde empezó: una tarea empezada desde la pestaña **Tareas** de un proyecto vuelve a esa pestaña. Haga clic en **Cancelar** para eliminar la tarea en su lugar. Kadratis pide confirmación primero cuando ha introducido más que el título.
+4. Haga clic en **Listo** cuando haya terminado. Vuelve al lugar donde empezó: una tarea empezada desde la pestaña **Tareas** de un proyecto vuelve a esa pestaña. Haga clic en **Cancelar** para eliminar la tarea en su lugar. En cuanto otra persona ha hecho algún cambio, o un documento está vinculado, **Cancelar** se rechaza. Kadratis pide confirmación primero cuando ha introducido más que el título.
 
 Pulsar **Escape** en el título de una tarea nueva, hacer clic en **Cancelar** o salir de la página no crea nada, aunque ya haya escrito un título. Una vez creada la tarea, salir de ella de otra forma que con **Cancelar** la conserva.
 

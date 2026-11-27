@@ -63,6 +63,7 @@ While the application is being created, its header shows **Create** and **Cancel
 - **Create** does the same as Enter: it creates the application and leaves it open with its reference. With an empty title, the title asks for one
 - Once the application is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started: the list or the previous screen
 - **Cancel** closes without keeping anything. On an application already created, it deletes it. If you entered more than the name, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete applications
+- Once another person has changed it, or a document is linked to it, **Cancel** is refused
 
 Leaving the application any other way keeps it. Delete it like any other application. The reference of a cancelled application is not used again.
 
