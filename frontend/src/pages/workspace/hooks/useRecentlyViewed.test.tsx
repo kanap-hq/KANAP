@@ -68,4 +68,13 @@ describe('reference data', () => {
     expect(ENTITY_TYPE_CONFIG.contract.route('ct-1', 'CTR-4')).toBe('/ops/contracts/CTR-4');
     expect(ENTITY_TYPE_CONFIG.contract.route('ct-1')).toBe('/ops/contracts/ct-1');
   });
+
+  it('opens a project, a request and a task by their reference, by their uuid when kept without one', () => {
+    expect(ENTITY_TYPE_CONFIG.project.route('prj-1', 'PRJ-4')).toBe('/portfolio/projects/PRJ-4');
+    expect(ENTITY_TYPE_CONFIG.project.route('prj-1')).toBe('/portfolio/projects/prj-1');
+    expect(ENTITY_TYPE_CONFIG.request.route('req-1', 'REQ-2')).toBe('/portfolio/requests/REQ-2');
+    expect(ENTITY_TYPE_CONFIG.request.route('req-1')).toBe('/portfolio/requests/req-1');
+    expect(ENTITY_TYPE_CONFIG.task.route('task-1', 'T-9')).toBe('/portfolio/tasks/T-9');
+    expect(ENTITY_TYPE_CONFIG.task.route('task-1')).toBe('/portfolio/tasks/task-1');
+  });
 });

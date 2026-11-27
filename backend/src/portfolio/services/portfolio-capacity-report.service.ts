@@ -484,6 +484,7 @@ export class PortfolioCapacityReportService {
       `
       SELECT DISTINCT
         p.id,
+        p.item_number,
         p.name,
         p.status,
         p.execution_progress,
@@ -619,6 +620,7 @@ export class PortfolioCapacityReportService {
 
       projects.push({
         projectId: row.id,
+        projectItemNumber: row.item_number,
         projectName: row.name,
         status: row.status,
         estimatedEffort: round1(estimatedEffort),

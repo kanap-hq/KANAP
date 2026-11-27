@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
+import { buildItemPath, itemAddress } from '../../../utils/item-ref';
 import AgGridBox from '../../../components/AgGridBox';
 import { formatPercentPoints } from '../../../i18n/formatters';
 import { useLocale } from '../../../i18n/useLocale';
@@ -15,6 +16,7 @@ import { getProjectStatusLabel } from '../../../utils/portfolioI18n';
 
 type ProjectBreakdownRow = {
   projectId: string;
+  projectItemNumber?: number | null;
   projectName: string;
   status: string;
   estimatedEffort: number;
@@ -70,10 +72,10 @@ export default function ContributorDrilldownDialog({
   const rows = data?.projects ?? [];
   const notAvailable = t('reports.capacityHeatmap.values.notAvailable');
 
-  const openProject = useCallback((projectId?: string) => {
-    if (!projectId) return;
+  const openProject = useCallback((row?: ProjectBreakdownRow) => {
+    if (!row?.projectId) return;
     onClose();
-    navigate(`/portfolio/projects/${projectId}/effort`);
+    navigate(`${buildItemPath('project', itemAddress('project', { id: row.projectId, item_number: row.projectItemNumber }))}/effort`);
   }, [navigate, onClose]);
 
   const columns = useMemo<ColDef[]>(() => ([
@@ -86,7 +88,7 @@ export default function ContributorDrilldownDialog({
         <Box
           component="span"
           sx={{ cursor: 'pointer', color: 'text.primary', '&:hover': { textDecoration: 'underline' } }}
-          onClick={() => openProject(p.data?.projectId)}
+          onClick={() => openProject(p.data)}
         >
           {p.value}
         </Box>

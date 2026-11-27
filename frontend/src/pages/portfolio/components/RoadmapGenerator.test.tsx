@@ -130,6 +130,18 @@ describe('RoadmapGenerator', () => {
     expect(screen.getAllByRole('combobox', { name: 'Scheduling' })).toHaveLength(2);
   });
 
+  it('links each project it names to its effort tab by its reference, by its uuid without one', async () => {
+    api.post.mockResolvedValue({ data: { ...generated, projectItemNumbers: { 'prj-1': 5 } } });
+    await i18n.loadNamespaces(['portfolio', 'common']);
+    await i18n.changeLanguage('en');
+    renderGenerator();
+    fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
+    const scheduled = await screen.findAllByRole('link', { name: 'Cheese track' });
+    expect(scheduled.map((link) => link.getAttribute('href'))).toEqual(scheduled.map(() => '/portfolio/projects/PRJ-5/effort'));
+    const held = screen.getAllByRole('link', { name: 'Capacity hold' });
+    expect(held.map((link) => link.getAttribute('href'))).toEqual(held.map(() => '/portfolio/projects/prj-2/effort'));
+  });
+
   it('does not offer apply or the scheduling mode to a reader', async () => {
     auth.contributor = false;
     api.post.mockResolvedValue({ data: generated });

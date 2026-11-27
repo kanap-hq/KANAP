@@ -9,6 +9,9 @@ import { TechnologySupport1854270000000 } from '../../migrations/1854270000000-t
 import { BusinessProcessTypeAndParent1856170000000 } from '../../migrations/1856170000000-business-process-type-and-parent';
 import { ApplicationItemLinksTenantKeys1853690000000 as Migration } from '../../migrations/1853690000000-application-item-links-tenant-keys';
 import { BudgetLinePredecessor1854000000000 } from '../../migrations/1854000000000-budget-line-predecessor';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1853690000000 (tenant keys on the application <-> OPEX / CAPEX
 // line links), against a real database, each test in a transaction that is
@@ -283,6 +286,7 @@ function detailLine(lines: string[], kind: string, linkId: string) {
 /** up() on a damaged state keeps the right links, logs the counts and adds the keys. */
 async function testRepairsDirtyState() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const w = await seedWorld(runner);
     const seeded = await seedDirtyState(runner, w);
 
@@ -321,6 +325,7 @@ async function testRepairsDirtyState() {
 /** A second up() repairs, creates and logs nothing. */
 async function testSecondRunChangesNothing() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const w = await seedWorld(runner);
     const seeded = await seedDirtyState(runner, w);
     await captureLogs(() => migration.up(runner));
@@ -356,6 +361,7 @@ async function expectCode(runner: QueryRunner, sql: string, params: unknown[], c
 /** Under the tenant's own RLS context, a link to another tenant's row or a second copy of a link fails; deletes still cascade. */
 async function testNewKeysRefuseBadLinks() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const w = await seedWorld(runner);
     await setTenant(runner, w.tenantA);
     const capexSql = `INSERT INTO application_capex_items (tenant_id, application_id, capex_item_id) VALUES ($1, $2, $3)`;
@@ -384,6 +390,7 @@ async function testNewKeysRefuseBadLinks() {
 /** down() restores the single-column keys and drops only the unique keys up() created. */
 async function testDownRestoresOldKeys() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     await downFromHere(runner);
     assert.deepEqual(await keys(runner), OLD_KEYS);
 
@@ -403,6 +410,7 @@ async function testDownRestoresOldKeys() {
  */
 async function testOrphanLinksAreDeleted() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const w = await seedWorld(runner);
     await downFromHere(runner);
     await runner.query(`ALTER TABLE application_capex_items DROP CONSTRAINT fk_app_capex_item`);
@@ -442,6 +450,7 @@ async function testOrphanLinksAreDeleted() {
  */
 async function testParentWithoutTenantStops() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const w = await seedWorld(runner);
     await downFromHere(runner);
     for (const table of LINK_TABLES) await runner.query(`ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY`);

@@ -36,6 +36,8 @@ const translationMock = vi.hoisted(() => {
 const queryClientMock = vi.hoisted(() => ({
   invalidateQueries: vi.fn(),
   removeQueries: vi.fn(),
+  setQueryData: vi.fn(),
+  getQueryData: vi.fn(),
 }));
 
 const taskQueryMock = vi.hoisted(() => ({
@@ -283,7 +285,8 @@ function createLocalStorageMock() {
   };
 }
 
-function renderEditPage(initialEntry = '/portfolio/tasks/task-1/overview') {
+// The address the screen writes: the task's reference (an address by id moves to it).
+function renderEditPage(initialEntry = '/portfolio/tasks/T-1/overview') {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <KanapDialogProvider>

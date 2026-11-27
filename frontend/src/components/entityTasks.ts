@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api';
 import type { TaskStatus } from '../pages/tasks/task.constants';
 import { buildTaskOriginSearchParams } from '../pages/tasks/taskWorkspaceOrigin';
+import { itemAddress } from '../utils/item-ref';
 
 /** A task of a project, a budget line, a contract or an incident, as its owner's route lists it. */
 export type EntityTask = {
@@ -36,19 +37,22 @@ export const CLOSED_TASK_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>
 /**
  * The tasks of one entity, with the paths that open one or create one from the entity's page
  * (the task's page then offers the way back). Shared by the full tasks panel and the compact
- * section of a workspace overview.
+ * section of a workspace overview. `entityId` reads the tasks; `entityAddress` names the entity in
+ * the task's address: its reference (`CTR-2`), the id when it has none.
  */
-export function useEntityTasks(entityType: EntityType, entityId: string) {
+export function useEntityTasks(entityType: EntityType, entityId: string, entityAddress?: string | null) {
   const navigate = useNavigate();
   const location = useLocation();
+  const originAddress = entityAddress || entityId;
   const originSearchParams = React.useMemo(
-    () => buildTaskOriginSearchParams(entityType, entityId, { pathname: location.pathname, search: location.search }),
-    [entityId, entityType, location.pathname, location.search],
+    () => buildTaskOriginSearchParams(entityType, originAddress, { pathname: location.pathname, search: location.search }),
+    [entityType, location.pathname, location.search, originAddress],
   );
+  // A task's address names it by its reference (`T-4`), by its uuid only when it has no number.
   const taskPath = React.useCallback(
-    (taskId: string) => {
+    (task: Pick<EntityTask, 'id' | 'item_number'>) => {
       const qs = originSearchParams.toString();
-      return `/portfolio/tasks/${taskId}${qs ? `?${qs}` : ''}`;
+      return `/portfolio/tasks/${itemAddress('task', task)}${qs ? `?${qs}` : ''}`;
     },
     [originSearchParams],
   );
@@ -72,7 +76,7 @@ export function useEntityTasks(entityType: EntityType, entityId: string) {
     isLoading: query.isLoading,
     refetch: query.refetch,
     taskPath,
-    openTask: (taskId: string) => navigate(taskPath(taskId)),
+    openTask: (task: Pick<EntityTask, 'id' | 'item_number'>) => navigate(taskPath(task)),
     createTask,
   };
 }

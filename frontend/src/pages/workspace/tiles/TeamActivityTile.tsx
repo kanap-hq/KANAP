@@ -10,15 +10,17 @@ import {
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../api';
+import { buildItemPath, itemAddress } from '../../../utils/item-ref';
 import { useTranslation } from 'react-i18next';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
 import { useRelativeTime } from './useRelativeTime';
 import { useLocale } from '../../../i18n/useLocale';
-import { formatShortDate } from '../../../lib/dateFormat';
+import { formatShortInstantDate } from '../../../lib/dateFormat';
 
 interface TeamActivityItem {
   id: string;
   projectId: string;
+  projectItemNumber?: number | null;
   projectName: string;
   type: 'change' | 'comment' | 'decision';
   content: string | null;
@@ -83,7 +85,7 @@ export default function TeamActivityTile({ config }: TeamActivityTileProps) {
           {items.map((item) => (
             <ListItemButton
               key={item.id}
-              onClick={() => navigate(`/portfolio/projects/${item.projectId}/activity`)}
+              onClick={() => navigate(`${buildItemPath('project', itemAddress('project', { id: item.projectId, item_number: item.projectItemNumber }))}/activity`)}
               sx={{ py: 0.5, alignItems: 'flex-start' }}
             >
               <ListItemText
@@ -98,7 +100,7 @@ export default function TeamActivityTile({ config }: TeamActivityTileProps) {
                         sx={{ height: 20, fontSize: '0.7rem' }}
                       />
                       <Typography variant="caption" color="text.secondary">
-                        {relativeTime(item.createdAt, () => formatShortDate(item.createdAt, locale))}
+                        {relativeTime(item.createdAt, () => formatShortInstantDate(item.createdAt, locale))}
                       </Typography>
                     </Box>
                     <Typography variant="caption" color="text.secondary">

@@ -330,7 +330,8 @@
       "noPayingCompany": "Sin empresa pagadora",
       "noCostCenter": "Sin centro de coste",
       "noBudgetNextYear": "Sin {{column}} para el próximo año",
-      "accountOutsideChart": "Cuenta fuera del plan de la empresa"
+      "accountOutsideChart": "Cuenta fuera del plan de la empresa",
+      "entryToCheck": "Cantidad y precio por verificar"
     },
     "topItems": "Top líneas",
     "columnY": "{{column}}, A",

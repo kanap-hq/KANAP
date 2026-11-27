@@ -127,7 +127,7 @@ export async function ensureBootstrapAdministrator(
       console.log(`${prefix}Created administrator account ${params.email}: the workspace had no active administrator`);
     } else {
       await manager.query(
-        `UPDATE users SET role_id = $3, status = 'enabled', updated_at = now() WHERE tenant_id = $1 AND id = $2`,
+        `UPDATE users SET role_id = $3, status = 'enabled' WHERE tenant_id = $1 AND id = $2`,
         [tenantId, account.id, adminRole.id],
       );
       // A local account without a password (a directory contact, an invitation) gets the start-up

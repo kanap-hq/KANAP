@@ -33,6 +33,8 @@ export type { EntityType } from './entityTasks';
 type Props = {
   entityType: EntityType;
   entityId: string;
+  /** The entity's reference (`CTR-2`): it names the entity in the address of the tasks opened here. */
+  entityAddress?: string | null;
   phases?: Array<{ id: string; name: string }>; // Only used for projects
   disabled?: boolean;
   onTasksChange?: () => void;
@@ -49,7 +51,7 @@ const PRIORITY_LABELS: Record<string, string> = {
   optional: 'Optional',
 };
 
-export default function EntityTasksPanel({ entityType, entityId, phases = [], disabled = false, onTasksChange }: Props) {
+export default function EntityTasksPanel({ entityType, entityId, entityAddress, phases = [], disabled = false, onTasksChange }: Props) {
   const navigate = useNavigate();
   const theme = useTheme();
   const location = useLocation();
@@ -62,7 +64,7 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
   const canCreateTask = hasLevel('tasks', 'member');
   // Deleting a task is the tasks module's admin action, whatever the host record allows.
   const canDeleteTask = hasLevel('tasks', 'admin');
-  const { tasks, isLoading, refetch, taskPath: buildTaskWorkspacePath, createTask: handleCreateTask } = useEntityTasks(entityType, entityId);
+  const { tasks, isLoading, refetch, taskPath: buildTaskWorkspacePath, createTask: handleCreateTask } = useEntityTasks(entityType, entityId, entityAddress);
 
   const listFilters = React.useMemo(
     () => parseEntityTaskListFilters(new URLSearchParams(location.search)),
@@ -214,7 +216,7 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
                     component="a"
                     noWrap
                     title={task.title}
-                    onClick={() => navigate(buildTaskWorkspacePath(task.id))}
+                    onClick={() => navigate(buildTaskWorkspacePath(task))}
                     sx={{
                       display: 'block',
                       maxWidth: 360,
@@ -267,7 +269,7 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
                   <IconButton
                     size="small"
                     title={t('portfolio:shared.entityTasksPanel.actions.openTask')}
-                    onClick={() => navigate(buildTaskWorkspacePath(task.id))}
+                    onClick={() => navigate(buildTaskWorkspacePath(task))}
                   >
                     <OpenInNewIcon fontSize="small" />
                   </IconButton>

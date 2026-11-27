@@ -20,7 +20,6 @@ import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
-import { AiPolicyService } from '../ai-policy.service';
 import {
   AiWriteLanguage, AllocationBasis, AllocationSplitView, allocationSplitText, manualAllocationRemovedText, previewSummaryText, quoted, writeActionText,
 } from '../ai-write-texts';
@@ -140,8 +139,8 @@ function allocationBasis(method: string, driver: unknown): AllocationBasis | nul
 }
 
 /** A percentage as a model may write it (60, "60", "60 %", "60,5"). */
-function percentValue(value: unknown, label: string): number {
-  const parsed = typeof value === 'number' ? value : Number(String(value).replace('%', '').replace(',', '.').trim());
+export function percentValue(value: unknown, label: string): number {
+  const parsed = typeof value === 'number' ? value : Number(String(value).replace(/%/g, '').replace(',', '.').trim());
   if (!Number.isFinite(parsed)) throw new BadRequestException(`${label} must be a number.`);
   return parsed;
 }
@@ -407,7 +406,6 @@ export class AiFinancialPlanMutationSupportService {
     private readonly spendAllocations: SpendAllocationsService,
     private readonly spendAmounts: SpendAmountsService,
     private readonly spendVersions: SpendVersionsService,
-    private readonly policy: AiPolicyService,
   ) {}
 
   getWritableFieldDescriptions(): string[] {
@@ -1465,18 +1463,17 @@ export class AiFinancialPlanMutationSupportService {
 
   /**
    * Split rows as a card shows them, sorted by name: a company or department by its name, as the
-   * Allocations tab shows them to the person: a company they do not read shows as '—', a department
-   * they do not read is left out. Never an id.
+   * Allocations tab shows them. The names are carried by the line the person reads, so they show even
+   * without the right to read the companies or departments lists. Never an id.
    */
   private async splitView(
     context: AiExecutionContextWithManager,
     rows: ReadonlyArray<{ company_id?: unknown; department_id?: unknown; allocation_pct?: unknown }>,
     basis: AllocationBasis | null,
   ): Promise<AllocationSplitView> {
-    const readable = await this.policy.readableResources(context, ['companies', 'departments'], context.manager);
     const namesOf = async (table: 'companies' | 'departments', key: 'company_id' | 'department_id') => {
       const ids = Array.from(new Set(rows.map((row) => textOrNull(row[key])).filter((id): id is string => !!id)));
-      if (!readable.has(table) || ids.length === 0) return new Map<string, string>();
+      if (ids.length === 0) return new Map<string, string>();
       const found: Array<{ id: string; name: string }> = await context.manager.query(
         `SELECT id::text AS id, name FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
         [context.tenantId, ids],

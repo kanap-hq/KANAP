@@ -189,10 +189,13 @@ export default function UnifiedActivityForm({
         queryClient.invalidateQueries({ queryKey: ['tasks'] }),
         queryClient.invalidateQueries({ queryKey: ['task-time-entries', taskId] }),
         queryClient.invalidateQueries({ queryKey: ['task-time-entries-sum', taskId] }),
+        // The project's effort tab: the task time it reads, and the project, whose actual effort the server
+        // recomputes (read under its address, `PRJ-7`, which this panel does not know).
         ...(projectId
           ? [
-            queryClient.invalidateQueries({ queryKey: ['project-tasks-time-summary', projectId] }),
-            queryClient.invalidateQueries({ queryKey: ['project', projectId] }),
+            queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time', projectId] }),
+            queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time-entries', projectId] }),
+            queryClient.invalidateQueries({ queryKey: ['portfolio-project'] }),
           ]
           : []),
       ]);

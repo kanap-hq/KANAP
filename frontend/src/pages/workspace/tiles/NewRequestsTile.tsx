@@ -9,12 +9,14 @@ import {
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../api';
+import { buildItemPath, itemAddress } from '../../../utils/item-ref';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../../i18n/useLocale';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
 
 interface PortfolioRequest {
   id: string;
+  item_number?: number | null;
   name: string;
   requester_name?: string;
   created_at: string;
@@ -91,7 +93,7 @@ export default function NewRequestsTile({ config }: NewRequestsTileProps) {
           {requests.map((request) => (
             <ListItemButton
               key={request.id}
-              onClick={() => navigate(`/portfolio/requests/${request.id}`)}
+              onClick={() => navigate(buildItemPath('request', itemAddress('request', request)))}
               sx={{ py: 0.5 }}
             >
               <ListItemText

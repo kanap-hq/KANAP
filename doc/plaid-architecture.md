@@ -215,6 +215,17 @@ Application queries can filter, sort, group, aggregate, and count business
 level/rank, cyber level/rank, data class, recovery wave/order, RTO, RPO, and
 review state.
 
+Codes of a list come with their names (`backend/src/ai/ai-code-names.ts`), in the
+person's language, else the chat screen's, else the workspace's (the MCP server:
+the person behind the key, else the workspace): `<field>_name` beside a field,
+`key_name` beside a group, `names` beside filter values, `before_label` and
+`after_label` in a history entry. A set filter on a named field of `query_entities`
+or `aggregate_entities` takes the name in any of the four languages as well as the
+stored value: the server reads it as that value. A value that names nothing is
+listed in `filter_values_unknown`, with the accepted values and their names when
+they are few. A budget line's detail gives `allocation_by_year`, the method each
+of the five years applies, the workspace's default for a year without a version.
+
 ### Query contract
 
 `query_entities` and `aggregate_entities` translate the model's fields through
@@ -223,7 +234,9 @@ family's list service, the one behind its grid. A registry advertises its filter
 fields (`fields`) and its sort fields (`sortFields`, which also holds `label`,
 `created_at` and `updated_at` on every family with its own record; the two End
 of support report families are computed rows and carry no `created_at`).
-`describe_entity_filters` returns both, with `sort_fields` and `default_sort`.
+`describe_entity_filters` returns both, with `sort_fields` and `default_sort`;
+it counts them as `fields_total` and `fields_returned`, never a bare `total` a
+model could read as a number of records.
 
 Nothing the model asks for is dropped silently:
 

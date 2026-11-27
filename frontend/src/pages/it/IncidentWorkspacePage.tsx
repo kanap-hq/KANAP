@@ -22,7 +22,7 @@ import useAutosave, { autosaveErrorMessage } from '../../hooks/useAutosave';
 import { sendPatchBuffer, usePatchBuffer } from '../../hooks/patchBuffer';
 import { useIncidentItemNav } from '../../hooks/useModuleItemNav';
 import { useLocale } from '../../i18n/useLocale';
-import { formatShortDate } from '../../lib/dateFormat';
+import { formatShortInstantDate } from '../../lib/dateFormat';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { downloadBlob } from '../../utils/downloadBlob';
@@ -583,7 +583,7 @@ export function IncidentWorkspacePage() {
   const reviewHint = saveHint(reviewSaveStatus);
   const lockedBanner = data && locked
     ? t(data.status === 'cancelled' ? 'workspace.incident.overview.cancelledBanner' : 'workspace.incident.overview.closedBanner', {
-      date: formatShortDate(data.closed_at || data.updated_at, locale, { year: 'always' }),
+      date: formatShortInstantDate(data.closed_at || data.updated_at, locale, { year: 'always' }),
     })
     : null;
 
@@ -815,6 +815,7 @@ export function IncidentWorkspacePage() {
               <IncidentRelationsTab
                 key={data.id}
                 incidentId={data.id}
+                incidentReference={reference}
                 readOnly={!editable}
                 onLinksChange={(kind, count) => setIncidentCache((current) => ({
                   ...current,

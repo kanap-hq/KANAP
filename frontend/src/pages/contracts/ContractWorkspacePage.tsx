@@ -657,7 +657,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
           <Stack key={isCreate || creation.beingCreated ? 'draft' : form.id} spacing={4} sx={sectionStackSx}>
             <ContractDeadlines schedule={schedule} />
             {!stale && !isCreate && <ContractRenewalDecision contractId={form.id} startDate={form.start_date} canDecide={editable} onDecided={refreshAfterDecision} />}
-            {!isCreate && <EntityTasksSection entityType="contract" entityId={form.id} disabled={!editable} />}
+            {!isCreate && <EntityTasksSection entityType="contract" entityId={form.id} entityAddress={contractReference(shownData)} disabled={!editable} />}
             <Stack spacing={1.25}>
               <RelationsSectionTitle>{t('contracts.fields.notes')}</RelationsSectionTitle>
               <Box onFocusCapture={() => { notesTouchedRef.current = true; }} data-testid="contract-notes" data-creation-description={editable ? '' : undefined}>

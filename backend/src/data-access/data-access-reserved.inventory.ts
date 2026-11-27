@@ -462,6 +462,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
       contractConsistency: READ, // GET :id/contract-consistency
       create: LINE_WRITE, // POST (root)
       creationChanges: 'the preflight of the cancel of a line being created (read), with its creation token', // GET :id/creation
+      entryCheck: READ, // GET :id/entry-check
       exportBudgetFile: BUDGET_FILE, // GET budget-file/export
       get: READ, // GET :ref
       hiddenByValue: READ, // GET summary/hidden-by-value

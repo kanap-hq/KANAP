@@ -382,7 +382,10 @@ async function authorFallbackAndNoBase(kind: Kind) {
     assert.equal(emptied.current, null);
     assert.deepEqual(emptied.labels, { base: null, current: null, mine: 'New supplier' }, 'the deleted supplier has no name left');
     assert.equal(emptied.changed_by, null, 'nobody named for a delete elsewhere');
-    assert.equal(emptied.changed_at, lastUpdate);
+    // The cleared supplier dates the line (migration 1856270000000): the time is that of the delete.
+    const clearedAt = new Date((await line(race, kind, s.itemId)).updated_at).toISOString();
+    assert.ok(clearedAt > lastUpdate, 'the cleared supplier dates the line');
+    assert.equal(emptied.changed_at, clearedAt);
 
     assertSucceeded(await settle(update(race, party, kind, s, s.marie, { notes: 'Without base' })), 'no base: as before');
     assert.equal((await line(race, kind, s.itemId)).notes, 'Without base');

@@ -4,6 +4,9 @@ import { QueryRunner } from 'typeorm';
 import { TechnologyHostingType1854310000000 as Migration } from '../../migrations/1854310000000-technology-hosting-type';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { technology } from './technologies.fixtures';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1854310000000 (`technologies.hosting_type` replaces `technologies.mode`), against a
 // real database, in transactions rolled back at the end:
@@ -83,6 +86,7 @@ async function pending(runner: QueryRunner, tenantIds?: string[]): Promise<Pendi
 
 async function testMigratedAndRerun() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     assert.deepEqual(await shape(runner), EXPECTED);
     const tenantId = await seedTenant(runner, 'hst-rerun');
     const tech = await technology(runner, tenantId, 1, 'Entra ID', 'directory');
@@ -101,6 +105,7 @@ async function testMigratedAndRerun() {
 
 async function testDirtyDatabase() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     await migration.down(runner);
     await runner.query(`ALTER TABLE technologies DROP CONSTRAINT technologies_mode_check`);
     await runner.query(`ALTER TABLE technologies ADD COLUMN hosting_type varchar(30) NULL DEFAULT ''`);
@@ -176,6 +181,7 @@ async function testDirtyDatabase() {
 
 async function testDownThenUp() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const a = await seedTenant(runner, 'hst-down');
     for (const [n, type] of [[1, 'on_prem'], [2, 'colocation'], [3, 'public_cloud'], [4, 'saas'], [5, 'gone']] as const) {
       const id = await technology(runner, a, n, type);

@@ -11,11 +11,14 @@ import { getDotColor, MILESTONE_STATUS_COLORS, PROJECT_STATUS_COLORS } from '../
 import { computeInactiveSegments, formatInactiveTooltip } from './roadmap-inactive-segments';
 import type { InactiveSegment } from './roadmap-inactive-segments';
 import { useLocale } from '../../../i18n/useLocale';
+import { buildItemPath, itemAddress } from '../../../utils/item-ref';
 import { formatQuarterLabel, formatWeekLabel } from '../../../lib/isoWeek';
 import { useKanapDialogs } from '../../../components/design';
 
 interface GanttProject {
   id: string;
+  /** The project's number, for its address (`PRJ-12`). */
+  item_number?: number | null;
   name: string;
   status: string;
   category_id: string | null;
@@ -48,6 +51,7 @@ interface ProjectMilestone {
   target_date: string;
   status: string;
   project_name: string;
+  project_item_number?: number | null;
 }
 
 interface Props {
@@ -226,6 +230,7 @@ export function PortfolioGantt({
           _statusLabel: t(`statuses.project.${p.status}`, { defaultValue: p.status }),
           _progress: p.execution_progress || 0,
           _isProject: true,
+          _itemNumber: p.item_number ?? null,
           _isReservation: isReservation,
           _reservationReason: p.reservation_reason || null,
           _historicalStart: p.historical_start,
@@ -261,6 +266,7 @@ export function PortfolioGantt({
         _progress: m.status === 'achieved' ? 100 : 0,
         _isProject: false,
         _projectId: m.project_id,
+        _projectItemNumber: m.project_item_number ?? null,
         _projectName: m.project_name,
       }));
 
@@ -433,15 +439,16 @@ export function PortfolioGantt({
   const openOnDoubleClickRef = useRef(openOnDoubleClick);
   openOnDoubleClickRef.current = openOnDoubleClick;
 
-  // Opens a project from its chart id (a milestone opens its project's timeline tab).
+  // Opens a project from its chart id (a milestone opens its project's timeline tab), at the
+  // address of its reference.
   const openTask = useCallback((taskId: string) => {
+    const task = tasksRef.current.find(t => t.id === taskId) as any;
     if (taskId.startsWith('milestone-')) {
-      const task = tasksRef.current.find(t => t.id === taskId) as any;
       if (task && task._projectId) {
-        navigate(`/portfolio/projects/${task._projectId}/timeline`);
+        navigate(`${buildItemPath('project', itemAddress('project', { id: task._projectId, item_number: task._projectItemNumber }))}/timeline`);
       }
     } else {
-      navigate(`/portfolio/projects/${taskId}/summary`);
+      navigate(`${buildItemPath('project', itemAddress('project', { id: taskId, item_number: task?._itemNumber }))}/summary`);
     }
   }, [navigate]);
 

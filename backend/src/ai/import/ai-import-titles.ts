@@ -91,6 +91,7 @@ const COLUMN_TITLES: Record<string, Titles> = {
     es: 'Descripción de la cuenta de consolidación',
   },
   nature: { en: 'Nature', fr: 'Nature', de: 'Art', es: 'Naturaleza' },
+  quantity_price_expected: { en: 'Quantity and price entry', fr: 'Saisie en quantité et prix', de: 'Erfassung nach Menge und Preis', es: 'Introducción por cantidad y precio' },
   axis_code: { en: 'Dimension', fr: 'Dimension', de: 'Dimension', es: 'Dimensión' },
   applies_to: { en: 'Applies to', fr: "S'applique à", de: 'Gilt für', es: 'Se aplica a' },
   process_type: { en: 'Process type', fr: 'Type de processus', de: 'Prozesstyp', es: 'Tipo de proceso' },

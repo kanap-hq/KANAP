@@ -9,9 +9,10 @@ import {
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../api';
+import { buildItemPath, itemAddress } from '../../../utils/item-ref';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../../i18n/useLocale';
-import { formatShortDate } from '../../../lib/dateFormat';
+import { formatShortInstantDate } from '../../../lib/dateFormat';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
 import { taskStatusLabel } from './tileLabels';
 import { getDotColor, getPillBg, TASK_STATUS_COLORS } from '../../../utils/statusColors';
@@ -80,7 +81,7 @@ export default function StaleTasksTile({ config }: StaleTasksTileProps) {
           {items.map((item) => (
             <ListItemButton
               key={item.id}
-              onClick={() => navigate(`/portfolio/tasks/${item.id}`)}
+              onClick={() => navigate(buildItemPath('task', itemAddress('task', { id: item.id, item_number: item.itemNumber })))}
               sx={{ py: 0.5, alignItems: 'flex-start' }}
             >
               <ListItemText
@@ -108,7 +109,7 @@ export default function StaleTasksTile({ config }: StaleTasksTileProps) {
                     <Typography variant="caption" color="text.secondary">
                       {item.relatedObjectHiddenKind === 'contract'
                         ? t('ops:contracts.outsideYourAccess')
-                        : item.relatedObjectName || t('dashboard.tiles.standaloneTask')} {String.fromCharCode(8226)} {t('dashboard.tiles.updated', { date: formatShortDate(item.updatedAt, locale) })}
+                        : item.relatedObjectName || t('dashboard.tiles.standaloneTask')} {String.fromCharCode(8226)} {t('dashboard.tiles.updated', { date: formatShortInstantDate(item.updatedAt, locale) })}
                     </Typography>
                     {scope !== 'my' && item.assigneeName && (
                       <Typography variant="caption" color="text.secondary">
