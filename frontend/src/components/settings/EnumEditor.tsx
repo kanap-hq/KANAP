@@ -1,4 +1,5 @@
 import React from 'react';
+import { useEditorRows } from './useEditorRows';
 import TranslateIcon from '@mui/icons-material/Translate';
 import {
   Box,
@@ -166,31 +167,16 @@ export function EnumEditor<T extends EnumItem>({
     [items]
   );
 
-  const [localItems, setLocalItems] = React.useState<T[]>(itemsWithIds);
+  const [localItems, changeRows] = useEditorRows<T>(itemsWithIds, onChange);
   const [focusId, setFocusId] = React.useState<string | null>(null);
   const firstFieldRef = React.useRef<HTMLInputElement | null>(null);
   const lastAddToken = React.useRef<number | undefined>(undefined);
-  const sentListsRef = React.useRef(new WeakSet<object>());
 
   const { containerRef, onScroll, useVirtual, visibleItems, paddingTop, paddingBottom, maxHeight } =
     useVirtualRows({
       items: localItems,
       rowHeight,
     });
-
-  // Sync down from parent, except a list this editor sent itself: the rows typed since are newer than it.
-  React.useEffect(() => {
-    if (sentListsRef.current.has(itemsWithIds)) return;
-    setLocalItems(itemsWithIds);
-  }, [itemsWithIds]);
-
-  const commitToParent = React.useCallback(
-    (next: T[]) => {
-      sentListsRef.current.add(next);
-      React.startTransition(() => onChange(next));
-    },
-    [onChange]
-  );
 
   React.useEffect(() => {
     if (focusId && firstFieldRef.current) {
@@ -203,27 +189,17 @@ export function EnumEditor<T extends EnumItem>({
   const handleUpdate = React.useCallback(
     (localId: string, patch: Partial<T>) => {
       if (readOnly) return;
-      setLocalItems((prev) => {
-        const next = prev.map((item) =>
-          (item as any).localId === localId ? { ...item, ...patch } : item
-        );
-        commitToParent(next);
-        return next;
-      });
+      changeRows((prev) => prev.map((item) => ((item as any).localId === localId ? { ...item, ...patch } : item)));
     },
-    [commitToParent, readOnly]
+    [changeRows, readOnly]
   );
 
   const handleAdd = React.useCallback(() => {
     if (readOnly) return;
     const newRow = { code: '', label: '', deprecated: false, localId: makeLocalId('enum') } as T;
-    setLocalItems((prev) => {
-      const next = [newRow, ...prev];
-      commitToParent(next);
-      return next;
-    });
+    changeRows((prev) => [newRow, ...prev]);
     setFocusId((newRow as any).localId);
-  }, [commitToParent, readOnly]);
+  }, [changeRows, readOnly]);
 
   React.useEffect(() => {
     if (addRequestToken === undefined) return;
@@ -234,13 +210,9 @@ export function EnumEditor<T extends EnumItem>({
 
   const removeRow = React.useCallback(
     (localId: string) => {
-      setLocalItems((prev) => {
-        const next = prev.filter((row) => (row as any).localId !== localId);
-        commitToParent(next);
-        return next;
-      });
+      changeRows((prev) => prev.filter((row) => (row as any).localId !== localId));
     },
-    [commitToParent]
+    [changeRows]
   );
 
   // A saved value is removed only when nothing references it; otherwise the dialog offers to retire it.

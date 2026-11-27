@@ -33,6 +33,7 @@ import useItOpsSettings from '../../hooks/useItOpsSettings';
 import { useVirtualRows } from '../../hooks/useVirtualRows';
 import { useLocationOptions, type LocationOption } from '../../hooks/useLocationOptions';
 import { useCatalogRemoval } from '../../components/settings/useCatalogRemoval';
+import { useEditorRows } from '../../components/settings/useEditorRows';
 import { useCatalogTranslations } from '../../components/settings/CatalogTranslationsDialog';
 import TranslateIcon from '@mui/icons-material/Translate';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -270,46 +271,23 @@ const ConnectionTypesEditor = React.memo(function ConnectionTypesEditor({
   readOnly = false,
 }: ConnectionTypesEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'ct'), [items]);
-  const [localItems, setLocalItems] = React.useState(itemsWithIds);
-  const sentListsRef = React.useRef(new WeakSet<object>());
+  const [localItems, changeRows] = useEditorRows(itemsWithIds, onChange);
   const { containerRef, onScroll, useVirtual, visibleItems, paddingTop, paddingBottom, maxHeight } =
     useVirtualRows({ items: localItems, rowHeight: 60 });
-
-  // Sync down from parent, except a list this editor sent itself: the rows typed since are newer than it.
-  React.useEffect(() => {
-    if (sentListsRef.current.has(itemsWithIds)) return;
-    setLocalItems(itemsWithIds);
-  }, [itemsWithIds]);
-
-  const commitToParent = React.useCallback(
-    (next: ConnectionTypeOption[]) => {
-      sentListsRef.current.add(next);
-      React.startTransition(() => onChange(next));
-    },
-    [onChange]
-  );
 
   const handleUpdate = React.useCallback(
     (localId: string, patch: Partial<ConnectionTypeOption>) => {
       if (readOnly) return;
-      setLocalItems((prev) => {
-        const next = prev.map((row: any) => (row.localId === localId ? { ...row, ...patch } : row));
-        commitToParent(next);
-        return next;
-      });
+      changeRows((prev) => prev.map((row: any) => (row.localId === localId ? { ...row, ...patch } : row)));
     },
-    [commitToParent, readOnly]
+    [changeRows, readOnly]
   );
 
   const handleRemove = React.useCallback(
     (localId: string) => {
-      setLocalItems((prev) => {
-        const next = prev.filter((row: any) => row.localId !== localId);
-        commitToParent(next);
-        return next;
-      });
+      changeRows((prev) => prev.filter((row: any) => row.localId !== localId));
     },
-    [commitToParent]
+    [changeRows]
   );
 
   const { t } = useTranslation(['it', 'common']);
@@ -386,46 +364,23 @@ const SubnetsEditor = React.memo(function SubnetsEditor({
   readOnly = false,
 }: SubnetsEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'subnet'), [items]);
-  const [localItems, setLocalItems] = React.useState(itemsWithIds);
-  const sentListsRef = React.useRef(new WeakSet<object>());
+  const [localItems, changeRows] = useEditorRows(itemsWithIds, onChange);
   const { containerRef, onScroll, useVirtual, visibleItems, paddingTop, paddingBottom, maxHeight } =
     useVirtualRows({ items: localItems, rowHeight: 60 });
-
-  // Sync down from parent, except a list this editor sent itself: the rows typed since are newer than it.
-  React.useEffect(() => {
-    if (sentListsRef.current.has(itemsWithIds)) return;
-    setLocalItems(itemsWithIds);
-  }, [itemsWithIds]);
-
-  const commitToParent = React.useCallback(
-    (next: SubnetOption[]) => {
-      sentListsRef.current.add(next);
-      React.startTransition(() => onChange(next));
-    },
-    [onChange]
-  );
 
   const handleUpdate = React.useCallback(
     (localId: string, patch: Partial<SubnetOption>) => {
       if (readOnly) return;
-      setLocalItems((prev) => {
-        const next = prev.map((row: any) => (row.localId === localId ? { ...row, ...patch } : row));
-        commitToParent(next);
-        return next;
-      });
+      changeRows((prev) => prev.map((row: any) => (row.localId === localId ? { ...row, ...patch } : row)));
     },
-    [commitToParent, readOnly]
+    [changeRows, readOnly]
   );
 
   const handleRemove = React.useCallback(
     (localId: string) => {
-      setLocalItems((prev) => {
-        const next = prev.filter((row: any) => row.localId !== localId);
-        commitToParent(next);
-        return next;
-      });
+      changeRows((prev) => prev.filter((row: any) => row.localId !== localId));
     },
-    [commitToParent]
+    [changeRows]
   );
 
   const { t } = useTranslation(['it', 'common']);
@@ -519,46 +474,23 @@ interface DomainsEditorProps {
 
 export const DomainsEditor = React.memo(function DomainsEditor({ items, onChange, readOnly = false }: DomainsEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'domain'), [items]);
-  const [localItems, setLocalItems] = React.useState(itemsWithIds);
-  const sentListsRef = React.useRef(new WeakSet<object>());
+  const [localItems, changeRows] = useEditorRows(itemsWithIds, onChange);
   const { containerRef, onScroll, useVirtual, visibleItems, paddingTop, paddingBottom, maxHeight } =
     useVirtualRows({ items: localItems, rowHeight: 52 });
-
-  // Sync down from parent, except a list this editor sent itself: the rows typed since are newer than it.
-  React.useEffect(() => {
-    if (sentListsRef.current.has(itemsWithIds)) return;
-    setLocalItems(itemsWithIds);
-  }, [itemsWithIds]);
-
-  const commitToParent = React.useCallback(
-    (next: DomainOption[]) => {
-      sentListsRef.current.add(next);
-      React.startTransition(() => onChange(next));
-    },
-    [onChange]
-  );
 
   const handleUpdate = React.useCallback(
     (localId: string, patch: Partial<DomainOption>) => {
       if (readOnly) return;
-      setLocalItems((prev) => {
-        const next = prev.map((row: any) => (row.localId === localId ? { ...row, ...patch } : row));
-        commitToParent(next);
-        return next;
-      });
+      changeRows((prev) => prev.map((row: any) => (row.localId === localId ? { ...row, ...patch } : row)));
     },
-    [commitToParent, readOnly]
+    [changeRows, readOnly]
   );
 
   const handleRemove = React.useCallback(
     (localId: string) => {
-      setLocalItems((prev) => {
-        const next = prev.filter((row: any) => row.localId !== localId);
-        commitToParent(next);
-        return next;
-      });
+      changeRows((prev) => prev.filter((row: any) => row.localId !== localId));
     },
-    [commitToParent]
+    [changeRows]
   );
 
   // The DNS suffix follows the name until it is edited by hand; the code is generated by the server.
@@ -697,36 +629,16 @@ function SortableAdminZoneRow({ id, children }: { id: string; children: React.Re
 /** Administration zones: name, administrator group and description per zone. */
 export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, onChange, readOnly = false }: AdminZonesEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'adminZones'), [items]);
-  const [localItems, setLocalItems] = React.useState(itemsWithIds);
-  const sentListsRef = React.useRef(new WeakSet<object>());
-
-  // Sync down from parent, except a list this editor sent itself: the rows typed since are newer than it.
-  React.useEffect(() => {
-    if (sentListsRef.current.has(itemsWithIds)) return;
-    setLocalItems(itemsWithIds);
-  }, [itemsWithIds]);
-
-  const commitToParent = React.useCallback((next: AdminZoneOption[]) => {
-    sentListsRef.current.add(next);
-    React.startTransition(() => onChange(next));
-  }, [onChange]);
+  const [localItems, changeRows] = useEditorRows(itemsWithIds, onChange);
 
   const handleUpdate = React.useCallback((localId: string, patch: Partial<AdminZoneOption>) => {
     if (readOnly) return;
-    setLocalItems((prev) => {
-      const next = prev.map((row: any) => (row.localId === localId ? { ...row, ...patch } : row));
-      commitToParent(next);
-      return next;
-    });
-  }, [commitToParent, readOnly]);
+    changeRows((prev) => prev.map((row: any) => (row.localId === localId ? { ...row, ...patch } : row)));
+  }, [changeRows, readOnly]);
 
   const handleRemove = React.useCallback((localId: string) => {
-    setLocalItems((prev) => {
-      const next = prev.filter((row: any) => row.localId !== localId);
-      commitToParent(next);
-      return next;
-    });
-  }, [commitToParent]);
+    changeRows((prev) => prev.filter((row: any) => row.localId !== localId));
+  }, [changeRows]);
 
   const { t } = useTranslation(['it', 'common']);
   const removal = useCatalogRemoval('adminZones');
@@ -740,13 +652,8 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
     if (readOnly) return;
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    setLocalItems((prev) => {
-      const next = reorderById(prev, String(active.id), String(over.id));
-      if (next === prev) return prev;
-      commitToParent(next);
-      return next;
-    });
-  }, [commitToParent, readOnly]);
+    changeRows((prev) => reorderById(prev, String(active.id), String(over.id)));
+  }, [changeRows, readOnly]);
   const text = (item: any, key: 'admin_group' | 'description', placeholder: string) => (
     <TextField value={item[key] || ''} onChange={(e) => handleUpdate(item.localId, { [key]: e.target.value || undefined })} size="small" fullWidth placeholder={placeholder} disabled={readOnly} inputProps={{ maxLength: ADMIN_ZONE_LIMITS[key], 'aria-label': `${t(`pages.settings.columns.${key === 'admin_group' ? 'adminGroup' : 'description'}`)} ${item.label}` }} />
   );
