@@ -9,6 +9,7 @@ import {
 } from '../../portfolio/workspace/PortfolioMetadataBar';
 import { drawerMenuItemSx, drawerFieldValueSx, drawerSelectSx } from '../../../theme/formSx';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import CommitTextField from './CommitTextField';
 
 type Props = {
@@ -68,8 +69,9 @@ export default function LocationMetadataBar({
   const { t } = useTranslation(['it', 'common']);
   const countryOptions = useCountryOptions();
   const { byField, labelFor } = useItOpsEnumOptions();
-  const hostingOptions = byField.hostingType || [];
-  const providerOptions = byField.serverProvider || [];
+  // Rule P7: the values still offered, plus the one the location holds.
+  const hostingOptions = offeredCatalogOptions(byField.hostingType, hostingType);
+  const providerOptions = offeredCatalogOptions(byField.serverProvider, provider);
 
   const [hostingAnchor, setHostingAnchor] = React.useState<HTMLElement | null>(null);
   const [geoAnchor, setGeoAnchor] = React.useState<HTMLElement | null>(null);
@@ -125,7 +127,6 @@ export default function LocationMetadataBar({
         onClose={() => setHostingAnchor(null)}
       >
         {hostingOptions
-          .filter((opt) => !opt.deprecated || opt.code === hostingType)
           .map((opt) => (
             <MenuItem
               key={opt.code}
@@ -136,7 +137,7 @@ export default function LocationMetadataBar({
               }}
               sx={drawerMenuItemSx}
             >
-              {opt.label}
+              {catalogOptionLabel(opt, t)}
             </MenuItem>
           ))}
       </Menu>
@@ -266,7 +267,7 @@ export default function LocationMetadataBar({
                 <MenuItem value="" sx={drawerMenuItemSx}>—</MenuItem>
                 {providerOptions.map((opt) => (
                   <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
-                    {opt.deprecated ? t('common.deprecatedOption', { label: opt.label }) : opt.label}
+                    {catalogOptionLabel(opt, t)}
                   </MenuItem>
                 ))}
               </TextField>

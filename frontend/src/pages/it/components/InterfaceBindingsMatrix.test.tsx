@@ -18,7 +18,7 @@ vi.mock('../../../api', () => ({ default: { get, post: vi.fn(), patch, delete: v
 
 const settings = vi.hoisted(() => ({
   data: {
-    lifecycleStates: [{ code: 'active', label: 'Active' }],
+    lifecycleStates: [{ code: 'active', label: 'Active' }] as Array<{ code: string; label: string; deprecated?: boolean }>,
     interfacePatterns: [{ code: 'rest_api_sync', label: 'REST API (sync)' }],
   },
 }));
@@ -217,6 +217,29 @@ describe('InterfaceBindingsMatrix connection picker', () => {
     expect(option).toHaveTextContent('Serveur à serveur · Actif · Critique');
     expect(option.textContent).not.toMatch(/server_to_server|business_critical/);
     expect(option.textContent).not.toMatch(/\bactive\b/);
+  });
+
+  it('offers a retired status only to the binding that holds it (rule P7)', async () => {
+    const before = settings.data;
+    settings.data = { ...before, lifecycleStates: [{ code: 'active', label: 'Active' }, { code: 'legacy', label: 'Legacy', deprecated: true }] };
+    try {
+      renderMatrix({ bindings: [BINDING] });
+      await openBindingPanel();
+      const statusSelect = screen.getAllByRole('combobox').find((node) => node.textContent === 'Actif')!;
+      fireEvent.mouseDown(statusSelect);
+      const listbox = await screen.findByRole('listbox');
+      expect(within(listbox).getByRole('option', { name: 'Actif' })).toBeInTheDocument();
+      expect(within(listbox).queryByRole('option', { name: /Legacy/ })).toBeNull();
+      cleanup();
+      renderMatrix({ bindings: [{ ...BINDING, status: 'legacy' }] });
+      const held = await screen.findByText(/^Legacy/);
+      fireEvent.click(held.closest('[role="button"]')!);
+      const heldSelect = (await screen.findAllByRole('combobox')).find((node) => node.textContent?.includes('Legacy'))!;
+      fireEvent.mouseDown(heldSelect);
+      expect(within(await screen.findByRole('listbox')).getByRole('option', { name: /Legacy/ })).toBeInTheDocument();
+    } finally {
+      settings.data = before;
+    }
   });
 
   it('shows no modification action to a reader and opens a binding read-only', async () => {

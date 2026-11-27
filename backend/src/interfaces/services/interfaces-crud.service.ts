@@ -370,7 +370,7 @@ export class InterfacesCrudService extends InterfacesBaseService {
       existing.target_application_id = app.id;
     }
     if (has('data_category')) {
-      existing.data_category = await this.normalizeDataCategory(body.data_category, tenantId, opts?.manager);
+      existing.data_category = await this.normalizeDataCategory(body.data_category, tenantId, opts?.manager, existing.data_category);
     }
     if (has('integration_route_type')) {
       const nextRoute = this.normalizeRouteType(body.integration_route_type);
@@ -385,6 +385,7 @@ export class InterfacesCrudService extends InterfacesBaseService {
         body.lifecycle,
         existing.tenant_id,
         opts?.manager,
+        existing.lifecycle,
         existing.lifecycle,
       );
     }

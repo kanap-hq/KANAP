@@ -177,10 +177,10 @@ export class AppAssetAssignmentsService {
     return asset;
   }
 
-  private async normalizeRole(value: unknown, tenantId: string, manager?: EntityManager): Promise<string> {
-    if (!String(value || '').trim()) return normalizeServerRole(value, []);
+  /** Rule P7: `held`, the role the assignment already holds (none for a new one). */
+  private async normalizeRole(value: unknown, tenantId: string, manager?: EntityManager, held?: string | null): Promise<string> {
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    return normalizeServerRole(value, settings.serverRoles);
+    return normalizeServerRole(value, settings.serverRoles, held);
   }
 
   /** No date when none is given; a refusal (`date_invalid`) when one is given that is not a date. */
@@ -505,7 +505,7 @@ export class AppAssetAssignmentsService {
       patch.asset_id = assetId;
     }
     if (payload.role !== undefined) {
-      patch.role = await this.normalizeRole(payload.role, instance.tenant_id, mg);
+      patch.role = await this.normalizeRole(payload.role, instance.tenant_id, mg, assignment.role);
     }
     if (payload.since_date !== undefined) {
       patch.since_date = this.parseDate(payload.since_date, 'since_date');

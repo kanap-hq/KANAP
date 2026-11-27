@@ -41,6 +41,7 @@ import { classificationText } from '../../utils/applicationClassification';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { APPLICATION_ENVIRONMENTS, environmentLabel } from '../../utils/applicationEnvironments';
 import { legTypeLabel, routeTypeLabel } from '../../utils/interfaceLegType';
+import { catalogOptionLabel } from '../../utils/catalogOffered';
 
 type ApiMapNode = {
   id: string;
@@ -273,7 +274,7 @@ export default function InterfaceMapPage() {
     if (list.length === 0) return [{ label: t('pages.maps.active'), value: 'active' }];
     return list.map((item) => ({
       value: item.code,
-      label: item.deprecated ? `${item.label} (${t('common:enumEditor.retiredSuffix')})` : item.label,
+      label: catalogOptionLabel(item, t),
     }));
   }, [byField.lifecycleStatus, t]);
 

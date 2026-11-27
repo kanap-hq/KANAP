@@ -126,6 +126,8 @@ L'espace de travail comporte un en-tête, un panneau Propriétés à droite et s
 
 Les modifications s'enregistrent au fil de la saisie.
 
+**Valeurs qui ne sont plus proposées** : la famille, le type d'hébergement, le cycle de vie, la zone d'administration, la criticité cyber et la vague de reprise listent les valeurs encore proposées dans les [Paramètres de la Cartographie SI](it-ops-settings.md). Une valeur marquée **Ne plus proposer** reste sur les technologies qui l'ont déjà, et elles la gardent quand elles sont enregistrées. Les autres technologies ne peuvent pas la prendre, sur cette page ou par Kad. Une technologie ajoutée depuis le catalogue dont la famille n'est plus proposée prend la famille Autre.
+
 #### Type d'hébergement
 
 Le type d'hébergement dit où tourne la technologie. La liste est celle des **Types d'hébergement** de **Cartographie SI > Paramètres**, partagée avec les sites : **Sur site**, **Colocation**, **Cloud public**, **Cloud privé** et **SaaS** par défaut. Chaque type est sur site ou dans le cloud :

@@ -10,6 +10,7 @@ import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerMenuItemSx } from '../../../theme/formSx';
 import { CRITICALITY_COLORS, getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { classificationText } from '../../../utils/applicationClassification';
+import { catalogOptionLabel, isHeldUnknown, offeredCatalogOptions } from '../../../utils/catalogOffered';
 
 type Props = {
   lifecycle: string;
@@ -55,23 +56,22 @@ export default function InterfaceMetadataBar({
   const [dataClassAnchor, setDataClassAnchor] = React.useState<HTMLElement | null>(null);
 
   const lifecycleOptions = React.useMemo(() => (
-    (byField.lifecycleStatus || [])
-      .filter((item) => !item.deprecated || item.code === lifecycle)
+    // Rule P7: the values still offered, plus the one the interface holds.
+    offeredCatalogOptions(byField.lifecycleStatus, lifecycle)
       .map((item) => ({
         value: item.code,
-        label: item.deprecated ? t('it:workspace.interface.metadata.deprecated', { label: item.label }) : item.label,
+        label: catalogOptionLabel(item, t),
         color: getDotColor(LIFECYCLE_COLORS[item.code] || 'default', theme.palette.mode),
       }))
   ), [byField.lifecycleStatus, lifecycle, theme.palette.mode]);
 
-  const criticalityOptions = [{ value: '', label: classificationText('Not set'), color: getDotColor('default', theme.palette.mode) }, ...(classificationCatalog?.businessCriticalityLevels || []).filter((item) => !item.deprecated || item.code === criticality).map((item) => ({ value: item.code, label: item.label, color: getDotColor('default', theme.palette.mode) }))];
+  const criticalityOptions = [{ value: '', label: classificationText('Not set'), color: getDotColor('default', theme.palette.mode) }, ...offeredCatalogOptions(classificationCatalog?.businessCriticalityLevels, criticality).map((item) => ({ value: item.code, label: catalogOptionLabel(item, t), color: getDotColor('default', theme.palette.mode) }))];
 
   const dataClassOptions = React.useMemo(() => (
-    (byField.dataClass || [])
-      .filter((item) => !item.deprecated || item.code === dataClass)
+    offeredCatalogOptions(byField.dataClass, dataClass)
       .map((item) => ({
         value: item.code,
-        label: item.deprecated ? t('it:workspace.interface.metadata.deprecated', { label: item.label }) : item.label,
+        label: catalogOptionLabel(item, t),
       }))
   ), [byField.dataClass, dataClass]);
 

@@ -196,6 +196,7 @@ async function run() {
       ]);
 
       await testClearingRule(runner, tenantId, params, context);
+      await testRetiredValues(runner, tenantId, params, context);
     });
   } finally {
     await dataSource.destroy();
@@ -248,6 +249,45 @@ async function testClearingRule(runner: any, tenantId: string, params: { dryRun:
   assert.deepEqual(now.ip_addresses, [{ type: 'host', ip: '10.1.1.1', subnet_cidr: null }]);
   // An earlier address `-` clears while a later one is set: a gap, as an empty cell on a new asset.
   assert.deepEqual(codes(await run('Stored;;;;;;;-;;host;10.1.1.9;')), [['ip_2_address', 'asset_ip_gap']]);
+}
+
+/**
+ * Rule P7 (lot K2c of 26.12.1): a value the catalog retired is refused on a row whose asset does not
+ * hold it (a new asset, or a stored one holding another value), and kept on the asset that holds it.
+ */
+async function testRetiredValues(runner: any, tenantId: string, params: { dryRun: boolean; operation: 'upsert' }, context: any) {
+  const retired = (list: any[], code: string) => [...list, { code, label: `Old ${code}`, deprecated: true }];
+  const settings = {
+    ...itOpsSettings,
+    serverKinds: retired(itOpsSettings.serverKinds, 'old_kind'),
+    lifecycleStates: retired(itOpsSettings.lifecycleStates, 'old_status'),
+    domains: retired(itOpsSettings.domains, 'old_domain'),
+    adminZones: retired(itOpsSettings.adminZones, 'old_zone'),
+    ipAddressTypes: retired(itOpsSettings.ipAddressTypes, 'old_ip'),
+  };
+  await runner.query(
+    `INSERT INTO assets (tenant_id, name, kind, environment, location_id, provider, status, domain, admin_zone, ip_addresses)
+     SELECT $1, 'Old holder', 'old_kind', 'prod', id, 'on_prem', 'old_status', 'old_domain', 'old_zone', $2::jsonb FROM locations WHERE tenant_id = $1`,
+    [tenantId, JSON.stringify([{ type: 'old_ip', ip: '10.7.7.7', subnet_cidr: null }])],
+  );
+  const head = 'name;location_reference;kind;environment;status;domain;admin_zone;ip_1_type;ip_1_address';
+  const result = await importer.import(assetCsvConfig, file([
+    head,
+    'Old holder;LOC-1;Old old_kind;prod;old_status;old_domain;old_zone;old_ip;10.7.7.7',
+    'Fresh;LOC-1;old_kind;prod;old_status;old_domain;old_zone;old_ip;10.7.7.8',
+    'Stored;LOC-1;vm;prod;active;old_domain;;;',
+  ].join('\n')), params, { ...context, itOpsSettings: settings });
+  assert.deepEqual(result.errors.map((error: any) => [error.row, error.column, error.code]), [
+    [3, 'kind', 'catalog_value_retired'],
+    [3, 'domain', 'catalog_value_retired'],
+    [3, 'status', 'catalog_value_retired'],
+    [3, 'admin_zone', 'catalog_value_retired'],
+    [3, 'ip_1_type', 'catalog_value_retired'],
+    [4, 'domain', 'catalog_value_retired'],
+  ]);
+  const [refusal] = result.errors;
+  assert.match(refusal.message, /The asset type "Old old_kind" is retired/);
+  assert.equal(refusal.params?.allowed, 'vm (Virtual machine)');
 }
 
 run()

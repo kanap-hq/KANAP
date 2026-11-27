@@ -143,6 +143,8 @@ Los tipos de alojamiento son configurables en **Panorama IT > Configuración**. 
 | Nube privada | Nube | Plataforma de nube operada por la empresa |
 | Edge | Nube | Ubicaciones de computación en el borde |
 
+**Valores que ya no se proponen**: el tipo de alojamiento y el proveedor ofrecen los valores que siguen disponibles en [Configuración del Panorama IT](it-ops-settings.md). Un valor marcado **Dejar de proponer** permanece en las ubicaciones que ya lo tienen, que lo conservan al guardarse. Las demás ubicaciones no pueden tomarlo, ni en esta página ni a través de Kad. Una zona de red marcada **Dejar de proponer** permanece en las subredes que la tienen; una subred nueva no puede tomarla.
+
 ---
 
 ## Permisos

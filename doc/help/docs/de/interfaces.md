@@ -75,6 +75,8 @@ Das Schnittstellenraster zeigt Ihr Integrationsverzeichnis auf einen Blick.
 
 Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat sechs Reiter. Die Schnittstelleneigenschaften stehen in einem Seitenpanel auf der rechten Seite. Der Name in der Kopfzeile lässt sich direkt dort bearbeiten. Der letzte Reiter, **Verlauf**, listet die Änderungen an der Schnittstelle auf (siehe [Verlauf der Datensätze](record-history.md)).
 
+**Nicht mehr angebotene Werte**: Datenkategorie, Lebenszyklus, Kritikalität, Datenklasse sowie Status und Authentifizierungsmodus einer Bindung bieten die Werte an, die in den [IT-Landschaft-Einstellungen](it-ops-settings.md) noch angeboten werden. Ein als **Nicht mehr anbieten** markierter Wert bleibt bei den Schnittstellen und Bindungen, die ihn bereits haben, und sie behalten ihn beim Speichern. Andere können ihn nicht übernehmen, weder auf dieser Seite noch über Kad. Im Reiter **Fluss** bleibt ein nicht mehr angebotener Auslöser, ein Muster oder ein Format verfügbar, solange ein Leg der Schnittstelle ihn hat.
+
 Die Kopfzeile enthält **Löschen**, ein Papierkorbsymbol mit seinem Namen im Tooltip (`applications:admin`). Die Bestätigung verwendet dieselbe Prüfung wie **Ausgewählte löschen**. Sie sagt, dass dies nicht rückgängig gemacht werden kann. Wenn die Schnittstelle Bindungen hat, erklärt sie diese und bietet **Zugehörige Bindungen ebenfalls löschen**: das Löschen ist verfügbar, sobald diese Option aktiviert ist, die Bindungen gehen mit der Schnittstelle, und die Verbindungen bleiben erhalten. Die Liste öffnet sich danach wieder.
 
 ### Schnittstelleneigenschaften (Seitenpanel)

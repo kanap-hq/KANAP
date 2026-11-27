@@ -143,6 +143,8 @@ Les types d'hébergement sont configurables dans **Cartographie SI > Paramètres
 | Cloud privé | Cloud | Plateforme cloud exploitée par l'entreprise |
 | Edge | Cloud | Sites de calcul edge |
 
+**Valeurs qui ne sont plus proposées** : le type d'hébergement et le fournisseur listent les valeurs encore proposées dans les [Paramètres de la Cartographie SI](it-ops-settings.md). Une valeur marquée **Ne plus proposer** reste sur les sites qui l'ont déjà, et ils la gardent quand ils sont enregistrés. Les autres sites ne peuvent pas la prendre, sur cette page ou par Kad. Une zone réseau marquée **Ne plus proposer** reste sur les sous-réseaux qui l'ont ; un nouveau sous-réseau ne peut pas la prendre.
+
 ---
 
 ## Autorisations

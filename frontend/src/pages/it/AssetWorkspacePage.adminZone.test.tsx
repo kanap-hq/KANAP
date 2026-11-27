@@ -179,10 +179,10 @@ describe('Asset properties: administration zone', () => {
 
   it('keeps a retired zone while it is the value', async () => {
     renderAsset({ ...ASSET, admin_zone: 'old' });
-    const field = await zoneShowing('common.deprecatedOption:Old zone');
+    const field = await zoneShowing('Old zone (common:enumEditor.retiredSuffix)');
     fireEvent.mouseDown(field);
     const options = within(screen.getByRole('listbox')).getAllByRole('option').map((option) => option.textContent);
-    expect(options).toEqual(['pages.administrationView.noZone', 'Tier 0', 'common.deprecatedOption:Old zone', 'Tier 1']);
+    expect(options).toEqual(['pages.administrationView.noZone', 'Tier 0', 'Old zone (common:enumEditor.retiredSuffix)', 'Tier 1']);
   });
 
   it('shows a value outside the catalog as legacy and does not offer a retired zone', async () => {

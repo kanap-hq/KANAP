@@ -75,6 +75,8 @@ La grille Interfaces affiche votre registre d'intégration en un coup d'œil.
 
 Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte six onglets, avec les propriétés de l'interface dans un panneau latéral à droite. Le nom dans l'en-tête se modifie directement. Le dernier onglet, **Historique**, liste les modifications apportées à l'interface (voir [Historique des fiches](record-history.md)).
 
+**Valeurs qui ne sont plus proposées** : la catégorie de données, le cycle de vie, la criticité, la classification des données, ainsi que le statut et le mode d'authentification d'une liaison listent les valeurs encore proposées dans les [Paramètres de la Cartographie SI](it-ops-settings.md). Une valeur marquée **Ne plus proposer** reste sur les interfaces et les liaisons qui l'ont déjà, et elles la gardent quand elles sont enregistrées. Les autres ne peuvent pas la prendre, sur cette page ou par Kad. Dans l'onglet **Flux**, un déclencheur, un pattern ou un format qui n'est plus proposé reste disponible tant qu'un leg de l'interface l'a.
+
 L'en-tête porte **Supprimer**, une icône corbeille avec son nom en infobulle (`applications:admin`). La confirmation utilise la même vérification que **Supprimer la sélection**. Elle indique que cette action est irréversible. Lorsque l'interface a des liaisons, elle les explique et propose **Supprimer également les liaisons associées** : la suppression est disponible une fois cette option cochée, les liaisons partent avec l'interface et les connexions sont conservées. La liste s'ouvre ensuite.
 
 ### Propriétés de l'interface (panneau latéral)

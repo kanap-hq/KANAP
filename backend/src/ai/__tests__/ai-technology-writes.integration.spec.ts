@@ -2232,13 +2232,13 @@ async function testTechnologyCatalogLabels(harness: Harness) {
     await approvePreview(harness, ctx, update);
     const [kept] = await runner.query(`SELECT family FROM technologies WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, seed.technologies.postgres]);
     assert.equal(kept.family, 'legacy_db', 'the retired value the record held stays');
-    // A new record cannot take a retired value.
+    // A new record cannot take a retired value (rule P7): the refusal says it is retired.
     await expectRejects(
       () => harness.previews.createPreview(ctx, 'create_business_record', {
         entity_type: 'technologies',
         fields: { name: 'Kafka legacy', family: 'Legacy DB', lifecycle: 'Actif', from_catalog: false },
       }),
-      /Unknown family "Legacy DB"/,
+      /The family "Legacy DB" is retired: only a record that already holds it keeps it\. Valid values: /,
     );
   });
 }

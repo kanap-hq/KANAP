@@ -9,10 +9,11 @@ import type { ServerOption } from '../../../components/fields/serverOptionRender
 
 const apiGet = vi.hoisted(() => vi.fn());
 const apiPatch = vi.hoisted(() => vi.fn());
-vi.mock('../../../api', () => ({ default: { get: apiGet, post: vi.fn(), patch: apiPatch, delete: vi.fn() } }));
+const apiPost = vi.hoisted(() => vi.fn());
+vi.mock('../../../api', () => ({ default: { get: apiGet, post: apiPost, patch: apiPatch, delete: vi.fn() } }));
 const enumOptions = vi.hoisted(() => ({
   settings: {
-    connectionTypes: [] as Array<{ code: string; label: string }>,
+    connectionTypes: [] as Array<{ code: string; label: string; deprecated?: boolean }>,
     pathHopFunctions: [] as Array<{ code: string; label: string; deprecated?: boolean }>,
   },
 }));
@@ -45,6 +46,7 @@ describe('ConnectionPathSection', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('en');
     enumOptions.settings.pathHopFunctions = [];
+    enumOptions.settings.connectionTypes = [];
     apiGet.mockReset();
     apiGet.mockResolvedValue({ data: { items: [] } });
     apiPatch.mockReset();
@@ -97,6 +99,64 @@ describe('ConnectionPathSection', () => {
     expect(await screen.findByRole('option', { name: 'Proxy (plus proposé)' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Firewall' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: / \(deprecated\)$/ })).toBeNull();
+  });
+
+  describe('rule P7: a retired value only on the hop that holds it', () => {
+    const renderHops = (hops: ConnectionPathHop[], defaultProtocolCodes: string[] = []) => render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <ConnectionPathSection
+          connectionId="c-1"
+          hops={hops}
+          canManage
+          defaultProtocolCodes={defaultProtocolCodes}
+          sourceLabel="SRC"
+          destinationLabel="DST"
+          onChange={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+    beforeEach(() => {
+      enumOptions.settings.pathHopFunctions = [
+        { code: 'firewall', label: 'Firewall' },
+        { code: 'proxy', label: 'Proxy', deprecated: true },
+      ];
+      enumOptions.settings.connectionTypes = [
+        { code: 'https', label: 'HTTPS' },
+        { code: 'ftp', label: 'FTP', deprecated: true },
+      ];
+    });
+
+    it('does not offer a retired function to a hop that does not hold it', async () => {
+      renderHops([{ ...HOP, function_code: 'firewall' }]);
+      const hopFunction = screen.getAllByRole('combobox').find((node) => node.textContent?.includes('Firewall'));
+      fireEvent.mouseDown(hopFunction!);
+      expect(await screen.findByRole('option', { name: 'Firewall' })).toBeInTheDocument();
+      expect(screen.queryByRole('option', { name: /Proxy/ })).toBeNull();
+    });
+
+    it('offers a retired protocol only to the hop that holds it', async () => {
+      renderHops([
+        { ...HOP, protocol_codes: ['ftp'] },
+        { ...HOP, id: 'hop-2', order_index: 2, protocol_codes: ['https'] },
+      ]);
+      const [first, second] = screen.getAllByRole('button', { name: /FTP|HTTPS/ }).filter((node) => node.tagName === 'BUTTON' && !node.getAttribute('aria-label'));
+      fireEvent.click(first);
+      expect(await screen.findByRole('menuitem', { name: 'FTP (no longer offered)' })).toBeInTheDocument();
+      fireEvent.keyDown(screen.getByRole('menuitem', { name: 'FTP (no longer offered)' }), { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('menuitem', { name: /FTP/ })).toBeNull());
+      fireEvent.click(second);
+      expect(await screen.findByRole('menuitem', { name: 'HTTPS' })).toBeInTheDocument();
+      expect(screen.queryByRole('menuitem', { name: /FTP/ })).toBeNull();
+    });
+
+    it('gives a new hop the connection protocols still offered', async () => {
+      apiPost.mockReset();
+      apiPost.mockResolvedValue({ data: { ...HOP, id: 'hop-new', order_index: 2 } });
+      renderHops([HOP], ['ftp', 'https']);
+      fireEvent.click(screen.getByText(i18n.t('it:workspace.connection.path.addHop')));
+      await waitFor(() => expect(apiPost).toHaveBeenCalled());
+      expect(apiPost.mock.calls[0][1].protocol_codes).toEqual(['https']);
+    });
   });
 
   describe('port and notes waiting to be saved', () => {

@@ -65,6 +65,7 @@ import { joinNames } from '../working-day-calendars/workingDayCalendarFields';
 import { useTranslation } from 'react-i18next';
 import { screenLanguage } from '../../components/csv/readings';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { catalogOptionLabel, isHeldUnknown, offeredCatalogOptions } from '../../utils/catalogOffered';
 import { assetDeleteCheck } from '../../utils/deleteCheck';
 import { deleteFailureReason } from '../../utils/deleteRefusal';
 import { isValidHostname, sanitizeHostname } from '../../utils/hostname';
@@ -517,10 +518,11 @@ function AssetWorkspaceRoute() {
   }, [data, isCreate, routeId]);
   const queryClient = useQueryClient();
   const { byField, labelFor, settings } = useItOpsEnumOptions();
+  // Rule P7: a new assignment holds no role yet, so a retired role is not offered.
   const serverRoleOptions = React.useMemo(
-    () => (byField.serverRole || []).map((o) => ({
+    () => offeredCatalogOptions(byField.serverRole).map((o) => ({
       value: o.code,
-      label: o.deprecated ? t('common.deprecatedOption', { label: o.label }) : o.label,
+      label: catalogOptionLabel(o, t),
       deprecated: !!o.deprecated,
     })),
     [byField.serverRole, t],
@@ -732,29 +734,24 @@ function AssetWorkspaceRoute() {
     void loadOptions();
     return () => { cancelled = true; };
   }, [id, memberDialogOpen, memberSearch]);
-  const lifecycleOptions = React.useMemo(() => {
-    const list = byField.lifecycleStatus || [];
-    const current = status;
-    const opts = list.map((item) => ({
+  // Rule P7: the values still offered, plus the one the asset holds (an unknown one under its code).
+  const lifecycleOptions = React.useMemo(
+    () => offeredCatalogOptions(byField.lifecycleStatus, status).map((item) => ({
       value: item.code,
-      label: item.deprecated ? t('common.deprecatedOption', { label: item.label }) : item.label,
-      deprecated: !!item.deprecated,
-    }));
-    if (current && !opts.some((opt) => opt.value === current)) {
-      opts.push({ value: current, label: current, deprecated: false });
-    }
-    return opts.filter((opt) => !opt.deprecated || opt.value === current);
-  }, [byField.lifecycleStatus, status, t]);
+      label: catalogOptionLabel(item, t),
+    })),
+    [byField.lifecycleStatus, status, t],
+  );
 
   const kindOptions = React.useMemo(
-    () => (byField.serverKind || [])
+    () => offeredCatalogOptions(byField.serverKind, kind)
       .map((o) => ({
         value: o.code,
-        label: o.deprecated ? t('common.deprecatedOption', { label: o.label }) : o.label,
+        label: catalogOptionLabel(o, t),
         deprecated: !!o.deprecated,
       }))
       .sort((a, b) => a.label.localeCompare(b.label)),
-    [byField.serverKind, t],
+    [byField.serverKind, kind, t],
   );
 
   // Determine if the current asset type is physical (shows Hardware/Support tabs)
@@ -789,28 +786,28 @@ function AssetWorkspaceRoute() {
   }, [isCreate, tab, isPhysicalAsset, settings]);
 
   const domainOptions = React.useMemo(
-    () => (settings?.domains || []).map((d) => ({
+    () => offeredCatalogOptions(settings?.domains, domain).map((d) => (isHeldUnknown(d) ? {
       value: d.code,
-      label: d.deprecated ? t('common.deprecatedOption', { label: d.label }) : d.label,
+      label: d.label,
+      dns_suffix: undefined,
+      system: undefined,
+      deprecated: true,
+    } : {
+      value: d.code,
+      label: catalogOptionLabel(d, t),
       dns_suffix: d.dns_suffix,
       system: d.system,
       deprecated: !!d.deprecated,
     })),
-    [settings?.domains, t],
+    [settings?.domains, domain, t],
   );
-  const adminZoneOptions = React.useMemo(() => {
-    const zones = (byField.adminZone || []).filter((option) => !option.deprecated || option.code === adminZone);
-    if (adminZone && !zones.some((option) => option.code === adminZone)) {
-      return [{ value: adminZone, label: t('common.legacyOption', { label: adminZone }) }, ...zones.map((option) => ({
-        value: option.code,
-        label: option.deprecated ? t('common.deprecatedOption', { label: option.label }) : option.label,
-      }))];
-    }
-    return zones.map((option) => ({
+  const adminZoneOptions = React.useMemo(
+    () => offeredCatalogOptions(byField.adminZone, adminZone, (code) => t('common.legacyOption', { label: code })).map((option) => ({
       value: option.code,
-      label: option.deprecated ? t('common.deprecatedOption', { label: option.label }) : option.label,
-    }));
-  }, [adminZone, byField.adminZone, t]);
+      label: catalogOptionLabel(option, t),
+    })),
+    [adminZone, byField.adminZone, t],
+  );
 
   // Compute FQDN from hostname and domain
   const computedFqdn = React.useMemo(() => {
@@ -852,33 +849,48 @@ function AssetWorkspaceRoute() {
   const networkSegmentOptions = React.useMemo(
     () => (byField.networkSegment || []).map((o) => ({
       value: o.code,
-      label: o.deprecated ? t('common.deprecatedOption', { label: o.label }) : o.label,
+      label: catalogOptionLabel(o, t),
       deprecated: !!o.deprecated,
     })),
     [byField.networkSegment, t],
   );
 
+  // Rule P7: the subnets of the asset's location still offered, plus those the asset holds (a retired
+  // one, or one of another location, stays on its row).
+  const heldIpAddresses = !isCreate ? data?.ip_addresses : null;
+  const heldSubnets = React.useMemo(
+    () => (heldIpAddresses || []).map((entry) => entry.subnet_cidr).filter((cidr): cidr is string => !!cidr),
+    [heldIpAddresses],
+  );
+  const heldIpTypes = React.useMemo(() => (heldIpAddresses || []).map((entry) => entry.type), [heldIpAddresses]);
   const subnetOptions = React.useMemo(
-    () => (settings?.subnets || [])
-      .filter((s) => s.location_id === locationId && !s.deprecated)
-      .map((s) => ({
-        value: s.cidr,
-        label: s.cidr,
-        vlan_number: s.vlan_number,
-        network_zone: s.network_zone,
-        description: s.description,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label)),
-    [settings?.subnets, locationId],
+    () => offeredCatalogOptions(
+      (settings?.subnets || [])
+        .filter((s) => s.location_id === locationId || heldSubnets.includes(s.cidr))
+        .map((s) => ({ ...s, code: s.cidr })),
+      heldSubnets,
+    )
+      .map((s) => (isHeldUnknown(s)
+        ? { value: s.code, label: s.code, vlan_number: null, network_zone: null, description: null }
+        : {
+          value: s.cidr,
+          label: catalogOptionLabel(s, t),
+          vlan_number: s.vlan_number,
+          network_zone: s.network_zone,
+          description: s.description,
+        }))
+      .sort((a, b) => a.value.localeCompare(b.value)),
+    [settings?.subnets, locationId, heldSubnets, t],
   );
 
-  // IP address type options
+  // IP address type options: the types still offered, plus those the asset holds (rule P7).
   const ipAddressTypeOptions = React.useMemo(
-    () => (byField.ipAddressType || []).map((o) => ({
+    () => offeredCatalogOptions(byField.ipAddressType, heldIpTypes).map((o) => ({
       value: o.code,
-      label: o.label,
+      label: catalogOptionLabel(o, t),
+      deprecated: !!o.deprecated,
     })),
-    [byField.ipAddressType],
+    [byField.ipAddressType, heldIpTypes, t],
   );
 
   React.useEffect(() => {
@@ -1869,7 +1881,7 @@ function AssetWorkspaceRoute() {
       <PropertyGroup>
         <PropertyRow label={t('workspace.asset.overview.assetType')} required missing={creation.marked.has('kind')}>
           <Autocomplete
-            options={kindOptions.filter((opt) => !opt.deprecated || opt.value === kind)}
+            options={kindOptions}
             value={kind ? kindOptions.find((opt) => opt.value === kind) || { value: kind, label: kind, deprecated: false } : null}
             onChange={(_, val) => updateAssetType(val?.value || '')}
             getOptionLabel={(opt) => opt.label}
@@ -2265,7 +2277,7 @@ function AssetWorkspaceRoute() {
               open={!!assetTypeAnchorEl}
               onClose={() => setAssetTypeAnchorEl(null)}
             >
-              {kindOptions.filter((option) => !option.deprecated || option.value === kind).map((option) => (
+              {kindOptions.map((option) => (
                 <MenuItem
                   key={option.value}
                   selected={option.value === kind}
@@ -2629,11 +2641,9 @@ function AssetWorkspaceRoute() {
                       disabled={!canEditNetboxField('domain')}
                     >
                       <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
-                      {domainOptions
-                        .filter((opt) => !opt.deprecated || opt.value === domain)
-                        .map((opt) => (
-                          <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>
-                        ))}
+                      {domainOptions.map((opt) => (
+                        <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>
+                      ))}
                     </TextField>
                   </PropertyRow>
                   <PropertyRow label={t('workspace.asset.technical.fqdn')} valueSx={{ maxWidth: 520 }}>
@@ -2690,7 +2700,7 @@ function AssetWorkspaceRoute() {
                     variant="action"
                     startIcon={<AddIcon />}
                     onClick={() => {
-                      const defaultType = ipAddressTypeOptions[0]?.value || 'host';
+                      const defaultType = ipAddressTypeOptions.find((option) => !option.deprecated)?.value || 'host';
                       setIpAddresses((prev) => [...prev, { type: defaultType, ip: '', subnet_cidr: null }]);
                     }}
                     disabled={!canEditNetboxField('ip_addresses')}

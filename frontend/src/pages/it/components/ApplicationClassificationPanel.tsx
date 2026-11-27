@@ -3,6 +3,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { Link } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../../utils/applicationClassification';
+import { catalogOptionLabel } from '../../../utils/catalogOffered';
 import { HelpTip } from './HelpTip';
 import React from 'react';
 import { Alert, Box, Button, IconButton, Tooltip, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
@@ -81,10 +82,12 @@ export function HelpLabel({ text, help }: { text: string; help: string }) {
 
 /** Naked select over a tenant catalog: label at 13px, definition at 11px under each option. */
 export function LevelSelect({ value, options, placeholder, ariaLabel, disabled, onChange }: { value: string | null; options: Option[]; placeholder: string; ariaLabel: string; disabled: boolean; onChange: (value: string | null) => void }) {
+  const { t } = useTranslation('common');
   const visible = options.filter((item) => !item.deprecated || item.code === value);
-  return <Select value={value || ''} renderValue={(selected) => options.find((item) => item.code === selected)?.label || selected || placeholder} onChange={(event) => onChange(event.target.value || null)} disabled={disabled} displayEmpty variant="standard" sx={drawerSelectSx} inputProps={{ 'aria-label': ariaLabel }}>
+  const held = (selected: string) => options.find((item) => item.code === selected);
+  return <Select value={value || ''} renderValue={(selected) => (held(selected) ? catalogOptionLabel(held(selected)!, t) : selected || placeholder)} onChange={(event) => onChange(event.target.value || null)} disabled={disabled} displayEmpty variant="standard" sx={drawerSelectSx} inputProps={{ 'aria-label': ariaLabel }}>
     <MenuItem value="" sx={drawerMenuItemSx}>{placeholder}</MenuItem>
-    {visible.map((item) => <MenuItem key={item.code} value={item.code} sx={drawerMenuItemSx}><Box><Typography sx={{ fontSize: 13 }}>{item.label}{item.deprecated ? ` (${classificationText('No longer offered')})` : ''}</Typography>{item.description && <Typography sx={{ fontSize: 11, whiteSpace: 'normal', maxWidth: 440, color: 'text.secondary' }}>{item.description}</Typography>}</Box></MenuItem>)}
+    {visible.map((item) => <MenuItem key={item.code} value={item.code} sx={drawerMenuItemSx}><Box><Typography sx={{ fontSize: 13 }}>{catalogOptionLabel(item, t)}</Typography>{item.description && <Typography sx={{ fontSize: 11, whiteSpace: 'normal', maxWidth: 440, color: 'text.secondary' }}>{item.description}</Typography>}</Box></MenuItem>)}
   </Select>;
 }
 

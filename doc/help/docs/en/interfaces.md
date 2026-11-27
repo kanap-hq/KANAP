@@ -75,6 +75,8 @@ The Interfaces grid shows your integration registry at a glance.
 
 Click any row to open the workspace. The workspace has six tabs, with the interface properties in a side panel on the right. The name in the header can be edited in place. The last one, **History**, lists the changes made to the interface (see [Record history](record-history.md)).
 
+**Values no longer offered**: The data category, the lifecycle, the criticality, the data class, and the status and the authentication mode of a binding list the values still offered in [IT Landscape Settings](it-ops-settings.md). A value marked **No longer offered** stays on the interfaces and bindings that already have it, which keep it when they are saved. The others cannot take it, on this page or through Kad. On the **Flow** tab, a trigger, a pattern or a format no longer offered stays available while a leg of the interface has it.
+
 The header carries **Delete**, a trash icon with its name in a tooltip (`applications:admin`). The confirmation uses the same check as **Delete selected**. It says this cannot be undone. When the interface has bindings, it explains them and offers **Also delete related bindings**: the delete is available once that option is checked, the bindings go with the interface, and the connections stay. The list opens again afterwards.
 
 ### Interface properties (side panel)
