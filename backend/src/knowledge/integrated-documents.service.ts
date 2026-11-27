@@ -1,3 +1,4 @@
+import { withSavepoint } from '../common/savepoint.util';
 import { writeAuditLog } from '../audit/audit.service';
 import {
   BadRequestException,
@@ -2253,10 +2254,54 @@ export class IntegratedDocumentsService {
       userId,
       manager,
     );
+    // Two first writers of the slot (the page opening the record, a write of its text): the second
+    // one's binding meets the first one's (`uq_integrated_document_bindings_slot`) once that commits.
+    // Its document and binding are made under a savepoint, so that conflict undoes them alone and the
+    // binding saved first is returned, in a transaction that stays usable.
+    const title = this.formatManagedTitle(sourceEntityType, source, slotKey, await this.creatorSlotLabel(sourceEntityType, slotKey, userId, manager));
+    let created: { id: string };
+    try {
+      created = await withSavepoint(manager, () => this.createBoundDocument(sourceEntityType, source, slotKey, {
+        title, initialContent, slotSetting, provisioningContext, explicitContent, userId, manager, opts,
+      }));
+    } catch (e: any) {
+      if (String(e?.message || '').includes('uq_integrated_document_bindings_slot')) {
+        const existingBinding = await this.findBinding(sourceEntityType, source.id, slotKey, manager);
+        if (existingBinding) {
+          return { documentId: existingBinding.document_id, changed: false, created: false };
+        }
+      }
+      throw e;
+    }
+
+    return {
+      documentId: created.id,
+      changed: true,
+      created: true,
+    };
+  }
+
+  /** The managed document of a slot and its binding (`ensureBoundDocument`). */
+  private async createBoundDocument(
+    sourceEntityType: SourceScopedEntityType,
+    source: SourceDescriptor,
+    slotKey: IntegratedDocumentSlotKey,
+    input: {
+      title: string;
+      initialContent: string;
+      slotSetting: SlotSettingRecord;
+      provisioningContext: Awaited<ReturnType<IntegratedDocumentsService['buildSourceAccessContext']>>;
+      explicitContent: string | null | undefined;
+      userId: string | null | undefined;
+      manager: EntityManager;
+      opts?: Parameters<IntegratedDocumentsService['ensureBoundDocument']>[6];
+    },
+  ): Promise<{ id: string }> {
+    const { initialContent, slotSetting, provisioningContext, explicitContent, userId, manager, opts } = input;
     const created = await this.knowledge.createManagedDocument(
       {
         tenantId: source.tenant_id,
-        title: this.formatManagedTitle(sourceEntityType, source, slotKey, await this.creatorSlotLabel(sourceEntityType, slotKey, userId, manager)),
+        title: input.title,
         summary: null,
         content_markdown: initialContent,
         folder_id: slotSetting.folder_id,
@@ -2286,33 +2331,17 @@ export class IntegratedDocumentsService {
       },
     );
     await this.ensurePrimaryOwnerContributor(created.id, opts?.ownerUserId ?? null, manager);
-
-    try {
-      await manager.getRepository(IntegratedDocumentBinding).save(
-        manager.getRepository(IntegratedDocumentBinding).create({
-          tenant_id: source.tenant_id,
-          source_entity_type: sourceEntityType,
-          source_entity_id: source.id,
-          slot_key: slotKey,
-          document_id: created.id,
-          hidden_from_entity_knowledge: true,
-        }),
-      );
-    } catch (e: any) {
-      if (String(e?.message || '').includes('uq_integrated_document_bindings_slot')) {
-        const existingBinding = await this.findBinding(sourceEntityType, source.id, slotKey, manager);
-        if (existingBinding) {
-          return { documentId: existingBinding.document_id, changed: false, created: false };
-        }
-      }
-      throw e;
-    }
-
-    return {
-      documentId: created.id,
-      changed: true,
-      created: true,
-    };
+    await manager.getRepository(IntegratedDocumentBinding).save(
+      manager.getRepository(IntegratedDocumentBinding).create({
+        tenant_id: source.tenant_id,
+        source_entity_type: sourceEntityType,
+        source_entity_id: source.id,
+        slot_key: slotKey,
+        document_id: created.id,
+        hidden_from_entity_knowledge: true,
+      }),
+    );
+    return created;
   }
 
   async provisionForRequest(
