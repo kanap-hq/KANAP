@@ -214,7 +214,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 1. Seleccione las líneas y haga clic en **Modificar la selección** (icono de edición). El icono muestra el número de líneas seleccionadas
 2. Elija el **Campo**: **Centro de coste**, **Cuenta**, **Empresa pagadora**, **Proveedor**, **Responsable de TI**, **Responsable de negocio**, **Valor de dimensión** o **Run o build**. Para una cuenta, elija primero la empresa en **Plan de cuentas de** y luego la cuenta. Para un valor de dimensión, elija primero la **Dimensión** y luego el valor
 3. Elija el **Nuevo valor**. El diálogo cuenta las líneas: cuántas cambiarán, cuántas ya tienen este valor y cuántas se rechazan, con el motivo de cada rechazo (por ejemplo "Solo lectura para usted" o "Cuenta no prevista para este tipo de línea"). El recuento se repite con cada nuevo valor
-4. Haga clic en **Modificar 12 filas** (con su recuento) para confirmar. Las líneas rechazadas quedan como estaban y las demás cambian. La ventana muestra entonces el resultado: las líneas modificadas, las que ya tenían el valor y las rechazadas con sus motivos. Haga clic en **Cerrar** para cerrarla. La lista detrás ya está actualizada
+4. Haga clic en **Modificar 12 filas** (con su recuento) para confirmar. Las líneas rechazadas quedan como estaban y las demás cambian. La ventana muestra entonces el resultado: las líneas modificadas, las que ya tenían el valor y las rechazadas con sus motivos. Cuando hay líneas modificadas en la columna **Por verificar**, también indica cuántas, por ejemplo «Por verificar: 3». Haga clic en **Cerrar** para cerrarla. La lista detrás ya está actualizada
 
 **Vaciar un campo**: En un campo opcional, haga clic en **Vaciar el campo** (icono de goma) junto al valor. El valor muestra **Vacío**, y el campo se vacía en cada línea seleccionada. La **Cuenta** y la **Empresa pagadora** no se pueden vaciar, ni una dimensión obligatoria.
 
@@ -538,6 +538,8 @@ En una línea así, la pestaña **Presupuesto**:
 - Muestra un icono de información junto al título del editor cuando la columna del editor no está por verificar. Da la misma frase, que dice por qué la columna se abre en **Cantidad y precio**
 
 Una columna está por verificar cuando se muestra, no está congelada, tiene un total distinto de cero para el año y no está construida a partir de líneas de cantidad y precio. Cuentan todos los años. Una columna repartida, introducida por mes o editada a mano, y una columna que conserva sus líneas solo como referencia están por verificar. Una columna copiada de una columna construida a partir de líneas también está construida a partir de líneas: no está por verificar.
+
+El [archivo de presupuesto](budget-file.md#consistency-warnings) y [Kad](ai-assistant.md#tool-calls) solo escriben totales. Un importe que escriben en una cuenta así queda por verificar hasta que su columna se construye a partir de líneas de cantidad y precio. Ambos avisan antes de la escritura, y la escritura está permitida. Una [modificación en bloque](#modificar-lineas-en-bloque) que pasa líneas a una cuenta así cuenta las líneas por verificar en su resultado.
 
 Para encontrar estas líneas, muestre la columna **Por verificar** de la lista y fíltrela por **Cantidad y precio**, o haga clic en **Cantidad y precio por verificar** en el mosaico [Calidad de datos](my-dashboard.md#data-hygiene). Ese mosaico está desactivado hasta que lo añada: **Personalizar la página de inicio** y luego **Añadir un mosaico** (+) en la sección **Gestión presupuestaria**.
 

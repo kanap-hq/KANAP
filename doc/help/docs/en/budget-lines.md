@@ -214,7 +214,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 1. Select the lines, then click **Change the selection** (edit icon). The icon shows the number of lines selected
 2. Choose the **Field**: **Cost center**, **Account**, **Paying company**, **Supplier**, **IT owner**, **Business owner**, **Dimension value** or **Run or build**. For an account, first pick the company in **Chart of accounts of**, then the account. For a dimension value, first pick the **Dimension**, then the value
 3. Choose the **New value**. The dialog counts the lines: how many will change, how many already have this value, and how many are refused, with the reason for each (for example "Read only for you" or "Account not for this type of line"). The count runs again at each new value
-4. Click **Change 12 rows** (with your count) to confirm. The refused lines stay as they are and the others change. The window then shows the outcome: the lines changed, those that already had the value, and those refused with their reasons. Click **Close** to close it. The list behind it is already up to date
+4. Click **Change 12 rows** (with your count) to confirm. The refused lines stay as they are and the others change. The window then shows the outcome: the lines changed, those that already had the value, and those refused with their reasons. When some of the changed lines show in the **To check** column, it also says how many, for example "To check: 3". Click **Close** to close it. The list behind it is already up to date
 
 **Emptying a field**: For an optional field, click **Empty the field** (eraser icon) beside the value. The value reads **Empty**, and the field is emptied on every selected line. **Account** and **Paying company** cannot be emptied, nor a required dimension.
 
@@ -539,6 +539,8 @@ On such a line, the **Budget** tab:
 - Shows an info icon next to the editor title when the column in the editor is not to check. It gives the same sentence, which says why the column opens on **Quantity and price**
 
 A column is to check when it is shown, is not frozen, has a total other than zero for the year, and is not built from quantity and price lines. Every year counts. A spread, a column entered by month or edited by hand, and a column that keeps its lines only as a reference are to check. A column copied from a column built from lines is built from lines too, so it is not.
+
+The [budget file](budget-file.md#consistency-warnings) and [Kad](ai-assistant.md#tool-calls) write totals only. An amount they write on such an account is to check until its column is built from quantity and price lines. Both warn before the write, and the write is allowed. A [change in bulk](#changing-lines-in-bulk) that moves lines onto such an account counts the lines to check in its outcome.
 
 To find these lines, show the **To check** column of the list and filter it on **Quantity and price**, or click **Quantity and price to check** in the [Data hygiene](my-dashboard.md#data-hygiene) tile. That tile is off until you add it: **Customize the home page**, then **Add a tile** (+) in the **Budget management** section.
 

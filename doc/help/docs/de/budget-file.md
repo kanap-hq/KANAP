@@ -133,7 +133,7 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 | **Änderungen** | Die anzulegenden Budgetzeilen, die zu aktualisierenden Budgetzeilen und die Budgetzeilen, die die Datei unverändert lässt |
 | **Seit dem Export geändert** | Die Budgetzeilen, die jemand nach Ihrem Export geändert hat, mit wer und wann. Das Laden der Datei schreibt Ihre Werte über diese Änderungen |
 | **Ähnelt einer bestehenden Zeile** | Die neuen Zeilen, die einer vorhandenen Budgetzeile ähneln, und was aus jeder wird. Siehe [Zeilen, die einer bestehenden Zeile ähneln](#lookalike-lines) |
-| **Warnungen** | Eine Zeile, die einer anderen Zeile der Datei ähnelt, ein `company_name`, der vom Unternehmen der Kostenstelle der Zeile abweicht, ein Betrag, durch den eine Spalte ihren Berechnungszeilen nicht mehr folgt, ein ungewöhnlicher Betrag, ein ungewöhnliches Datum oder eine ungewöhnliche Währung (siehe [Plausibilitätswarnungen](#consistency-warnings)), Spalten und Zellen, die die Datei ignoriert |
+| **Warnungen** | Eine Zeile, die einer anderen Zeile der Datei ähnelt, ein `company_name`, der vom Unternehmen der Kostenstelle der Zeile abweicht, ein Betrag, durch den eine Spalte ihren Berechnungszeilen nicht mehr folgt, ein ungewöhnlicher Betrag, ein ungewöhnliches Datum oder eine ungewöhnliche Währung, ein Betrag auf einem Konto, das eine Erfassung nach Menge und Preis erwartet (siehe [Plausibilitätswarnungen](#consistency-warnings)), Spalten und Zellen, die die Datei ignoriert |
 | **N Werte zugeordnet** | Die Lieferanten, Unternehmen und Dimensionswerte der Datei, die als vorhandener Wert gelesen werden, eingeklappt. Klappen Sie die Zeile auf, um jede Zuordnung zu sehen, zum Beispiel `Kostenart: Matériel → Hardware`. **Rückgängig** behält den Wert, wie er geschrieben ist: Das Laden legt ihn an, oder die Prüfung lehnt ihn ab, wenn er nicht angelegt werden kann. **Wieder zuordnen** stellt die Zuordnung wieder her. Ein Wert, der sich nur in Groß- und Kleinschreibung unterscheidet, ist derselbe Wert und wird nicht aufgelistet |
 | **Beim Laden angelegt** | Die Lieferanten und Dimensionswerte, die das Laden hinzufügen würde. Zeigen Sie auf einen unterstrichenen Wert, um die vorhandenen Namen zu sehen, die ihm ähneln |
 
@@ -172,6 +172,7 @@ Die Prüfung weist auch auf Werte hin, die ungewöhnlich wirken. Es sind Warnung
 - Ein Betrag, der zehnmal höher oder niedriger ist als bei vergleichbaren Budgetzeilen: der Budgetzeile, die die Zeile aktualisiert, oder den anderen Budgetzeilen desselben Lieferanten.
 - Ein Startdatum nach den Jahren der Beträge, oder ein Enddatum davor.
 - Eine andere Währung als die des zahlenden Unternehmens.
+- Ein Betrag auf einem Konto, das eine Erfassung nach Menge und Preis erwartet: Die Budgetzeile ist danach zu prüfen (siehe [Wenn das Konto eine Erfassung nach Menge und Preis erwartet](budget-lines.md#quantity-and-price-expected)). Dasselbe gilt für eine Budgetzeile, die die Datei von einem Konto ohne diese Erwartung auf ein solches Konto setzt, für die Spalten, die sie bereits enthält. Die Warnung nennt das Konto und die Spalten, die im Tab **Budget** der Zeile zu ergänzen sind, zum Beispiel „Das Konto 6100 erwartet eine Erfassung nach Menge und Preis: Ergänzen Sie Budget 2026 auf der Registerkarte Budget der Zeile.“
 
 ### Spalten aus Menge und Preis
 

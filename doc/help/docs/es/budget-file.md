@@ -133,7 +133,7 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 | **Cambios** | Las líneas que se crearán, las que se actualizarán y las que el archivo deja tal como están |
 | **Modificadas desde la exportación** | Las líneas que alguien modificó después de su exportación, con quién y cuándo. Cargar el archivo escribe sus valores sobre esos cambios |
 | **Se parece a una línea existente** | Las filas nuevas que se parecen a una línea que ya existe, y lo que pasa con cada una. Vea [Filas que se parecen a una línea existente](#lookalike-lines) |
-| **Advertencias** | Una fila que se parece a otra fila del archivo, un `company_name` distinto de la empresa del centro de coste de la fila, un importe que hace que una columna deje de seguir sus líneas de cálculo, un importe, una fecha o una moneda inusuales (vea [Advertencias de coherencia](#consistency-warnings)), columnas y celdas que el archivo ignora |
+| **Advertencias** | Una fila que se parece a otra fila del archivo, un `company_name` distinto de la empresa del centro de coste de la fila, un importe que hace que una columna deje de seguir sus líneas de cálculo, un importe, una fecha o una moneda inusuales, un importe en una cuenta que espera una introducción por cantidad y precio (vea [Advertencias de coherencia](#consistency-warnings)), columnas y celdas que el archivo ignora |
 | **N valores asociados** | Los proveedores, las empresas y los valores de dimensión del archivo leídos como un valor existente, plegados. Despliegue la línea para ver cada asociación, por ejemplo `Tipo de coste: Matériel → Hardware`. **Deshacer** conserva el valor tal como está escrito: la carga lo crea, o la comprobación lo rechaza cuando no se puede crear. **Volver a asociar** restablece la asociación. Un valor que solo difiere en mayúsculas y minúsculas es el mismo valor y no se lista |
 | **Creados por la carga** | Los proveedores y los valores de dimensión que la carga añadiría. Señale un valor subrayado para ver los nombres existentes parecidos |
 
@@ -172,6 +172,7 @@ La comprobación también señala los valores que parecen inusuales. Son adverte
 - Un importe diez veces superior o inferior al de las líneas comparables: la línea que la fila actualiza, o las demás líneas del mismo proveedor.
 - Una fecha de inicio posterior a los años de los importes, o una fecha de fin anterior a ellos.
 - Una moneda distinta de la de la empresa pagadora.
+- Un importe en una cuenta que espera una introducción por cantidad y precio, que deja la línea por verificar (vea [Cuando la cuenta espera una introducción por cantidad y precio](budget-lines.md#quantity-and-price-expected)). Lo mismo vale para una línea que el archivo pasa a una cuenta así desde una cuenta que no lo espera, para las columnas que ya tiene. La advertencia nombra la cuenta y las columnas que se completan en la pestaña **Presupuesto** de la línea, por ejemplo «La cuenta 6100 espera una introducción por cantidad y precio: complete Presupuesto 2026 en la pestaña Presupuesto de la línea.»
 
 ### Columnas calculadas por cantidad y precio
 
