@@ -188,5 +188,5 @@ export async function assertCreatorAloneSinceCreation(
     if (!locked.length) return;
   }
   if ((await countOtherAuthorsSinceCreation(manager, tenantId, table, recordId, userId)) > 0) throw creationCancelExpired();
-  await assertNoCreationLinks(manager, tenantId, table, recordId, userId);
+  await assertNoCreationLinks(manager, tenantId, table, recordId, userId, { lock: options.lock });
 }

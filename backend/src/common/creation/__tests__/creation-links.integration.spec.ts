@@ -184,6 +184,155 @@ async function testDocumentLinks() {
   });
 }
 
+// The other cascade children no history row records (lot N1b, option (a)): each one set by another
+// record refuses its family's Cancel and nothing goes; an activity, a comment or a review request
+// refuses only when another person wrote it. Without the child, Cancel passes.
+type ChildCase = {
+  family: Family;
+  child: string;
+  /** Writes the child on the record, as `authorId` when the row has an author. */
+  write: (runner: QueryRunner, recordId: string, authorId: string) => Promise<unknown>;
+  authored?: true;
+};
+
+const EXTRA_FAMILIES: Record<string, Family> = {
+  business_processes: { table: 'business_processes', relation: '', insert: (r, t, n) => id(r, `INSERT INTO business_processes (tenant_id, name) VALUES ($1, $2)`, [t, `Process ${n}`]) },
+  contacts: { table: 'contacts', relation: '', insert: (r, t, n) => id(r, `INSERT INTO contacts (tenant_id, email, item_number) VALUES ($1, $2, $3)`, [t, `contact-${n}@example.com`, n]) },
+  departments: {
+    table: 'departments',
+    relation: '',
+    insert: async (r, t, n) => {
+      const company = await id(r, `INSERT INTO companies (tenant_id, name, country_iso, city, item_number) VALUES ($1, $2, 'FR', 'Lyon', $3)`, [t, `Company ${n}`, n]);
+      return id(r, `INSERT INTO departments (tenant_id, company_id, name, item_number) VALUES ($1, $2, $3, $4)`, [t, company, `Department ${n}`, n]);
+    },
+  },
+  documents: {
+    table: 'documents',
+    relation: '',
+    insert: async (r, t, n) => {
+      const library = await id(r, `INSERT INTO document_libraries (tenant_id, name, slug) VALUES ($1, $2, $3)`, [t, `Library ${n}`, `library-${n}-${randomUUID().slice(0, 6)}`]);
+      return id(r, `INSERT INTO documents (tenant_id, library_id, title, item_number, status) VALUES ($1, $2, $3, $4, 'draft')`, [t, library, `Doc ${n}`, 1000 + n]);
+    },
+  },
+};
+
+const family = (table: string) => FAMILIES.find((row) => row.table === table) ?? EXTRA_FAMILIES[table];
+
+function childCases(seeded: Seeded): ChildCase[] {
+  const other = async (runner: QueryRunner, table: string) => family(table).insert(runner, seeded.tenantId, ++numbers);
+  const technology = (runner: QueryRunner) => id(runner, `INSERT INTO technologies (tenant_id, item_number, name) VALUES ($1, $2, $3)`, [seeded.tenantId, ++numbers, `Tech ${numbers}`]);
+  const pair = (child: string, recordColumn: string, otherColumn: string, otherOf: (runner: QueryRunner) => Promise<string>) =>
+    async (runner: QueryRunner, recordId: string) =>
+      runner.query(`INSERT INTO ${child} (tenant_id, ${recordColumn}, ${otherColumn}) VALUES ($1, $2, $3)`, [seeded.tenantId, recordId, await otherOf(runner)]);
+  const activity = (column: string) => (runner: QueryRunner, recordId: string, authorId: string) =>
+    runner.query(`INSERT INTO portfolio_activities (tenant_id, ${column}, author_id, type, content) VALUES ($1, $2, $3, 'comment', 'Seen.')`, [seeded.tenantId, recordId, authorId]);
+  return [
+    { family: family('applications'), child: 'incident_applications', write: pair('incident_applications', 'application_id', 'incident_id', (r) => other(r, 'incidents')) },
+    { family: family('applications'), child: 'task_applications', write: pair('task_applications', 'application_id', 'task_id', (r) => other(r, 'tasks')) },
+    { family: family('applications'), child: 'interface_middleware_applications', write: pair('interface_middleware_applications', 'application_id', 'interface_id', (r) => other(r, 'interfaces')) },
+    { family: family('assets'), child: 'incident_assets', write: pair('incident_assets', 'asset_id', 'incident_id', (r) => other(r, 'incidents')) },
+    { family: family('assets'), child: 'task_assets', write: pair('task_assets', 'asset_id', 'task_id', (r) => other(r, 'tasks')) },
+    {
+      family: family('business_processes'),
+      child: 'portfolio_request_business_processes',
+      write: pair('portfolio_request_business_processes', 'business_process_id', 'request_id', (r) => other(r, 'portfolio_requests')),
+    },
+    { family: family('contacts'), child: 'application_support_contacts', write: pair('application_support_contacts', 'contact_id', 'application_id', (r) => other(r, 'applications')) },
+    { family: family('contacts'), child: 'asset_support_contacts', write: pair('asset_support_contacts', 'contact_id', 'asset_id', (r) => other(r, 'assets')) },
+    { family: family('contacts'), child: 'location_contacts', write: pair('location_contacts', 'contact_id', 'location_id', (r) => other(r, 'locations')) },
+    { family: family('contacts'), child: 'portfolio_project_contacts', write: pair('portfolio_project_contacts', 'contact_id', 'project_id', (r) => other(r, 'portfolio_projects')) },
+    { family: family('contacts'), child: 'portfolio_request_contacts', write: pair('portfolio_request_contacts', 'contact_id', 'request_id', (r) => other(r, 'portfolio_requests')) },
+    { family: family('contacts'), child: 'technology_support_contacts', write: pair('technology_support_contacts', 'contact_id', 'technology_id', technology) },
+    { family: family('departments'), child: 'application_departments', write: pair('application_departments', 'department_id', 'application_id', (r) => other(r, 'applications')) },
+    {
+      family: family('portfolio_projects'),
+      child: 'portfolio_request_dependencies',
+      write: pair('portfolio_request_dependencies', 'depends_on_project_id', 'request_id', (r) => other(r, 'portfolio_requests')),
+    },
+    { family: family('portfolio_projects'), child: 'portfolio_activities', write: activity('project_id'), authored: true },
+    { family: family('portfolio_requests'), child: 'portfolio_activities', write: activity('request_id'), authored: true },
+    { family: family('tasks'), child: 'portfolio_activities', write: activity('task_id'), authored: true },
+    {
+      family: family('documents'),
+      child: 'document_activities',
+      write: (runner, recordId, authorId) =>
+        runner.query(`INSERT INTO document_activities (tenant_id, document_id, author_id, type, content) VALUES ($1, $2, $3, 'comment', 'Seen.')`, [seeded.tenantId, recordId, authorId]),
+      authored: true,
+    },
+    {
+      family: family('documents'),
+      child: 'document_workflows',
+      write: (runner, recordId, authorId) =>
+        runner.query(`INSERT INTO document_workflows (tenant_id, document_id, status, requested_revision, requested_by) VALUES ($1, $2, 'pending_review', 1, $3)`, [seeded.tenantId, recordId, authorId]),
+      authored: true,
+    },
+  ];
+}
+
+async function childCount(runner: QueryRunner, seeded: Seeded, testCase: ChildCase, recordId: string): Promise<number> {
+  const link = CREATION_CANCEL_LINKS[testCase.family.table].find((row) => row.table === testCase.child)!;
+  const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM ${link.table} WHERE tenant_id = $1 AND ${link.column} = $2`, [seeded.tenantId, recordId]);
+  return n;
+}
+
+async function testOtherChildren() {
+  await inRolledBackTransaction(async (runner) => {
+    const seeded = await seedTenant(runner);
+    for (const table of Object.keys(EXTRA_FAMILIES)) {
+      await cancels(runner, seeded, family(table), await created(runner, seeded, family(table)), `${table} without a child`);
+    }
+    for (const testCase of childCases(seeded)) {
+      const label = `${testCase.family.table} with ${testCase.child}`;
+      if (testCase.authored) {
+        // The creator's own row does not refuse.
+        const own = await created(runner, seeded, testCase.family);
+        await testCase.write(runner, own.id, seeded.creatorId);
+        await cancels(runner, seeded, testCase.family, own, `${label} of the creator`);
+      }
+      const record = await created(runner, seeded, testCase.family);
+      await testCase.write(runner, record.id, seeded.otherId);
+      await refuses(runner, seeded, testCase.family, record, label);
+      assert.equal(await childCount(runner, seeded, testCase, record.id), 1, `${label}: the child stays`);
+      console.log(`    ok ${label}`);
+    }
+  });
+}
+
+async function testInterfaceBindingConnections() {
+  await inRolledBackTransaction(async (runner) => {
+    const seeded = await seedTenant(runner);
+    const interfaces = family('interfaces');
+    const t = seeded.tenantId;
+    const withBinding = async () => {
+      const record = await created(runner, seeded, interfaces);
+      const [row] = await runner.query(`SELECT source_application_id AS source, target_application_id AS target FROM interfaces WHERE tenant_id = $1 AND id = $2`, [t, record.id]);
+      const instance = (applicationId: string) => id(runner, `INSERT INTO app_instances (tenant_id, application_id, environment) VALUES ($1, $2, 'prod')`, [t, applicationId]);
+      const leg = await id(
+        runner,
+        `INSERT INTO interface_legs (tenant_id, interface_id, leg_type, from_role, to_role, trigger_type, integration_pattern, data_format, order_index)
+         VALUES ($1, $2, 'source', 'source', 'target', 'schedule', 'batch', 'json', 1)`,
+        [t, record.id],
+      );
+      const binding = await id(
+        runner,
+        `INSERT INTO interface_bindings (tenant_id, interface_id, interface_leg_id, environment, source_instance_id, target_instance_id) VALUES ($1, $2, $3, 'prod', $4, $5)`,
+        [t, record.id, leg, await instance(row.source), await instance(row.target)],
+      );
+      return { record, binding };
+    };
+    // The creator's own binding, unlinked: Cancel passes.
+    const unlinked = await withBinding();
+    await cancels(runner, seeded, interfaces, unlinked.record, 'an interface with an unlinked binding');
+    // A connection linked to its binding (from the connection): refused, the link stays.
+    const linked = await withBinding();
+    const connection = await id(runner, `INSERT INTO connections (tenant_id, name, topology, lifecycle, risk_mode) VALUES ($1, 'Web out', 'server_to_server', 'active', 'manual')`, [t]);
+    await runner.query(`INSERT INTO interface_connection_links (tenant_id, interface_binding_id, connection_id) VALUES ($1, $2, $3)`, [t, linked.binding, connection]);
+    await refuses(runner, seeded, interfaces, linked.record, 'an interface whose binding carries a connection');
+    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM interface_connection_links WHERE tenant_id = $1 AND interface_binding_id = $2`, [t, linked.binding]);
+    assert.equal(n, 1, 'the link stays');
+  });
+}
+
 async function testIncidentJournal() {
   await inRolledBackTransaction(async (runner) => {
     const seeded = await seedTenant(runner);
@@ -229,6 +378,10 @@ async function main() {
   try {
     await testDocumentLinks();
     console.log('  ok testDocumentLinks');
+    await testOtherChildren();
+    console.log('  ok testOtherChildren');
+    await testInterfaceBindingConnections();
+    console.log('  ok testInterfaceBindingConnections');
     await testIncidentJournal();
     console.log('  ok testIncidentJournal');
     await testOtherTenant();

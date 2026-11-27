@@ -121,6 +121,53 @@ async function testCreatorCancelsTheCreation() {
   });
 }
 
+/**
+ * A person edits a managed document of the request as its save does: the content, then a version
+ * of its own (`KnowledgeService.ensureVersionSnapshot`).
+ */
+async function editManagedDocumentAs(runner: QueryRunner, tenantId: string, recordId: string, slotKey: string, userId: string, content: string) {
+  const [doc] = await runner.query(
+    `UPDATE documents d SET content_markdown = $4, updated_by = $5, current_version_number = d.current_version_number + 1
+       FROM integrated_document_bindings b
+      WHERE b.tenant_id = $1 AND b.source_entity_id = $2 AND b.slot_key = $3 AND d.id = b.document_id AND d.tenant_id = b.tenant_id
+      RETURNING d.id, d.title, d.current_version_number`,
+    [tenantId, recordId, slotKey, content, userId],
+  );
+  const row = doc[0];
+  await runner.query(
+    `INSERT INTO document_versions (tenant_id, document_id, version_number, title, content_markdown, content_plain, created_by)
+     VALUES ($1, $2, (SELECT coalesce(max(version_number), 0) + 1 FROM document_versions WHERE tenant_id = $1 AND document_id = $2), $3, $4, $4, $5)`,
+    [tenantId, row.id, row.title, content, userId],
+  );
+}
+
+// Lot N1b: another person wrote the request's purpose (a version of their own): the creator's
+// Cancel is refused, before and under the lock, and the request and its documents stay. The
+// creator's own versions are only counted.
+async function testPurposeWrittenByAnotherPerson() {
+  await inRolledBackTransaction(async (runner) => {
+    const seed = await seedCreationTenant(runner, { portfolio_requests: 'member' });
+    const { tenantId, creatorId, otherId } = seed;
+    const { controller } = controllerFor(runner);
+    const asCreator = req(seed, creatorId, runner);
+
+    const own: any = await controller.create({ name: 'Purpose by its creator' }, asCreator);
+    await editManagedDocumentAs(runner, tenantId, own.id, 'purpose', creatorId, 'Why we need it.');
+    const counted = await controller.creationChanges(own.id, own.creation_token, asCreator);
+    assert.deepEqual(counted, { changes: { fields: 0, children: { document: 1 } } }, 'the creator\'s purpose is counted');
+    await controller.cancelCreation(own.id, { token: own.creation_token }, asCreator);
+    assert.equal(await boundDocuments(runner, tenantId, 'requests', own.id), 0, 'cancelled with its documents');
+
+    const theirs: any = await controller.create({ name: 'Purpose by another person' }, asCreator);
+    await editManagedDocumentAs(runner, tenantId, theirs.id, 'purpose', otherId, 'Why the business needs it.');
+    await refusedAsExpired(controller.creationChanges(theirs.id, theirs.creation_token, asCreator), 'another person\'s purpose, preflight');
+    await refusedAsExpired(controller.cancelCreation(theirs.id, { token: theirs.creation_token }, asCreator), 'another person\'s purpose');
+    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM portfolio_requests WHERE tenant_id = $1 AND id = $2`, [tenantId, theirs.id]);
+    assert.equal(n, 1, 'the request stays');
+    assert.equal(await boundDocuments(runner, tenantId, 'requests', theirs.id), 2, 'its documents stay');
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   try {
@@ -128,6 +175,8 @@ async function main() {
     console.log('  ok testRoutesNeedTheCreateLevel');
     await testCreatorCancelsTheCreation();
     console.log('  ok testCreatorCancelsTheCreation');
+    await testPurposeWrittenByAnotherPerson();
+    console.log('  ok testPurposeWrittenByAnotherPerson');
   } finally {
     await dataSource.destroy();
     await closeMarkdownWorkers();

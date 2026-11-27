@@ -20,15 +20,19 @@ import { assert, describe, progress, runRaceSpecs, settle, sql, withRace, type O
 // - child first: the cancel waits, then reads the child under its lock and is refused (403
 //   `CREATION_CANCEL_EXPIRED`); the record and the child stay.
 // Neither child leaves a row of the record's history: only the read under the lock sees it.
+// A managed document's version (another person writes the application's description) takes the
+// key of the document, not the record's: the cancel locks the record's managed documents too, so
+// the edit's write of the document waits for the cancel, and the cancel for a pending edit.
 // (The connections' links race in `connections/__tests__/connection-cancel-linked-race`.)
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'creation-links-race-spec-secret';
 
-type Kind = 'document' | 'note';
+type Kind = 'document' | 'note' | 'managed';
 
 const FORM: Record<Kind, { table: string; child: string; column: string }> = {
   document: { table: 'applications', child: 'document_applications', column: 'application_id' },
   note: { table: 'incidents', child: 'incident_entries', column: 'incident_id' },
+  managed: { table: 'applications', child: 'document_versions', column: 'document_id' },
 };
 
 async function seedRace(race: Race, kind: Kind) {
@@ -42,11 +46,17 @@ async function seedRace(race: Race, kind: Kind) {
     );
     const creatorId = await user('Creator');
     const otherId = await user('Other');
-    const recordId = kind === 'document'
+    const recordId = kind !== 'note'
       ? await id(`INSERT INTO applications (tenant_id, name, status) VALUES ($1, $2, 'enabled')`, [race.tenantId, `App ${tag}`])
       : await id(`INSERT INTO incidents (tenant_id, item_number, title, severity, status) VALUES ($1, 1, $2, 'minor', 'open')`, [race.tenantId, `Incident ${tag}`]);
     const library = await id(`INSERT INTO document_libraries (tenant_id, name, slug) VALUES ($1, $2, $3)`, [race.tenantId, `Library ${tag}`, `library-${tag}`]);
     const document = await id(`INSERT INTO documents (tenant_id, library_id, title, item_number, status) VALUES ($1, $2, 'Runbook', 1, 'published')`, [race.tenantId, library]);
+    if (kind === 'managed') {
+      await runner.query(
+        `INSERT INTO integrated_document_bindings (tenant_id, source_entity_type, source_entity_id, slot_key, document_id) VALUES ($1, 'applications', $2, 'description', $3)`,
+        [race.tenantId, recordId, document],
+      );
+    }
     return { creatorId, otherId, recordId, document };
   });
   const { creation_token: token } = withCreationToken(FORM[kind].table, { id: seeded.recordId }, { tenantId: race.tenantId, userId: seeded.creatorId });
@@ -57,24 +67,44 @@ type Seeded = Awaited<ReturnType<typeof seedRace>>;
 
 /** The other person's child, as its writer sets it: a document's relation, a journal note. */
 function write(kind: Kind, seeded: Seeded, manager: EntityManager, tenantId: string): Promise<unknown> {
+  if (kind === 'managed') return editManaged(seeded, manager, tenantId);
   if (kind === 'document') {
     return (Object.create(KnowledgeService.prototype) as KnowledgeService).addDocumentRelationByEntity(seeded.document, 'applications', seeded.recordId, manager);
   }
   return new IncidentEntriesService(dataSource.getRepository(Incident)).createNote(seeded.recordId, { content: 'Seen at 9:00.' }, seeded.otherId, { manager, tenantId });
 }
 
+/** Another person's save of the managed document, in the order of `KnowledgeService.update`. */
+async function editManaged(seeded: Seeded, manager: EntityManager, tenantId: string) {
+  await manager.query(
+    `UPDATE documents SET content_markdown = 'Written by the other person.', updated_by = $3, current_version_number = current_version_number + 1
+      WHERE tenant_id = $1 AND id = $2`,
+    [tenantId, seeded.document, seeded.otherId],
+  );
+  await manager.query(
+    `INSERT INTO document_versions (tenant_id, document_id, version_number, title, content_markdown, content_plain, created_by)
+     VALUES ($1, $2, 1, 'Runbook', 'Written by the other person.', 'Written by the other person.', $3)`,
+    [tenantId, seeded.document, seeded.otherId],
+  );
+}
+
 function cancel(kind: Kind, seeded: Seeded, manager: EntityManager, tenantId: string) {
   const { table } = FORM[kind];
-  return cancelCreation(table, seeded.recordId, seeded.token, { tenantId, userId: seeded.creatorId, manager }, (m) =>
-    m.query(`DELETE FROM ${table} WHERE tenant_id = $1 AND id = $2`, [tenantId, seeded.recordId]));
+  return cancelCreation(table, seeded.recordId, seeded.token, { tenantId, userId: seeded.creatorId, manager }, async (m) => {
+    // The managed documents name the record without a foreign key: the delete removes them first.
+    if (kind === 'managed') await m.query(`DELETE FROM documents WHERE tenant_id = $1 AND id = $2`, [tenantId, seeded.document]);
+    await m.query(`DELETE FROM ${table} WHERE tenant_id = $1 AND id = $2`, [tenantId, seeded.recordId]);
+  });
 }
 
 async function stateOf(race: Race, kind: Kind, seeded: Seeded) {
   const { table, child, column } = FORM[kind];
   const row = await race.readOne(
     `SELECT (SELECT count(*)::int FROM ${table} WHERE tenant_id = $1 AND id = $2) AS record,
-            (SELECT count(*)::int FROM ${child} WHERE tenant_id = $1 AND ${column} = $2${kind === 'note' ? ' AND author_id = $3::uuid' : ''}) AS children`,
-    kind === 'note' ? [race.tenantId, seeded.recordId, seeded.otherId] : [race.tenantId, seeded.recordId],
+            (SELECT count(*)::int FROM ${child} WHERE tenant_id = $1 AND ${column} = $3${kind === 'document' ? '' : ' AND ' + (kind === 'note' ? 'author_id' : 'created_by') + ' = $4::uuid'}) AS children`,
+    kind === 'document'
+      ? [race.tenantId, seeded.recordId, seeded.recordId]
+      : [race.tenantId, seeded.recordId, kind === 'managed' ? seeded.document : seeded.recordId, seeded.otherId],
   );
   return { record: Number(row.record), children: Number(row.children) };
 }
@@ -97,11 +127,12 @@ async function cancelFirst(kind: Kind) {
     const seeded = await seedRace(race, kind);
     const canceller = await race.open('canceller');
     const writer = await race.open('writer');
-    const locked = race.gate(canceller, { label: 'after its lock', when: 'after', match: sql.lockOn(FORM[kind].table) });
+    // The managed document's lock comes after the record's: the edit waits on that one.
+    const locked = race.gate(canceller, { label: 'after its lock', when: 'after', match: sql.lockOn(kind === 'managed' ? 'documents' : FORM[kind].table) });
     const cancelling = race.start(canceller, (manager) => cancel(kind, seeded, manager, race.tenantId));
     assert.equal(await progress(cancelling, { party: canceller, gate: locked }), 'gated', 'the cancel holds the lock');
     const writing = race.start(writer, (manager) => write(kind, seeded, manager, race.tenantId));
-    assert.equal(await progress(writing, { party: writer }), 'blocked', 'the child waits for the lock through its foreign key');
+    assert.equal(await progress(writing, { party: writer }), 'blocked', 'the child waits for the lock through its foreign key (the edit, on the document)');
     locked.release();
     const cancelled = await settle(cancelling);
     assert.ok(cancelled.ok, `the cancel must succeed; it ${describe(cancelled)}`);
@@ -131,6 +162,8 @@ async function childFirst(kind: Kind) {
 void runRaceSpecs('Creation cancel and children', [
   ['cancel first, then a document linked to the application: fails on the record gone', () => cancelFirst('document')],
   ['cancel first, then another person\'s note on the incident: fails on the record gone', () => cancelFirst('note')],
+  ['cancel first, then another person\'s edit of the managed document: fails on the document gone', () => cancelFirst('managed')],
   ['a document linked first, then the cancel: refused under the lock', () => childFirst('document')],
   ['another person\'s note first, then the cancel: refused under the lock', () => childFirst('note')],
+  ['another person\'s edit of the managed document first, then the cancel: refused under the lock', () => childFirst('managed')],
 ]);
