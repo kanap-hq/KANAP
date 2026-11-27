@@ -13,6 +13,7 @@ import { assert, assertSucceeded, describe, pgCode, progress, runRaceSpecs, sett
 //   its description): the second one's binding meets the first one's; it is made under a savepoint
 //   (`ensureBoundDocument`), so both succeed, with one document.
 // - A: an autosave of the overview document against an import of the description, both orders.
+// - P: the page making the overview document while the application is deleted.
 
 process.env.JWT_SECRET ||= 'test-jwt-secret';
 process.env.STRIPE_SECRET_KEY = '';
@@ -202,6 +203,33 @@ async function autosaveAgainstImport(importFirst: boolean) {
   });
 }
 
+/** P: the page opens an application with no document (it makes it) while the application is deleted. */
+async function pageAgainstDelete() {
+  await withRace('app-desc-page-during-delete', async (race) => {
+    const s = await prepare(race, false);
+    const [{ n: documentsBefore }] = await race.read('SELECT count(*)::int AS n FROM documents');
+    const d = await race.open('delete of the application');
+    const page = await race.open('the page opens the application');
+    const gate = race.gate(d, { label: 'the application locked', when: 'after', match: (t) => DELETE_LOCK.test(t) });
+    const deleting = race.start(d, (m) => h.deletes.delete(s.appId, { manager: m, userId: s.userId }));
+    assert.equal(await progress(deleting, { party: d, gate }), 'gated', 'harness: the delete must pause holding the application');
+    const opening = race.start(page, (m) => h.docs.getBySource('applications', s.appId, 'overview', s.userId, { manager: m }));
+    assert.equal(await progress(opening, { party: page }), 'blocked', 'the page waits for the delete before making the document');
+    gate.release();
+    const deleted = await settle(deleting);
+    const opened = await settle(opening);
+    assert.ok(!deadlocked(deleted) && !deadlocked(opened), `no deadlock: delete ${describe(deleted)}, page ${describe(opened)}`);
+    assertSucceeded(deleted, 'the delete');
+    assert.equal(opened.ok, false, `the page finds the application gone, got ${describe(opened)}`);
+    assert.match(String((opened as any).error?.message), /not found/i);
+    const left = await race.read(
+      `SELECT (SELECT count(*)::int FROM integrated_document_bindings WHERE source_entity_type = 'applications' AND source_entity_id = $1) AS bindings,
+              (SELECT count(*)::int FROM documents) AS documents`,
+      [s.appId]);
+    assert.deepEqual(left[0], { bindings: 0, documents: documentsBefore }, 'no document outlives the application');
+  });
+}
+
 void (async () => {
   await boot();
   try {
@@ -214,6 +242,7 @@ void (async () => {
       ['C2: a PATCH first, then the page opens, no document yet: both succeed', () => firstWriters(false)],
       ['A1: an import writes the description first, then an autosave that read the old revision: 409, the imported text stays', () => autosaveAgainstImport(true)],
       ['A2: an autosave first, then an import: the import writes over it, the next autosave gets a 409', () => autosaveAgainstImport(false)],
+      ['P1: the delete first, then the page opens the application with no document: no document left', () => pageAgainstDelete()],
     ]);
   } finally {
     await h.app.close();

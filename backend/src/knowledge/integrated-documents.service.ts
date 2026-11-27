@@ -2318,6 +2318,11 @@ export class IntegratedDocumentsService {
     },
   ): Promise<{ id: string }> {
     const { initialContent, slotSetting, provisioningContext, explicitContent, userId, manager, opts } = input;
+    // A record being deleted holds its row until the delete commits: the document waits for it, then
+    // finds the record gone instead of outliving it.
+    if (!await this.lockSourceRow(sourceEntityType, source.id, manager)) {
+      throw new NotFoundException(`${sourceEntityType.slice(0, -1)} not found`);
+    }
     const created = await this.knowledge.createManagedDocument(
       {
         tenantId: source.tenant_id,
