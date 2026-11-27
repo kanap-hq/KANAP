@@ -11,7 +11,9 @@ import { readEntryChecks } from '../../spend/budget-line-entry-check';
 //
 // - The change in bulk of the screen (`BudgetLinesService.bulkUpdate`, the common contract): the dry
 //   run and the write count the written rows the list's "To check" column will show (every check),
-//   an account ticked or not, rows already to check, a frozen or hidden column; nothing refused.
+//   an account ticked or not, rows already to check, a frozen or hidden column; nothing refused. The
+//   count of 500 lines the statistics do not know stays within its time limit; a count that does not
+//   finish leaves the write done, answered without the number.
 // - Kad's card in bulk: the same count at the preview and once written, the warning while it waits
 //   for an account that expects quantity and price, a limited person's own lines only.
 // - Kad's cards of one line: its amounts (`write_financial_plan` upsert_amounts), a new line with its
@@ -276,6 +278,109 @@ async function testScreenBulk(harness: Harness) {
   });
 }
 
+/**
+ * The count of a change in bulk of 500 lines, in the transaction that created them (the statistics do
+ * not know them, as after a load not analysed yet): under the count's own time limit, every line is
+ * counted, and the statement reads the selection's versions once (the reviewer's 102 s case, lot B12b).
+ */
+async function testCountOfFiveHundred(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    const ids: string[] = (await runner.query(
+      `WITH li AS (
+         INSERT INTO spend_items (tenant_id, nature, item_number, product_name, currency, effective_start, status, paying_company_id, account_id)
+         SELECT $1, 'opex', 1000 + g, 'Bulk ' || g, 'EUR', '2020-01-01', 'enabled', CASE WHEN g % 2 = 0 THEN $2::uuid ELSE $3::uuid END, $4
+           FROM generate_series(1, 500) g RETURNING id)
+       SELECT id::text AS id FROM li`, [seed.tenantId, seed.companies.a, seed.companies.b, seed.accounts.tick])).map((r: any) => r.id);
+    await runner.query(
+      `WITH v AS (INSERT INTO spend_versions (tenant_id, spend_item_id, version_name, as_of_date, budget_year)
+                  SELECT $1, id, 'Y' || $3::int, make_date($3::int, 1, 1), $3::int FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[]) RETURNING id)
+       INSERT INTO spend_amounts (tenant_id, version_id, period, planned)
+       SELECT $1, v.id, make_date($3::int, m, 1), 100 FROM v CROSS JOIN generate_series(1, 12) m`, [seed.tenantId, ids, Y]);
+    const { budgetListLineChecksByIds } = require('../../spend/budget-list/budget-list.service');
+    const { SUMMARY_SCOPES } = require('../../spend/spend-summary.builder');
+    const { BULK_TO_CHECK_LIMITS } = require('../../common/bulk-edit/bulk-edit');
+    const deps = { fxRates: (harness.budgetLines as any).fxRates, access: undefined };
+    const statements: string[] = [];
+    const original = runner.manager.query.bind(runner.manager);
+    (runner.manager as any).query = (sql: string, params?: unknown[]) => { statements.push(sql); return original(sql, params); };
+    await runner.query(`SAVEPOINT five_hundred`);
+    await runner.query(`SELECT set_config('statement_timeout', $1, true)`, [BULK_TO_CHECK_LIMITS.statementTimeout]);
+    const started = Date.now();
+    let counted: Map<string, unknown>;
+    try {
+      counted = await budgetListLineChecksByIds(SUMMARY_SCOPES.all, deps, runner.manager, ids);
+    } finally {
+      (runner.manager as any).query = original;
+      await runner.query(`ROLLBACK TO SAVEPOINT five_hundred`);
+    }
+    const elapsed = Date.now() - started;
+    assert.equal(counted.size, 500, 'every line counted within the count\'s time limit');
+    assert.ok(statements.some((sql) => /ec_selection_versions AS MATERIALIZED/.test(sql)), 'the selection\'s versions read once');
+    await runner.query(`INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, access) VALUES ($1, $2, 'company', $3, 'edit')`,
+      [seed.tenantId, seed.users.limited, seed.companies.a]);
+    if ((await runner.query(`SELECT to_regrole('kanap_data_limited') IS NOT NULL AS present`))[0].present) {
+      await runner.query(`SAVEPOINT five_hundred_limited`);
+      await runner.query(`SELECT data_access_apply($1)`, [seed.users.limited]);
+      await runner.query(`SELECT set_config('statement_timeout', $1, true)`, [BULK_TO_CHECK_LIMITS.statementTimeout]);
+      try {
+        const limited = await budgetListLineChecksByIds(SUMMARY_SCOPES.all, deps, runner.manager, ids);
+        assert.equal(limited.size, 250, 'a limited person: the lines of their company');
+      } finally {
+        await runner.query(`ROLLBACK TO SAVEPOINT five_hundred_limited`);
+      }
+    }
+    console.log(`  the count of a change in bulk of 500 lines the statistics do not know: ${elapsed} ms: OK`);
+  });
+}
+
+/**
+ * The count is optional: when it does not finish (forced here past its time limit), the change in
+ * bulk still writes and answers without the number, the transaction goes on, and the person's own
+ * time limit is the one in force afterwards, as it is after a count that finished.
+ */
+async function testCountThatFails(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    const opts = { manager: runner.manager };
+    const listService = require('../../spend/budget-list/budget-list.service');
+    const limits = require('../../common/bulk-edit/bulk-edit').BULK_TO_CHECK_LIMITS;
+    const timeout = async () => (await runner.query(`SELECT current_setting('statement_timeout') AS s`))[0].s as string;
+    const ids = [seed.lines[1], seed.lines[2]];
+    const write = async () => {
+      const dry = await harness.budgetLines.bulkUpdate({ ids, changes: { account_id: seed.accounts.tick }, dry_run: true }, seed.users.member, opts);
+      const done = await harness.budgetLines.bulkUpdate({ ids, changes: { account_id: seed.accounts.tick }, as_of: dry.as_of, expected_rows: dry.rows, fingerprint: dry.fingerprint }, seed.users.member, opts);
+      return { dry, done };
+    };
+    await savepoint(runner, async () => {
+      await runner.query(`SET LOCAL statement_timeout = '45s'`);
+      const { done } = await write();
+      assert.deepEqual(done.to_check, { rows: 2, checks: { quantity_price: 2 } });
+      assert.equal(await timeout(), '45s', 'the time limit in force before the count, after it');
+    });
+    const original = listService.budgetListLineChecksByIds;
+    const limit = limits.statementTimeout;
+    listService.budgetListLineChecksByIds = async (_scope: unknown, _deps: unknown, manager: any) => {
+      await manager.query(`SELECT pg_sleep(2)`);
+      return new Map();
+    };
+    limits.statementTimeout = '200ms';
+    try {
+      await savepoint(runner, async () => {
+        await runner.query(`SET LOCAL statement_timeout = '45s'`);
+        const { dry, done } = await write();
+        assert.equal(dry.to_check, undefined, 'the dry run answers without the number');
+        assert.deepEqual([done.changed, done.to_check], [2, undefined], 'the write is done and answers without the number');
+        assert.equal(await timeout(), '45s', 'the time limit in force before the count, after it');
+        const accounts = await runner.query(`SELECT account_id FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [seed.tenantId, ids]);
+        assert.deepEqual(accounts.map((row: any) => row.account_id), [seed.accounts.tick, seed.accounts.tick], 'the lines are written');
+      });
+    } finally {
+      listService.budgetListLineChecksByIds = original;
+      limits.statementTimeout = limit;
+    }
+    console.log('  a count that does not finish: the change in bulk writes and answers without it: OK');
+  });
+}
+
 async function testKadBulkCard(harness: Harness) {
   await inSeed(harness, async (runner, seed) => {
     const ctx = context(seed, runner, 'bulk');
@@ -406,6 +511,8 @@ async function run() {
   const harness = await createHarness();
   try {
     await testScreenBulk(harness);
+    await testCountOfFiveHundred(harness);
+    await testCountThatFails(harness);
     await testKadBulkCard(harness);
     await testKadBulkLimited(harness);
     await testKadLineCards(harness);

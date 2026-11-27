@@ -125,15 +125,20 @@ export function expectedAccountsSql(stmt: Binder): string {
  *   check when the caller asks whether there is one (the list's field), where the join checked
  *   every round and every round line of the tenant.
  */
-function lineColumnsParts(stmt: Binder, line: string, settings: EntryCheckSettings): { from: string; where: string } {
+function lineColumnsParts(
+  stmt: Binder,
+  line: string,
+  settings: EntryCheckSettings,
+  sources: { versions: string; totals: string } = { versions: 'spend_versions', totals: 'spend_version_totals' },
+): { from: string; where: string } {
   const t = stmt.tenant;
   // Each measure is one of the five column names (`AMOUNT_MEASURES`): never request text.
   const values = AMOUNT_MEASURES.map((measure) => `('${measure}', vt.${measure})`).join(', ');
   const conforming = `SELECT 1 FROM spend_round_inputs er
         WHERE er.tenant_id = ${t} AND er.version_id = v.id AND er.measure = m.measure AND ${columnConformsSql('er')}`;
   return {
-    from: `spend_versions v
-    JOIN spend_version_totals vt ON vt.tenant_id = ${t} AND vt.version_id = v.id
+    from: `${sources.versions} v
+    JOIN ${sources.totals} vt ON vt.tenant_id = ${t} AND vt.version_id = v.id
     CROSS JOIN LATERAL (VALUES ${values}) m(measure, total)`,
     where: `v.tenant_id = ${t} AND v.spend_item_id = ${line}.id
       AND (${line}.disabled_at IS NULL OR v.budget_year <= extract(year FROM ${line}.disabled_at AT TIME ZONE 'UTC'))
@@ -144,8 +149,13 @@ function lineColumnsParts(stmt: Binder, line: string, settings: EntryCheckSettin
 }
 
 /** The columns to check of one line (`year`, `measure`), as a subquery on `line` (`lineColumnsParts`). */
-export function lineColumnsToCheckSql(stmt: Binder, line: string, settings: EntryCheckSettings): string {
-  const { from, where } = lineColumnsParts(stmt, line, settings);
+export function lineColumnsToCheckSql(
+  stmt: Binder,
+  line: string,
+  settings: EntryCheckSettings,
+  sources?: { versions: string; totals: string },
+): string {
+  const { from, where } = lineColumnsParts(stmt, line, settings, sources);
   return `SELECT v.budget_year AS year, m.measure FROM ${from} WHERE ${where}`;
 }
 
@@ -154,6 +164,12 @@ export function lineColumnsToCheckSql(stmt: Binder, line: string, settings: Entr
  * `expectedAccountsSql` named `accounts`. `natures`: the lines read; `itemIds`: only these lines
  * (a bound uuid array), else every line of the tenant. With every row readable, one flat join the
  * planner may hash; line by line, a subquery kept apart (`OFFSET 0`) that runs for each line.
+ *
+ * A selection first reads its versions and their totals once each (two materialised reads keyed by
+ * the selection), and the test runs on those rows. Joined to the tables themselves, statistics that
+ * do not know the tenant's rows yet (a load not analysed) let the planner scan every version of the
+ * tenant for each version of each line: 100 s for the count of a change in bulk of 500 lines (lot
+ * B12b), where these reads stay linear in the tenant's versions whatever the plan.
  */
 export function columnsToCheckSql(
   stmt: Binder,
@@ -165,15 +181,32 @@ export function columnsToCheckSql(
   const t = stmt.tenant;
   const lines = `${accounts} ea
     JOIN spend_items li ON li.tenant_id = ${t} AND li.account_id = ea.account_id${naturesAnd('li', natures)}${itemIds ? ` AND li.id = ANY(${itemIds})` : ''}`;
+  const sources = itemIds ? SELECTION_SOURCES : undefined;
+  let body: string;
   if (settings.lineByLine) {
-    return `SELECT li.id AS item_id, c.year, c.measure
+    const { from, where } = lineColumnsParts(stmt, 'li', settings, sources);
+    body = `SELECT li.id AS item_id, c.year, c.measure
     FROM ${lines}
-    CROSS JOIN LATERAL (${lineColumnsToCheckSql(stmt, 'li', settings)} OFFSET 0) c`;
-  }
-  const { from, where } = lineColumnsParts(stmt, 'li', settings);
-  return `SELECT li.id AS item_id, v.budget_year AS year, m.measure
+    CROSS JOIN LATERAL (SELECT v.budget_year AS year, m.measure FROM ${from} WHERE ${where} OFFSET 0) c`;
+  } else {
+    const { from, where } = lineColumnsParts(stmt, 'li', settings, sources);
+    body = `SELECT li.id AS item_id, v.budget_year AS year, m.measure
     FROM ${lines}, ${from}
     WHERE ${where}`;
+  }
+  return itemIds ? `SELECT ec_selection.* FROM (${selectionSourcesSql(stmt, itemIds)} ${body}) ec_selection` : body;
+}
+
+/** The versions and totals of a selection of lines, as `lineColumnsParts` reads them (`columnsToCheckSql` says why). */
+const SELECTION_SOURCES = { versions: 'ec_selection_versions', totals: 'ec_selection_totals' };
+
+/** The `WITH` that reads `SELECTION_SOURCES` once each, for the lines of `itemIds` (a bound uuid array). */
+function selectionSourcesSql(stmt: Binder, itemIds: string): string {
+  const t = stmt.tenant;
+  return `WITH ${SELECTION_SOURCES.versions} AS MATERIALIZED (SELECT * FROM spend_versions sv
+      WHERE sv.tenant_id = ${t} AND sv.spend_item_id = ANY(${itemIds})),
+    ${SELECTION_SOURCES.totals} AS MATERIALIZED (SELECT * FROM spend_version_totals st
+      WHERE st.tenant_id = ${t} AND st.version_id = ANY(ARRAY(SELECT id FROM ${SELECTION_SOURCES.versions})))`;
 }
 
 /**
@@ -331,10 +364,12 @@ export async function readColumnsToCheckOnAnyAccount(
   if (ids.length === 0) return result;
   const rule = settings ?? await loadEntryCheckSettings(manager, tenantId);
   const stmt = new SqlStatement(tenantId);
-  const query = stmt.finalize(`SELECT li.id::text AS item_id, c.year, c.measure
+  const bound = stmt.bind(ids, 'uuid[]');
+  const query = stmt.finalize(`${selectionSourcesSql(stmt, bound)}
+    SELECT li.id::text AS item_id, c.year, c.measure
     FROM spend_items li
-    CROSS JOIN LATERAL (${lineColumnsToCheckSql(stmt, 'li', rule)}) c
-    WHERE li.tenant_id = ${stmt.tenant}${naturesAnd('li', BUDGET_NATURES)} AND li.id = ANY(${stmt.bind(ids, 'uuid[]')})`);
+    CROSS JOIN LATERAL (${lineColumnsToCheckSql(stmt, 'li', rule, SELECTION_SOURCES)}) c
+    WHERE li.tenant_id = ${stmt.tenant}${naturesAnd('li', BUDGET_NATURES)} AND li.id = ANY(${bound})`);
   const rows: Array<{ item_id: string; year: number; measure: AmountMeasure }> = await manager.query(query.sql, query.params);
   for (const row of rows) {
     const list = result.get(row.item_id) ?? [];
