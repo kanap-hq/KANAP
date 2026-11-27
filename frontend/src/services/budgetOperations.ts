@@ -95,7 +95,8 @@ export type CopyBudgetResponse = {
   success: boolean;
   dryRun: boolean;
   scope: BudgetScope;
-  summary: { lines: number; amounts?: CopyPartSummary; allocations?: CopyPartSummary };
+  /** `toCheck`: the lines whose amounts the copy wrote that the list's "To check" column shows (a copy only). */
+  summary: { lines: number; amounts?: CopyPartSummary; allocations?: CopyPartSummary; toCheck?: { rows: number } };
   results: CopyBudgetLine[];
 };
 

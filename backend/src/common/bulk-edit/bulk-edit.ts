@@ -291,18 +291,24 @@ const DRY_RUN_SAVEPOINT = 'bulk_edit_dry_run';
 const ROW_SAVEPOINT = 'bulk_edit_row';
 const TO_CHECK_SAVEPOINT = 'bulk_edit_to_check';
 
-/** The longest the optional count of the rows to check may take (`countToCheck`); a spec shortens it. */
+/** The longest the optional count of the rows to check may take (`countToCheckWithin`); a spec shortens it. */
 export const BULK_TO_CHECK_LIMITS = { statementTimeout: '5s' };
 
 const logger = new Logger('BulkEdit');
 
 /**
- * The list's optional count of the rows written that are to check, which never fails the write: in a
+ * An optional count of the rows written that are to check (`count`), which never fails the write: in a
  * savepoint of its own, under a short statement timeout (the shorter of it and the transaction's),
  * the transaction's own put back after it (a `SET LOCAL` outlives the savepoint's release; a rollback
- * to the savepoint undoes it). On any error the change goes on without `to_check`, and a log line says so.
+ * to the savepoint undoes it). On any error the write goes on without it, and a log line says so
+ * (`what`: the write). The change in bulk, and the copy of budget columns (`budget-copy.ts`).
  */
-async function countToCheck(manager: EntityManager, list: BulkEditList<any>, written: string[]): Promise<BulkToCheck | undefined> {
+export async function countToCheckWithin(
+  manager: EntityManager,
+  what: string,
+  written: readonly string[],
+  count: (ids: string[]) => Promise<BulkToCheck>,
+): Promise<BulkToCheck | undefined> {
   const before: string = (await manager.query(`SELECT current_setting('statement_timeout') AS s`))[0]?.s ?? '0';
   await manager.query(`SAVEPOINT ${TO_CHECK_SAVEPOINT}`);
   try {
@@ -312,14 +318,14 @@ async function countToCheck(manager: EntityManager, list: BulkEditList<any>, wri
          CASE WHEN $1::text = '0' OR ($1::text)::interval > ($2::text)::interval THEN $2::text ELSE $1::text END, true)`,
       [before, BULK_TO_CHECK_LIMITS.statementTimeout],
     );
-    const counted = await list.toCheck!(written);
+    const counted = await count([...written]);
     await manager.query(`SELECT set_config('statement_timeout', $1, true)`, [before]);
     await manager.query(`RELEASE SAVEPOINT ${TO_CHECK_SAVEPOINT}`);
     return counted;
   } catch (error) {
     await manager.query(`ROLLBACK TO SAVEPOINT ${TO_CHECK_SAVEPOINT}`);
     await manager.query(`RELEASE SAVEPOINT ${TO_CHECK_SAVEPOINT}`);
-    logger.warn(`The count of the rows to check of a change in bulk (${written.length} rows) did not finish: answered without it (${(error as Error)?.message ?? error})`);
+    logger.warn(`The count of the rows to check of ${what} (${written.length} rows) did not finish: answered without it (${(error as Error)?.message ?? error})`);
     return undefined;
   }
 }
@@ -386,7 +392,7 @@ export async function runBulkEdit<Row extends { id: string }>(
     } else unchanged += 1;
   }
   // Before the dry run's rollback: the rows as the write leaves them.
-  const toCheck = list.toCheck ? await countToCheck(manager, list, written) : undefined;
+  const toCheck = list.toCheck ? await countToCheckWithin(manager, 'a change in bulk', written, (ids) => list.toCheck!(ids)) : undefined;
   const listed = {
     ...(options.changedIds ? { changed_ids: changedIds } : {}),
     ...(options.changedRows ? { changed_rows: changedRows } : {}),

@@ -201,13 +201,13 @@ export async function bulkUpdateBudgetLines(body: unknown, deps: BudgetLineBulkD
     // The lines written that the list's "To check" column will show (lot B12b): every check, those
     // the change caused (an account whose chart is not the company's, or that expects quantity and
     // price) and those the lines already failed.
-    ...(deps.lineChecks ? { toCheck: (ids: string[]) => countToCheck(ids, deps.lineChecks!) } : {}),
+    ...(deps.lineChecks ? { toCheck: (ids: string[]) => countLinesToCheck(ids, deps.lineChecks!) } : {}),
   };
   return runBulkEdit(manager, list, selection, confirmation, changes, deps.options);
 }
 
 /** How many of `ids` fail a check, and how many fail each one. */
-async function countToCheck(ids: string[], lineChecks: NonNullable<BudgetLineBulkDeps['lineChecks']>): Promise<BulkToCheck> {
+export async function countLinesToCheck(ids: string[], lineChecks: NonNullable<BudgetLineBulkDeps['lineChecks']>): Promise<BulkToCheck> {
   const failed = ids.length > 0 ? await lineChecks(ids) : new Map<string, readonly string[]>();
   const checks: Record<string, number> = {};
   let rows = 0;

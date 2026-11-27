@@ -22,6 +22,7 @@ import { readEntryChecks } from '../../spend/budget-line-entry-check';
 //   does not repeat it; no warning when nothing will be to check (another account, a zero, a hidden
 //   column). A card warns if and only if the line is to check once written because of the card (an
 //   undo, a month as stored, a move with an end, an end of validity alone), as the list reads it.
+// - "Copy budget columns": its answer counts the lines it wrote that are to check, as the list shows them.
 // @database-spec: boots the application context, so run-ci-tests.js runs this file in a database lane.
 
 process.env.AI_CHAT_ENABLED = 'true';
@@ -581,6 +582,34 @@ async function testKadCardsWarnIffToCheck(harness: Harness) {
   });
 }
 
+/**
+ * "Copy budget columns" (lot B12b): its answer counts the lines whose amounts it wrote that the list's
+ * "To check" column shows, as a change in bulk counts them. A hidden column copied as amounts onto a
+ * shown one, on the ticked account, leaves line 6 to check; the count is the list's.
+ */
+async function testCopyCountsToCheck(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    const { SpendBudgetOperationsService } = require('../../spend/spend-budget-operations.service');
+    const operations = harness.app.get(SpendBudgetOperationsService, { strict: false });
+    await runner.query(`UPDATE spend_items SET account_id = $2 WHERE tenant_id = $1 AND id = $3`, [seed.tenantId, seed.accounts.tick, seed.lines[6]]);
+    assert.equal(await listSaysToCheck(harness, runner, seed, 6), false, 'line 6: its forecast is hidden, not to check');
+    const opts = { manager: runner.manager, toCheck: (ids: string[]) => harness.budgetLines.countLinesToCheck(ids, { manager: runner.manager }) };
+    const copy = (dryRun: boolean) => operations.copyBudget({
+      scope: 'opex', sourceYear: Y, destinationYear: Y, overwrite: true, dryRun,
+      amounts: { sourceColumn: 'forecast', destinationColumn: 'revision', percentageIncrease: 0 },
+    }, seed.users.member, opts);
+    const preview = await copy(true);
+    assert.equal(preview.summary.toCheck, undefined, 'the preview writes nothing: no count');
+    const done = await copy(false);
+    const written = done.results.filter((line: any) => line.amounts && !line.amounts.skipped).map((line: any) => line.itemNumber as number);
+    const listed: number[] = [];
+    for (const n of written) if (await listSaysToCheck(harness, runner, seed, n)) listed.push(n);
+    assert.ok(listed.includes(6), `line 6 is to check once copied (${listed.join(', ')})`);
+    assert.deepEqual(done.summary.toCheck, { rows: listed.length, checks: { quantity_price: listed.length } }, 'the answer counts what the list shows');
+    console.log('  the copy of budget columns counts the lines it wrote that are to check: OK');
+  });
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -591,6 +620,7 @@ async function run() {
     await testKadBulkLimited(harness);
     await testKadLineCards(harness);
     await testKadCardsWarnIffToCheck(harness);
+    await testCopyCountsToCheck(harness);
   } finally {
     await harness.app.close();
   }

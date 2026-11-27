@@ -13,6 +13,7 @@ import { clearBudgetColumn, copyBudgetColumn, CopyColumnOperation } from './budg
 import { copyAllocations, CopyAllocationsOperation } from './budget-allocation-operations';
 import { BudgetOperationScope, clearBudgetColumns, copyBudget, CopyBudgetOperation } from './budget-copy';
 import type { BudgetNature } from './budget-nature';
+import type { BulkToCheck } from '../common/bulk-edit/bulk-edit';
 
 @Injectable()
 export class SpendBudgetOperationsService {
@@ -39,9 +40,9 @@ export class SpendBudgetOperationsService {
   }
 
   /** "Copy budget columns": the amounts, the allocations or both, of one nature or both (all or nothing); see `budget-copy.ts`. */
-  async copyBudget(operation: CopyBudgetOperation, userId: string | null, opts?: { manager?: EntityManager }) {
+  async copyBudget(operation: CopyBudgetOperation, userId: string | null, opts?: { manager?: EntityManager; toCheck?: (ids: string[]) => Promise<BulkToCheck> }) {
     const manager = opts?.manager ?? this.spendItems.manager;
-    return copyBudget({ manager, audit: this.audit, freeze: this.freeze, calculator: this.allocationCalculator }, operation, userId);
+    return copyBudget({ manager, audit: this.audit, freeze: this.freeze, calculator: this.allocationCalculator, toCheck: opts?.toCheck }, operation, userId);
   }
 
   /** Clear one budget column of a year of the lines of one nature or both (all or nothing); see `budget-copy.ts`. */
