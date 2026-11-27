@@ -265,9 +265,11 @@ async function testNamesBeyondAccents() {
   console.log('  names beyond accents, case first, ambiguity named: OK');
 }
 
-// The same name held by several records (two departments "Finance" of two companies). Exactly and
-// case aside, the first record read wins, as on main. Accents aside, a name answering several records
-// is refused, naming them, even when their names are the same (T-I3a, lot I3 of 26.11.9, fixes D).
+// The same name held by several records (two departments "Finance" of two companies). A family whose
+// records belong to a parent (a department to its company, a stream to its category) answers "several"
+// at every tier, with the records, for the import to look the name up in the row's parent (P12, lot I7a
+// of 26.12.1): the first record read no longer wins. Accents aside, a name answering several records is
+// refused, naming them, even when their names are the same (T-I3a, lot I3 of 26.11.9, fixes D).
 async function testSameNameOfSeveralRecordsBeyondAccents() {
   const service = new CsvResolverService();
   const mockData = {
@@ -284,19 +286,20 @@ async function testSameNameOfSeveralRecordsBeyondAccents() {
   ];
   const cache = await service.preloadResolvers('t1', fields, createMockManager(mockData));
   const beyond = { beyondCase: true };
-  // Exactly and case aside: the first record read, as before.
-  assert.equal(service.resolveId('departments', 'FINANCE', cache), 'd1');
-  const exact = service.resolveName('departments', 'Finance', cache, beyond);
-  assert.deepEqual(exact.kind === 'one' && [exact.entry.id, exact.how], ['d1', 'exact']);
-  const folded = service.resolveName('departments', 'ÉTUDES', cache, beyond);
-  assert.deepEqual(folded.kind === 'one' && [folded.entry.id, folded.how], ['d3', 'case']);
-  // Accents aside: several records, refused and named, equal names included.
-  assert.deepEqual(service.resolveName('departments', 'Fînance', cache, beyond), { kind: 'many', names: ['DEPT-1', 'DEPT-2'] });
-  assert.deepEqual(service.resolveName('departments', 'Etudes', cache, beyond), { kind: 'many', names: ['DEPT-3', 'DEPT-4'] });
+  const several = (lookup: ReturnType<typeof service.resolveName>) =>
+    lookup.kind === 'many' && [lookup.names, lookup.scoped?.how, lookup.scoped?.entries.map((entry) => [entry.id, entry.company_id])];
+  assert.equal(service.parentOf('departments')?.column, 'company_id');
+  assert.equal(service.parentOf('portfolio_streams')?.column, 'category_id');
+  // Exactly and case aside: the records of that name, to look up in the row's company.
+  assert.deepEqual(several(service.resolveName('departments', 'Finance', cache, beyond)), [['DEPT-1', 'DEPT-2'], 'case', [['d1', 'c1'], ['d2', 'c2']]]);
+  assert.deepEqual(several(service.resolveName('departments', 'ÉTUDES', cache, beyond)), [['DEPT-3', 'DEPT-4'], 'case', [['d3', 'c1'], ['d4', 'c2']]]);
+  // Accents aside: the same, found by its accents.
+  assert.deepEqual(several(service.resolveName('departments', 'Fînance', cache, beyond)), [['DEPT-1', 'DEPT-2'], 'accents', [['d1', 'c1'], ['d2', 'c2']]]);
+  assert.deepEqual(several(service.resolveName('departments', 'Etudes', cache, beyond)), [['DEPT-3', 'DEPT-4'], 'accents', [['d3', 'c1'], ['d4', 'c2']]]);
   // One record accents aside: found, as before.
   const one = service.resolveName('departments', 'Véntes', cache, beyond);
   assert.deepEqual(one.kind === 'one' && [one.entry.id, one.how, one.ref], ['d5', 'accents', 'DEPT-5']);
-  console.log('  a name of several records accents aside is refused, equal names included: OK');
+  console.log('  a name of several records answers them all, to settle by their parent: OK');
 }
 
 // A shipped task type found by its name in another language is a translation; e-mails and site

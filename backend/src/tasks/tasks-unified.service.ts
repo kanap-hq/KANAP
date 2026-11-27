@@ -25,6 +25,8 @@ import { assertContractsEditable } from '../data-access/contract-write-checks';
 import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
+import { givenMembership, loadMembershipParents, membershipReadLock, settleRecordMembership, STREAM_PAIR } from '../common/record-membership';
+import { shownTaskClassification } from './task-shown-classification';
 import {
   IncidentViewer,
   taskIncidentVisibilityQueryBuilderClause,
@@ -97,6 +99,50 @@ export class TasksUnifiedService {
 
   private hasOwn(payload: Partial<Task>, key: keyof Task): boolean {
     return Object.prototype.hasOwnProperty.call(payload, key);
+  }
+
+  /**
+   * A task's stream belongs to its category (`common/record-membership.ts`): the values of the pair to
+   * write, or a 400. On a task of a project, the values it shows stand where it has none of its own
+   * (`tasks/task-shown-classification.ts`), so the shown values written again change nothing.
+   */
+  private async settleTaskMembership(
+    manager: EntityManager,
+    payload: Record<string, unknown>,
+    existing: Partial<Task> | null,
+    project: ProjectDefaults | null | undefined,
+    tenantId?: string | null,
+  ): Promise<Record<string, string | null>> {
+    const given = givenMembership([STREAM_PAIR], payload);
+    if (Object.keys(given).length === 0) return {};
+    const shown = shownTaskClassification(existing, project);
+    return settleRecordMembership(manager, [STREAM_PAIR], given, { category_id: shown.category_id, stream_id: shown.stream_id }, tenantId);
+  }
+
+  /**
+   * A write that sets the stream or the category of a standalone or project task, its relation kept,
+   * reads the task again under the write's lock (`membershipReadLock`), so two such writes at the same
+   * moment are checked one after the other. Such a write locks nothing after the task (no budget line,
+   * no project), so the lock order of the other writes stays as it is.
+   */
+  private async lockForMembership(manager: EntityManager, repo: Repository<Task>, existing: Task, payload: Record<string, unknown>): Promise<Task> {
+    if (this.hasOwn(payload, 'related_object_type') || this.hasOwn(payload, 'related_object_id')) return existing;
+    if (existing.related_object_type !== null && existing.related_object_type !== 'project') return existing;
+    const lock = membershipReadLock(manager, [STREAM_PAIR], payload);
+    if (!lock.lock) return existing;
+    const locked = await repo.findOne({ where: { id: existing.id }, ...lock });
+    if (!locked) throw new NotFoundException('Task not found');
+    return locked;
+  }
+
+  /** The classification of the project a task belongs to, none for another task. */
+  private async taskProjectDefaults(manager: EntityManager, task: Partial<Task>): Promise<ProjectDefaults | null> {
+    if (task.related_object_type !== 'project' || !task.related_object_id) return null;
+    const [project] = await manager.query(
+      'SELECT source_id, category_id, stream_id, company_id FROM portfolio_projects WHERE id = $1 AND tenant_id = $2 LIMIT 1',
+      [task.related_object_id, task.tenant_id],
+    );
+    return project ?? null;
   }
 
   private hasPayloadKey(payload: Record<string, unknown>, key: string): boolean {
@@ -865,6 +911,12 @@ export class TasksUnifiedService {
       );
       if (project) defaults = project;
     }
+    const membership = canEditClassification
+      ? await this.settleTaskMembership(manager, payload as Record<string, unknown>, null, defaults, opts?.tenantId)
+      : {};
+    const classified = (key: 'category_id' | 'stream_id') => (key in membership
+      ? membership[key]
+      : (payload[key] !== undefined ? payload[key] : defaults[key]));
 
     // Build entity with new fields
     const entity = repo.create({
@@ -884,8 +936,8 @@ export class TasksUnifiedService {
       labels: payload.labels ?? [],
       // Classification fields (populated for standalone and project tasks)
       source_id: canEditClassification ? (payload.source_id !== undefined ? payload.source_id : defaults.source_id) as any : null,
-      category_id: canEditClassification ? (payload.category_id !== undefined ? payload.category_id : defaults.category_id) as any : null,
-      stream_id: canEditClassification ? (payload.stream_id !== undefined ? payload.stream_id : defaults.stream_id) as any : null,
+      category_id: canEditClassification ? classified('category_id') as any : null,
+      stream_id: canEditClassification ? classified('stream_id') as any : null,
       company_id: canEditClassification ? (payload.company_id !== undefined ? payload.company_id : defaults.company_id) as any : null,
       creator_id: (payload.creator_id ?? userId ?? null) as any,
       owner_ids: payload.owner_ids ?? [],
@@ -943,8 +995,9 @@ export class TasksUnifiedService {
     delete (payload as any).application_ids;
     delete (payload as any).asset_ids;
     if (!payload?.id) throw new BadRequestException('id is required');
-    const existing = await repo.findOne({ where: { id: payload.id } });
-    if (!existing) throw new NotFoundException('Task not found');
+    const found = await repo.findOne({ where: { id: payload.id } });
+    if (!found) throw new NotFoundException('Task not found');
+    const existing = await this.lockForMembership(manager, repo, found, payloadRecord);
 
     const normalizedDescription = this.hasOwn(payload, 'description')
       ? await normalizeMarkdownRichText(payload.description, { fieldName: 'description', storedValue: existing.description })
@@ -991,6 +1044,9 @@ export class TasksUnifiedService {
     const { id: _id, related_object_type: _type, related_object_id: _relatedId, ...fields } = payload as Record<string, unknown>;
     void _id; void _type; void _relatedId;
     if (this.hasOwn(payload, 'description')) fields.description = normalizedDescription;
+    if (canEditClassification && Object.keys(givenMembership([STREAM_PAIR], fields)).length > 0) {
+      Object.assign(fields, await this.settleTaskMembership(manager, fields, existing, await this.taskProjectDefaults(manager, existing), tenantId));
+    }
     // Data-scoped access (`task-data-access.ts`): a read-only task refused, a handover keeps the person as observer.
     const write = await prepareTaskWrite(manager, existing, fields);
     const saved = await writeTaskColumns(repo, existing, write.changes);
@@ -1065,8 +1121,9 @@ export class TasksUnifiedService {
     delete (payload as any).application_ids;
     delete (payload as any).asset_ids;
 
-    const existing = await repo.findOne({ where: { id: taskId } });
-    if (!existing) throw new NotFoundException('Task not found');
+    const found = await repo.findOne({ where: { id: taskId } });
+    if (!found) throw new NotFoundException('Task not found');
+    const existing = await this.lockForMembership(manager, repo, found, payloadRecord);
 
     // Capture "before" state for notification comparison
     const before = { ...existing };
@@ -1151,8 +1208,8 @@ export class TasksUnifiedService {
           nextPayload.phase_id = null;
         }
 
-        const classificationKeys: Array<'source_id' | 'category_id' | 'stream_id' | 'company_id'> = [
-          'source_id', 'category_id', 'stream_id', 'company_id',
+        const classificationKeys: Array<'source_id' | 'category_id' | 'company_id'> = [
+          'source_id', 'category_id', 'company_id',
         ];
         for (const key of classificationKeys) {
           if ((nextPayload as any)[key] !== undefined) continue;
@@ -1163,7 +1220,24 @@ export class TasksUnifiedService {
             (nextPayload as any)[key] = defaultValue;
           }
         }
+        // The project's stream goes on a task without one only within the task's category (lot I7a of
+        // 26.12.1): another category keeps the task's, without a stream.
+        if (nextPayload.stream_id === undefined && existing.stream_id == null && defaults.stream_id) {
+          const category = nextPayload.category_id !== undefined ? nextPayload.category_id : existing.category_id;
+          const parentOf = await loadMembershipParents(manager, new Map([['stream', [String(defaults.stream_id)]]]), tenantId);
+          const streamCategory = parentOf('stream', String(defaults.stream_id));
+          if (!category || String(streamCategory ?? '').toLowerCase() === String(category).toLowerCase()) {
+            nextPayload.stream_id = defaults.stream_id as any;
+          }
+        }
       }
+    }
+
+    // A stream in its category: on a project task, the values it shows stand where it has none. A task
+    // that moves is judged on its own values: what its new project fills in is written by the move.
+    if (canEditClassification && Object.keys(givenMembership([STREAM_PAIR], nextPayload as Record<string, unknown>)).length > 0) {
+      const project = relationChanged ? null : await this.taskProjectDefaults(manager, existing);
+      Object.assign(nextPayload, await this.settleTaskMembership(manager, nextPayload as Record<string, unknown>, existing, project, tenantId));
     }
 
     // Validate phase if updating project task

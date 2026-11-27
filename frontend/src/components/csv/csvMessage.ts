@@ -1,4 +1,5 @@
-import type { TFunction } from 'i18next';
+import i18next, { type TFunction } from 'i18next';
+import { refusalUsages, usageTotal } from '../../utils/deleteRefusal';
 
 /**
  * An error or warning of a CSV import report. `code` is the key the interface
@@ -12,6 +13,8 @@ export type CsvReportMessage = {
   message: string;
   code?: string;
   params?: Record<string, string | number>;
+  /** What still uses the record, counted per kind (`{{usages}}` in the sentence of `code`). */
+  usages?: Array<{ type: string; total: number }>;
 };
 
 /** The columns a message names by their keys (`CSV_DUPLICATE_KEY`: `company_name, name`), none when it names none. */
@@ -38,7 +41,12 @@ export function csvMessageText(item: CsvReportMessage, t: TFunction, columnName?
   item = withMissingNamed(item, columnName);
   const columns = namedColumns(item);
   const params = columnName && columns.length > 0 ? { ...item.params, columns: columns.map(columnName).join(', ') } : item.params;
-  return t(`errors:${item.code}`, { ...params, defaultValue: item.message });
+  // The counts as a refused delete words them ("2 users and 1 OPEX line"), in the language of `t`.
+  const language = (t as { lng?: string }).lng || i18next.resolvedLanguage || i18next.language || 'en';
+  const usages = Array.isArray(item.usages) && item.usages.length > 0
+    ? { ...usageTotal(item.usages), usages: refusalUsages(item.usages, undefined, t, language) }
+    : {};
+  return t(`errors:${item.code}`, { ...params, ...usages, defaultValue: item.message });
 }
 
 /**

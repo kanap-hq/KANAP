@@ -1,4 +1,5 @@
 import { AiEntityFilterRegistry } from '../ai-filter.types';
+import { TASK_SHOWN_STREAM_SQL } from '../../../tasks/task-shown-classification';
 
 /**
  * The task's related object family as the model sees it: a budget line of either nature is the
@@ -265,7 +266,7 @@ export const tasksRegistry: AiEntityFilterRegistry = {
         expression: 'pst.name',
         joins: [
           `LEFT JOIN portfolio_projects pp ON pp.id = t.related_object_id AND t.related_object_type = 'project' AND pp.tenant_id = t.tenant_id`,
-          `LEFT JOIN portfolio_streams pst ON pst.id = COALESCE(t.stream_id, pp.stream_id) AND pst.tenant_id = t.tenant_id`,
+          `LEFT JOIN portfolio_streams pst ON pst.id = ${TASK_SHOWN_STREAM_SQL} AND pst.tenant_id = t.tenant_id`,
         ],
       },
       company: {

@@ -446,6 +446,8 @@ Las tareas de proyecto tienen funcionalidades adicionales comparadas con las tar
 
 **Clasificación independiente**: Las tareas de proyecto tienen sus propios campos de Origen, Categoría, Flujo y Empresa. Cuando se crea una tarea dentro de un proyecto, estos valores se heredan de la clasificación del proyecto por conveniencia. Sin embargo, la clasificación de cada tarea puede editarse de forma independiente. Si un campo de clasificación de la tarea no se establece explícitamente, hereda y muestra el valor del proyecto.
 
+La línea de una tarea pertenece a la categoría de la tarea, la suya o, si no, la de su proyecto: en una importación o con Kad, un nombre de línea que comparten varias categorías se lee en esa categoría, y una línea de otra categoría se rechaza.
+
 **Puntuación de prioridad**: Las tareas de proyecto muestran una puntuación de prioridad calculada que combina:
 - La puntuación de prioridad del proyecto padre
 - Un ajuste basado en el nivel de prioridad de la tarea (+10 para Bloqueante, +5 para Alta, 0 para Normal, -5 para Baja, -10 para Opcional)

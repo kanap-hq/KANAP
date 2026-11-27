@@ -144,7 +144,7 @@ Vous pouvez aussi accorder le consentement depuis le portail Azure avec **Grant 
 Une fois autorisé, Kadratis interroge Microsoft Graph chaque nuit à 03:00 UTC (l'horloge du conteneur API) et, pour chaque utilisateur lié à Entra :
 
 - Actualise le prénom, le nom, l'intitulé de poste, le téléphone professionnel et le téléphone mobile
-- Rapproche le département et la société de l'annuaire **par leur nom** avec les enregistrements Kadratis existants. Rien n'est créé automatiquement, et un nom sans correspondance laisse l'affectation inchangée.
+- Rapproche le département et la société de l'annuaire **par leur nom** avec les enregistrements Kadratis existants. Rien n'est créé automatiquement, et un nom sans correspondance laisse l'affectation inchangée. Le département est cherché dans la société de la personne ; sans société, un nom de département que plusieurs sociétés partagent ne change rien. Une nouvelle société vide un département de l'ancienne.
 - Définit la langue de l'interface uniquement si la personne n'en a pas choisi
 - Désactive le compte Kadratis si la personne a été retirée de l'annuaire, ou si son compte d'annuaire a été désactivé (`accountEnabled` vaut false)
 

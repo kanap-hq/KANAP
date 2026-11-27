@@ -25,6 +25,7 @@ import { StatusState, STATUS_STATES, deriveStatusFromDisabledAt, resolveLifecycl
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { DepartmentUpsertDto } from './dto/department.dto';
 import { duplicateNameException } from '../common/duplicate-name';
+import { assertMemberMoveAllowed, memberMoveRefusal, memberMoveUsages } from '../common/record-membership-moves';
 import {
   cellOf,
   cellText,
@@ -319,9 +320,11 @@ export class DepartmentsService {
     const repo = this.getRepo(opts?.manager);
     const compRepo = this.getCompanyRepo(opts?.manager);
     const existing = await this.get(id, { manager: opts?.manager });
-    if (body.company_id && body.company_id !== existing.company_id) {
+    if (body.company_id && String(body.company_id).toLowerCase() !== existing.company_id.toLowerCase()) {
       const comp = await compRepo.findOne({ where: { id: body.company_id as string } });
       if (!comp) throw new BadRequestException('company_id is invalid');
+      // A department that records carry stays in its company (`record-membership-moves.ts`).
+      await assertMemberMoveAllowed(repo.manager, 'department', id, comp.id, { lock: true });
     }
     const before = { ...existing };
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
@@ -765,6 +768,8 @@ export class DepartmentsService {
     const warnings: ImportReportError[] = [];
     const firstLineOfDepartment = new Map<string, number>();
     const firstLineOfName = new Map<string, number>();
+    // The departments the rows move to another company: refused below while records carry them.
+    const moves: Array<{ id: string; parentId: string; line: number; name: string }> = [];
     for (const fileItem of unique) {
       const line = lineOf.get(fileItem) ?? 0;
       const reference = referenceOf.get(fileItem);
@@ -857,7 +862,19 @@ export class DepartmentsService {
         updated += 1;
         updates.push({ row: row.line, ref: numberedReference('DEPT', existing.item_number), name: existing.name });
       }
+      if (existing && existing.company_id.toLowerCase() !== companyId.toLowerCase()) {
+        moves.push({ id: existing.id, parentId: companyId, line, name: existing.name });
+      }
       toWrite.push({ item, existing });
+    }
+    // A department that records carry stays in its company (`record-membership-moves.ts`): its row is
+    // refused, with the records counted, at the check as at the load.
+    const moveUsages = await memberMoveUsages(repo.manager, 'department', moves);
+    for (const move of moves) {
+      const usages = moveUsages.get(move.id.toLowerCase());
+      if (!usages) continue;
+      const refusal = memberMoveRefusal('department', move.name, usages);
+      errors.push({ ...rowError(move.line, 'company_name', refusal.code, refusal.message, refusal.params), usages });
     }
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };

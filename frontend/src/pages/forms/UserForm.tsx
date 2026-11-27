@@ -128,7 +128,7 @@ const UserForm = forwardRef<UserFormHandle, {
   }, [defaultValues]);
   const schema = useMemo(() => createUserFormSchema(t), [t]);
   const methods = useZodForm<UserFormValues>({ schema, defaultValues: resolvedDefaults as any });
-  const { register, handleSubmit, formState, watch, control, reset } = methods;
+  const { register, handleSubmit, formState, watch, control, reset, getValues, setValue } = methods;
 
   // Reset when the person changes. Validating here would show "required" under the email of a
   // new user before anything is typed. isValid is still computed on mount, without those messages,
@@ -272,7 +272,14 @@ const UserForm = forwardRef<UserFormHandle, {
                 label={t('userForm.fields.companyOptional')}
                 disabled={readOnly}
                 value={field.value as any}
-                onChange={(v) => field.onChange(v)}
+                onChange={(v) => {
+                  // The department picker lists the company's departments only: another company
+                  // leaves the department chosen in the old one, which travels cleared in the same save.
+                  if ((v || null) !== (field.value || null) && getValues('department_id')) {
+                    setValue('department_id', null as any, { shouldDirty: true });
+                  }
+                  field.onChange(v);
+                }}
                 helperText=""
               />
             )}
