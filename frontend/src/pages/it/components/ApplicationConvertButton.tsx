@@ -75,8 +75,11 @@ export default function ApplicationConvertButton({ applicationId, applicationNam
     setError(null);
     try {
       const res = await api.post<{ technology: { id: string; reference: string | null } }>(`/applications/${applicationId}/convert-to-technology`, { family });
+      // Marked stale, read again where they are next shown: the page on screen is the converted
+      // application's, which no longer exists, and leaves for the technology.
       await queryClient.invalidateQueries({
         predicate: (query) => ['applications', 'application-workspace', 'app-filter-values', 'technologies'].some((key) => String(query.queryKey[0]).startsWith(key)),
+        refetchType: 'none',
       });
       setOpen(false);
       const { technology } = res.data;

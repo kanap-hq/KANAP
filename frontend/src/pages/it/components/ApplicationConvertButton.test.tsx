@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../../i18n';
@@ -31,7 +31,7 @@ function preview(extra: Partial<ConversionPreview> = {}): ConversionPreview {
   };
 }
 
-function renderButton() {
+function renderButton(children?: React.ReactNode) {
   const onConverted = vi.fn();
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
@@ -40,6 +40,7 @@ function renderButton() {
       <QueryClientProvider client={queryClient}>
         <KanapDialogProvider>
           <ApplicationConvertButton applicationId="app-1" applicationName="vSphere" onConverted={onConverted} />
+          {children}
         </KanapDialogProvider>
       </QueryClientProvider>
     </ThemeProvider>,
@@ -85,6 +86,31 @@ describe('ApplicationConvertButton', () => {
     const predicate = (invalidate.mock.calls[0][0] as any).predicate;
     expect(predicate({ queryKey: ['application-workspace', 'app-1'] })).toBe(true);
     expect(within(dialog).queryByText(/Other links you cannot see/)).not.toBeInTheDocument();
+  });
+
+  it('reads nothing more of the converted application before the page leaves', async () => {
+    const reads = vi.fn(async () => ({}));
+    function ApplicationPage() {
+      useQuery({ queryKey: ['application-workspace', 'app-1'], queryFn: reads });
+      useQuery({ queryKey: ['application-workspace-relations-count', 'app-1'], queryFn: reads });
+      useQuery({ queryKey: ['application-workspace-interfaces', 'app-1'], queryFn: reads });
+      return null;
+    }
+    get.mockResolvedValue({ data: preview() });
+    post.mockResolvedValue({ data: { technology: { id: 'tec-9', reference: 'TEC-9', name: 'vSphere' } } });
+    const { onConverted, queryClient } = renderButton(<ApplicationPage />);
+    await waitFor(() => expect(reads).toHaveBeenCalledTimes(3));
+    fireEvent.click(screen.getByRole('button', { name: 'Convert to technology' }));
+    const dialog = await screen.findByRole('dialog');
+    await within(dialog).findByText('Moves to the technology');
+    fireEvent.mouseDown(within(dialog).getByRole('combobox', { name: 'Family' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Hypervisor' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Convert' }));
+    await waitFor(() => expect(onConverted).toHaveBeenCalledWith('/it/technologies/TEC-9'));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(reads).toHaveBeenCalledTimes(3);
+    // Stale all the same: shown again elsewhere, they are read anew.
+    expect(queryClient.getQueryState(['application-workspace', 'app-1'])?.isInvalidated).toBe(true);
   });
 
   it('mentions the links the caller cannot read and the managed documents kept', async () => {
