@@ -144,3 +144,17 @@ describe('UnifiedActivityForm time logged on a project task', () => {
     });
   });
 });
+
+describe('UnifiedActivityForm status menu focus', () => {
+  it('keeps the focus on the status menu after a keyboard choice', async () => {
+    renderForm();
+    const status = screen.getByRole('combobox');
+    status.focus();
+    fireEvent.keyDown(status, { key: 'Enter' });
+    const listbox = await screen.findByRole('listbox');
+    fireEvent.keyDown(listbox, { key: 'ArrowDown' });
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Enter' });
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    expect(document.activeElement).toBe(status);
+  });
+});

@@ -55,6 +55,7 @@ import {
   saveListContext,
   setListFiltersParam,
   takeLostListFilters,
+  withClearedDefaults,
 } from '../lib/listContext';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import { foldText } from '../utils/foldText';
@@ -755,6 +756,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const [offDefault, setOffDefault] = useState(false);
   const defaultFilterKeyRef = useRef(filterModelKey(defaultFilterModel));
   defaultFilterKeyRef.current = filterModelKey(defaultFilterModel);
+  // The address sync is created once. The page's default filter arrives with the props (applications: after the catalog loads).
+  const defaultFilterModelRef = useRef(defaultFilterModel);
+  defaultFilterModelRef.current = defaultFilterModel;
   // The datasource is created once. These follow the props, for the "off the opening state" check.
   const defaultSortRef = useRef(defaultSort);
   defaultSortRef.current = defaultSort;
@@ -1376,16 +1380,19 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   // one request for both). A reload or a copied address then shows the latest filters.
   const filtersUrlTokenRef = useRef(0);
   const syncFiltersInUrl = useCallback((model: Record<string, unknown>) => {
+    // A default column the person cleared is absent from the grid model. Write it null, same as a record link, so a reload stays cleared.
+    const defaults = defaultFilterModelRef.current;
+    const forAddress = defaults ? withClearedDefaults(model, defaults) : model;
     const token = ++filtersUrlTokenRef.current;
     const write = () => {
       if (token !== filtersUrlTokenRef.current) return;
       const current = new URLSearchParams(locationSearchRef.current);
       const next = new URLSearchParams(current);
-      setListFiltersParam(next, endpointRef.current, model);
+      setListFiltersParam(next, endpointRef.current, forAddress);
       if (next.toString() !== current.toString()) navigate({ search: next.toString() }, { replace: true });
     };
-    if (filtersNeedContext(model) && !cachedListContextId(endpointRef.current, model)) {
-      saveListContext(endpointRef.current, model).then(write, () => undefined);
+    if (filtersNeedContext(forAddress) && !cachedListContextId(endpointRef.current, forAddress)) {
+      saveListContext(endpointRef.current, forAddress).then(write, () => undefined);
       return;
     }
     write();

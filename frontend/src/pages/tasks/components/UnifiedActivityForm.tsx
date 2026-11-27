@@ -11,7 +11,7 @@ import type { TaskStatus } from '../task.constants';
 import { taskDetailTokens, taskDetailTypography, STATUS_DOT_COLORS } from '../theme/taskDetailTokens';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { StatusDot } from '../../../components/design';
-import { inlineControlSx } from '../../../theme/formSx';
+import { inlineControlSx, selectKeepsFocus } from '../../../theme/formSx';
 import { useTheme } from '@mui/material/styles';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatFigure } from '../../portfolio/figures';
@@ -267,6 +267,7 @@ export default function UnifiedActivityForm({
               variant="standard"
               disabled={submitting || readOnly}
               displayEmpty
+              MenuProps={selectKeepsFocus.MenuProps}
               renderValue={(val) => {
                 const opt = statusOptions.find((o) => o.value === val) || statusOptions[0];
                 const dotColor = STATUS_DOT_COLORS[opt.statusKey as keyof typeof STATUS_DOT_COLORS]?.[mode] ?? theme.palette.kanap.text.tertiary;

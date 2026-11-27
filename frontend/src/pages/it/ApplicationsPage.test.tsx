@@ -427,3 +427,85 @@ describe('ApplicationsPage', () => {
     expect(countries.getByText('FR, DE +1')).toBeInTheDocument();
   });
 });
+
+const LIFECYCLE = [
+  { code: 'proposed', label: 'Proposed' },
+  { code: 'active', label: 'Active' },
+  { code: 'deprecated', label: 'Deprecated' },
+  { code: 'retired', label: 'Retired' },
+];
+
+function nameLinkFilters(filterModel: Record<string, unknown>) {
+  act(() => (lastProps() as any).onQueryStateChange({ sort: 'name:ASC', q: '', filterModel }));
+  const Cell = lastProps().columns.find((column) => column.field === 'name')!.cellRenderer!;
+  const view = render(
+    <MemoryRouter>
+      <Cell value="Payroll" data={{ id: 'a-1', sequential_id: 'APP-1', name: 'Payroll' }} />
+    </MemoryRouter>,
+  );
+  const href = view.getByRole('link', { name: 'Payroll' }).getAttribute('href')!;
+  view.unmount();
+  const filters = new URLSearchParams(href.split('?')[1] ?? '').get('filters');
+  return filters ? JSON.parse(filters) : null;
+}
+
+describe('ApplicationsPage default lifecycle filter', () => {
+  beforeEach(() => {
+    grid.calls = [];
+    auth.reader = true;
+    auth.write = true;
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: { lifecycleStates: LIFECYCLE } } as any;
+      return { data: Object.assign([], { items: [] }) } as any;
+    });
+  });
+
+  async function readyPage(search = '') {
+    const view = renderPage(search);
+    await waitFor(() => expect((lastProps() as any).defaultFilterModel?.lifecycle?.values).toContain('active'));
+    return view;
+  }
+
+  it('opens a record with the lifecycle filter cleared, so the list comes back without it', async () => {
+    const view = await readyPage();
+    expect(nameLinkFilters({})).toEqual({ lifecycle: null });
+    view.unmount();
+  });
+
+  it('opens a record with the lifecycle filter the person chose, including every state and none', async () => {
+    const view = await readyPage();
+    const every = { filterType: 'set', values: ['proposed', 'active', 'deprecated', 'retired'] };
+    expect(nameLinkFilters({ lifecycle: every }).lifecycle).toEqual(every);
+    const none = { filterType: 'set', values: [] as string[] };
+    expect(nameLinkFilters({ lifecycle: none }).lifecycle).toEqual(none);
+    view.unmount();
+  });
+
+  it('does not put the lifecycle default back when the address already cleared it', async () => {
+    const setFilterModel = vi.fn();
+    const view = await readyPage(`?filters=${encodeURIComponent(JSON.stringify({ lifecycle: null }))}`);
+    expect((lastProps() as any).initialState.filter.filterModel.lifecycle).toBeNull();
+    act(() => lastProps().onGridApiReady({
+      getFilterModel: () => ({}),
+      setFilterModel,
+      onFilterChanged: () => undefined,
+    }));
+    await act(async () => undefined);
+    expect(setFilterModel).not.toHaveBeenCalled();
+    view.unmount();
+  });
+
+  it('still applies the lifecycle default when the address names no filter', async () => {
+    const setFilterModel = vi.fn();
+    const view = renderPage();
+    act(() => lastProps().onGridApiReady({
+      getFilterModel: () => ({}),
+      setFilterModel,
+      onFilterChanged: () => undefined,
+    }));
+    await waitFor(() => expect(setFilterModel).toHaveBeenCalled());
+    const model = setFilterModel.mock.calls[0][0];
+    expect(model.lifecycle.values).toEqual(['proposed', 'active', 'deprecated']);
+    view.unmount();
+  });
+});

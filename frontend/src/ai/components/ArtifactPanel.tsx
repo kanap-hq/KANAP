@@ -96,17 +96,20 @@ function ArtifactTab({ open, onToggle, label }: { open: boolean; onToggle: () =>
         ) : (
           <KeyboardArrowLeftIcon sx={{ fontSize: 16 }} />
         )}
-        <Box
-          component="span"
-          sx={{
-            writingMode: 'vertical-rl',
-            transform: 'rotate(180deg)',
-            textTransform: 'none',
-            fontWeight: 500,
-          }}
-        >
-          {label}
-        </Box>
+        {/* The header names the open panel. The tab keeps the name for the closed panel and for assistive tech. */}
+        {open ? null : (
+          <Box
+            component="span"
+            sx={{
+              writingMode: 'vertical-rl',
+              transform: 'rotate(180deg)',
+              textTransform: 'none',
+              fontWeight: 500,
+            }}
+          >
+            {label}
+          </Box>
+        )}
       </Box>
     </Box>
   );

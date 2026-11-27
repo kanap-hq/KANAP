@@ -100,4 +100,30 @@ describe('RequestScoringEditor priority', () => {
     expect(await screen.findByText('Value')).toBeInTheDocument();
     expect(priorityFigure()).toBe('72');
   });
+
+  it('shows the bypass mark on a scale value only when the setting is on', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/portfolio/criteria') {
+        return {
+          data: [{
+            id: 'c-reg',
+            name: 'Regulation',
+            enabled: true,
+            inverted: false,
+            weight: 1,
+            values: [
+              { id: 'v-no', label: 'No', position: 0, triggers_mandatory_bypass: false },
+              { id: 'v-yes', label: 'Required', position: 1, triggers_mandatory_bypass: true },
+            ],
+          }],
+        };
+      }
+      return { data: {} };
+    });
+    const off = renderEditor();
+    expect((await screen.findByRole('button', { name: /^Required/ })).textContent).toBe('Required');
+    off.unmount();
+    renderEditor({ mandatoryBypassEnabled: true });
+    expect((await screen.findByRole('button', { name: 'Required *' })).textContent).toBe('Required *');
+  });
 });

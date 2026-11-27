@@ -1403,6 +1403,18 @@ export const aiConversationsApi = {
   },
 };
 
+/** A legacy GLPI ticket connection the space can call: switched on, with an address and a user token. */
+export function legacyTicketConnectionReady(settings: {
+  glpi_enabled?: boolean;
+  glpi_url?: string | null;
+  has_glpi_user_token?: boolean;
+} | null | undefined): boolean {
+  return settings?.glpi_enabled === true
+    && typeof settings.glpi_url === 'string'
+    && settings.glpi_url.trim() !== ''
+    && settings.has_glpi_user_token === true;
+}
+
 export const aiAdminApi = {
   async getSettings(): Promise<AiSettingsPayload> {
     const res = await api.get('/ai/settings');

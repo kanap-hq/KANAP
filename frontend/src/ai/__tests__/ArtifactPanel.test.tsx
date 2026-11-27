@@ -356,6 +356,53 @@ describe('ArtifactPanel', () => {
     expect(actions).not.toContainElement(lookalike);
     expect(lookalike.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  const oneCard = {
+    preview_id: 'name-card',
+    tool_name: 'create_task' as const,
+    status: 'pending' as const,
+    target: { entity_type: 'tasks', entity_id: null, ref: null, title: 'Task 1' },
+    changes: { title: { label: 'Title', from: null, to: 'Task 1', format: 'text' as const } },
+    requires_confirmation: true,
+    actions: ['approve', 'reject'] as Array<'approve' | 'reject'>,
+    summary: 'Create task 1.',
+    error_message: null,
+    conversation_id: 'conversation-1',
+    created_at: '2026-03-28T17:00:00.000Z',
+    expires_at: '2026-03-28T17:10:00.000Z',
+    approved_at: null,
+    rejected_at: null,
+    executed_at: null,
+  };
+
+  function renderNamed(open: boolean) {
+    return renderWithTheme(
+      <ArtifactPanel
+        previews={[oneCard]}
+        selectedId="name-card"
+        open={open}
+        onToggle={() => undefined}
+        onSelect={() => undefined}
+        onApprove={() => undefined}
+        onReject={() => undefined}
+        onApproveMany={() => undefined}
+        onRejectMany={() => undefined}
+      />,
+    );
+  }
+
+  it('names the panel once while it is open and keeps the name on the tab', () => {
+    renderNamed(true);
+    const tab = screen.getByRole('button', { name: 'artifactPanel.tab' });
+    expect(tab.textContent ?? '').not.toContain('artifactPanel.tab');
+    expect(screen.getAllByText('artifactPanel.title')).toHaveLength(1);
+  });
+
+  it('shows the name on the tab while the panel is closed', () => {
+    renderNamed(false);
+    expect(screen.getByRole('button', { name: 'artifactPanel.tab' })).toHaveTextContent('artifactPanel.tab');
+    expect(screen.queryByText('artifactPanel.title')).toBeNull();
+  });
 });
 
 // Its edge became the one of the properties panels (lot N2 of 26.11.9): same gestures, its own

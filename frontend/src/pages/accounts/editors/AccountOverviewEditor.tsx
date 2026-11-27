@@ -91,11 +91,14 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const isTemplateAccount = basePath.startsWith('/admin/coa-templates/');
   const schema = useMemo(
-    () => accountFormSchema.extend({
-      coa_id: z.string().min(1, t('master-data:formSchemas.account.chartOfAccountsRequired')),
-    }),
-    [t],
+    () => (isTemplateAccount
+      ? accountFormSchema
+      : accountFormSchema.extend({
+        coa_id: z.string().min(1, t('master-data:formSchemas.account.chartOfAccountsRequired')),
+      })) as unknown as z.ZodType<AccountUpdateFormValues>,
+    [isTemplateAccount, t],
   );
 
   const form = useZodForm<AccountUpdateFormValues>({
@@ -122,6 +125,8 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
         baselineRef.current = { ...values };
         reset(values, { keepDirty: false, keepTouched: false });
         onDirtyChange?.(false);
+        // A template account has no chart of the space.
+        if (isTemplateAccount) return;
         // Load CoAs (after account so we can show selection correctly)
         try {
           setLoadingCoas(true);
@@ -145,7 +150,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
     };
     void load();
     return () => { active = false; };
-  }, [id, onDirtyChange, reset]);
+  }, [basePath, id, isTemplateAccount, onDirtyChange, reset]);
 
   useEffect(() => {
     onDirtyChange?.(formState.isDirty);
@@ -191,7 +196,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
       {readOnly && (
         <Alert severity="info">{t('shared.messages.readOnlyAccess', { entity: t('accounts.entity') + 's' })}</Alert>
       )}
-      <FormControl fullWidth error={!!err.coa_id}>
+      {!isTemplateAccount && <FormControl fullWidth error={!!err.coa_id}>
         <InputLabel id="coa-select-label" required>{t('accounts.fields.chartOfAccounts')}</InputLabel>
         <Controller
           control={control}
@@ -217,7 +222,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
         />
         {err.coa_id?.message && <FormHelperText>{err.coa_id.message as string}</FormHelperText>}
         {loadCoasError && <Alert severity="error" sx={{ mt: 1 }}>{loadCoasError}</Alert>}
-      </FormControl>
+      </FormControl>}
       <TextField
         label={t('accounts.fields.accountNumber')}
         required

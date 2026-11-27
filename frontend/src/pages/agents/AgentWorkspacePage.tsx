@@ -17,8 +17,10 @@ import KanapDialog from '../../components/design/KanapDialog';
 import { PropertyRow } from '../../components/design';
 import { compactSelectMenuProps, drawerMenuItemSx, drawerSelectSx, drawerFieldValueSx, inlineControlSx, longFormSurfaceFieldSx, pageSelectSx } from '../../theme/formSx';
 import {
+  aiAdminApi,
   aiAgentControlApi,
   aiModelConfigsApi,
+  legacyTicketConnectionReady,
   type AiAgentControlAgentDefinition,
   type AiAgentControlAgentDefinitionInput,
   type AiAgentControlEvaluationDailyResult,
@@ -39,6 +41,7 @@ import {
   formatNumber,
   formatPercent,
   humanize,
+  LEGACY_GLPI_TICKETING_PROVIDER_KEY,
   MetricBlock,
   providerBindingForDefinition,
   resolveAgentSummary,
@@ -319,13 +322,14 @@ function ReferenceNote({ children }: { children: React.ReactNode }) {
 // categories, priorities and types when Classification is on.
 // Short enum lists stay inline; the large catalogues collapse to a counted row, and one
 // search field looks through all of them at once.
-function InstructionsReferencePanel({ statuses, routingEnabled, classificationEnabled, priorities, types, agentId, onInsert }: {
+function InstructionsReferencePanel({ statuses, routingEnabled, classificationEnabled, priorities, types, agentId, catalogsEnabled, onInsert }: {
   agentId: string;
   classificationEnabled: boolean;
   priorities: AiAgentControlRefItem[];
   types: AiAgentControlRefItem[];
   statuses: AiAgentControlRefItem[] | null;
   routingEnabled: boolean;
+  catalogsEnabled: boolean;
   onInsert: (name: string) => void;
 }) {
   const { t } = useTranslation(['agents']);
@@ -335,9 +339,9 @@ function InstructionsReferencePanel({ statuses, routingEnabled, classificationEn
   const settled = useDebouncedValue(query).trim();
   const searching = settled.length > 0;
 
-  const groupsQuery = useReferenceCatalogue(agentId, 'group', routingEnabled, settled);
-  const techniciansQuery = useReferenceCatalogue(agentId, 'technician', routingEnabled, settled);
-  const categoriesQuery = useReferenceCatalogue(agentId, 'category', classificationEnabled, settled);
+  const groupsQuery = useReferenceCatalogue(agentId, 'group', routingEnabled && catalogsEnabled, settled);
+  const techniciansQuery = useReferenceCatalogue(agentId, 'technician', routingEnabled && catalogsEnabled, settled);
+  const categoriesQuery = useReferenceCatalogue(agentId, 'category', classificationEnabled && catalogsEnabled, settled);
 
   const statusMatches = referenceMatches(statuses ?? [], settled);
   const priorityMatches = classificationEnabled ? referenceMatches(priorities, settled) : [];
@@ -1574,6 +1578,21 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
   const isHelpdesk = definition.agent_type === 'helpdesk';
   const isSre = definition.agent_type === 'sre';
   const monitoringBinding = providerBindingForDefinition(definition, 'monitoring');
+  const { hasLevel } = useAuth();
+  const providerKey = ticketingProviderKeyForDefinition(definition);
+  const legacyTicketProvider = !providerKey || providerKey === LEGACY_GLPI_TICKETING_PROVIDER_KEY;
+  const canReadTicketConnection = hasLevel('ai_settings', 'admin');
+  // The ticket catalogues call the space's ticket connection. Without one they answer 400,
+  // so they stay unrequested and the lists stay empty. Another provider is not this connection.
+  const connectionQuery = useQuery({
+    queryKey: ['admin-ai-settings'],
+    queryFn: () => aiAdminApi.getSettings(),
+    enabled: isHelpdesk && legacyTicketProvider && canReadTicketConnection,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const ticketCatalogs = !isHelpdesk || !legacyTicketProvider || !canReadTicketConnection
+    || (connectionQuery.isSuccess && legacyTicketConnectionReady(connectionQuery.data.settings));
   const [pendingPreset, setPendingPreset] = React.useState<TargetingPresetKey | null>(null);
   const sharedContext = personaSharedContext(definition);
   const storedInstructions = personaText(definition, 'instructions');
@@ -1619,19 +1638,19 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
   const referencePrioritiesQuery = useQuery({
     queryKey: ['ai-agent-targeting-options', definition.id, 'priority', ''],
     queryFn: () => aiAgentControlApi.getAgentTargetingOptions(definition.id, 'priority', { limit: 50 }),
-    enabled: classificationEnabled,
+    enabled: classificationEnabled && ticketCatalogs,
     staleTime: TARGETING_OPTIONS_STALE_TIME_MS,
   });
   const referenceTypesQuery = useQuery({
     queryKey: ['ai-agent-targeting-options', definition.id, 'type', ''],
     queryFn: () => aiAgentControlApi.getAgentTargetingOptions(definition.id, 'type', { limit: 50 }),
-    enabled: classificationEnabled,
+    enabled: classificationEnabled && ticketCatalogs,
     staleTime: TARGETING_OPTIONS_STALE_TIME_MS,
   });
   const referenceStatusesQuery = useQuery({
     queryKey: ['ai-agent-targeting-options', definition.id, 'status', ''],
     queryFn: () => aiAgentControlApi.getAgentTargetingOptions(definition.id, 'status', { limit: 50 }),
-    enabled: !isSre,
+    enabled: !isSre && ticketCatalogs,
     staleTime: 5 * 60 * 1000,
   });
   const webSearchAvailable = useFeatures().config.features.aiWebSearch;
@@ -1686,7 +1705,7 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
   const targetingStatusOptionsQuery = useQuery({
     queryKey: ['ai-agent-targeting-options', definition.id, 'status', ''],
     queryFn: () => aiAgentControlApi.getAgentTargetingOptions(definition.id, 'status', { limit: 50 }),
-    enabled: isHelpdesk,
+    enabled: isHelpdesk && ticketCatalogs,
     staleTime: TARGETING_OPTIONS_STALE_TIME_MS,
   });
   const presetStatusValues = React.useMemo(
@@ -2085,7 +2104,7 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
             ) : null}
           </Stack>
           <SettingsField label={t('settings.targetingBuilder.filters')} hint={t('settings.targetingBuilder.hint')}>
-            <HelpdeskTargetingFilterBuilder agentId={definition.id} filters={form.filters} onChange={updateFilters} />
+            <HelpdeskTargetingFilterBuilder agentId={definition.id} filters={form.filters} onChange={updateFilters} catalogsEnabled={ticketCatalogs} />
           </SettingsField>
           {watching ? (
             <TargetingPreviewSummary
@@ -2229,12 +2248,13 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
           </Box>
           {!isSre && (
             <InstructionsReferencePanel
-              statuses={referenceStatusesQuery.data?.options ?? null}
+              statuses={ticketCatalogs ? (referenceStatusesQuery.data?.options ?? null) : []}
               routingEnabled={routingGroupsEnabled}
               classificationEnabled={classificationEnabled}
               priorities={referencePrioritiesQuery.data?.options ?? []}
               types={referenceTypesQuery.data?.options ?? []}
               agentId={definition.id}
+              catalogsEnabled={ticketCatalogs}
               onInsert={insertIntoInstructions}
             />
           )}

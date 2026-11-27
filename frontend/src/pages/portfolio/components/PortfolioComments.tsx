@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { MarkdownContent } from '../../../components/MarkdownContent';
 import { useLocale } from '../../../i18n/useLocale';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { selectKeepsFocus } from '../../../theme/formSx';
 import { formatUserName, getUserInitials } from '../../../utils/userDisplay';
 import {
   formatRelativeTime,
@@ -276,6 +277,7 @@ export default function PortfolioComments({
                     value={newStatus}
                     label={t('portfolio:activity.form.fields.changeStatus')}
                     onChange={(e) => setNewStatus(e.target.value)}
+                    MenuProps={selectKeepsFocus.MenuProps}
                   >
                     <MenuItem value="">{t('portfolio:activity.form.noChange')}</MenuItem>
                     {allowedTransitions.map((status) => {

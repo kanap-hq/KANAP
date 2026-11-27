@@ -857,6 +857,7 @@ const TASK_PROJECT_SORTS = new Set(['phase_name', 'project_stream_name', 'projec
 
 const TASK_SORT_EXPRESSIONS: Record<string, string> = {
   title: 't.title',
+  item_number: 't.item_number',
   description: 't.description',
   status: 't.status',
   created_at: 't.created_at',

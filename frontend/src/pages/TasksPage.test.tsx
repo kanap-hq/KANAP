@@ -1,11 +1,13 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../config/ThemeContext';
+import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import TasksPage from './TasksPage';
+import { ACTIVE_TASK_STATUSES } from './tasks/task.constants';
 
 const deleteButton = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
 const grid = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
@@ -24,7 +26,14 @@ vi.mock('../auth/AuthContext', () => ({
     user: null,
   }),
 }));
-vi.mock('../api', () => ({ default: { get: vi.fn(async () => ({ data: { items: [] } })), post } }));
+vi.mock('../api', () => ({
+  default: {
+    get: vi.fn(async (url: string) => (
+      url === '/portfolio/classification/task-types' ? { data: [] } : { data: { items: [] } }
+    )),
+    post,
+  },
+}));
 vi.mock('../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'fromage' }) }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../components/ServerDataGrid', () => ({
@@ -124,5 +133,105 @@ describe('TasksPage delete', () => {
     render(<ThemeProvider theme={createAppTheme('light')}>{emptyState}</ThemeProvider>);
     expect(screen.getByTestId('tasks-empty').textContent).toBe('tasks.empty');
     expect(screen.getByTestId('tasks-empty').querySelector('button')).toBeNull();
+  });
+});
+
+function renderTasks(search = '') {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <ThemeProvider theme={createAppTheme('light')}>
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[`/tasks${search}`]}><TasksPage /></MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>,
+  );
+}
+
+/** The filters of the address a task's link opens, once the list has reported `filterModel`. */
+function taskLinkFilters(filterModel: Record<string, unknown>) {
+  act(() => grid.props!.onQueryStateChange({ sort: 'priority_score:DESC', q: '', filterModel }));
+  const column = (grid.props!.columns as Array<Record<string, any>>).find((c) => c.field === 'item_number')!;
+  const view = render(
+    <ThemeProvider theme={createAppTheme('light')}>
+      <MemoryRouter>
+        {column.cellRenderer({
+          value: 4,
+          valueFormatted: 'T-4',
+          data: { id: 'row-1', item_number: 4, title: 'Origin' },
+        })}
+      </MemoryRouter>
+    </ThemeProvider>,
+  );
+  const href = view.getByRole('link', { name: 'T-4' }).getAttribute('href')!;
+  view.unmount();
+  const filters = new URLSearchParams(href.split('?')[1] ?? '').get('filters');
+  return filters ? JSON.parse(filters) : null;
+}
+
+describe('TasksPage default status filter', () => {
+  beforeEach(() => {
+    grid.props = null;
+  });
+
+  it('opens on the active statuses when the address names none', () => {
+    const view = renderTasks();
+    expect(grid.props!.initialState.filter.filterModel.status.values).toEqual(ACTIVE_TASK_STATUSES);
+    view.unmount();
+  });
+
+  it('keeps a cleared status filter cleared when the address says so', () => {
+    const view = renderTasks(`?filters=${encodeURIComponent(JSON.stringify({ status: null }))}`);
+    expect(grid.props!.initialState.filter.filterModel.status).toBeNull();
+    view.unmount();
+  });
+
+  it('opens a task with the status filter cleared, so the list comes back without it', () => {
+    const view = renderTasks();
+    expect(taskLinkFilters({})).toEqual({ status: null });
+    view.unmount();
+  });
+
+  it('opens a task with the status filter the person chose, including every status and none', () => {
+    const view = renderTasks();
+    const chosen = { filterType: 'set', values: ['done'] };
+    expect(taskLinkFilters({ status: chosen }).status).toEqual(chosen);
+    const every = { filterType: 'set', values: ['open', 'in_progress', 'pending', 'in_testing', 'done', 'cancelled'] };
+    expect(taskLinkFilters({ status: every }).status).toEqual(every);
+    const none = { filterType: 'set', values: [] as string[] };
+    expect(taskLinkFilters({ status: none }).status).toEqual(none);
+    view.unmount();
+  });
+
+  it('names a selected status the list does not return, including pending and in testing', async () => {
+    const view = renderTasks();
+    const column = (grid.props!.columns as Array<Record<string, any>>).find((c) => c.field === 'status')!;
+    const filterRef = React.createRef<any>();
+    const model = { status: { filterType: 'set', values: ['open', 'pending', 'in_testing'] } };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const filter = render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <CheckboxSetFilter
+            ref={filterRef}
+            {...({
+              api: { getFilterModel: () => model, setFilterModel: vi.fn() },
+              column: { getColId: () => 'status' },
+              colDef: { field: 'status' },
+              context: { getQueryState: () => ({}) },
+              ...column.filterParams,
+              getValues: async () => [{ value: 'open', label: 'statuses.task.open' }],
+            } as any)}
+          />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    act(() => { filterRef.current.afterGuiAttached(); });
+    expect(await screen.findByRole('checkbox', { name: 'statuses.task.open' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'pending' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'in_testing' })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'statuses.task.pending' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'statuses.task.in_testing' })).toBeInTheDocument();
+    filter.unmount();
+    view.unmount();
   });
 });

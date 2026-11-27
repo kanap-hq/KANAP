@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -17,6 +17,10 @@ const harness = vi.hoisted(() => ({
   updateAgent: vi.fn(),
   previewAgentTargeting: vi.fn(),
   listKnowledgeLibraries: vi.fn(),
+  getAgentTargetingOptions: vi.fn(async () => ({ options: [] as Array<{ value: string; label: string }> })),
+  getSettings: vi.fn(async () => ({
+    settings: { glpi_enabled: false, glpi_url: null as string | null, has_glpi_user_token: false },
+  })),
   webSearch: false,
   snapshot: (): Record<string, unknown> => ({}),
 }));
@@ -47,6 +51,11 @@ vi.mock('../../ai/aiApi', async () => {
       updateAgent: harness.updateAgent,
       previewAgentTargeting: harness.previewAgentTargeting,
       listKnowledgeLibraries: harness.listKnowledgeLibraries,
+      getAgentTargetingOptions: harness.getAgentTargetingOptions,
+    },
+    aiAdminApi: {
+      ...actual.aiAdminApi,
+      getSettings: harness.getSettings,
     },
   };
 });
@@ -521,5 +530,42 @@ describe('AgentWorkspacePage targeting preview', { timeout: 20000 }, () => {
     shownDefinition = helpdesk(true);
     renderPage('/agents/payroll?tab=settings');
     expect(await screen.findByText(UNAVAILABLE, {}, { timeout: 5000 })).toBeInTheDocument();
+  });
+
+  it('does not ask for ticket values when the space has no ticket connection', async () => {
+    harness.getAgentTargetingOptions.mockClear();
+    harness.getSettings.mockClear();
+    harness.getSettings.mockResolvedValue({
+      settings: { glpi_enabled: false, glpi_url: null, has_glpi_user_token: false },
+    });
+    shownDefinition = {
+      ...helpdesk(false),
+      allowed_capabilities_json: [
+        { name: 'ticketing.ticket.classification_context.get' },
+        { name: 'ticketing.ticket.classification_update.prepare' },
+        { name: 'ticketing.ticket.classification_update.approved' },
+        { name: 'ticketing.ticket.routing_context.get' },
+        { name: 'ticketing.ticket.assignment_update.prepare' },
+        { name: 'ticketing.ticket.assignment_update.approved' },
+      ],
+    };
+    renderPage('/agents/payroll?tab=settings');
+    expect(await screen.findByText('Names you can use in the instructions', {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText('Nothing available.')).toBeInTheDocument();
+    expect(screen.queryByText('The catalogue could not be loaded.')).toBeNull();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(harness.getAgentTargetingOptions).not.toHaveBeenCalled();
+  });
+
+  it('asks for ticket values when the space has a ticket connection', async () => {
+    harness.getAgentTargetingOptions.mockClear();
+    harness.getSettings.mockResolvedValue({
+      settings: { glpi_enabled: true, glpi_url: 'https://glpi.example', has_glpi_user_token: true },
+    });
+    shownDefinition = helpdesk(false);
+    renderPage('/agents/payroll?tab=settings');
+    await waitFor(() => {
+      expect(harness.getAgentTargetingOptions).toHaveBeenCalled();
+    }, { timeout: 5000 });
   });
 });
