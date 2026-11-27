@@ -365,7 +365,9 @@ function amountMeasures(payload: AmountPayload): AmountMeasure[] {
 /**
  * The columns a payload writes, each with its total for the year once written (lot B12b, the
  * warning of a column left to check): a yearly or quarterly payload sets its columns' year, a
- * monthly one its months over the months stored (`beforeItems`, the year's rows as listed).
+ * monthly one its months over the months stored (`beforeItems`, the year's rows as listed). A
+ * monthly column whose cents do not change is not written as an amount (`recordPayloadRoundInputs`
+ * keeps how it was entered): left out.
  */
 export function columnsAfterWrite(raw: unknown, beforeItems: readonly unknown[] = []): ColumnAfterWrite[] {
   const payload = raw as AmountPayload;
@@ -377,8 +379,9 @@ export function columnsAfterWrite(raw: unknown, beforeItems: readonly unknown[] 
   }
   const months = new Map<string, Record<string, unknown>>();
   for (const row of beforeItems as Array<Record<string, unknown>>) months.set(String(row?.period ?? ''), { ...row });
+  const changed = measures.filter((measure) => payload.months.some((row) => row[measure] !== undefined && cents(row[measure]) !== cents(months.get(row.period)?.[measure])));
   for (const row of payload.months) months.set(row.period, { ...(months.get(row.period) ?? {}), ...Object.fromEntries(measures.filter((m) => row[m] !== undefined).map((m) => [m, row[m]])) });
-  return measures.map((measure) => ({
+  return changed.map((measure) => ({
     year: payload.year,
     measure,
     total: [...months.entries()].filter(([period]) => periodYear(period) === payload.year).reduce((sum, [, row]) => sum + cents(row[measure]), 0),
@@ -604,9 +607,12 @@ export class AiFinancialPlanMutationSupportService {
       let currentValues = prepared.currentValues;
       if (rebuilt.size > 0 && currentValues?.[ENTRY_CHECK_STORE_KEY]) {
         const { [ENTRY_CHECK_STORE_KEY]: _warned, ...rest } = currentValues;
+        // The months stored now, as the first evaluation read them (`values.items`).
+        const storedItems = (currentValues.values as { items?: unknown } | undefined)?.items;
+        const storedNow = Array.isArray(storedItems) ? storedItems : [];
         const warning = await amountsEntryCheckWarning(context.manager, context.tenantId,
           { nature: item.nature, accountId: item.row.account_id, endOfValidity: item.row.disabled_at as string | Date | null },
-          columnsAfterWrite(prepared.mutationInput.amounts).filter((column) => !rebuilt.has(column.measure)));
+          columnsAfterWrite(prepared.mutationInput.amounts, storedNow).filter((column) => !rebuilt.has(column.measure)));
         currentValues = { ...rest, ...(warning ? { [ENTRY_CHECK_STORE_KEY]: warning } : {}) };
       }
       return { ...prepared, currentValues, mutationInput: { ...prepared.mutationInput, restore_inputs: inputs } };

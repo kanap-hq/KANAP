@@ -130,6 +130,7 @@ function lineColumnsParts(
   line: string,
   settings: EntryCheckSettings,
   sources: { versions: string; totals: string } = { versions: 'spend_versions', totals: 'spend_version_totals' },
+  anyEnd = false,
 ): { from: string; where: string } {
   const t = stmt.tenant;
   // Each measure is one of the five column names (`AMOUNT_MEASURES`): never request text.
@@ -140,8 +141,8 @@ function lineColumnsParts(
     from: `${sources.versions} v
     JOIN ${sources.totals} vt ON vt.tenant_id = ${t} AND vt.version_id = v.id
     CROSS JOIN LATERAL (VALUES ${values}) m(measure, total)`,
-    where: `v.tenant_id = ${t} AND v.spend_item_id = ${line}.id
-      AND (${line}.disabled_at IS NULL OR v.budget_year <= extract(year FROM ${line}.disabled_at AT TIME ZONE 'UTC'))
+    where: `v.tenant_id = ${t} AND v.spend_item_id = ${line}.id${anyEnd ? '' : `
+      AND (${line}.disabled_at IS NULL OR v.budget_year <= extract(year FROM ${line}.disabled_at AT TIME ZONE 'UTC'))`}
       AND m.measure = ANY(${stmt.bind(settings.measures, 'text[]')}) AND m.total <> 0
       AND NOT ((${line}.nature || ':' || v.budget_year || ':' || m.measure) = ANY(${stmt.bind(settings.frozen, 'text[]')}))
       AND ${settings.lineByLine ? `(${conforming}) IS NULL` : `NOT EXISTS (${conforming})`}`,
@@ -154,8 +155,9 @@ export function lineColumnsToCheckSql(
   line: string,
   settings: EntryCheckSettings,
   sources?: { versions: string; totals: string },
+  anyEnd = false,
 ): string {
-  const { from, where } = lineColumnsParts(stmt, line, settings, sources);
+  const { from, where } = lineColumnsParts(stmt, line, settings, sources, anyEnd);
   return `SELECT v.budget_year AS year, m.measure FROM ${from} WHERE ${where}`;
 }
 
@@ -315,6 +317,17 @@ export async function readAccountExpectations(
   return result;
 }
 
+/** The year of an end of validity, as the rule reads it (UTC); null without one. */
+export function endOfValidityYear(endOfValidity: string | Date | null | undefined): number | null {
+  return endOfValidity ? new Date(endOfValidity).getUTCFullYear() : null;
+}
+
+/** The columns of `columns` up to the year of `endOfValidity` (every one without an end). */
+export function withinEndOfValidity<T extends { year: number }>(columns: readonly T[], endOfValidity: string | Date | null | undefined): T[] {
+  const lastYear = endOfValidityYear(endOfValidity);
+  return lastYear === null ? [...columns] : columns.filter((column) => column.year <= lastYear);
+}
+
 /** A column of a line as a write will leave it: its year, its column, its net total for the year once written (cents or units: only zero matters). */
 export type ColumnAfterWrite = { year: number; measure: AmountMeasure; total: bigint | number };
 
@@ -333,7 +346,7 @@ export function columnsLeftToCheck(
   columns: readonly ColumnAfterWrite[],
   endOfValidity?: string | Date | null,
 ): EntryCheckColumn[] {
-  const lastYear = endOfValidity ? new Date(endOfValidity).getUTCFullYear() : null;
+  const lastYear = endOfValidityYear(endOfValidity);
   const seen = new Set<string>();
   const left: EntryCheckColumn[] = [];
   for (const column of columns) {
@@ -352,12 +365,15 @@ export function columnsLeftToCheck(
 /**
  * The columns to check of lines as they stand, whatever their account (`lineColumnsToCheckSql`):
  * what a move onto an expected account leaves to check. One statement; a line without one is absent.
+ * `anyEnd`: every year, whatever the line's end of validity (for an end the write changes:
+ * `withinEndOfValidity`).
  */
 export async function readColumnsToCheckOnAnyAccount(
   manager: EntityManager,
   tenantId: string,
   itemIds: readonly string[],
   settings?: EntryCheckSettings,
+  anyEnd = false,
 ): Promise<Map<string, EntryCheckColumn[]>> {
   const result = new Map<string, EntryCheckColumn[]>();
   const ids = Array.from(new Set(itemIds));
@@ -368,7 +384,7 @@ export async function readColumnsToCheckOnAnyAccount(
   const query = stmt.finalize(`${selectionSourcesSql(stmt, bound)}
     SELECT li.id::text AS item_id, c.year, c.measure
     FROM spend_items li
-    CROSS JOIN LATERAL (${lineColumnsToCheckSql(stmt, 'li', rule, SELECTION_SOURCES)}) c
+    CROSS JOIN LATERAL (${lineColumnsToCheckSql(stmt, 'li', rule, SELECTION_SOURCES, anyEnd)}) c
     WHERE li.tenant_id = ${stmt.tenant}${naturesAnd('li', BUDGET_NATURES)} AND li.id = ANY(${bound})`);
   const rows: Array<{ item_id: string; year: number; measure: AmountMeasure }> = await manager.query(query.sql, query.params);
   for (const row of rows) {

@@ -77,12 +77,20 @@ export class UpdateBusinessRecordAiMutationOperation implements AiMutationOperat
 }
 
 /**
- * A budget line moved onto an account that expects quantity and price, with amounts not built so:
- * the card warns that the line will be to check (lot B12b). Other changes and families as they are.
+ * A budget line moved onto an account that expects quantity and price, with amounts not built so,
+ * or on such an account given an end of validity that brings back a year with them: the card warns
+ * that the line will be to check (lot B12b), reading the account and the end the card writes. Other
+ * changes and families as they are.
  */
 async function withAccountEntryCheck(context: AiExecutionContextWithManager, prepared: AiPreparedMutationPreview): Promise<AiPreparedMutationPreview> {
   const fields = prepared.mutationInput?.fields as Record<string, unknown> | undefined;
-  if (prepared.targetEntityType !== 'budget_lines' || !prepared.targetEntityId || typeof fields?.account_id !== 'string') return prepared;
-  const warning = await accountEntryCheckWarning(context.manager, context.tenantId, [prepared.targetEntityId], fields.account_id);
+  if (prepared.targetEntityType !== 'budget_lines' || !prepared.targetEntityId || !fields) return prepared;
+  const accountGiven = typeof fields.account_id === 'string';
+  const endGiven = Object.prototype.hasOwnProperty.call(fields, 'disabled_at');
+  if (!accountGiven && !endGiven) return prepared;
+  const warning = await accountEntryCheckWarning(context.manager, context.tenantId, prepared.targetEntityId, {
+    ...(accountGiven ? { accountId: fields.account_id } : {}),
+    ...(endGiven ? { endOfValidity: fields.disabled_at ?? null } : {}),
+  });
   return warning ? { ...prepared, currentValues: { ...(prepared.currentValues ?? {}), [ENTRY_CHECK_STORE_KEY]: warning } } : prepared;
 }

@@ -20,7 +20,8 @@ import { readEntryChecks } from '../../spend/budget-line-entry-check';
 //   amounts (`create_business_record`), its account (`update_business_record`). The warning names the
 //   line's own account and says where to complete it; approval writes as before; the written card
 //   does not repeat it; no warning when nothing will be to check (another account, a zero, a hidden
-//   column).
+//   column). A card warns if and only if the line is to check once written because of the card (an
+//   undo, a month as stored, a move with an end, an end of validity alone), as the list reads it.
 // @database-spec: boots the application context, so run-ci-tests.js runs this file in a database lane.
 
 process.env.AI_CHAT_ENABLED = 'true';
@@ -73,8 +74,8 @@ async function seedUser(runner: QueryRunner, tenantId: string, roleId: string, f
     [tenantId, first, `${first.toLowerCase()}-${randomUUID().slice(0, 8)}@example.test`, roleId, mode]);
 }
 
-type Column = { year: number; measure: 'planned' | 'forecast'; months: number[]; method: 'spread' | 'computed' };
-type LineDef = { n: number; account: 'tick' | 'cons' | 'none'; company: 'a' | 'b'; columns: Column[] };
+type Column = { year: number; measure: 'planned' | 'committed' | 'forecast'; months: number[]; method: 'spread' | 'computed' };
+type LineDef = { n: number; account: 'tick' | 'cons' | 'none'; company: 'a' | 'b'; columns: Column[]; end?: string };
 
 const spread = (year = Y): Column => ({ year, measure: 'planned', months: Array(12).fill(100), method: 'spread' });
 const qp = (year = Y): Column => ({ year, measure: 'planned', months: Array(12).fill(100), method: 'computed' });
@@ -83,7 +84,9 @@ const qp = (year = Y): Column => ({ year, measure: 'planned', months: Array(12).
  * 1, 2: spread budgets on an account that expects nothing. 3: a spread budget on the ticked account
  * (already to check). 4: as 1, paid by company B. 5: built as quantity × price on the ticked account.
  * 6: a forecast only (the column is hidden). 7: next year's budget only (frozen). 8: built as
- * quantity × price on an account ticked through its consolidation account.
+ * quantity × price on an account ticked through its consolidation account. 9: Budget and Revision
+ * both built as quantity × price on the ticked account. 10: on the ticked account, ended last year:
+ * last year's Budget built as quantity × price, this year's spread (after its end: not looked at).
  */
 const LINES: LineDef[] = [
   { n: 1, account: 'none', company: 'a', columns: [spread()] },
@@ -94,6 +97,8 @@ const LINES: LineDef[] = [
   { n: 6, account: 'none', company: 'a', columns: [{ year: Y, measure: 'forecast', months: [500], method: 'spread' }] },
   { n: 7, account: 'none', company: 'a', columns: [spread(Y + 1)] },
   { n: 8, account: 'cons', company: 'a', columns: [qp()] },
+  { n: 9, account: 'tick', company: 'a', columns: [qp(), { ...qp(), measure: 'committed' }] },
+  { n: 10, account: 'tick', company: 'a', columns: [qp(Y - 1), spread()], end: `${Y - 1}-06-30T12:00:00Z` },
 ];
 
 async function seedGraph(runner: QueryRunner): Promise<Seed> {
@@ -138,9 +143,9 @@ async function seedGraph(runner: QueryRunner): Promise<Seed> {
   const lines: Record<number, string> = {};
   for (const line of LINES) {
     const id = await one(runner,
-      `INSERT INTO spend_items (tenant_id, nature, item_number, product_name, currency, effective_start, status, paying_company_id, account_id, supplier_id)
-       VALUES ($1, 'opex', $2, $3, 'EUR', '2020-01-01', 'enabled', $4, $5, $6) RETURNING id`,
-      [tenantId, line.n, `Line ${line.n}`, companies[line.company], accounts[line.account], supplier]);
+      `INSERT INTO spend_items (tenant_id, nature, item_number, product_name, currency, effective_start, status, paying_company_id, account_id, supplier_id, disabled_at)
+       VALUES ($1, 'opex', $2, $3, 'EUR', '2020-01-01', 'enabled', $4, $5, $6, $7) RETURNING id`,
+      [tenantId, line.n, `Line ${line.n}`, companies[line.company], accounts[line.account], supplier, line.end ?? null]);
     lines[line.n] = id;
     const versions = new Map<number, string>();
     for (const column of line.columns) {
@@ -152,7 +157,8 @@ async function seedGraph(runner: QueryRunner): Promise<Seed> {
         versions.set(column.year, versionId);
       }
       for (const [month, value] of column.months.entries()) {
-        await runner.query(`INSERT INTO spend_amounts (tenant_id, version_id, period, ${column.measure}) VALUES ($1, $2, make_date($3, $4, 1), $5::numeric)`,
+        await runner.query(`INSERT INTO spend_amounts (tenant_id, version_id, period, ${column.measure}) VALUES ($1, $2, make_date($3, $4, 1), $5::numeric)
+          ON CONFLICT (version_id, period) DO UPDATE SET ${column.measure} = EXCLUDED.${column.measure}`,
           [tenantId, versionId, column.year, month + 1, value]);
       }
       const round = await one(runner,
@@ -507,6 +513,74 @@ async function testKadLineCards(harness: Harness) {
   });
 }
 
+/** Whether the list's "To check" column names the rule for line `n` (`budgetListLineChecksByIds`, the list's own field). */
+async function listSaysToCheck(harness: Harness, runner: QueryRunner, seed: Seed, n: number): Promise<boolean> {
+  const { budgetListLineChecksByIds } = require('../../spend/budget-list/budget-list.service');
+  const { SUMMARY_SCOPES } = require('../../spend/spend-summary.builder');
+  const checks: Map<string, string[]> = await budgetListLineChecksByIds(
+    SUMMARY_SCOPES.all, { fxRates: (harness.budgetLines as any).fxRates, access: undefined }, runner.manager, [seed.lines[n]]);
+  return (checks.get(seed.lines[n]) ?? []).includes('quantity_price');
+}
+
+/**
+ * The rule of Kad's cards (lot B12b, adversarial review): a card warns if and only if the line is to
+ * check once it is written because of what the card writes. Each case starts from a line that is not
+ * to check, approves the card, and compares the warning with the list's "To check" column.
+ */
+async function testKadCardsWarnIffToCheck(harness: Harness) {
+  await inSeed(harness, async (runner, seed) => {
+    const iff = async (what: string, n: number, tool: string, input: Record<string, unknown>, expected: boolean) => {
+      assert.equal(await listSaysToCheck(harness, runner, seed, n), false, `${what}: not to check before`);
+      const ctx = context(seed, runner, what);
+      const preview = await card(harness, ctx, tool, input);
+      const warns = preview.changes[WARNING_FIELD] !== undefined;
+      await approve(harness, ctx, preview);
+      const after = await listSaysToCheck(harness, runner, seed, n);
+      assert.deepEqual({ warns, after }, { warns: expected, after: expected }, `${what}: warns as the list reads once written`);
+      return { ctx, preview };
+    };
+    const amounts = (ref: string, payload: Record<string, unknown>) => ({
+      entity_type: 'budget_lines', ref, action: 'upsert_amounts', version_ref: `Y${Y}`, amounts: payload,
+    });
+
+    // R1: the undo of a total on a line whose Revision is also built as quantity × price.
+    await savepoint(runner, async () => {
+      const { ctx, preview } = await iff('a total on line 9', 9, 'write_financial_plan', amounts('BL-9', { kind: 'annual', year: Y, totals: { planned: 2400 } }), true);
+      const undo = await harness.tools.execute(ctx, 'undo_preview', { preview_id: preview.preview_id }) as any;
+      assert.equal(undo.status, 'pending');
+      assert.equal(undo.changes[WARNING_FIELD], undefined, 'the undo rebuilds the Budget and leaves the Revision as it is: no warning');
+      await approve(harness, ctx, undo);
+      assert.equal(await listSaysToCheck(harness, runner, seed, 9), false, 'not to check once undone');
+    });
+    // R2: a month repeated as stored on a column built as quantity × price is not written; another value is.
+    await savepoint(runner, async () => {
+      await iff('a month as stored', 5, 'write_financial_plan', amounts('BL-5', { kind: 'monthly', year: Y, months: [{ period: `${Y}-01-01`, planned: '100' }] }), false);
+    });
+    await savepoint(runner, async () => {
+      await iff('a month changed', 5, 'write_financial_plan', amounts('BL-5', { kind: 'monthly', year: Y, months: [{ period: `${Y}-01-01`, planned: '150' }] }), true);
+    });
+    // R3: one card moves line 1 onto the ticked account and ends it the year before its Budget.
+    await savepoint(runner, async () => {
+      await iff('a move with an end before the budget', 1, 'update_business_record',
+        { entity_type: 'budget_lines', ref: 'BL-1', fields: { account_id: seed.accounts.tick, disabled_at: `${Y - 1}-06-30` } }, false);
+    });
+    await savepoint(runner, async () => {
+      await iff('a move with an end after the budget', 1, 'update_business_record',
+        { entity_type: 'budget_lines', ref: 'BL-1', fields: { account_id: seed.accounts.tick, disabled_at: `${Y}-12-31` } }, true);
+    });
+    // M3: on the ticked account, the end of validity alone, moved to a year with a spread Budget, or within its year.
+    await savepoint(runner, async () => {
+      await iff('an end brought to this year', 10, 'update_business_record',
+        { entity_type: 'budget_lines', ref: 'BL-10', fields: { disabled_at: `${Y}-12-31` } }, true);
+    });
+    await savepoint(runner, async () => {
+      await iff('an end moved within its year', 10, 'update_business_record',
+        { entity_type: 'budget_lines', ref: 'BL-10', fields: { disabled_at: `${Y - 1}-12-31` } }, false);
+    });
+    console.log('  Kad\'s cards warn if and only if the line is to check once written because of the card: OK');
+  });
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -516,6 +590,7 @@ async function run() {
     await testKadBulkCard(harness);
     await testKadBulkLimited(harness);
     await testKadLineCards(harness);
+    await testKadCardsWarnIffToCheck(harness);
   } finally {
     await harness.app.close();
   }

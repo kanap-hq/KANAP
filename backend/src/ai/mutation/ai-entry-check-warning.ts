@@ -5,6 +5,7 @@ import {
   loadEntryCheckSettings,
   readAccountExpectations,
   readColumnsToCheckOnAnyAccount,
+  withinEndOfValidity,
   type ColumnAfterWrite,
 } from '../../spend/budget-line-entry-check';
 import type { AiMutationPreviewChangeDto } from '../ai.types';
@@ -13,8 +14,8 @@ import { AiWriteLanguage, ENTRY_CHECK_WARNING_FIELD, quantityPriceExpectedWarnin
 /**
  * The warning of Kad's budget cards when their write leaves a column "To check" (lot B12b): the
  * line's account, or its consolidation account, expects quantity and price, and Kad writes totals
- * only (a line's amounts, a new line with its amounts) or moves the line with its amounts onto
- * such an account. The rule is the line's (`spend/budget-line-entry-check.ts`), read before the
+ * only (a line's amounts, a new line with its amounts), moves the line with its amounts onto
+ * such an account, or extends the end of validity of a line on one to a year with such amounts. The rule is the line's (`spend/budget-line-entry-check.ts`), read before the
  * write; the card names the line's own account, never the consolidation account (a person who does
  * not read the accounts is not told it). Stored on the card when it is prepared, said while it
  * waits for approval: the approval writes as for any card, and the card once written does not say
@@ -54,17 +55,32 @@ export async function amountsEntryCheckWarning(
   return left.length > 0 ? { kind: 'amounts', account } : null;
 }
 
-/** The warning of a move of lines onto `accountId`: when one of their columns, as it stands, will be to check there. */
+/**
+ * The warning of a change of a line's account or end of validity (`change`: the values the card
+ * writes, absent when it keeps the stored one), on its columns as they stand: a move onto an
+ * account that expects quantity and price, when one of them will be to check there, up to the end
+ * the line will have; on the same account, an end of validity that brings back a year with such a
+ * column (lot B12b).
+ */
 export async function accountEntryCheckWarning(
   manager: EntityManager,
   tenantId: string,
-  itemIds: readonly string[],
-  accountId: unknown,
+  itemId: string,
+  change: { accountId?: unknown; endOfValidity?: unknown },
 ): Promise<AiEntryCheckWarning | null> {
-  const account = await expectedAccountLabel(manager, tenantId, accountId);
+  const rows: Array<{ account_id: string | null; disabled_at: Date | null }> = await manager.query(
+    `SELECT account_id, disabled_at FROM spend_items WHERE tenant_id = $1 AND id = $2`, [tenantId, itemId]);
+  if (rows.length === 0) return null;
+  const stored = rows[0];
+  const moved = change.accountId !== undefined && change.accountId !== stored.account_id;
+  const account = await expectedAccountLabel(manager, tenantId, moved ? change.accountId : stored.account_id);
   if (!account) return null;
-  const columns = await readColumnsToCheckOnAnyAccount(manager, tenantId, itemIds);
-  return columns.size > 0 ? { kind: 'account', account } : null;
+  const end = (value: unknown) => (typeof value === 'string' || value instanceof Date ? value : null);
+  const columns = (await readColumnsToCheckOnAnyAccount(manager, tenantId, [itemId], undefined, true)).get(itemId) ?? [];
+  const after = withinEndOfValidity(columns, change.endOfValidity !== undefined ? end(change.endOfValidity) : stored.disabled_at);
+  if (moved) return after.length > 0 ? { kind: 'account', account } : null;
+  const before = new Set(withinEndOfValidity(columns, stored.disabled_at).map((column) => `${column.year}:${column.measure}`));
+  return after.some((column) => !before.has(`${column.year}:${column.measure}`)) ? { kind: 'account', account } : null;
 }
 
 function storedWarning(value: unknown): AiEntryCheckWarning | null {

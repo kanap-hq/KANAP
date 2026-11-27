@@ -8,7 +8,7 @@ import {
 } from '../../analytics/analytics-context';
 import { notApplicableDimensionMessage, requiredDimensionMessage } from '../item-analytics.util';
 import { AMOUNT_MEASURES, AmountMeasure, MEASURE_FREEZE_COLUMN } from '../amounts-write.util';
-import { columnsLeftToCheck, roundConforms, type ColumnAfterWrite } from '../budget-line-entry-check';
+import { columnsLeftToCheck, endOfValidityYear, roundConforms, type ColumnAfterWrite } from '../budget-line-entry-check';
 import { formatCentsFixed } from '../../common/amount';
 import { endOfValidityFromDate, isActiveAt } from '../../common/status';
 import type { BudgetNature } from '../budget-nature';
@@ -1669,7 +1669,8 @@ function checkConsistency(
  * file moves onto such an account from one that expects nothing (or none) is also told of the
  * columns it already holds that are not built as quantity × price, frozen ones left out: the line
  * was not to check, and will be. Between two accounts that both expect it, only the amounts written
- * count: the line already was. The account the line has once written is named by its number, as the
+ * count: the line already was. On such an account, an end of validity the file moves later also
+ * tells of the stored columns of the years it brings back. The account the line has once written is named by its number, as the
  * file names it, never its consolidation account. One warning per row.
  */
 function checkQuantityPrice(
@@ -1688,10 +1689,16 @@ function checkQuantityPrice(
   if (!account?.quantityPrice) return;
   // Moved onto the account from one that expects nothing: the stored columns count too.
   const moved = !!live && accountId !== live.accountId && !accountOf(live.accountId)?.quantityPrice;
-  if (draft.amounts.length === 0 && !moved) return;
   const endOfValidity = Object.prototype.hasOwnProperty.call(draft.body, 'disabled_at') ? draft.body.disabled_at : live?.endOfValidity;
+  // Already on such an account, an end of validity moved later: the stored columns of the years it brings back.
+  const storedEnd = endOfValidityYear(live?.endOfValidity);
+  const newEnd = endOfValidityYear(typeof endOfValidity === 'string' ? endOfValidity : null);
+  const extended = !!live && !moved && storedEnd !== null && (newEnd === null || newEnd > storedEnd);
+  if (draft.amounts.length === 0 && !moved && !extended) return;
   const written = columnsAfterFile(draft, live);
-  const columns = moved ? [...storedColumnsToCheck(live!, written), ...written] : written;
+  const stored = moved ? storedColumnsToCheck(live!, written)
+    : extended ? storedColumnsToCheck(live!, written).filter((column) => column.year > storedEnd!) : [];
+  const columns = [...stored, ...written];
   const left = columnsLeftToCheck(
     { measures, frozen: frozenMeasures(input.catalog.frozen) },
     nature,
