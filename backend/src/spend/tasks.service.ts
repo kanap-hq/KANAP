@@ -816,6 +816,7 @@ const TASK_RELATED_FAMILY_SQL = `CASE WHEN t.related_object_type IN ('spend_item
 
 const TASK_SORT_EXPRESSIONS: Record<string, string> = {
   title: 't.title',
+  item_number: 't.item_number',
   description: 't.description',
   status: 't.status',
   created_at: 't.created_at',
