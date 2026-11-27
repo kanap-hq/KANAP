@@ -33,7 +33,7 @@ export interface AiImportColumnRule {
   multi?: boolean;
   /** A number column that holds a percentage, 0 to 100: a cell shown as a percentage (0.45 as 45%) reads as 45. */
   percent?: boolean;
-  /** A `reference` column of the family's own references (`COMP`): it reads only values written with this prefix. */
+  /** A `reference` column read only with its prefix (`COMP`, a link's `AST`): it reads only values written with it. */
   prefix?: string;
   /**
    * Values the model's value map never converts in this column (the hosting words of the servers'
@@ -252,11 +252,11 @@ function cellReader(
 }
 
 /**
- * A column of the family's own references, which names the record a row updates (`COMP-4`, any case).
- * Kad reads a value as a reference only when it carries the family's prefix: a column of the person's
- * sheet numbering its rows 1 to N would otherwise rename records unrelated to them. One value without
- * the prefix and the column is no column of references: none of its cells is read, and every row
- * keeps the import's key by name.
+ * A column of references, which names the record a row updates (`COMP-4`, `INC-12`, any case) or the
+ * record a link names (a link's server, `AST-3`). Kad reads a value as a reference only when it
+ * carries the prefix: a column of the person's sheet numbering its rows 1 to N would otherwise rename
+ * or link records unrelated to them. One value without the prefix and the column is no column of
+ * references: none of its cells is read, and every row keeps the import's key by name.
  */
 function prefixedReferenceReader(prefix: string, cells: ReadonlyArray<SheetCell | undefined>): AiImportColumnReader {
   const numberOf = (cell: SheetCell | undefined) => parseReferenceNumber(cellText(cell), prefix, { prefixRequired: true });
