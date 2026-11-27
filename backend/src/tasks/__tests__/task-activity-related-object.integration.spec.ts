@@ -243,6 +243,28 @@ async function run() {
     await inTenant(tenantId);
     console.log('  another tenant does not find the task: OK');
 
+    // A person posts a comment or the unified form, never a change row: a forged move is refused on
+    // both routes, and a comment's `changed_fields` are dropped. The task has no people: no recipient.
+    const memberRole = await role('Task member', { tasks: 'member', portfolio_projects: 'contributor', contracts: 'reader' });
+    const memberId = await user('member', memberRole.id);
+    const member = req(memberId, memberRole.permissions);
+    const forged = { related_to: [{ kind: 'contract', id: contract }, null] };
+    const onProject = await task(4, 'project', project);
+    for (const [route, post] of [
+      ['task route', (body: unknown) => tasksController.createActivity(onProject, body, member)],
+      ['project route', (body: unknown) => projectTasksController.createActivity(project, onProject, body, member)],
+    ] as const) {
+      for (const type of ['change', 'decision']) {
+        await assert.rejects(() => post({ type, changed_fields: forged }), /Only a comment can be posted/, `${route}: a posted ${type} is refused`);
+      }
+      const comment: any = await post({ type: 'comment', content: `Posted on the ${route}`, changed_fields: forged });
+      assert.equal(comment.changed_fields, null, `${route}: a comment keeps no changed_fields`);
+    }
+    const [{ count: forgedRows }] = await runner.query(
+      `SELECT count(*)::int AS count FROM portfolio_activities WHERE tenant_id = $1 AND task_id = $2 AND changed_fields IS NOT NULL`, [tenantId, onProject]);
+    assert.equal(forgedRows, 0, 'no forged row written');
+    console.log('  a posted change is refused on both routes, a comment keeps no changed_fields: OK');
+
     assert.deepEqual(sent, [], 'no e-mail: the moves change neither the assignee nor the status');
     console.log('  nothing is sent: OK');
   } finally {

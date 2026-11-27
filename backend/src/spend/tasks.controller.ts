@@ -31,7 +31,7 @@ import { Public } from '../auth/public.decorator';
 import { TaskLinkedScopes, TasksService } from './tasks.service';
 import { TasksDeleteService } from '../tasks/tasks-delete.service';
 import { TasksUnifiedService, RelatedType } from '../tasks/tasks-unified.service';
-import { TaskActivitiesService, ActivityBodyDto } from '../tasks/task-activities.service';
+import { TaskActivitiesService, ActivityBodyDto, postedActivityBody } from '../tasks/task-activities.service';
 import { TaskAttachmentsService } from '../tasks/task-attachments.service';
 import { TaskTimeEntriesService } from '../tasks/task-time-entries.service';
 import { TasksCsvService } from '../tasks/tasks-csv.service';
@@ -617,13 +617,15 @@ export class TasksController {
     const id = await this.resolve(idOrRef, req);
     await this.ensureTaskAccess(id, req, 'member');
     const tenantId = req?.tenant?.id ?? '';
-    if (body.type === 'unified') {
-      return this.activitiesSvc.createUnified(id, body, tenantId, req.user?.sub ?? null, {
+    // A comment or the unified form only: a change row is the server's (`postedActivityBody`).
+    const posted = postedActivityBody(body);
+    if (posted.type === 'unified') {
+      return this.activitiesSvc.createUnified(id, posted, tenantId, req.user?.sub ?? null, {
         manager: req?.queryRunner?.manager,
         isAdmin: req?.isAdmin === true,
       });
     }
-    return this.activitiesSvc.create(id, body, tenantId, req.user?.sub ?? null, {
+    return this.activitiesSvc.create(id, posted, tenantId, req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
     });
   }

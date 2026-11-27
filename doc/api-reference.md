@@ -1607,8 +1607,8 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - POST `/tasks/:id/activities` — create task activity **[Requires: tasks:member]**
 - POST `/portfolio/projects/:projectId/tasks/:taskId/activities` — create task activity in project context **[Requires: portfolio_projects:contributor]**
   - Supported payloads:
-    - Comment: `{ type: 'comment', content: string }`
-    - Change: `{ type: 'change', changed_fields: Record<string, [unknown, unknown]> }`
+    - Comment: `{ type: 'comment', content: string, context?: string }` (any `changed_fields` is dropped)
+    - Any other `type` (`change`, `decision`) answers 400: change rows are written by the server alone, from the changes it makes.
     - Unified action: `{ type: 'unified', content?, status?, time_hours?, time_category? }`
       - `status` accepts task statuses listed above.
       - `time_hours`: integer `0..8` (`0` = no time entry).
@@ -1625,6 +1625,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
     - `changed_fields` uses historical snapshots with human-readable FK values (not UUIDs) where possible.
     - Common auto-generated keys: `title`, `description`, `status`, `task_type_id`, `priority_level`, `creator_id`, `assignee_user_id`, `start_date`, `due_date`, `labels`, `phase_id`, `source_id`, `category_id`, `stream_id`, `company_id`, plus synthetic `related_to` when context changes.
     - `related_to` stores the kind and the id of each side (`{ kind: 'project' | 'contract' | 'budget_line' | 'incident', id }`, `null` for no object), never a name. The task activity reads name each side with the reader's rights, as the record history does: `{ kind, id, label, reference }` for an object the person reads, `{ hidden: true, kind }` for one they do not read (module, data-scoped access, participation), `{ hidden: true, kind, deleted: true }` for a deleted one. Rows written before this format stored a text: they read `{ hidden: true, kind }` when the text tells the kind, `{ hidden: true }` otherwise, for every reader.
+    - `phase_id` stores the phase's name. The task activity reads show it only to a person who reads the project it belongs to (the project the task was on at that row: in a move, the side of `related_to` the value belongs to), and `{ hidden: true }` otherwise, as the task's page empties `phase_name`.
     - Creating a task under a project also writes a project history change key: `task_created: [null, <task title>]`.
     - Portfolio reads that include activities (`?include=activities` on project and request detail) return `created_by_name`: the creation author resolved from the audit trail, with the email as fallback for accounts without a name. `created_at` carries the creation date. Creation itself is not a stored activity row, so the history feed appends a creation entry (date with time, and author) after the recorded changes, which are listed newest first.
     - Managed document edits are stored as `document_updated: [null, <slotKey>]` (`purpose`, `risks_mitigations`) instead of a rendered sentence, so clients can label the change in their own language; a `change` row without `changed_fields` still carries a human-readable `content`.

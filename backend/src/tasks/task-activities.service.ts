@@ -51,6 +51,26 @@ export interface CreateImportedTaskCommentDto {
 
 export type ActivityBodyDto = CreateTaskActivityDto | CreateUnifiedActivityDto;
 
+/**
+ * What the activity routes accept from a person (lot I7e of 26.12.1): a comment, or the unified
+ * form of the task screen (comment, status, time). A `change` row is written by the server alone,
+ * from the change it made (`logChange`): a posted one, or a comment carrying `changed_fields`, would
+ * let a member forge a move the activity then names for its readers. A comment keeps its text and
+ * its context only.
+ */
+export function postedActivityBody(body: unknown): ActivityBodyDto {
+  const dto = (body ?? {}) as Record<string, unknown>;
+  if (dto.type === 'unified') return dto as unknown as CreateUnifiedActivityDto;
+  if (dto.type !== undefined && dto.type !== 'comment') {
+    throw new BadRequestException('Only a comment can be posted: type must be "comment" or "unified".');
+  }
+  return {
+    type: 'comment',
+    content: typeof dto.content === 'string' ? dto.content : undefined,
+    context: typeof dto.context === 'string' ? dto.context : undefined,
+  };
+}
+
 type TaskActivityAuditOptions = {
   source?: string;
   sourceRef?: string | null;
