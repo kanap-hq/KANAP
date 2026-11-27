@@ -524,7 +524,13 @@ async function testPromptSaysItsLimitsAndRights() {
   assert.match(prompt, /31\/12\/2026 in French/);
   assert.match(prompt, /Never write a field name or a raw value from a tool result \(term_state, to_decide, next_due_date/);
   assert.match(prompt, /`current_term_number`: quote it, never compute it/);
-  assert.match(build({ plaidChanges: true, modifiableModules: [] }), new RegExp(`Their role lets them prepare changes with ${AGENT_NAME}\\.\\n- Their role lets them modify no module\\.`));
+  const writer = build({ plaidChanges: true, modifiableModules: [] });
+  assert.match(writer, new RegExp(`Their role lets them prepare changes with ${AGENT_NAME}\\.\\n- Their role lets them modify no module\\.`));
+  assert.match(writer, /imported only with the import tool/);
+  assert.match(writer, /refuses because a right is missing/);
+  assert.match(writer, /create no row of the file one by one/);
+  assert.match(writer, /record they describe in writing is created as usual/);
+  assert.doesNotMatch(prompt, /imported only with the import tool/);
 }
 
 /** Issue 125: what Plaid cannot write is refused in words; no substitute preview. */

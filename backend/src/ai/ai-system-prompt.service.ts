@@ -235,6 +235,13 @@ function writeRightsText(writeRights: SystemPromptParams['writeRights']): string
     if (writeRights.contributableModules?.length) {
       lines.push(`- Modules they may contribute to, as on the screen: ${writeRights.contributableModules.join('; ')}.`);
     }
+    if (writeRights.plaidChanges) {
+      lines.push(
+        '- A file the person attaches is imported only with the import tool. '
+        + 'When that tool refuses because a right is missing, tell them that right in the words it gives and create no row of the file one by one. '
+        + 'A record they describe in writing is created as usual.',
+      );
+    }
   }
   lines.push(
     `- When a change is refused or cannot be made, say in plain words, in the user's language, which right is missing, for example "you need the right to modify projects" or "your role lets you ask ${AGENT_NAME} questions but not prepare changes". `
