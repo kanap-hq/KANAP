@@ -106,7 +106,7 @@
     "turnoverFxExcludedPair_other": "{{currency}} {{year}} ({{count}} empresas)",
     "export": "Exportar empresas",
     "import": "Importar empresas",
-    "importHint": "Indicadores leídos: {{years}}, según el año de la lista. Cada año es opcional. Valores aceptados para status: enabled o disabled.",
+    "importHint": "Indicadores leídos: {{years}}, según el año de la lista. Cada año es opcional. Valores aceptados para Estado: enabled o disabled.",
     "previous": "Empresa anterior",
     "next": "Empresa siguiente",
     "fields": {

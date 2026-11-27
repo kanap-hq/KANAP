@@ -51,7 +51,7 @@ describe('companies CSV import dialog', () => {
 
   it('explains the years and the status values in French', () => {
     expect(frMasterData.companies.importHint).toBe(
-      "Métriques lues : {{years}}, d'après l'année de la liste. Chaque année est facultative. Valeurs acceptées pour status : enabled ou disabled.",
+      "Métriques lues : {{years}}, d'après l'année de la liste. Chaque année est facultative. Valeurs acceptées pour Statut : enabled ou disabled.",
     );
   });
 });
