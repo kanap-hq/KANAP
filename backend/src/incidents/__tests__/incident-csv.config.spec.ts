@@ -127,6 +127,18 @@ async function testHiddenRefIsUnknownOnValidate(): Promise<void> {
   assert.match(hidden.leaveOut ? '' : hidden.errors![0].message, /"INC-12" is no reference in this workspace/);
 }
 
+/**
+ * A reference `beforeValidate` took off a row comes back through `settleRows`; a row it never comes
+ * back to stops the whole import before anything is written, never becomes a new incident.
+ */
+async function testTakenReferenceNeverBecomesACreation(): Promise<void> {
+  const row = importRow('INC-12');
+  const context = mockContext([hiddenRow]);
+  await incidentCsvConfig.beforeValidate!([row], context);
+  assert.equal(row.raw.ref, '');
+  await assert.rejects(() => incidentCsvConfig.afterValidate!([row], context), /internal error.*settleRows/i);
+}
+
 async function testVisibleRestrictedRefIsAllowed(): Promise<void> {
   const row = importRow('INC-13');
   const context = mockContext([visibleRestrictedRow]);
@@ -314,6 +326,7 @@ async function run(): Promise<void> {
   assert.ok(incidentCsvConfig.afterValidate);
   await testHiddenRefIsUnknownOnValidate();
   await testVisibleRestrictedRefIsAllowed();
+  await testTakenReferenceNeverBecomesACreation();
   await testEmptyConfidentialCellIsUnchangedOnUpdate();
   await testHiddenUpdateIsRefusedOnCommit();
   await testUpdateRowsAreLockedAndPreImageKept();

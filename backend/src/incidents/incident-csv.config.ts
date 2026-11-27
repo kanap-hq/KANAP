@@ -733,6 +733,11 @@ export const incidentCsvConfig: CsvEntityConfig = {
    * contributor gets a row error, with the INC-N reference, in both the preflight and the load.
    */
   afterValidate: async (rows, context) => {
+    // A reference `beforeValidate` took off a row comes back through `settleRows`: a row it never came
+    // back to would become a new incident. Nothing is written then.
+    if (rows.some((row) => hiddenReferences.has(row.raw))) {
+      throw new Error('Incident import: internal error, a reference taken off a row was not given back by settleRows.');
+    }
     // A review cell that repeats its document is kept as stored, whatever tags it holds.
     await keepStoredSlotBodies(rows, context, 'incidents', { [REVIEW_ENTITY_PROPERTY]: 'review' });
     // The comparison swallows an unknown category, and the commit throw does not run on the check.
