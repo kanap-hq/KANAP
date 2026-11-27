@@ -266,7 +266,7 @@ Filter the list by **Person**, **Key or connection**, **Result** and **Period** 
 
 Click a line to see the arguments the call sent, shortened. For a refusal or a failure, the line shows its reason; its full cause is shown to the person who made the call and to an Administrator. Secret values show as *Hidden*.
 
-The journal also records calls made with a key that was revoked or has expired. It never keeps a key or a token.
+The journal also records calls made with a key or a connection that was revoked or has expired. It never keeps a key or a token.
 
 ---
 
