@@ -21,6 +21,7 @@ export type RecentEntityType =
   | 'application'
   | 'asset'
   | 'interface'
+  | 'technology'
   | 'connection'
   | 'contract'
   | 'task'
@@ -154,6 +155,12 @@ export const ENTITY_TYPE_CONFIG: Record<
     resource: 'applications',
     icon: 'SwapHoriz',
     labelKey: 'dashboard.tiles.entityTypes.interface',
+  },
+  technology: {
+    route: (id, ref) => `/it/technologies/${ref || id}`,
+    resource: 'infrastructure',
+    icon: 'Layers',
+    labelKey: 'dashboard.tiles.entityTypes.technology',
   },
   connection: {
     route: (id, ref) => `/it/connections/${ref || id}`,

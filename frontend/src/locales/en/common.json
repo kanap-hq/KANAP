@@ -475,6 +475,7 @@
         "application": "Application",
         "asset": "Asset",
         "interface": "Interface",
+        "technology": "Technology",
         "connection": "Connection",
         "contract": "Contract",
         "task": "Task",

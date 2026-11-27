@@ -104,6 +104,7 @@ describe('reference data', () => {
     ['application', 'APP-3', '/it/applications/APP-3', '/it/applications/rec-1'],
     ['asset', 'SRV-8', '/it/assets/SRV-8', '/it/assets/rec-1'],
     ['interface', 'INT-4', '/it/interfaces/INT-4', '/it/interfaces/rec-1'],
+    ['technology', 'TEC-3', '/it/technologies/TEC-3', '/it/technologies/rec-1'],
     ['connection', 'CONN-2', '/it/connections/CONN-2', '/it/connections/rec-1'],
     ['location', 'LOC-5', '/it/locations/LOC-5', '/it/locations/rec-1'],
     ['document', 'DOC-12', '/knowledge/DOC-12', '/knowledge/rec-1'],

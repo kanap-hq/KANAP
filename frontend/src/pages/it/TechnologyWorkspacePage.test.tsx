@@ -14,6 +14,8 @@ const patch = vi.hoisted(() => vi.fn());
 const del = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ level: 'admin' }));
 const owners = vi.hoisted(() => ({ onChange: {} as Record<string, (ids: string[]) => Promise<void>> }));
+const recent = vi.hoisted(() => ({ addToRecent: vi.fn() }));
+vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => recent }));
 
 const stableT = (key: string) => key;
 vi.mock('react-i18next', () => ({
@@ -202,6 +204,12 @@ describe('TechnologyWorkspacePage', () => {
 
     renderAddressed(['/it/technologies/tec-3/overview']);
     await waitFor(() => expect(screen.getAllByTestId('location')[1]).toHaveTextContent('/it/technologies/TEC-3/overview'));
+  });
+
+  it('keeps the open technology in the recent records by its id, with its reference', async () => {
+    recent.addToRecent.mockClear();
+    renderAddressed(['/it/technologies/TEC-3/overview']);
+    await waitFor(() => expect(recent.addToRecent).toHaveBeenCalledWith('technology', 'tech-1', 'Microsoft SQL Server', 'TEC-3'));
   });
 
   it('stays on the next technology while it loads, never back on the one it leaves', async () => {

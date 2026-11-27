@@ -30,6 +30,7 @@ import TechnologyRelationsTab, { fetchTechnologyRelations, technologyRelationsCo
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
+import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 
 type TabKey = 'overview' | 'servers' | 'applications' | 'operations' | 'compliance' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
@@ -125,6 +126,10 @@ export default function TechnologyWorkspacePage() {
     queryClient.setQueryData(['technology-workspace', technology.reference], technology);
     navigate(`/it/technologies/${technology.reference}${params.tab ? `/${params.tab}` : ''}${location.search}${location.hash}`, { replace: true });
   }, [location.hash, location.search, navigate, params.tab, queryClient, routeId, technology, technologyMatchesRoute]);
+  const { addToRecent } = useRecentlyViewed();
+  React.useEffect(() => {
+    if (technologyMatchesRoute && technology?.id && technology.name) addToRecent('technology', technology.id, technology.name, technology.reference || undefined);
+  }, [addToRecent, technology?.id, technology?.name, technology?.reference, technologyMatchesRoute]);
   // One read per tab: the badges and the tabs share these queries.
   const technologyId = technology?.id ?? '';
   const serversQuery = useQuery({

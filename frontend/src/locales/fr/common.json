@@ -475,6 +475,7 @@
         "application": "Application",
         "asset": "Actif",
         "interface": "Interface",
+        "technology": "Technologie",
         "connection": "Connexion",
         "contract": "Contrat",
         "task": "Tâche",
