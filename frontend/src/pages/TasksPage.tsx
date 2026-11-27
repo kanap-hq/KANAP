@@ -475,6 +475,8 @@ export default function TasksPage() {
           labelMap: statusLabelMap,
           order: ['open', 'in_progress', 'pending', 'in_testing', 'done', 'cancelled'],
         }),
+        // A status the server omits (no task has it) is still selected by the default filter.
+        labelFormatter: (value: string | null) => (value == null ? t('shared.blankValue') : (statusLabelMap[value] ?? value)),
         searchable: false,
       },
       cellRenderer: renderStatusCell,

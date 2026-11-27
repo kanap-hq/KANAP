@@ -397,7 +397,7 @@ export default function TaskPropertiesDrawer({
         </PropertyRow>
         )}
         {task.assets !== null && (
-        <PropertyRow label={t('workspace.task.sidebar.fields.assets', { defaultValue: 'Assets' })}>
+        <PropertyRow label={t('nav:sidebar.it.assets')}>
           {readOnly ? (
             <Typography sx={{ fontSize: 13 }}>{formatLinkedNames(task.assets)}</Typography>
           ) : (

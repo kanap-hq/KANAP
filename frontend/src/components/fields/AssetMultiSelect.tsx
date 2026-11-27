@@ -43,7 +43,7 @@ export default function AssetMultiSelect({
   textFieldSx,
 }: AssetMultiSelectProps) {
   const { t } = useTranslation('common');
-  const label = labelProp ?? t('selects.assets', { defaultValue: 'Assets' });
+  const label = labelProp ?? t('nav:sidebar.it.assets');
   const naked = hideLabel || label === '';
   const ids = Array.isArray(value) ? value : [];
 

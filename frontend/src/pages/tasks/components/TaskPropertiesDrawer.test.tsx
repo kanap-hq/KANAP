@@ -91,6 +91,15 @@ afterEach(async () => {
   await i18n.changeLanguage('en');
 });
 
+describe('TaskPropertiesDrawer assets', () => {
+  it('names the assets field with the family label', async () => {
+    await i18n.changeLanguage('fr');
+    renderDrawer({ readOnly: false, task: task({ assets: [], asset_ids: [] }) });
+    expect(screen.getByText('Actifs')).toBeTruthy();
+    expect(screen.queryByText('Assets')).toBeNull();
+  });
+});
+
 describe('TaskPropertiesDrawer task type', () => {
   it('shows the shipped type of the record in the user\'s language', async () => {
     await i18n.changeLanguage('fr');

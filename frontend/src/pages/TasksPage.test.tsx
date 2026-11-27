@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../config/ThemeContext';
+import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import TasksPage from './TasksPage';
 import { ACTIVE_TASK_STATUSES } from './tasks/task.constants';
 
@@ -25,7 +26,14 @@ vi.mock('../auth/AuthContext', () => ({
     user: null,
   }),
 }));
-vi.mock('../api', () => ({ default: { get: vi.fn(async () => ({ data: { items: [] } })), post } }));
+vi.mock('../api', () => ({
+  default: {
+    get: vi.fn(async (url: string) => (
+      url === '/portfolio/classification/task-types' ? { data: [] } : { data: { items: [] } }
+    )),
+    post,
+  },
+}));
 vi.mock('../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'fromage' }) }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../components/ServerDataGrid', () => ({
@@ -191,6 +199,39 @@ describe('TasksPage default status filter', () => {
     expect(taskLinkFilters({ status: every }).status).toEqual(every);
     const none = { filterType: 'set', values: [] as string[] };
     expect(taskLinkFilters({ status: none }).status).toEqual(none);
+    view.unmount();
+  });
+
+  it('names a selected status the list does not return, including pending and in testing', async () => {
+    const view = renderTasks();
+    const column = (grid.props!.columns as Array<Record<string, any>>).find((c) => c.field === 'status')!;
+    const filterRef = React.createRef<any>();
+    const model = { status: { filterType: 'set', values: ['open', 'pending', 'in_testing'] } };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const filter = render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <CheckboxSetFilter
+            ref={filterRef}
+            {...({
+              api: { getFilterModel: () => model, setFilterModel: vi.fn() },
+              column: { getColId: () => 'status' },
+              colDef: { field: 'status' },
+              context: { getQueryState: () => ({}) },
+              ...column.filterParams,
+              getValues: async () => [{ value: 'open', label: 'statuses.task.open' }],
+            } as any)}
+          />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    act(() => { filterRef.current.afterGuiAttached(); });
+    expect(await screen.findByRole('checkbox', { name: 'statuses.task.open' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'pending' })).toBeNull();
+    expect(screen.queryByRole('checkbox', { name: 'in_testing' })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'statuses.task.pending' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'statuses.task.in_testing' })).toBeInTheDocument();
+    filter.unmount();
     view.unmount();
   });
 });
