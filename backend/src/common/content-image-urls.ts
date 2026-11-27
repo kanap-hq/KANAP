@@ -13,7 +13,8 @@ function isQuoteCode(code: number): boolean {
  * The values of `src` attributes that name an inline image: what
  * `/\bsrc\s*=\s*["']([^"']*\/inline(?:\/[^"']*)?)["']/gi` captures, read once in time proportional
  * to the length of the text. A value runs from its quote to the next quote (either kind), and it
- * names an inline image when it holds `/inline/` or ends with `/inline`.
+ * names an inline image when it holds `/inline/` or ends with `/inline`, in any case of ASCII
+ * letters, as the `i` flag reads it: the callers compare these addresses without case.
  */
 function findInlineSourceValues(content: string): string[] {
   const values: string[] = [];
@@ -39,7 +40,8 @@ function findInlineSourceValues(content: string): string[] {
           let end = start;
           while (end < content.length && !isQuoteCode(content.charCodeAt(end))) end += 1;
           const value = content.slice(start, end);
-          if (end < content.length && (value.includes('/inline/') || value.endsWith('/inline'))) {
+          const folded = value.replace(/[A-Z]+/g, (letters) => letters.toLowerCase());
+          if (end < content.length && (folded.includes('/inline/') || folded.endsWith('/inline'))) {
             values.push(value);
             next = end + 1;
           }
