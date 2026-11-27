@@ -434,11 +434,13 @@ export const RequestScoringEditor = forwardRef<RequestScoringEditorHandle, Props
                 },
               }}
             >
-              {criterion.values.map((v) => (
+              {criterion.values.map((v) => {
+                const marksBypass = mandatoryBypassEnabled && v.triggers_mandatory_bypass;
+                return (
                 <ToggleButton
                   key={v.id}
                   value={v.id}
-                  sx={v.triggers_mandatory_bypass ? {
+                  sx={marksBypass ? {
                     '&&': {
                       borderColor: theme.palette.kanap.pillDanger.border,
                       color: theme.palette.kanap.danger,
@@ -463,9 +465,10 @@ export const RequestScoringEditor = forwardRef<RequestScoringEditorHandle, Props
                   } : undefined}
                 >
                   {v.label}
-                  {v.triggers_mandatory_bypass && ' *'}
+                  {marksBypass && ' *'}
                 </ToggleButton>
-              ))}
+                );
+              })}
             </ToggleButtonGroup>
           </Box>
         ))}
