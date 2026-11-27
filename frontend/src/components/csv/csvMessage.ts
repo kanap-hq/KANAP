@@ -23,12 +23,22 @@ function namedColumns(item: CsvReportMessage): string[] {
   return typeof columns === 'string' ? columns.split(',').map((column) => column.trim()).filter(Boolean) : [];
 }
 
+/** The message with the missing columns of a header (`missing`) named as the view names its columns. */
+function withMissingNamed(item: CsvReportMessage, columnName?: (column: string) => string): CsvReportMessage {
+  const missing = item.params?.missing;
+  const columns = typeof missing === 'string' ? missing.split(',').map((column) => column.trim()).filter(Boolean) : [];
+  if (!columnName || columns.length === 0) return item;
+  return { ...item, params: { ...item.params, missing: columns.map(columnName).join(', ') } };
+}
+
 /**
  * The message in the interface language when it has a code. `columnName` names the columns the
- * sentence lists (`CSV_DUPLICATE_KEY`) as the view names its columns; absent, by their keys.
+ * sentence lists (`CSV_DUPLICATE_KEY`, the missing columns of a header) as the view names its
+ * columns; absent, by their keys. A column the file's language already titles stays as it is.
  */
 export function csvMessageText(item: CsvReportMessage, t: TFunction, columnName?: (column: string) => string): string {
   if (!item.code) return item.message;
+  item = withMissingNamed(item, columnName);
   const columns = namedColumns(item);
   const params = columnName && columns.length > 0 ? { ...item.params, columns: columns.map(columnName).join(', ') } : item.params;
   // The counts as a refused delete words them ("2 users and 1 OPEX line"), in the language of `t`.

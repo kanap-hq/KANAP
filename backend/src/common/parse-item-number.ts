@@ -36,16 +36,17 @@ export function isPaddedReferenceNumber(prefix: string | null | undefined, digit
 }
 
 /**
- * The number a cell or a search names as a `prefix` reference: `SUP-12`, without case, or the bare
- * number `12` unless `prefixRequired`. Null for anything else, a number with a leading zero of
- * these families included (`SUP-013`, `013`: text, such as an ERP ID).
+ * The number a cell or a search names as a `prefix` reference: `SUP-12`, without case, the prefix
+ * followed by a dash, a space or the number itself (`SUP 12`, `SUP12`, as the incident import reads
+ * `INC 12`), or the bare number `12` unless `prefixRequired`. Null for anything else, a number with
+ * a leading zero of these families included (`SUP-013`, `013`: text, such as an ERP ID).
  */
 export function parseReferenceNumber(
   text: string | null | undefined,
   prefix: string,
   options: { prefixRequired?: boolean } = {},
 ): number | null {
-  const match = String(text ?? '').trim().match(/^(?:([A-Z]+)-)?(\d+)$/i);
+  const match = String(text ?? '').trim().match(/^(?:([A-Z]+)[-\s]?)?(\d+)$/i);
   if (!match) return null;
   if (match[1] ? match[1].toUpperCase() !== prefix.toUpperCase() : options.prefixRequired) return null;
   if (isPaddedReferenceNumber(prefix, match[2])) return null;

@@ -9,7 +9,6 @@ import appDataSource from '../../data-source';
 import { applyDataAccess } from '../data-access';
 import { DataAccessHiddenLinesException, hiddenContractCount } from '../hidden-links';
 import { TasksService } from '../../spend/tasks.service';
-import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { DashboardDataService } from '../../dashboard/dashboard-data.service';
 import { SpendItemsService } from '../../spend/spend-items.service';
 import { SpendItem } from '../../spend/spend-item.entity';
@@ -171,16 +170,13 @@ async function testTasks(runner: QueryRunner, s: ContractSeed): Promise<void> {
       assert.equal(text.includes('DA contract CH'), false, `${what}: no name of the hidden contract`);
     }
 
-    // The label of a task's move (its activity, read as stored by every reader of the task): the
-    // kind alone, true whoever reads it; neither the name nor the reference of CH.
-    const moved = await (unified() as any).resolveRelatedObjectName('contract', s.contracts.CH, m);
-    assert.equal(moved, 'A contract', `activity label of CH: ${moved}`);
+    // A task's move stores the kind and the id of its object, named at the read with the reader's
+    // rights (lot I7e of 26.12.1, `tasks/__tests__/task-activity-related-object.integration.spec.ts`).
   });
   console.log('  tasks of a hidden contract: kind, no id, no name, no reference; dashboard tile too: OK');
 
   // A contract the person reads is named by its reference and name (lot R4 of 26.11.9), as an
-  // incident is: the list, the detail, the list's filter and the dashboard. A move's activity keeps
-  // its name alone: every reader of the task reads it as stored, a limited one included.
+  // incident is: the list, the detail, the list's filter and the dashboard.
   const [ce] = await runner.query(`SELECT item_number, name FROM contracts WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.contracts.CE]);
   const label = `CTR-${ce.item_number} · ${ce.name}`;
   await as(runner, s.persons.marta, async (m) => {
@@ -200,13 +196,8 @@ async function testTasks(runner: QueryRunner, s: ContractSeed): Promise<void> {
     const staleRow = (stale as any[]).find((item) => item.id === s.tasks.visible);
     assert.ok(staleRow, 'the stale tile reads the task of CE');
     assert.equal(staleRow.relatedObjectName, label, 'the tile names CE by its reference');
-    assert.equal(await (unified() as any).resolveRelatedObjectName('contract', s.contracts.CE, m), `Contract: ${ce.name}`, 'a move is logged without the reference');
   });
-  console.log('  tasks of a readable contract: CTR-n · name on the list, the detail, the filter and the tile; the name alone in a move\'s activity: OK');
-}
-
-function unified(): TasksUnifiedService {
-  return new (TasksUnifiedService as any)(...Array.from({ length: 9 }, () => undefined));
+  console.log('  tasks of a readable contract: CTR-n · name on the list, the detail, the filter and the tile: OK');
 }
 
 async function testLineMentions(runner: QueryRunner, s: ContractSeed, extra: Extra): Promise<void> {

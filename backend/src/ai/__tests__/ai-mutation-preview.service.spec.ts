@@ -1,6 +1,8 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AiMutationPreviewService } from '../ai-mutation-preview.service';
+import { PREVIEW_DOCUMENT_CHANGED_MESSAGE } from '../ai-write-texts';
+import { documentRevisionConflict } from '../../knowledge/document-revision-conflict';
 import { isRightRefusalMessage, missingRightMessage } from '../ai-policy.service';
 import { AiMutationOperationRegistry } from '../mutation/ai-mutation-operation.registry';
 import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutation-support.service';
@@ -2772,6 +2774,25 @@ async function testFailedExecutionRollsBackDomainWritesBeforeSavingFailedPreview
   assert.equal(saved[saved.length - 1].status, 'failed');
 }
 
+/**
+ * The document written by someone else between Kad's check of its revision and its write (the 409
+ * `document_revision_conflict`): the card fails with a sentence that says so and asks for the request
+ * again (lot I7b of 26.12.1), never the API's "Document revision conflict".
+ */
+async function testDocumentRevisionConflictAtTheWriteAsksForTheRequestAgain() {
+  const { service, context, documentLocksReleased } = createService({
+    previews: [createDocumentContentPreview()],
+    updateError: documentRevisionConflict(),
+    queryRunner: { isTransactionActive: true, query: async () => [] },
+  });
+
+  const result = await service.executePreview(context, 'preview-1');
+
+  assert.equal(result.status, 'failed');
+  assert.equal(result.error_message, PREVIEW_DOCUMENT_CHANGED_MESSAGE);
+  assert.equal(documentLocksReleased.length, 1);
+}
+
 async function testDocumentContentRevisionDriftFailsExecutionAndReleasesLock() {
   const { service, context, documentUpdates, documentLocksReleased } = createService({
     previews: [createDocumentContentPreview()],
@@ -3208,6 +3229,7 @@ async function main() {
   await testExecuteDocumentRelationsPreviewRoutesRemovalThroughKnowledgeService();
   await testDocumentRevisionDriftFailsExecutionAndReleasesLock();
   await testFailedExecutionRollsBackDomainWritesBeforeSavingFailedPreview();
+  await testDocumentRevisionConflictAtTheWriteAsksForTheRequestAgain();
   await testDocumentContentRevisionDriftFailsExecutionAndReleasesLock();
   await testDocumentRelationDriftFailsExecutionAndReleasesLock();
   await testPreviewActionsStayScopedToConversation();

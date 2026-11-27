@@ -8,7 +8,7 @@ import { IntegratedDocumentSlotKey } from './integrated-document.constants';
 export async function loadSlotBodies(
   manager: { query: (sql: string, params: unknown[]) => Promise<any[]> },
   tenantId: string,
-  sourceEntityType: 'projects' | 'requests' | 'incidents',
+  sourceEntityType: 'projects' | 'requests' | 'incidents' | 'applications',
   ids: string[],
   slots: IntegratedDocumentSlotKey[],
 ): Promise<Map<string, Map<string, string>>> {
@@ -68,7 +68,7 @@ export async function sameAsStoredWithDocuments(
     context.manager, context.tenantId, sourceEntityType,
     rows.map((row) => row.existingEntity.id), Object.values(slots),
   );
-  return Promise.all(rows.map(async (row) => {
+  const sameRow = async (row: CsvImportRow): Promise<boolean> => {
     const next: Record<string, any> = { ...row.parsed };
     for (const [property, slot] of Object.entries(slots)) {
       const value = next[property];
@@ -85,7 +85,13 @@ export async function sameAsStoredWithDocuments(
       return false;
     }
     return sameStoredValues(row.existingEntity, next);
-  }));
+  };
+  // One row after the other: a text is compared in the Markdown workers, which keep two calls of a
+  // person waiting at most (`markdown-worker.ts`); past them a call is refused, which reads here as a
+  // change (`sameSlotBody`).
+  const same: boolean[] = [];
+  for (const row of rows) same.push(await sameRow(row));
+  return same;
 }
 
 /**

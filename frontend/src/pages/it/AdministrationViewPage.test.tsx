@@ -588,7 +588,8 @@ describe('AdministrationViewPage', () => {
     renderPage('/it/administration?tab=directories');
     const services = await screen.findByRole('table', { name: 'Directory services' });
     expect(within(services).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Ref', 'Name', 'Zone', 'Servers']);
-    expect(within(services).getByRole('link', { name: 'TEC-1' }).getAttribute('href')).toBe('/it/technologies/tech-ad');
+    // A directory service opens by its reference.
+    expect(within(services).getByRole('link', { name: 'TEC-1' }).getAttribute('href')).toBe('/it/technologies/TEC-1');
     const serviceRow = within(services).getAllByRole('row')[1];
     expect(serviceRow.textContent).toContain('Active Directory');
     expect(serviceRow.textContent).toContain('Niveau 0');

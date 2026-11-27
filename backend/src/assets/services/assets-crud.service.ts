@@ -466,6 +466,7 @@ export class AssetsCrudService extends AssetsBaseService {
 
     const rows: Array<{
       asset_id: string;
+      asset_reference: string | null;
       name: string;
       environment: string;
       status: string;
@@ -476,7 +477,7 @@ export class AssetsCrudService extends AssetsBaseService {
       location_reference: string | null;
       operating_system: string | null;
     }> = await mg.query(
-      `SELECT acm.asset_id, a.name, a.environment, a.status, a.location_id,
+      `SELECT acm.asset_id, a.asset_reference, a.name, a.environment, a.status, a.location_id,
               a.kind, a.provider, ${operatingSystemLabelSql('a')} AS operating_system,
               l.name AS location_name, l.location_reference AS location_reference
        FROM asset_cluster_members acm
@@ -489,6 +490,7 @@ export class AssetsCrudService extends AssetsBaseService {
 
     const items = rows.map((row) => ({
       id: row.asset_id,
+      asset_reference: row.asset_reference ?? null,
       name: row.name,
       environment: row.environment,
       status: row.status,
@@ -508,8 +510,8 @@ export class AssetsCrudService extends AssetsBaseService {
     await this.ensureAsset(assetId, opts?.manager, tenantId);
     const mg = this.getManager(opts);
 
-    const rows: Array<{ id: string; name: string; environment: string; status: string }> = await mg.query(
-      `SELECT acm.cluster_id AS id, c.name, c.environment, c.status
+    const rows: Array<{ id: string; reference: string | null; name: string; environment: string; status: string }> = await mg.query(
+      `SELECT acm.cluster_id AS id, c.asset_reference AS reference, c.name, c.environment, c.status
        FROM asset_cluster_members acm
        JOIN assets c ON c.id = acm.cluster_id
        WHERE acm.asset_id = $1 AND acm.tenant_id = $2 AND c.tenant_id = $2

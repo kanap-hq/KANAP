@@ -61,6 +61,17 @@ describe('CsvImportDialog messages', () => {
     expect(screen.queryByText(/Ligne 0/)).not.toBeInTheDocument();
   });
 
+  it('names a doubled column by its label, in the interface language (lot I6c of 26.12.1)', async () => {
+    post.mockResolvedValueOnce({ data: { ok: false, dryRun: true, total: 0, inserted: 0, updated: 0, errors: [{
+      row: 0, message: "Column 'name' appears twice.", code: 'CSV_HEADER_DUPLICATE_COLUMN', params: { columns: 'name' },
+    }] } });
+    render(<CsvImportDialog open onClose={() => undefined} endpoint="/companies" />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['a;b'], 'societes.csv', { type: 'text/csv' })] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Vérification préalable' }));
+    expect(await screen.findByText('En-tête : Ces colonnes apparaissent deux fois : Nom.')).toBeInTheDocument();
+  });
+
   it('labels a header problem without a code as the header too', async () => {
     check([{ row: 0, message: "Column 'status' appears twice." }]);
     expect(await screen.findByText("En-tête : Column 'status' appears twice.")).toBeInTheDocument();

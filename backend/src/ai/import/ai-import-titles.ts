@@ -150,6 +150,29 @@ export const TASK_COLUMN_TITLES: Record<string, Titles> = {
   })),
 };
 
+/**
+ * The titles of the request import's columns that its import screen names otherwise than the titles
+ * above (`csv.fields.portfolio_requests` in the interface's `common.json`): the screen's labels are the
+ * reference (P11 of 26.12.1), checked by `ai-import-screen-titles.spec.ts`.
+ */
+export const REQUEST_COLUMN_TITLES: Record<string, Titles> = {
+  requestor_email: { en: 'Requestor email', fr: 'E-mail du demandeur', de: 'E-Mail Antragsteller/in', es: 'Correo del solicitante' },
+  business_sponsor_email: {
+    en: 'Business sponsor email', fr: 'E-mail du sponsor métier', de: 'E-Mail Fachbereichssponsor', es: 'Correo del patrocinador de negocio',
+  },
+  business_lead_email: {
+    en: 'Business lead email', fr: 'E-mail du responsable métier', de: 'E-Mail Fachbereichsleiter', es: 'Correo del responsable de negocio',
+  },
+  it_sponsor_email: { en: 'IT sponsor email', fr: 'E-mail du sponsor IT', de: 'E-Mail IT-Sponsor', es: 'Correo del patrocinador IT' },
+  it_lead_email: { en: 'IT lead email', fr: 'E-mail du responsable IT', de: 'E-Mail IT-Leiter', es: 'Correo del responsable IT' },
+  priority_override: { en: 'Priority override', fr: 'Surcharge de priorité', de: 'Prioritätsüberschreibung', es: 'Sobrescritura de prioridad' },
+  override_value: { en: 'Override value', fr: 'Valeur de surcharge', de: 'Überschreibungswert', es: 'Valor de sobrescritura' },
+  override_justification: {
+    en: 'Override justification', fr: 'Justification de la surcharge', de: 'Begründung der Überschreibung', es: 'Justificación de la sobrescritura',
+  },
+  target_delivery_date: { en: 'Target delivery date', fr: 'Date de livraison cible', de: 'Ziellieferdatum', es: 'Fecha de entrega objetivo' },
+};
+
 /** Columns of one year (`headcount_2026`): the title, then the year. */
 const YEARLY_TITLES: Record<string, Titles> = {
   headcount: { en: 'Headcount', fr: 'Effectif', de: 'Mitarbeiter', es: 'Plantilla' },

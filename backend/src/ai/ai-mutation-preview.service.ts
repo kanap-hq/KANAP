@@ -26,6 +26,7 @@ import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.re
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview, AiPreviewExecutionRefusal, runAfterExecutionRollback } from './mutation/ai-mutation-operation.types';
 import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
 import { isBudgetOperationRunning } from '../spend/budget-locks';
+import { isDocumentRevisionConflict } from '../knowledge/document-revision-conflict';
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
 import { assertLinesEditable } from '../data-access/line-write-checks';
 import { isReservedAiMutation } from './mutation/ai-mutation-reserved';
@@ -33,6 +34,7 @@ import { aiRelationTargetRequirement, aiWriteLevel, assertRecordInWriteScope } f
 import {
   AiWriteLanguage,
   PREVIEW_DATA_BUSY_MESSAGE,
+  PREVIEW_DOCUMENT_CHANGED_MESSAGE,
   PREVIEW_BUDGET_OPERATION_RUNNING_MESSAGE,
   PREVIEW_EXPIRED_MESSAGE,
   personWriteLanguage,
@@ -40,6 +42,7 @@ import {
   isFixedPreviewError,
 } from './ai-write-texts';
 import { AGENT_NAME } from '../config/product';
+import { entityPageUrl } from './ai-page-urls';
 import { AI_BULK_EDIT_TOOLS, BULK_EDIT_PLAN_REFUSAL } from './mutation/ai-bulk-edit';
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
@@ -236,7 +239,7 @@ export class AiMutationPreviewService {
       preview_id: preview.id,
       tool_name: preview.tool_name as AiMutationWriteToolName,
       status: preview.status,
-      target: presentation.target,
+      target: withTargetPage(presentation.target),
       changes: presentation.changes,
       ...(presentation.importMapping ? { import_mapping: presentation.importMapping } : {}),
       ...(presentation.bulkEdit ? { bulk_edit: presentation.bulkEdit } : {}),
@@ -1364,7 +1367,10 @@ export class AiMutationPreviewService {
       if (error instanceof AiPreviewExecutionRefusal) preview.current_values = { ...(preview.current_values ?? {}), ...error.kept };
       preview.status = 'failed';
       preview.approved_at = new Date();
-      preview.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview execution failed.');
+      // A document written by someone else meanwhile: said in the person's words, never the API's.
+      preview.error_message = isDocumentRevisionConflict(error)
+        ? PREVIEW_DOCUMENT_CHANGED_MESSAGE
+        : dataAccessRefusalMessage(error) ?? (error?.message || 'Preview execution failed.');
       const saved = await repo.save(preview);
       const dto = this.toPreviewDto(saved, await this.languageOf(context));
       const followUps = await this.advanceMutationPlanAfterPreview(context, saved);
@@ -1425,6 +1431,8 @@ export class AiMutationPreviewService {
       columns: input.columns,
       assumptions: [],
       ...(Array.isArray(input.left_aside) && input.left_aside.length > 0 ? { left_aside: input.left_aside } : {}),
+      // The zone the card read the file's times in (lot I6c of 26.12.1).
+      ...(typeof input.time_zone === 'string' ? { time_zone: input.time_zone } : {}),
       choices,
     });
     if (created.status !== 'pending' || created.preview_id === preview.id) {
@@ -1775,4 +1783,13 @@ export class AiMutationPreviewService {
 
     return count > 0;
   }
+}
+
+/**
+ * The page of a card's existing record (`page_url`, by its reference where its page opens by it),
+ * so that Kad links the record it is about to change as it does once the change is made.
+ */
+export function withTargetPage(target: AiMutationPreviewDto['target']): AiMutationPreviewDto['target'] {
+  const url = target.entity_id ? entityPageUrl(target.entity_type, target.entity_id, target.ref) : null;
+  return url ? { ...target, page_url: url } : target;
 }

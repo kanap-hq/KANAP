@@ -114,6 +114,10 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     const manager = opts?.manager ?? this.repository.manager;
     const appRepo = this.getRepo(manager);
 
+    // The application first, as every writer of it and of its documents (`lockApplicationRow`): a
+    // write of its description holds it, then writes its document; the delete below removes the
+    // documents, then the application. Locked first, the two wait for each other, never deadlock.
+    await lockApplications(manager, [applicationId]);
     const app = await appRepo.findOne({ where: { id: applicationId } as any });
     if (!app) {
       throw new NotFoundException('Application not found');
@@ -177,6 +181,9 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     const appRepo = this.getRepo(manager);
     const result: BulkDeleteResult = { deleted: [], failed: [] };
 
+    // One transaction for them all: locked together in id order, as an import or a change in bulk
+    // locks them, before the first delete.
+    await lockApplications(manager, ids || []);
     for (const id of ids || []) {
       try {
         await withSavepoint(manager, () => this.delete(id, { manager, userId }));
@@ -195,4 +202,14 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
 
     return result;
   }
+}
+
+/** The applications of the tenant among `ids`, locked `FOR UPDATE` in id order (unknown ids ignored). */
+async function lockApplications(manager: EntityManager, ids: string[]): Promise<void> {
+  const wanted = [...new Set(ids.filter((id) => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)))].sort();
+  if (wanted.length === 0) return;
+  await manager.query(
+    `SELECT id FROM applications WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[]) ORDER BY id FOR UPDATE`,
+    [wanted],
+  );
 }

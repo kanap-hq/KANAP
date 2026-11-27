@@ -1062,7 +1062,8 @@ export default function ApplicationsPage() {
         }
 
         const sp = buildWorkspaceSearch();
-        navigate(`/it/applications/${newId}/overview?${sp.toString()}`);
+        // The copy by its reference (`APP-12`), by its id without one.
+        navigate(`/it/applications/${created?.data?.sequential_id || newId}/overview?${sp.toString()}`);
       }
     } catch (e) {
       setNotice(getApiErrorMessage(e, t, t('pages.applications.copyFailed')));

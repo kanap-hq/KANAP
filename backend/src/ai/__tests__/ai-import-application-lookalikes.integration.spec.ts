@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
+import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-document-seed';
 
 // Lot I3 of 26.11.9, pass 3a: Kad imports applications that look like stored ones (T-I3d). The card's
 // report carries the lookalikes on the lines of the person's file, named (APP-n); a row left out leaves
@@ -52,6 +53,8 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     [tenantId, slug, slug],
   );
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+  // The documents of the records (an application's description is its document's text), as every tenant has them.
+  await seedManagedDocsKnowledgeAssets(runner.manager as any, tenantId);
   const [role] = await runner.query(`INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Administrator', 'Administrator') RETURNING id`, [tenantId]);
   const [user] = await runner.query(
     `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status, locale) VALUES ($1, $2, 'Yann', 'Le Goff', $3, 'enabled', 'fr') RETURNING id`,

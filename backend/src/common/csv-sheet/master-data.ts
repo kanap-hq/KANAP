@@ -5,7 +5,7 @@ import { CLEAR_MARK, GUARDED_DASH } from './clear';
 import { formatCsvDate, formatCsvEndOfValidity } from './date';
 import { csvDecodeErrorCode } from './decode';
 import { CSV_FILE_EMPTY_MESSAGE, readSheet } from './read';
-import { CsvAmountColumn, CsvDataRow, CsvDateOrder, CsvLanguage } from './types';
+import { CsvAmountColumn, CsvDataRow, CsvDateOrder, CsvHeaderErrorCode, CsvLanguage } from './types';
 import { sameStoredValue } from './unchanged';
 
 /**
@@ -171,9 +171,24 @@ export function labelLists(labels: NonNullable<MasterDataFileRequest['fieldLabel
 /** The refusal of a file for its headers: the missing columns (by their title in the file's language), then the unknown ones. */
 function headerProblem(
   request: MasterDataFileRequest,
-  read: { headerErrors: string[]; columns: Array<{ id: string }>; ignoredColumns: string[] },
+  read: { headerErrors: string[]; headerErrorCodes?: Array<CsvHeaderErrorCode | null>; columns: Array<{ id: string }>; ignoredColumns: string[] },
 ): ImportReportError | null {
-  if (read.headerErrors.length > 0) return { row: 0, message: read.headerErrors.join(' ') };
+  if (read.headerErrors.length > 0) {
+    // Errors of one code are one sentence the interface words (the doubled columns listed by key, which
+    // the screen names by their labels); any other mix keeps the reader's English sentences.
+    const codes = read.headerErrorCodes ?? [];
+    const first = codes[0];
+    if (first && codes.length === read.headerErrors.length && codes.every((entry) => entry?.code === first.code)) {
+      const columns = codes.flatMap((entry) => (entry && 'params' in entry ? [entry.params.columns] : []));
+      return {
+        row: 0,
+        message: read.headerErrors.join(' '),
+        code: first.code,
+        ...(columns.length > 0 ? { params: { columns: [...new Set(columns)].join(', ') } } : {}),
+      };
+    }
+    return { row: 0, message: read.headerErrors.join(' ') };
+  }
   const optional = new Set(request.optional ?? []);
   const present = new Set(read.columns.map((column) => column.id));
   const keys = request.keys;

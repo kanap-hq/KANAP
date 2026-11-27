@@ -139,12 +139,15 @@ type GraphData = {
 
 type ApplicationMapSummary = {
   id: string;
+  /** The application's APP-n, its page's address. */
+  reference?: string | null;
   name: string;
   description: string | null;
   editor: string | null;
   criticality: string;
   /** A cluster comes with its members: they carry `inherited` and the clusters in `via_clusters`. */
-  assigned_servers: Array<{ id: string; name: string; environment: string; is_cluster?: boolean; inherited?: boolean; via_clusters?: Array<{ id: string; name: string }> }>;
+  /** `asset_reference`: the server's AST-n, its page's address. */
+  assigned_servers: Array<{ id: string; asset_reference?: string | null; name: string; environment: string; is_cluster?: boolean; inherited?: boolean; via_clusters?: Array<{ id: string; name: string }> }>;
   business_owners: Array<{ user_id: string; name: string; email?: string | null }>;
   it_owners: Array<{ user_id: string; name: string; email?: string | null }>;
   support_contacts: Array<{ id?: string; contact_id: string; role?: string | null; contact?: { first_name?: string | null; last_name?: string | null; email?: string | null } }>;
@@ -863,7 +866,7 @@ export default function InterfaceMapPage() {
                                             <Button
                                               variant="text"
                                               size="small"
-                                              onClick={() => navigate(`/it/assets/${srv.id}/overview`)}
+                                              onClick={() => navigate(`/it/assets/${srv.asset_reference || srv.id}/overview`)}
                                               sx={{ justifyContent: 'flex-start', textAlign: 'left', px: 0, minWidth: 0 }}
                                             >
                                               {srv.name}
@@ -944,7 +947,7 @@ export default function InterfaceMapPage() {
                                     key={`${c.contact_id}-${idx}`}
                                     variant="text"
                                     size="small"
-                                    onClick={() => navigate(`/it/applications/${selectedNode.id}/technical`)}
+                                    onClick={() => navigate(`/it/applications/${summary?.data?.reference || selectedNode.id}/technical`)}
                                     sx={{ justifyContent: 'flex-start', textAlign: 'left', px: 0 }}
                                   >
                                     {name}{c.role ? ` (${c.role})` : ''}
@@ -961,7 +964,7 @@ export default function InterfaceMapPage() {
                           <Button
                             variant="contained"
                             size="small"
-                            onClick={() => navigate(`/it/applications/${selectedNode.id}/overview`)}
+                            onClick={() => navigate(`/it/applications/${summary?.data?.reference || selectedNode.id}/overview`)}
                           >
                             {t('pages.interfaceMap.openApplication')}
                           </Button>

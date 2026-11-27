@@ -28,7 +28,7 @@ export default function ApplicationVersionLinks({ applicationId }: { application
   const previous = data?.predecessors?.[data.predecessors.length - 1] ?? null;
   const next = data?.successors ?? [];
   const link = (item: Lineage) => (
-    <RouterLink key={item.id} to={`/it/applications/${item.id}/overview`} style={{ fontSize: 13, color: 'inherit' }}>{nameOf(item)}</RouterLink>
+    <RouterLink key={item.id} to={`/it/applications/${item.sequential_id || item.id}/overview`} style={{ fontSize: 13, color: 'inherit' }}>{nameOf(item)}</RouterLink>
   );
   return (
     <>

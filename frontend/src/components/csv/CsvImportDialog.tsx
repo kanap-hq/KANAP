@@ -45,9 +45,11 @@ type RowError = CsvReportMessage;
 
 /** A row error in the interface language when it has a code, with the column it is about. */
 function rowErrorText(err: RowError, t: TFunction, entity: string): string {
-  const message = csvMessageText(withCatalogValueName(err, t), t);
+  // The report names a column by its key: the screen names it by its label, as the card of Kad.
+  const label = (key: string) => csvFieldLabel(t, entity, { csvColumn: key, label: key });
+  const message = csvMessageText(withCatalogValueName(err, t), t, label);
   if (err.row === 0) return t('csv.headerError', { message });
-  const column = err.column ? csvFieldLabel(t, entity, { csvColumn: err.column, label: err.column }) : err.column;
+  const column = err.column ? label(err.column) : err.column;
   return err.code && column
     ? t('csv.rowColumnError', { row: err.row, column, message })
     : t('csv.rowError', { row: err.row, message });

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
+import { applicationDescriptionSql } from '../applications/application-description';
 import { bilingualDocumentTsQuerySql } from '../common/document-search-tsquery';
 import { isPaddedReferenceNumber, parseItemNumber } from '../common/parse-item-number';
 import { contractLabelSql } from '../contracts/contract-reference';
@@ -459,6 +460,9 @@ function toIntegratedDocumentSummary(row: any): AiEntitySummaryDto {
   });
 }
 
+/** The families whose reference is text on the record (`INT-3`, `LOC-2`, `CONN-4`), with its prefix in the search index. */
+const TEXT_REFERENCE_PREFIXES: Readonly<Partial<Record<string, string>>> = { interfaces: 'INT', locations: 'LOC', connections: 'CONN' };
+
 /**
  * Feature flag for the unified `search_index` path (Phase B of
  * planning/search-revamp.md). Defaults to enabled; set
@@ -728,7 +732,7 @@ export class AiEntityService {
       `SELECT a.id,
               a.sequential_id AS item_ref,
               a.name AS label,
-              a.description AS summary,
+              ${applicationDescriptionSql('a')} AS summary,
               a.status,
               a.updated_at,
               a.lifecycle,
@@ -745,7 +749,6 @@ export class AiEntityService {
                 WHEN $1::text IS NOT NULL AND UPPER(COALESCE(a.sequential_id, '')) = 'APP-' || $1 THEN 4
                 WHEN $1::text IS NOT NULL AND COALESCE(a.sequential_id, '') ILIKE 'APP-' || $1 || '%' THEN 3.5
                 WHEN a.name ILIKE $2 THEN 3
-                WHEN COALESCE(a.description, '') ILIKE $2 THEN 2
                 ELSE 1
               END AS score
        FROM applications a
@@ -756,7 +759,8 @@ export class AiEntityService {
            OR ($1::text IS NOT NULL AND COALESCE(a.sequential_id, '') ILIKE 'APP-' || $1 || '%')
            OR COALESCE(a.sequential_id, '') ILIKE $2
            OR a.name ILIKE $2
-           OR COALESCE(a.description, '') ILIKE $2
+           -- The description is no search field (migration 1856300000000): its words find its
+           -- document, as in the indexed search.
            OR COALESCE(a.editor, '') ILIKE $2
            OR COALESCE(a.notes, '') ILIKE $2
            OR COALESCE(a.support_notes, '') ILIKE $2
@@ -1087,6 +1091,7 @@ export class AiEntityService {
     const like = `%${query}%`;
     const rows = await context.manager.query<SearchRow[]>(
       `SELECT ranked.id,
+              ranked.ref,
               ranked.label,
               ranked.summary,
               ranked.status,
@@ -1095,6 +1100,7 @@ export class AiEntityService {
               COUNT(*) OVER()::int AS total_count
        FROM (
          SELECT DISTINCT ON (l.id) l.id,
+                l.location_reference AS ref,
                 l.location_reference || ' · ' || l.name AS label,
                 COALESCE(NULLIF(l.city, ''), l.country_iso) AS summary,
                 NULL::text AS status,
@@ -1843,6 +1849,7 @@ export class AiEntityService {
     const rows = await context.manager.query<SearchRow[]>(
       `SELECT i.id,
               NULL::int AS item_number,
+              i.interface_reference AS ref,
               NULLIF(TRIM(CONCAT_WS(' - ', i.interface_reference, i.name)), '') AS label,
               COALESCE(NULLIF(i.business_purpose, ''), NULLIF(CONCAT_WS(' | ', sa.name, ta.name), '')) AS summary,
               i.lifecycle AS status,
@@ -1905,6 +1912,7 @@ export class AiEntityService {
     const rows = await context.manager.query<SearchRow[]>(
       `SELECT cn.id,
               NULL::int AS item_number,
+              cn.connection_reference AS ref,
               NULLIF(TRIM(CONCAT_WS(' - ', cn.connection_reference, cn.name)), '') AS label,
               COALESCE(NULLIF(cn.description, ''), NULLIF(CONCAT_WS(' | ', src.name, dst.name), '')) AS summary,
               cn.lifecycle AS status,
@@ -1965,7 +1973,7 @@ export class AiEntityService {
     const accessScope = await resolveAiParticipationAccessScope(context, 'applications');
     const accessScopeSql = appendParticipationScopeSql('applications', 'a', params, accessScope);
     const rows = await context.manager.query<any[]>(
-      `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at,
+      `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, ${applicationDescriptionSql('a')} AS summary, a.status, a.updated_at,
               a.lifecycle, a.criticality, a.cyber_criticality, a.recovery_wave, a.rto_minutes, a.rpo_minutes, a.category, a.hosting_model, a.data_class, a.version,
               s.name AS supplier_name,
               ${itOwnerNamesSql} AS it_owner_names
@@ -2446,8 +2454,15 @@ export class AiEntityService {
     const offsetRef = push(offset);
 
     const rows = await context.manager.query(
-      `SELECT entity_type, entity_id, ref_prefix, ref_number, label, summary, status,
-              extra_json, source_updated_at,
+      `SELECT entity_type, entity_id, ref_prefix, ref_number, label,
+              -- An application's entry carries no description (migration 1856300000000): the
+              -- description shown is its document's text, else its seed (decision P14 of 26.12.1).
+              CASE WHEN entity_type = 'applications'
+                   THEN (SELECT ${applicationDescriptionSql('si_app')} FROM applications si_app
+                          WHERE si_app.id = search_index.entity_id AND si_app.tenant_id = search_index.tenant_id)
+                   ELSE summary
+              END AS summary,
+              status, extra_json, source_updated_at,
               COUNT(*) OVER()::int AS total_count,
               CASE
                 WHEN ${legacyRefParam}::text IS NOT NULL AND extra_json->>'legacy_number' = ${legacyRefParam} THEN 4
@@ -2562,8 +2577,15 @@ export class AiEntityService {
     const extra = (row.extra_json ?? null) as Record<string, unknown> | null;
 
     let ref: string | null = null;
+    const textPrefix = TEXT_REFERENCE_PREFIXES[type];
     if (type === 'applications' || type === 'assets') {
       ref = (extra?.item_ref as string | undefined) ?? null;
+    } else if (textPrefix) {
+      // Interfaces, sites and connections keep their reference as text (`LOC-2`); the index holds its
+      // prefix and number. The reference is the one the label starts with, as the record writes it.
+      const candidate = row.ref_prefix === textPrefix && row.ref_number ? `${textPrefix}-${row.ref_number}` : null;
+      const label = String(row.label ?? '');
+      ref = candidate && (label === candidate || label.startsWith(`${candidate} `)) ? candidate : null;
     } else {
       ref = buildRef(type, row.ref_number ?? null);
     }
@@ -3074,7 +3096,7 @@ export class AiEntityService {
     const applicationRootParams: unknown[] = [applicationId, tenantId];
     const applicationRootScopeSql = appendParticipationScopeSql('applications', 'a', applicationRootParams, applicationAccessScope);
     const applications = await manager.query<any[]>(
-      `SELECT a.id, a.sequential_id, a.name, a.description, a.status, a.updated_at, a.lifecycle, a.editor, a.criticality, a.hosting_model, a.data_class, a.version,
+      `SELECT a.id, a.sequential_id, a.name, ${applicationDescriptionSql('a')} AS description, a.status, a.updated_at, a.lifecycle, a.editor, a.criticality, a.hosting_model, a.data_class, a.version,
               a.cyber_criticality, a.recovery_wave, a.rto_minutes, a.rpo_minutes,
               -- Calendar days, as text: a date never shifts with the time zone.
               a.last_dr_test::text AS last_dr_test, a.go_live_date::text AS go_live_date, a.end_of_support_date::text AS end_of_support_date, a.retired_date::text AS retired_date
@@ -3121,14 +3143,14 @@ export class AiEntityService {
         applicationProjectParams,
       );
     const relatedApplicationRows = await manager.query<SearchRow[]>(
-        `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
+        `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, ${applicationDescriptionSql('a')} AS summary, a.status, a.updated_at
          FROM application_suites l
          JOIN applications a ON a.id = l.suite_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
          WHERE l.application_id = $1
            AND l.tenant_id = $2
            ${relatedApplicationScopeSql}
          UNION
-         SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
+         SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, ${applicationDescriptionSql('a')} AS summary, a.status, a.updated_at
          FROM application_suites l
          JOIN applications a ON a.id = l.application_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
          WHERE l.suite_id = $1
@@ -3277,7 +3299,7 @@ export class AiEntityService {
         [assetId, tenantId],
       );
     const applicationRows = await manager.query<SearchRow[]>(
-        `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
+        `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, ${applicationDescriptionSql('a')} AS summary, a.status, a.updated_at
          -- The applications running on the asset (effective: a member runs what its clusters carry).
          FROM (${effectiveAssignmentsSql({ tenant: '$2', assets: 'ARRAY[$1::uuid]' })}) aaa
          JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = $2 AND ai.tenant_id = aaa.tenant_id
@@ -3441,7 +3463,7 @@ export class AiEntityService {
         const scopeSql = appendParticipationScopeSql('applications', 'a', params, applications.scope);
         params.push(AI_CONTEXT_GROUP_ITEM_LIMIT);
         const rows = await manager.query<Array<SearchRow & { total: string }>>(
-          `SELECT a.id, a.sequential_id AS item_ref, a.name AS label, a.description AS summary, a.status, a.updated_at,
+          `SELECT a.id, a.sequential_id AS item_ref, a.name AS label, ${applicationDescriptionSql('a')} AS summary, a.status, a.updated_at,
                   count(*) OVER () AS total
            FROM applications a
            WHERE a.tenant_id = $1
@@ -3606,7 +3628,7 @@ export class AiEntityService {
         requestDependencyParams,
       );
     const applicationRows = await manager.query<SearchRow[]>(
-        `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
+        `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, ${applicationDescriptionSql('a')} AS summary, a.status, a.updated_at
          FROM portfolio_request_applications l
          JOIN applications a ON a.id = l.application_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
          WHERE l.request_id = $1
@@ -3765,7 +3787,7 @@ export class AiEntityService {
         projectDependencyParams,
       );
     const applicationRows = await manager.query<SearchRow[]>(
-        `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
+        `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, ${applicationDescriptionSql('a')} AS summary, a.status, a.updated_at
          FROM application_projects l
          JOIN applications a ON a.id = l.application_id AND a.tenant_id = $2 AND a.tenant_id = l.tenant_id
          WHERE l.project_id = $1
@@ -3945,7 +3967,7 @@ export class AiEntityService {
         `SELECT a.id,
                 a.sequential_id AS item_ref,
                 a.name AS label,
-                a.description AS summary,
+                ${applicationDescriptionSql('a')} AS summary,
                 a.lifecycle AS status,
                 a.updated_at
          FROM task_applications ta

@@ -174,11 +174,12 @@ async function residencyPageWaitsForTheLoad() {
     const load = await race.open('load of the import');
     const page = await race.open('residency of the page');
     const bounded = (manager: EntityManager) => manager.query(`SET LOCAL lock_timeout = '10s'`);
-    const holds = race.gate(load, { label: 'lock the application', when: 'after', match: (text) => /FROM applications WHERE tenant_id = \$1 AND id = \$2 FOR UPDATE/.test(text) });
+    // The load holds the application since it found it (FOR NO KEY UPDATE): paused as it reads its owners.
+    const holds = race.gate(load, { label: 'read the owners', when: 'after', match: (text) => /FROM "application_owners"/.test(text) });
     const loadWork = race.start(load, async (manager) => {
       await bounded(manager);
       return csvService(manager).import(
-        // Its IT owner, already stored: the load locks the application before its owners, then writes the residency.
+        // Its IT owner, already stored: the load holds the application, writes its owners, then the residency.
         { buffer: Buffer.from(`name;it_owner_email_1;data_residency\nRace application;ben-${race.tenantId.slice(0, 8)}@example.com;DE\n`), originalname: 'apps.csv' } as Express.Multer.File,
         { dryRun: false, operation: 'upsert' },
         { manager, tenantId: race.tenantId, access: { isAdmin: true, permissions: {} } },

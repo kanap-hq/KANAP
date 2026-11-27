@@ -104,6 +104,7 @@ import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type Dele
 import { textSortKey } from '../common/list-sort';
 import { applyDocumentColumnFilters } from './knowledge-list-filters';
 import { applyDataAccess } from '../data-access/data-access';
+import { documentRevisionConflict } from './document-revision-conflict';
 
 /** The document list columns that sort alphabetically, and the expressions they read. */
 const KNOWLEDGE_TEXT_SORTS: Record<string, string> = {
@@ -919,6 +920,16 @@ export class KnowledgeService {
     private readonly emails: EmailService,
     private readonly notifications: NotificationsService,
   ) {}
+
+  /**
+   * The document's row, locked until the transaction ends, before a write reads its revision: two
+   * writers of one document (an autosave, a write of the record's text, a restore) then follow one
+   * another, and the second one compares against the revision the first one saved. A writer that
+   * holds the record (application, project, incident...) locks it before the document.
+   */
+  private async lockDocumentRow(id: string, manager: EntityManager): Promise<void> {
+    await manager.query('SELECT id FROM documents WHERE id = $1 FOR UPDATE', [id]);
+  }
 
   getManager(opts?: { manager?: EntityManager }): EntityManager {
     return opts?.manager ?? this.documentsRepo.manager;
@@ -4606,6 +4617,7 @@ export class KnowledgeService {
     const normalizedUserId = String(userId || '').trim() || null;
 
     const repo = manager.getRepository(Document);
+    await this.lockDocumentRow(id, manager);
     const existing = await repo.findOne({ where: { id } });
     if (!existing) {
       throw new NotFoundException('Document not found');
@@ -4861,6 +4873,7 @@ export class KnowledgeService {
     const id = await this.resolveDocumentId(idOrRef, manager);
 
     const repo = manager.getRepository(Document);
+    await this.lockDocumentRow(id, manager);
     const existing = await repo.findOne({ where: { id } });
     if (!existing) {
       throw new NotFoundException('Document not found');
@@ -4899,7 +4912,7 @@ export class KnowledgeService {
       throw new BadRequestException('revision is required');
     }
     if (incomingRevision !== Number(existing.revision)) {
-      throw new ConflictException('Document revision conflict');
+      throw documentRevisionConflict();
     }
 
     await this.assertIntegratedDocumentUpdateRestrictions(existing, body, manager);
@@ -5745,6 +5758,7 @@ export class KnowledgeService {
     await this.assertDocumentWritable(documentId, manager, userId, opts);
     await this.assertWorkflowAllowsEditing(documentId, manager);
 
+    await this.lockDocumentRow(documentId, manager);
     const doc = await manager.getRepository(Document).findOne({ where: { id: documentId } });
     if (!doc) throw new NotFoundException('Document not found');
 

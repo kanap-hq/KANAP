@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { withApplicationDescriptions } from '../../applications/application-description';
 import { codedForbidden } from '../../auth/module-right-required';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
@@ -2042,6 +2043,7 @@ export class AiQueryExecutor {
   private mapInterface(row: any): AiEntitySummaryDto {
     return toEntitySummary('interfaces', {
       id: row.id,
+      reference: row.interface_reference ?? null,
       label: [row.interface_reference || row.interface_id, row.name].filter(Boolean).join(' - ') || 'Untitled interface',
       status: row.lifecycle ?? null,
       summary: row.business_purpose ?? row.overview_notes ?? null,
@@ -2068,6 +2070,7 @@ export class AiQueryExecutor {
   private mapConnection(row: any): AiEntitySummaryDto {
     return toEntitySummary('connections', {
       id: row.id,
+      reference: row.connection_reference ?? null,
       label: [row.connection_reference, row.name].filter(Boolean).join(' - ') || 'Untitled connection',
       status: row.lifecycle ?? null,
       summary: row.description ?? null,
@@ -2543,6 +2546,8 @@ export class AiQueryExecutor {
         tenantId: context.tenantId,
         accessScope,
       });
+      // Each summary is the description its page shows: its document's text.
+      await withApplicationDescriptions(context.manager, context.tenantId, (result.items || []) as any[]);
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;

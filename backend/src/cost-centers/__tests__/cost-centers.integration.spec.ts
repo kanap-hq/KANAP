@@ -69,6 +69,9 @@ async function testCompanyByKind() {
     assert.equal(standalone.parent_id, null);
     assert.equal(standalone.company_id, paris);
     assert.equal(standalone.company_name, 'Test company Paris');
+    // The Access tab opens the company by its COMP-n.
+    const [{ item_number: parisNumber }] = await runner.query(`SELECT item_number FROM companies WHERE tenant_id = $1 AND id = $2`, [tenantId, paris]);
+    assert.equal(standalone.company_item_number, parisNumber);
     assert.equal(standalone.depth, 0);
 
     // Turning a cost center into a group drops its company.

@@ -221,6 +221,8 @@ async function testQuickSearchAndFilterValues(kind: Kind) {
     const byContract = await svc.summary({ ...ALL, q: 'zephyr' }, opts);
     assert.deepEqual(byContract.items.map((row: any) => row.id), [ids.alpha], `${kind}: quick search on a contract`);
     assert.equal(byContract.items[0].latest_contract_name, 'Zephyr agreement');
+    // The list's contract link opens the contract by its CTR-n.
+    assert.equal(byContract.items[0].latest_contract_item_number, 1, `${kind}: the contract's number`);
     const byProject = await svc.summary({ ...ALL, q: 'nebula' }, opts);
     assert.deepEqual(byProject.items.map((row: any) => row.id), [ids.bravo], `${kind}: quick search on a linked project`);
     assert.equal(byProject.items[0].project_name, 'Nebula programme', `${kind}: the project column reads the linked projects`);

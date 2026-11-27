@@ -42,14 +42,14 @@ const VIEW = {
   ],
 };
 
-function renderTab() {
+function renderTab(companyItemNumber?: number) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <MemoryRouter>
-            <CostCenterAccessTab costCenterId="cc-1" companyId="co-1" nodeLabel="Infrastructure (INF)" />
+            <CostCenterAccessTab costCenterId="cc-1" companyId="co-1" companyItemNumber={companyItemNumber} nodeLabel="Infrastructure (INF)" />
           </MemoryRouter>
         </KanapDialogProvider>
       </ThemeProvider>
@@ -94,6 +94,11 @@ describe('CostCenterAccessTab', () => {
     expect(screen.getByText('admin:dataAccess.types.everything')).toBeInTheDocument();
     // An inherited access has no remove command.
     expect(screen.queryByRole('button', { name: 'admin:dataAccess.accessTab.remove|{"name":"Rita Bloom"}' })).toBeNull();
+  });
+
+  it('opens the company of an inherited access by its reference', async () => {
+    renderTab(5);
+    expect(await screen.findByRole('link', { name: 'Alpha France' })).toHaveAttribute('href', '/master-data/companies/COMP-5/access');
   });
 
   it('adds a direct access with edit and removes it through the person’s own access', async () => {

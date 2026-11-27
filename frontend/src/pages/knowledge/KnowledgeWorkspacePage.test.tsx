@@ -441,6 +441,25 @@ describe('KnowledgeWorkspacePage — autosave', () => {
       vi.useRealTimers();
     }
   });
+  it('says the document changed elsewhere when an autosave meets a newer revision, and keeps what was typed', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+    renderWorkspace(queryClient);
+    fireEvent.click(await screen.findByText('workspace.actions.edit'));
+    await screen.findByText('workspace.actions.done');
+    vi.mocked(api.patch).mockRejectedValue(Object.assign(new Error('Request failed'), {
+      response: { status: 409, data: { code: 'document_revision_conflict', message: 'Document revision conflict' } },
+    }));
+
+    const readsBefore = vi.mocked(api.get).mock.calls.filter(([url]) => url === DOC_URL).length;
+    await commitTitle('Runbook, typed during an import');
+
+    expect(await screen.findByText('errors:document_revision_conflict', {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(screen.queryByText('Document revision conflict')).not.toBeInTheDocument();
+    expect(vi.mocked(api.patch).mock.calls.filter(([url]) => url === DOC_URL)).toHaveLength(1);
+    // The page stays in edit mode, its document not read again: what was typed is kept.
+    expect(screen.getByText('workspace.actions.done')).toBeInTheDocument();
+    expect(vi.mocked(api.get).mock.calls.filter(([url]) => url === DOC_URL).length).toBe(readsBefore);
+  });
 });
 
 describe('KnowledgeWorkspacePage — title', () => {

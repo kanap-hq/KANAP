@@ -161,8 +161,11 @@ type ServerMapSummary = {
   location_reference: string | null;
   location_name: string | null;
   /** A member also lists what its clusters carry: `inherited`, with the clusters in `via_clusters`. */
-  assigned_applications: Array<{ id: string; name: string; environment: string; inherited?: boolean; via_clusters?: Array<{ id: string; name: string }> }>;
+  /** `reference`: the application's APP-n, its page's address. */
+  assigned_applications: Array<{ id: string; reference?: string | null; name: string; environment: string; inherited?: boolean; via_clusters?: Array<{ id: string; name: string }> }>;
   is_cluster?: boolean;
+  /** The server's AST-n, its page's address. */
+  asset_reference?: string | null;
 };
 
 /** The addresses the panel lists, in stored order, skipping a blank one. */
@@ -1301,7 +1304,7 @@ export default function ConnectionMapPage() {
                                               <Button
                                                 variant="text"
                                                 size="small"
-                                                onClick={() => navigate(`/it/applications/${app.id}/overview`)}
+                                                onClick={() => navigate(`/it/applications/${app.reference || app.id}/overview`)}
                                                 sx={{ justifyContent: 'flex-start', textAlign: 'left', px: 0, minWidth: 0 }}
                                               >
                                                 {app.name}
@@ -1330,7 +1333,7 @@ export default function ConnectionMapPage() {
                             size="small"
                             onClick={() => {
                               // The cluster sections stand at the top of the Operations tab.
-                              navigate(`/it/assets/${selectedNode.id}/${selectedNode.kind === 'cluster' ? 'operations' : 'overview'}`);
+                              navigate(`/it/assets/${summary?.data?.asset_reference || selectedNode.id}/${selectedNode.kind === 'cluster' ? 'operations' : 'overview'}`);
                             }}
                           >
                             {selectedNode.kind === 'cluster' ? t('pages.connectionMap.viewCluster') : t('pages.connectionMap.openServer')}

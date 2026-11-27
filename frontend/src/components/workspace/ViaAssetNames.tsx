@@ -18,7 +18,7 @@ export default function ViaAssetNames({ assets, href }: { assets: ViaAsset[]; hr
           {index > 0 && ', '}
           <Link
             component={RouterLink}
-            to={href ? href(asset) : `/it/assets/${asset.id}/overview`}
+            to={href ? href(asset) : `/it/assets/${asset.reference || asset.id}/overview`}
             underline="hover"
             onClick={(event) => event.stopPropagation()}
             sx={{ color: 'inherit', fontSize: 'inherit', '&:hover': { color: 'primary.main' } }}

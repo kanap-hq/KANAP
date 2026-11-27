@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { AiTranslatedWriteLanguage, isFixedPreviewError, PREVIEW_EXPIRED_MESSAGE, previewErrorText } from '../ai-write-texts';
+import { AiTranslatedWriteLanguage, isFixedPreviewError, PREVIEW_DOCUMENT_CHANGED_MESSAGE, PREVIEW_EXPIRED_MESSAGE, previewErrorText } from '../ai-write-texts';
 
 /**
  * The detail of a failed preview (`previewErrorText`): drift since the preview and a record
@@ -219,3 +219,18 @@ testRelationCards();
 testDrift();
 testMissingRecords();
 testLeftAsStored();
+testDocumentChangedMeanwhile();
+
+/**
+ * A document written by someone else while Kad's approved change wrote it (the 409
+ * `document_revision_conflict`, lot I7b of 26.12.1): the card says so in the person's language and
+ * asks for the request again, never the API's "Document revision conflict".
+ */
+function testDocumentChangedMeanwhile() {
+  assert.equal(PREVIEW_DOCUMENT_CHANGED_MESSAGE, 'The document changed in the meantime, so nothing was changed. Make the request again.');
+  assert.equal(previewErrorText('en', PREVIEW_DOCUMENT_CHANGED_MESSAGE), PREVIEW_DOCUMENT_CHANGED_MESSAGE);
+  assert.equal(previewErrorText('fr', PREVIEW_DOCUMENT_CHANGED_MESSAGE), "Le document a changé entre-temps : rien n'a été modifié. Relancez la demande.");
+  assert.equal(previewErrorText('de', PREVIEW_DOCUMENT_CHANGED_MESSAGE), 'Das Dokument hat sich inzwischen geändert, daher wurde nichts geändert. Stellen Sie die Anfrage erneut.');
+  assert.equal(previewErrorText('es', PREVIEW_DOCUMENT_CHANGED_MESSAGE), 'El documento ha cambiado mientras tanto, así que no se ha modificado nada. Vuelva a hacer la solicitud.');
+  assert.equal(isFixedPreviewError(PREVIEW_DOCUMENT_CHANGED_MESSAGE), true);
+}

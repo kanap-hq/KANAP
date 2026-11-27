@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { AI_PAGE_ROUTES, withAiPageUrls } from '../ai-page-urls';
+import { AI_PAGE_ROUTES, entityPageUrl, withAiPageUrls } from '../ai-page-urls';
 
 // `page_url` on the records of the read tools (`ai-page-urls.ts`): the families without a business
 // reference get the page of the application, for a person who holds its right; absolute addresses
@@ -97,8 +97,57 @@ function testRoutesHaveNoReferenceFamilies() {
   }
 }
 
+/** A site carries LOC-n in Kad's reads: its page opens by it. A connection without one keeps its id. */
+async function testSiteByReference() {
+  const result = await withAiPageUrls({
+    items: [
+      { type: 'locations', id: COMPANY, ref: 'LOC-2', label: 'LOC-2 · Lyon' },
+      { type: 'connections', id: PROCESS, ref: null, label: 'CONN-4 - VPN' },
+      { type: 'locations', id: APPLICATION, ref: 'Lyon', label: 'Lyon' },
+    ],
+  }, { readableResources: reads('locations', 'infrastructure'), origin: async () => null });
+  assert.deepEqual(result.items.map((item: any) => item.page_url), [
+    '/it/locations/LOC-2',
+    `/it/connections/${PROCESS}`,
+    `/it/locations/${APPLICATION}`,
+  ], 'a site by its reference, a record without a reference by its id');
+}
+
+/** The page of a record, as an approved change's summary links it: by its reference when its page opens by it. */
+function testEntityPageUrl() {
+  const cases: Array<[string, string, string]> = [
+    ['tasks', 'T-4', '/portfolio/tasks/T-4'],
+    ['projects', 'PRJ-3', '/portfolio/projects/PRJ-3'],
+    ['requests', 'REQ-2', '/portfolio/requests/REQ-2'],
+    ['technologies', 'TEC-7', '/it/technologies/TEC-7'],
+    ['documents', 'DOC-5', '/knowledge/DOC-5'],
+    ['incidents', 'INC-6', '/it/incidents/INC-6'],
+    ['applications', 'APP-8', '/it/applications/APP-8'],
+    ['assets', 'AST-9', '/it/assets/AST-9'],
+    ['interfaces', 'INT-3', '/it/interfaces/INT-3'],
+    ['locations', 'LOC-2', '/it/locations/LOC-2'],
+    ['budget_lines', 'BL-12', '/ops/budget/BL-12'],
+    ['contracts', 'CTR-2', '/ops/contracts/CTR-2'],
+    ['companies', 'COMP-5', '/master-data/companies/COMP-5'],
+    ['contacts', 'CTCT-4', '/master-data/contacts/CTCT-4'],
+    ['departments', 'DEPT-5', '/master-data/departments/DEPT-5'],
+    ['suppliers', 'SUP-3', '/master-data/suppliers/SUP-3'],
+    ['contributors', 'MEM-2', '/portfolio/contributors/MEM-2'],
+  ];
+  for (const [type, ref, url] of cases) assert.equal(entityPageUrl(type, COMPANY, ref), url, `${type} by its reference`);
+  // A reference of another family, a legacy budget number, a code or a missing one: the id.
+  assert.equal(entityPageUrl('tasks', COMPANY, 'PRJ-3'), `/portfolio/tasks/${COMPANY}`);
+  assert.equal(entityPageUrl('budget_lines', COMPANY, 'CPX-2'), `/ops/budget/${COMPANY}`);
+  assert.equal(entityPageUrl('accounts', COMPANY, '612100'), `/master-data/accounts/${COMPANY}`);
+  assert.equal(entityPageUrl('business_processes', COMPANY, null), `/master-data/business-processes/${COMPANY}`);
+  assert.equal(entityPageUrl('suppliers', COMPANY, 'SUP-013'), `/master-data/suppliers/${COMPANY}`);
+  assert.equal(entityPageUrl('roles', COMPANY, 'Admin'), null, 'no page builder: no link');
+}
+
 async function run() {
   await testListItems();
+  await testSiteByReference();
+  testEntityPageUrl();
   await testRights();
   await testDetailAndContext();
   await testMcpOrigin();

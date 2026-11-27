@@ -5,6 +5,15 @@ import { RECENT_VIEWS_CHANGED, RECENT_VIEWS_PREFIX } from '../../../lib/recentVi
 
 const MAX_ITEMS = 10;
 const isBudgetLine = (type: RecentEntityType) => type === 'spend_item' || type === 'capex_item';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Interfaces were once kept under their reference (`INT-4`) in place of their id, without `ref`.
+ * Such an entry shows and opens by that reference; the next visit replaces it (`addToRecent`).
+ */
+function withLegacyReference(item: RecentItem): RecentItem {
+  return item.type === 'interface' && !item.ref && typeof item.id === 'string' && !UUID_RE.test(item.id) ? { ...item, ref: item.id } : item;
+}
 
 export type RecentEntityType =
   | 'project'
@@ -12,6 +21,7 @@ export type RecentEntityType =
   | 'application'
   | 'asset'
   | 'interface'
+  | 'technology'
   | 'connection'
   | 'contract'
   | 'task'
@@ -42,7 +52,7 @@ function getStorageKey(tenantSlug: string, userId: string): string {
 function loadFromStorage(storageKey: string): RecentItem[] {
   try {
     const stored = localStorage.getItem(storageKey);
-    const parsed = stored ? (JSON.parse(stored) as RecentItem[]) : [];
+    const parsed = (stored ? (JSON.parse(stored) as RecentItem[]) : []).map(withLegacyReference);
     return parsed.filter((item, index) => !parsed.slice(0, index).some((previous) =>
       previous.id === item.id && (previous.type === item.type || (isBudgetLine(previous.type) && isBudgetLine(item.type)))
     )).slice(0, MAX_ITEMS);
@@ -86,8 +96,9 @@ export function useRecentlyViewed() {
   const addToRecent = useCallback(
     (type: RecentEntityType, id: string, label: string, ref?: string) => {
       setItems((prev) => {
-        // Remove existing entry for the same item
-        const filtered = prev.filter((r) => !(r.id === id && (r.type === type || (isBudgetLine(r.type) && isBudgetLine(type)))));
+        // Remove existing entry for the same item, and one kept under its reference (`withLegacyReference`).
+        const filtered = prev.filter((r) => !(r.id === id && (r.type === type || (isBudgetLine(r.type) && isBudgetLine(type))))
+          && !(ref && r.type === type && r.id === ref));
         // Add new entry at the beginning
         const entry: RecentItem = { type, id, label, viewedAt: Date.now(), ...(ref ? { ref } : {}) };
         const updated = [entry, ...filtered].slice(
@@ -128,25 +139,31 @@ export const ENTITY_TYPE_CONFIG: Record<
     labelKey: 'dashboard.tiles.entityTypes.request',
   },
   application: {
-    route: (id) => `/it/applications/${id}`,
+    route: (id, ref) => `/it/applications/${ref || id}`,
     resource: 'applications',
     icon: 'Apps',
     labelKey: 'dashboard.tiles.entityTypes.application',
   },
   asset: {
-    route: (id) => `/it/assets/${id}`,
+    route: (id, ref) => `/it/assets/${ref || id}`,
     resource: 'infrastructure',
     icon: 'Storage',
     labelKey: 'dashboard.tiles.entityTypes.asset',
   },
   interface: {
-    route: (id) => `/it/interfaces/${id}`,
+    route: (id, ref) => `/it/interfaces/${ref || id}`,
     resource: 'applications',
     icon: 'SwapHoriz',
     labelKey: 'dashboard.tiles.entityTypes.interface',
   },
+  technology: {
+    route: (id, ref) => `/it/technologies/${ref || id}`,
+    resource: 'infrastructure',
+    icon: 'Layers',
+    labelKey: 'dashboard.tiles.entityTypes.technology',
+  },
   connection: {
-    route: (id) => `/it/connections/${id}`,
+    route: (id, ref) => `/it/connections/${ref || id}`,
     resource: 'infrastructure',
     icon: 'Cable',
     labelKey: 'dashboard.tiles.entityTypes.connection',
@@ -164,31 +181,31 @@ export const ENTITY_TYPE_CONFIG: Record<
     labelKey: 'dashboard.tiles.entityTypes.task',
   },
   spend_item: {
-    route: (id) => `/ops/budget/${id}`,
+    route: (id, ref) => `/ops/budget/${ref || id}`,
     resource: 'budget',
     icon: 'Receipt',
     labelKey: 'dashboard.tiles.entityTypes.opexItem',
   },
   capex_item: {
-    route: (id) => `/ops/budget/${id}`,
+    route: (id, ref) => `/ops/budget/${ref || id}`,
     resource: 'budget',
     icon: 'AccountBalance',
     labelKey: 'dashboard.tiles.entityTypes.capexItem',
   },
   incident: {
-    route: (id) => `/it/incidents/${id}/overview`,
+    route: (id, ref) => `/it/incidents/${ref || id}/overview`,
     resource: 'incidents',
     icon: 'ReportProblem',
     labelKey: 'dashboard.tiles.entityTypes.incident',
   },
   location: {
-    route: (id) => `/it/locations/${id}`,
+    route: (id, ref) => `/it/locations/${ref || id}`,
     resource: 'infrastructure',
     icon: 'Place',
     labelKey: 'dashboard.tiles.entityTypes.location',
   },
   document: {
-    route: (id) => `/knowledge/${id}`,
+    route: (id, ref) => `/knowledge/${ref || id}`,
     resource: 'knowledge',
     icon: 'Article',
     labelKey: 'dashboard.tiles.entityTypes.document',

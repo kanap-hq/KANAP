@@ -233,7 +233,9 @@ Tool-specific or private notes live in each tool's local files, never here.
   `DATABASE_URL` at a dedicated migrated database (the dev `appdb` has the API connected):
   `CI_ADMIN_DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres`
   `DATABASE_URL=postgres://app:app@localhost:5432/appdb_ci npm run test:ci -- --db-lanes 4`.
-  The race specs run on the copies, which are throwaway.
+  The race specs run on the copies, which are throwaway. So do the specs marked `// @throwaway-db-spec`
+  (they call `assertThrowawayDatabase`, `src/common/__tests__/throwaway-database.ts`): like the race
+  specs, they refuse a developer's `appdb`, and the runner leaves them out of a run on it.
 - Exclusive specs touch what the whole PostgreSQL server shares. They run first, one at a time,
   while no other lane runs a database spec. The runner finds them by pattern, in the spec and in
   the `__tests__` helpers it imports: roles, databases, `ALTER SYSTEM`, `pg_reload_conf`,

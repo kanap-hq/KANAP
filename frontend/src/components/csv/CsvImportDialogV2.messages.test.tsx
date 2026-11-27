@@ -65,22 +65,22 @@ describe('CsvImportDialogV2 messages', () => {
     expect(screen.getByRole('button', { name: 'Importer' })).toBeEnabled();
   });
 
-  it('says which date-times without a zone are read as UTC, and lets the import go on', async () => {
+  it('says which date-times without a zone are read in the person\'s zone, and lets the import go on', async () => {
     post.mockResolvedValueOnce({
       data: report({
         inserted: 0,
         updated: 1,
         warnings: [{
           row: 0,
-          message: 'Times without a time zone, read as UTC: started_at, detected_at',
+          message: 'Times without a time zone, read in Europe/Paris: started_at, detected_at',
           code: 'CSV_HEADER_ZONELESS_DATE_TIMES',
-          params: { columns: 'started_at, detected_at', example: 'started_at' },
+          params: { columns: 'started_at, detected_at', example: 'started_at', zone: 'Europe/Paris' },
         }],
       }),
     });
     validate();
     expect(await screen.findByText(
-      'Heures sans fuseau lues en UTC : started_at, detected_at. Nommez le fuseau après la colonne, par exemple started_at (Europe/Paris).',
+      'Heures sans fuseau lues dans le fuseau Europe/Paris : started_at, detected_at. Nommez le fuseau après la colonne, par exemple started_at (Europe/Paris).',
     )).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Importer' })).toBeEnabled();
   });

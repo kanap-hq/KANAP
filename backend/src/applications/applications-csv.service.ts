@@ -4,7 +4,7 @@ import { ApplicationsListService } from './services/applications-list.service';
 import { classificationReadState } from './services/application-classification';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { exportCatalogLabelsIn } from '../it-ops-settings/catalog-resolve';
-import { lockApplicationNames, lockApplicationRow } from './application-rules';
+import { lockApplicationNames } from './application-rules';
 import { requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
 import { noteNameMatch, proposalFor, undoneMatch } from '../common/name-matching';
 import type { CsvImportContext, CsvImportRow, CsvSettledRow, ImportLookalikeChoice } from '../common/csv';
@@ -26,6 +26,15 @@ import { ApplicationOwner } from './application-owner.entity';
 import { ApplicationDataResidency } from './application-data-residency.entity';
 import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
+import { loadSlotBodies } from '../knowledge/integrated-document-bodies';
+import { prepareRecoveredContent } from '../common/markdown-worker';
+import {
+  APPLICATION_DESCRIPTION_SLOT,
+  keepApplicationSeed,
+  sameApplicationDescription,
+  withApplicationDescriptions,
+  writeApplicationDescription,
+} from './application-description';
 import {
   CsvExportService,
   CsvImportService,
@@ -74,6 +83,8 @@ type LookalikeState = {
   decisions: Map<number, LookalikeDecision>;
   followed: ImportLookalikeChoice[];
   fields: Map<number, string[]>;
+  /** The applications the load locked as "Update APP-n" targets (`lookalikeTargets`); none on a check. */
+  locked?: Set<string>;
 };
 
 /** A row the load wrote: the application it saved, and its cells (by column), for its owners and data residency. */
@@ -155,8 +166,9 @@ export class ApplicationsCsvService {
     const matching = await this.listService.listIds({ ...opts.query, filters: JSON.stringify(filters), __classificationExport: true }, { manager, tenantId });
     if (!matching.ids.length) queryBuilder.andWhere('FALSE');
     else queryBuilder.andWhere('app.id = ANY(:ids)', { ids: matching.ids });
-    // In the list's order (its sort, the id breaking ties), as the screen shows them.
-    const applications = inIdOrder(await queryBuilder.getMany(), matching.ids);
+    // In the list's order (its sort, the id breaking ties), as the screen shows them; each description
+    // as its page shows it (its document's text).
+    const applications = await withApplicationDescriptions(manager, tenantId, inIdOrder(await queryBuilder.getMany(), matching.ids));
     // Users never see codes: catalog-backed columns are exported as names (import accepts either).
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
     for (const app of applications) {
@@ -302,10 +314,15 @@ export class ApplicationsCsvService {
     // (it looks like an application) keeps the owners and residency of every application.
     const written: WrittenRow[] = [];
     const look: LookalikeState = { decisions: new Map(), followed: [], fields: new Map() };
+    // The description of each application a row updates, as its page shows it (`settleDescriptions`).
+    const descriptions = new Map<string, string | null>();
+    const changesDescription = async (entity: any) => !(await sameApplicationDescription(descriptions.get(String(entity.id)), entity.description));
     const config = {
       ...applicationCsvConfig,
-      settleRows: (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) =>
-        this.settleRows(rows, context, look),
+      lockAlso: (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) =>
+        this.lookalikeTargets(rows, context, look),
+      settleRows: async (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) =>
+        this.settleDescriptions(await this.settleRows(rows, context, look), context, descriptions),
       afterValidate: async (rows: CsvImportRow[], context: CsvImportContext) => {
         await applicationCsvConfig.afterValidate!(rows, context);
         for (const row of rows) {
@@ -323,8 +340,19 @@ export class ApplicationsCsvService {
         }
         return same;
       },
-      afterCommit: async (_entities: any[], _context: CsvImportContext, rows: Array<{ row: CsvImportRow; entity: any }> = []) => {
+      beforeCommit: async (entities: any[], context: CsvImportContext) => {
+        await applicationCsvConfig.beforeCommit!(entities, context);
+        // An updated application with no document yet, whose description changes: the document of the
+        // text it replaces, while the column still holds it (the save writes it next).
+        if (!this.integratedDocuments) return;
+        for (const entity of entities) {
+          if (!entity.id || !descriptions.has(String(entity.id)) || !(await changesDescription(entity))) continue;
+          await keepApplicationSeed(this.integratedDocuments, String(entity.id), { manager: context.manager, userId: context.userId, audit: context.audit });
+        }
+      },
+      afterCommit: async (_entities: any[], context: CsvImportContext, rows: Array<{ row: CsvImportRow; entity: any }> = []) => {
         for (const { row, entity } of rows) if (entity?.id) written.push({ id: String(entity.id), raw: row.raw });
+        await this.writeDescriptions(rows, context, changesDescription);
       },
     };
     // The names before the load, to find the renamed applications afterwards.
@@ -360,28 +388,58 @@ export class ApplicationsCsvService {
    * (`CSV_LOOKALIKE_NAME_FOUND`). A load refuses a row the check would have created that looks like an
    * application since (`CSV_LOOKALIKE_NEW`); a check lists it, left out (review 4, C6).
    */
-  private async settleRows(
+  /** The lookalike decision of each row (none in "update only": no row looks like another there). */
+  private async decideLookalikes(
     rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>,
     context: CsvImportContext,
-    look: LookalikeState,
-  ): Promise<CsvSettledRow[]> {
+  ): Promise<ReturnType<typeof decideLookalikes> | null> {
     const { params } = context;
-    if (params.operation === 'update_only') return rows.map((row) => ({ entity: row.found }));
+    if (params.operation === 'update_only') return null;
     const index = new ApplicationIndex(await storedApplications(context.manager, context.tenantId));
-    const decided = decideLookalikes(rows.map((row) => {
+    return decideLookalikes(rows.map((row) => {
       const name = cellValue(row.raw, 'name');
       const keys = !name ? null : row.found
         ? { name, supplierId: null, editor: null }
         : { name, supplierId: this.rowSupplier(row.raw, context), editor: cellValue(row.raw, 'editor') || null };
       return { line: row.rowNumber, foundId: row.found ? String(row.found.id) : null, keys };
     }), index, params.lookalikes ?? [], { updatable: params.operation !== 'insert_only' });
+  }
+
+  /**
+   * The applications the rows update as "Update APP-n" (lot I7b of 26.12.1): the load locks them with
+   * those its file finds, in one statement in id order (`lockAlso`), before any write, as the change in
+   * bulk locks its applications. Locked after those, they could meet it in the other order (40P01).
+   */
+  private async lookalikeTargets(
+    rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>,
+    context: CsvImportContext,
+    look: LookalikeState,
+  ): Promise<string[]> {
+    const decided = await this.decideLookalikes(rows, context);
+    const targets = decided ? updateTargets(decided) : [];
+    look.locked = new Set(targets);
+    return targets;
+  }
+
+  private async settleRows(
+    rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>,
+    context: CsvImportContext,
+    look: LookalikeState,
+  ): Promise<CsvSettledRow[]> {
+    const { params } = context;
+    const decided = await this.decideLookalikes(rows, context);
+    if (!decided) return rows.map((row) => ({ entity: row.found }));
     look.decisions = decided.decisions;
     look.followed = decided.followed;
-    // The applications updated, locked in id order (as `lockApplicationRow`, the first lock of every
-    // writer of their owners), then their state read again: nothing changes them before the commit.
-    const ids = [...new Set([...decided.decisions.values()].filter((decision) => decision.action === 'update').map((decision) => decision.id))].sort();
+    // The applications updated, locked in id order, then their state read again: nothing changes them
+    // before the commit (every other writer of their owners locks them FOR UPDATE first).
+    // The load already holds them FOR NO KEY UPDATE, with those the file finds (`lookalikeTargets`): no
+    // other order, and no stronger lock, which a page holding one FOR KEY SHARE would wait for.
+    // A target the load did not lock (the application it looked like went, another one looks like
+    // its row since): never locked here, out of the id order; its row is refused below.
+    const ids = updateTargets(decided).filter((id) => !look.locked || look.locked.has(id));
     const stored: any[] = ids.length === 0 ? [] : await context.manager.query(
-      `SELECT * FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR UPDATE`,
+      `SELECT * FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR NO KEY UPDATE`,
       [context.tenantId, ids],
     );
     const states = new Map((ids.length === 0 ? [] : await storedApplications(context.manager, context.tenantId, ids)).map((app) => [app.id, applicationState(app)]));
@@ -413,6 +471,7 @@ export class ApplicationsCsvService {
         };
       }
       if (decision.action === 'create') return { entity: null };
+      if (look.locked && !look.locked.has(String(decision.id))) return refuse('CSV_LOOKALIKE_NEW', `The row looks like ${ref} since the check.`, ref);
       const entity = stored.find((app) => String(app.id) === decision.id) ?? null;
       if (!entity) return refuse('CSV_LOOKALIKE_GONE', 'The application chosen at the check no longer exists.');
       decision.state = states.get(decision.id) ?? decision.state;
@@ -421,6 +480,63 @@ export class ApplicationsCsvService {
       }
       return { entity };
     });
+  }
+
+  /**
+   * The description of the application a row updates is its document's text, never the column, its
+   * seed (decision P14 of 26.12.1): the clearing rule and the unchanged check read the document. An
+   * application with no document yet holds it in that seed, read as the Markdown its page makes of it
+   * when it opens (`prepareRecoveredContent`), as for a project's purpose (`settleWithSlotBodies`).
+   */
+  private async settleDescriptions(settled: CsvSettledRow[], context: CsvImportContext, descriptions: Map<string, string | null>): Promise<CsvSettledRow[]> {
+    const entityOf = (row: CsvSettledRow) => ('entity' in row ? row.entity : null);
+    const ids = settled.flatMap((row) => (entityOf(row) ? [String(entityOf(row).id)] : []));
+    const bodies = await loadSlotBodies(context.manager, context.tenantId, 'applications', ids, [APPLICATION_DESCRIPTION_SLOT]);
+    // One row after the other: a seed is read in the Markdown workers, which keep two calls of a person
+    // waiting at most (`markdown-worker.ts`); rows read at once were refused past three.
+    const out: CsvSettledRow[] = [];
+    for (const row of settled) {
+      const entity = entityOf(row);
+      if (!entity || !('entity' in row)) {
+        out.push(row);
+        continue;
+      }
+      const id = String(entity.id);
+      const description = bodies.get(id)?.get(APPLICATION_DESCRIPTION_SLOT) ?? await prepareRecoveredContent(entity.description);
+      descriptions.set(id, description);
+      out.push({ ...row, entity: { ...entity, description } });
+    }
+    return out;
+  }
+
+  /**
+   * The descriptions the load wrote, into each application's document (created with it when the
+   * application has none): a new application's when it has one, an updated one's when it changed.
+   */
+  private async writeDescriptions(
+    rows: Array<{ row: CsvImportRow; entity: any }>,
+    context: CsvImportContext,
+    changesDescription: (entity: any) => Promise<boolean>,
+  ): Promise<void> {
+    if (!this.integratedDocuments) return;
+    const writes: Array<{ id: string; description: string | null }> = [];
+    for (const { row, entity } of rows) {
+      if (!entity?.id) continue;
+      const write = row.isInsert ? !!String(entity.description ?? '').trim() : await changesDescription(entity);
+      if (write) writes.push({ id: String(entity.id), description: entity.description ?? null });
+    }
+    if (writes.length === 0) return;
+    // The name and reference the documents' titles carry (a new application's is given on insert).
+    const apps: Array<{ id: string; tenant_id: string; name: string; sequential_id: string | null }> = await context.manager.query(
+      `SELECT id::text AS id, tenant_id::text AS tenant_id, name, sequential_id FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [context.tenantId, writes.map((write) => write.id)],
+    );
+    const byId = new Map(apps.map((app) => [app.id, app]));
+    for (const { id, description } of writes) {
+      const app = byId.get(id);
+      if (!app) continue;
+      await writeApplicationDescription(this.integratedDocuments, app, description, { manager: context.manager, userId: context.userId, audit: context.audit });
+    }
   }
 
   /**
@@ -521,8 +637,10 @@ export class ApplicationsCsvService {
     const userByEmail = await usersByEmail(manager, tenantId);
 
     for (const { id: appId, raw: row } of rows) {
-      // The application, then its owners (`lockApplicationRow`), as every writer of them.
-      await lockApplicationRow(manager, tenantId, appId);
+      // The load holds every application it wrote: FOR NO KEY UPDATE since it found it (by its id, its
+      // name or as "Update APP-n"), or made by it. The other writers of the owners lock the application
+      // FOR UPDATE first and wait for the import. No stronger lock here: a page holding the application
+      // FOR KEY SHARE waits on the document the import wrote, and would wait in a cycle.
       const ownerRepo = manager.getRepository(ApplicationOwner);
       const beforeRows = await ownerRepo.find({ where: { application_id: appId, tenant_id: tenantId } as any });
 
@@ -648,4 +766,9 @@ export class ApplicationsCsvService {
 
     return { fields, presets };
   }
+}
+
+/** The applications a lookalike decision updates, in id order. */
+function updateTargets(decided: ReturnType<typeof decideLookalikes>): string[] {
+  return [...new Set([...decided.decisions.values()].filter((decision) => decision.action === 'update').map((decision) => String(decision.id)))].sort();
 }

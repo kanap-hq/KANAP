@@ -211,6 +211,11 @@ export type AiExecutionContext = {
    * the person's language when their profile sets none, as the screen then follows the browser.
    */
   screenLanguage?: string | null;
+  /**
+   * The zone the assistant reads and writes date-times in, for a turn of the chat: the browser's,
+   * else the person's own, else UTC (`timeZoneOf`). Absent on the other requests.
+   */
+  timeZone?: string | null;
 };
 
 export type AiExecutionContextWithManager = AiExecutionContext & {
@@ -738,6 +743,8 @@ export type AiMutationPreviewDto = {
     entity_id: string | null;
     ref: string | null;
     title: string | null;
+    /** The page of the existing record, by its reference where its page opens by it. */
+    page_url?: string;
   };
   changes: Record<string, AiMutationPreviewChangeDto>;
   /** The column mapping of an import, for the `prepare_import_mapping` card. */

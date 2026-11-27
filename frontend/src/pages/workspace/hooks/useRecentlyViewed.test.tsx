@@ -32,6 +32,28 @@ describe('recent budget lines', () => {
   });
 });
 
+describe('recent interfaces', () => {
+  const ID = '0b6f6a3e-4c2d-4f8e-9a1b-2c3d4e5f6a7b';
+
+  it('keeps an interface by its id with its INT reference, so a delete drops it', () => {
+    const { result } = renderHook(useRecentlyViewed);
+    act(() => result.current.addToRecent('interface', ID, 'Orders', 'INT-4'));
+    expect(result.current.items[0]).toMatchObject({ type: 'interface', id: ID, ref: 'INT-4' });
+    expect(ENTITY_TYPE_CONFIG.interface.route(result.current.items[0].id, result.current.items[0].ref)).toBe('/it/interfaces/INT-4');
+    act(() => forgetRecentlyViewed([ID]));
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual([]);
+  });
+
+  it('shows and opens an entry kept under its reference, and the next visit replaces it', () => {
+    localStorage.setItem(KEY, JSON.stringify([{ type: 'interface', id: 'INT-4', label: 'Orders', viewedAt: 1 }]));
+    const { result } = renderHook(useRecentlyViewed);
+    expect(result.current.items[0]).toMatchObject({ id: 'INT-4', ref: 'INT-4' });
+    expect(ENTITY_TYPE_CONFIG.interface.route(result.current.items[0].id, result.current.items[0].ref)).toBe('/it/interfaces/INT-4');
+    act(() => result.current.addToRecent('interface', ID, 'Orders', 'INT-4'));
+    expect(result.current.items.map((item) => [item.id, item.ref])).toEqual([[ID, 'INT-4']]);
+  });
+});
+
 describe('a deleted record', () => {
   it('leaves the open list at once', () => {
     const { result } = renderHook(useRecentlyViewed);
@@ -76,5 +98,21 @@ describe('reference data', () => {
     expect(ENTITY_TYPE_CONFIG.request.route('req-1')).toBe('/portfolio/requests/req-1');
     expect(ENTITY_TYPE_CONFIG.task.route('task-1', 'T-9')).toBe('/portfolio/tasks/T-9');
     expect(ENTITY_TYPE_CONFIG.task.route('task-1')).toBe('/portfolio/tasks/task-1');
+  });
+
+  it.each([
+    ['application', 'APP-3', '/it/applications/APP-3', '/it/applications/rec-1'],
+    ['asset', 'SRV-8', '/it/assets/SRV-8', '/it/assets/rec-1'],
+    ['interface', 'INT-4', '/it/interfaces/INT-4', '/it/interfaces/rec-1'],
+    ['technology', 'TEC-3', '/it/technologies/TEC-3', '/it/technologies/rec-1'],
+    ['connection', 'CONN-2', '/it/connections/CONN-2', '/it/connections/rec-1'],
+    ['location', 'LOC-5', '/it/locations/LOC-5', '/it/locations/rec-1'],
+    ['document', 'DOC-12', '/knowledge/DOC-12', '/knowledge/rec-1'],
+    ['spend_item', 'BL-7', '/ops/budget/BL-7', '/ops/budget/rec-1'],
+    ['capex_item', 'BL-8', '/ops/budget/BL-8', '/ops/budget/rec-1'],
+    ['incident', 'INC-6', '/it/incidents/INC-6/overview', '/it/incidents/rec-1/overview'],
+  ] as const)('opens a kept %s by its reference, by its uuid when kept without one', (type, ref, byRef, byId) => {
+    expect(ENTITY_TYPE_CONFIG[type].route('rec-1', ref)).toBe(byRef);
+    expect(ENTITY_TYPE_CONFIG[type].route('rec-1')).toBe(byId);
   });
 });

@@ -364,6 +364,8 @@ export class IncidentsCsvService {
       language?: CsvLanguage;
       /** The person's rights: a name is found beyond case in the families they read. */
       access?: CsvCallerAccess;
+      /** The zone of the date-times whose header names none (`timeZoneOf`); UTC when absent. */
+      timeZone?: string;
     },
   ): Promise<CsvImportResult> {
     // The import service turns a commit failure into `ok: false` instead of

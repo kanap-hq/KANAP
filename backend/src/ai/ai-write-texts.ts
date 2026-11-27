@@ -1543,6 +1543,14 @@ export const PREVIEW_EXPIRED_MESSAGE = 'Preview expired before approval.';
 export const PREVIEW_DATA_BUSY_MESSAGE =
   'The data this change writes was busy with another operation, so nothing was changed. Approve it again in a moment.';
 
+/**
+ * A document written by someone else while an approved change wrote it (the 409
+ * `document_revision_conflict` of `knowledge/document-revision-conflict.ts`): nothing was written, and
+ * the card starts from a text that is no longer the document's, so the request is made again.
+ */
+export const PREVIEW_DOCUMENT_CHANGED_MESSAGE =
+  'The document changed in the meantime, so nothing was changed. Make the request again.';
+
 /** A closure whose review is being edited by someone else (the 423 of the review lock). */
 export const PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE =
   'The incident review is being edited by someone else, so nothing was changed. Try again once that edit is saved or its lock is released.';
@@ -1600,6 +1608,11 @@ const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
     fr: "Les données que cette modification écrit étaient occupées par une autre opération : rien n'a été modifié. Approuvez-la de nouveau dans un instant.",
     de: 'Die Daten, die diese Änderung schreibt, waren durch einen anderen Vorgang belegt. Es wurde nichts geändert. Genehmigen Sie sie gleich noch einmal.',
     es: 'Los datos que escribe este cambio estaban ocupados por otra operación, así que no se ha modificado nada. Vuelva a aprobarlo en un momento.',
+  },
+  [PREVIEW_DOCUMENT_CHANGED_MESSAGE]: {
+    fr: "Le document a changé entre-temps : rien n'a été modifié. Relancez la demande.",
+    de: 'Das Dokument hat sich inzwischen geändert, daher wurde nichts geändert. Stellen Sie die Anfrage erneut.',
+    es: 'El documento ha cambiado mientras tanto, así que no se ha modificado nada. Vuelva a hacer la solicitud.',
   },
   [PREVIEW_INCIDENT_REVIEW_LOCKED_MESSAGE]: {
     fr: "La revue de l'incident est en cours de modification par une autre personne : rien n'a été modifié. Réessayez quand cette modification sera enregistrée ou son verrou levé.",

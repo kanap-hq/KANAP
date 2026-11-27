@@ -582,10 +582,10 @@ export class OnboardingService {
     manager: EntityManager,
     tenantId: string,
     userId: string,
-  ): Promise<{ item: { id: string; name: string } | null }> {
+  ): Promise<{ item: { id: string; name: string; sequential_id: string | null } | null }> {
     const scope = await resolveBusinessContributorScopeForUser({ manager, userId, tenantId }, 'applications', 'reader');
-    const [row]: Array<{ id: string; name: string }> = await manager.query(
-      `SELECT a.id, a.name
+    const [row]: Array<{ id: string; name: string; sequential_id: string | null }> = await manager.query(
+      `SELECT a.id, a.name, a.sequential_id
          FROM applications a
         WHERE a.tenant_id = $1
           AND (a.disabled_at IS NULL OR a.disabled_at > now())
@@ -600,7 +600,8 @@ export class OnboardingService {
         LIMIT 1`,
       scope ? [tenantId, scope.userId] : [tenantId],
     );
-    return { item: row ? { id: row.id, name: row.name } : null };
+    // `sequential_id`: the application's APP-n, the address of its page.
+    return { item: row ? { id: row.id, name: row.name, sequential_id: row.sequential_id ?? null } : null };
   }
 
   private async readChoice(manager: EntityManager, tenantId: string): Promise<ChoiceRow | null> {

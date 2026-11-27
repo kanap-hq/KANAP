@@ -79,6 +79,8 @@ export interface CsvImportOptions {
   access?: CsvCallerAccess;
   /** The source of each record's history row (Kad's card); without it, the person's. See CsvImportContext. */
   audit?: AuditSourceOptions;
+  /** The zone of the date-times whose header names none: the person's (`timeZoneOf`). UTC when absent. */
+  timeZone?: string;
 }
 
 /** A reference cell nothing finds, or that may name several records: what parseFk and the lists do with it. */
@@ -159,7 +161,7 @@ export class CsvImportService {
     opts: CsvImportOptions,
   ): Promise<CsvImportResult> {
     // Decode and parse CSV
-    const { rows, headerErrors, headerWarnings, timeZones, firstSheetOnly } = await this.parseCsv(config, file, opts.language);
+    const { rows, headerErrors, headerWarnings, timeZones, firstSheetOnly } = await this.parseCsv(config, file, opts.language, opts.timeZone);
     // A workbook of several sheets: the report says which one was read, on every outcome.
     if (firstSheetOnly !== undefined) {
       headerWarnings.push({
@@ -372,6 +374,7 @@ export class CsvImportService {
     config: CsvEntityConfig,
     file: Express.Multer.File,
     language?: CsvLanguage,
+    personZone?: string,
   ): Promise<{
     rows: Record<string, string>[];
     headerErrors: CsvImportError[];
@@ -408,8 +411,8 @@ export class CsvImportService {
 
     // A date-time column may name the zone of its cells after its name (`detected_at
     // (Europe/Paris)`, as the export writes it): the row is read by the plain name, and the
-    // transform reads the cells in that zone. Without a zone, the cells are UTC, and the report
-    // says which columns were read that way.
+    // transform reads the cells in that zone. Without a zone, the cells are read in the person's
+    // zone (UTC when none is known), and the report says which columns were read that way.
     const zonedColumns = new Set(
       config.fields.filter((f) => f.zonedDateTime && f.importable !== false).map((f) => f.csvColumn),
     );
@@ -501,12 +504,14 @@ export class CsvImportService {
           }
 
           if (zoneless.length > 0) {
+            const zone = knownTimeZone(personZone) ?? 'UTC';
+            for (const column of zoneless) timeZones[column] = zone;
             const columns = zoneless.map(columnTitle);
             headerWarnings.push({
               row: 0,
-              message: `Times without a time zone, read as UTC: ${columns.join(', ')}`,
+              message: `Times without a time zone, read in ${zone}: ${columns.join(', ')}`,
               code: 'CSV_HEADER_ZONELESS_DATE_TIMES',
-              params: { columns: columns.join(', '), example: columns[0] },
+              params: { columns: columns.join(', '), example: columns[0], zone },
             });
           }
 
@@ -1512,7 +1517,7 @@ export class CsvImportService {
       }
     }
 
-    const deleted = context.params.dryRun ? new Set<string>() : await this.lockExistingEntities(config, entities, context);
+    const deleted = context.params.dryRun ? new Set<string>() : await this.lockExistingEntities(config, entities, rows, context);
     return { entities, deleted };
   }
 
@@ -1526,14 +1531,26 @@ export class CsvImportService {
    * record's key alone, as the update itself does: rows that reference the record (time entries,
    * attachments, activities) are saved without waiting. A record deleted since the first read is
    * returned in `deleted`: its row is refused (`CSV_RECORD_DELETED`), never inserted again. The check
-   * (`dryRun`) locks nothing.
+   * (`dryRun`) locks none of the records it finds here; a config's hooks may still lock in a check (the
+   * applications lock their tenant row, their names and their "Update APP-n" targets). The other
+   * records the config says the load updates (`lockAlso`) are locked in the same statement: one id
+   * order for every record the load writes.
    */
-  private async lockExistingEntities(config: CsvEntityConfig, entities: Map<string, any>, context: CsvImportContext): Promise<Set<string>> {
+  private async lockExistingEntities(
+    config: CsvEntityConfig,
+    entities: Map<string, any>,
+    rows: Record<string, string>[],
+    context: CsvImportContext,
+  ): Promise<Set<string>> {
     const ids = [...new Set([...entities.values()].map((entity) => String(entity.id)))].sort();
-    if (ids.length === 0) return new Set();
+    const also = config.lockAlso
+      ? await config.lockAlso(rows.map((raw, i) => ({ raw, rowNumber: i + 2, found: this.resolveIdentity(config, raw, entities) })), context)
+      : [];
+    const locking = [...new Set([...ids, ...also])].sort();
+    if (locking.length === 0) return new Set();
     const locked: any[] = await context.manager.query(
       `SELECT * FROM ${config.tableName} WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR NO KEY UPDATE`,
-      [context.tenantId, ids],
+      [context.tenantId, locking],
     );
     const fresh = new Map(locked.map((entity) => [String(entity.id), entity]));
     for (const [key, entity] of entities) entities.set(key, fresh.get(String(entity.id)) ?? entity);

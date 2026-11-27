@@ -75,7 +75,7 @@ export default function KnowledgeOverviewTile({ config: _config }: KnowledgeOver
             {reviewItems.map((item) => (
               <ListItemButton
                 key={item.id}
-                onClick={() => navigate(`/knowledge/${item.id}`)}
+                onClick={() => navigate(`/knowledge/${item.itemNumber ? `DOC-${item.itemNumber}` : item.id}`)}
                 sx={{ py: 0.5, alignItems: 'flex-start' }}
               >
                 <ListItemText
