@@ -274,4 +274,34 @@ describe('Administration zone order on the settings page', () => {
     expect(dragged.adminZones.map((zone: { label: string }) => zone.label)).toEqual(['Zone B', 'Zone A', 'Zone C']);
     expect(dragged.adminZones[0].description).toBe('Identity core');
   }, 20000);
+
+  it('saves a typed value when the page is left before the delay', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: pageSettings };
+      if (String(url).startsWith('/locations')) return { data: { items: [] } };
+      return { data: { total: 0, usage: [] } };
+    });
+    patch.mockImplementation(async (_url: string, body: Partial<ItOpsSettings>) => ({ data: { ...pageSettings, ...body } }));
+    const view = render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MemoryRouter>
+            <KanapDialogProvider>
+              <ItOperationsSettingsPage />
+            </KanapDialogProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /pages.settings.lists.adminZones.title/ }));
+    const description = await screen.findByRole('textbox', { name: 'pages.settings.columns.description Zone B' });
+    fireEvent.change(description, { target: { value: 'Identity core' } });
+    view.unmount();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(patch).toHaveBeenCalled();
+    const saved = patch.mock.calls.map((call) => call[1]).find((body) => Array.isArray(body?.adminZones));
+    expect(saved.adminZones.find((zone: { code: string }) => zone.code === 'zone_b').description).toBe('Identity core');
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 1600)); });
+    expect(patch.mock.calls.filter((call) => Array.isArray(call[1]?.adminZones))).toHaveLength(1);
+  });
 });

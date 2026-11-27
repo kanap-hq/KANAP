@@ -1086,6 +1086,34 @@ function ItSettingsLists() {
     return () => clearTimeout(timer);
   });
 
+  // The effect above clears its timer on every render and on leaving the page, so a
+  // value typed just before leaving would be dropped. Remember the pending save and
+  // send it once when the page unmounts. A save already in flight is left alone.
+  const flushAutosaveRef = React.useRef<(() => void) | null>(null);
+  React.useEffect(() => {
+    if (readOnly || submitting) {
+      flushAutosaveRef.current = null;
+      return;
+    }
+    const dirtyIds = (Object.keys(state.dirty) as ListId[]).filter(
+      (id) => state.dirty[id] && listReadyToSave(id) && !autosaveBlocked(state, id),
+    );
+    flushAutosaveRef.current = dirtyIds.length === 0
+      ? null
+      : () => {
+          dirtyIds.forEach((id) => {
+            if (id === 'connectionTypes') handleSaveConnections();
+            else if (id === 'subnets') handleSaveSubnets();
+            else if (id === 'domains') handleSaveDomains();
+            else handleSaveEnum(id);
+          });
+        };
+  });
+
+  React.useEffect(() => () => {
+    flushAutosaveRef.current?.();
+  }, []);
+
   // Locked rows come from the server (lifecycle statuses, system domains); protected rows are defaults it re-adds.
   const editorGuards = (id: EnumListId) => ({
     usageList: id,
