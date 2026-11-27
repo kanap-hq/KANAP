@@ -29,6 +29,7 @@ const mocked = api as unknown as {
 };
 
 const BASE = '/admin/coa-templates/tpl-1/accounts';
+const WORKSPACE = '/accounts';
 const TEMPLATE_ACCOUNT = {
   account_number: 2050,
   account_name: 'Software licences',
@@ -58,8 +59,6 @@ const natureSelect = () => screen.getByRole('combobox', { name: 'accounts.fields
 
 /** A required MUI label keeps its asterisk in the accessible name, so match the key as a prefix. */
 const labelled = (key: string) => screen.getByLabelText(new RegExp(`^${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
-
-const chartSelect = () => screen.getByRole('combobox', { name: /^accounts\.fields\.chartOfAccounts/ });
 
 async function pickNature(label: string) {
   fireEvent.mouseDown(natureSelect());
@@ -159,11 +158,8 @@ describe('platform admin template account editors: Used for', () => {
   });
 
   it('creates a template account with its choice', async () => {
-    // The editor preselects the chart named in the address.
-    window.history.replaceState(null, '', '/?selected=coa-1');
     const ref = React.createRef<AccountCreateEditorHandle>();
     wrap(<AccountCreateEditor ref={ref} basePath={BASE} />);
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/chart-of-accounts', expect.anything()));
     // OPEX and CAPEX until a choice is made.
     expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
     fireEvent.change(labelled('accounts.fields.accountNumber'), { target: { value: '6100' } });
@@ -183,7 +179,7 @@ describe('account editors: chart of accounts is required', () => {
     vi.clearAllMocks();
     window.history.replaceState(null, '', '/');
     mocked.get.mockImplementation(async (url: string) => {
-      if (url === `${BASE}/2050`) return { data: { ...TEMPLATE_ACCOUNT, coa_id: '' } };
+      if (url === `${WORKSPACE}/2050`) return { data: { ...TEMPLATE_ACCOUNT, coa_id: '' } };
       if (url === '/chart-of-accounts') return { data: { items: CHARTS } };
       return { data: {} };
     });
@@ -200,7 +196,7 @@ describe('account editors: chart of accounts is required', () => {
 
   it('shows the locale message when a new account has no chart', async () => {
     const ref = React.createRef<AccountCreateEditorHandle>();
-    wrap(<AccountCreateEditor ref={ref} basePath={BASE} />);
+    wrap(<AccountCreateEditor ref={ref} basePath={WORKSPACE} />);
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/chart-of-accounts', expect.anything()));
     fireEvent.change(labelled('accounts.fields.accountNumber'), { target: { value: '6100' } });
     fireEvent.change(labelled('accounts.fields.accountName'), { target: { value: 'Cash' } });
@@ -212,7 +208,7 @@ describe('account editors: chart of accounts is required', () => {
 
   it('shows the locale message when an existing account has no chart', async () => {
     const ref = React.createRef<AccountOverviewEditorHandle>();
-    wrap(<AccountOverviewEditor ref={ref} id="2050" basePath={BASE} />);
+    wrap(<AccountOverviewEditor ref={ref} id="2050" basePath={WORKSPACE} />);
     await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex'));
     await ref.current!.save().catch(() => undefined);
     expect(await screen.findByText(CHART_REQUIRED_KEY)).toBeInTheDocument();
@@ -308,9 +304,7 @@ describe('platform admin template account editors: labels', () => {
 
   it('shows locale keys on a new account, with no English label left', async () => {
     wrap(<AccountCreateEditor basePath={BASE} />);
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/chart-of-accounts', expect.anything()));
-    fireEvent.mouseDown(chartSelect());
-    expect(await screen.findByRole('option', { name: 'accounts.fields.selectChart' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /^accounts\.fields\.chartOfAccounts/ })).not.toBeInTheDocument();
     expect(labelled('accounts.fields.accountNumber')).toBeInTheDocument();
     expect(labelled('accounts.fields.accountName')).toBeInTheDocument();
     expect(labelled('accounts.fields.nativeName')).toBeInTheDocument();
@@ -324,13 +318,66 @@ describe('platform admin template account editors: labels', () => {
   it('shows the same keys on an existing account', async () => {
     wrap(<AccountOverviewEditor id="2050" basePath={BASE} />);
     await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex'));
-    expect(chartSelect()).toHaveTextContent('IFRS · Group chart');
+    expect(screen.queryByRole('combobox', { name: /^accounts\.fields\.chartOfAccounts/ })).not.toBeInTheDocument();
     expect(labelled('accounts.fields.accountNumber')).toHaveValue(2050);
     expect(labelled('accounts.fields.accountName')).toHaveValue('Software licences');
     expect(labelled('accounts.fields.consolidationAccountNumber')).toHaveValue(1200);
     expect(labelled('accounts.fields.consolidationAccountName')).toHaveValue('Software');
-    fireEvent.mouseDown(chartSelect());
-    expect(within(await screen.findByRole('listbox')).getByRole('option', { name: 'accounts.fields.selectChart' })).toBeInTheDocument();
     expectNoHardCodedLabel();
+  });
+});
+
+describe('template accounts do not ask for a chart of accounts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.history.replaceState(null, '', '/');
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `${BASE}/2050` || url === `${WORKSPACE}/2050`) return { data: { ...TEMPLATE_ACCOUNT, coa_id: '' } };
+      if (url === '/chart-of-accounts') return { data: { items: CHARTS } };
+      return { data: {} };
+    });
+    mocked.patch.mockResolvedValue({ data: {} });
+    mocked.post.mockResolvedValue({ data: { account_number: 6100 } });
+  });
+
+  it('saves an existing template account without a chart', async () => {
+    const ref = React.createRef<AccountOverviewEditorHandle>();
+    wrap(<AccountOverviewEditor ref={ref} id="2050" basePath={BASE} />);
+    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex'));
+    expect(screen.queryByRole('combobox', { name: /^accounts\.fields\.chartOfAccounts/ })).not.toBeInTheDocument();
+    fireEvent.change(labelled('accounts.fields.accountName'), { target: { value: 'Licences' } });
+    await ref.current!.save();
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalled());
+    const [, body] = mocked.patch.mock.calls[0];
+    expect(body.account_name).toBe('Licences');
+    expect(body).not.toHaveProperty('coa_id');
+    expect(mocked.get).not.toHaveBeenCalledWith('/chart-of-accounts', expect.anything());
+  });
+
+  it('creates a template account without a chart', async () => {
+    const ref = React.createRef<AccountCreateEditorHandle>();
+    wrap(<AccountCreateEditor ref={ref} basePath={BASE} />);
+    expect(screen.queryByRole('combobox', { name: /^accounts\.fields\.chartOfAccounts/ })).not.toBeInTheDocument();
+    fireEvent.change(labelled('accounts.fields.accountNumber'), { target: { value: '6100' } });
+    fireEvent.change(labelled('accounts.fields.accountName'), { target: { value: 'Cash' } });
+    await ref.current!.save();
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(BASE, expect.anything()));
+    const [, body] = mocked.post.mock.calls[0];
+    expect(body.account_number).toBe(6100);
+    expect(body.account_name).toBe('Cash');
+    expect(body).not.toHaveProperty('coa_id');
+    expect(mocked.get).not.toHaveBeenCalledWith('/chart-of-accounts', expect.anything());
+  });
+
+  it('still requires a chart for a workspace account', async () => {
+    const ref = React.createRef<AccountCreateEditorHandle>();
+    wrap(<AccountCreateEditor ref={ref} basePath={WORKSPACE} />);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/chart-of-accounts', expect.anything()));
+    expect(screen.getByRole('combobox', { name: /^accounts\.fields\.chartOfAccounts/ })).toBeInTheDocument();
+    fireEvent.change(labelled('accounts.fields.accountNumber'), { target: { value: '6100' } });
+    fireEvent.change(labelled('accounts.fields.accountName'), { target: { value: 'Cash' } });
+    await ref.current!.save().catch(() => undefined);
+    expect(await screen.findByText(CHART_REQUIRED_KEY)).toBeInTheDocument();
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 });

@@ -62,11 +62,14 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
   const [saving, setSaving] = React.useState(false);
   const { t } = useTranslation(['master-data', 'common']);
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const isTemplateAccount = basePath.startsWith('/admin/coa-templates/');
   const schema = useMemo(
-    () => accountFormSchema.extend({
-      coa_id: z.string().min(1, t('master-data:formSchemas.account.chartOfAccountsRequired')),
-    }),
-    [t],
+    () => (isTemplateAccount
+      ? accountFormSchema
+      : accountFormSchema.extend({
+        coa_id: z.string().min(1, t('master-data:formSchemas.account.chartOfAccountsRequired')),
+      })) as z.ZodType<AccountCreateFormValues>,
+    [isTemplateAccount, t],
   );
 
   const form = useZodForm<AccountCreateFormValues>({
@@ -80,6 +83,7 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
   const [loadingCoas, setLoadingCoas] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   useEffect(() => {
+    if (isTemplateAccount) return;
     let active = true;
     const init = async () => {
       setLoadingCoas(true);
@@ -104,7 +108,7 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
     };
     void init();
     return () => { active = false; };
-  }, [setValue]);
+  }, [isTemplateAccount, setValue]);
 
   useEffect(() => {
     onDirtyChange?.(formState.isDirty);
@@ -144,7 +148,7 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
   return (
     <Stack spacing={2}>
       {!!serverError && <Alert severity="error">{serverError}</Alert>}
-      <FormControl fullWidth error={!!err.coa_id}>
+      {!isTemplateAccount && <FormControl fullWidth error={!!err.coa_id}>
         <InputLabel id="coa-select-label" required>{t('accounts.fields.chartOfAccounts')}</InputLabel>
         <Controller
           control={control}
@@ -168,8 +172,8 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
           )}
         />
         {err.coa_id?.message && <FormHelperText>{err.coa_id.message as string}</FormHelperText>}
-      </FormControl>
-      {loadError && <Alert severity="error">{loadError}</Alert>}
+      </FormControl>}
+      {!isTemplateAccount && loadError && <Alert severity="error">{loadError}</Alert>}
 
       <TextField
         label={t('accounts.fields.accountNumber')}
