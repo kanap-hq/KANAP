@@ -24,6 +24,9 @@ import { issueRefreshToken, newGrantPrefix, signAccessToken } from '../oauth/mcp
 import { mcpResourceUrl } from '../oauth/mcp-oauth.util';
 import { buildMcpApiKeyPolicyRecord } from '../control-plane/mcp/ai-mcp-access-policy';
 
+// The OAuth tokens are signed with the JWT secret: a default when the shell and `backend/.env` leave it empty.
+process.env.JWT_SECRET ||= 'test-jwt-secret-of-the-mcp-journal-spec';
+
 // The MCP journal against PostgreSQL (brief plaid-mcp-annuaire, P3-9): a refused or failed call,
 // and a request with a revoked key, each leave one line in ai_runs / ai_tool_executions under FORCE
 // RLS, written after the request transaction rolled back; the lines carry the argument values and
@@ -381,6 +384,7 @@ async function testTenantsReadOnlyTheirOwnLines(a: Seed, b: Seed) {
 async function testRefusedOAuthConnectionsAreJournaled(c: Seed, b: Seed) {
   const live = await createGrant(c, new Date(Date.now() + 86_400_000));
   const expired = await createGrant(c, new Date(Date.now() - 60_000));
+  const owned = await createGrant(c, new Date(Date.now() + 86_400_000));
   const linesOfB = await journalLines(b);
   const auditOfB = (await failedAuthentications(b)).length;
   let liveToken = '';
@@ -410,6 +414,18 @@ async function testRefusedOAuthConnectionsAreJournaled(c: Seed, b: Seed) {
     assert.equal((await call(url, b, 'search_all', { query: 'other' }, liveToken)).status, 401);
     const forged = accessToken(url, { sub: c.userId, tenantId: b.tenantId, grant: live });
     assert.equal((await call(url, b, 'search_all', { query: 'forged' }, forged)).status, 401);
+
+    // A connection whose owner may no longer sign in (a disabled account).
+    const setStatus = (status: string) => executor.run(c.tenantId, (manager) => manager.query(
+      `UPDATE users SET status = $2 WHERE tenant_id = $1 AND id = $3`, [c.tenantId, status, c.userId]));
+    await setStatus('disabled');
+    try {
+      const denied = await call(url, c, 'search_all', { query: 'disabled owner' }, accessToken(url, { sub: c.userId, tenantId: c.tenantId, grant: owned }));
+      assert.equal(denied.status, 401);
+      assert.equal(denied.body.message, 'The MCP connection owner is not allowed to authenticate.');
+    } finally {
+      await setStatus('enabled');
+    }
   });
 
   const page = await asAdmin(c, (ctx) => audit.list(ctx, { limit: 50 }));
@@ -418,6 +434,7 @@ async function testRefusedOAuthConnectionsAreJournaled(c: Seed, b: Seed) {
     [
       ['search_all', 'refused', 'key_expired', expired, 'oauth', 'MCP connection has expired.'],
       ['search_all', 'refused', 'key_revoked', live, 'oauth', 'MCP connection has been revoked.'],
+      ['search_all', 'refused', 'owner_not_allowed', owned, 'oauth', 'The MCP connection owner is not allowed to authenticate.'],
     ].sort(),
   );
   const revokedLine = page.items.find((item) => item.reason === 'key_revoked')!;
@@ -428,7 +445,7 @@ async function testRefusedOAuthConnectionsAreJournaled(c: Seed, b: Seed) {
   const rows = await failedAuthentications(c);
   assert.deepEqual(
     rows.map((row) => [row.record_id, row.user_id, row.after_json.reason]).sort(),
-    [[expired, c.userId, 'expired'], [live, c.userId, 'revoked']].sort(),
+    [[expired, c.userId, 'expired'], [live, c.userId, 'revoked'], [owned, c.userId, 'owner_not_allowed']].sort(),
   );
   const dump = await executor.run(c.tenantId, (manager) => manager.query(
     `SELECT (SELECT json_agg(t)::text FROM ai_tool_executions t WHERE t.tenant_id = $1) AS tools,
