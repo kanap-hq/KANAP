@@ -2469,8 +2469,9 @@ export class AiEntityService {
 
     const rows = await context.manager.query(
       `SELECT entity_type, entity_id, ref_prefix, ref_number, label, summary, status,
-              extra_json, source_updated_at, ${catalogKey} AS catalog_key,
+              extra_json, source_updated_at,
               COUNT(*) OVER()::int AS total_count,
+              ${catalogKey} AS catalog_key,
               CASE
                 WHEN ${legacyRefParam}::text IS NOT NULL AND extra_json->>'legacy_number' = ${legacyRefParam} THEN 4
                 WHEN ${refRef}::int IS NOT NULL AND ref_number = ${refRef}
