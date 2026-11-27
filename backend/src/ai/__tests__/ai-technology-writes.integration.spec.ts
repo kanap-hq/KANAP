@@ -1182,13 +1182,13 @@ async function testTechnologyAdoption(harness: Harness) {
     );
     assert.ok(audits.some((row: any) => row.table_name === 'technologies' && row.source_ref === preview.preview_id));
     assert.ok(audits.some((row: any) => row.table_name === 'technology_versions' && row.source_ref === preview.preview_id));
-    // A second request on the same name gives the created reference.
+    // A second request on the same catalog entry names the technology already adopted.
     await expectRejects(
       () => harness.previews.createPreview(ctx, 'create_business_record', {
         entity_type: 'technologies',
         fields: { name: 'PostgreSQL', lifecycle: 'Active' },
       }),
-      new RegExp(`^A technology with this name already exists: ${executed.target.ref}\\.$`),
+      `"PostgreSQL" from the ${PRODUCT_NAME} catalog is already in this workspace: ${executed.target.ref}, currently named "PostgreSQL". Tell the person this technology already exists, give this reference and the current name, and offer to open it or to change it. Prepare no creation and no second adoption.`,
     );
     // A version of the catalog says where it comes from on a versions preview.
     const versionsPreview = await executeToolPreview(harness, ctx, 'update_technology_versions', {

@@ -718,6 +718,14 @@ function takeFromCatalogFlag(fields: Record<string, unknown>): boolean | undefin
   throw new BadRequestException('from_catalog must be true or false.');
 }
 
+/**
+ * What the model reads when this workspace already holds the catalog entry. The reference and the
+ * current name are the technology `notAdopted` resolved by catalog key.
+ */
+function adoptedCatalogTechnologyMessage(catalogName: string, reference: string, currentName: string): string {
+  return `"${catalogName}" from the ${PRODUCT_NAME} catalog is already in this workspace: ${reference}, currently named "${currentName}". Tell the person this technology already exists, give this reference and the current name, and offer to open it or to change it. Prepare no creation and no second adoption.`;
+}
+
 @Injectable()
 export class AiBusinessRecordMutationSupportService {
   constructor(
@@ -1862,11 +1870,14 @@ export class AiBusinessRecordMutationSupportService {
   }
 
   /**
-   * A technology is adopted from the KANAP catalog when it knows the exact name, typed free
-   * otherwise or when `from_catalog: false` asks for it. A hand-typed record of the same name,
-   * without a catalog key, is completed by the exact catalog entry when there is one (the card
-   * names it and what the adoption adds); otherwise a same-name technology is refused here with
-   * its reference, and an ambiguous name lists the closest catalog entries.
+   * A technology is adopted from the Kadratis catalog when it knows the exact name, typed free
+   * otherwise or when `from_catalog: false` asks for it. An entry this workspace already holds,
+   * whatever its current name, is the one `notAdopted` lists in `adopted` (the screen's read, by
+   * catalog key): the model is told that reference and that current name, and nothing is prepared.
+   * A hand-typed record of the same name, without a catalog key, is completed by the exact catalog
+   * entry when there is one (the card names it and what the adoption adds); otherwise a same-name
+   * technology is refused here with its reference, and an ambiguous name lists the closest catalog
+   * entries.
    *
    * A completion keeps the record's current values: its other fields are normalised in update mode
    * against that record, a field equal to the current value leaves the card, and the execution
@@ -1891,6 +1902,17 @@ export class AiBusinessRecordMutationSupportService {
         { manager: context.manager, tenantId: context.tenantId, userId: context.userId },
       );
       const wanted = name.toLowerCase();
+      // `adopted.name` is the catalog product name. The current name is the technology that list
+      // already resolved by catalog key.
+      const adopted = catalog.adopted.find((item) => item.name.trim().toLowerCase() === wanted);
+      if (adopted) {
+        const [row] = await context.manager.query(
+          `SELECT name FROM technologies WHERE tenant_id = $1 AND id = $2`,
+          [context.tenantId, adopted.id],
+        );
+        const currentName = String(row?.name ?? '').trim() || adopted.name;
+        throw new BadRequestException(adoptedCatalogTechnologyMessage(adopted.name, adopted.reference, currentName));
+      }
       const exact = catalog.items.find((item) => item.name.trim().toLowerCase() === wanted);
       const existing = sameName[0] ?? null;
       if (exact && (!existing || (!existing.catalog_key && exact.completes_id === existing.id))) {
