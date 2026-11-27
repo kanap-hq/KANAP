@@ -144,6 +144,8 @@ Traitez le panneau Propriétés comme la carte d'identité persistante du projet
 
 Ces champs pilotent le reporting, la planification, le filtrage et le contexte par défaut du portefeuille. Les choix de classification sont particulièrement importants car ils affectent où le projet apparaît dans l'analyse multi-portefeuille.
 
+Une filière appartient à sa catégorie et un département à sa société, sur cette page, dans les imports et avec Kad : une filière indiquée seule apporte sa catégorie, et une filière d'une autre catégorie est refusée, comme un département d'une autre société. Changer seulement la catégorie vide une filière d'une autre catégorie, et changer seulement la société vide un département d'une autre société.
+
 ### Équipe
 
 L'assignation d'équipe vit dans le panneau afin de rester disponible pendant que vous travaillez sur le planning, la charge ou les tâches.

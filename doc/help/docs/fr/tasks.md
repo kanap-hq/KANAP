@@ -446,6 +446,8 @@ Les tâches de projet ont des fonctionnalités supplémentaires par rapport aux 
 
 **Classification indépendante** : Les tâches de projet ont leurs propres champs Source, Catégorie, Stream et Société. Lorsqu'une tâche est créée au sein d'un projet, ces valeurs proviennent par défaut de la classification du projet pour la commodité. Cependant, la classification de chaque tâche peut être modifiée indépendamment. Si un champ de classification d'une tâche n'est pas explicitement défini, il hérite et affiche la valeur du projet.
 
+La filière d'une tâche appartient à la catégorie de la tâche, la sienne ou à défaut celle de son projet : dans un import ou avec Kad, un nom de filière que plusieurs catégories partagent est lu dans cette catégorie, et une filière d'une autre catégorie est refusée.
+
 **Score de priorité** : Les tâches de projet affichent un score de priorité calculé qui combine :
 - Le score de priorité du projet parent
 - Un ajustement basé sur le niveau de priorité de la tâche (+10 pour Bloquant, +5 pour Haute, 0 pour Normale, -5 pour Basse, -10 pour Optionnelle)

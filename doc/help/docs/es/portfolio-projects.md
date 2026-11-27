@@ -144,6 +144,8 @@ Trate el panel de propiedades como la tarjeta de identidad persistente del proye
 
 Estos campos impulsan los informes, la planificación, el filtrado y el contexto predeterminado del portafolio. Las elecciones de clasificación son especialmente importantes porque afectan a dónde aparece el proyecto en el análisis cruzado del portafolio.
 
+Una línea pertenece a su categoría y un departamento a su empresa, en esta página, en las importaciones y con Kad: una línea indicada sola aporta su categoría, y una línea de otra categoría se rechaza, al igual que un departamento de otra empresa. Cambiar solo la categoría vacía una línea de otra categoría, y cambiar solo la empresa vacía un departamento de otra empresa.
+
 ### Equipo
 
 La asignación de equipo vive en el panel para que permanezca disponible mientras trabaja en el cronograma, esfuerzo o tareas.

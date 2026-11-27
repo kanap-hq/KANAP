@@ -144,6 +144,8 @@ Treat the Properties panel as the project's persistent identity card. It is grou
 
 These fields drive reporting, planning, filtering, and default portfolio context. Classification choices are especially important because they affect where the project appears in cross-portfolio analysis.
 
+A stream belongs to its category and a department to its company, on this page, in imports and with Kad: a stream given alone brings its category, and a stream of another category is refused, as is a department of another company. Changing the category alone empties a stream of another category, and changing the company alone empties a department of another company.
+
 ### Team
 
 Team assignment lives in the panel so it stays available while you work on schedule, effort, or tasks.

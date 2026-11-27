@@ -22,6 +22,7 @@ import { taskDetailTokens, taskDetailTypography } from '../theme/taskDetailToken
 import { useLocalizedTaskTypes, useTaskTypeLabel } from '../../../hooks/useLocalizedTaskTypes';
 import { useLocale } from '../../../i18n/useLocale';
 import { formatFigure } from '../../portfolio/figures';
+import { carriedStreamLabel } from '../../../utils/carriedStream';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -174,7 +175,8 @@ export default function TaskPropertiesDrawer({
   const nameIn = (list: Array<{ id: string; name: string }> | undefined, id?: string | null) => (id ? list?.find((item) => item.id === id)?.name ?? null : null);
   const sourceName = task.source_name || nameIn(classificationData?.sources, task.source_id);
   const categoryName = task.category_name || nameIn(classificationData?.categories, task.category_id);
-  const streamName = task.stream_name || nameIn(classificationData?.streams, task.stream_id);
+  // A stream of another category than the task's (kept from before the rule) names its own category.
+  const streamName = carriedStreamLabel(task.stream_id, task.category_id, classificationData, task.stream_name);
   const sourceOptions = React.useMemo(() => withCurrentOption(sources.map((s) => ({ label: s.name, value: s.id })), task.source_id, sourceName), [sources, task.source_id, sourceName]);
   const categoryOptions = React.useMemo(() => withCurrentOption(categories.map((c) => ({ label: c.name, value: c.id })), task.category_id, categoryName), [categories, task.category_id, categoryName]);
   const streamOptions = React.useMemo(() => withCurrentOption(filteredStreams.map((s) => ({ label: s.name, value: s.id })), task.stream_id, streamName), [filteredStreams, task.stream_id, streamName]);

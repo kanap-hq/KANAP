@@ -14,6 +14,9 @@ import { EntityManager } from 'typeorm';
  * It also tells whether another attachment row still names a stored file before the file is
  * deleted (`common/storage-path-refs.ts`): every row counts, and only the caller's paths come back.
  *
+ * It also counts the records that hold a department in its company or a stream in its category
+ * before either moves (`common/record-membership-moves.ts`): only the counts come back.
+ *
  * `withFullDataAccess` is that window, and the only code besides `data_access_apply` that changes
  * the role (inventory: `data-access-inventory.spec.ts`, which also checks its two callers: the
  * chargeback report and the contract coverage):

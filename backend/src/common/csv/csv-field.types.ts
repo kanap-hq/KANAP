@@ -168,6 +168,12 @@ export interface CsvEntityConfig {
   /** Validate resolved rows identically in dry-run and execution, after identity resolution. */
   afterValidate?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<void>;
   /**
+   * The values a record shows from elsewhere where it has none of its own, once the hooks ran (a task
+   * of a project shows its project's category and stream): the parent a name is looked up in, and
+   * what the pair check compares with (lot I7a of 26.12.1). Read after `afterValidate`.
+   */
+  inheritedValues?: (rows: CsvImportRow[], context: CsvImportContext) => Promise<Map<CsvImportRow, Record<string, string | null>>>;
+  /**
    * Which matched rows leave everything as stored, one answer per row (the rows to update,
    * free of errors). Replaces the plain comparison of each parsed value with its stored
    * column, for configs whose hooks resolve names to codes, read virtual columns or write
@@ -434,10 +440,27 @@ export interface CsvImportRow {
    * its key (`parsed`), which counts in the file's duplicates.
    */
   leftOut?: boolean;
+  /**
+   * Reference cells whose name several records share (two streams "Ops" of two categories), looked up
+   * once the row is read, in the row's parent (lot I7a of 26.12.1): the column, the record's property,
+   * the family and the records of that name.
+   */
+  pendingNames?: CsvPendingName[];
   /** Row-level errors */
   errors: CsvImportError[];
   /** Row-level warnings */
   warnings: CsvImportWarning[];
+}
+
+/** A reference cell whose name several records share, waiting for the row's parent (lot I7a of 26.12.1). */
+export interface CsvPendingName {
+  column: string;
+  property: string;
+  fkEntity: string;
+  value: string;
+  entries: Array<{ id: string; [key: string]: any }>;
+  /** How the name found them: case aside, or accents aside too (a match the result lists). */
+  how: string;
 }
 
 /**

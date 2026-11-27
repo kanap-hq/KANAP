@@ -446,6 +446,8 @@ Projektaufgaben haben zusätzliche Funktionen im Vergleich zu regulären Aufgabe
 
 **Unabhängige Klassifizierung**: Projektaufgaben haben ihre eigenen Felder Quelle, Kategorie, Stream und Unternehmen. Wenn eine Aufgabe innerhalb eines Projekts erstellt wird, werden diese der Bequemlichkeit halber von der Klassifizierung des Projekts vorbelegt. Die Klassifizierung jeder Aufgabe kann jedoch unabhängig bearbeitet werden. Wenn das Klassifizierungsfeld einer Aufgabe nicht ausdrücklich festgelegt ist, erbt sie den Wert des Projekts und zeigt ihn an.
 
+Der Stream einer Aufgabe gehört zur Kategorie der Aufgabe, ihrer eigenen oder sonst der ihres Projekts: In einem Import oder mit Kad wird ein Stream-Name, den mehrere Kategorien teilen, in dieser Kategorie gelesen, und ein Stream einer anderen Kategorie wird abgelehnt.
+
 **Prioritätswert**: Projektaufgaben zeigen einen berechneten Prioritätswert an, der Folgendes kombiniert:
 - Den Prioritätswert des übergeordneten Projekts
 - Eine Anpassung basierend auf der Prioritätsstufe der Aufgabe (+10 für Blocker, +5 für Hoch, 0 für Normal, -5 für Niedrig, -10 für Optional)

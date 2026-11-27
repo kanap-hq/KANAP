@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { validate as isUuid } from 'uuid';
 import { BadRequestException, ConflictException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { DeepPartial, EntityManager, In } from 'typeorm';
+import { parentReadLock } from '../common/record-membership';
 import { AuditService } from '../audit/audit.service';
 import { Company } from '../companies/company.entity';
 import { EDIT_CONFLICT_CODE, EditConflictAuthor, authorAt, userNames } from '../common/edit-conflicts';
@@ -171,6 +172,8 @@ async function planRows(
   items: AllocationInput[],
   emptyManual: 'refuse' | 'keep',
   fxRates: TurnoverFxRates | undefined,
+  /** A save (not Kad's card): the departments read are locked until it commits (`parentReadLock`). */
+  lockDepartments: boolean,
 ): Promise<RowsPlan> {
   const repo = manager.getRepository<AllocationRow>(SCOPES[scope].allocationEntity);
   const isManual = MANUAL_METHODS.has(method);
@@ -249,7 +252,7 @@ async function planRows(
   if (selections.length === 0) {
     throw new BadRequestException('Select at least one department for manual allocation.');
   }
-  const computed = await manualDepartmentDistribution(manager, tenantId, (version as any).budget_year, selections);
+  const computed = await manualDepartmentDistribution(manager, tenantId, (version as any).budget_year, selections, lockDepartments);
   return { kind: 'manual', rows: computed.map((share) => row(share)) };
 }
 
@@ -259,9 +262,15 @@ async function manualDepartmentDistribution(
   tenantId: string,
   fiscalYear: number,
   selections: Array<{ company_id: string; department_id: string }>,
+  lock: boolean,
 ): Promise<Array<{ company_id: string; department_id: string; allocation_pct: number }>> {
   const uniqueDeptIds = Array.from(new Set(selections.map((s) => s.department_id)));
-  const departments = await manager.getRepository(Department).find({ where: { tenant_id: tenantId, id: In(uniqueDeptIds) as any } as any });
+  // The share stores the company read here: a save reads the departments `FOR KEY SHARE`, so none moves
+  // to another company before it commits (lot I7a of 26.12.1, `record-membership-moves.ts`).
+  const departments = await manager.getRepository(Department).find({
+    where: { tenant_id: tenantId, id: In(uniqueDeptIds) as any } as any,
+    ...(parentReadLock(manager, lock) ? { lock: { mode: 'for_key_share' as const } } : {}),
+  });
   if (departments.length !== uniqueDeptIds.length) {
     throw new BadRequestException('Some departments could not be found for manual allocation.');
   }
@@ -345,7 +354,7 @@ export async function bulkUpsertAllocations(
   if (!version) throw new BadRequestException('Invalid version');
   const method = (version.allocation_method as string | null) ?? 'default';
   const driver = (version.allocation_driver as string | null) ?? 'headcount';
-  const plan = await planRows(manager, scope, tenantId, version, method, driver, items, 'refuse', deps.calculator?.fxRates);
+  const plan = await planRows(manager, scope, tenantId, version, method, driver, items, 'refuse', deps.calculator?.fxRates, true);
   return storeRows(deps, scope, tenantId, version, plan, userId);
 }
 
@@ -393,7 +402,7 @@ export async function plannedAllocationRows(
   if (!version) throw new BadRequestException('Invalid version');
   const method = (version.allocation_method as string | null) ?? 'default';
   const driver = (version.allocation_driver as string | null) ?? 'headcount';
-  const plan = await planRows(manager, scope, tenantId, version, method, driver, items, 'refuse', fxRates);
+  const plan = await planRows(manager, scope, tenantId, version, method, driver, items, 'refuse', fxRates, false);
   if (plan.kind !== 'manual') return null;
   return plan.rows.map((row) => ({ company_id: row.company_id, department_id: row.department_id ?? null, allocation_pct: Number(row.allocation_pct) }));
 }
@@ -538,7 +547,7 @@ export async function putVersionAllocations(
   const method = request.method;
   const driver = driverFor(method, request.driver);
   // Validated and computed before anything is compared or written: a refused row answers 400.
-  const plan = await planRows(manager, scope, tenantId, version, method, driver, request.rows, 'keep', deps.calculator?.fxRates);
+  const plan = await planRows(manager, scope, tenantId, version, method, driver, request.rows, 'keep', deps.calculator?.fxRates, true);
 
   if (request.baseSignature !== null) {
     const current = allocationSignature(state);
