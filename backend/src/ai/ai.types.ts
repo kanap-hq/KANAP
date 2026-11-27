@@ -104,7 +104,9 @@ export const AI_SEARCH_ENTITY_TYPES = [
  * `working_day_calendars` and `analytics_axes` have no search index: `search_all` searches them by
  * code and by name through their reads (`AI_SEARCH_REFERENCE_ENTITY_TYPES`); each has a detail.
  * `exchange_rates` (the rate matrix and the currency settings, `query/ai-exchange-rates.query.ts`)
- * is listed only: a rate is a cell of a year's set, not a record.
+ * is listed only: a rate is a cell of a year's set, not a record. `contributors` (Portfolio ›
+ * Contributors, `query/ai-contributors.query.ts`) has no search index either: `search_all` searches
+ * them by `MEM-n` and by name through their read; each has a detail.
  */
 export const AI_QUERY_ENTITY_TYPES = [
   ...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities', 'technology_versions', 'support_gaps', 'support_deadlines', 'roles', 'role_permissions',
@@ -113,6 +115,7 @@ export const AI_QUERY_ENTITY_TYPES = [
   'cost_centers',
   'working_day_calendars', 'analytics_axes',
   'exchange_rates',
+  'contributors',
 ] as const;
 
 /**
@@ -170,7 +173,7 @@ export const AiSearchEntityTypeSchema = z.enum(AI_SEARCH_ENTITY_TYPES);
  * reads of their families (`AiQueryExecutor.searchReferenceData`): lists of a few dozen rows.
  * The exchange rates are cells of a year's set, not records: they are not searched.
  */
-export const AI_SEARCH_REFERENCE_ENTITY_TYPES = ['cost_centers', 'working_day_calendars', 'analytics_axes'] as const;
+export const AI_SEARCH_REFERENCE_ENTITY_TYPES = ['cost_centers', 'working_day_calendars', 'analytics_axes', 'contributors'] as const;
 export type AiSearchReferenceEntityType = (typeof AI_SEARCH_REFERENCE_ENTITY_TYPES)[number];
 
 /** The families `search_all` takes in `entity_types`: the indexed ones and the reference data. */

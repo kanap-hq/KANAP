@@ -2009,7 +2009,7 @@ async function testReferenceDataFamiliesAreDescribed() {
     assert.ok(values.some((value: any) => value.type === 'number'), `${schema.name}: a number alone is accepted (${JSON.stringify(values)})`);
   }
   const search = text('search_all');
-  assert.match(search, /It also searches the cost centers, working-day calendars and analytics dimensions by code and by name \(`ref` is the code; at most five of each family\)/);
+  assert.match(search, /It also searches the cost centers, working-day calendars, analytics dimensions and contributors \(MEM-n\) by code and by name \(`ref` is the code, the MEM-n of a contributor; at most five of each family\)/);
   assert.match(search, /The exchange rates are not searched here: query_entities on `exchange_rates` reads them, and `not_searched_here` says so/);
   assert.doesNotMatch(search, /The reference data are families too/, 'search_all says what it searches, not the facts of the families');
   // No sentence says the reference data are not read.
