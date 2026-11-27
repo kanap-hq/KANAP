@@ -305,14 +305,14 @@ async function testReferencesAndRefusals(harness: Harness) {
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'active', filters: { environment: ['prod'] } }),
       /^These applications filters cannot choose applications to change: environment\. Use lifecycle, criticality, cyber_criticality/);
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'active', filters: { criticality: ['Ultra'] } }),
-      /^"Ultra" is not a value of the applications filter criticality\. It takes: Critical \(business_critical\), High \(high\)/);
+      /^Unknown criticality filter value "Ultra"\. Use one of: Critical, High, Moderate, Low, or null \(not set\)\.$/);
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'active', filters: { external_facing: ['maybe'] } }),
       /^These applications filters cannot be used: external_facing \(takes true, false\)/);
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'active', filters: { supplier: { not: ['Acme'] } } }),
       /^These applications filters cannot be used: supplier\./);
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'active', rows: ['APP-1'], filters: { supplier: ['Acme'] } }), /rows|filters/);
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: null, rows: ['APP-1'] }), 'The lifecycle of an application cannot be emptied.');
-    await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'Sunset', rows: ['APP-1'] }), /^"Sunset" is not a lifecycle state of this workspace\. The states: Proposed \(proposed\), Active \(active\)/);
+    await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'Sunset', rows: ['APP-1'] }), /^Unknown lifecycle state "Sunset"\. Use one of: Proposed, Active/);
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'criticality', value: ['high', 'low'], rows: ['APP-1'] }), 'criticality takes one value.');
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'lifecycle', value: 'active', rows: ['APP-1'] }), /^Nothing to change/);
     await rejects(() => harness.tools.execute(ctx, 'prepare_mutation_plan', {
@@ -345,7 +345,7 @@ async function testCategoryAsACatalog(harness: Harness) {
       );
     }
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'criticality', value: 'High', filters: { category: ['Nope'] } }),
-      /^"Nope" is not a value of the applications filter category\. It takes: Line of business \(line_of_business\), Security \(security\), or null \(not set\)\.$/);
+      /^Unknown category filter value "Nope"\. Use one of: Line of business, Security, or null \(not set\)\.$/);
     console.log('  the category is a catalog, by name, translated name or code: OK');
   });
 }
@@ -427,7 +427,7 @@ async function testEveryField(harness: Harness) {
       ])],
     );
     await rejects(() => harness.tools.execute(ctx, TOOL, { field: 'criticality', value: 'High', rows: ['APP-1'] }),
-      /^"High" is not a business criticality level offered in this workspace\. The levels: Critical \(business_critical\), Moderate \(medium\), Low \(low\)\.$/);
+      /^The business criticality level "High" is retired: only a record that already holds it keeps it\. Use one of: Critical, Moderate, Low\.$/);
     console.log('  every field: owners replaced or emptied, lifecycle, criticality set and emptied: OK');
   });
 }
@@ -481,7 +481,8 @@ async function testCategoryAndCyberCriticality(harness: Harness) {
     await approve(harness, english, cleared);
     assert.equal(await column(runner, seed, 1, 'cyber_criticality'), null);
 
-    // Never empty; a category or a level no longer offered is refused, by its name or its code.
+    // Never empty; a category or a level no longer offered is refused, by its name or its code. Kad reads
+    // the refusal with the names the person reads, without codes (rejeu du pilote, K2c).
     await rejects(() => harness.tools.execute(english, TOOL, { field: 'category', value: null, rows: ['APP-1'] }), 'The category of an application cannot be emptied.');
     await runner.query(
       `UPDATE tenants SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('it_ops', jsonb_build_object('application_categories', $2::jsonb, 'cyber_criticality_levels', $3::jsonb)) WHERE id = $1`,
@@ -491,10 +492,10 @@ async function testCategoryAndCyberCriticality(harness: Harness) {
     );
     for (const value of ['analytics', 'Analytics']) {
       await rejects(() => harness.tools.execute(english, TOOL, { field: 'category', value, rows: ['APP-1'] }),
-        `"${value}" is not a category offered in this workspace. The categories: Infrastructure (infrastructure), Atelier (atelier).`);
+        'The category "Analytics" is retired: only a record that already holds it keeps it. Use one of: Infrastructure, Atelier.');
     }
     await rejects(() => harness.tools.execute(english, TOOL, { field: 'cyber_criticality', value: 'legacy', rows: ['APP-1'] }),
-      '"legacy" is not a cyber criticality level offered in this workspace. The levels: High (high).');
+      'The cyber criticality level "Legacy" is retired: only a record that already holds it keeps it. Use one of: High.');
     // A category the workspace created keeps its name on the card.
     const own = await card(harness, english, { field: 'category', value: 'atelier', rows: ['APP-1'] });
     assert.match(own.changes[CARD].to, /\n\nCategory → Atelier\n\n1 application to change/);

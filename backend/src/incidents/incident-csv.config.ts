@@ -15,7 +15,7 @@ import { formatCsvDateTime, instantInTimeZone, type CsvLanguage } from '../commo
 import { allocateItemNumbers } from '../common/item-number.service';
 import { parseItemNumber } from '../common/parse-item-number';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
-import { findCatalogOption, requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
+import { findCatalogOption, offeredCatalogList, requireImportCatalogs, type CatalogOptionLike } from '../it-ops-settings/catalog-resolve';
 import { keepStoredSlotBodies, sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, isReservedIncidentStatusMove } from './incident.entity';
 import { incidentVisibleToViewer, type IncidentViewer } from './incident-visibility';
@@ -431,8 +431,9 @@ function textField(csvColumn: string, label: string, group: string) {
 }
 
 /**
- * An unknown category, as a row error of the check and of the load. A name that matches several
- * categories stays the write-time refusal: that sentence is not one of these row errors.
+ * An unknown category, or a retired one the incident does not hold (rule P7), as a row error of the
+ * check and of the load. A name that matches several categories stays the write-time refusal: that
+ * sentence is not one of these row errors.
  */
 async function refuseUnknownCategories(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
   const filled = rows.filter((row) => {
@@ -444,14 +445,28 @@ async function refuseUnknownCategories(rows: CsvImportRow[], context: CsvImportC
   const names = categories.map((category) => category.label).join(', ');
   for (const row of filled) {
     const category = String(row.parsed.category);
-    let resolved: string | undefined;
+    let resolved: CatalogOptionLike | null;
     try {
-      resolved = findCatalogOption(category, categories)?.code;
+      resolved = findCatalogOption(category, categories);
     } catch {
       continue;
     }
-    if (resolved) continue;
     const label = incidentLabel(row.existingEntity?.item_number ? row.existingEntity : { title: row.parsed.title });
+    if (resolved) {
+      // Rule P7: a retired category only on the incident the row updates, when it already holds it.
+      const held = row.isInsert ? null : row.existingEntity?.category ?? null;
+      if (!resolved.deprecated || held === resolved.code) continue;
+      const allowed = offeredCatalogList(categories, held);
+      const name = resolved.label || resolved.code;
+      row.errors.push({
+        row: row.rowNumber,
+        column: 'category',
+        message: `${label}: the category "${name}" is no longer offered. Use one of ${allowed}.`,
+        code: 'catalog_value_retired',
+        params: { value: name, allowed, valueCode: resolved.code, list: 'incidentCategories' },
+      });
+      continue;
+    }
     row.errors.push({
       row: row.rowNumber,
       column: 'category',

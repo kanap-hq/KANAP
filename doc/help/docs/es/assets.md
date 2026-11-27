@@ -166,6 +166,8 @@ Una dirección que no designa ningún activo abre una página **Activo no encont
 
 Las pestañas son **Vista general**, **Operaciones**, **Red**, **Hardware** (solo para tipos de activos físicos), **Dependencias**, **Relaciones** e **Historial** (los cambios hechos en el activo, vea [Historial de los registros](record-history.md)). Un activo nuevo solo muestra su título, su tipo y su ubicación. Todas las pestañas se abren en cuanto se crea el activo.
 
+**Valores que ya no se proponen**: el tipo, el ciclo de vida, el dominio, la zona de administración, el tipo y la subred de una dirección IP, y el rol de un servidor en un despliegue ofrecen los valores que siguen disponibles en [Configuración del Panorama IT](it-ops-settings.md). Un valor marcado **Dejar de proponer** permanece en los activos que ya lo tienen, que lo conservan al guardarse. Los demás activos no pueden tomarlo, ni en esta página, ni en una importación CSV, ni a través de Kad.
+
 ### Encabezado
 
 El encabezado muestra:

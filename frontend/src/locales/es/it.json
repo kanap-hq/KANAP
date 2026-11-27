@@ -2905,8 +2905,7 @@
         "flow": "Flujo",
         "route": "Ruta",
         "data": "Datos",
-        "applicationsMissing": "Faltan las aplicaciones",
-        "deprecated": "{{label}} (obsoleto)"
+        "applicationsMissing": "Faltan las aplicaciones"
       },
       "relations": {
         "upstream": "Interfaces anteriores",
@@ -3512,7 +3511,6 @@
     "notes": "Notas",
     "role": "Rol",
     "system": "Sistema",
-    "deprecatedOption": "{{label}} (obsoleto)",
     "legacyOption": "{{label}} (valor antiguo)"
   },
   "classification": {

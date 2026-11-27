@@ -166,6 +166,8 @@ An address that names no asset opens an **Asset not found** page, with a link ba
 
 The tabs are **Overview**, **Operations**, **Network**, **Hardware** (physical asset types only), **Dependencies**, **Relations** and **History** (the changes made to the asset, see [Record history](record-history.md)). A new asset shows only its title, its type and its location. All tabs open once the asset is created.
 
+**Values no longer offered**: The type, the lifecycle, the domain, the administration zone, the type and the subnet of an IP address, and the role of a server in a deployment list the values still offered in [IT Landscape Settings](it-ops-settings.md). A value marked **No longer offered** stays on the assets that already have it, which keep it when they are saved. The other assets cannot take it, on this page, in a CSV import or through Kad.
+
 ### Header
 
 The header shows:

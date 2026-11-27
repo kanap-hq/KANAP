@@ -308,6 +308,8 @@ Les catégories d'incident vous appartiennent : définissez-les dans **Cartograp
 
 Gardez la liste courte. Les catégories sont ce qui vous servira à regrouper une année d'incidents, et une liste de trente est une liste que personne n'utilise de façon cohérente. Plutôt que de supprimer une catégorie déjà utilisée, marquez-la comme obsolète : elle disparaît du sélecteur pour les nouveaux incidents tandis que les existants conservent leur historique.
 
+Une catégorie marquée **Ne plus proposer** reste sur les incidents qui l'ont déjà, et ils la gardent quand ils sont enregistrés. Les autres incidents ne peuvent pas la prendre, sur cette page, dans un import CSV ou par Kad.
+
 ---
 
 ## Demander à l'assistant

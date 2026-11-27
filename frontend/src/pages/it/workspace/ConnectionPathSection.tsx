@@ -17,6 +17,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import api from '../../../api';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import ConnectionHopEquipmentPicker from './ConnectionHopEquipmentPicker';
 import useClusterConnectionQuestion from '../components/useClusterConnectionQuestion';
 import ConnectionProtocolsTable, { type ConnectionProtocol } from './ConnectionProtocolsTable';
@@ -123,6 +124,7 @@ export default function ConnectionPathSection({
     () => [...hops].sort((a, b) => a.order_index - b.order_index),
     [hops],
   );
+  const protocolsAnchorHop = protocolsAnchor ? sortedHops.find((l) => l.id === protocolsAnchor.hopId) ?? null : null;
 
   // `quiet`: the section is going away or shows another connection, so the answer is not put back in its list.
   const callPatch = React.useCallback(
@@ -163,6 +165,15 @@ export default function ConnectionPathSection({
     onChange(hops.map((l) => (l.id === hopId ? { ...l, ...patch } : l)));
   };
 
+  // Rule P7: a new hop holds nothing yet, so it takes the connection's protocols still offered
+  // (a retired one stays on the connection and the hops that hold it).
+  const newHopProtocolCodes = (): string[] => {
+    const offered = offeredCatalogOptions(connectionTypes).map((ct: any) => String(ct.code));
+    const kept = defaultProtocolCodes.filter((code) => offered.includes(code));
+    if (kept.length > 0) return kept;
+    return offered.includes('https') || offered.length === 0 ? ['https'] : [offered[0]];
+  };
+
   const handleAddHop = async () => {
     if (!canManage) return;
     try {
@@ -170,7 +181,7 @@ export default function ConnectionPathSection({
         function_code: null,
         equipment_asset_id: null,
         equipment_entity_code: null,
-        protocol_codes: defaultProtocolCodes.length > 0 ? defaultProtocolCodes : ['https'],
+        protocol_codes: newHopProtocolCodes(),
         port_override: null,
         notes: null,
       });
@@ -360,9 +371,9 @@ export default function ConnectionPathSection({
                     <MenuItem value="" sx={drawerMenuItemSx}>
                       <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{t('workspace.connection.path.functionMissing')}</Typography>
                     </MenuItem>
-                    {pathHopFunctions.map((fn: any) => (
+                    {offeredCatalogOptions<any>(pathHopFunctions, hop.function_code).map((fn: any) => (
                       <MenuItem key={fn.code} value={fn.code} sx={drawerMenuItemSx}>
-                        {fn.deprecated ? `${fn.label} (${t('common:enumEditor.retiredSuffix')})` : fn.label}
+                        {catalogOptionLabel(fn, t)}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -448,7 +459,10 @@ export default function ConnectionPathSection({
                       }}
                     >
                       {(hop.protocol_codes || [])
-                        .map((c) => connectionTypes.find((ct: any) => ct.code === c)?.label || c)
+                        .map((c) => {
+                          const type = connectionTypes.find((ct: any) => ct.code === c);
+                          return type ? catalogOptionLabel(type, t) : c;
+                        })
                         .join(', ') || 'Inherited'}
                     </Typography>
                   </Box>
@@ -537,8 +551,8 @@ export default function ConnectionPathSection({
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
         <Box sx={{ minWidth: 240, maxHeight: 360, overflowY: 'auto', py: 0.5 }}>
-          {connectionTypes.map((ct: any) => {
-            const hop = protocolsAnchor ? sortedHops.find((l) => l.id === protocolsAnchor.hopId) : null;
+          {offeredCatalogOptions<any>(connectionTypes, protocolsAnchorHop?.protocol_codes).map((ct: any) => {
+            const hop = protocolsAnchorHop;
             const isChecked = hop ? (hop.protocol_codes || []).includes(ct.code) : false;
             return (
               <MenuItem
@@ -561,7 +575,7 @@ export default function ConnectionPathSection({
                 }}
               >
                 <Checkbox size="small" checked={isChecked} sx={{ p: 0.5, mr: 1 }} />
-                <ListItemText primaryTypographyProps={{ sx: { fontSize: 13 } }} primary={ct.label || ct.code} />
+                <ListItemText primaryTypographyProps={{ sx: { fontSize: 13 } }} primary={catalogOptionLabel(ct, t)} />
               </MenuItem>
             );
           })}

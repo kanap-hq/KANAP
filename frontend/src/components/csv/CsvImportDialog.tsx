@@ -8,6 +8,7 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { csvRequestErrorMessage } from './csvRequestError';
 import { csvEntityOf, csvFieldLabel } from './csvLabels';
 import { CsvReportMessage, csvMessageText } from './csvMessage';
+import { withCatalogValueName } from '../../utils/catalogReportMessage';
 import { AmountReading, DateReading, amountReadingOf, dateReadingOf, screenLanguage } from './readings';
 import { useImportFiles } from './importFiles';
 import ImportExampleButton, { type ImportExampleKey } from './ImportExampleButton';
@@ -44,7 +45,7 @@ type RowError = CsvReportMessage;
 
 /** A row error in the interface language when it has a code, with the column it is about. */
 function rowErrorText(err: RowError, t: TFunction, entity: string): string {
-  const message = csvMessageText(err, t);
+  const message = csvMessageText(withCatalogValueName(err, t), t);
   if (err.row === 0) return t('csv.headerError', { message });
   const column = err.column ? csvFieldLabel(t, entity, { csvColumn: err.column, label: err.column }) : err.column;
   return err.code && column

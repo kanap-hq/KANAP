@@ -3261,7 +3261,8 @@ export class AiChatOrchestratorService {
                 });
                 controlPlaneRunId = dispatched.run_id;
                 userPreviews = Array.isArray(dispatched.previews) ? dispatched.previews : null;
-                return dispatched.output;
+                // The card keeps a catalog value's code; the model reads its name.
+                return this.capabilityRegistry.resultForModel(ctx, dispatched.output);
               });
               if (bulkAutoplan && result && typeof result === 'object') {
                 result = {

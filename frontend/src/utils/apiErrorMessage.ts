@@ -1,6 +1,7 @@
 import i18next, { type TFunction } from 'i18next';
 import { refusalUsages, usageTotal, type DeleteFailure } from './deleteRefusal';
 import { moduleRightLabel, rightLevelLabel } from './permissionLabels';
+import { catalogValueName } from './catalogValueName';
 
 type ApiErrorPayload = {
   message?: unknown;
@@ -277,7 +278,12 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
         params.level = rightLevelLabel(t, params.level);
       }
     }
-    const translated = t(`errors:${code}`, {
+    // A retired catalog value (rule P7) is named as the field's selector names it, and the message
+    // does not list the values allowed: the selector shows them. Plaid, the API and the import report
+    // keep that list (`catalog_value_retired`).
+    const retiredValue = code === 'catalog_value_retired';
+    if (retiredValue) params.value = catalogValueName(params, language) ?? params.value;
+    const translated = t(`errors:${retiredValue ? 'catalog_value_no_longer_offered' : code}`, {
       ...params,
       defaultValue: message || fallback,
       ...(variant ? { context: variant } : {}),

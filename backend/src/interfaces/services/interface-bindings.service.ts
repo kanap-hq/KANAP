@@ -93,6 +93,7 @@ export class InterfaceBindingsManagementService extends InterfacesBaseService {
       legById.set(leg.id, leg);
     }
 
+    // Rule P7, the interface being the record: a retired value one of its legs holds stays offered to its legs.
     const toUpdate: InterfaceLeg[] = [];
     for (const item of body.items as any[]) {
       const legId = String(item?.id || '').trim();
@@ -108,6 +109,7 @@ export class InterfaceBindingsManagementService extends InterfacesBaseService {
           'interfaceTriggerTypes',
           'trigger_type',
           mg,
+          legs.map((leg) => leg.trigger_type),
         );
       }
       if (item.integration_pattern !== undefined) {
@@ -117,6 +119,7 @@ export class InterfaceBindingsManagementService extends InterfacesBaseService {
           'interfacePatterns',
           'integration_pattern',
           mg,
+          legs.map((leg) => leg.integration_pattern),
         );
       }
       if (item.data_format !== undefined) {
@@ -126,6 +129,7 @@ export class InterfaceBindingsManagementService extends InterfacesBaseService {
           'interfaceFormats',
           'data_format',
           mg,
+          legs.map((leg) => leg.data_format),
         );
       }
       if (item.job_name !== undefined) {

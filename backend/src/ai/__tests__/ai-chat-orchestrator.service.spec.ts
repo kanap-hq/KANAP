@@ -231,6 +231,7 @@ function createOrchestrator(options?: {
   };
 
   const mockCapabilityRegistry = {
+    resultForModel: async (_context: unknown, result: unknown) => result,
     toToolJsonSchemas: (tools: Array<{ name: string }>) => tools.map((tool) => ({
       name: tool.name,
       description: tool.name === 'search_all' ? 'Search' : `${tool.name} description`,

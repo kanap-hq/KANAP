@@ -143,6 +143,8 @@ Hosting-Typen sind in **IT-Landschaft > Einstellungen** konfigurierbar. Jeder Ty
 | Private Cloud | Cloud | Firmenbetriebene Cloud-Plattform |
 | Edge | Cloud | Edge-Computing-Standorte |
 
+**Nicht mehr angebotene Werte**: Hosting-Typ und Anbieter bieten die Werte an, die in den [IT-Landschaft-Einstellungen](it-ops-settings.md) noch angeboten werden. Ein als **Nicht mehr anbieten** markierter Wert bleibt bei den Standorten, die ihn bereits haben, und sie behalten ihn beim Speichern. Andere Standorte können ihn nicht übernehmen, weder auf dieser Seite noch über Kad. Eine als **Nicht mehr anbieten** markierte Netzwerkzone bleibt bei den Subnetzen, die sie haben; ein neues Subnetz kann sie nicht übernehmen.
+
 ---
 
 ## Berechtigungen

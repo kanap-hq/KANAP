@@ -114,7 +114,7 @@ describe('ConnectionWorkspacePage endpoint and protocol names', () => {
     expect(document.body.textContent).not.toContain('entity:');
   });
 
-  it('opens a connection with no criticality without a null value warning, and retires a lifecycle in the locale', async () => {
+  it('opens a connection with no criticality without a null value warning, and offers a retired lifecycle, named in the locale, only to the connection that holds it', async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     try {
       await i18n.changeLanguage('fr');
@@ -137,10 +137,32 @@ describe('ConnectionWorkspacePage endpoint and protocol names', () => {
 
       const drawer = document.querySelector('aside');
       expect(drawer).toBeTruthy();
+      // Rule P7: a retired lifecycle is offered only to the connection that holds it.
       fireEvent.mouseDown(within(drawer as HTMLElement).getAllByRole('combobox')[0]);
+      expect(await screen.findAllByRole('option')).not.toHaveLength(0);
+      expect(screen.queryByRole('option', { name: /Legacy/ })).toBeNull();
+      cleanup();
+
+      CONNECTION.lifecycle = 'legacy';
+      render(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <KanapDialogProvider>
+          <MemoryRouter initialEntries={['/it/connections/c-1/overview']}>
+            <Routes>
+              <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+          </KanapDialogProvider>
+        </ThemeProvider>
+        </QueryClientProvider>,
+      );
+      expect(await screen.findByText('Utilisateurs internes → PAR-DC1')).toBeInTheDocument();
+      fireEvent.mouseDown(within(document.querySelector('aside') as HTMLElement).getAllByRole('combobox')[0]);
       expect(await screen.findByRole('option', { name: 'Legacy (plus proposé)' })).toBeInTheDocument();
       expect(screen.queryByRole('option', { name: /\(deprecated\)/ })).toBeNull();
     } finally {
+      CONNECTION.lifecycle = 'active';
       errors.mockRestore();
     }
   });

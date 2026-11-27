@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { PRODUCT_NAME } from '../../config/product';
@@ -14,8 +14,9 @@ import { ContractsService } from '../../contracts/contracts.service';
 import { InterfacesService } from '../../interfaces/services/interfaces.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { TechnologyCatalogService } from '../../technologies/catalog/technology-catalog.service';
+import { OperatingSystemService } from '../../technologies/operating-system.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
-import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
+import { catalogValueRefusal, findCatalogOption, resolveOfferedCatalogCodes, type CatalogRefusalDetail } from '../../it-ops-settings/catalog-resolve';
 import { withShippedLabels } from '../../it-ops-settings/catalog-shipped-labels';
 import { ClassificationCatalog, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
@@ -60,6 +61,7 @@ import {
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
 import { nameWithoutLeadingReference } from './name-without-leading-reference';
+import { loadSlotBodies } from '../../knowledge/integrated-document-bodies';
 import { familyReference, familyReferenceNumber } from '../ai-entity-reference.util';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, INCIDENT_STATUS_RANK } from '../../incidents/incident.entity';
@@ -134,6 +136,7 @@ type FieldKind =
   | 'application_classification'
   | 'incident_category'
   | 'it_catalog'
+  | 'it_catalog_list'
   | 'date_time'
   | 'non_negative_decimal'
   | 'percent'
@@ -142,7 +145,9 @@ type FieldKind =
   | 'upper3';
 
 /** The tenant's IT settings lists a `it_catalog` field takes its code and label from. */
-type ItCatalogList = 'technologyFamilies' | 'lifecycleStates' | 'hostingTypes' | 'cyberCriticalityLevels' | 'recoveryWaves' | 'adminZones';
+type ItCatalogList =
+  | 'technologyFamilies' | 'lifecycleStates' | 'hostingTypes' | 'cyberCriticalityLevels' | 'recoveryWaves' | 'adminZones' | 'accessMethods'
+  | 'serverKinds' | 'serverProviders' | 'domains' | 'entities' | 'connectionTypes' | 'interfaceDataCategories';
 
 type FieldConfig = {
   label: string;
@@ -155,8 +160,10 @@ type FieldConfig = {
   classificationAxis?: 'business' | 'cyber' | 'confidentiality' | 'recovery';
   /** A tenant catalog of IT settings: the card accepts the code or the exact label and shows the label. */
   itCatalog?: ItCatalogList;
-  /** The screen still offers a value marked retired in the settings: accept it like the others. */
-  offersRetired?: boolean;
+  /** Written at the creation only: an update refuses it before the card, with this sentence. */
+  createOnly?: string;
+  /** An alias the write folds into another field (that field is the one compared and written). */
+  writesAs?: string;
   minimum?: number;
   maximum?: number;
   /** The service's text bound, in characters; absent keeps the generic text rule. */
@@ -256,9 +263,9 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       end_of_support_date: { label: 'End of Support Date', kind: 'date', nullable: true },
       go_live_date: { label: 'Go-Live Date', kind: 'date', nullable: true },
       predecessor_id: { label: 'Predecessor', kind: 'relation', nullable: true, relationTarget: 'applications', aliases: ['predecessor'] },
-      // The workspace's states, as the Applications screen and the change in bulk offer them: a state
-      // marked retired in the settings stays offered there, so it stays accepted here.
-      lifecycle: { label: 'Lifecycle', kind: 'it_catalog', itCatalog: 'lifecycleStates', offersRetired: true },
+      // The workspace's states, as the Applications screen and the change in bulk offer them (rule P7:
+      // a state marked retired only on the application that holds it).
+      lifecycle: { label: 'Lifecycle', kind: 'it_catalog', itCatalog: 'lifecycleStates' },
       environment: { label: 'Environment', kind: 'enum', enumValues: ENVIRONMENTS },
       criticality: { label: 'Business criticality', kind: 'application_classification', classificationAxis: 'business', nullable: true, aliases: ['business_criticality'] },
       cyber_criticality: { label: 'Cyber Criticality', kind: 'application_classification', classificationAxis: 'cyber', nullable: true, aliases: ['cyber'] },
@@ -274,7 +281,7 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       sso_enabled: { label: 'SSO Enabled', kind: 'boolean' },
       mfa_supported: { label: 'MFA Supported', kind: 'boolean' },
       etl_enabled: { label: 'ETL Enabled', kind: 'boolean' },
-      access_methods: { label: 'Access Methods', kind: 'array_text' },
+      access_methods: { label: 'Access Methods', kind: 'it_catalog_list', itCatalog: 'accessMethods' },
       contains_pii: { label: 'Contains PII', kind: 'boolean' },
       licensing: { label: 'Licensing', kind: 'text', nullable: true },
       notes: { label: 'Notes', kind: 'text', nullable: true },
@@ -293,14 +300,16 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     fields: {
       name: { label: 'Name', kind: 'text', requiredOnCreate: true },
       asset_reference: { label: 'Asset Reference', kind: 'text', nullable: true, aliases: ['reference'] },
-      kind: { label: 'Kind', kind: 'text', requiredOnCreate: true },
-      provider: { label: 'Provider', kind: 'text', requiredOnCreate: true },
+      // The catalog fields of an asset take a code or a name the app shows, in any language (rule P7:
+      // a retired value only on the asset that holds it), as the asset's page offers them.
+      kind: { label: 'Kind', kind: 'it_catalog', itCatalog: 'serverKinds', requiredOnCreate: true },
+      provider: { label: 'Provider', kind: 'it_catalog', itCatalog: 'serverProviders', requiredOnCreate: true },
       environment: { label: 'Environment', kind: 'enum', enumValues: ENVIRONMENTS, requiredOnCreate: true },
       region: { label: 'Region', kind: 'text', nullable: true },
       zone: { label: 'Zone', kind: 'text', nullable: true },
       hostname: { label: 'Hostname', kind: 'text', nullable: true },
-      domain: { label: 'Domain', kind: 'text', nullable: true },
-      admin_zone: { label: 'Administration Zone', kind: 'text', nullable: true },
+      domain: { label: 'Domain', kind: 'it_catalog', itCatalog: 'domains', nullable: true },
+      admin_zone: { label: 'Administration Zone', kind: 'it_catalog', itCatalog: 'adminZones', nullable: true },
       aliases: { label: 'Aliases', kind: 'array_text', nullable: true },
       ip_addresses: { label: 'IP Addresses', kind: 'json', nullable: true },
       cluster: { label: 'Cluster', kind: 'text', nullable: true },
@@ -309,7 +318,7 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       // Every asset has a site: required at creation, and an update cannot clear it.
       location_id: { label: 'Location', kind: 'relation', requiredOnCreate: true, relationTarget: 'locations' as RelationTarget, aliases: ['location'] },
       sub_location_id: { label: 'Sub-location', kind: 'relation', nullable: true, relationTarget: 'location_sub_items' as RelationTarget, aliases: ['sub_location'] },
-      status: { label: 'Status', kind: 'text' },
+      status: { label: 'Status', kind: 'it_catalog', itCatalog: 'lifecycleStates' },
       go_live_date: { label: 'Go-Live Date', kind: 'date', nullable: true },
       end_of_life_date: { label: 'End of Life Date', kind: 'date', nullable: true },
       notes: { label: 'Notes', kind: 'text', nullable: true },
@@ -386,9 +395,10 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       business_purpose: { label: 'Business Purpose', kind: 'text', requiredOnCreate: true },
       source_application_id: { label: 'Source Application', kind: 'relation', requiredOnCreate: true, relationTarget: 'applications', aliases: ['source_application'] },
       target_application_id: { label: 'Target Application', kind: 'relation', requiredOnCreate: true, relationTarget: 'applications', aliases: ['target_application'] },
-      data_category: { label: 'Data Category', kind: 'text', requiredOnCreate: true },
+      // The catalog fields take a code or a name the app shows, in any language (rule P7).
+      data_category: { label: 'Data Category', kind: 'it_catalog', itCatalog: 'interfaceDataCategories', requiredOnCreate: true },
       integration_route_type: { label: 'Integration Route Type', kind: 'enum', enumValues: INTERFACE_ROUTES },
-      lifecycle: { label: 'Lifecycle', kind: 'text' },
+      lifecycle: { label: 'Lifecycle', kind: 'it_catalog', itCatalog: 'lifecycleStates' },
       overview_notes: { label: 'Overview Notes', kind: 'text', nullable: true },
       criticality: { label: 'Operational criticality', kind: 'application_classification', classificationAxis: 'business', nullable: true },
       impact_of_failure: { label: 'Impact of Failure', kind: 'text', nullable: true },
@@ -404,7 +414,12 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       audit_logging: { label: 'Audit Logging', kind: 'text', nullable: true },
       security_controls_summary: { label: 'Security Controls Summary', kind: 'text', nullable: true },
       middleware_application_ids: { label: 'Middleware Applications', kind: 'relation', nullable: true, relationTarget: 'applications', aliases: ['middleware_applications'] },
-      specification_markdown: { label: 'Specification', kind: 'text', nullable: true },
+      // The specification is a document of the interface, filled at the creation; its text then
+      // changes through the document's own tool.
+      specification_markdown: {
+        label: 'Specification', kind: 'text', nullable: true,
+        createOnly: "An interface's specification is a document: change its text with `update_document_content` on the interface's specification document.",
+      },
     },
   },
   connections: {
@@ -417,12 +432,13 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       description: { label: 'Description', kind: 'text', nullable: true, aliases: ['purpose', 'notes'] },
       topology: { label: 'Topology', kind: 'enum', enumValues: CONNECTION_TOPOLOGIES },
       source_asset_id: { label: 'Source Asset', kind: 'relation', nullable: true, relationTarget: 'assets', aliases: ['source_asset', 'source_server_id', 'source_server'] },
-      source_entity_code: { label: 'Source Entity Code', kind: 'text', nullable: true },
+      // The catalog fields take a code or a name the app shows, in any language (rule P7).
+      source_entity_code: { label: 'Source Entity Code', kind: 'it_catalog', itCatalog: 'entities', nullable: true },
       destination_asset_id: { label: 'Destination Asset', kind: 'relation', nullable: true, relationTarget: 'assets', aliases: ['destination_asset', 'destination_server_id', 'destination_server'] },
-      destination_entity_code: { label: 'Destination Entity Code', kind: 'text', nullable: true },
+      destination_entity_code: { label: 'Destination Entity Code', kind: 'it_catalog', itCatalog: 'entities', nullable: true },
       servers: { label: 'Servers', kind: 'relation', nullable: true, relationTarget: 'assets' },
-      protocol_codes: { label: 'Protocol Codes', kind: 'array_text', requiredOnCreate: true, aliases: ['protocols'] },
-      lifecycle: { label: 'Lifecycle', kind: 'text' },
+      protocol_codes: { label: 'Protocol Codes', kind: 'it_catalog_list', itCatalog: 'connectionTypes', requiredOnCreate: true, aliases: ['protocols'] },
+      lifecycle: { label: 'Lifecycle', kind: 'it_catalog', itCatalog: 'lifecycleStates' },
       criticality: { label: 'Operational criticality', kind: 'application_classification', classificationAxis: 'business', nullable: true },
       data_class: { label: 'Data confidentiality', kind: 'application_classification', classificationAxis: 'confidentiality', nullable: true },
       contains_pii: { label: 'Contains PII', kind: 'boolean' },
@@ -492,7 +508,7 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       currency: { label: 'Currency', kind: 'upper3', requiredOnCreate: true },
       effective_start: { label: 'Effective Start', kind: 'date', requiredOnCreate: true },
       // Deprecated alias of disabled_at for one release: fills an empty end of validity, never clears it.
-      effective_end: { label: 'End of validity', kind: 'date', nullable: true },
+      effective_end: { label: 'End of validity', kind: 'date', nullable: true, writesAs: 'disabled_at' },
       owner_it_id: { label: 'IT Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['it_owner'] },
       owner_business_id: { label: 'Business Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['business_owner'] },
       analytics_category_id: { label: 'Analytics Category', kind: 'relation', nullable: true, relationTarget: 'analytics_categories', aliases: ['analytics_category'] },
@@ -528,6 +544,27 @@ const TECHNOLOGY_REFUSED_FIELDS: Record<string, string> = {
   file: "Attachments are added from the technology's Relations tab, not by a record write.",
   technology_attachments: "Attachments are added from the technology's Relations tab, not by a record write.",
 };
+
+/** The fields an update of the family writes (`update_business_record`): every field but the creation-only ones. */
+export function aiBusinessRecordUpdateFields(entityType: AiBusinessRecordEntityType): string[] {
+  return Object.entries(ENTITY_CONFIG[entityType].fields).filter(([, field]) => !field.createOnly && !field.writesAs).map(([name]) => name);
+}
+
+/**
+ * The tenant's catalog a field of the family writes by code (rule P7), whose card shows the code for
+ * the frontend to name: null for any other field.
+ */
+export function aiBusinessRecordCatalogList(entityType: unknown, fieldName: string): { list: string; many: boolean } | null {
+  const config = ENTITY_CONFIG[String(entityType || '') as AiBusinessRecordEntityType];
+  const field = config && Object.prototype.hasOwnProperty.call(config.fields, fieldName) ? config.fields[fieldName] : null;
+  if (!field) return null;
+  if ((field.kind === 'it_catalog' || field.kind === 'it_catalog_list') && field.itCatalog) {
+    return { list: field.itCatalog, many: field.kind === 'it_catalog_list' };
+  }
+  if (field.kind === 'application_category') return { list: 'applicationCategories', many: false };
+  if (field.kind === 'incident_category') return { list: 'incidentCategories', many: false };
+  return null;
+}
 
 export const AI_BUSINESS_RECORD_BUSINESS_RESOURCES = Array.from(
   new Set(AI_BUSINESS_RECORD_ENTITY_TYPES.map((entityType) => ENTITY_CONFIG[entityType].businessResource)),
@@ -690,15 +727,21 @@ export class AiBusinessRecordMutationSupportService {
     private readonly incidents: IncidentsService,
     private readonly technologies: TechnologiesService,
     private readonly technologyCatalog: TechnologyCatalogService,
+    @Optional() private readonly operatingSystems?: OperatingSystemService,
   ) {}
 
   getBusinessResource(entityType: unknown): string {
     return getAiBusinessRecordBusinessResource(entityType);
   }
 
-  getWritableFieldDescriptions(entityTypes: readonly AiBusinessRecordEntityType[] = AI_BUSINESS_RECORD_ENTITY_TYPES): string[] {
+  getWritableFieldDescriptions(
+    entityTypes: readonly AiBusinessRecordEntityType[] = AI_BUSINESS_RECORD_ENTITY_TYPES,
+    mode: 'create' | 'update' = 'create',
+  ): string[] {
     return entityTypes.map((entityType) => {
-      const fields = Object.keys(ENTITY_CONFIG[entityType].fields);
+      const fields = Object.entries(ENTITY_CONFIG[entityType].fields)
+        .filter(([, field]) => mode === 'create' || !field.createOnly)
+        .map(([name]) => name);
       // The tenant's other analytics dimensions (listed per tenant in the prompt context).
       if (isBudgetLineEntity(entityType)) fields.push(`${ANALYTICS_CSV_PREFIX}<dimension code>`);
       return `${entityType}: ${fields.join(', ')}`;
@@ -833,34 +876,56 @@ export class AiBusinessRecordMutationSupportService {
       return { value: normalized, displayValue: normalized };
     }
     if (field.kind === 'application_category') {
+      // Rule P7: a retired category only on the application that holds it. The card shows the
+      // code: the frontend names it from the tenant's list in the person's language.
       const option = await this.itOpsSettings.resolveApplicationCategoryOption(context.tenantId, rawValue, {
         manager: context.manager,
+        current: existing?.[fieldName] == null ? null : String(existing[fieldName]),
       });
-      return { value: option.code, displayValue: option.label || option.code };
+      return { value: option.code, displayValue: option.code };
     }
     if (field.kind === 'it_catalog') {
       // The tenant's own list, with the labels the app shows for a shipped value in every
       // language: the code or an exact label is accepted. A retired value is refused unless it is
-      // the one the record already holds, as the screen hides it (`offersRetired` keeps it when the
-      // screen still offers it). An ambiguous label is refused.
+      // the one the record already holds, as the screen hides it (rule P7). An ambiguous label is refused.
       const settings = withShippedLabels(await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager }));
       const options = field.itCatalog
         ? settings[field.itCatalog] as Array<{ code: string; label: string; deprecated?: boolean }>
         : [];
       const current = existing?.[fieldName] == null ? null : String(existing[fieldName]);
-      const option = findCatalogOption(rawValue, options, current, !field.offersRetired);
+      const option = findCatalogOption(rawValue, options, current, true);
       if (!option) {
-        const allowed = options
-          .filter((item) => field.offersRetired || !item.deprecated || item.code === current)
-          .slice(0, 10)
-          .map((item) => item.label || item.code)
-          .join(', ');
-        throw new BadRequestException(
-          `Unknown ${field.label.toLowerCase()} "${String(rawValue).trim()}". Valid values: ${allowed}.`,
+        const offered = options.filter((item) => !item.deprecated || item.code === current).slice(0, 10);
+        const allowed = offered.map((item) => item.label || item.code).join(', ');
+        const retired = findCatalogOption(rawValue, options);
+        const name = retired ? retired.label || retired.code : String(rawValue).trim();
+        const what = field.label.toLowerCase();
+        throw catalogValueRefusal(
+          { value: name, allowed, retired: !!retired, valueCode: retired?.code, list: field.itCatalog },
+          retired
+            ? `The ${what} "${name}" is retired: only a record that already holds it keeps it. Valid values: ${allowed}.`
+            : `Unknown ${what} "${name}". Valid values: ${allowed}.`,
+          undefined,
+          { what, list: field.itCatalog, retired: !!retired, value: name, valueCode: retired?.code, offered: offered.map(({ code, label }) => ({ code, label })) },
         );
       }
       // The card shows the code: the frontend names it from the same list in the person's language.
       return { value: option.code, displayValue: option.code };
+    }
+    if (field.kind === 'it_catalog_list') {
+      // A list of the tenant's catalog (the access methods of an application): each value by its
+      // code or an exact label in any language the app shows; an unknown value is refused with the
+      // list of the values allowed, a retired one unless the record already holds it (rule P7).
+      const settings = withShippedLabels(await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager }));
+      const options = field.itCatalog ? settings[field.itCatalog] as Array<{ code: string; label: string; deprecated?: boolean }> : [];
+      const values = Array.isArray(rawValue) ? rawValue : String(rawValue).split(',');
+      const codes = resolveOfferedCatalogCodes(values, options, {
+        held: Array.isArray(existing?.[fieldName]) ? existing?.[fieldName] : [],
+        what: field.label.toLowerCase().replace(/s$/, ''),
+        list: field.itCatalog,
+      });
+      // The card shows the codes: the frontend names them from the same list in the person's language.
+      return { value: codes, displayValue: codes.join(', ') };
     }
     if (field.kind === 'incident_category') {
       const settings = await this.itOpsSettings.getSettings(context.tenantId, { manager: context.manager });
@@ -869,11 +934,18 @@ export class AiBusinessRecordMutationSupportService {
       // refusal lists only the categories a new value may take, as the screen's selector does.
       const option = findCatalogOption(rawValue, settings.incidentCategories, current, true);
       if (!option) {
-        const allowed = settings.incidentCategories
-          .filter((item) => !item.deprecated || item.code === current)
-          .map((item) => item.label || item.code)
-          .join(', ');
-        throw new BadRequestException(`Unknown incident category "${String(rawValue).trim()}". Valid incident categories: ${allowed}.`);
+        const offered = settings.incidentCategories.filter((item) => !item.deprecated || item.code === current);
+        const allowed = offered.map((item) => item.label || item.code).join(', ');
+        const typed = String(rawValue).trim();
+        const retired = findCatalogOption(rawValue, settings.incidentCategories);
+        // Plaid reads the categories by their names in the person's language (`catalogRefusalForModel`).
+        throw Object.assign(new BadRequestException(`Unknown incident category "${typed}". Valid incident categories: ${allowed}.`), {
+          catalogRefusal: {
+            what: 'incident category', list: 'incidentCategories', retired: !!retired,
+            value: retired ? retired.label || retired.code : typed, valueCode: retired?.code,
+            offered: offered.map(({ code, label }) => ({ code, label })),
+          } satisfies CatalogRefusalDetail,
+        });
       }
       // The card names the category from the tenant's own list in the person's language: keep the code.
       return { value: option.code, displayValue: option.code };
@@ -912,6 +984,13 @@ export class AiBusinessRecordMutationSupportService {
     if (field.kind === 'upper3') {
       text = text.toUpperCase();
       if (text.length !== 3) throw new BadRequestException(`${field.label} must be 3 letters.`);
+    }
+    if (entityType === 'assets' && fieldName === 'operating_system' && this.operatingSystems) {
+      // The card shows what the server will hold ("Debian 12 (Bookworm)" for "Debian 12"): the
+      // preview of the resolution the write runs (`OperatingSystemService.resolve`, with create),
+      // writing nothing. The write still resolves the text as typed.
+      const shown = await this.operatingSystems.preview(context.manager, context.tenantId, text);
+      return { value: text, displayValue: shown?.label ?? text };
     }
     return { value: text, displayValue: text };
   }
@@ -1037,6 +1116,9 @@ export class AiBusinessRecordMutationSupportService {
       if (Object.prototype.hasOwnProperty.call(fields, resolved.name)) {
         const shown = axis && !axis.is_default ? `${ANALYTICS_CSV_PREFIX}${axis.code}` : resolved.name;
         throw new BadRequestException(`Field ${shown} was provided more than once.`);
+      }
+      if (mode === 'update' && resolved.config.createOnly) {
+        throw new BadRequestException(resolved.config.createOnly);
       }
       if (isLine && resolved.name === 'contract_id' && nature === 'capex') {
         throw new BadRequestException('A contract cannot be written on a CAPEX line: link the contract from the line\'s Relations tab instead.');
@@ -1867,7 +1949,11 @@ export class AiBusinessRecordMutationSupportService {
     input: AiUpdateBusinessRecordInput,
   ): Promise<AiPreparedMutationPreview> {
     const entityType = requireEntityType(input.entity_type);
-    const target = await this.resolveRecordReference(context, entityType, input.ref);
+    const reference = await this.resolveRecordReference(context, entityType, input.ref);
+    // The record as the screen reads it, the read the approval compares with: an operating system,
+    // a connection's protocols and servers, an interface's middleware are not columns of its table.
+    const row = this.withAnalyticsValueKeys(entityType, await this.getRecordSnapshot(context, entityType, reference.id));
+    const target = { ...reference, row };
     return this.prepareUpdatePreviewForTarget(context, entityType, target, coerceRecord(input.fields, 'fields'), {
       sourcePreviewId: null,
     });
@@ -1925,7 +2011,12 @@ export class AiBusinessRecordMutationSupportService {
     }
     const requestedFieldNames = Object.keys(normalized.fields);
     const currentValues = this.pickFieldValues(entityType, target.row, requestedFieldNames);
-    const changedFieldNames = requestedFieldNames.filter((fieldName) => !sameValue(currentValues[fieldName], normalized.fields[fieldName]));
+    // An operating system is compared by what the server will hold, the label its text resolves to
+    // ("Debian 12" on a server with "Debian 12 (Bookworm)" changes nothing).
+    const requested = (fieldName: string) => (entityType === 'assets' && fieldName === 'operating_system'
+      ? normalized.displayValues[fieldName]
+      : normalized.fields[fieldName]);
+    const changedFieldNames = requestedFieldNames.filter((fieldName) => !sameValue(currentValues[fieldName], requested(fieldName)));
     if (changedFieldNames.length === 0) {
       throw new BadRequestException(`${this.getConfig(entityType).labelSingular} already has the requested values.`);
     }
@@ -2405,7 +2496,30 @@ export class AiBusinessRecordMutationSupportService {
     }
   }
 
+  /**
+   * The record as its screen reads it (`get`), with the values Kad writes in the same shape: a
+   * connection's servers as their ids.
+   */
   private async getRecordSnapshot(
+    context: AiExecutionContextWithManager,
+    entityType: AiBusinessRecordEntityType,
+    id: string,
+  ): Promise<Record<string, unknown>> {
+    const row = await this.readRecord(context, entityType, id);
+    if (entityType === 'connections' && Array.isArray(row?.servers)) {
+      return { ...row, servers: (row.servers as Array<{ id?: unknown } | string>).map((server) => (typeof server === 'string' ? server : String(server?.id ?? ''))) };
+    }
+    if (entityType === 'projects' || entityType === 'requests') {
+      // A project's purpose, a request's purpose and risks are the texts of its managed documents.
+      const slots = entityType === 'projects' ? { purpose: 'purpose' } : { purpose: 'purpose', risks: 'risks_mitigations' };
+      const bodies = (await loadSlotBodies(context.manager, context.tenantId, entityType, [String(row.id)], Object.values(slots) as any[])).get(String(row.id));
+      const texts = Object.fromEntries(Object.entries(slots).map(([field, slot]) => [field, bodies?.get(slot) ?? null]));
+      return { ...row, ...texts };
+    }
+    return row;
+  }
+
+  private async readRecord(
     context: AiExecutionContextWithManager,
     entityType: AiBusinessRecordEntityType,
     id: string,

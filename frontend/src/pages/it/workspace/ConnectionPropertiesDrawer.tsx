@@ -8,6 +8,7 @@ import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { formatShortInstantDate } from '../../../lib/dateFormat';
 import { useLocale } from '../../../i18n/useLocale';
 import { classificationText } from '../../../utils/applicationClassification';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 
 
 type Props = {
@@ -64,7 +65,8 @@ export default function ConnectionPropertiesDrawer({
   const CRITICALITIES = [{ code: '', label: classificationText('Not set') }, ...(classificationCatalog?.businessCriticalityLevels || [])];
   const { byField } = useItOpsEnumOptions();
   const locale = useLocale();
-  const lifecycleOptions = byField.lifecycleStatus || [];
+  // Rule P7: the lifecycles still offered, plus the one the connection holds.
+  const lifecycleOptions = offeredCatalogOptions(byField.lifecycleStatus, lifecycle);
   const dataClassOptions = classificationCatalog?.dataClasses || [];
 
   const isDerived = riskMode === 'derived';
@@ -88,7 +90,7 @@ export default function ConnectionPropertiesDrawer({
           >
             {lifecycleOptions.map((opt) => (
               <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
-                {opt.deprecated ? `${opt.label} (${t('common:enumEditor.retiredSuffix')})` : opt.label}
+                {catalogOptionLabel(opt, t)}
               </MenuItem>
             ))}
           </TextField>

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
+import { catalogValueRefusal, resolveOfferedCatalogCode } from '../../it-ops-settings/catalog-resolve';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { assetBadRequest, assetFqdnOf } from '../asset-rules';
 import { isValidHostname } from '../hostname.util';
@@ -19,38 +19,35 @@ export class AssetsValidationService {
     return text.length === 0 ? null : text;
   }
 
+  /**
+   * The catalog values of an asset follow rule P7 (`resolveOfferedCatalogCode`): a code or a name of
+   * the tenant's list; a retired value, or one the list does not know, only on the asset that already
+   * holds it (`held`). Each refusal lists the values allowed.
+   */
   async resolveKind(
     value: unknown,
     tenantId: string,
     manager?: EntityManager,
+    held?: string | null,
   ): Promise<string> {
-    const code = String(value || '').trim().toLowerCase();
-    if (!code) {
+    if (!String(value ?? '').trim()) {
       throw new BadRequestException('kind is required');
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set((settings.serverKinds || []).map((o) => o.code));
-    if (!allowed.has(code)) {
-      throw new BadRequestException(`Invalid kind "${value}"`);
-    }
-    return code;
+    return resolveOfferedCatalogCode(value, settings.serverKinds || [], { held, what: 'asset type', list: 'serverKinds' });
   }
 
   async resolveProvider(
     value: unknown,
     tenantId: string,
     manager?: EntityManager,
+    held?: string | null,
   ): Promise<string> {
-    const code = String(value || '').trim().toLowerCase();
-    if (!code) {
+    if (!String(value ?? '').trim()) {
       throw new BadRequestException('provider is required');
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set((settings.serverProviders || []).map((o) => o.code));
-    if (!allowed.has(code)) {
-      throw new BadRequestException(`Invalid provider "${value}"`);
-    }
-    return code;
+    return resolveOfferedCatalogCode(value, settings.serverProviders || [], { held, what: 'provider', list: 'serverProviders' });
   }
 
   /**
@@ -84,31 +81,28 @@ export class AssetsValidationService {
     value: unknown,
     tenantId: string,
     manager?: EntityManager,
+    held?: string | null,
   ): Promise<string | null> {
     const normalized = this.normalizeNullable(value);
     if (!normalized) return null;
-    const code = normalized.toLowerCase();
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set(((settings as any).domains || []).map((d: any) => d.code));
-    if (!allowed.has(code)) {
-      throw new BadRequestException(`Invalid domain "${value}"`);
-    }
-    return code;
+    return resolveOfferedCatalogCode(normalized, settings.domains || [], { held, what: 'domain', list: 'domains' });
   }
 
   async resolveAdminZone(
     value: unknown,
     tenantId: string,
     manager?: EntityManager,
+    held?: string | null,
   ): Promise<string | null> {
     const normalized = this.normalizeNullable(value);
     if (!normalized) return null;
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const option = findCatalogOption(normalized, settings.adminZones || []);
-    if (!option) {
-      throw new BadRequestException(`Unknown administration zone: ${normalized}.`);
-    }
-    return option.code;
+    return resolveOfferedCatalogCode(normalized, settings.adminZones || [], {
+      held,
+      what: 'administration zone',
+      list: 'adminZones',
+    });
   }
 
   validateHostname(value: string | null): boolean {
@@ -173,13 +167,16 @@ export class AssetsValidationService {
     tenantId: string,
     manager?: EntityManager,
     excludeAssetId?: string,
+    held?: Array<{ type?: unknown; subnet_cidr?: unknown }> | null,
   ): Promise<Array<{ type: string; ip: string; subnet_cidr: string | null }> | null> {
     if (value == null) return null;
     if (!Array.isArray(value)) return null;
 
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowedTypes = new Set((settings.ipAddressTypes || []).map((t) => t.code));
-    const allowedSubnets = new Set((settings.subnets || []).map((s) => s.cidr));
+    // Rule P7: a retired type or subnet only on the asset that already holds it.
+    const heldTypes = (held || []).map((item) => item?.type).filter(Boolean);
+    const heldSubnets = new Set((held || []).map((item) => String(item?.subnet_cidr ?? '')).filter(Boolean));
+    const allowedSubnets = new Set((settings.subnets || []).filter((s) => !s.deprecated || heldSubnets.has(s.cidr)).map((s) => s.cidr));
 
     const normalized: Array<{ type: string; ip: string; subnet_cidr: string | null }> = [];
     for (const item of value) {
@@ -194,12 +191,18 @@ export class AssetsValidationService {
         throw assetBadRequest('asset_ip_invalid', `"${ip}" is not a valid IP address.`, { value: ip });
       }
 
-      if (!type || !allowedTypes.has(type)) {
-        throw new BadRequestException(`Invalid IP address type "${type}"`);
-      }
+      if (!type) throw new BadRequestException('Invalid IP address type ""');
+      const typeCode = resolveOfferedCatalogCode(type, settings.ipAddressTypes || [], { held: heldTypes, what: 'IP address type', list: 'ipAddressTypes' });
 
       if (subnet_cidr && !allowedSubnets.has(subnet_cidr)) {
-        throw new BadRequestException(`Invalid subnet "${subnet_cidr}"`);
+        const retired = (settings.subnets || []).some((s) => s.cidr === subnet_cidr);
+        if (!retired) throw new BadRequestException(`Invalid subnet "${subnet_cidr}"`);
+        // A subnet is named by its CIDR, on the screen as here.
+        const allowed = [...allowedSubnets].join(', ');
+        throw catalogValueRefusal(
+          { value: subnet_cidr, allowed, retired: true },
+          `The subnet "${subnet_cidr}" is retired: only a record that already holds it keeps it. Use one of: ${allowed}.`,
+        );
       }
 
       if (subnet_cidr && !this.ipBelongsToSubnet(ip, subnet_cidr)) {
@@ -208,7 +211,7 @@ export class AssetsValidationService {
         );
       }
 
-      normalized.push({ type, ip, subnet_cidr: subnet_cidr || null });
+      normalized.push({ type: typeCode, ip, subnet_cidr: subnet_cidr || null });
     }
 
     if (normalized.length > 0 && manager) {
@@ -254,6 +257,7 @@ export class AssetsValidationService {
     tenantId: string,
     manager?: EntityManager,
     fallback: string = 'active',
+    held?: string | null,
   ): Promise<string> {
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
     const allowed = (settings.lifecycleStates || []).map((item) => item.code);
@@ -261,11 +265,7 @@ export class AssetsValidationService {
     if (value === undefined || value === null || String(value).trim() === '') {
       return fallbackCode;
     }
-    const normalized = String(value).trim().toLowerCase();
-    if (!allowed.includes(normalized)) {
-      throw new BadRequestException(`Invalid lifecycle "${value}"`);
-    }
-    return normalized;
+    return resolveOfferedCatalogCode(value, settings.lifecycleStates || [], { held, what: 'lifecycle', list: 'lifecycleStates' });
   }
 
   private pickLifecycleFallback(candidate: string | undefined, allowed: string[]): string {

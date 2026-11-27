@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import i18n from '../i18n';
 import { useLocalizedItOpsSettings } from './useLocalizedItOpsSettings';
 import { ItOpsEnumOption } from '../services/itOpsSettings';
+import { catalogOptionLabel } from '../utils/catalogOffered';
 
 type FieldKey =
   | 'applicationCategory'
@@ -60,7 +61,7 @@ export function useItOpsEnumOptions(options: { enabled?: boolean } = {}) {
     const list = byField[field] || [];
     const found = list.find((o) => o.code === code);
     if (!found) return String(code);
-    return found.deprecated ? `${found.label} (${i18n.t('common:enumEditor.retiredSuffix')})` : found.label;
+    return catalogOptionLabel(found, i18n.t);
   }, [byField]);
 
   /**

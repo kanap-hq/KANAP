@@ -17,7 +17,8 @@ import { ApplicationLink } from '../application-link.entity';
 import { ApplicationAttachment } from '../application-attachment.entity';
 import { ApplicationDataResidency } from '../application-data-residency.entity';
 import { AuditService } from '../../audit/audit.service';
-import { formatApplicationCategoryOptions, ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { resolveOfferedCatalogCode, resolveOfferedCatalogCodes } from '../../it-ops-settings/catalog-resolve';
 import { StorageService } from '../../common/storage/storage.service';
 import { unreferencedPaths } from '../../common/storage-path-refs';
 import { randomUUID } from 'crypto';
@@ -242,6 +243,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const nowYear = new Date().getFullYear();
     const lifecycle = await this.normalizeLifecycle(body.lifecycle, tenantId, mg, 'active');
     const category = await this.normalizeCategory((body as any).category, tenantId, mg, { useDefaultForEmpty: true });
+    const accessMethods = await this.normalizeAccessMethods(body.access_methods, tenantId, mg, []);
     assertApplicationDates(body as any);
     await lockApplicationNames(mg, tenantId);
     await assertApplicationNameFree(mg, tenantId, name);
@@ -266,6 +268,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       sso_enabled: !!body.sso_enabled,
       mfa_supported: !!body.mfa_supported,
       etl_enabled: !!(body as any).etl_enabled,
+      access_methods: accessMethods,
       contains_pii: !!body.contains_pii,
       licensing: body.licensing ?? null,
       notes: body.notes ?? null,
@@ -315,10 +318,13 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     if (patch.end_of_support_date !== undefined) patch.end_of_support_date = patch.end_of_support_date ? new Date(patch.end_of_support_date as any) : null;
     if (patch.go_live_date !== undefined) patch.go_live_date = patch.go_live_date ? new Date(patch.go_live_date as any) : null;
     if (patch.lifecycle !== undefined) {
-      patch.lifecycle = await this.normalizeLifecycle(patch.lifecycle, existing.tenant_id, mg, existing.lifecycle);
+      patch.lifecycle = await this.normalizeLifecycle(patch.lifecycle, existing.tenant_id, mg, existing.lifecycle, existing.lifecycle);
     }
     if (patch.category !== undefined) {
-      patch.category = await this.normalizeCategory(patch.category, existing.tenant_id, mg);
+      patch.category = await this.normalizeCategory(patch.category, existing.tenant_id, mg, { current: existing.category });
+    }
+    if (patch.access_methods !== undefined) {
+      patch.access_methods = await this.normalizeAccessMethods(patch.access_methods, existing.tenant_id, mg, existing.access_methods);
     }
     if (patch.name !== undefined) {
       patch.name = normalizeApplicationName(patch.name);
@@ -572,10 +578,10 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
   }
 
   /**
-   * The values a change in bulk accepts (`application-bulk-edit.ts`): the tenant's categories still
-   * offered, its lifecycle states, and its business and cyber criticality levels still offered. A
-   * category or a level no longer offered is never newly assigned in bulk, even by its code (the
-   * update of one application still takes a category no longer offered by its code).
+   * The values a change in bulk accepts (`application-bulk-edit.ts`): the tenant's categories,
+   * lifecycle states and business and cyber criticality levels still offered. A retired value is
+   * never newly assigned in bulk (rule P7; the update of each application refuses it too, unless the
+   * application already holds it).
    */
   async bulkEditValues(manager: EntityManager): Promise<ApplicationBulkValues> {
     const tenantId = await this.getCurrentTenantId(manager);
@@ -585,17 +591,22 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const offered = (options: ReadonlyArray<{ code: string; deprecated?: boolean }>) => options.filter((option) => !option.deprecated).map((option) => option.code);
     return {
       category: offered(categories),
-      lifecycle: (settings.lifecycleStates || []).map((state) => state.code),
+      lifecycle: offered(settings.lifecycleStates || []),
       criticality: offered(catalog.businessCriticalityLevels),
       cyber_criticality: offered(catalog.cyberCriticalityLevels),
     };
   }
 
+  /**
+   * The lifecycle a write stores: a state of the tenant by its code or its name (rule P7: a retired
+   * state only on the application that holds it, `held`). Empty takes the fallback.
+   */
   async normalizeLifecycle(
     value: unknown,
     tenantId: string,
     manager?: any,
     fallback?: string,
+    held?: string | null,
   ): Promise<string> {
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
     const codes = (settings.lifecycleStates || []).map((item: any) => item.code);
@@ -603,12 +614,19 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     if (value === undefined || value === null || String(value).trim() === '') {
       return fallbackCode;
     }
-    const normalized = String(value).trim().toLowerCase();
-    if (!codes.includes(normalized)) {
-      const allowed = formatApplicationCategoryOptions(settings.lifecycleStates || []);
-      throw applicationBadRequest('lifecycle_invalid', `Invalid lifecycle "${value}". Use one of: ${allowed}.`, { value: String(value), allowed });
-    }
-    return normalized;
+    return resolveOfferedCatalogCode(value, settings.lifecycleStates || [], {
+      held, what: 'lifecycle', list: 'lifecycleStates', unknownCode: 'lifecycle_invalid',
+    });
+  }
+
+  /** The access methods a write stores: codes of the tenant's catalog (rule P7, `held`: the application's). */
+  private async normalizeAccessMethods(value: unknown, tenantId: string, manager: any, held: string[] | null | undefined): Promise<string[]> {
+    if (value === undefined || value === null) return held ?? [];
+    const values = Array.isArray(value) ? value : String(value).split(',');
+    const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
+    return resolveOfferedCatalogCodes(values, settings.accessMethods || [], {
+      held, what: 'access method', list: 'accessMethods', unknownCode: 'access_method_invalid',
+    });
   }
 
   private pickLifecycleFallback(candidate: string, allowed: string[]): string {
@@ -626,21 +644,14 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     value: unknown,
     tenantId: string,
     manager?: any,
-    opts?: { useDefaultForEmpty?: boolean },
+    opts?: { useDefaultForEmpty?: boolean; current?: string | null },
   ): Promise<string> {
-    try {
-      return await this.itOpsSettings.resolveApplicationCategoryCode(tenantId, value, {
-        manager,
-        useDefaultForEmpty: opts?.useDefaultForEmpty,
-      });
-    } catch (error) {
-      if (error instanceof BadRequestException) {
-        const options = await this.itOpsSettings.getApplicationCategoryOptions(tenantId, { manager });
-        const allowed = formatApplicationCategoryOptions(options);
-        throw applicationBadRequest('category_invalid', error.message, { value: String(value ?? ''), allowed });
-      }
-      throw error;
-    }
+    return this.itOpsSettings.resolveApplicationCategoryCode(tenantId, value, {
+      manager,
+      useDefaultForEmpty: opts?.useDefaultForEmpty,
+      current: opts?.current,
+      unknownCode: 'category_invalid',
+    });
   }
 
   // Derived users

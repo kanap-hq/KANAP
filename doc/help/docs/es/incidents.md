@@ -308,6 +308,8 @@ Las categorías de incidente son suyas: defínalas en **Panorama IT > Configurac
 
 Mantenga la lista corta. Las categorías son aquello por lo que agrupará un año de incidentes, y una lista de treinta es una lista que nadie usa de forma coherente. En lugar de eliminar una categoría que ya está en uso, márquela como obsoleta: desaparece del selector para los nuevos incidentes mientras los existentes conservan su historial.
 
+Una categoría marcada **Dejar de proponer** permanece en los incidentes que ya la tienen, que la conservan al guardarse. Los demás incidentes no pueden tomarla, ni en esta página, ni en una importación CSV, ni a través de Kad.
+
 ---
 
 ## Preguntar al asistente

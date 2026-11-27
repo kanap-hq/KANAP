@@ -8,7 +8,7 @@ vi.mock('../../components/fields/UserMultiSelect', () => ({ default: () => null 
 
 const options = vi.hoisted(() => ({
   byField: {
-    lifecycleStatus: [{ code: 'active', label: 'Active' }],
+    lifecycleStatus: [{ code: 'active', label: 'Active' }, { code: 'frozen', label: 'Gelé', deprecated: true }],
     applicationCategory: [
       { code: 'analytics', label: 'Analytique' },
       { code: 'infrastructure', label: 'Infrastructure' },
@@ -56,5 +56,10 @@ describe('useApplicationBulkFields', () => {
     expect(cyber.optional).toBe(true);
     expect(offered(cyber)).toEqual(['Critique', 'Élevée']);
     expect(cyber.changes(null, null)).toEqual({ cyber_criticality: null });
+  });
+
+  it('offers the lifecycles still offered: a retired one goes to no record of a selection', () => {
+    const { result } = renderHook(() => useApplicationBulkFields());
+    expect(offered(result.current.find((field) => field.key === 'lifecycle')!)).toEqual(['Active']);
   });
 });

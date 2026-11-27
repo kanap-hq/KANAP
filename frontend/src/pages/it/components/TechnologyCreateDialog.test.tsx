@@ -21,7 +21,7 @@ vi.mock('../../../hooks/useItOpsEnumOptions', () => ({
   default: () => ({
     settings: null,
     byField: {
-      technologyFamily: [{ code: 'database', label: 'Database' }],
+      technologyFamily: [{ code: 'database', label: 'Database' }, { code: 'mainframe_os', label: 'Mainframe OS', deprecated: true }],
       hostingType: [
         { code: 'on_prem', label: 'On-prem', category: 'on_prem' },
         { code: 'legacy_dc', label: 'Old datacenter', category: 'on_prem', deprecated: true },
@@ -154,6 +154,14 @@ describe('TechnologyCreateDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('TEC-5'));
     expect(post).toHaveBeenCalledWith('/technologies', { name: 'In-house broker', family: undefined, editor: undefined, hosting_type: 'saas' });
+  });
+
+  it('does not offer a retired family to a new technology (rule P7)', async () => {
+    renderDialog();
+    fireEvent.click(screen.getByText('pages.technologies.create.manualLink'));
+    fireEvent.mouseDown(screen.getByLabelText('workspace.technology.fields.family'));
+    expect(await screen.findByRole('option', { name: 'Database' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Mainframe OS' })).toBeNull();
   });
 
   it('lists an already adopted entry with its reference, and opens it instead of adopting it', async () => {

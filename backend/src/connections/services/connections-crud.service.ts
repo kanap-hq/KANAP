@@ -297,6 +297,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
       tenant,
       mg,
       existing.lifecycle,
+      existing.lifecycle,
     );
     const criticality = body.hasOwnProperty('criticality')
       ? await this.normalizeCriticality(body.criticality, tenant, mg, existing.criticality)
@@ -341,11 +342,11 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     let nextProtocols: Array<{ code: string; port_override: string | null }>;
     if (body.hasOwnProperty('protocols')) {
       // Rich form: explicit per-protocol port overrides from the Overview tab.
-      nextProtocols = await this.normalizeProtocols(body.protocols, tenant, mg);
+      nextProtocols = await this.normalizeProtocols(body.protocols, tenant, mg, existingProtocols.map((p) => p.connection_type_code));
     } else if (body.hasOwnProperty('protocol_codes')) {
       // Legacy code-only form (metadata bar add/remove): preserve existing
       // per-protocol overrides for codes that survive the change.
-      const codes = await this.normalizeProtocolCodes(body.protocol_codes, tenant, mg);
+      const codes = await this.normalizeProtocolCodes(body.protocol_codes, tenant, mg, existingProtocols.map((p) => p.connection_type_code));
       nextProtocols = codes.map((code) => ({
         code,
         port_override: existingPortByCode.get(code) ?? null,
@@ -386,7 +387,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
           await this.ensureAsset(candidateAsset, tenant, mg);
           return { asset: candidateAsset, entity: null };
         }
-        await this.validateEntityCode(candidateEntity as string, tenant, mg);
+        await this.validateEntityCode(candidateEntity as string, tenant, mg, fallbackEntity);
         return { asset: null, entity: candidateEntity };
       };
       const src = await normalizeSide(

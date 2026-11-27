@@ -98,6 +98,8 @@ La pestaña [Red](assets.md#network) de cada miembro lista las conexiones de sus
 
 Haga clic en una fila para abrir el espacio de trabajo. Tiene tres pestañas: **Vista general**, **Ruta** e **Historial** (los cambios hechos en la conexión, vea [Historial de los registros](record-history.md)). El panel de propiedades de la derecha contiene **Ciclo de vida**, **Topología**, **Modo de riesgo**, **Criticidad**, **Clasificación de datos**, **Contiene PII** y **Creado el**. Los cambios se guardan automáticamente.
 
+**Valores que ya no se proponen**: el ciclo de vida, los protocolos, la entidad de cada extremo, y la función, los protocolos y la entidad de un salto ofrecen los valores que siguen disponibles en [Configuración del Panorama IT](it-ops-settings.md). Un valor marcado **Dejar de proponer** permanece en las conexiones y los saltos que ya lo tienen, que lo conservan al guardarse. Los demás no pueden tomarlo, ni en esta página ni a través de Kad. Un salto nuevo toma los protocolos de la conexión que siguen disponibles.
+
 **Eliminar**, un icono de papelera en el encabezado, elimina la conexión tras una confirmación (`infrastructure:member`). La confirmación cuenta los saltos que se eliminan con ella y los enlaces de interfaz de los que se desvincula. Las interfaces se conservan.
 
 ### Vista general

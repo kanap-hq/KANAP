@@ -28,6 +28,7 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
 import ExportFormatButton from '../../components/csv/ExportFormatButton';
 import type { ExportFormat } from '../../components/csv/exportFormat';
+import { catalogOptionLabel } from '../../utils/catalogOffered';
 
 const ENDPOINT = '/technologies/reports/administration';
 const ASSETS_ENDPOINT = `${ENDPOINT}/assets`;
@@ -131,7 +132,7 @@ function useZoneName() {
     const zone = zones.find((item) => item.code === code);
     if (!zone || zone.unknown) return t('pages.administrationView.unknownZone', { code });
     const name = (byField.adminZone || []).find((option) => option.code === code)?.label || zone.label || code;
-    return zone.deprecated ? `${name} (${t('common:enumEditor.retiredSuffix')})` : name;
+    return catalogOptionLabel({ code, label: name, deprecated: zone.deprecated }, t);
   }, [byField, t]);
 }
 
@@ -692,7 +693,7 @@ function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => s
     { key: 'servers', header: t('pages.administrationView.columns.servers'), width: 80, align: 'right', render: (row) => row.servers.toLocaleString() },
   ];
   const domainColumns: Array<RelationsColumn<AdministrationDomain>> = [
-    { key: 'name', header: t('pages.administrationView.columns.domain'), width: 200, render: (row) => `${domainName(row.code, row.label)}${row.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}` },
+    { key: 'name', header: t('pages.administrationView.columns.domain'), width: 200, render: (row) => catalogOptionLabel({ code: row.code, label: domainName(row.code, row.label), deprecated: row.deprecated }, t) },
     { key: 'dns', header: t('pages.administrationView.columns.dnsSuffix'), width: 180, hideOrder: 4, render: (row) => row.dns_suffix },
     {
       key: 'trusts',

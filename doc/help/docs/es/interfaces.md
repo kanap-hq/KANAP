@@ -75,6 +75,8 @@ La cuadrícula de Interfaces muestra su registro de integraciones de un vistazo.
 
 Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene seis pestañas, con las propiedades de la interfaz en un panel lateral a la derecha. El nombre de la cabecera se puede editar en el mismo lugar. La última, **Historial**, lista los cambios hechos en la interfaz (vea [Historial de los registros](record-history.md)).
 
+**Valores que ya no se proponen**: la categoría de datos, el ciclo de vida, la criticidad, la clasificación de datos, y el estado y el modo de autenticación de un enlace ofrecen los valores que siguen disponibles en [Configuración del Panorama IT](it-ops-settings.md). Un valor marcado **Dejar de proponer** permanece en las interfaces y los enlaces que ya lo tienen, que lo conservan al guardarse. Los demás no pueden tomarlo, ni en esta página ni a través de Kad. En la pestaña **Flujo**, un disparador, un patrón o un formato que ya no se propone sigue disponible mientras un tramo de la interfaz lo tenga.
+
 La cabecera lleva **Eliminar**, un icono de papelera con su nombre en una información emergente (`applications:admin`). La confirmación usa la misma comprobación que **Eliminar seleccionadas**. Indica que esta acción no se puede deshacer. Cuando la interfaz tiene enlaces, los explica y ofrece **Eliminar también los enlaces relacionados**: la eliminación está disponible una vez marcada esa opción, los enlaces se van con la interfaz y las conexiones se conservan. La lista se abre de nuevo después.
 
 ### Propiedades de la interfaz (panel lateral)

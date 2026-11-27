@@ -19,6 +19,10 @@ function main() {
   assert.equal(catalogFamilyForTenant('database', families('network_security', 'other')), 'other');
   assert.equal(catalogFamilyForTenant('storage', families('storage', 'other')), 'storage');
   assert.equal(catalogFamilyForTenant('network_security', families('network_security', 'other')), 'network_security');
+  // Rule P7: a family the tenant retired is not written on a new technology.
+  const retired = (code: string) => ({ code, deprecated: true });
+  assert.equal(catalogFamilyForTenant('storage', [retired('storage'), { code: 'other' }]), 'other');
+  assert.equal(catalogFamilyForTenant('network', [retired('network'), { code: 'network_security' }, { code: 'other' }]), 'network_security');
   console.log('catalog-family.spec: ok');
 }
 
