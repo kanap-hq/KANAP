@@ -109,6 +109,8 @@ const portfolioRecordFields = (kind: 'project' | 'request'): Record<string, stri
   priority_score: 'portfolio:editors.scoring.labels.priorityScore',
   priority_override: 'portfolio:activity.history.fields.priorityOverride',
   override_value: 'portfolio:activity.history.fields.overrideValue',
+  override_justification: 'portfolio:activity.history.fields.overrideJustification',
+  criteria_values: 'portfolio:editors.scoring.sections.evaluationCriteria',
 });
 
 const BUDGET_LINE_FIELDS: Record<string, string> = {
@@ -283,6 +285,7 @@ const SCREEN_FIELD_KEYS: Record<string, Record<string, string>> = {
     current_situation: 'portfolio:workspace.request.analysis.labels.currentSituation',
     expected_benefits: 'portfolio:workspace.request.analysis.labels.expectedBenefits',
     feasibility_review: 'portfolio:workspace.request.analysis.sections.feasibilityReview',
+    risks: 'portfolio:workspace.request.analysis.fields.risksMitigations',
   },
   technologies: {
     name: 'it:workspace.technology.fields.name',

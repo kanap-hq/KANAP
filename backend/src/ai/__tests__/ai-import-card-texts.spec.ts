@@ -83,8 +83,20 @@ function instructionsNameLinesAndColumnsNeverCodes() {
   assert.match(hint, /by its title/);
   // Lines are those of the person's file, header counted, as the summary and the check number them.
   assert.match(texts, /line of the file/);
+  // Lot I6a of 26.12.1: the assumptions are about the whole file, never about one row (the server says what each row does).
   const assumptions = (operation.inputSchema.shape.assumptions as any).description as string;
-  assert.match(assumptions, /line of the file/);
+  for (const text of [assumptions, operation.inputSummary.assumptions]) {
+    assert.match(text, /about the whole file/);
+    assert.match(text, /never about one row/i);
+    assert.doesNotMatch(text, /line of the file|header counted|named by its line/, 'no assumption names a line of the file');
+  }
+  assert.match(hint, /`assumptions` speak of the whole file, never of one row/);
+  // Passe 2: nor what the import creates, updates or leaves out, nor what a value becomes; in the person's language.
+  for (const text of [assumptions, hint]) {
+    assert.match(text, /creates, updates or leaves out/);
+    assert.match(text, /what a value becomes/);
+  }
+  assert.match(assumptions, /in the person's language/);
   console.log('  the model names lines and columns as the person sees them, never a code: OK');
 }
 
