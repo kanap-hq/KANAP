@@ -709,7 +709,7 @@ Die Anfrage wird mit dem Status **Wartet auf Überprüfung** erstellt und ist mi
 ### Bedingungen
 
 - **Berechtigungen**: Sie benötigen sowohl `tasks:member` als auch `portfolio_requests:member`
-- **Einmalige Konvertierung**: Jede Aufgabe kann nur einmal konvertiert werden. Nach der Konvertierung ist die Schaltfläche **In Anfrage umwandeln** deaktiviert und zeigt die verknüpfte Anfragenreferenz an (z. B. „Bereits in REQ-42 konvertiert")
+- **Einmalige Konvertierung**: Jede Aufgabe kann nur einmal konvertiert werden. Nach der Konvertierung ist die Schaltfläche **In Anfrage umwandeln** deaktiviert, und ihr Tooltip zeigt die verknüpfte Anfragenreferenz an (z. B. „Bereits konvertiert (REQ-42)")
 - **Aufgabe bleibt**: Die ursprüngliche Aufgabe wird nicht gelöscht. Es sei denn, Sie aktivieren die Schließen-Option, bleibt sie in ihrem aktuellen Status und kann unabhängig weiter aktualisiert werden
 
 **Tipp**: Verwenden Sie dies, wenn eine Aufgabe eine größere Initiative offenbart, die ihren eigenen Anfrage-Lebenszyklus benötigt: Kriterienbewertung, Genehmigungs-Workflow und schließlich Konvertierung in ein Projekt.

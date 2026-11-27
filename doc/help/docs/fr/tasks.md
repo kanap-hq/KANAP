@@ -709,7 +709,7 @@ La demande est créée avec un statut de **En attente de revue** et est liée en
 ### Conditions
 
 - **Autorisations** : Vous avez besoin à la fois de `tasks:member` et de `portfolio_requests:member`
-- **Conversion unique** : Chaque tâche ne peut être convertie qu'une seule fois. Après conversion, le bouton **Convertir en demande** est désactivé et affiche la référence de la demande liée (ex. : « Déjà convertie en REQ-42 »)
+- **Conversion unique** : Chaque tâche ne peut être convertie qu'une seule fois. Après conversion, le bouton **Convertir en demande** est désactivé et son infobulle affiche la référence de la demande liée (ex. : « Déjà converti (REQ-42) »)
 - **La tâche reste** : La tâche d'origine n'est pas supprimée. Sauf si vous cochez l'option de fermeture, elle reste dans son statut courant et peut toujours être mise à jour indépendamment
 
 **Conseil** : Utilisez cela lorsqu'une tâche révèle une initiative plus grande qui a besoin de son propre cycle de vie de demande : évaluation par critères, workflow d'approbation et conversion éventuelle en projet.
