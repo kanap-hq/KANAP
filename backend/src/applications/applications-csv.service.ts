@@ -492,14 +492,21 @@ export class ApplicationsCsvService {
     const entityOf = (row: CsvSettledRow) => ('entity' in row ? row.entity : null);
     const ids = settled.flatMap((row) => (entityOf(row) ? [String(entityOf(row).id)] : []));
     const bodies = await loadSlotBodies(context.manager, context.tenantId, 'applications', ids, [APPLICATION_DESCRIPTION_SLOT]);
-    return Promise.all(settled.map(async (row) => {
+    // One row after the other: a seed is read in the Markdown workers, which keep two calls of a person
+    // waiting at most (`markdown-worker.ts`); rows read at once were refused past three.
+    const out: CsvSettledRow[] = [];
+    for (const row of settled) {
       const entity = entityOf(row);
-      if (!entity || !('entity' in row)) return row;
+      if (!entity || !('entity' in row)) {
+        out.push(row);
+        continue;
+      }
       const id = String(entity.id);
       const description = bodies.get(id)?.get(APPLICATION_DESCRIPTION_SLOT) ?? await prepareRecoveredContent(entity.description);
       descriptions.set(id, description);
-      return { ...row, entity: { ...entity, description } };
-    }));
+      out.push({ ...row, entity: { ...entity, description } });
+    }
+    return out;
   }
 
   /**

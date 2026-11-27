@@ -869,7 +869,7 @@ export const applicationCsvConfig: CsvEntityConfig = {
     const ownersById = groupKeys(owners, (o: any) => o.application_id, (o: any) => `${o.owner_type}:${o.user_id}`);
     const residencyById = groupKeys(residency, (r: any) => r.application_id, (r: any) => String(r.country_iso).trim().toUpperCase());
 
-    return Promise.all(rows.map(async (row) => {
+    const sameRow = async (row: (typeof rows)[number]): Promise<boolean> => {
       const stored = row.existingEntity;
       // The owners and the countries the row removes, announced by the check (`cleared`): this hook
       // runs at the check as at the load, on the rows that update an application.
@@ -894,7 +894,12 @@ export const applicationCsvConfig: CsvEntityConfig = {
         return false;
       }
       return sameStoredValues(stored, next);
-    }));
+    };
+    // One row after the other: a description is compared in the Markdown workers, which keep two calls
+    // of a person waiting at most (`markdown-worker.ts`); rows compared at once were refused past three.
+    const same: boolean[] = [];
+    for (const row of rows) same.push(await sameRow(row));
+    return same;
   },
 
   beforeCommit: async (entities: any[], context: CsvImportContext) => {
