@@ -219,10 +219,13 @@ export class IncidentsController {
     @Query('language') languageRaw: string | undefined,
     @Body('unmatched') unmatchedRaw: unknown,
     @Tenant() ctx: TenantRequest,
+    @Query('timeZone') timeZoneRaw?: string,
   ) {
     const viewer = incidentViewerFromContext(ctx);
     // The screen's language (the user's own when the screen sends none), as the export.
     const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
+    // A header without a zone is read in the person's: the browser's, else the user's own, else UTC, as Kad.
+    const timeZone = await timeZoneOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, timeZoneRaw);
     return this.csvSvc.import(
       file,
       { dryRun: dryRun !== 'false', operation, unmatched: csvUnmatched(unmatchedRaw) },
@@ -233,6 +236,7 @@ export class IncidentsController {
         isAdmin: viewer.isAdmin,
         viewer,
         language,
+        timeZone,
         access: csvCallerAccess(ctx),
       },
     );

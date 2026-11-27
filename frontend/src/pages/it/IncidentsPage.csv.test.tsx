@@ -103,6 +103,7 @@ describe('IncidentsPage CSV', () => {
       expect(errors.CSV_HEADER_UNKNOWN_TIME_ZONE, lang).toContain('{{zone}}');
       expect(errors.CSV_HEADER_ZONELESS_DATE_TIMES, lang).toContain('{{columns}}');
       expect(errors.CSV_HEADER_ZONELESS_DATE_TIMES, lang).toContain('{{example}}');
+      expect(errors.CSV_HEADER_ZONELESS_DATE_TIMES, lang).toContain('{{zone}}');
     }
   });
 

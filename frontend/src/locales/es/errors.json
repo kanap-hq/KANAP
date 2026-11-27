@@ -128,7 +128,7 @@
   "BUDGET_FILE_CURRENCY_NOT_COMPANY_UNREAD": "{{currency}} no es la moneda de la sociedad pagadora ({{base}}).",
   "CSV_HEADER_IGNORED_COLUMNS": "Estas columnas no se importan: {{extra}}.",
   "CSV_HEADER_UNKNOWN_TIME_ZONE": "Zona horaria desconocida en la columna {{column}}: {{zone}}. Use una zona como Europe/Paris o UTC.",
-  "CSV_HEADER_ZONELESS_DATE_TIMES": "Horas sin zona horaria, leídas en UTC: {{columns}}. Indique la zona después de la columna, por ejemplo {{example}} (Europe/Paris).",
+  "CSV_HEADER_ZONELESS_DATE_TIMES": "Horas sin zona horaria, leídas en {{zone}}: {{columns}}. Indique la zona después de la columna, por ejemplo {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "Se requiere un valor.",
   "CSV_VALUE_ONE_REQUIRED": "Rellene al menos una columna {{column}}.",
   "CSV_VALUE_CANNOT_BE_CLEARED": "Este valor no se puede vaciar.",

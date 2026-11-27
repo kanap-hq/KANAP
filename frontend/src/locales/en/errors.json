@@ -128,7 +128,7 @@
   "BUDGET_FILE_CURRENCY_NOT_COMPANY_UNREAD": "{{currency}} is not the currency of the paying company ({{base}}).",
   "CSV_HEADER_IGNORED_COLUMNS": "These columns are not imported: {{extra}}.",
   "CSV_HEADER_UNKNOWN_TIME_ZONE": "Unknown time zone in the {{column}} column: {{zone}}. Use a zone such as Europe/Paris or UTC.",
-  "CSV_HEADER_ZONELESS_DATE_TIMES": "Times without a time zone, read as UTC: {{columns}}. Name the zone after the column, for example {{example}} (Europe/Paris).",
+  "CSV_HEADER_ZONELESS_DATE_TIMES": "Times without a time zone, read in {{zone}}: {{columns}}. Name the zone after the column, for example {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "A value is required.",
   "CSV_VALUE_ONE_REQUIRED": "Fill in at least one {{column}} column.",
   "CSV_VALUE_CANNOT_BE_CLEARED": "This value cannot be cleared.",
