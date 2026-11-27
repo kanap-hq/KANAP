@@ -46,4 +46,5 @@ export const CONNECTION_ASSET_READERS: Readonly<Record<string, ConnectionAssetRe
   'src/it-ops-settings/catalog-usage.ts': { status: 'direct', reason: 'Usage of a catalog code: the stored rows name it.' },
   'src/common/tenant-isolation.inventory.ts': { status: 'direct', reason: 'Tenant isolation inventory.' },
   'src/admin/tenants/tenant-purge.inventory.ts': { status: 'direct', reason: 'Tenant purge inventory.' },
+  'src/common/creation/creation-links.inventory.ts': { status: 'direct', reason: 'Creation cancel inventory: names the table, reads nothing.' },
 };

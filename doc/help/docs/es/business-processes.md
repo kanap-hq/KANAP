@@ -64,7 +64,7 @@ Mientras el proceso se está creando, su encabezado muestra **Crear** y **Cancel
 
 - **Crear** funciona como Intro: crea el proceso y lo deja abierto. Con el título vacío, el título pide uno.
 - Una vez creado el proceso, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le lleva de vuelta al punto de partida: la lista o la pantalla anterior.
-- **Cancelar** cierra sin conservar nada. En un proceso ya creado, lo elimina, con los vínculos a aplicaciones que haya añadido. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar procesos.
+- **Cancelar** cierra sin conservar nada. En un proceso ya creado, lo elimina, con los vínculos a aplicaciones que haya añadido. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar procesos. En cuanto otra persona ha hecho algún cambio, o hay una solicitud vinculada, **Cancelar** se rechaza.
 
 Si sale del proceso de otra forma, este se conserva.
 

@@ -18,6 +18,10 @@ import { ConnectionProtocol } from '../connection-protocol.entity';
 import { ConnectionLeg } from '../connection-leg.entity';
 import { ConnectionsController } from '../connections.controller';
 import { ConnectionsCrudService } from '../services/connections-crud.service';
+import { ConnectionsLegsService } from '../services/connections-legs.service';
+import { InterfaceBinding } from '../../interface-bindings/interface-binding.entity';
+import { InterfaceBindingsService } from '../../interface-bindings/interface-bindings.service';
+import { KnowledgeService } from '../../knowledge/knowledge.service';
 
 // A connection is born complete (lot L3c): the screen fills a draft and writes it with one
 // `POST /connections`, which keeps its full rules (a protocol, both ends or two servers) and hands
@@ -33,6 +37,7 @@ const SETTINGS = {
   lifecycleStates: [{ code: 'active' }],
   connectionTypes: [{ code: 'https' }, { code: 'ssh' }],
   entities: [{ code: 'internet' }],
+  pathHopFunctions: [{ code: 'firewall' }],
 };
 
 type Req = { tenant: { id: string }; user: { sub: string }; queryRunner: { manager: any } };
@@ -113,7 +118,74 @@ function setup(runner: QueryRunner) {
       delete: (id: string, userId: string | null, opts: any) => crud.delete(id, userId, opts),
     },
   });
-  return { controller, crud };
+  const legs = new ConnectionsLegsService(
+    manager.getRepository(Connection),
+    manager.getRepository(ConnectionServer),
+    manager.getRepository(ConnectionProtocol),
+    manager.getRepository(ConnectionLeg),
+    manager.getRepository(Asset),
+    settings as any,
+    audit,
+  );
+  // The writers of a connection's links, as their screens call them: an interface binding's
+  // connection (`POST /interface-bindings/:id/connection-links`) and a document's relation.
+  const bindings = Object.assign(Object.create(InterfaceBindingsService.prototype), { audit, repo: manager.getRepository(InterfaceBinding) }) as InterfaceBindingsService;
+  const knowledge = Object.create(KnowledgeService.prototype) as KnowledgeService;
+  return { controller, crud, legs, bindings, knowledge };
+}
+
+/** Interface bindings to link connections to: one interface between two applications, one binding per leg. */
+async function seedBindings(runner: QueryRunner, tenantId: string, count: number): Promise<string[]> {
+  const id = async (text: string, params: unknown[]) => (await runner.query(`${text} RETURNING id`, params))[0].id as string;
+  const tag = randomUUID().slice(0, 8);
+  const app = (name: string) => id(`INSERT INTO applications (tenant_id, name, status) VALUES ($1, $2, 'enabled')`, [tenantId, `${name}-${tag}`]);
+  const [source, target] = [await app('Orders'), await app('Billing')];
+  const instance = (applicationId: string) => id(`INSERT INTO app_instances (tenant_id, application_id, environment) VALUES ($1, $2, 'prod')`, [tenantId, applicationId]);
+  const [sourceInstance, targetInstance] = [await instance(source), await instance(target)];
+  const interfaceId = await id(
+    `INSERT INTO interfaces (tenant_id, interface_reference, name, source_application_id, target_application_id, business_purpose, data_category, integration_route_type)
+     VALUES ($1, $2, 'Orders flow', $3, $4, 'Orders', 'orders', 'direct')`,
+    [tenantId, `INT-${tag}`, source, target],
+  );
+  const out: string[] = [];
+  for (let order = 1; order <= count; order++) {
+    const leg = await id(
+      `INSERT INTO interface_legs (tenant_id, interface_id, leg_type, from_role, to_role, trigger_type, integration_pattern, data_format, order_index)
+       VALUES ($1, $2, 'source', 'source', 'target', 'schedule', 'batch', 'json', $3)`,
+      [tenantId, interfaceId, order],
+    );
+    out.push(await id(
+      `INSERT INTO interface_bindings (tenant_id, interface_id, interface_leg_id, environment, source_instance_id, target_instance_id)
+       VALUES ($1, $2, $3, 'prod', $4, $5)`,
+      [tenantId, interfaceId, leg, sourceInstance, targetInstance],
+    ));
+  }
+  return out;
+}
+
+/** A published document to link connections to. */
+async function seedDocument(runner: QueryRunner, tenantId: string): Promise<string> {
+  const tag = randomUUID().slice(0, 8);
+  const [library] = await runner.query(`INSERT INTO document_libraries (tenant_id, name, slug) VALUES ($1, $2, $3) RETURNING id`, [tenantId, `Library ${tag}`, `library-${tag}`]);
+  const [document] = await runner.query(
+    `INSERT INTO documents (tenant_id, library_id, title, item_number, status) VALUES ($1, $2, 'Firewall rules', 1, 'published') RETURNING id`,
+    [tenantId, library.id],
+  );
+  return document.id as string;
+}
+
+/** What a connection holds: itself and each of its children (`?` once gone). */
+async function holdings(runner: QueryRunner, tenantId: string, connectionId: string) {
+  const [row] = await runner.query(
+    `SELECT (SELECT count(*)::int FROM connections WHERE tenant_id = $1 AND id = $2) AS connection,
+            (SELECT count(*)::int FROM connection_protocols WHERE tenant_id = $1 AND connection_id = $2) AS protocols,
+            (SELECT count(*)::int FROM connection_servers WHERE tenant_id = $1 AND connection_id = $2) AS servers,
+            (SELECT count(*)::int FROM connection_legs WHERE tenant_id = $1 AND connection_id = $2) AS legs,
+            (SELECT count(*)::int FROM interface_connection_links WHERE tenant_id = $1 AND connection_id = $2) AS interface_links,
+            (SELECT count(*)::int FROM document_connections WHERE tenant_id = $1 AND connection_id = $2) AS document_links`,
+    [tenantId, connectionId],
+  );
+  return row as Record<'connection' | 'protocols' | 'servers' | 'legs' | 'interface_links' | 'document_links', number>;
 }
 
 async function refusedWith(promise: Promise<unknown>, check: (response: any) => void) {
@@ -214,6 +286,105 @@ async function testCreatedWholeWithAToken() {
   });
 }
 
+// Lot N1b (decision P17): an interface binding or a document linked to the connection ends its
+// creator's "Cancel" (403 `CREATION_CANCEL_EXPIRED`), before and under the lock, and nothing goes.
+// Those links carry no author and no history row of the connection (only the first binding's
+// risk-mode switch writes one), so any link refuses, the creator's own included. The protocols,
+// servers and path segments the creator gives do not; another person's change of them is in the
+// history.
+
+async function testOwnChildrenStillCancel() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, creatorId, web, db, req } = await seed(runner);
+    const { controller, crud, legs } = setup(runner);
+    const opts = { manager: runner.manager };
+    const multi: any = await (controller as any).create({ name: 'Cluster sync', topology: 'multi_server', servers: [web, db], protocol_codes: ['https'] }, req(creatorId));
+    await crud.update(multi.id, { protocol_codes: ['https', 'ssh'] }, tenantId, creatorId, opts);
+    await legs.createLeg(multi.id, tenantId, { function_code: 'firewall', protocol_codes: ['https'] }, creatorId, opts);
+    assert.deepEqual(await holdings(runner, tenantId, multi.id), { connection: 1, protocols: 2, servers: 2, legs: 1, interface_links: 0, document_links: 0 });
+
+    const changes = await controller.creationChanges(multi.id, multi.creation_token, req(creatorId));
+    assert.equal(changes.changes.children.protocol, 2, 'the preflight counts what Cancel would delete');
+    await controller.cancelCreation(multi.id, { token: multi.creation_token }, req(creatorId));
+    assert.deepEqual(await holdings(runner, tenantId, multi.id), { connection: 0, protocols: 0, servers: 0, legs: 0, interface_links: 0, document_links: 0 }, 'everything goes');
+  });
+}
+
+async function testLinkedConnectionRefusesCancel() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, creatorId, otherId, web, req } = await seed(runner);
+    const { controller, bindings, knowledge } = setup(runner);
+    const opts = { manager: runner.manager };
+    const [firstBinding, secondBinding] = await seedBindings(runner, tenantId, 2);
+    const document = await seedDocument(runner, tenantId);
+    const create = (name: string): Promise<any> =>
+      (controller as any).create({ name, source_asset_id: web, destination_entity_code: 'internet', protocol_codes: ['https'] }, req(creatorId));
+    const refused = async (connection: any, message: string) => {
+      const before = await holdings(runner, tenantId, connection.id);
+      await refusedAsExpired(controller.creationChanges(connection.id, connection.creation_token, req(creatorId)), `${message}: preflight`);
+      await refusedAsExpired(controller.cancelCreation(connection.id, { token: connection.creation_token }, req(creatorId)), `${message}: cancel`);
+      assert.deepEqual(await holdings(runner, tenantId, connection.id), before, `${message}: nothing is deleted`);
+      assert.equal(before.connection, 1, `${message}: the connection stays`);
+    };
+
+    // The creator links a first binding (its risk-mode switch is the creator's history row),
+    // another person a second one, which leaves no history row.
+    const interfaces = await create('Interface linked');
+    await bindings.createConnectionLink(firstBinding, { connection_id: interfaces.id }, tenantId, creatorId, opts);
+    await bindings.createConnectionLink(secondBinding, { connection_id: interfaces.id }, tenantId, otherId, opts);
+    await refused(interfaces, 'an interface binding linked by another person');
+
+    // Another person links the first binding: refused as well.
+    const firstByOther = await create('First binding by another');
+    await bindings.createConnectionLink(firstBinding, { connection_id: firstByOther.id }, tenantId, otherId, opts);
+    await refused(firstByOther, 'a first interface binding linked by another person');
+
+    // A document linked by another person writes no history row of the connection.
+    const documents = await create('Document linked');
+    await knowledge.addDocumentRelationByEntity(document, 'connections', documents.id, runner.manager);
+    await refused(documents, 'a document linked by another person');
+
+    // A link carries no author: the creator's own link refuses too.
+    const own = await create('Own link');
+    await bindings.createConnectionLink(secondBinding, { connection_id: own.id }, tenantId, creatorId, opts);
+    await refused(own, 'an interface binding linked by the creator');
+
+    // Unlinked again, the creator cancels it as before.
+    const unlinked = await create('Unlinked');
+    await knowledge.addDocumentRelationByEntity(document, 'connections', unlinked.id, runner.manager);
+    await knowledge.removeDocumentRelationByEntity(document, 'connections', unlinked.id, runner.manager);
+    await controller.cancelCreation(unlinked.id, { token: unlinked.creation_token }, req(creatorId));
+    assert.equal((await holdings(runner, tenantId, unlinked.id)).connection, 0, 'a link removed no longer refuses');
+  });
+}
+
+async function testOtherTenant() {
+  await inRolledBackTransaction(async (runner) => {
+    const first = await seed(runner);
+    const firstSetup = setup(runner);
+    const body = (asset: string) => ({ name: 'Web out', source_asset_id: asset, destination_entity_code: 'internet', protocol_codes: ['https'] });
+    const asTenant = (tenantId: string) => runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+    await asTenant(first.tenantId);
+    const mine: any = await (firstSetup.controller as any).create(body(first.web), first.req(first.creatorId));
+
+    // Another tenant: its connection, linked to a document of its own.
+    const second = await seed(runner);
+    const secondSetup = setup(runner);
+    const theirs: any = await (secondSetup.controller as any).create(body(second.web), second.req(second.creatorId));
+    const document = await seedDocument(runner, second.tenantId);
+    await secondSetup.knowledge.addDocumentRelationByEntity(document, 'connections', theirs.id, runner.manager);
+
+    // The first tenant's token is worth nothing in the second, and the second's link does not reach the first.
+    await refusedAsExpired(secondSetup.controller.cancelCreation(mine.id, { token: mine.creation_token }, second.req(first.creatorId)), 'another tenant');
+    await refusedAsExpired(secondSetup.controller.cancelCreation(theirs.id, { token: theirs.creation_token }, second.req(second.creatorId)), 'the second tenant is linked');
+    await asTenant(first.tenantId);
+    await firstSetup.controller.cancelCreation(mine.id, { token: mine.creation_token }, first.req(first.creatorId));
+    assert.equal((await holdings(runner, first.tenantId, mine.id)).connection, 0, 'the first tenant cancels');
+    await asTenant(second.tenantId);
+    assert.deepEqual(await holdings(runner, second.tenantId, theirs.id), { connection: 1, protocols: 1, servers: 0, legs: 0, interface_links: 0, document_links: 1 }, 'the second keeps its own');
+  });
+}
+
 async function testIncompleteConnectionStillEdits() {
   await inRolledBackTransaction(async (runner) => {
     const { tenantId, creatorId, web, db } = await seed(runner);
@@ -249,6 +420,12 @@ async function main() {
     console.log('  ok testRoutes');
     await testCreatedWholeWithAToken();
     console.log('  ok testCreatedWholeWithAToken');
+    await testOwnChildrenStillCancel();
+    console.log('  ok testOwnChildrenStillCancel');
+    await testLinkedConnectionRefusesCancel();
+    console.log('  ok testLinkedConnectionRefusesCancel');
+    await testOtherTenant();
+    console.log('  ok testOtherTenant');
     await testIncompleteConnectionStillEdits();
     console.log('  ok testIncompleteConnectionStillEdits');
   } finally {

@@ -64,7 +64,7 @@ Solange der Prozess erstellt wird, zeigt seine Kopfzeile **Erstellen** und **Abb
 
 - **Erstellen** wirkt wie die Eingabetaste: Es erstellt den Prozess und lässt ihn geöffnet. Bei leerem Titel verlangt der Titel einen.
 - Sobald der Prozess erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm.
-- **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstellter Prozess wird gelöscht, mit den Verknüpfungen zu Anwendungen, die Sie hinzugefügt haben. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Prozessen abbrechen.
+- **Abbrechen** schließt, ohne etwas zu behalten. Ein bereits erstellter Prozess wird gelöscht, mit den Verknüpfungen zu Anwendungen, die Sie hinzugefügt haben. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Prozessen abbrechen. Sobald eine andere Person etwas daran geändert hat oder eine Anfrage damit verknüpft ist, wird **Abbrechen** abgelehnt.
 
 Verlassen Sie den Prozess auf andere Weise, bleibt er bestehen.
 

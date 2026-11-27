@@ -24,6 +24,7 @@ Solange die Verbindung erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **A
 - Lehnt Kadratis die Verbindung ab, zum Beispiel mit demselben Asset auf beiden Seiten, erscheint die Meldung unter dem betroffenen Feld. Der Entwurf bleibt unverändert
 - Sobald die Verbindung erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben
 - **Abbrechen** löscht die Verbindung. Wenn Sie sie nach der Erstellung geändert haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Verbindungen abbrechen
+- Sobald eine andere Person die Verbindung geändert hat oder eine Schnittstellen-Bindung oder ein Dokument mit ihr verknüpft ist, wird **Abbrechen** abgelehnt: Löschen Sie die Verbindung stattdessen
 
 Verlassen Sie die Verbindung auf andere Weise (über das Menü oder den Zurück-Pfeil), bleibt sie erhalten: Sie ist vollständig.
 

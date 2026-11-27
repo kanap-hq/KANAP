@@ -4,6 +4,7 @@ import { auditPageQuery } from '../../audit/record-history/query';
 import { historyFields } from '../../audit/record-history/fields';
 import { deepEqual, isPlainObject } from '../../audit/record-history/values';
 import { creationCancelExpired } from './creation-token';
+import { assertNoCreationLinks } from './creation-links';
 
 /**
  * What was written on a record and its children since its creation, read before "Cancel creation"
@@ -165,9 +166,11 @@ export async function countOtherAuthorsSinceCreation(
 /**
  * "Cancel" of a record being created stops once another person has worked on it: 403
  * `CREATION_CANCEL_EXPIRED` when its history since its creation holds a write by anyone but
- * `userId` (the token's person). The cancel routes call it with the record locked FOR UPDATE
- * (`lock`: here, on the record's own table), so no write of another person lands between this read
- * and the delete; their preflight calls it without the lock.
+ * `userId` (the token's person), or when a child no history row records stands
+ * (`creation-links.ts`: a linked document, another person's journal note). The cancel routes call
+ * it with the record locked FOR UPDATE (`lock`: here, on the record's own table), so no write of
+ * another person lands between these reads and the delete; their preflight calls it without the
+ * lock.
  */
 export async function assertCreatorAloneSinceCreation(
   manager: EntityManager,
@@ -185,4 +188,5 @@ export async function assertCreatorAloneSinceCreation(
     if (!locked.length) return;
   }
   if ((await countOtherAuthorsSinceCreation(manager, tenantId, table, recordId, userId)) > 0) throw creationCancelExpired();
+  await assertNoCreationLinks(manager, tenantId, table, recordId, userId, { lock: options.lock });
 }

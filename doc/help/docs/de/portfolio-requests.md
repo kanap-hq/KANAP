@@ -105,6 +105,7 @@ Solange die Anfrage erstellt wird, zeigt ihre Kopfzeile **Erstellen** und **Abbr
 - **Erstellen** wirkt wie die Eingabetaste: Es erstellt die Anfrage und lässt sie geöffnet, mit ihrer Referenz. Bei leerem Titel verlangt der Titel einen
 - Sobald die Anfrage erstellt ist, wird **Erstellen** zu **Fertig**. **Fertig** speichert, was Sie gerade eingeben, und bringt Sie dorthin zurück, wo Sie begonnen haben: zur Liste oder zum vorherigen Bildschirm
 - **Abbrechen** schließt, ohne etwas zu behalten. Eine bereits erstellte Anfrage wird gelöscht. Wenn Sie mehr als den Namen eingegeben haben, nennt eine Bestätigung, was gelöscht wird. Sie können Ihre eigene Erstellung auch ohne das Recht zum Löschen von Anfragen abbrechen
+- Sobald eine andere Person etwas daran geändert oder kommentiert hat oder ein anderer Datensatz damit verknüpft ist, wird **Abbrechen** abgelehnt
 
 Verlassen Sie die Anfrage auf andere Weise, bleibt sie bestehen. Ein Administrator kann sie dann mit **Löschen** löschen. Die Referenz einer abgebrochenen Anfrage wird nicht wiederverwendet.
 

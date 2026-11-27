@@ -24,6 +24,7 @@ Mientras la conexión se está creando, su encabezado muestra **Crear** y **Canc
 - Cuando Kadratis rechaza la conexión, por ejemplo con el mismo activo en ambos lados, el mensaje aparece bajo el campo afectado. El borrador se queda como está
 - Una vez creada la conexión, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le devuelve al punto de partida
 - **Cancelar** elimina la conexión. Si la modificó después de crearla, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar conexiones
+- En cuanto otra persona ha modificado la conexión, o un enlace de interfaz o un documento está vinculado a ella, **Cancelar** se rechaza: elimine la conexión en su lugar
 
 Si sale de la conexión de otra forma (el menú, la flecha de retroceso), se conserva: está completa.
 

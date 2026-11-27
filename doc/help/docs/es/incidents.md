@@ -46,6 +46,7 @@ Mientras el incidente se está creando, su encabezado muestra **Crear** y **Canc
 - **Crear** funciona como Intro: crea el incidente y lo deja abierto, con su referencia. Con el título vacío, el título pide uno
 - Una vez creado el incidente, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le lleva de vuelta al punto de partida: la lista o la pantalla anterior
 - **Cancelar** cierra sin conservar nada. En un incidente ya creado, lo elimina. Si introdujo algo más que el título, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar incidentes
+- En cuanto otra persona ha hecho algún cambio o ha escrito en su diario, o un documento está vinculado, **Cancelar** se rechaza
 
 **Cancelar incidente** permanece oculto mientras el incidente se está creando. La cancelación de la creación se rechaza en cuanto el incidente está cerrado o cancelado, o contiene datos de notificación reglamentaria (consulte [Eliminar un incidente](#eliminar-un-incidente)). Si sale del incidente de otra forma, este permanece en el registro. La referencia de una creación cancelada no se reutiliza.
 
