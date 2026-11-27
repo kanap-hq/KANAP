@@ -102,14 +102,18 @@ function updateStatusRow(itemNumber: number, from: string, to: string): CsvImpor
  */
 async function testHiddenRefIsUnknownOnValidate(): Promise<void> {
   const row = importRow('INC-12');
+  const other = { ...importRow('INC-99'), rowNumber: 3 };
   const context = mockContext([hiddenRow]);
-  await incidentCsvConfig.beforeValidate!([row], context);
-  assert.equal(row.raw.ref, '12');
+  await incidentCsvConfig.beforeValidate!([row, other], context);
+  // Taken off the row on a read that locks nothing: the load neither finds nor locks the incident.
+  assert.equal(row.raw.ref, '');
+  assert.equal(other.raw.ref, '99');
   assert.equal(row.errors.length, 0);
   const [hidden, unknown] = await incidentCsvConfig.settleRows!([
-    { raw: { ref: '12' }, rowNumber: 2, found: hiddenRow },
-    { raw: { ref: '99' }, rowNumber: 3, found: null },
+    { raw: row.raw, rowNumber: 2, found: null },
+    { raw: other.raw, rowNumber: 3, found: null },
   ], context);
+  assert.equal(row.raw.ref, '12', 'the reference given back to the row');
   const answer = (settled: typeof hidden) => {
     assert.ok(!settled.leaveOut);
     assert.equal(settled.entity, null);
@@ -128,7 +132,8 @@ async function testVisibleRestrictedRefIsAllowed(): Promise<void> {
   const context = mockContext([visibleRestrictedRow]);
   await incidentCsvConfig.beforeValidate!([row], context);
   assert.equal(row.errors.length, 0);
-  const [settled] = await incidentCsvConfig.settleRows!([{ raw: { ref: '13' }, rowNumber: 2, found: visibleRestrictedRow }], context);
+  assert.equal(row.raw.ref, '13', 'kept for the load, which finds and locks it');
+  const [settled] = await incidentCsvConfig.settleRows!([{ raw: row.raw, rowNumber: 2, found: visibleRestrictedRow }], context);
   assert.ok(!settled.leaveOut);
   assert.equal(settled.entity, visibleRestrictedRow);
   assert.equal(settled.errors, undefined);

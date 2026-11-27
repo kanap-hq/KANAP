@@ -18,7 +18,7 @@ import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { findCatalogOption, offeredCatalogList, requireImportCatalogs, type CatalogOptionLike } from '../it-ops-settings/catalog-resolve';
 import { keepStoredSlotBodies, sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, isReservedIncidentStatusMove } from './incident.entity';
-import { incidentVisibleToViewer, type IncidentViewer } from './incident-visibility';
+import { incidentVisibleToViewer, type IncidentViewer, type IncidentVisibilityRow } from './incident-visibility';
 import { numberedReference } from '../common/csv-sheet/master-data';
 
 /**
@@ -113,6 +113,13 @@ export const IMPORT_ENTRY_CONTENT = 'Imported from CSV';
 
 /** Rows inserted by the current import, marked in beforeCommit, journalled in afterCommit. */
 const insertedByImport = new WeakSet<object>();
+
+/**
+ * The rows whose reference names an incident the person does not read, with its number: kept out of
+ * the load's lookup by `beforeValidate`, so the load neither finds nor locks it, and given back to the
+ * row by `settleRows` (lot I6c of 26.12.1).
+ */
+const hiddenReferences = new WeakMap<object, number>();
 
 /**
  * `review` is a virtual column. It is parsed onto the entity like any other
@@ -650,28 +657,38 @@ export const incidentCsvConfig: CsvEntityConfig = {
   ],
 
   /**
-   * Identity resolution reads the raw cells, so INC-12 has to become 12 before
-   * the existing incidents are loaded. Mutating `raw` here is what the import
-   * service then matches and parses.
+   * Identity resolution reads the raw cells, so INC-12 (or INC-0012) has to become 12 before the
+   * existing incidents are loaded. Mutating `raw` here is what the import service then matches and
+   * parses. A reference that is no number (`INC-3000000000`) is left as it came: the cell's own
+   * reading refuses it, once.
+   *
+   * Then whether the person reads each incident named, on a read that locks nothing (lot I6c of
+   * 26.12.1): the reference of one they do not read is taken off the row, so the load does not find,
+   * lock or wait for it, as for a reference no incident has; `settleRows` gives it back.
    */
-  beforeValidate: async (rows) => {
+  beforeValidate: async (rows, context) => {
+    const named = new Map<number, CsvImportRow[]>();
     for (const row of rows) {
       const value = row.raw.ref;
       if (typeof value !== 'string') continue;
       const match = REF_INPUT_RE.exec(value.trim());
-      if (match) {
-        const number = parseItemNumber(match[1]);
-        if (number == null) {
-          row.errors.push({
-            row: row.rowNumber,
-            column: 'ref',
-            message: invalidReferenceMessage(value),
-            code: IMPORT_REFERENCE_INVALID_CODE,
-            params: { value },
-          });
-          continue;
-        }
-        row.raw.ref = match[1];
+      const number = match ? parseItemNumber(match[1]) : null;
+      if (number == null) continue;
+      row.raw.ref = String(number);
+      named.set(number, [...(named.get(number) ?? []), row]);
+    }
+    if (named.size === 0) return;
+    const viewer = importViewer(context);
+    const stored: Array<{ item_number: number } & IncidentVisibilityRow> = await context.manager.query(
+      `SELECT item_number, confidential, reporter_user_id, owner_user_id FROM incidents
+       WHERE tenant_id = $1 AND item_number = ANY($2::int[])`,
+      [context.tenantId, [...named.keys()]],
+    );
+    for (const incident of stored) {
+      if (incidentVisibleToViewer(incident, viewer)) continue;
+      for (const row of named.get(Number(incident.item_number)) ?? []) {
+        hiddenReferences.set(row.raw, Number(incident.item_number));
+        row.raw.ref = '';
       }
     }
   },
@@ -685,10 +702,21 @@ export const incidentCsvConfig: CsvEntityConfig = {
    */
   settleRows: async (rows, context) => {
     const viewer = importViewer(context);
+    // "Update only" skips a row that finds no incident, as it always has: one the person does not
+    // read alike.
+    const updateOnly = context.params.operation === 'update_only';
     return rows.map(({ raw, rowNumber, found }) => {
+      const hidden = hiddenReferences.get(raw);
+      if (hidden !== undefined) {
+        // Its reference back on the row, for the file's duplicates and the cell's reading.
+        raw.ref = String(hidden);
+        hiddenReferences.delete(raw);
+      }
       const itemNumber = typeof raw.ref === 'string' && /^\d+$/.test(raw.ref) ? parseItemNumber(raw.ref) : null;
       if (itemNumber == null) return { entity: found ?? null };
+      // At the load, `found` is the incident as locked: the rule read again on it.
       if (found && incidentVisibleToViewer(found, viewer)) return { entity: found };
+      if (updateOnly) return { entity: null };
       return { entity: null, errors: [unknownReferenceError({ rowNumber }, itemNumber)] };
     });
   },

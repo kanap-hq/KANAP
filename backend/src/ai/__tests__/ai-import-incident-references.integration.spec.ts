@@ -306,6 +306,192 @@ async function testTimesWithoutZone(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  times without a zone: read in the zone of the person who imports, said on the card: OK');
 }
 
+// ---------------------------------------------------------------------------
+// The screen's load with two connections (review of lot I6c): a committed workspace, removed after.
+// ---------------------------------------------------------------------------
+
+function csvFile(content: string): Express.Multer.File {
+  const text = `\uFEFF${content}`;
+  return { buffer: Buffer.from(text, 'utf8'), fieldname: 'file', originalname: 'incidents.csv', encoding: 'utf8', mimetype: 'text/csv', size: Buffer.byteLength(text) } as Express.Multer.File;
+}
+
+type Committed = { tenantId: string; outsider: string };
+
+async function inTenant<T>(h: Harness, tenantId: string, work: (runner: QueryRunner) => Promise<T>): Promise<T> {
+  const runner = h.dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  try {
+    await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+    const result = await work(runner);
+    await runner.commitTransaction();
+    return result;
+  } catch (error) {
+    await runner.rollbackTransaction();
+    throw error;
+  } finally {
+    await runner.release();
+  }
+}
+
+/** An outsider (incidents contributor); INC-1 open to all, INC-3, INC-5 and INC-6 confidential. */
+async function seedCommitted(h: Harness): Promise<Committed> {
+  const tenantId = randomUUID();
+  const slug = `ai-i6c-locks-${tenantId.slice(0, 8)}`;
+  await h.dataSource.query(
+    `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
+     VALUES ($1, $2, $3, 'active', '{"reporting_currency":"EUR"}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
+    [tenantId, slug, slug],
+  );
+  return inTenant(h, tenantId, async (runner) => {
+    const role = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Contrib', 'Contrib')`, [tenantId]);
+    await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'incidents', 'contributor')`, [tenantId, role]);
+    const outsider = await insertId(runner,
+      `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status, locale) VALUES ($1, $2, 'Out', 'Sider', $3, 'enabled', 'fr')`,
+      [tenantId, `outsider-${slug}@example.test`, role]);
+    for (const [number, confidential] of [[1, false], [3, true], [5, true], [6, true]] as Array<[number, boolean]>) {
+      await runner.query(
+        `INSERT INTO incidents (tenant_id, item_number, title, severity, status, detected_at, confidential, created_at, updated_at)
+         VALUES ($1, $2, $3, 'major', 'open', '2026-10-16T08:38:00Z', $4, now(), now())`,
+        [tenantId, number, `Secret ${number}`, confidential]);
+    }
+    await runner.query(`INSERT INTO item_sequences (tenant_id, entity_type, next_val) VALUES ($1, 'incident', 10)`, [tenantId]);
+    return { tenantId, outsider };
+  });
+}
+
+async function removeCommitted(h: Harness, c: Committed) {
+  await inTenant(h, c.tenantId, async (runner) => {
+    for (const table of ['incident_entries', 'incidents', 'item_sequences', 'users', 'role_permissions', 'roles']) {
+      await runner.query(`DELETE FROM ${table} WHERE tenant_id = $1`, [c.tenantId]);
+    }
+  });
+  await h.dataSource.query(`DELETE FROM tenants WHERE id = $1`, [c.tenantId]).catch(() => undefined);
+}
+
+/** A session in the workspace, its transaction open. */
+async function openSession(h: Harness, c: Committed): Promise<QueryRunner> {
+  const runner = h.dataSource.createQueryRunner();
+  await runner.connect();
+  await runner.startTransaction();
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [c.tenantId]);
+  return runner;
+}
+
+async function closeSession(runner: QueryRunner, commit = false) {
+  if (commit) await runner.commitTransaction(); else await runner.rollbackTransaction().catch(() => undefined);
+  await runner.release();
+}
+
+/** One import by the outsider on the screen, in its own transaction: its answer (or error) and time. `after` runs before it ends. */
+async function screenImport(h: Harness, c: Committed, body: string, operation: string, dryRun: boolean, after?: () => Promise<void>) {
+  const runner = await openSession(h, c);
+  try {
+    await runner.query(`SET LOCAL lock_timeout = '1500ms'`);
+    const t0 = Date.now();
+    let answer: { result: any; error: string | null };
+    try {
+      answer = { result: await h.incidentsCsv.import(csvFile(body), { dryRun, operation }, {
+        manager: runner.manager, tenantId: c.tenantId, userId: c.outsider, isAdmin: false, viewer: { userId: c.outsider, isAdmin: false }, language: 'fr',
+      }), error: null };
+    } catch (error: any) {
+      answer = { result: null, error: String(error.message) };
+    }
+    const ms = Date.now() - t0;
+    if (after) await after();
+    return { ...answer, ms };
+  } finally {
+    await closeSession(runner);
+  }
+}
+
+const answerShape = (answer: { result: any; error: string | null }, reference: string) =>
+  JSON.stringify(answer.result ?? answer.error).split(reference).join('<ref>');
+const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+const fileOf = (reference: string) => `ref;title;severity\n${reference};Titre;minor\n`;
+
+// The load locks only the incidents the person reads: one held by another transaction, hidden from
+// the person, answers as an unknown reference does, as fast, and the load leaves it free.
+async function testHiddenHeldDuringTheLoad(h: Harness, c: Committed) {
+  const holder = await openSession(h, c);
+  try {
+    await holder.query(`UPDATE incidents SET title = title WHERE tenant_id = $1 AND item_number = 3`, [c.tenantId]);
+    const times = { hidden: [] as number[], unknown: [] as number[] };
+    let hidden: any = null;
+    let unknown: any = null;
+    for (let round = 0; round < 5; round++) {
+      hidden = await screenImport(h, c, fileOf('INC-3'), 'upsert', false);
+      unknown = await screenImport(h, c, fileOf('INC-99'), 'upsert', false);
+      times.hidden.push(hidden.ms);
+      times.unknown.push(unknown.ms);
+    }
+    assert.equal(hidden.error, null, `the load answers, it does not wait: ${hidden.error}`);
+    assert.equal(answerShape(hidden, 'INC-3'), answerShape(unknown, 'INC-99'), 'the same answer');
+    assert.deepEqual(hidden.result.errors.map((error: any) => [error.row, error.column, error.code]), [[2, 'ref', 'CSV_RECORD_REFERENCE_NOT_FOUND']]);
+    assert.ok(Math.abs(median(times.hidden) - median(times.unknown)) < 50, `the same time: ${median(times.hidden)} ms vs ${median(times.unknown)} ms`);
+  } finally {
+    await closeSession(holder);
+  }
+  // While the load's transaction is still open, another one writes the hidden incident at once.
+  const load = await screenImport(h, c, fileOf('INC-3'), 'upsert', false, async () => {
+    const other = await openSession(h, c);
+    try {
+      await other.query(`SET LOCAL lock_timeout = '300ms'`);
+      await other.query(`UPDATE incidents SET title = title WHERE tenant_id = $1 AND item_number = 3`, [c.tenantId]);
+    } finally {
+      await closeSession(other);
+    }
+  });
+  assert.equal(load.error, null);
+  console.log('  the screen\'s load locks only the incidents the person reads: a hidden one held elsewhere answers as an unknown one: OK');
+}
+
+// A hidden incident deleted while the load runs: one refusal, the unknown reference's.
+async function testHiddenDeletedDuringTheLoad(h: Harness, c: Committed) {
+  const deleter = await openSession(h, c);
+  await deleter.query(`SELECT id FROM incidents WHERE tenant_id = $1 AND item_number = 5 FOR UPDATE`, [c.tenantId]);
+  const racing = screenImport(h, c, fileOf('INC-5'), 'upsert', false);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  await deleter.query(`DELETE FROM incidents WHERE tenant_id = $1 AND item_number = 5`, [c.tenantId]);
+  await closeSession(deleter, true);
+  const deleted = await racing;
+  const unknown = await screenImport(h, c, fileOf('INC-99'), 'upsert', false);
+  assert.equal(answerShape(deleted, 'INC-5'), answerShape(unknown, 'INC-99'), JSON.stringify(deleted.result?.errors ?? deleted.error));
+  console.log('  a hidden incident deleted during the load: the one refusal of an unknown reference: OK');
+}
+
+// An incident made confidential while the load waits for its lock: the guard read again on the
+// locked row refuses it as an unknown reference.
+async function testMadeConfidentialBeforeTheLock(h: Harness, c: Committed) {
+  const writer = await openSession(h, c);
+  await writer.query(`UPDATE incidents SET confidential = true WHERE tenant_id = $1 AND item_number = 1`, [c.tenantId]);
+  const racing = screenImport(h, c, fileOf('INC-1'), 'upsert', false);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  await closeSession(writer, true);
+  const refused = await racing;
+  const unknown = await screenImport(h, c, fileOf('INC-99'), 'upsert', false);
+  assert.equal(answerShape(refused, 'INC-1'), answerShape(unknown, 'INC-99'), JSON.stringify(refused.result?.errors ?? refused.error));
+  await inTenant(h, c.tenantId, (runner) => runner.query(`UPDATE incidents SET confidential = false WHERE tenant_id = $1 AND item_number = 1`, [c.tenantId]));
+  console.log('  an incident made confidential before the load locks it: refused as an unknown reference: OK');
+}
+
+// "Update only" skips a row that finds no incident, as before the lot, alike for an unknown and a
+// hidden reference; INC-0001 is INC-1; a reference beyond the numbers gets one refusal.
+async function testUpdateOnlyAndReferenceForms(h: Harness, c: Committed) {
+  const counts = (answer: any) => [answer.result.ok, answer.result.updated, answer.result.skipped, answer.result.errors.length];
+  for (const dryRun of [true, false]) {
+    const withUnknown = await screenImport(h, c, 'ref;title;severity\nINC-1;Mis à jour;minor\nINC-99;Autre;minor\n', 'update_only', dryRun);
+    const withHidden = await screenImport(h, c, 'ref;title;severity\nINC-1;Mis à jour;minor\nINC-3;Autre;minor\n', 'update_only', dryRun);
+    assert.deepEqual(counts(withUnknown), [true, 1, 1, 0], JSON.stringify(withUnknown.result));
+    assert.equal(answerShape(withHidden, 'INC-3'), answerShape(withUnknown, 'INC-99'), `update_only dryRun=${dryRun}: the same report`);
+  }
+  const padded = await screenImport(h, c, 'ref;title;severity\nINC-0001;Mis à jour;minor\n', 'upsert', true);
+  assert.deepEqual(counts(padded), [true, 1, 0, 0], JSON.stringify(padded.result?.errors));
+  const beyond = await screenImport(h, c, 'ref;title;severity\nINC-3000000000;T;minor\n', 'upsert', true);
+  assert.deepEqual(beyond.result.errors.map((error: any) => error.code), ['CSV_INCIDENT_REFERENCE_INVALID'], 'one refusal for one cell');
+  console.log('  update only skips an unknown and a hidden reference alike; INC-0001 is INC-1; one refusal beyond the numbers: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -326,6 +512,17 @@ async function run() {
       await runner.rollbackTransaction();
       await runner.release();
     }
+    const committed = await seedCommitted(harness);
+    // Each case runs, the failures said together.
+    const failures: unknown[] = [];
+    try {
+      for (const test of [testHiddenHeldDuringTheLoad, testHiddenDeletedDuringTheLoad, testMadeConfidentialBeforeTheLock, testUpdateOnlyAndReferenceForms]) {
+        await test(harness, committed).catch((error) => { failures.push(error); console.error(`  FAILED ${test.name}: ${String((error as Error).message).split('\n')[0]}`); });
+      }
+    } finally {
+      await removeCommitted(harness, committed);
+    }
+    if (failures.length > 0) throw failures[0];
   } finally {
     await harness.app.close();
   }

@@ -116,13 +116,6 @@ async function testDryRunCodesTheSixRowErrors(): Promise<void> {
       message: referenceMessage('INC-2147483648'),
     },
     {
-      row: 3,
-      column: 'ref',
-      code: 'CSV_INCIDENT_REFERENCE_INVALID',
-      params: { value: 'INC-2147483648' },
-      message: referenceMessage('INC-2147483648'),
-    },
-    {
       row: 4,
       column: 'ref',
       code: 'CSV_RECORD_REFERENCE_NOT_FOUND',
