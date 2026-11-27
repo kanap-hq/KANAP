@@ -138,7 +138,7 @@ export type RelatedTechnology = {
   extended_support_end: string | null;
   support_end: string | null;
   support_state: VersionSupport['state'] | null;
-  via: Array<{ asset_id: string; asset_name: string | null; host_name: string | null }>;
+  via: Array<{ asset_id: string; asset_name: string | null; asset_reference: string | null; host_name: string | null }>;
   declarations: Array<{ link_id: string; technology_version_id: string | null; version_label: string | null }>;
 };
 export type RelatedProcess = { id: string; name: string; path: string; status: string | null; owner_name: string | null };
@@ -680,6 +680,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
 type ReachingRow = Awaited<ReturnType<TechnologyLinksService['technologiesOfApplication']>>['items'][number];
 type TechnologyMergeRow = Pick<ReachingRow,
   'technology_id' | 'technology_name' | 'technology_reference' | 'family' | 'kind' | 'version_label' | 'asset_id' | 'asset_name' | 'via_asset_name'>
+  & { asset_reference?: string | null }
   & { link_id?: string | null; technology_version_id?: string | null };
 
 /**
@@ -711,7 +712,7 @@ export function mergeTechnologies(rows: TechnologyMergeRow[], support: Map<strin
     else tech.version_unknown = true;
     if (row.kind !== 'declared' && row.asset_id && !tech.viaSet.has(row.asset_id)) {
       tech.viaSet.add(row.asset_id);
-      tech.via.push({ asset_id: row.asset_id, asset_name: row.asset_name, host_name: row.via_asset_name });
+      tech.via.push({ asset_id: row.asset_id, asset_name: row.asset_name, asset_reference: row.asset_reference ?? null, host_name: row.via_asset_name });
     }
   }
   const byName = (a: string | null, b: string | null) => String(a ?? '').localeCompare(String(b ?? ''), 'en', { sensitivity: 'base' });

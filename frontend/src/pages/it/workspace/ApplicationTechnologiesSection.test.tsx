@@ -60,7 +60,7 @@ function relations(overrides: Partial<ApplicationRelationsData> = {}): Applicati
       {
         id: 'tec-2', reference: 'TEC-2', name: 'vSphere', family: 'virtualization', declared: false, hosted: true, versions: ['8'], version_unknown: false,
         standard_support_end: '2099-10-11', support_end: '2099-10-11', support_state: 'supported',
-        via: [{ asset_id: 'srv-2', asset_name: 'srv-etl-2', host_name: 'esx-01' }],
+        via: [{ asset_id: 'srv-2', asset_name: 'srv-etl-2', asset_reference: 'AST-2', host_name: 'esx-01' }],
       },
     ],
     deployment_servers: [],
@@ -146,6 +146,8 @@ describe('ApplicationTechnologiesSection', () => {
     expect(java.getByText('workspace.application.relations.technologyLink.declared')).toBeTruthy();
     expect(within(rows[2] as HTMLElement).getByText('workspace.application.relations.technologyLink.both')).toBeTruthy();
     expect(within(rows[3] as HTMLElement).getByText('workspace.application.relations.viaHost(server=srv-etl-2,host=esx-01)')).toBeTruthy();
+    // A server opens by its reference, by its id when it has none (srv-etl-1 below).
+    expect(within(rows[3] as HTMLElement).getByRole('link', { name: 'workspace.application.relations.viaHost(server=srv-etl-2,host=esx-01)' })).toHaveAttribute('href', '/it/assets/AST-2/operations');
 
     fireEvent.click(java.getByText('Java'));
     expect(screen.getByTestId('location').textContent).toBe('/it/technologies/TEC-4');
