@@ -396,6 +396,22 @@ describe('IntegratedDocumentEditor — incidents:review', () => {
     expect((screen.getByLabelText('markdown-editor') as HTMLTextAreaElement).value).toBe('a long document, one more line');
   });
 
+  it('says the document changed elsewhere when an autosave meets a newer revision', async () => {
+    await renderEditor({ autosaveDelayMs: 5 });
+    const editor = await startEditing();
+    vi.mocked(api.patch).mockRejectedValueOnce(Object.assign(new Error('Request failed'), {
+      response: { status: 409, data: { code: 'document_revision_conflict', message: 'Document revision conflict' } },
+    }));
+
+    fireEvent.change(editor, { target: { value: 'typed while an import wrote the text' } });
+
+    expect(await screen.findByText('errors:document_revision_conflict')).toBeInTheDocument();
+    expect(screen.queryByText('Document revision conflict')).not.toBeInTheDocument();
+    expect(api.patch).toHaveBeenCalledTimes(1);
+    // The text stays in the editor.
+    expect((screen.getByLabelText('markdown-editor') as HTMLTextAreaElement).value).toBe('typed while an import wrote the text');
+  });
+
   it('sends an autosave again when the server is busy with other texts, without an error', async () => {
     await renderEditor({ autosaveDelayMs: 5 });
     const editor = await startEditing();

@@ -103,6 +103,7 @@ import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type Dele
 import { textSortKey } from '../common/list-sort';
 import { applyDocumentColumnFilters } from './knowledge-list-filters';
 import { applyDataAccess } from '../data-access/data-access';
+import { documentRevisionConflict } from './document-revision-conflict';
 
 /** The document list columns that sort alphabetically, and the expressions they read. */
 const KNOWLEDGE_TEXT_SORTS: Record<string, string> = {
@@ -4910,7 +4911,7 @@ export class KnowledgeService {
       throw new BadRequestException('revision is required');
     }
     if (incomingRevision !== Number(existing.revision)) {
-      throw new ConflictException('Document revision conflict');
+      throw documentRevisionConflict();
     }
 
     await this.assertIntegratedDocumentUpdateRestrictions(existing, body, manager);

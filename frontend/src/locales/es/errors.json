@@ -34,6 +34,7 @@
   "notSavedYet": "Su último cambio aún no se ha guardado porque el servidor está ocupado. Se queda en esta página y se enviará de nuevo con su próximo cambio.",
   "edit_conflict": "Otra persona modificó este campo mientras usted lo editaba. Elija qué valor conservar.",
   "edit_conflict_unreadable": "Otra persona modificó lo que usted guardaba, y su respuesta no se pudo leer. Sus valores siguen en pantalla, aún sin guardar.",
+  "document_revision_conflict": "Este documento ha cambiado en otro lugar: recargue la página para verlo.",
   "administrator_required": "Solo un administrador de este espacio de trabajo puede hacerlo.",
   "platform_admin_required": "Solo un administrador de la plataforma puede hacer esto.",
   "demo_status_conflict": "El estado de los datos de ejemplo ha cambiado mientras tanto. Recargue la página para ver en qué punto está.",

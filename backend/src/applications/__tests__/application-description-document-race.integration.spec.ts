@@ -188,12 +188,14 @@ async function autosaveAgainstImport(importFirst: boolean) {
     if (importFirst) {
       assert.equal(saved.ok, false, `the autosave that read revision ${readRevision} is refused, got ${describe(saved)}`);
       assert.equal((saved as any).error?.status, 409, describe(saved));
+      assert.equal((saved as any).error?.getResponse?.()?.code, 'document_revision_conflict', 'the refusal carries its code');
     } else {
       assertSucceeded(saved, 'the autosave');
       // The page's next autosave carries the revision its save returned: the import wrote after it.
       const next = await settle(race.start(page, (m) => autosave(m, Number((saved as any).value?.revision), 'Typed again')));
       assert.equal(next.ok, false, `the next autosave is refused, got ${describe(next)}`);
       assert.equal((next as any).error?.status, 409, describe(next));
+      assert.equal((next as any).error?.getResponse?.()?.code, 'document_revision_conflict', 'the refusal carries its code');
     }
     const doc = await race.read(
       `SELECT d.content_markdown AS text, d.revision FROM integrated_document_bindings b JOIN documents d ON d.id = b.document_id

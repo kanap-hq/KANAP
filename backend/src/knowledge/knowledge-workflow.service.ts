@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -19,6 +18,7 @@ import { DocumentWorkflowParticipant } from './document-workflow-participant.ent
 import { DocumentWorkflow } from './document-workflow.entity';
 import { Document } from './document.entity';
 import { KnowledgeService } from './knowledge.service';
+import { documentRevisionConflict } from './document-revision-conflict';
 
 type DocumentWorkflowStage = 'reviewer' | 'approver';
 type DocumentWorkflowStatus = 'pending_review' | 'pending_approval' | 'changes_requested' | 'approved' | 'cancelled';
@@ -179,7 +179,7 @@ export class KnowledgeWorkflowService {
       throw new BadRequestException('revision is required');
     }
     if (incomingRevision !== Number(document.revision)) {
-      throw new ConflictException('Document revision conflict');
+      throw documentRevisionConflict();
     }
 
     const activeWorkflow = await this.knowledge.getActiveWorkflow(documentId, manager);
