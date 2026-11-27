@@ -217,9 +217,9 @@ Al quitar un responsable, un proceso de negocio, una suite o un contacto de sopo
 
 ---
 
-### Visión general
+### Vista general
 
-La pestaña Visión general es la narrativa de la aplicación. Contiene:
+La pestaña Vista general es la narrativa de la aplicación. Contiene:
 
 **Descripción**: Una descripción enriquecida de la aplicación. El editor guarda automáticamente mientras escribe. Quien puede modificar la aplicación puede modificar su descripción, sin permiso sobre la base de conocimiento. La descripción se guarda como documento gestionado en la base de conocimiento. Su título lleva la referencia y el nombre de la aplicación, en el idioma de la persona que lo creó. Al renombrar la aplicación, en el espacio de trabajo o por una importación, ese título se actualiza. Una importación, la API y Kad escriben esta misma descripción, y la exportación la lee. Cada cambio que hacen se guarda como una versión del documento.
 
@@ -354,7 +354,7 @@ La pestaña se organiza en cuatro bloques, en el orden de un análisis de impact
 - La **ola de recuperación** indica el orden de restauración; no representa una duración ni una gravedad.
 - El **RTO** es el objetivo de tiempo de recuperación. El **RPO** es la pérdida de datos aceptable y puede ser cero. Si el RTO alcanza la duración máxima tolerable de interrupción definida en el nivel de negocio elegido, Kadratis muestra una advertencia y conserva ambos valores.
 - Bajo la ola, Kadratis lista las interfaces que vinculan esta aplicación con una aplicación prevista en una ola **posterior** («Intercambio con CRM, prevista en V3»), con un enlace a cada interfaz. Ambas aplicaciones deben estar operativas para que el flujo funcione; el responsable del plan de recuperación decide. Las interfaces retiradas se ignoran, y los usuarios con un alcance restringido de Colaborador de negocio no ven esta lista.
-- **Última prueba de recuperación** contiene la fecha de la prueba más reciente. Un enlace abierto desde esta zona utiliza la única sección **Base de conocimiento** de Visión general y no crea un registro duplicado. Las URL antiguas siguen disponibles en Relaciones.
+- **Última prueba de recuperación** contiene la fecha de la prueba más reciente. Un enlace abierto desde esta zona utiliza la única sección **Base de conocimiento** de Vista general y no crea un registro duplicado. Las URL antiguas siguen disponibles en Relaciones.
 
 Pueden aparecer dos indicaciones discretas: datos en el nivel de confidencialidad más alto combinados con la criticidad cibernética más baja, y una aplicación en el nivel de negocio más crítico sin prueba de recuperación en los últimos doce meses. Nunca bloquean nada.
 
@@ -800,5 +800,5 @@ Pregunte, por ejemplo: «Añade PostgreSQL 16 a CheeseTrack y a sus servidores»
 - **Mantenga los despliegues actualizados**: La pestaña Despliegues alimenta los chips de entorno en la lista: manténgala actualizada para una visibilidad precisa.
 - **Documente la audiencia**: Defina la audiencia de empresas y departamentos en el panel de propiedades; el conteo de usuarios se deriva entonces automáticamente y se utiliza en los informes.
 - **Aproveche el filtrado por categoría**: Utilice el filtro de columna Categoría para centrarse en tipos específicos de aplicaciones (p. ej., mostrar solo apps de Línea de negocio, o excluir herramientas de Productividad).
-- **Adjunte conocimiento temprano**: Vincule runbooks y documentos de arquitectura desde la pestaña Visión general para que el equipo sepa dónde buscar durante los incidentes.
+- **Adjunte conocimiento temprano**: Vincule runbooks y documentos de arquitectura desde la pestaña Vista general para que el equipo sepa dónde buscar durante los incidentes.
 - **Las tareas vienen de la página Tareas**: Para adjuntar una tarea a una aplicación, defina el campo App / Servicio en la propia tarea; aparecerá en Relaciones > Tareas.
