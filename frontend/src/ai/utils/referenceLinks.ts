@@ -96,6 +96,13 @@ function linkedText(value: string, options: ReferenceLinkOptions): MarkdownNode[
   return nodes;
 }
 
+/** A link that leads nowhere (`[APP-32 - Figma](#)`, an empty address): Kad shows its text. */
+function isDeadLink(node: MarkdownNode): boolean {
+  if (node.type !== 'link') return false;
+  const url = String(node.url ?? '').trim();
+  return url === '' || url === '#';
+}
+
 function linkReferencesIn(node: MarkdownNode, options: ReferenceLinkOptions): void {
   // A link keeps its own text. Code is a leaf (`value`, not children); named here so a
   // child added under a code node is still left as text.
@@ -108,6 +115,12 @@ function linkReferencesIn(node: MarkdownNode, options: ReferenceLinkOptions): vo
   ) return;
   node.children = node.children.flatMap((child) => {
     if (child.type === 'text' && child.value) return linkedText(child.value, options);
+    // Its text stays, and the references in it link as anywhere else.
+    if (isDeadLink(child)) {
+      const text: MarkdownNode = { type: 'emphasis', children: child.children ?? [] };
+      linkReferencesIn(text, options);
+      return text.children ?? [];
+    }
     linkReferencesIn(child, options);
     return [child];
   });

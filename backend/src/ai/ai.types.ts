@@ -738,6 +738,8 @@ export type AiMutationPreviewDto = {
     entity_id: string | null;
     ref: string | null;
     title: string | null;
+    /** The page of the existing record, by its reference where its page opens by it. */
+    page_url?: string;
   };
   changes: Record<string, AiMutationPreviewChangeDto>;
   /** The column mapping of an import, for the `prepare_import_mapping` card. */
