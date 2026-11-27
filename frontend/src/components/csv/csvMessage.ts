@@ -14,15 +14,18 @@ export type CsvReportMessage = {
   params?: Record<string, string | number>;
 };
 
-/** The columns a message's `param` lists (`CSV_DUPLICATE_KEY`: `company_name, name`), none when it names none. */
-function listedColumns(item: CsvReportMessage, param: 'columns' | 'missing'): string[] {
-  const columns = item.params?.[param];
+/** The columns a message names by their keys (`CSV_DUPLICATE_KEY`: `company_name, name`), none when it names none. */
+function namedColumns(item: CsvReportMessage): string[] {
+  const columns = item.params?.columns;
   return typeof columns === 'string' ? columns.split(',').map((column) => column.trim()).filter(Boolean) : [];
 }
 
-/** The columns a message names by their keys (`CSV_DUPLICATE_KEY`: `company_name, name`), none when it names none. */
-function namedColumns(item: CsvReportMessage): string[] {
-  return listedColumns(item, 'columns');
+/** The message with the missing columns of a header (`missing`) named as the view names its columns. */
+function withMissingNamed(item: CsvReportMessage, columnName?: (column: string) => string): CsvReportMessage {
+  const missing = item.params?.missing;
+  const columns = typeof missing === 'string' ? missing.split(',').map((column) => column.trim()).filter(Boolean) : [];
+  if (!columnName || columns.length === 0) return item;
+  return { ...item, params: { ...item.params, missing: columns.map(columnName).join(', ') } };
 }
 
 /**
@@ -32,13 +35,9 @@ function namedColumns(item: CsvReportMessage): string[] {
  */
 export function csvMessageText(item: CsvReportMessage, t: TFunction, columnName?: (column: string) => string): string {
   if (!item.code) return item.message;
-  let params = item.params;
-  if (columnName) {
-    for (const param of ['columns', 'missing'] as const) {
-      const columns = listedColumns(item, param);
-      if (columns.length > 0) params = { ...params, [param]: columns.map(columnName).join(', ') };
-    }
-  }
+  item = withMissingNamed(item, columnName);
+  const columns = namedColumns(item);
+  const params = columnName && columns.length > 0 ? { ...item.params, columns: columns.map(columnName).join(', ') } : item.params;
   return t(`errors:${item.code}`, { ...params, defaultValue: item.message });
 }
 
