@@ -104,9 +104,11 @@ export type AiAggregateGroupDef = {
    * A many-to-many group narrowed to the caller's participation on one linked family (a Business
    * Contributor's applications): the join that names `table` as `alias` also carries the
    * participant condition, so the group lists only the linked records the caller takes part in.
+   * On `projects`, the group is a value of the record's project (a task's phase): it reads as empty
+   * where the project, joined as `alias`, is outside the participation, as on the task.
    */
   participation?: {
-    entityType: 'applications';
+    entityType: 'applications' | 'projects';
     table: string;
     alias: string;
   };

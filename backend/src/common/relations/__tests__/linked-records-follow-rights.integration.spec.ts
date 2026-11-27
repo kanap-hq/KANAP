@@ -47,6 +47,7 @@ import { DataSource, QueryRunner } from 'typeorm';
 //      does not see.
 //  18. The task list and Kad sort a value the person does not see (a Business Contributor's
 //      project outside their participation, its phase and classification) as an empty value.
+//  19. Kad's task groups by phase, project stream and project category follow the same rule.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -1037,6 +1038,38 @@ async function testTaskSortsOnHiddenValues(h: Harness, runner: QueryRunner, s: S
   hasNot(other, hidden.concat([PROJECT, MAIN_PHASE]), 'other workspace, tasks list');
 }
 
+// 19. Kad groups tasks by phase, project stream or project category on the projects the person
+//     reads: the value of a project outside a Business Contributor's participation is no group,
+//     and the answer says the groups are partial.
+async function testTaskAggregatesOnHiddenProjects(h: Harness, runner: QueryRunner, s: Seed, people: FollowUpPeople) {
+  const hidden = [DEPENDENCY, PHASE, HIDDEN_STREAM, HIDDEN_CATEGORY, s.dependency];
+  const groups = (result: any) => result.groups.map((group: any) => group.key ?? '(none)').sort();
+  for (const [groupBy, visible, secret] of [['phase', MAIN_PHASE, PHASE], ['project_stream', 'Main stream', HIDDEN_STREAM], ['project_category', 'Main category', HIDDEN_CATEGORY]] as const) {
+    for (const surface of ['chat', 'mcp'] as const) {
+      const e = await h.tools.execute(ctx(runner, s, 'e', surface), 'aggregate_entities', { entity_type: 'tasks', group_by: groupBy, function: 'count' });
+      hasNot(e, hidden, `E (${surface}), tasks grouped by ${groupBy}`);
+      assert.ok(groups(e).includes(visible), `E (${surface}): the ${groupBy} of their project`);
+      assert.ok((e.fields_partial ?? []).some((note: any) => note.field === groupBy), `E (${surface}): the ${groupBy} groups are said partial`);
+    }
+    const team = await h.tools.execute(personContext(runner, s.tenantId, people.team), 'aggregate_entities', { entity_type: 'tasks', group_by: groupBy, function: 'count' });
+    assert.ok(groups(team).includes(secret), `team member: the ${groupBy} of the dependency project`);
+    const reader = await h.tools.execute(personContext(runner, s.tenantId, people.reader), 'aggregate_entities', { entity_type: 'tasks', group_by: groupBy, function: 'count' });
+    assert.ok(groups(reader).includes(secret), `module reader: the ${groupBy} of the dependency project`);
+    assert.equal((reader.fields_partial ?? []).some((note: any) => note.field === groupBy), false, `module reader: the ${groupBy} groups are whole`);
+    await refused(runner, () => h.tools.execute(personContext(runner, s.tenantId, people.tasksOnly), 'aggregate_entities', { entity_type: 'tasks', group_by: groupBy, function: 'count' }),
+      new RegExp(`group_by ${groupBy} is not available`), `tasks reader without projects: no ${groupBy} group, with the reason`);
+  }
+  // Kad's count of the tasks of the hidden project's phase: none, in the group or out of it.
+  const eCount = await h.tools.execute(ctx(runner, s, 'e'), 'aggregate_entities', { entity_type: 'tasks', group_by: 'phase', function: 'count' });
+  const counted = eCount.groups.find((group: any) => group.key === MAIN_PHASE);
+  assert.equal(counted?.count, 1, 'E: the phase of their project counts its task');
+
+  const other: any = await inTenant(runner, people.otherTenant, s.tenantId, () => h.tools.execute(
+    personContext(runner, people.otherTenant, people.otherUser), 'aggregate_entities', { entity_type: 'tasks', group_by: 'phase', function: 'count' }));
+  hasNot(other, hidden.concat([MAIN_PHASE]), 'other workspace, tasks grouped by phase');
+  assert.equal(other.total, 1, 'other workspace: its own task only');
+}
+
 
 async function run() {
   const harness = await createHarness();
@@ -1066,6 +1099,7 @@ async function run() {
       const people = await followUpPeople(runner, s);
       await seedProjectValues(runner, s);
       await testTaskSortsOnHiddenValues(harness, runner, s, people);
+      await testTaskAggregatesOnHiddenProjects(harness, runner, s, people);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
