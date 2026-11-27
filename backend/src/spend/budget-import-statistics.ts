@@ -33,8 +33,7 @@ import { DATA_ACCESS_SYNC_LOCK } from '../data-access/data-access-availability';
  * It is the last call of the budget file load routes (`POST /spend-items/budget-file/import`
  * and the CAPEX twin). A budget file load approved in Kad gets the same ANALYZE once the
  * approval's transaction is committed (`AiChatOrchestratorService.analyzeLargeImportsAfterApproval`).
- * A sample data load ends with it too, once its loader is done (`DemoDataService.analyzeAfterLoad`,
- * lot B12b).
+ * A sample data load ends with it too, once its loader is done (`DemoDataService.analyzeAfterLoad`).
  *
  * `data_access_sync_policies()` grants and rewrites the policies of these tables in one
  * transaction: it updates a table's `pg_class` row, then waits for the table's lock, which an
@@ -45,7 +44,7 @@ import { DATA_ACCESS_SYNC_LOCK } from '../data-access/data-access-availability';
  * (logged, left to autovacuum), and the sync waits for an ANALYZE that holds it. Shared: two
  * ANALYZE at once (two loads) both run. The migrations that run
  * the sync do not take the lock: they run before the API starts, when no ANALYZE of this process
- * runs (lot B12b).
+ * runs.
  */
 export const ANALYZE_AFTER_IMPORT_ROWS = 1000;
 

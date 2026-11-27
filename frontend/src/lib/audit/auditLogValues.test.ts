@@ -343,6 +343,11 @@ describe('formatAuditValue', () => {
     expect(formatAuditValue('shelf', 'kind', context({ table: 'cost_centers' })).text).toBe('shelf');
   });
 
+  it('names the units an account expects as the budget tab names them', () => {
+    expect(formatAuditValue(['people', 'days'], 'expected_units', context({ locale: 'en', t: tEnAll, table: 'accounts' })).text).toBe('people, days');
+    expect(formatAuditValue(['pieces'], 'expected_units', context({ locale: 'fr', t: tFrAll, table: 'accounts' })).text).toBe('pièces');
+  });
+
   it('names a project, phase and milestone status, origin, modes and effort type from the portfolio lists', () => {
     const project = (locale: 'en' | 'fr') => ({
       locale,

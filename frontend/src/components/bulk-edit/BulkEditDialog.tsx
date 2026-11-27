@@ -42,7 +42,7 @@ export type BulkEditField = {
 type BulkCount = { rows: number; changes: number; unchanged: number; refused: Record<string, number>; as_of: string; fingerprint?: string };
 /**
  * The answer of the write. `to_check`: the written rows the list's "To check" column will show, for a
- * list that has one (budget lines, lot B12b); absent elsewhere.
+ * list that has one (budget lines); absent elsewhere.
  */
 export type BulkEditWriteResult = { rows: number; changed: number; unchanged: number; refused: Record<string, number>; to_check?: { rows: number } };
 

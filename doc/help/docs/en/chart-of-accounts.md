@@ -95,6 +95,7 @@ The grid shows accounts for the selected CoA only.
 - **Consol. description**: Consolidation account description.
 - **Status**: Whether the account is enabled or disabled.
 - **Quantity and price entry**: **Yes** when the account expects its budget lines in quantity and price. Its filter offers **Yes** and **No**. See [Quantity and price entry](#quantity-and-price-entry).
+- **Expected units**: The units the account expects its calculation lines in. An account with **Quantity and price entry** and no units shows **Any unit**. Its filter offers each unit and **Any unit**.
 - **Created**: Timestamp when the account was created.
 
 **Filtering**:
@@ -119,7 +120,7 @@ Click any row in the accounts grid to open the account workspace. The **History*
 ### Layout
 
 - **Header**: the account number is the reference (you can copy it from there) and the account name is the title. Click the title to rename the account. **Previous** and **Next** move through the accounts of the list you came from, in the same order, with the same search and filters. The back link returns to **Charts of accounts** with your selection kept.
-- **Properties panel** on the right: **Chart of accounts**, **Account number**, **Used for**, **Quantity and price entry** and **Lifecycle** (the status switch and the **End of validity** date). Use the panel toggle to collapse it or open it again. See [Status and lifecycle](#status-and-lifecycle).
+- **Properties panel** on the right: **Chart of accounts**, **Account number**, **Used for**, **Quantity and price entry**, **Expected units** (once **Quantity and price entry** is ticked) and **Lifecycle** (the status switch and the **End of validity** date). Use the panel toggle to collapse it or open it again. See [Status and lifecycle](#status-and-lifecycle).
 - **Main column**: **Native name (local language)**, **Description** and the **Consolidation** section.
 
 **Changes save automatically.** Each field saves when you leave it, and there is no Save button. If a value is refused, a message appears under the field. The **Account number** must be a whole number greater than zero, with at most 15 digits.
@@ -146,8 +147,11 @@ When Kadratis added this setting, it filled it in for you. An account used only 
 
 Tick **Quantity and price entry** in the properties panel when the budget lines of the account should be built as quantity and price. The setting refuses nothing: it marks the lines entered another way so that you can check them. See [When the account expects quantity and price](budget-lines.md#quantity-and-price-expected).
 
+Once the box is ticked, **Expected units** appears below it, with **People**, **Days** and **Pieces**. Tick the units the calculation lines should use: each column then needs at least one calculation line in one of them. With no unit ticked, any unit is fine. Unticking **Quantity and price entry** clears the units.
+
 - A line follows the setting of its account. When its account is not ticked, it follows its consolidation account
 - Ticking a consolidation account applies to every account attached to it. They all follow it: none can be left out
+- The units go with the setting. An account that is ticked keeps its own units, or none: it never takes the units of its consolidation account. An account that is not ticked takes both the setting and the units of its consolidation account
 - A disabled account that is ticked still applies its setting
 - Each change shows in the account's history
 
@@ -482,16 +486,16 @@ You can export a list of your CoAs (with metadata like code, name, country, defa
 
 The global `/accounts` file includes a `coa_code` column to identify which CoA each account belongs to. **Export** and **Import** use it when no CoA is selected on the page.
 
-  - **Export**: the accounts the list shows (or, on request in the dialog, all accounts) with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, status and **Used for**
+  - **Export**: the accounts the list shows (or, on request in the dialog, all accounts) with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, status, **Used for**, **Quantity and price entry** and **Expected units**
   - **Import**: **Download template** in the dialog gives a file with the headers only. Start with **Preflight check** to validate the structure, the encoding, the required fields and the duplicates, then **Load** to apply the inserts and the updates
   - **Matching**: by `(coa_code, account_number)` within your workspace
   - **Required columns**: `coa_code` and `account_number`, plus `account_name` for a new account. All rows of one file must carry the same `coa_code`
-  - **Optional columns**: `native_name`, `description`, the consolidation columns, `status`, `nature`, `quantity_price_expected`. A file can leave them out: the accounts it updates keep their stored values, and new accounts take the defaults (empty, enabled, **OPEX and CAPEX**). On an account the file updates, an empty cell keeps the stored value, and `-` clears it. `-` cannot clear `coa_code`, `account_number`, `account_name` or `status`: the row is refused. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
+  - **Optional columns**: `native_name`, `description`, the consolidation columns, `status`, `nature`, `quantity_price_expected`, `expected_units`. A file can leave them out: the accounts it updates keep their stored values, and new accounts take the defaults (empty, enabled, **OPEX and CAPEX**). On an account the file updates, an empty cell keeps the stored value, and `-` clears it. `-` cannot clear `coa_code`, `account_number`, `account_name` or `status`: the row is refused. See [Empty cells and `-`](csv-files.md#empty-cells-and-clearing)
   - A file that names the same account twice (same `coa_code` and `account_number`) is refused whole, and nothing is written. The message names both rows
 
 **CSV schema** (the export writes the separator of the screen language; shown here with semicolons):
 ```
-coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected
+coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected;expected_units
 ```
 
 ### Accounts (CoA-scoped)
@@ -504,7 +508,7 @@ From the Charts of Accounts page, **Import** and **Export** are automatically sc
 
 **CSV schema** (CoA-scoped; shown here with semicolons):
 ```
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected;expected_units
 ```
 
 **Notes**:
@@ -515,6 +519,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Status values: `enabled` or `disabled` (defaults to enabled)
   - `nature` is the **Used for** setting. Values: `opex`, `capex`, or empty for **OPEX and CAPEX**. A file without this column leaves the settings unchanged. An empty cell keeps the setting of a stored account, and a new account is for **OPEX and CAPEX**. `-` sets **OPEX and CAPEX**. Any other value is refused for that row
   - `quantity_price_expected` is the **Quantity and price entry** setting. Yes, in any of the four languages (`yes`, `oui`, `ja`, `sí`), ticks it. No, or `-`, clears it. An empty cell keeps the setting of a stored account, and a new account starts unticked. A file without this column leaves the settings unchanged. Any other value is refused for that row. The export writes yes in the language of the file, and leaves the cell empty for an account that is not ticked
+  - `expected_units` is the **Expected units** setting: the units separated by commas, for example `people, days`. The words of any of the four languages are read (`personnes`, `Tage`, `piezas`). `-` clears the units, and an empty cell keeps them. An unknown unit is refused for that row, and so are units on an account whose `quantity_price_expected` is not ticked. The export writes the units in the language of the file
   - Consolidation columns: when `consolidation_account_number` exists in your consolidation chart, its name and description replace the `consolidation_account_name` and `consolidation_account_description` cells. `-` in the number clears all three, and an empty number keeps them. See [Setting up consolidation mappings](#setting-up-consolidation-mappings)
 
 ## Tips

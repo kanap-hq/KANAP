@@ -13,6 +13,7 @@ import { CHARGEBACK_EXPORT_LABELS } from '../spend/chargeback-report.export';
 import { END_OF_SUPPORT_EXPORT_LABELS } from '../technologies/reports/end-of-support-export-labels';
 import { aiScreenLanguage } from './ai-unread-families';
 import { BUDGET_LINE_CHECK_LABEL_KEYS, BUDGET_LINE_CHECK_LABELS } from './query/ai-line-check-names';
+import { EXPECTED_UNIT_LABELS } from '../accounts/account-expected-units';
 import { VULNERABILITY_STATE_LABELS } from './ai-write-texts';
 import { countryCode, countryNameIn } from './import/ai-import-countries';
 import {
@@ -444,6 +445,8 @@ export const AI_CODE_LISTS = {
   budgetColumn: { kind: 'budgetColumn', aliases: { review: 'revision', actual: 'follow_up' } },
   // A budget line's checks (`to_check`), as the budget list's "To check" column names them.
   budgetLineCheck: fixed('ops:', BUDGET_LINE_CHECK_LABELS, { keys: BUDGET_LINE_CHECK_LABEL_KEYS }),
+  // The unit of a calculation line, as the budget tab names it (an account's expected units).
+  quantityUnit: fixed('ops:budgetTab.lines.unitNames', EXPECTED_UNIT_LABELS),
   // The `status` of a line's `quantity_price_entry` and `account_chart`: only "To check" has a word
   // on screen (the column's title); the other states are said by their `explanation`.
   lineCheckState: fixed('ops:', codeLabels({ to_check: ['To check', 'À vérifier', 'Zu prüfen', 'Por verificar'] }), {
@@ -599,6 +602,7 @@ export const AI_NAMED_FIELDS: Readonly<Record<string, Readonly<Record<string, Ai
   accounts: {
     status: one(L.enabled),
     nature: one(L.lineUsage),
+    expected_units: many(L.quantityUnit),
   },
   analytics_categories: {
     status: one(L.enabled),

@@ -3576,3 +3576,56 @@ describe('BudgetTab: the account expects quantity and price (lot B12a)', () => {
     expect(screen.queryByTestId(/^year-mark-/)).not.toBeInTheDocument();
   });
 });
+
+describe('BudgetTab: the units the account expects', () => {
+  const WITH_UNITS = "The line's account expects quantity and price entry, with calculation lines in people or days.";
+  const UNITS_ONLY = "The line's account expects calculation lines in people or days.";
+  const expected = (columns: BudgetLineEntryCheck['columns'], unitColumns: BudgetLineEntryCheck['columns'], units: BudgetLineEntryCheck['units'] = ['people', 'days']): BudgetLineEntryCheck => (
+    { expected: true, level: 'account', consolidation_account: null, units, columns, unit_columns: unitColumns }
+  );
+  const label = (measure: string) => within(card(measure)).getAllByText(/./)[0].textContent;
+  const selectedMode = () => within(editor()).getAllByRole('tab').find((tab) => tab.getAttribute('aria-selected') === 'true')?.textContent;
+
+  it('says on each dot which problem its column has, and on the year one sentence per problem', async () => {
+    setupApi();
+    renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, {
+      entryCheck: expected([{ year: YEAR, measure: 'planned' }, { year: YEAR, measure: 'forecast' }], [{ year: YEAR, measure: 'planned' }]),
+    });
+    await waitForAmounts();
+    // Built as quantity × price with no calculation line in people or days: the units alone.
+    expect(within(card('planned')).getByRole('img', { name: UNITS_ONLY })).toHaveAttribute('data-testid', 'entry-check-planned');
+    // Not built as quantity × price: the mode, with the units expected.
+    expect(within(card('forecast')).getByRole('img', { name: WITH_UNITS })).toHaveAttribute('data-testid', 'entry-check-forecast');
+    expect(screen.getByRole('tab', { name: String(YEAR) })).toHaveAccessibleDescription(
+      `The line's account expects quantity and price entry, with calculation lines in people or days: ${label('forecast')}. `
+      + `The line's account expects calculation lines in people or days: ${label('planned')}.`,
+    );
+  });
+
+  it('names the consolidation account that expects the units, when the person reads the accounts', async () => {
+    setupApi();
+    const named: BudgetLineEntryCheck = {
+      ...expected([{ year: YEAR, measure: 'planned' }], [{ year: YEAR, measure: 'planned' }], ['days']),
+      level: 'consolidation', consolidation_account: { number: 2400, name: 'Services extérieurs' },
+    };
+    const view = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: named });
+    await waitForAmounts();
+    expect(within(card('planned')).getByRole('img', { name: 'The consolidation account 2400 - Services extérieurs expects calculation lines in days.' })).toBeInTheDocument();
+    view.rerenderEntryCheck({ ...named, consolidation_account: null });
+    expect(within(card('planned')).getByRole('img', { name: 'The consolidation account expects calculation lines in days.' })).toBeInTheDocument();
+  });
+
+  it('opens a new calculation line in the first unit the account expects, and in people otherwise', async () => {
+    setupApi({ empty: true });
+    const view = renderTab(YEAR, {}, OPEX_FINANCE_CONFIG, undefined, { entryCheck: expected([], [], ['pieces', 'people']) });
+    await waitForAmounts();
+    expect(selectedMode()).toBe('Quantity and price');
+    expect(within(editor()).getByRole('img', { name: "The line's account expects quantity and price entry, with calculation lines in pieces or people." })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    const unit = () => within(screen.getAllByTestId('line-row').slice(-1)[0]).getByRole('combobox', { name: 'Unit' });
+    expect(unit()).toHaveTextContent('pieces');
+    view.rerenderEntryCheck(expected([], [], null));
+    fireEvent.click(screen.getByRole('button', { name: 'Add a line' }));
+    expect(unit()).toHaveTextContent('people');
+  });
+});

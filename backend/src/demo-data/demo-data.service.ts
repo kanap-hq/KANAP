@@ -1576,7 +1576,7 @@ export class DemoDataService implements OnApplicationShutdown {
   }
 
   /**
-   * The planner's statistics of the budget tables once a load has written its lines (lot B12b):
+   * The planner's statistics of the budget tables once a load has written its lines:
    * without them the budget list of a large workspace reads the new lines as a few rows until
    * autovacuum analyses them. The loader's requests are committed; the ANALYZE runs on connections
    * of its own, in the background, and never fails the load (`analyzeTables`, which says why it

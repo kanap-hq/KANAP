@@ -391,6 +391,7 @@ const SCREEN_FIELD_KEYS: Record<string, Record<string, string>> = {
     consolidation_account_name: 'master-data:accounts.fields.consolidationAccountName',
     consolidation_account_description: 'master-data:accounts.fields.consolidationAccountDescription',
     quantity_price_expected: 'master-data:accounts.fields.quantityPriceExpected',
+    expected_units: 'master-data:accounts.fields.expectedUnits',
   },
   chart_of_accounts: {
     code: 'master-data:coa.manageDialog.columns.code',
@@ -490,6 +491,10 @@ export function usePreviewChangeLabels(preview?: AiMutationPreview) {
       if (field === 'category' && entity === 'applications') return labelFor('applicationCategory', value) || value;
       if (field === 'access_methods' && entity === 'applications') {
         return value.split(', ').map((code) => labelFor('accessMethod', code) || code).join(', ');
+      }
+      // The units an account expects, as the budget tab names them: the server sends their codes.
+      if (field === 'expected_units' && entity === 'accounts') {
+        return value.split(', ').map((code) => known([`ops:budgetTab.lines.unitNames.${code}`]) ?? code).join(', ');
       }
       const catalogField = CATALOG_FIELDS[entity]?.[field];
       if (catalogField) return labelFor(catalogField, value) || value;

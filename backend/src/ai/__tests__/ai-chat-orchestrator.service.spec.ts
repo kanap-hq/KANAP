@@ -5253,7 +5253,7 @@ function analyzeRecorder(transactions: { open: number }) {
         release: async () => { released = true; },
         query: async (sql: string, params?: any[]) => {
           if (sql.includes('to_regclass')) return (params![0] as string[]).map((name) => ({ name, present: true, owned: true }));
-          // No data-access policy sync runs: each ANALYZE gets its shared lock (lot B12b).
+          // No data-access policy sync runs: each ANALYZE gets its shared lock.
           if (sql.includes('pg_try_advisory_xact_lock_shared')) return [{ free: true }];
           const table = /^ANALYZE (\w+)$/.exec(sql)?.[1];
           if (table) batch.push(table);

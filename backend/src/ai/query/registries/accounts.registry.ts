@@ -54,7 +54,11 @@ export const accountsRegistry: AiEntityFilterRegistry = {
       description: 'Whether the budget lines of the account are expected to be entered as quantity and price: true when the account sets it, null when it does not. '
         + 'A local account without the setting takes it from its consolidation account (the account of the consolidation chart with its consolidation number): '
         + 'setting a consolidation account applies to every account mapped to it. The budget lines to check against it are budget_lines whose `to_check` holds `quantity_price`; '
-        + 'a line\'s get_entity_detail says why in `quantity_price_entry` (`expected_by`, `columns_to_check`, `explanation`).',
+        + 'a line\'s get_entity_detail says why in `quantity_price_entry` (`expected_by`, `expected_units`, `columns_to_check`, `explanation`). '
+        + 'An account that sets it may also name the units its calculation lines are expected in (`expected_units` of its metadata, named in `expected_units_name`): '
+        + 'a column then also needs a calculation line in one of them; without units the entry mode alone is checked. The units are read with the setting, at the same level. '
+        + 'This field is a yes-or-no setting, never a unit: a unit named for an account ("on pieces", in any language) is expected_units, which the account write ticks this setting with. '
+        + 'It is an expectation: a line that does not follow it is flagged to check, never refused; say that the account expects it, never that lines must follow it.',
       values: ['true', null],
       discoverable: true,
       sortable: true,

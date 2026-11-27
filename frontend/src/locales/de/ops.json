@@ -1794,7 +1794,11 @@
       "consolidationNamed": "Das Konsolidierungskonto {{account}} erwartet eine Erfassung nach Menge und Preis",
       "consolidation": "Das Konsolidierungskonto erwartet eine Erfassung nach Menge und Preis",
       "sentence": "{{reason}}.",
-      "withColumns": "{{reason}}: {{columns}}."
+      "withColumns": "{{reason}}: {{columns}}.",
+      "withUnits": "{{reason}}, mit Berechnungszeilen in der Einheit {{units}}",
+      "unitsAccount": "Das Konto der Zeile erwartet Berechnungszeilen in der Einheit {{units}}",
+      "unitsConsolidation": "Das Konsolidierungskonto erwartet Berechnungszeilen in der Einheit {{units}}",
+      "unitsConsolidationNamed": "Das Konsolidierungskonto {{account}} erwartet Berechnungszeilen in der Einheit {{units}}"
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "Aufbau der Spalte",

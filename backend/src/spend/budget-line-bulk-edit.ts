@@ -198,7 +198,7 @@ export async function bulkUpdateBudgetLines(body: unknown, deps: BudgetLineBulkD
       return null;
     },
 
-    // The lines written that the list's "To check" column will show (lot B12b): every check, those
+    // The lines written that the list's "To check" column will show: every check, those
     // the change caused (an account whose chart is not the company's, or that expects quantity and
     // price) and those the lines already failed.
     ...(deps.lineChecks ? { toCheck: (ids: string[]) => countLinesToCheck(ids, deps.lineChecks!) } : {}),

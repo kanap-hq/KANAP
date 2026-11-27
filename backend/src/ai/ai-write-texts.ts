@@ -1,6 +1,7 @@
 import { BULK_LIST_CHANGED_MESSAGE } from '../common/bulk-edit/bulk-edit';
 import type { EntityManager } from 'typeorm';
 import { PRODUCT_NAME } from '../config/product';
+import { expectedUnitsInWords } from '../accounts/account-expected-units';
 
 /**
  * The sentences the backend writes itself around a write, in the person's language: the stops of
@@ -501,31 +502,50 @@ const INCIDENT_ACCESS_WARNING: Texts = {
 };
 
 /**
- * The card's warning when its account expects quantity and price entry (lot B12b): the amounts Kad
+ * The card's warning when its account expects quantity and price entry: the amounts Kad
  * writes are totals, never quantity × price, so the line's list shows them "To check". `amounts`:
  * Kad writes the amounts (a line's amounts, a new line with its amounts); `account`: the change
  * moves lines with their amounts onto the account (one line, or `many` in bulk). `account` is the
  * account as the card names it, `6100 - Software`. Nothing is refused: the card is approved as any other.
+ * `units`: the units the account expects, said as the Budget tab's dot says them
+ * (`ops:budgetTab.entryCheck.withUnits`); `units` as the kind: the line's columns are built as
+ * quantity × price, with no calculation line in one of them (`ops:budgetTab.entryCheck.unitsAccount`).
  */
 export function quantityPriceExpectedWarning(
   language: AiWriteLanguage,
-  kind: 'amounts' | 'account',
+  kind: 'amounts' | 'account' | 'units',
   account: string,
   many = false,
+  units: readonly string[] | null = null,
 ): string {
+  const words = units?.length ? expectedUnitsInWords(units, language) : null;
+  if (kind === 'units' && words) {
+    return {
+      en: `The account ${account} expects calculation lines in ${words}: the columns built without one will be to check, to complete on the Budget tab of ${many ? 'each line' : 'the line'}.`,
+      fr: `Le compte ${account} attend des lignes de calcul en ${words} : les colonnes construites sans l'une d'elles seront à vérifier, à compléter dans l'onglet Budget de ${many ? 'chaque ligne' : 'la ligne'}.`,
+      de: `Das Konto ${account} erwartet Berechnungszeilen in der Einheit ${words}: Spalten ohne eine solche Zeile sind danach zu prüfen und auf der Registerkarte Budget ${many ? 'jeder Zeile' : 'der Zeile'} zu ergänzen.`,
+      es: `La cuenta ${account} espera líneas de cálculo en ${words}: las columnas construidas sin ninguna quedarán por verificar y se completan en la pestaña Presupuesto de ${many ? 'cada línea' : 'la línea'}.`,
+    }[language];
+  }
+  const expects = {
+    en: `The account ${account} expects quantity and price entry${words ? `, with calculation lines in ${words}` : ''}`,
+    fr: `Le compte ${account} attend une saisie en quantité et prix${words ? `, avec des lignes de calcul en ${words}` : ''}`,
+    de: `Das Konto ${account} erwartet eine Erfassung nach Menge und Preis${words ? `, mit Berechnungszeilen in der Einheit ${words}` : ''}`,
+    es: `La cuenta ${account} espera una introducción por cantidad y precio${words ? `, con líneas de cálculo en ${words}` : ''}`,
+  }[language];
   if (kind === 'amounts') {
     return {
-      en: `The account ${account} expects quantity and price entry, and Kad only writes a total: this amount will be to check, to complete on the line's Budget tab.`,
-      fr: `Le compte ${account} attend une saisie en quantité et prix, et Kad n'écrit qu'un total : ce montant sera à vérifier, à compléter dans l'onglet Budget de la ligne.`,
-      de: `Das Konto ${account} erwartet eine Erfassung nach Menge und Preis, und Kad schreibt nur einen Gesamtbetrag: Dieser Betrag ist danach zu prüfen und auf der Registerkarte Budget der Zeile zu ergänzen.`,
-      es: `La cuenta ${account} espera una introducción por cantidad y precio, y Kad solo escribe un total: este importe quedará por verificar y se completa en la pestaña Presupuesto de la línea.`,
+      en: `${expects}, and Kad only writes a total: this amount will be to check, to complete on the line's Budget tab.`,
+      fr: `${expects}, et Kad n'écrit qu'un total : ce montant sera à vérifier, à compléter dans l'onglet Budget de la ligne.`,
+      de: `${expects}, und Kad schreibt nur einen Gesamtbetrag: Dieser Betrag ist danach zu prüfen und auf der Registerkarte Budget der Zeile zu ergänzen.`,
+      es: `${expects}, y Kad solo escribe un total: este importe quedará por verificar y se completa en la pestaña Presupuesto de la línea.`,
     }[language];
   }
   return {
-    en: `The account ${account} expects quantity and price entry: the amounts not entered that way will be to check, to complete on the Budget tab of ${many ? 'each line' : 'the line'}.`,
-    fr: `Le compte ${account} attend une saisie en quantité et prix : les montants qui ne sont pas saisis ainsi seront à vérifier, à compléter dans l'onglet Budget de ${many ? 'chaque ligne' : 'la ligne'}.`,
-    de: `Das Konto ${account} erwartet eine Erfassung nach Menge und Preis: Beträge, die nicht so erfasst sind, sind danach zu prüfen und auf der Registerkarte Budget ${many ? 'jeder Zeile' : 'der Zeile'} zu ergänzen.`,
-    es: `La cuenta ${account} espera una introducción por cantidad y precio: los importes que no se introducen así quedarán por verificar y se completan en la pestaña Presupuesto de ${many ? 'cada línea' : 'la línea'}.`,
+    en: `${expects}: the amounts not entered that way will be to check, to complete on the Budget tab of ${many ? 'each line' : 'the line'}.`,
+    fr: `${expects} : les montants qui ne sont pas saisis ainsi seront à vérifier, à compléter dans l'onglet Budget de ${many ? 'chaque ligne' : 'la ligne'}.`,
+    de: `${expects}: Beträge, die nicht so erfasst sind, sind danach zu prüfen und auf der Registerkarte Budget ${many ? 'jeder Zeile' : 'der Zeile'} zu ergänzen.`,
+    es: `${expects}: los importes que no se introducen así quedarán por verificar y se completan en la pestaña Presupuesto de ${many ? 'cada línea' : 'la línea'}.`,
   }[language];
 }
 

@@ -389,7 +389,7 @@ describe('BulkEditDialog', () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
-  it('says how many written rows will be to check when the list counts them (budget lines, lot B12b), and only then', async () => {
+  it('says how many written rows will be to check when the list counts them (budget lines), and only then', async () => {
     post.mockResolvedValueOnce({ data: COUNT });
     post.mockResolvedValueOnce({ data: { dry_run: false, rows: 10, changed: 5, unchanged: 5, refused: {}, to_check: { rows: 4, checks: { quantity_price: 4 } } } });
     renderDialog();

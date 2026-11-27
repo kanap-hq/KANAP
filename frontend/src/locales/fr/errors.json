@@ -128,6 +128,8 @@
   "BUDGET_FILE_START_AFTER_AMOUNTS": "La ligne commence le {{start}}, après ses derniers montants ({{year}}).",
   "BUDGET_FILE_END_BEFORE_AMOUNTS": "La ligne se termine le {{end}}, avant ses premiers montants ({{year}}).",
   "BUDGET_FILE_QUANTITY_PRICE_EXPECTED": "Le compte {{account}} attend une saisie en quantité et prix : complétez {{columns}} dans l'onglet Budget de la ligne.",
+  "BUDGET_FILE_QUANTITY_PRICE_EXPECTED_UNITS": "Le compte {{account}} attend une saisie en quantité et prix, avec des lignes de calcul en {{units}} : complétez {{columns}} dans l'onglet Budget de la ligne.",
+  "BUDGET_FILE_QUANTITY_PRICE_UNITS": "Le compte {{account}} attend des lignes de calcul en {{units}} : complétez {{columns}} dans l'onglet Budget de la ligne.",
   "BUDGET_FILE_CURRENCY_NOT_COMPANY": "{{currency}} n'est pas la devise de {{company}} ({{base}}).",
   "BUDGET_FILE_CURRENCY_NOT_COMPANY_UNREAD": "{{currency}} n'est pas la devise de la société payeuse ({{base}}).",
   "CSV_HEADER_IGNORED_COLUMNS": "Ces colonnes ne sont pas importées : {{extra}}.",
@@ -579,5 +581,8 @@
     "connections": "connexions",
     "incidents": "incidents"
   },
-  "INVOICE_PAYMENT_IN_PROGRESS": "Un paiement est déjà en cours."
+  "INVOICE_PAYMENT_IN_PROGRESS": "Un paiement est déjà en cours.",
+  "CSV_ACCOUNT_EXPECTED_UNIT_INVALID": "Unité inconnue « {{value}} ». Utilisez personnes, jours ou pièces, séparées par des virgules.",
+  "ACCOUNT_EXPECTED_UNITS_WITHOUT_ENTRY": "Les unités attendues demandent la saisie en quantité et prix : cochez Saisie en quantité et prix pour les nommer.",
+  "CSV_ACCOUNT_EXPECTED_UNITS_WITHOUT_ENTRY": "Les unités attendues demandent la saisie en quantité et prix : mettez quantity_price_expected à oui."
 }

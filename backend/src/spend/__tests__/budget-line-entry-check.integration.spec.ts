@@ -31,7 +31,7 @@ import { resolveAiEntityRegistry } from '../../ai/query/registries';
 // - a person limited to one company reads, counts and lists the lines of that company only, with the
 //   same answers on them as with every row readable (the reader, the field, its filter, sort and
 //   values, as seeded and after each change), though both read the columns line by line then;
-// - before a write (lot B12b): the accounts that expect it (`readAccountExpectations`, the budget
+// - before a write: the accounts that expect it (`readAccountExpectations`, the budget
 //   file's catalog) and the columns a move onto such an account leaves to check
 //   (`readColumnsToCheckOnAnyAccount`) are what the reader says once the write is made.
 // @database-spec: boots the application context, so run-ci-tests.js runs this file in a database lane.
@@ -316,7 +316,7 @@ async function testParity(h: Harness, runner: QueryRunner, s: Seed) {
   const checks = await readEntryChecks(runner.manager, s.tenantId, [s.lines.cons.id, s.lines.qp.id, s.lines.none.id], { accounts: true });
   assert.deepEqual(checks.get(s.lines.cons.id)!.consolidation_account, { number: 2400, name: 'External services' }, 'the consolidation account that sets it');
   assert.equal(checks.get(s.lines.qp.id)!.consolidation_account, null, 'no consolidation account at the account level');
-  assert.deepEqual(checks.get(s.lines.none.id), { expected: false, level: null, consolidation_account: null, columns: [], to_check: false });
+  assert.deepEqual(checks.get(s.lines.none.id), { expected: false, level: null, units: null, consolidation_account: null, columns: [], unit_columns: [], to_check: false });
   const hidden = await readEntryChecks(runner.manager, s.tenantId, [s.lines.cons.id]);
   assert.equal(hidden.get(s.lines.cons.id)!.consolidation_account, null, 'without the accounts, the level only');
 
@@ -474,8 +474,10 @@ async function testRoute(h: Harness, runner: QueryRunner, s: Seed) {
     reference: s.lines.cons.ref,
     expected: true,
     level: 'consolidation',
+    units: null,
     consolidation_account: { number: 2400, name: 'External services' },
     columns: [{ year: Y, measure: 'planned' }],
+    unit_columns: [],
     to_check: true,
   });
   const multi = await h.controller.entryCheck(s.lines.multi.id, reader);
@@ -742,22 +744,23 @@ async function testLimitedPerson(h: Harness, runner: QueryRunner, s: Seed) {
 }
 
 /**
- * The rule before a write (lot B12b), against the reader once the write is made: the level of each
+ * The rule before a write, against the reader once the write is made: the level of each
  * account (Kad's cards, the budget file's catalog), and the columns each line would have to check
  * on an expected account, read where it stands, then read again once every line is on that account.
  */
 async function testBeforeWrite(h: Harness, runner: QueryRunner, s: Seed) {
   const levels = await readAccountExpectations(runner.manager, s.tenantId);
-  const byKey = Object.fromEntries(Object.entries(s.accounts).map(([key, id]) => [key, levels.get(id) ?? null]));
+  const byKey = Object.fromEntries(Object.entries(s.accounts).map(([key, id]) => [key, levels.get(id)?.level ?? null]));
+  assert.ok([...levels.values()].every((expectation) => expectation.units === null), 'no account here names units: any unit');
   assert.deepEqual(byKey, { tick: 'account', cons: 'consolidation', both: 'account', none: null, noCons: null, outside: null, otherChart: null },
     'the accounts that expect it, at their level');
   const reader = await readerTable(runner, s);
   for (const line of LINES) {
     if (!line.account) continue;
-    assert.equal(levels.get(s.accounts[line.account]) ?? null, reader.get(line.label)!.level, `${line.label}: the account's level is the line's`);
+    assert.equal(levels.get(s.accounts[line.account])?.level ?? null, reader.get(line.label)!.level, `${line.label}: the account's level is the line's`);
   }
   const some = await readAccountExpectations(runner.manager, s.tenantId, [s.accounts.cons, s.accounts.none]);
-  assert.deepEqual([...some], [[s.accounts.cons, 'consolidation']], 'asked for some accounts: those that expect it');
+  assert.deepEqual([...some], [[s.accounts.cons, { level: 'consolidation', units: null }]], 'asked for some accounts: those that expect it');
   assert.equal((await readAccountExpectations(runner.manager, s.tenantId, [])).size, 0, 'none asked: none');
 
   const catalog = await loadCatalog(runner.manager, s.tenantId, null);

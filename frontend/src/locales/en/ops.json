@@ -1794,7 +1794,11 @@
       "consolidationNamed": "The consolidation account {{account}} expects quantity and price entry",
       "consolidation": "The consolidation account expects quantity and price entry",
       "sentence": "{{reason}}.",
-      "withColumns": "{{reason}}: {{columns}}."
+      "withColumns": "{{reason}}: {{columns}}.",
+      "withUnits": "{{reason}}, with calculation lines in {{units}}",
+      "unitsAccount": "The line's account expects calculation lines in {{units}}",
+      "unitsConsolidation": "The consolidation account expects calculation lines in {{units}}",
+      "unitsConsolidationNamed": "The consolidation account {{account}} expects calculation lines in {{units}}"
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "How the column is built",

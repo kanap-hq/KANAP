@@ -351,8 +351,8 @@ export type BulkEditCard = {
   /** The card was approved: its summary says what changed, the counts made before are not shown again. */
   done?: boolean;
   /**
-   * The rows that would change, or that changed, and that the list's "To check" column flags (lot
-   * B12b, budget lines only): said when not zero, in the words of the screen's dialog.
+   * The rows that would change, or that changed, and that the list's "To check" column flags (budget lines
+   * only): said when not zero, in the words of the screen's dialog.
    */
   toCheck?: number;
 };

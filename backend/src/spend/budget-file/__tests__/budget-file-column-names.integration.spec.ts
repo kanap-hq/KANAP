@@ -4,7 +4,7 @@ import { assert, inRolledBackTransaction, runSpecs, seedLine, seedTenant } from 
 import { BUDGET_FILE_OPTIONS, budgetFileService, exportBudgetFile, withCell } from '../../__tests__/budget-file.fixtures';
 import type { BudgetFileReport } from '../types';
 
-// Lot B12b: the budget file's messages name a column as the screen does, in the person's language: the
+// The budget file's messages name a column as the screen does, in the person's language: the
 // workspace's name for it, else the product name in the language of the request. The English `message`
 // keeps the English names; the parameters the screen and Kad's card translate carry the person's.
 // @database-spec

@@ -1021,7 +1021,8 @@
       "uploaded_by_id": "Téléversé par",
       "viewer_ids": "Lecteurs",
       "web_search_enabled": "Recherche web activée",
-      "linked_records": "Fiches liées"
+      "linked_records": "Fiches liées",
+      "expected_units": "Unités attendues"
     },
     "history": {
       "empty": "Aucun historique",

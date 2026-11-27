@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Checkbox, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Checkbox, FormControlLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { CreationActions, saveEditsSince, useCreatedFromDraft, useCreationLeave, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
@@ -30,6 +30,9 @@ import { keepValues } from '../reports/reportAggregates';
 import { ACCOUNT_NUMBER_MAX_DIGITS, parseAccountNumber, toAccountNumber } from '../../constants/accountNumber';
 
 const LIST_PATH = '/master-data/coa';
+/** The units a calculation line can be in, in the budget tab's order. */
+const EXPECTED_UNITS = ['people', 'days', 'pieces'] as const;
+type ExpectedUnit = typeof EXPECTED_UNITS[number];
 const ACCOUNT_PATH = '/master-data/accounts';
 /** The charts of accounts page's state, carried to the workspace and back. */
 const LIST_CONTEXT_KEYS = ['sort', 'q', 'filters', 'scope', 'selected', 'coaId', 'consolidation'];
@@ -51,6 +54,8 @@ type Account = {
   nature?: AccountNature | null;
   /** Its budget lines are expected as quantity and price: true, or null when not set (never false). */
   quantity_price_expected?: true | null;
+  /** The units its lines' calculation lines are expected in: only with the setting, null for any unit. */
+  expected_units?: ExpectedUnit[] | null;
   /** The OPEX and CAPEX lines (all statuses) using the account; on `GET /accounts/:id` only. */
   line_counts?: AccountLineCounts;
   status: string;
@@ -61,27 +66,27 @@ type Account = {
 const NEW_ACCOUNT: Account = {
   id: '', coa_id: null, account_number: '', account_name: '', native_name: null, description: null,
   consolidation_account_number: null, consolidation_account_name: null, consolidation_account_description: null,
-  nature: null, quantity_price_expected: null, status: STATUS_ENABLED, disabled_at: null,
+  nature: null, quantity_price_expected: null, expected_units: null, status: STATUS_ENABLED, disabled_at: null,
 };
 
 type TextKey = 'native_name' | 'description';
 /** Fields typed in place and saved on blur: a revert must reach the server even mid-save. */
 type TypedField = TextKey | 'account_name' | 'account_number';
 type AccountField = 'account_name' | 'account_number' | 'coa_id' | 'consolidation_account_number' | 'disabled_at' | 'nature'
-  | 'quantity_price_expected' | TextKey;
+  | 'quantity_price_expected' | 'expected_units' | TextKey;
 type FieldErrors = Partial<Record<AccountField, string>>;
 
 /** The draft's fields that Create sends and a patch can change. */
 const DRAFT_FIELDS = [
   'account_name', 'account_number', 'coa_id', 'native_name', 'description', 'consolidation_account_number', 'nature',
-  'quantity_price_expected', 'status', 'disabled_at',
+  'quantity_price_expected', 'expected_units', 'status', 'disabled_at',
 ] as const;
 
 const fetchAccount = async (accountId: string) => (await api.get<Account>(`/accounts/${accountId}`)).data;
 
 const ACCOUNT_FIELDS: ReadonlySet<string> = new Set<AccountField>([
   'account_name', 'account_number', 'coa_id', 'consolidation_account_number', 'disabled_at', 'nature', 'quantity_price_expected',
-  'native_name', 'description',
+  'expected_units', 'native_name', 'description',
 ]);
 
 /** The field a refusal names in its 400 body (`{ message, field }`), when the form shows it. */
@@ -331,6 +336,7 @@ export default function AccountWorkspacePage() {
           consolidation_account_number: sent.consolidation_account_number,
           nature: sent.nature,
           quantity_price_expected: sent.quantity_price_expected ?? null,
+          expected_units: sent.expected_units ?? null,
           status: sent.status,
           disabled_at: sent.disabled_at,
         });
@@ -418,11 +424,29 @@ export default function AccountWorkspacePage() {
             checked={data.quantity_price_expected === true}
             label={t('accounts.fields.quantityPriceExpected')}
             disabled={disabled}
-            error={errors.quantity_price_expected}
-            // Ticked: true; unticked: not set (null), never false.
-            onChange={(next) => void patch({ quantity_price_expected: next ? true : null }, 'quantity_price_expected')}
+            // A refusal of the units shows here while their field is hidden (the entry not ticked).
+            error={errors.quantity_price_expected
+              ?? (data.quantity_price_expected === true ? undefined : errors.expected_units)}
+            // Ticked: true; unticked: not set (null), never false, and the units go with it.
+            onChange={(next) => {
+              setErrors((prev) => ({ ...prev, expected_units: undefined }));
+              void patch(
+                next ? { quantity_price_expected: true } : { quantity_price_expected: null, expected_units: null },
+                'quantity_price_expected',
+              );
+            }}
           />
         </PropertyRow>
+        {data.quantity_price_expected === true && (
+          <PropertyRow label={t('accounts.fields.expectedUnits')} hint={t('accounts.hints.expectedUnits')}>
+            <ExpectedUnitsField
+              value={data.expected_units ?? null}
+              disabled={disabled}
+              error={errors.expected_units}
+              onChange={(next) => void patch({ expected_units: next }, 'expected_units')}
+            />
+          </PropertyRow>
+        )}
       </PropertyGroup>
       <PropertyGroup>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, py: '5px' }}>
@@ -611,6 +635,53 @@ function ExpectedSettingCheckbox({
         inputProps={{ 'aria-label': label }}
         sx={{ p: '2px', ml: '-2px' }}
       />
+      {error && (
+        <Typography role="alert" sx={{ mt: '3px', fontSize: 12, lineHeight: 1.35, color: 'error.main' }}>{error}</Typography>
+      )}
+    </Box>
+  );
+}
+
+const sentenceCase = (word: string) => word.charAt(0).toLocaleUpperCase() + word.slice(1);
+
+/** The units the account's calculation lines are expected in: none ticked, any unit. */
+function ExpectedUnitsField({
+  value,
+  disabled,
+  error,
+  onChange,
+}: {
+  value: ExpectedUnit[] | null;
+  disabled?: boolean;
+  error?: string;
+  onChange: (next: ExpectedUnit[] | null) => void;
+}) {
+  const { t } = useTranslation(['ops']);
+  const ticked = new Set(value ?? []);
+  const toggle = (unit: ExpectedUnit, on: boolean) => {
+    const next = EXPECTED_UNITS.filter((item) => (item === unit ? on : ticked.has(item)));
+    onChange(next.length > 0 ? next : null);
+  };
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2 }}>
+        {EXPECTED_UNITS.map((unit) => (
+          <FormControlLabel
+            key={unit}
+            label={sentenceCase(t(`budgetTab.lines.unitNames.${unit}`))}
+            disabled={disabled}
+            sx={{ m: 0, '& .MuiFormControlLabel-label': { fontSize: 13 } }}
+            control={(
+              <Checkbox
+                size="small"
+                checked={ticked.has(unit)}
+                onChange={(event) => toggle(unit, event.target.checked)}
+                sx={{ p: '2px', mr: '4px', ml: '-2px' }}
+              />
+            )}
+          />
+        ))}
+      </Box>
       {error && (
         <Typography role="alert" sx={{ mt: '3px', fontSize: 12, lineHeight: 1.35, color: 'error.main' }}>{error}</Typography>
       )}

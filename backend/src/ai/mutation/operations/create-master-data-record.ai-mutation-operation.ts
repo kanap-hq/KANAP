@@ -8,6 +8,7 @@ import {
   AiPreparedMutationPreview,
 } from '../ai-mutation-operation.types';
 import {
+  AI_ACCOUNT_FIELDS_DECLARATION,
   AI_MASTER_DATA_BUSINESS_RESOURCES,
   AI_MASTER_DATA_ENTITY_TYPES,
   AiCreateMasterDataRecordInput,
@@ -41,7 +42,7 @@ export class CreateMasterDataRecordAiMutationOperation implements AiMutationOper
       'departments: company_id, name, description, status, disabled_at, metrics_year, headcount',
       'suppliers: name, erp_supplier_id, notes, status, disabled_at',
       'contacts: first_name, last_name, job_title, email, phone, mobile, country, notes, active, supplier_id, supplier_role',
-      'accounts: coa_id, account_number, account_name, native_name, description, consolidation_account_number, consolidation_account_name, consolidation_account_description, nature, quantity_price_expected (yes or no), status, disabled_at',
+      AI_ACCOUNT_FIELDS_DECLARATION,
       'chart_of_accounts: code, name, country_iso, scope, is_default',
       'analytics_categories: name, description, applies_to, status, disabled_at, dimension (create only: the code or name of the analytics dimension, the default dimension when omitted)',
       'business_processes: name, description, notes, owner_user_id, it_owner_user_id, process_type (management, core or support), parent_id (the parent process), status, disabled_at',

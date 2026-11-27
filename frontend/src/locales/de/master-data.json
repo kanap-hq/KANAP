@@ -565,6 +565,8 @@
       "accountName": "Name",
       "nature": "Verwendet für",
       "quantityPriceExpected": "Erfassung nach Menge und Preis",
+      "expectedUnits": "Erwartete Einheiten",
+      "expectedUnitsAny": "Jede Einheit",
       "nativeName": "Lokaler Name",
       "consolAccountNumber": "Konsol.-Kontonr.",
       "consolAccountName": "Konsol.-Name",
@@ -712,10 +714,12 @@
       "consolidationAccountDescription": "Beschreibung des Konsolidierungskontos",
       "selectChart": "Wählen Sie einen Kontenplan",
       "lifecycle": "Lebenszyklus",
-      "loadCoAsError": "Fehler beim Laden der Kontenpläne"
+      "loadCoAsError": "Fehler beim Laden der Kontenpläne",
+      "expectedUnits": "Erwartete Einheiten"
     },
     "hints": {
-      "quantityPriceExpected": "Budgetzeilen auf diesem Konto werden nach Menge und Preis erwartet. Auf einem Konsolidierungskonto gilt die Einstellung für die ihm zugeordneten Konten."
+      "quantityPriceExpected": "Budgetzeilen auf diesem Konto werden nach Menge und Preis erwartet. Auf einem Konsolidierungskonto gilt die Einstellung für die ihm zugeordneten Konten.",
+      "expectedUnits": "Jede Spalte braucht mindestens eine Berechnungszeile in einer angehakten Einheit. Keine angehakt: jede Einheit passt."
     },
     "placeholders": {
       "chartOfAccounts": "z. B. COA-FR",

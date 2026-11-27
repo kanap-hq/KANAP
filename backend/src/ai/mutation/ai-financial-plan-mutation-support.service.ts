@@ -363,7 +363,7 @@ function amountMeasures(payload: AmountPayload): AmountMeasure[] {
 }
 
 /**
- * The columns a payload writes, each with its total for the year once written (lot B12b, the
+ * The columns a payload writes, each with its total for the year once written (the
  * warning of a column left to check): a yearly or quarterly payload sets its columns' year, a
  * monthly one its months over the months stored (`beforeItems`, the year's rows as listed). A
  * monthly column whose cents do not change is not written as an amount (`recordPayloadRoundInputs`
@@ -488,7 +488,7 @@ export class AiFinancialPlanMutationSupportService {
       const columns = await readBudgetColumns(context.manager, context.tenantId);
       const beforeItems = Array.isArray(before.items) ? before.items : [];
       const reverseItems = completeAmountRowsForPeriods(beforeItems, amountTouchedPeriods(amounts));
-      // Kad writes totals: on an account that expects quantity and price, the card warns (lot B12b).
+      // Kad writes totals: on an account that expects quantity and price, the card warns.
       const warning = await amountsEntryCheckWarning(context.manager, context.tenantId,
         { nature: item.nature, accountId: item.row.account_id, endOfValidity: item.row.disabled_at as string | Date | null },
         columnsAfterWrite(amounts, beforeItems));

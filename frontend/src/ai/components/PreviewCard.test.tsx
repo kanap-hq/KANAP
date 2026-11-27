@@ -123,7 +123,22 @@ describe('PreviewCard in French', () => {
     expect(screen.queryByText('What goes with it')).not.toBeInTheDocument();
   });
 
-  it('warns that a budget line will be to check, under the list column\'s name, and keeps Approve (lot B12b)', () => {
+  it('names the units an account expects as the budget tab does, in French', () => {
+    renderCard(preview({
+      tool_name: 'update_master_data_record',
+      target: { entity_type: 'accounts', entity_id: 'account-1', ref: '621100', title: '621100 - Personnel intérimaire' },
+      changes: {
+        expected_units: { label: 'Expected units', from: 'people, days', to: 'pieces', format: 'text' },
+      },
+    }));
+
+    expect(screen.getByText('Unités attendues')).toBeInTheDocument();
+    expect(screen.getByText('personnes, jours')).toBeInTheDocument();
+    expect(screen.getByText('pièces')).toBeInTheDocument();
+    expect(screen.queryByText(/people|pieces/)).not.toBeInTheDocument();
+  });
+
+  it('warns that a budget line will be to check, under the list column\'s name, and keeps Approve', () => {
     const warning = "Le compte 621100 - Honoraires attend une saisie en quantité et prix : les montants qui ne sont pas saisis ainsi seront à vérifier, à compléter dans l'onglet Budget de la ligne.";
     renderCard(preview({
       tool_name: 'update_business_record',

@@ -483,7 +483,7 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     expect(screen.getByText(`${K}andMore:{"count":2}`)).toBeInTheDocument();
   });
 
-  it('warns, by line, of an amount on an account that expects quantity and price, with the account and its columns (lot B12b)', async () => {
+  it('warns, by line, of an amount on an account that expects quantity and price, with the account and its columns', async () => {
     post.mockResolvedValueOnce({ data: report({
       warnings: {
         duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [],

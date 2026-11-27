@@ -128,6 +128,8 @@
   "BUDGET_FILE_START_AFTER_AMOUNTS": "Die Budgetzeile beginnt am {{start}}, nach ihren letzten Beträgen ({{year}}).",
   "BUDGET_FILE_END_BEFORE_AMOUNTS": "Die Budgetzeile endet am {{end}}, vor ihren ersten Beträgen ({{year}}).",
   "BUDGET_FILE_QUANTITY_PRICE_EXPECTED": "Das Konto {{account}} erwartet eine Erfassung nach Menge und Preis: Ergänzen Sie {{columns}} auf der Registerkarte Budget der Zeile.",
+  "BUDGET_FILE_QUANTITY_PRICE_EXPECTED_UNITS": "Das Konto {{account}} erwartet eine Erfassung nach Menge und Preis, mit Berechnungszeilen in der Einheit {{units}}: Ergänzen Sie {{columns}} auf der Registerkarte Budget der Zeile.",
+  "BUDGET_FILE_QUANTITY_PRICE_UNITS": "Das Konto {{account}} erwartet Berechnungszeilen in der Einheit {{units}}: Ergänzen Sie {{columns}} auf der Registerkarte Budget der Zeile.",
   "BUDGET_FILE_CURRENCY_NOT_COMPANY": "{{currency}} ist nicht die Währung von {{company}} ({{base}}).",
   "BUDGET_FILE_CURRENCY_NOT_COMPANY_UNREAD": "{{currency}} ist nicht die Währung der zahlenden Gesellschaft ({{base}}).",
   "CSV_HEADER_IGNORED_COLUMNS": "Diese Spalten werden nicht importiert: {{extra}}.",
@@ -579,5 +581,8 @@
     "connections": "Verbindungen",
     "incidents": "Vorfälle"
   },
-  "INVOICE_PAYMENT_IN_PROGRESS": "Eine Zahlung ist bereits in Bearbeitung."
+  "INVOICE_PAYMENT_IN_PROGRESS": "Eine Zahlung ist bereits in Bearbeitung.",
+  "CSV_ACCOUNT_EXPECTED_UNIT_INVALID": "Unbekannte Einheit „{{value}}“. Verwenden Sie Personen, Tage oder Stück, durch Kommas getrennt.",
+  "ACCOUNT_EXPECTED_UNITS_WITHOUT_ENTRY": "Erwartete Einheiten setzen die Erfassung nach Menge und Preis voraus: Aktivieren Sie Erfassung nach Menge und Preis, um sie anzugeben.",
+  "CSV_ACCOUNT_EXPECTED_UNITS_WITHOUT_ENTRY": "Erwartete Einheiten setzen die Erfassung nach Menge und Preis voraus: setzen Sie quantity_price_expected auf ja."
 }

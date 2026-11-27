@@ -4,6 +4,7 @@ import { SqlStatement } from '../common/list-engine/sql-statement';
 import { AMOUNT_MEASURES, MEASURE_FREEZE_COLUMN, type AmountMeasure } from './amounts-write.util';
 import { BUDGET_NATURES, naturesAnd, type BudgetNature } from './budget-nature';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
+import { expectedUnitsSetting, type AccountExpectedUnit } from '../accounts/account.entity';
 
 /**
  * "Quantity and price expected" read on the budget lines (lot B12a): an account
@@ -21,6 +22,11 @@ import { isLimitedTransaction } from '../data-access/line-write-checks';
  * frozen; every year the line has a version, after the end of validity cut as the list cuts it.
  * Such a column is to check unless it conforms (`columnConformsSql`). A line is `to_check` when
  * at least one of its columns is.
+ *
+ * The expected units (`accounts.expected_units`) are read at the same level as the
+ * setting, as a block: the line's account when it sets it (its units, or none), else its
+ * consolidation account's. A level that names units also wants at least one calculation line of the
+ * column in one of them; a level without units checks the entry mode alone.
  *
  * Both readers build their SQL here: the list's check `quantity_price` of the field `to_check`
  * (`budget-line-checks.ts`, `budget-list.config.ts`) and the per-line reader (`readEntryChecks`,
@@ -50,6 +56,8 @@ export type LineEntryCheck = {
   /** The line's account, or its consolidation account, expects quantity and price. */
   expected: boolean;
   level: EntryCheckLevel | null;
+  /** The units that level expects, in the budget tab's order; null when it names none. */
+  units: AccountExpectedUnit[] | null;
   /**
    * The consolidation account that sets it (`level` `consolidation`), for a caller who reads the
    * accounts; null otherwise, as the list's consolidation fields.
@@ -57,6 +65,11 @@ export type LineEntryCheck = {
   consolidation_account: { number: number; name: string } | null;
   /** The columns to check, by year then in the columns' order. */
   columns: EntryCheckColumn[];
+  /**
+   * Those of `columns` that are built as quantity × price, with no calculation line in one of
+   * `units`: what they lack is a line in an expected unit, not the entry mode.
+   */
+  unit_columns: EntryCheckColumn[];
   to_check: boolean;
 };
 
@@ -71,38 +84,49 @@ export type LineEntryCheck = {
  * whose calendar has no working days in the destination year, where the copy keeps the amounts
  * without computing them (`copied`, its lines only a reference).
  *
- * `round` is the alias of the column's `spend_round_inputs` row. The one place this rule lives.
+ * `round` is the alias of the column's `spend_round_inputs` row. `units`, when given, is the SQL
+ * of the expected units (a `text[]`, null for none): one of the lines must then be in one of them.
+ * A forfeit in pieces next to people still conforms on an account that expects people. The one
+ * place this rule lives.
  */
-export function columnConformsSql(round: string): string {
+export function columnConformsSql(round: string, units?: string): string {
+  const inUnits = units ? `
+      AND (${units} IS NULL OR ecl.quantity_unit::text = ANY(${units}))` : '';
   return `(${round}.method = 'computed' AND EXISTS (SELECT 1 FROM spend_round_input_lines ecl
-    WHERE ecl.tenant_id = ${round}.tenant_id AND ecl.round_input_id = ${round}.id))`;
+    WHERE ecl.tenant_id = ${round}.tenant_id AND ecl.round_input_id = ${round}.id${inUnits}))`;
 }
 
 /**
- * `columnConformsSql` on a round already read (the budget file's check reads each column's method
- * and its count of calculation lines): `computed` with lines it still has. The parity spec holds the
- * two together.
+ * `columnConformsSql` on a round already read (the budget file's check reads each column's method,
+ * its count of calculation lines and their units): `computed` with lines it still has, one of them
+ * in one of `units` when the account names some. The parity spec holds the two together.
  */
-export function roundConforms(round: { method: string; lineCount: number } | null | undefined): boolean {
-  return !!round && round.method === 'computed' && round.lineCount > 0;
+export function roundConforms(
+  round: { method: string; lineCount: number; units?: readonly string[] } | null | undefined,
+  units?: readonly string[] | null,
+): boolean {
+  if (!round || round.method !== 'computed' || round.lineCount === 0) return false;
+  return !units?.length || (round.units ?? []).some((unit) => units.includes(unit));
 }
 
 /** What a statement binds its values with (`SqlStatement`). */
 type Binder = Pick<SqlStatement, 'tenant' | 'bind'>;
 
 /**
- * The accounts whose lines are expected, from the accounts that set it: `account_id`, `level`, and
- * for `consolidation` the consolidation account's number and name (`cons_number`, `cons_name`).
+ * The accounts whose lines are expected, from the accounts that set it: `account_id`, `level`, the
+ * units of that level (`units`, the setting's level as a block: never the consolidation account's
+ * units under an account that sets it), and for `consolidation` the consolidation account's number
+ * and name (`cons_number`, `cons_name`).
  * One row per account: a local account maps to one consolidation account at most (one
  * consolidation chart, one account per number in it).
  */
 export function expectedAccountsSql(stmt: Binder): string {
   const t = stmt.tenant;
-  return `SELECT a.id AS account_id, 'account'::text AS level, NULL::bigint AS cons_number, NULL::text AS cons_name
+  return `SELECT a.id AS account_id, 'account'::text AS level, a.expected_units AS units, NULL::bigint AS cons_number, NULL::text AS cons_name
       FROM accounts a
       WHERE a.tenant_id = ${t} AND a.quantity_price_expected
     UNION ALL
-    SELECT a.id, 'consolidation', ca.account_number, ca.account_name
+    SELECT a.id, 'consolidation', ca.expected_units, ca.account_number, ca.account_name
       FROM chart_of_accounts cc
       JOIN accounts ca ON ca.tenant_id = ${t} AND ca.coa_id = cc.id AND ca.quantity_price_expected
       JOIN accounts a ON a.tenant_id = ${t} AND a.consolidation_account_number = ca.account_number
@@ -113,7 +137,8 @@ export function expectedAccountsSql(stmt: Binder): string {
 /**
  * The columns to check of one line: the `FROM` and `WHERE` that select its versions and columns
  * (`v`, `m`). `line` is the alias of the line's `spend_items` row in the enclosing statement, whose
- * account the caller already knows to expect quantity and price.
+ * account the caller already knows to expect quantity and price; `units` the SQL of that account's
+ * expected units (`expectedAccountsSql`'s `units` of its row).
  *
  * Two shapes of the same test, after `settings.lineByLine`:
  * - all data (`false`): `NOT EXISTS`, which the planner turns into one anti-join against the
@@ -129,6 +154,7 @@ function lineColumnsParts(
   stmt: Binder,
   line: string,
   settings: EntryCheckSettings,
+  units: string,
   sources: { versions: string; totals: string } = { versions: 'spend_versions', totals: 'spend_version_totals' },
   anyEnd = false,
 ): { from: string; where: string } {
@@ -136,7 +162,7 @@ function lineColumnsParts(
   // Each measure is one of the five column names (`AMOUNT_MEASURES`): never request text.
   const values = AMOUNT_MEASURES.map((measure) => `('${measure}', vt.${measure})`).join(', ');
   const conforming = `SELECT 1 FROM spend_round_inputs er
-        WHERE er.tenant_id = ${t} AND er.version_id = v.id AND er.measure = m.measure AND ${columnConformsSql('er')}`;
+        WHERE er.tenant_id = ${t} AND er.version_id = v.id AND er.measure = m.measure AND ${columnConformsSql('er', units)}`;
   return {
     from: `${sources.versions} v
     JOIN ${sources.totals} vt ON vt.tenant_id = ${t} AND vt.version_id = v.id
@@ -149,15 +175,19 @@ function lineColumnsParts(
   };
 }
 
-/** The columns to check of one line (`year`, `measure`), as a subquery on `line` (`lineColumnsParts`). */
+/**
+ * The columns to check of one line (`year`, `measure`), as a subquery on `line` (`lineColumnsParts`);
+ * `units` the SQL of its account's expected units.
+ */
 export function lineColumnsToCheckSql(
   stmt: Binder,
   line: string,
   settings: EntryCheckSettings,
+  units: string,
   sources?: { versions: string; totals: string },
   anyEnd = false,
 ): string {
-  const { from, where } = lineColumnsParts(stmt, line, settings, sources, anyEnd);
+  const { from, where } = lineColumnsParts(stmt, line, settings, units, sources, anyEnd);
   return `SELECT v.budget_year AS year, m.measure FROM ${from} WHERE ${where}`;
 }
 
@@ -170,8 +200,8 @@ export function lineColumnsToCheckSql(
  * A selection first reads its versions and their totals once each (two materialised reads keyed by
  * the selection), and the test runs on those rows. Joined to the tables themselves, statistics that
  * do not know the tenant's rows yet (a load not analysed) let the planner scan every version of the
- * tenant for each version of each line: 100 s for the count of a change in bulk of 500 lines (lot
- * B12b), where these reads stay linear in the tenant's versions whatever the plan.
+ * tenant for each version of each line: 100 s for the count of a change in bulk of 500 lines,
+ * where these reads stay linear in the tenant's versions whatever the plan.
  */
 export function columnsToCheckSql(
   stmt: Binder,
@@ -186,12 +216,12 @@ export function columnsToCheckSql(
   const sources = itemIds ? SELECTION_SOURCES : undefined;
   let body: string;
   if (settings.lineByLine) {
-    const { from, where } = lineColumnsParts(stmt, 'li', settings, sources);
+    const { from, where } = lineColumnsParts(stmt, 'li', settings, 'ea.units', sources);
     body = `SELECT li.id AS item_id, c.year, c.measure
     FROM ${lines}
     CROSS JOIN LATERAL (SELECT v.budget_year AS year, m.measure FROM ${from} WHERE ${where} OFFSET 0) c`;
   } else {
-    const { from, where } = lineColumnsParts(stmt, 'li', settings, sources);
+    const { from, where } = lineColumnsParts(stmt, 'li', settings, 'ea.units', sources);
     body = `SELECT li.id AS item_id, v.budget_year AS year, m.measure
     FROM ${lines}, ${from}
     WHERE ${where}`;
@@ -234,13 +264,17 @@ export async function loadEntryCheckSettings(manager: EntityManager, tenantId: s
   };
 }
 
-const NOT_EXPECTED: LineEntryCheck = { expected: false, level: null, consolidation_account: null, columns: [], to_check: false };
+const NOT_EXPECTED: LineEntryCheck = {
+  expected: false, level: null, units: null, consolidation_account: null, columns: [], unit_columns: [], to_check: false,
+};
 
 /**
  * The rule for a batch of lines of either nature, in two statements whatever their number: the
  * lines whose account expects quantity and price (and nothing more when there is none), then their
  * columns to check, after the tenant's settings (two small reads, unless `settings` gives them). Every line asked comes back; a line that is
- * not expected, or that the caller cannot read (data-scoped access), reads as not expected.
+ * not expected, or that the caller cannot read (data-scoped access), reads as not expected. Each
+ * column to check says whether it is built as quantity × price (`entry_conforms`): then only its
+ * units are wrong (`unit_columns`).
  * `accounts`: the caller reads the accounts page, so the consolidation account is named.
  */
 export async function readEntryChecks(
@@ -255,34 +289,42 @@ export async function readEntryChecks(
 
   const first = new SqlStatement(tenantId);
   const expected = first.finalize(`WITH ea AS (${expectedAccountsSql(first)})
-    SELECT li.id, ea.level, ea.cons_number::text AS cons_number, ea.cons_name
+    SELECT li.id, ea.level, ea.units, ea.cons_number::text AS cons_number, ea.cons_name
       FROM spend_items li JOIN ea ON ea.account_id = li.account_id
       WHERE li.tenant_id = ${first.tenant}${naturesAnd('li', BUDGET_NATURES)} AND li.id = ANY(${first.bind(ids, 'uuid[]')})`);
-  const lines: Array<{ id: string; level: EntryCheckLevel; cons_number: string | null; cons_name: string | null }> =
+  const lines: Array<{ id: string; level: EntryCheckLevel; units: string[] | null; cons_number: string | null; cons_name: string | null }> =
     await manager.query(expected.sql, expected.params);
   if (lines.length === 0) return result;
 
   const settings = opts.settings ?? await loadEntryCheckSettings(manager, tenantId);
   const second = new SqlStatement(tenantId);
+  // A column to check that is built as quantity × price lacks only a line in an expected unit.
+  const t = second.tenant;
   const columns = second.finalize(`WITH ea AS (${expectedAccountsSql(second)})
-    ${columnsToCheckSql(second, 'ea', settings, BUDGET_NATURES, second.bind(lines.map((line) => line.id), 'uuid[]'))}`);
-  const rows: Array<{ item_id: string; year: number; measure: AmountMeasure }> = await manager.query(columns.sql, columns.params);
-  const byLine = new Map<string, EntryCheckColumn[]>();
+    SELECT c.item_id, c.year, c.measure, EXISTS (SELECT 1 FROM spend_versions cv
+        JOIN spend_round_inputs er ON er.tenant_id = ${t} AND er.version_id = cv.id AND er.measure = c.measure
+        WHERE cv.tenant_id = ${t} AND cv.spend_item_id = c.item_id AND cv.budget_year = c.year AND ${columnConformsSql('er')}) AS entry_conforms
+    FROM (${columnsToCheckSql(second, 'ea', settings, BUDGET_NATURES, second.bind(lines.map((line) => line.id), 'uuid[]'))}) c`);
+  const rows: Array<{ item_id: string; year: number; measure: AmountMeasure; entry_conforms: boolean }> = await manager.query(columns.sql, columns.params);
+  const byLine = new Map<string, Array<EntryCheckColumn & { entryConforms: boolean }>>();
   for (const row of rows) {
     const list = byLine.get(row.item_id) ?? [];
-    list.push({ year: Number(row.year), measure: row.measure });
+    list.push({ year: Number(row.year), measure: row.measure, entryConforms: row.entry_conforms === true });
     byLine.set(row.item_id, list);
   }
   for (const line of lines) {
-    const toCheck = (byLine.get(line.id) ?? [])
+    const found = (byLine.get(line.id) ?? [])
       .sort((a, b) => a.year - b.year || AMOUNT_MEASURES.indexOf(a.measure) - AMOUNT_MEASURES.indexOf(b.measure));
+    const toCheck = found.map(({ year, measure }) => ({ year, measure }));
     result.set(line.id, {
       expected: true,
       level: line.level,
+      units: expectedUnitsSetting(line.units),
       consolidation_account: line.level === 'consolidation' && opts.accounts && line.cons_number != null
         ? { number: Number(line.cons_number), name: line.cons_name ?? '' }
         : null,
       columns: toCheck,
+      unit_columns: found.filter((column) => column.entryConforms).map(({ year, measure }) => ({ year, measure })),
       to_check: toCheck.length > 0,
     });
   }
@@ -290,30 +332,34 @@ export async function readEntryChecks(
 }
 
 /*
- * The same rule before a write (lot B12b): what a line will read once a write that is not yet made
+ * The same rule before a write: what a line will read once a write that is not yet made
  * puts totals on it or moves it onto another account. Kad's cards and the budget file's check say
  * it as a warning; nothing is refused. The parity spec compares each answer with `readEntryChecks`
  * once the write is made.
  */
 
+/** What an account expects of its lines: the level that sets it and that level's units (null: any unit). */
+export type AccountExpectation = { level: EntryCheckLevel; units: AccountExpectedUnit[] | null };
+
 /**
- * The level at which each of `accountIds` expects quantity and price (`expectedAccountsSql`): the
- * account a write puts lines on, before they are. Every account of the tenant when `accountIds` is
- * absent (the budget file's catalog). An account that is not expected is absent from the answer.
+ * The level at which each of `accountIds` expects quantity and price (`expectedAccountsSql`), with
+ * the units of that level, as a block: the account a write puts lines on, before they are. Every
+ * account of the tenant when `accountIds` is absent (the budget file's catalog). An account that is
+ * not expected is absent from the answer.
  */
 export async function readAccountExpectations(
   manager: EntityManager,
   tenantId: string,
   accountIds?: readonly string[],
-): Promise<Map<string, EntryCheckLevel>> {
-  const result = new Map<string, EntryCheckLevel>();
+): Promise<Map<string, AccountExpectation>> {
+  const result = new Map<string, AccountExpectation>();
   if (accountIds && accountIds.length === 0) return result;
   const stmt = new SqlStatement(tenantId);
   const only = accountIds ? ` WHERE ea.account_id = ANY(${stmt.bind(Array.from(new Set(accountIds)), 'uuid[]')})` : '';
   const query = stmt.finalize(`WITH ea AS (${expectedAccountsSql(stmt)})
-    SELECT ea.account_id::text AS account_id, ea.level FROM ea${only}`);
-  const rows: Array<{ account_id: string; level: EntryCheckLevel }> = await manager.query(query.sql, query.params);
-  for (const row of rows) result.set(row.account_id, row.level);
+    SELECT ea.account_id::text AS account_id, ea.level, ea.units FROM ea${only}`);
+  const rows: Array<{ account_id: string; level: EntryCheckLevel; units: string[] | null }> = await manager.query(query.sql, query.params);
+  for (const row of rows) result.set(row.account_id, { level: row.level, units: expectedUnitsSetting(row.units) });
   return result;
 }
 
@@ -366,7 +412,8 @@ export function columnsLeftToCheck(
  * The columns to check of lines as they stand, whatever their account (`lineColumnsToCheckSql`):
  * what a move onto an expected account leaves to check. One statement; a line without one is absent.
  * `anyEnd`: every year, whatever the line's end of validity (for an end the write changes:
- * `withinEndOfValidity`).
+ * `withinEndOfValidity`). `units`: the units the account expects, null for any unit; a
+ * column built as quantity × price with no line in one of them lacks only a unit (`unitsOnly`).
  */
 export async function readColumnsToCheckOnAnyAccount(
   manager: EntityManager,
@@ -374,22 +421,29 @@ export async function readColumnsToCheckOnAnyAccount(
   itemIds: readonly string[],
   settings?: EntryCheckSettings,
   anyEnd = false,
-): Promise<Map<string, EntryCheckColumn[]>> {
-  const result = new Map<string, EntryCheckColumn[]>();
+  units: readonly string[] | null = null,
+): Promise<Map<string, Array<EntryCheckColumn & { unitsOnly: boolean }>>> {
+  const result = new Map<string, Array<EntryCheckColumn & { unitsOnly: boolean }>>();
   const ids = Array.from(new Set(itemIds));
   if (ids.length === 0) return result;
   const rule = settings ?? await loadEntryCheckSettings(manager, tenantId);
   const stmt = new SqlStatement(tenantId);
   const bound = stmt.bind(ids, 'uuid[]');
+  const t = stmt.tenant;
+  const wanted = units?.length ? stmt.bind([...units], 'text[]') : 'NULL::text[]';
+  // Only with units: whether the column is built as quantity × price, so that only a unit lacks.
+  const entryConforms = units?.length ? `EXISTS (SELECT 1 FROM ${SELECTION_SOURCES.versions} cv
+        JOIN spend_round_inputs er ON er.tenant_id = ${t} AND er.version_id = cv.id AND er.measure = c.measure
+        WHERE cv.spend_item_id = li.id AND cv.budget_year = c.year AND ${columnConformsSql('er')})` : 'false';
   const query = stmt.finalize(`${selectionSourcesSql(stmt, bound)}
-    SELECT li.id::text AS item_id, c.year, c.measure
+    SELECT li.id::text AS item_id, c.year, c.measure, ${entryConforms} AS entry_conforms
     FROM spend_items li
-    CROSS JOIN LATERAL (${lineColumnsToCheckSql(stmt, 'li', rule, SELECTION_SOURCES, anyEnd)}) c
-    WHERE li.tenant_id = ${stmt.tenant}${naturesAnd('li', BUDGET_NATURES)} AND li.id = ANY(${bound})`);
-  const rows: Array<{ item_id: string; year: number; measure: AmountMeasure }> = await manager.query(query.sql, query.params);
+    CROSS JOIN LATERAL (${lineColumnsToCheckSql(stmt, 'li', rule, wanted, SELECTION_SOURCES, anyEnd)}) c
+    WHERE li.tenant_id = ${t}${naturesAnd('li', BUDGET_NATURES)} AND li.id = ANY(${bound})`);
+  const rows: Array<{ item_id: string; year: number; measure: AmountMeasure; entry_conforms: boolean }> = await manager.query(query.sql, query.params);
   for (const row of rows) {
     const list = result.get(row.item_id) ?? [];
-    list.push({ year: Number(row.year), measure: row.measure });
+    list.push({ year: Number(row.year), measure: row.measure, unitsOnly: row.entry_conforms === true });
     result.set(row.item_id, list);
   }
   for (const list of result.values()) {

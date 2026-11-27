@@ -128,6 +128,8 @@
   "BUDGET_FILE_START_AFTER_AMOUNTS": "The line starts on {{start}}, after its last amounts ({{year}}).",
   "BUDGET_FILE_END_BEFORE_AMOUNTS": "The line ends on {{end}}, before its first amounts ({{year}}).",
   "BUDGET_FILE_QUANTITY_PRICE_EXPECTED": "Account {{account}} expects quantity and price entry: complete {{columns}} on the line's Budget tab.",
+  "BUDGET_FILE_QUANTITY_PRICE_EXPECTED_UNITS": "Account {{account}} expects quantity and price entry, with calculation lines in {{units}}: complete {{columns}} on the line's Budget tab.",
+  "BUDGET_FILE_QUANTITY_PRICE_UNITS": "Account {{account}} expects calculation lines in {{units}}: complete {{columns}} on the line's Budget tab.",
   "BUDGET_FILE_CURRENCY_NOT_COMPANY": "{{currency}} is not the currency of {{company}} ({{base}}).",
   "BUDGET_FILE_CURRENCY_NOT_COMPANY_UNREAD": "{{currency}} is not the currency of the paying company ({{base}}).",
   "CSV_HEADER_IGNORED_COLUMNS": "These columns are not imported: {{extra}}.",
@@ -579,5 +581,8 @@
     "connections": "connections",
     "incidents": "incidents"
   },
-  "INVOICE_PAYMENT_IN_PROGRESS": "A payment is already in progress."
+  "INVOICE_PAYMENT_IN_PROGRESS": "A payment is already in progress.",
+  "CSV_ACCOUNT_EXPECTED_UNIT_INVALID": "Unknown unit \"{{value}}\". Use people, days or pieces, separated by commas.",
+  "ACCOUNT_EXPECTED_UNITS_WITHOUT_ENTRY": "Expected units need quantity and price entry: tick Quantity and price entry to name them.",
+  "CSV_ACCOUNT_EXPECTED_UNITS_WITHOUT_ENTRY": "Expected units need quantity and price entry: set quantity_price_expected to yes."
 }

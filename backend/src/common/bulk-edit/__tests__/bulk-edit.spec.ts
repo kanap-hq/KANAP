@@ -123,7 +123,7 @@ async function main() {
     assert.deepEqual(list.written, [rows[3].id, rows[4].id]);
     assert.ok(!statements.some((s) => s.includes('bulk_edit_dry_run')));
   }
-  // A list with a "To check" column (budget lines, lot B12b): asked for the rows written, the dry run's
+  // A list with a "To check" column (budget lines): asked for the rows written, the dry run's
   // inside its savepoint (the writes are still there), and answered under `to_check`. A list without
   // one (the applications) answers as before, without the field (the blocks above).
   for (const dryRun of [true, false]) {

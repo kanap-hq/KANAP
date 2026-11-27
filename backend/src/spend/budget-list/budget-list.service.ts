@@ -740,7 +740,7 @@ ${core.where}
 /**
  * The checks each of `ids` fails, as the list's "To check" column names them (`to_check`, every
  * check of `budget-line-checks.ts`), read by the list engine's own field in one statement, under the
- * caller's access: a change in bulk counts the lines it leaves to check (lot B12b). No lifecycle
+ * caller's access: a change in bulk counts the lines it leaves to check. No lifecycle
  * scope. A line that fails none, of another tenant or not read is absent.
  */
 export async function budgetListLineChecksByIds(
@@ -757,7 +757,7 @@ export async function budgetListLineChecksByIds(
   const currentYear = new Date().getFullYear();
   const rt = await loadBudgetRuntime(scope, { fxRates: new RequestFxRates(deps.fxRates) }, manager, tenantId, currentYear, budgetRuntimeNeeds(currentYear, [TO_CHECK_FIELD], false), deps.access);
   const config = new BudgetListConfig(rt);
-  // The columns to check of these lines only, not of every line of the tenant (lot B12b).
+  // The columns to check of these lines only, not of every line of the tenant.
   config.lineIds = lineIds;
   const stmt = new SqlStatement(tenantId);
   const state: ListState = { page: 1, limit: lineIds.length, skip: 0, sort: { field: 'id', direction: 'ASC' }, filters: {}, scope: null };

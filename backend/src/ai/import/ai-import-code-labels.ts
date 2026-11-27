@@ -1,5 +1,6 @@
 import type { CsvLanguage } from '../../common/csv-sheet';
 import { accentFreeKey } from '../../common/name-matching';
+import { EXPECTED_UNIT_LABELS } from '../../accounts/account-expected-units';
 
 /**
  * The names of the fixed lists an import template offers, in the four languages, copied from the
@@ -169,6 +170,7 @@ export const AI_IMPORT_CODE_LISTS: ReadonlyArray<{
   { namespace: 'ops', path: 'contracts.billing', labels: BILLING_FREQUENCY_LABELS },
   { namespace: 'ops', path: 'opex.runBuild', labels: RUN_BUILD_LABELS },
   { namespace: 'master-data', path: 'contacts.roles', labels: SUPPLIER_CONTACT_ROLE_LABELS },
+  { namespace: 'ops', path: 'budgetTab.lines.unitNames', labels: EXPECTED_UNIT_LABELS },
 ];
 
 /** The CSV enums. A budget nature and an account nature share their codes and stay hand-written. */

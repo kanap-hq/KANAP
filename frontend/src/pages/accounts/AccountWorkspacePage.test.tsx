@@ -469,18 +469,70 @@ describe('AccountWorkspacePage', () => {
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/accounts/acc-1', { quantity_price_expected: true }));
     await waitFor(() => expect(box).toBeChecked());
     fireEvent.click(box);
-    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/accounts/acc-1', { quantity_price_expected: null }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/accounts/acc-1', { quantity_price_expected: null, expected_units: null }));
     await waitFor(() => expect(box).not.toBeChecked());
+  });
+
+  it('shows a refusal of the units under the quantity and price entry while the units are hidden', async () => {
+    mocked.patch.mockRejectedValueOnce({
+      response: {
+        status: 400,
+        data: {
+          code: 'ACCOUNT_EXPECTED_UNITS_WITHOUT_ENTRY',
+          message: 'Expected units need quantity and price entry: tick Quantity and price entry to name them.',
+          field: 'expected_units',
+        },
+      },
+    });
+    renderAt('/master-data/accounts/acc-1/overview');
+    await screen.findByText('Software subscriptions');
+    const box = screen.getByRole('checkbox', { name: 'accounts.fields.quantityPriceExpected' });
+    fireEvent.click(box);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/ACCOUNT_EXPECTED_UNITS_WITHOUT_ENTRY|Expected units need quantity and price entry/);
+    expect(box).not.toBeChecked();
+    expect(screen.queryByRole('checkbox', { name: 'BudgetTab.lines.unitNames.people' })).toBeNull();
+  });
+
+  it('shows the expected units only once the quantity and price entry is ticked, and saves them in the tab order', async () => {
+    renderAt('/master-data/accounts/acc-1/overview');
+    await screen.findByText('Software subscriptions');
+    expect(screen.queryByText('accounts.fields.expectedUnits')).toBeNull();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'accounts.fields.quantityPriceExpected' }));
+    await screen.findByText('accounts.fields.expectedUnits');
+    const days = screen.getByRole('checkbox', { name: 'BudgetTab.lines.unitNames.days' });
+    expect(days).not.toBeChecked();
+    fireEvent.click(days);
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/accounts/acc-1', { expected_units: ['days'] }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'BudgetTab.lines.unitNames.people' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/accounts/acc-1', { expected_units: ['people', 'days'] }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'BudgetTab.lines.unitNames.people' }));
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: 'BudgetTab.lines.unitNames.people' })).not.toBeChecked());
+    fireEvent.click(screen.getByRole('checkbox', { name: 'BudgetTab.lines.unitNames.days' }));
+    // No unit ticked: any unit, sent as none.
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/accounts/acc-1', { expected_units: null }));
+  });
+
+  it('clears the expected units with the quantity and price entry', async () => {
+    serve({ account: { ...ACCOUNT, quantity_price_expected: true, expected_units: ['pieces'] } });
+    renderAt('/master-data/accounts/acc-1/overview');
+    await screen.findByText('Software subscriptions');
+    expect(screen.getByRole('checkbox', { name: 'BudgetTab.lines.unitNames.pieces' })).toBeChecked();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'accounts.fields.quantityPriceExpected' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenLastCalledWith('/accounts/acc-1', { quantity_price_expected: null, expected_units: null }));
+    await waitFor(() => expect(screen.queryByText('accounts.fields.expectedUnits')).toBeNull());
   });
 
   it('shows the quantity and price entry of a read-only account ticked and disabled', async () => {
     auth.canEdit = false;
-    serve({ account: { ...ACCOUNT, quantity_price_expected: true } });
+    serve({ account: { ...ACCOUNT, quantity_price_expected: true, expected_units: ['people'] } });
     renderAt('/master-data/accounts/acc-1/overview');
     await screen.findByText('Software subscriptions');
     const box = screen.getByRole('checkbox', { name: 'accounts.fields.quantityPriceExpected' });
     expect(box).toBeChecked();
     expect(box).toBeDisabled();
+     const people = screen.getByRole('checkbox', { name: 'BudgetTab.lines.unitNames.people' });
+    expect(people).toBeChecked();
+    expect(people).toBeDisabled();
   });
 
   it('shows read-only users disabled fields and no title edit', async () => {
@@ -584,6 +636,7 @@ describe('AccountWorkspacePage', () => {
       consolidation_account_number: 1200,
       nature: null,
       quantity_price_expected: null,
+      expected_units: null,
       status: 'enabled',
       disabled_at: null,
     }));

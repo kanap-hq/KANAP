@@ -21,6 +21,24 @@ export function expectedSetting(value: boolean | null | undefined): true | null 
   return value === true ? true : null;
 }
 
+/**
+ * The units an account may expect its calculation lines in: those of a calculation line
+ * of the budget tab (`spend_round_input_lines.quantity_unit`), in the tab's order. The first one is
+ * the unit a new calculation line of such an account opens in.
+ */
+export const ACCOUNT_EXPECTED_UNITS = ['people', 'days', 'pieces'] as const;
+export type AccountExpectedUnit = (typeof ACCOUNT_EXPECTED_UNITS)[number];
+
+/**
+ * Expected units as stored: the known units given, once each, in the tab's order, or null when
+ * there is none (never an empty list). An unknown unit is left to the caller, which refuses it.
+ */
+export function expectedUnitsSetting(units: readonly string[] | null | undefined): AccountExpectedUnit[] | null {
+  const given = new Set(units ?? []);
+  const kept = ACCOUNT_EXPECTED_UNITS.filter((unit) => given.has(unit));
+  return kept.length > 0 ? kept : null;
+}
+
 @Entity('accounts')
 export class Account {
   @PrimaryGeneratedColumn('uuid')
@@ -68,6 +86,14 @@ export class Account {
    */
   @Column('boolean', { nullable: true })
   quantity_price_expected!: true | null;
+
+  /**
+   * The units its calculation lines are expected in (`ACCOUNT_EXPECTED_UNITS`), or null when none is
+   * set: the check then reads the entry mode alone. Only on an account that sets
+   * `quantity_price_expected` (`accounts_expected_units_check`): unticking it clears them.
+   */
+  @Column('text', { array: true, nullable: true })
+  expected_units!: AccountExpectedUnit[] | null;
 
   @Column({
     type: 'enum',
