@@ -8,7 +8,7 @@ import {
 } from '../../analytics/analytics-context';
 import { notApplicableDimensionMessage, requiredDimensionMessage } from '../item-analytics.util';
 import { AMOUNT_MEASURES, AmountMeasure, MEASURE_FREEZE_COLUMN } from '../amounts-write.util';
-import { columnsLeftToCheck, type ColumnAfterWrite } from '../budget-line-entry-check';
+import { columnsLeftToCheck, roundConforms, type ColumnAfterWrite } from '../budget-line-entry-check';
 import { formatCentsFixed } from '../../common/amount';
 import { endOfValidityFromDate, isActiveAt } from '../../common/status';
 import type { BudgetNature } from '../budget-nature';
@@ -1665,9 +1665,12 @@ function checkConsistency(
  * to check, unless its column is hidden, its total for the year is zero once written, or its year
  * follows the line's end of validity (`columnsLeftToCheck`, the rule of `readEntryChecks` on values
  * not yet stored). A frozen column never gets here: its amount is refused (`resolveAmounts`). An
- * unchanged amount is not written, so a column built as quantity × price stays so. The account the
- * line has once written is named by its number, as the file names it, never its consolidation account.
- * One warning per row.
+ * unchanged amount is not written, so a column built as quantity × price stays so. A stored line the
+ * file moves onto such an account from one that expects nothing (or none) is also told of the
+ * columns it already holds that are not built as quantity × price, frozen ones left out: the line
+ * was not to check, and will be. Between two accounts that both expect it, only the amounts written
+ * count: the line already was. The account the line has once written is named by its number, as the
+ * file names it, never its consolidation account. One warning per row.
  */
 function checkQuantityPrice(
   input: PreflightInput,
@@ -1678,26 +1681,58 @@ function checkQuantityPrice(
   bag: Bag,
 ): void {
   const measures = input.catalog.shownMeasures;
-  if (!measures || draft.amounts.length === 0) return;
+  if (!measures) return;
+  const accountOf = (id: unknown) => (typeof id === 'string' ? input.catalog.accounts.find((item) => item.id === id) : undefined);
   const accountId = Object.prototype.hasOwnProperty.call(draft.body, 'account_id') ? draft.body.account_id : live?.accountId;
-  const account = typeof accountId === 'string' ? input.catalog.accounts.find((item) => item.id === accountId) : undefined;
+  const account = accountOf(accountId);
   if (!account?.quantityPrice) return;
+  // Moved onto the account from one that expects nothing: the stored columns count too.
+  const moved = !!live && accountId !== live.accountId && !accountOf(live.accountId)?.quantityPrice;
+  if (draft.amounts.length === 0 && !moved) return;
   const endOfValidity = Object.prototype.hasOwnProperty.call(draft.body, 'disabled_at') ? draft.body.disabled_at : live?.endOfValidity;
+  const written = columnsAfterFile(draft, live);
+  const columns = moved ? [...storedColumnsToCheck(live!, written), ...written] : written;
   const left = columnsLeftToCheck(
-    { measures, frozen: [] },
+    { measures, frozen: frozenMeasures(input.catalog.frozen) },
     nature,
-    columnsAfterFile(draft, live),
+    columns,
     typeof endOfValidity === 'string' ? endOfValidity : null,
   );
   if (left.length === 0) return;
-  const columns = left
+  const named = left
     .map((column) => `${input.labels[columnOfMeasure(column.measure)] || columnOfMeasure(column.measure)} ${column.year}`)
     .join(', ');
   bag.consistency.push({
     line: row.line,
-    message: `Account ${account.number} expects quantity and price entry: complete ${columns} on the line's Budget tab.`,
+    message: `Account ${account.number} expects quantity and price entry: complete ${named} on the line's Budget tab.`,
     code: 'BUDGET_FILE_QUANTITY_PRICE_EXPECTED',
-    params: { account: account.number, columns },
+    params: { account: account.number, columns: named },
+  });
+}
+
+/**
+ * The stored columns of a line that are not built as quantity × price (`roundConforms`), with their
+ * stored total for the year, the ones the file writes left to `written`.
+ */
+function storedColumnsToCheck(live: StoredLine, written: readonly ColumnAfterWrite[]): ColumnAfterWrite[] {
+  const rewritten = new Set(written.map((column) => `${column.year}:${column.measure}`));
+  const columns: ColumnAfterWrite[] = [];
+  for (const version of live.versions) {
+    for (const measure of AMOUNT_MEASURES) {
+      if (rewritten.has(`${version.year}:${measure}`) || roundConforms(version.rounds?.[measure])) continue;
+      columns.push({ year: version.year, measure, total: yearSum(version, measure) });
+    }
+  }
+  return columns;
+}
+
+/** The catalog's freezes (`nature:year:budget`) as the rule reads them (`nature:year:planned`). */
+function frozenMeasures(frozen: readonly string[]): string[] {
+  const measureOf = new Map<string, AmountMeasure>(AMOUNT_MEASURES.map((measure) => [MEASURE_FREEZE_COLUMN[measure], measure]));
+  return frozen.flatMap((key) => {
+    const [nature, year, column] = key.split(':');
+    const measure = measureOf.get(column);
+    return measure ? [`${nature}:${year}:${measure}`] : [];
   });
 }
 
