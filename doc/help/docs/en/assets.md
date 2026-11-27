@@ -41,7 +41,7 @@ While the asset is being created, its header shows **Create** and **Cancel** in 
 - **Create** creates the asset when it has its name, its type and its location. When one is missing, nothing is saved: a missing **Asset type** or **Location** label turns red with an alert icon, and the cursor goes to the first one missing. With an empty title, the title asks for one
 - Once the asset is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started
 - **Cancel** before the asset is created leaves without saving anything. After, it deletes the asset. If you changed the asset since, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete assets
-- Once another person has changed it, or a document is linked to it, **Cancel** is refused
+- Once another person has changed it, or another record is linked to it, **Cancel** is refused
 
 An asset saved without a location by an earlier version opens as usual, with its **Location** label marked as missing. Choose a location to save it.
 

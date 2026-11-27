@@ -105,7 +105,7 @@ Tant que la demande est en cours de création, son en-tête affiche **Créer** e
 - **Créer** fait comme Entrée : il crée la demande et la laisse ouverte, avec sa référence. Avec un titre vide, le titre en demande un
 - Une fois la demande créée, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ : la liste ou l'écran précédent
 - **Annuler** ferme sans rien conserver. Sur une demande déjà créée, il la supprime. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des demandes
-- Dès qu'une autre personne y a apporté une modification, ou qu'un document y est lié, **Annuler** est refusé
+- Dès qu'une autre personne y a apporté une modification ou un commentaire, ou qu'un document y est lié, **Annuler** est refusé
 
 Si vous quittez la demande autrement, elle reste. Un administrateur peut alors la supprimer avec **Supprimer**. La référence d'une demande annulée n'est pas réutilisée.
 

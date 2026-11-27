@@ -64,7 +64,7 @@ Tant que le processus est en cours de création, son en-tête affiche **Créer**
 
 - **Créer** fait comme Entrée : il crée le processus et le laisse ouvert. Avec un titre vide, le titre en demande un.
 - Une fois le processus créé, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ : la liste ou l'écran précédent.
-- **Annuler** ferme sans rien conserver. Sur un processus déjà créé, il le supprime, avec les liens vers les applications que vous avez ajoutés. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des processus.
+- **Annuler** ferme sans rien conserver. Sur un processus déjà créé, il le supprime, avec les liens vers les applications que vous avez ajoutés. Si vous avez saisi plus que le nom, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des processus. Dès qu'une autre personne y a apporté une modification, ou qu'une demande y est liée, **Annuler** est refusé.
 
 Si vous quittez le processus autrement, il est conservé.
 

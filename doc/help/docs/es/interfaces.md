@@ -23,7 +23,7 @@ Mientras la interfaz se está creando, su encabezado muestra **Crear** y **Cance
 - **Crear** guarda la interfaz cuando el borrador está completo y la deja abierta. Si todavía falta algo, un título vacío muestra su mensaje, la etiqueta de cada campo que falta se pone en rojo con un icono de alerta, y el título o el primer campo que falta recibe el foco
 - Una vez creada la interfaz, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le devuelve al punto de partida
 - **Cancelar** elimina la interfaz. Si añadió algo después de su creación, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar interfaces
-- En cuanto otra persona ha hecho algún cambio, o un documento está vinculado, **Cancelar** se rechaza
+- En cuanto otra persona ha hecho algún cambio, o hay otro registro vinculado, **Cancelar** se rechaza
 
 Si sale de la interfaz de otra forma (el menú, la flecha de retroceso), se conserva: está completa.
 

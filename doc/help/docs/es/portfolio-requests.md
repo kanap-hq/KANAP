@@ -105,7 +105,7 @@ Mientras la solicitud se está creando, su encabezado muestra **Crear** y **Canc
 - **Crear** funciona como Intro: crea la solicitud y la deja abierta, con su referencia. Con el título vacío, el título pide uno
 - Una vez creada la solicitud, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le lleva de vuelta al punto de partida: la lista o la pantalla anterior
 - **Cancelar** cierra sin conservar nada. En una solicitud ya creada, la elimina. Si introdujo algo más que el nombre, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar solicitudes
-- En cuanto otra persona ha hecho algún cambio, o un documento está vinculado, **Cancelar** se rechaza
+- En cuanto otra persona ha hecho algún cambio o un comentario, o un documento está vinculado, **Cancelar** se rechaza
 
 Si sale de la solicitud de otra forma, esta permanece. Un administrador puede entonces eliminarla con **Eliminar**. La referencia de una solicitud cancelada no se reutiliza.
 

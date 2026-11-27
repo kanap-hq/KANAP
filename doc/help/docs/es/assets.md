@@ -41,7 +41,7 @@ Mientras el activo se está creando, su encabezado muestra **Crear** y **Cancela
 - **Crear** crea el activo cuando tiene su nombre, su tipo y su ubicación. Si falta uno, no se guarda nada: la etiqueta **Tipo de activo** o **Ubicación** que falta se pone en rojo con un icono de alerta, y el cursor va al primer campo que falta. Con el título vacío, el título pide uno
 - Una vez creado el activo, **Crear** pasa a ser **Listo**. **Listo** guarda lo que está escribiendo y le devuelve al punto de partida
 - **Cancelar** antes de crear el activo sale sin guardar nada. Después, elimina el activo. Si modificó el activo desde entonces, una confirmación enumera lo que se eliminará. Puede cancelar su propia creación sin el derecho a eliminar activos
-- En cuanto otra persona ha hecho algún cambio, o un documento está vinculado, **Cancelar** se rechaza
+- En cuanto otra persona ha hecho algún cambio, o hay otro registro vinculado, **Cancelar** se rechaza
 
 Un activo guardado sin ubicación por una versión anterior se abre con normalidad, con su etiqueta **Ubicación** marcada como ausente. Elija una ubicación para guardarlo.
 
