@@ -13,6 +13,9 @@ import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-docum
 // - The export, the record's read (screen API, Kad's card, the MCP server's detail), Kad's context,
 //   the map summary, the copy, the conversion into a technology and the delete read the document.
 // - Another tenant's application and document are never reached.
+// - The search (migration 1856300000000): an application's entry carries no description; the search
+//   shows the document's text as its summary; the document, saved on the page (autosave included), is
+//   found by a word of its text by a person who reads the Knowledge, as a project's purpose is.
 
 process.env.AI_CHAT_ENABLED = 'true';
 process.env.AI_SETTINGS_ENABLED = 'true';
@@ -355,6 +358,41 @@ async function testCopyConversionDelete(harness: Harness) {
   });
 }
 
+/** The search reads the description from the document, and finds the document by its words. */
+async function testSearchReadsTheDocument(harness: Harness) {
+  await inSeed(harness, async (runner, s) => {
+    const opts = { manager: runner.manager, tenantId: s.tenantId, userId: s.userId };
+    const created = await harness.apps.create({ name: 'Ledger', description: 'Keeps the zebrafish accounts' }, s.userId, opts);
+    // The person edits the description on the page: the editor autosaves.
+    const docs = harness.docs;
+    const opened: any = await docs.getBySource('applications', created.id, 'overview', s.userId, { manager: runner.manager });
+    const lock: any = await docs.acquireLockBySource('applications', created.id, 'overview', s.userId, { manager: runner.manager });
+    await docs.updateBySource('applications', created.id, 'overview', {
+      content_markdown: 'Keeps the narwhal accounts', revision: opened.revision, save_mode: 'autosave',
+    }, s.userId, lock.lock_token, { manager: runner.manager });
+    await docs.releaseLockBySource('applications', created.id, 'overview', s.userId, lock.lock_token, { manager: runner.manager });
+    assert.equal(await column(runner, s, created.id), 'Keeps the zebrafish accounts', 'the seed is left behind by the page');
+
+    const ctx = context(s, runner);
+    const search = async (query: string) => (await harness.entities.searchAll(ctx, { query })).items
+      .map((item: any) => [item.type, item.label, item.summary ?? null]);
+    // Without a right on the Knowledge: neither the old nor the new words find anything.
+    assert.deepEqual(await search('zebrafish'), [], 'the seed left behind finds nothing');
+    assert.deepEqual(await search('narwhal'), [], 'without the Knowledge, the document is not searched');
+    assert.deepEqual(await search('Ledger'), [['applications', 'Ledger', 'Keeps the narwhal accounts']], 'the summary is the document\'s text');
+
+    // With the Knowledge read: the document is found by its words.
+    await runner.query(
+      `INSERT INTO role_permissions (tenant_id, role_id, resource, level, created_at, updated_at)
+       SELECT tenant_id, role_id, 'knowledge', 'reader', now(), now() FROM users WHERE tenant_id = $1 AND id = $2`,
+      [s.tenantId, s.userId]);
+    const hits = await search('narwhal');
+    assert.equal(hits.length, 1, JSON.stringify(hits));
+    assert.equal(hits[0][0], 'documents');
+    assert.match(String(hits[0][1]), /Ledger - Overview$/, 'the overview document, by its title');
+  });
+}
+
 /** An import of one tenant never reaches another tenant's application or document. */
 async function testOtherTenant(harness: Harness) {
   await inSeed(harness, async (runner, s) => {
@@ -384,7 +422,7 @@ async function run() {
     const failures: string[] = [];
     for (const test of [
       testImportWritesTheDocument, testUnchangedWritesNothing, testNewAndUnopenedApplications, testApiWritesTheDocument,
-      testKadWritesTheDocument, testCopyConversionDelete, testOtherTenant,
+      testKadWritesTheDocument, testCopyConversionDelete, testOtherTenant, testSearchReadsTheDocument,
     ]) {
       try {
         await test(harness);

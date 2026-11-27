@@ -2447,8 +2447,15 @@ export class AiEntityService {
     const offsetRef = push(offset);
 
     const rows = await context.manager.query(
-      `SELECT entity_type, entity_id, ref_prefix, ref_number, label, summary, status,
-              extra_json, source_updated_at,
+      `SELECT entity_type, entity_id, ref_prefix, ref_number, label,
+              -- An application's entry carries no description (migration 1856300000000): the
+              -- description shown is its document's text, else its seed (decision P14 of 26.12.1).
+              CASE WHEN entity_type = 'applications'
+                   THEN (SELECT ${applicationDescriptionSql('si_app')} FROM applications si_app
+                          WHERE si_app.id = search_index.entity_id AND si_app.tenant_id = search_index.tenant_id)
+                   ELSE summary
+              END AS summary,
+              status, extra_json, source_updated_at,
               COUNT(*) OVER()::int AS total_count,
               CASE
                 WHEN ${legacyRefParam}::text IS NOT NULL AND extra_json->>'legacy_number' = ${legacyRefParam} THEN 4
