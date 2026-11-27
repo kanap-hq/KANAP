@@ -1028,7 +1028,8 @@
         "consolidation_account_description": "Description du compte de consolidation",
         "status": "Statut",
         "nature": "Nature",
-        "quantity_price_expected": "Saisie en quantité et prix"
+        "quantity_price_expected": "Saisie en quantité et prix",
+        "expected_units": "Unités attendues"
       },
       "analytics-categories": {
         "axis_code": "Dimension",

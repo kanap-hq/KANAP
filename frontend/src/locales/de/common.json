@@ -1028,7 +1028,8 @@
         "consolidation_account_description": "Beschreibung des Konsolidierungskontos",
         "status": "Status",
         "nature": "Art",
-        "quantity_price_expected": "Erfassung nach Menge und Preis"
+        "quantity_price_expected": "Erfassung nach Menge und Preis",
+        "expected_units": "Erwartete Einheiten"
       },
       "analytics-categories": {
         "axis_code": "Dimension",
