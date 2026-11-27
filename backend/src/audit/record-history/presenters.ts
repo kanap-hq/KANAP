@@ -611,10 +611,20 @@ function calendarDaysChanges(before: Record<string, unknown>, after: Record<stri
   return changes;
 }
 
+/**
+ * The FTE of a budget input, derived from its lines: none without lines, zero with lines that name
+ * nobody (pieces, days). Both read as no FTE, so a column that moves to such lines shows no FTE change.
+ */
+function fteValue(value: unknown): unknown {
+  const decimal = decimalValue(value ?? null);
+  return decimal === '0' ? null : decimal;
+}
+
 function roundInputChanges(row: AuditRow, ctx: PageContext): RecordHistoryChange[] {
   const before = isPlainObject(row.before_json) ? row.before_json : {};
   const after = isPlainObject(row.after_json) ? row.after_json : {};
-  const changes = genericChanges(row, ctx, { label: row.table_name });
+  const changes = genericChanges(row, ctx, { label: row.table_name })
+    .filter((change) => change.field !== 'fte' || !deepEqual(fteValue(change.before), fteValue(change.after)));
   const beforeLines = roundInputLines(before.lines);
   const afterLines = roundInputLines(after.lines);
   const paired = pairCalcLines(calcLines(before.lines), calcLines(after.lines));
