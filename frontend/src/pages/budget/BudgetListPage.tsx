@@ -89,6 +89,7 @@ type SummaryRow = {
   versions?: SummaryVersions;
   latest_task?: { title?: string | null } | null;
   latest_contract_id?: string | null;
+  latest_contract_item_number?: number | null;
   latest_contract_name?: string | null;
   /** A limited person cannot read the contract: no id, no name, the label alone (spec §5.4). */
   contract_hidden?: boolean;
@@ -504,7 +505,7 @@ function BudgetListPageView() {
     if (!item?.id) return null;
     if (colId === 'contract_name') {
       const contractId = item.latest_contract_id;
-      return contractId ? `/ops/contracts/${contractId}/overview` : null;
+      return contractId ? `/ops/contracts/${item.latest_contract_item_number ? `CTR-${item.latest_contract_item_number}` : contractId}/overview` : null;
     }
     if (colId === 'cost_center_label') {
       return item.cost_center_id ? `/master-data/cost-centers/${item.cost_center_id}/overview` : null;

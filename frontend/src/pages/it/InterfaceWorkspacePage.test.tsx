@@ -30,7 +30,8 @@ vi.mock('../../auth/AuthContext', () => ({
 vi.mock('../../hooks/useModuleItemNav', () => ({
   useInterfaceItemNav: () => ({ total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
-vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
+const recent = vi.hoisted(() => ({ addToRecent: vi.fn() }));
+vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => recent }));
 vi.mock('./components/InterfaceBindingsMatrix', () => ({ default: () => null }));
 // The draft's fields: each button fills one, as the real pickers would.
 vi.mock('./workspace/InterfaceFlowTab', () => ({
@@ -202,6 +203,12 @@ describe('InterfaceWorkspacePage (draft)', () => {
     // A record written here opens on no record page: the cursor it awaits is dropped.
     clearCreationFieldFocus();
     await i18n.changeLanguage('en');
+  });
+
+  it('keeps an open interface in the recent records by its id, with its reference', async () => {
+    recent.addToRecent.mockClear();
+    renderNew('/it/interfaces/INT-9/overview');
+    await waitFor(() => expect(recent.addToRecent).toHaveBeenCalledWith('interface', 'int-9', INTERFACE.name, 'INT-9'));
   });
 
   it('opens a new interface on Flow', async () => {

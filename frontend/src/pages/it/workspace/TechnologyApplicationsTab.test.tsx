@@ -109,7 +109,7 @@ describe('TechnologyApplicationsTab', () => {
     expect(countApplications(ROWS)).toBe(2);
 
     fireEvent.click(first.getByText('PAR-DB-01'));
-    expect(screen.getByTestId('location').textContent).toBe('/it/applications/erp/overview');
+    expect(screen.getByTestId('location').textContent).toBe('/it/applications/APP-4/overview');
   });
 
   it('keeps apart two hosted rows that differ only by the server the technology comes through', async () => {

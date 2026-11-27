@@ -317,7 +317,7 @@ export default function InterfaceWorkspacePage() {
 
   React.useEffect(() => {
     if (data?.id && data?.name) {
-      addToRecent('interface', data.interface_reference || data.id, data.name);
+      addToRecent('interface', data.id, data.name, data.interface_reference || undefined);
     }
   }, [addToRecent, data?.id, data?.interface_reference, data?.name]);
 

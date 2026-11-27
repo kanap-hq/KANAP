@@ -78,7 +78,7 @@ import { findMarkdownPathLinks, replaceDataImageTags, replaceMarkdownDataImages 
 import { assertMarkdownSize } from '../common/markdown-limits';
 import { dataAccessRefusalMessage } from '../common/filters/database-error.mapping';
 import { conversationTitleFromMessage } from './ai-conversation-title.util';
-import { ENTITY_URL_BUILDERS } from './ai-page-urls';
+import { ENTITY_URL_BUILDERS, entityPageUrl } from './ai-page-urls';
 import {
   aiWriteLanguage,
   bulkPreviewsIncompleteText,
@@ -1811,10 +1811,12 @@ export class AiChatOrchestratorService {
     const targetRef = String(preview.target?.ref || '').trim();
     if (!targetEntityType || !targetEntityId || !targetRef) return text;
 
-    const builder = ENTITY_URL_BUILDERS[targetEntityType];
-    if (!builder) return text;
-
-    const url = builder(budgetReference ?? (targetEntityType === 'budget_lines' && /^BL-\d+$/.test(targetRef) ? targetRef : targetEntityId));
+    // The target's page by its reference (`/portfolio/tasks/T-4`) when its family's page opens by it,
+    // a budget line by the BL reference its legacy one names.
+    const url = budgetReference
+      ? ENTITY_URL_BUILDERS.budget_lines(budgetReference)
+      : entityPageUrl(targetEntityType, targetEntityId, targetRef);
+    if (!url) return text;
     // Replace every standalone occurrence of the ref with a markdown link, but skip refs
     // already inside `[ ]( )`. A negative lookbehind for `[`/`-`/word and a negative
     // lookahead for word/dash prevents partial matches like T-87 inside T-879 or

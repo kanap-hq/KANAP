@@ -66,7 +66,7 @@ describe('BusinessProcessApplicationsSection', () => {
     expect(within(table).getByText('Business critical')).toBeTruthy();
     expect(within(table).getByText('Marc Petit, Claire Dubois')).toBeTruthy();
     fireEvent.click(within(table).getByText('SAP ERP'));
-    expect(screen.getByTestId('location').textContent).toBe('/it/applications/app-1/overview');
+    expect(screen.getByTestId('location').textContent).toBe('/it/applications/APP-12/overview');
   });
 
   it('adds an application from a search, without the linked ones', async () => {

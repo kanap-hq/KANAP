@@ -39,6 +39,17 @@ function referenceUrl(entityType: string, reference: string): string | null {
 }
 
 /**
+ * The page of a record picked in the composer: by its reference when its family's page opens by it
+ * (`/portfolio/tasks/T-5`), by its id otherwise (a location, a business process); null for a family
+ * without a page.
+ */
+export function entityPageUrl(entityType: string, id: string, ref: string | null | undefined): string | null {
+  const match = ref ? /^([A-Z]+)-[1-9]\d*$/.exec(ref) : null;
+  const family = match ? LINKED_REFERENCE_FAMILIES[match[1]] : undefined;
+  return buildEntityUrl(entityType, ref && family?.entityType === entityType ? ref : id);
+}
+
+/**
  * The page of a business reference (`APP-12`, `BL-7`) the person may open, as the conversation links
  * it; null for another text or a page the person may not read.
  */
@@ -85,6 +96,13 @@ function linkedText(value: string, options: ReferenceLinkOptions): MarkdownNode[
   return nodes;
 }
 
+/** A link that leads nowhere (`[APP-32 - Figma](#)`, an empty address): Kad shows its text. */
+function isDeadLink(node: MarkdownNode): boolean {
+  if (node.type !== 'link') return false;
+  const url = String(node.url ?? '').trim();
+  return url === '' || url === '#';
+}
+
 function linkReferencesIn(node: MarkdownNode, options: ReferenceLinkOptions): void {
   // A link keeps its own text. Code is a leaf (`value`, not children); named here so a
   // child added under a code node is still left as text.
@@ -97,6 +115,12 @@ function linkReferencesIn(node: MarkdownNode, options: ReferenceLinkOptions): vo
   ) return;
   node.children = node.children.flatMap((child) => {
     if (child.type === 'text' && child.value) return linkedText(child.value, options);
+    // Its text stays, and the references in it link as anywhere else.
+    if (isDeadLink(child)) {
+      const text: MarkdownNode = { type: 'emphasis', children: child.children ?? [] };
+      linkReferencesIn(text, options);
+      return text.children ?? [];
+    }
     linkReferencesIn(child, options);
     return [child];
   });

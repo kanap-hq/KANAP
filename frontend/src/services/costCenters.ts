@@ -42,6 +42,8 @@ export type CostCenterListRow = CostCenterNode & {
 };
 
 export type CostCenterDetail = CostCenterListRow & {
+  /** The company's number (`COMP-3`), null without a company. */
+  company_item_number?: number | null;
   description: string | null;
   opex_count: number;
   capex_count: number;

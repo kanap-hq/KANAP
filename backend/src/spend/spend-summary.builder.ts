@@ -314,6 +314,8 @@ export type BudgetSummaryRow = Record<string, any> & {
    */
   to_check: BudgetLineCheck[] | null;
   latest_contract_id: string | null;
+  /** The latest contract's number (`CTR-3`), null when its id is withheld. */
+  latest_contract_item_number: number | null;
   latest_contract_name: string;
   /**
    * A limited person's line whose direct contract or latest linked contract is out of access
@@ -416,7 +418,7 @@ const GRID_VERSION_SLOTS = ['yMinus1', 'y', 'yPlus1', 'yPlus2'] as const;
  * the list's "To check" column).
  */
 const GRID_DERIVED_FIELDS = [
-  'cost_center_id', 'run_build', 'latest_contract_id', 'latest_contract_name', 'supplier_name', 'paying_company_name',
+  'cost_center_id', 'run_build', 'latest_contract_id', 'latest_contract_item_number', 'latest_contract_name', 'supplier_name', 'paying_company_name',
   'account_display', 'allocation_method_label', 'owner_it_name', 'owner_business_name', 'cost_center_label',
   'cost_center_path', 'budget_holder_name', 'project_name', 'analytics_category_name', 'has_fte', 'to_check',
 ] as const;
@@ -895,9 +897,9 @@ export async function buildBudgetSummaryRows(
   const ownerById = new Map(owners.map((u) => [u.id, u]));
   const payingCompanyById = new Map(payingCompanies.map((c) => [c.id, c]));
 
-  const contracts: Array<{ item_id: string; contract_id: string; contract_name: string }> = await manager.query(
+  const contracts: Array<{ item_id: string; contract_id: string; contract_item_number: number | null; contract_name: string }> = await manager.query(
     `SELECT DISTINCT ON (l.${config.contractLink.itemColumn})
-            l.${config.contractLink.itemColumn} AS item_id, c.id AS contract_id, c.name AS contract_name
+            l.${config.contractLink.itemColumn} AS item_id, c.id AS contract_id, c.item_number AS contract_item_number, c.name AS contract_name
      FROM ${config.contractLink.table} l
      JOIN contracts c ON c.id = l.contract_id AND c.tenant_id = l.tenant_id
      WHERE l.tenant_id = $1 AND l.${config.contractLink.itemColumn} = ANY($2::uuid[])
@@ -1101,6 +1103,8 @@ export async function buildBudgetSummaryRows(
       has_fte: staffItems.has(item.id) ? 'yes' : null,
       to_check: lineChecks({ quantity_price: !!entryChecks.get(item.id)?.to_check, coa_mismatch: accountWarning != null }),
       latest_contract_id: linkedContractIsHidden ? null : contract?.contract_id ?? null,
+      // The contract's number: the list opens its page by its reference (`CTR-3`).
+      latest_contract_item_number: linkedContractIsHidden ? null : contract?.contract_item_number ?? null,
       latest_contract_name: linkedContractIsHidden ? '' : contract?.contract_name ?? '',
       project_name: joinNames(projectLists.project_name),
       project_stream_name: joinNames(projectLists.project_stream_name),

@@ -51,7 +51,7 @@ export type TechnologyRow = {
   extended_support_end?: string | null;
   support_end?: string | null;
   support_state?: 'out_of_support' | 'extended_support' | 'supported' | null;
-  via: Array<{ asset_id: string; asset_name: string | null; host_name: string | null }>;
+  via: Array<{ asset_id: string; asset_name: string | null; asset_reference?: string | null; host_name: string | null }>;
   /** The application's own links of the technology, one per version declared. */
   declarations?: Array<{ link_id: string; technology_version_id: string | null; version_label: string | null }>;
 };

@@ -589,6 +589,20 @@ describe('ChatMessageList', () => {
     expect(screen.queryByRole('link', { name: 'APP-01' })).not.toBeInTheDocument();
   });
 
+  it('shows a link that leads nowhere as its text, with its reference linked', () => {
+    readableResources = null;
+    renderWithTheme(
+      <ChatMessageList
+        messages={[{ id: 'assistant-1', role: 'assistant', content: 'I will rename [APP-32 - Figma](#) and [Billing]().' }]}
+        previews={[]}
+        onSend={() => undefined}
+      />,
+    );
+    expect(screen.getByRole('link', { name: 'APP-32' }).getAttribute('href')).toBe('/it/applications/APP-32');
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+    expect(screen.getByText(/Figma and Billing/)).toBeInTheDocument();
+  });
+
   it('links a company and a department by their reference, for a person who may read them', () => {
     readableResources = ['companies'];
     try {

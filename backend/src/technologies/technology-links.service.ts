@@ -930,6 +930,8 @@ export class TechnologyLinksService {
         environment: r.environment,
         asset_id: r.asset_id,
         asset_name: r.asset_id ? assets.get(r.asset_id)?.name ?? null : null,
+        // The server's SRV-n, from the labels already read: the address of its page.
+        asset_reference: r.asset_id ? assets.get(r.asset_id)?.asset_reference ?? null : null,
         via_asset_id: r.via_asset_id,
         via_asset_name: r.via_asset_id ? assets.get(r.via_asset_id)?.name ?? null : null,
         // Every asset that carries it (a host, a cluster's members), by name; the one `via` otherwise.

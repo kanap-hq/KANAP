@@ -65,6 +65,8 @@ export interface CostCenterInput {
 export type CostCenterListRow = CostCenterTreeNode & { parent_code: string | null; parent_name: string | null };
 
 export type CostCenterDetail = CostCenterListRow & {
+  /** The company's number (`COMP-3`), null without a company. */
+  company_item_number: number | null;
   description: string | null;
   opex_count: number;
   capex_count: number;
@@ -388,6 +390,7 @@ export class CostCentersService {
     const parent = node.parent_id ? nodes.find((entry) => entry.id === node.parent_id) : undefined;
     const [row] = await ctx.manager.query(
       `SELECT cc.description,
+              (SELECT c.item_number FROM companies c WHERE c.tenant_id = $1 AND c.id = cc.company_id) AS company_item_number,
               (SELECT count(*)::int FROM spend_items si WHERE si.tenant_id = $1 AND si.nature = 'opex' AND si.cost_center_id = cc.id) AS opex_count,
               (SELECT count(*)::int FROM spend_items ci WHERE ci.tenant_id = $1 AND ci.nature = 'capex' AND ci.cost_center_id = cc.id) AS capex_count
          FROM cost_centers cc
@@ -398,6 +401,8 @@ export class CostCentersService {
       ...node,
       parent_code: parent?.code ?? null,
       parent_name: parent?.name ?? null,
+      // The company's number: the Access tab links the company's page by its reference (`COMP-3`).
+      company_item_number: row?.company_item_number ?? null,
       description: row?.description ?? null,
       opex_count: Number(row?.opex_count ?? 0),
       capex_count: Number(row?.capex_count ?? 0),

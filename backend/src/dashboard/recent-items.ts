@@ -20,6 +20,7 @@ const TABLES: Record<string, { table: string; where?: string }> = {
   application: { table: 'applications' },
   asset: { table: 'assets' },
   interface: { table: 'interfaces' },
+  technology: { table: 'technologies' },
   connection: { table: 'connections' },
   contract: { table: 'contracts' },
   company: { table: 'companies' },

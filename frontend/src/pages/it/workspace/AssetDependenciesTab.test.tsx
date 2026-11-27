@@ -78,7 +78,7 @@ function clusterRelations(): AssetRelationsData {
     {
       ...asset('as-4', 'AST-4', 'san-01'),
       via: [
-        { id: 'as-3', name: 'esx-host-01' },
+        { id: 'as-3', name: 'esx-host-01', reference: 'AST-3' },
         { id: 'as-7', name: 'esx-host-02' },
       ],
     },
@@ -198,6 +198,9 @@ describe('AssetDependenciesTab', () => {
     expect(within(region).getByText('nas-02')).toBeTruthy();
     expect(within(region).getByText('esx-host-01')).toBeTruthy();
     expect(within(region).getAllByText('esx-host-02')).toHaveLength(2);
+    // A member opens by its reference, by its id when it has none.
+    expect(within(region).getByRole('link', { name: 'esx-host-01' }).getAttribute('href')).toBe('/it/assets/AST-3/overview');
+    expect(within(region).getAllByRole('link', { name: 'esx-host-02' })[0].getAttribute('href')).toBe('/it/assets/as-7/overview');
     expect(within(region).getByText('workspace.asset.relations.via')).toBeTruthy();
     // A carried dependency has no action of its own.
     expect(within(region).queryByRole('button', { name: /relations\.remove/ })).toBeTruthy();

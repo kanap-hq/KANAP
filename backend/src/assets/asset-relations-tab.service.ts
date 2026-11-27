@@ -107,7 +107,8 @@ export type AssetRelationsCounts = {
 export type AssetRelatedAsset = RelatedAsset & { also_contained_by?: Array<{ id: string; name: string }> };
 
 /** An asset a cluster's members depend on, with the members that depend on it. */
-export type AssetMemberDependency = AssetRelatedAsset & { via: Array<{ id: string; name: string }> };
+/** `via`: the members it comes through, with their SRV-n, the address of their page. */
+export type AssetMemberDependency = AssetRelatedAsset & { via: Array<{ id: string; name: string; reference: string | null }> };
 
 /** The four directions, plus a cluster's dependencies through its members (absent on any other asset). */
 export type AssetRelationsByDirection = Record<AssetDirection, AssetRelatedAsset[]> & {
@@ -428,7 +429,7 @@ export class AssetRelationsTabService {
   private async listMemberDependencies(mg: EntityManager, asset: AssetRow): Promise<AssetMemberDependency[]> {
     return mg.query(
       `SELECT t.id, t.asset_reference AS reference, t.name, t.kind, t.environment, t.status,
-              json_agg(json_build_object('id', m.id, 'name', m.name) ORDER BY lower(m.name), m.id) AS via
+              json_agg(json_build_object('id', m.id, 'name', m.name, 'reference', m.asset_reference) ORDER BY lower(m.name), m.id) AS via
          FROM assets c
          JOIN asset_cluster_members cm ON cm.tenant_id = c.tenant_id AND cm.cluster_id = c.id
          JOIN assets m ON m.tenant_id = cm.tenant_id AND m.id = cm.asset_id AND ${assetInServiceSql('m')}
