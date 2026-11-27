@@ -822,6 +822,7 @@ export const incidentCsvConfig: CsvEntityConfig = {
       }> = await context.manager.query(
         `SELECT id, item_number, status, confidential, reporter_user_id, owner_user_id
          FROM incidents WHERE id = ANY($1::uuid[]) AND tenant_id = $2
+         ORDER BY id
          FOR UPDATE`,
         [updateEntities.map((entity) => entity.id), context.tenantId],
       );
