@@ -136,8 +136,8 @@ describe('ReachVulnerabilitiesSection', () => {
     const indirect = within(screen.getByTestId('reach-indirect')).getByRole('table', { name: 'On its members' });
     const lines = within(indirect).getAllByRole('row').slice(1);
     expect(lines).toHaveLength(1);
-    expect(within(lines[0]).getByRole('link', { name: 'PAR-SQL-01' }).getAttribute('href')).toBe('/it/assets/a-1/overview');
-    expect(within(lines[0]).getByRole('link', { name: 'PAR-SQL-02' }).getAttribute('href')).toBe('/it/assets/a-2/overview');
+    expect(within(lines[0]).getByRole('link', { name: 'PAR-SQL-01' }).getAttribute('href')).toBe('/it/assets/AST-1/overview');
+    expect(within(lines[0]).getByRole('link', { name: 'PAR-SQL-02' }).getAttribute('href')).toBe('/it/assets/AST-2/overview');
     expect(within(lines[0]).getByTitle('PAR-SQL-01, PAR-SQL-02')).toBeTruthy();
     // A long technology name is cut by the ellipsis, whole on hover; the counts keep their fixed room.
     expect(within(lines[0]).getByTitle('Microsoft SQL Server Enterprise Edition with a very long name')).toBeTruthy();

@@ -36,7 +36,8 @@ export type EffectiveAssignmentScope = { tenant: string; instances?: string; ass
  * The effective assignments, one row per `(tenant_id, app_instance_id, asset_id, role)`, with:
  * `assignment_id` (the direct row, else the row of the first cluster by name that gives it),
  * `since_date`, `notes`, `created_at`, `updated_at` (of that row), `inherited` (no direct row), and
- * `via_clusters`, a jsonb array `[{ id, name }]` of the clusters that give the row, sorted by name
+ * `via_clusters`, a jsonb array `[{ id, name, reference }]` of the clusters that give the row (`reference`:
+ * the cluster's SRV-n, the address of its page), sorted by name
  * (`[]` for a row only direct).
  */
 export function effectiveAssignmentsSql(p: EffectiveAssignmentScope): string {
@@ -48,17 +49,17 @@ export function effectiveAssignmentsSql(p: EffectiveAssignmentScope): string {
   return `SELECT ea_c.tenant_id, ea_c.app_instance_id, ea_c.asset_id, ea_c.role,
             ${winner('assignment_id')}, ${winner('since_date')}, ${winner('notes')}, ${winner('created_at')}, ${winner('updated_at')},
             bool_and(ea_c.inherited) AS inherited,
-            COALESCE(jsonb_agg(jsonb_build_object('id', ea_c.via_id, 'name', ea_c.via_name) ORDER BY ea_c.via_name, ea_c.via_id)
+            COALESCE(jsonb_agg(jsonb_build_object('id', ea_c.via_id, 'name', ea_c.via_name, 'reference', ea_c.via_reference) ORDER BY ea_c.via_name, ea_c.via_id)
                        FILTER (WHERE ea_c.via_id IS NOT NULL), '[]'::jsonb) AS via_clusters
        FROM (
          SELECT ea_x.tenant_id, ea_x.app_instance_id, ea_x.asset_id, ea_x.role, ea_x.id AS assignment_id, ea_x.since_date, ea_x.notes,
-                ea_x.created_at, ea_x.updated_at, false AS inherited, NULL::uuid AS via_id, NULL::text AS via_name
+                ea_x.created_at, ea_x.updated_at, false AS inherited, NULL::uuid AS via_id, NULL::text AS via_name, NULL::text AS via_reference
            FROM app_asset_assignments ea_x
            ${applications('ea_x', 'ea_xi')}
           WHERE ea_x.tenant_id = ${p.tenant}${instances('ea_x')}${p.assets ? ` AND ea_x.asset_id = ANY(${p.assets}::uuid[])` : ''}
          UNION ALL
          SELECT ea_y.tenant_id, ea_y.app_instance_id, ea_m.asset_id, ea_y.role, ea_y.id, ea_y.since_date, ea_y.notes,
-                ea_y.created_at, ea_y.updated_at, true, ea_cl.id, ea_cl.name
+                ea_y.created_at, ea_y.updated_at, true, ea_cl.id, ea_cl.name, ea_cl.asset_reference
            FROM app_asset_assignments ea_y
            JOIN asset_cluster_members ea_m ON ea_m.tenant_id = ea_y.tenant_id AND ea_m.cluster_id = ea_y.asset_id
            JOIN assets ea_cl ON ea_cl.tenant_id = ea_y.tenant_id AND ea_cl.id = ea_y.asset_id AND ${assetInServiceSql('ea_cl')}
@@ -70,7 +71,7 @@ export function effectiveAssignmentsSql(p: EffectiveAssignmentScope): string {
 }
 
 /** One cluster's via entry of `via_clusters`. */
-export type ViaCluster = { id: string; name: string };
+export type ViaCluster = { id: string; name: string; reference: string | null };
 
 /**
  * Which groupable sets `groupableAssignmentsSql` selects: `tenant` as above, `clusters` and

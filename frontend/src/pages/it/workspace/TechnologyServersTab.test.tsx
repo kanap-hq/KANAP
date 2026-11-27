@@ -267,7 +267,7 @@ describe('TechnologyServersTab', () => {
     expect(within(clusterRow).getByRole('img', { name: 'pages.assets.columns.cluster' })).toBeTruthy();
     const hosts = within(clusterRow).getAllByRole('link');
     expect(hosts.map((link) => link.textContent)).toEqual(['ESX-01', 'ESX-02']);
-    expect(hosts.map((link) => link.getAttribute('href'))).toEqual(['/it/assets/h1/overview', '/it/assets/h2/overview']);
+    expect(hosts.map((link) => link.getAttribute('href'))).toEqual(['/it/assets/AST-1/overview', '/it/assets/AST-2/overview']);
     const hostRow = rows.find((tr) => tr.textContent?.includes('AST-1') && !tr.textContent?.includes('VSPHERE-CL'))!;
     expect(within(hostRow).queryByRole('img')).toBeNull();
   });

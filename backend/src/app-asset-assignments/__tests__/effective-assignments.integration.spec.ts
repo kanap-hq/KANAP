@@ -63,7 +63,7 @@ const assign = (runner: QueryRunner, tenantId: string, instanceId: string, asset
   one(runner, `INSERT INTO app_asset_assignments (tenant_id, app_instance_id, asset_id, role) VALUES ($1, $2, $3, $4) RETURNING id`,
     [tenantId, instanceId, assetId, role]);
 
-type EffectiveRow = { asset_id: string; role: string; assignment_id: string; inherited: boolean; via_clusters: Array<{ id: string; name: string }> };
+type EffectiveRow = { asset_id: string; role: string; assignment_id: string; inherited: boolean; via_clusters: Array<{ id: string; name: string; reference: string | null }> };
 
 async function effective(runner: QueryRunner, tenantId: string, instanceId: string): Promise<EffectiveRow[]> {
   return runner.query(
@@ -102,6 +102,8 @@ async function run() {
     const q = (await instances.create(crm, { environment: 'prod' }, null, opts)).id;
     const clA = await seedAsset(runner, t, 'cl-a', { cluster: true });
     const clB = await seedAsset(runner, t, 'cl-b', { cluster: true });
+    // The via names open the cluster's page by its reference.
+    await runner.query(`UPDATE assets SET asset_reference = CASE id WHEN $2 THEN 'SRV-A' ELSE 'SRV-B' END WHERE tenant_id = $1 AND id = ANY($3::uuid[])`, [t, clA, [clA, clB]]);
     const m1 = await seedAsset(runner, t, 'srv-1');
     const m2 = await seedAsset(runner, t, 'srv-2');
     const m3 = await seedAsset(runner, t, 'srv-3', { retired: true });
@@ -127,12 +129,12 @@ async function run() {
     assert.equal(byAsset.get(clA)!.assignment_id, onA);
     const viaM2 = byAsset.get(m2)!;
     assert.equal(viaM2.inherited, true, 'a member inherits');
-    assert.deepEqual(viaM2.via_clusters, [{ id: clA, name: 'cl-a' }, { id: clB, name: 'cl-b' }], 'a member of two clusters: one row, both named, by name');
+    assert.deepEqual(viaM2.via_clusters, [{ id: clA, name: 'cl-a', reference: 'SRV-A' }, { id: clB, name: 'cl-b', reference: 'SRV-B' }], 'a member of two clusters: one row, both named, by name');
     assert.equal(viaM2.assignment_id, onA, 'the row of the first cluster by name');
     const viaM1 = byAsset.get(m1)!;
     assert.equal(viaM1.inherited, false, 'a direct row and an inherited one alike: the direct one wins');
     assert.equal(viaM1.assignment_id, m1Direct);
-    assert.deepEqual(viaM1.via_clusters, [{ id: clA, name: 'cl-a' }], 'and still names the cluster');
+    assert.deepEqual(viaM1.via_clusters, [{ id: clA, name: 'cl-a', reference: 'SRV-A' }], 'and still names the cluster');
     assert.ok(onB, 'the second cluster row exists');
 
     // --- The Deployments tab: a cluster's row carries its members, never rows of their own.

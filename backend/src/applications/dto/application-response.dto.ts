@@ -245,7 +245,7 @@ export interface ApplicationMapSummaryResponse {
     environment: string;
     /** True on a server that gets the row through its clusters (`via_clusters`). */
     inherited: boolean;
-    via_clusters: Array<{ id: string; name: string }>;
+    via_clusters: Array<{ id: string; name: string; reference: string | null }>;
   }>;
   business_owners: Array<{
     owner_type: string;

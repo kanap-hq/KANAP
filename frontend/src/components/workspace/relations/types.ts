@@ -79,7 +79,7 @@ export type AssetRelationRow = {
   /** The other containers in service holding it (`contains` only, R3). */
   also_contained_by?: Array<{ id: string; name: string }>;
   /** The members a cluster depends through (folded rows of `depends_on` only). */
-  via?: Array<{ id: string; name: string }>;
+  via?: Array<{ id: string; name: string; reference?: string | null }>;
 };
 
 /** A technology linked to the owner. `reference` is already `TEC-n`. */

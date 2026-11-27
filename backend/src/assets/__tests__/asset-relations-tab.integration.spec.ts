@@ -586,14 +586,14 @@ async function testMemberDependencies() {
       {
         ...related(san, 'PAR-SAN-01', 'physical_server', 'prod'),
         via: [
-          { id: host2.id, name: 'PAR-ESX-01' },
-          { id: host1.id, name: 'PAR-ESX-02' },
+          { id: host2.id, name: 'PAR-ESX-01', reference: host2.reference },
+          { id: host1.id, name: 'PAR-ESX-02', reference: host1.reference },
         ],
       },
       {
         ...related(retiredTarget, 'Retired array', 'physical_server', 'prod'),
         status: 'retired',
-        via: [{ id: host2.id, name: 'PAR-ESX-01' }],
+        via: [{ id: host2.id, name: 'PAR-ESX-01', reference: host2.reference }],
       },
     ], 'the array under two members, a retired target under one; nodes and direct targets stay out');
     assert.equal(res.counts.assets, 1, 'the badge counts the direct relations only');
@@ -622,7 +622,7 @@ async function testMemberDependencies() {
     const other = await http.relationsTabRead(otherCluster.reference, ctx(runner, { ...seed, tenantId: otherTenant }, ALL));
     assert.deepEqual(other.assets.depends_on_through_members, [{
       ...related(otherSan, 'PAR-SAN-B', 'physical_server', 'prod'),
-      via: [{ id: otherHost.id, name: 'PAR-ESX-01' }],
+      via: [{ id: otherHost.id, name: 'PAR-ESX-01', reference: otherHost.reference }],
     }]);
 
     // A retired cluster passes nothing to its members' dependencies.

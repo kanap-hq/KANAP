@@ -1422,7 +1422,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
     // The servers the application runs on (effective: a cluster and its members in service), an
     // inherited one marked with the clusters it comes through.
     const assetRows: Array<{
-      asset_id: string; asset_reference: string | null; asset_name: string; is_cluster: boolean; environment: string; inherited: boolean; via_clusters: Array<{ id: string; name: string }>;
+      asset_id: string; asset_reference: string | null; asset_name: string; is_cluster: boolean; environment: string; inherited: boolean; via_clusters: Array<{ id: string; name: string; reference: string | null }>;
     }> = await mg.query(
       `SELECT s.id AS asset_id, s.asset_reference, s.name AS asset_name, s.is_cluster, ai.environment, asa.inherited, asa.via_clusters
        FROM (${effectiveAssignmentsSql({ tenant: 'app_current_tenant()', applications: 'ARRAY[$1::uuid]' })}) asa
