@@ -295,6 +295,8 @@ export type AiEntityContextPayloadDto = {
   };
   related: AiEntityRelationshipGroupDto[];
   knowledge: AiKnowledgeContextDto | null;
+  /** A linked record the person does not read, which the answer must not turn into "none", and why. */
+  fields_withheld?: Array<{ field: string; reason: string }>;
   /** A group that holds only the records the person takes part in (Business Contributor), and why. */
   fields_partial?: Array<{ field: string; reason: string }>;
 };

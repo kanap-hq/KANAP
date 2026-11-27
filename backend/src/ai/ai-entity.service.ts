@@ -56,6 +56,7 @@ import { resolveAiApplicationsReach } from './query/ai-technologies.query';
 import { classificationLabels } from '../applications/services/application-classification';
 import { readClassificationCatalog } from './ai-classification-catalog.util';
 import { AiQueryExecutor } from './query/ai-query.executor';
+import { AI_TASK_CONVERTED_REQUEST_WITHHELD } from './query/ai-linked-read-notes.util';
 import {
   asksForUnreadFamily,
   notSearchedFamiliesAskedBy,
@@ -3935,7 +3936,8 @@ export class AiEntityService {
               pr.name AS converted_request_name,
               ${buildRequestSummarySql('pr')} AS converted_request_summary,
               pr.status AS converted_request_status,
-              pr.updated_at AS converted_request_updated_at
+              pr.updated_at AS converted_request_updated_at,
+              EXISTS (SELECT 1 FROM portfolio_requests pr_any WHERE pr_any.origin_task_id = t.id AND pr_any.tenant_id = $2) AS converted
        FROM tasks t
        LEFT JOIN portfolio_task_types tt ON tt.id = t.task_type_id AND tt.tenant_id = $2
        LEFT JOIN users u_assign ON u_assign.id = t.assignee_user_id AND u_assign.tenant_id = t.tenant_id
@@ -4060,6 +4062,7 @@ export class AiEntityService {
     }
 
     const recentActivity = await this.listRecentActivity(manager, { tenantId, taskId });
+    const related = await this.readableGroups(context, relatedGroups);
 
     return {
       entity: {
@@ -4085,8 +4088,12 @@ export class AiEntityService {
           recent_activity_truncated: recentActivity.total > recentActivity.items.length,
         },
       },
-      related: await this.readableGroups(context, relatedGroups),
+      related,
       knowledge: await this.getKnowledgeContext(context, 'tasks', taskId, manager),
+      // A converted task whose request the person does not read reads as converted, the request unnamed.
+      ...(task.converted === true && !related.some((group) => group.relation === 'converted_request')
+        ? { fields_withheld: [AI_TASK_CONVERTED_REQUEST_WITHHELD] }
+        : {}),
       // Said whatever the task holds, so that the answer says nothing of the applications left out.
       ...(applicationAccessScope ? {
         fields_partial: [{

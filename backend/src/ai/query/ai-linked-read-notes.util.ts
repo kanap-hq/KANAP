@@ -52,6 +52,17 @@ export async function aiLinkedReadNotes(
   return { ...(withheld.length ? { fields_withheld: withheld } : {}), ...(partial.length ? { fields_partial: partial } : {}) };
 }
 
+/**
+ * A task converted into a request the person does not read (`converted_request_hidden`): the task is
+ * converted, and the answer must say so without naming the request (task detail and context).
+ */
+export const AI_TASK_CONVERTED_REQUEST_WITHHELD: AiWithheldField = {
+  field: 'converted_request',
+  reason: 'This task was converted into a request this person cannot read (converted_request_hidden: true). '
+    + 'Say that the task is converted into a request, give neither the reference nor the name of that request, '
+    + 'and never say that the task is not converted.',
+};
+
 /** Two lists of withheld or partial fields as one, each field once. */
 export function mergeFieldNotes(...lists: Array<AiWithheldField[] | undefined>): AiWithheldField[] | undefined {
   const byField = new Map<string, AiWithheldField>();
