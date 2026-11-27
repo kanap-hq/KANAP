@@ -221,9 +221,12 @@ const family = (table: string) => FAMILIES.find((row) => row.table === table) ??
 function childCases(seeded: Seeded): ChildCase[] {
   const other = async (runner: QueryRunner, table: string) => family(table).insert(runner, seeded.tenantId, ++numbers);
   const technology = (runner: QueryRunner) => id(runner, `INSERT INTO technologies (tenant_id, item_number, name) VALUES ($1, $2, $3)`, [seeded.tenantId, ++numbers, `Tech ${numbers}`]);
-  const pair = (child: string, recordColumn: string, otherColumn: string, otherOf: (runner: QueryRunner) => Promise<string>) =>
+  const pair = (child: string, recordColumn: string, otherColumn: string, otherOf: (runner: QueryRunner) => Promise<string>, extra = '') =>
     async (runner: QueryRunner, recordId: string) =>
-      runner.query(`INSERT INTO ${child} (tenant_id, ${recordColumn}, ${otherColumn}) VALUES ($1, $2, $3)`, [seeded.tenantId, recordId, await otherOf(runner)]);
+      runner.query(
+        `INSERT INTO ${child} (tenant_id, ${recordColumn}, ${otherColumn}${extra ? `, ${extra.split('=')[0]}` : ''}) VALUES ($1, $2, $3${extra ? `, '${extra.split('=')[1]}'` : ''})`,
+        [seeded.tenantId, recordId, await otherOf(runner)],
+      );
   const activity = (column: string) => (runner: QueryRunner, recordId: string, authorId: string) =>
     runner.query(`INSERT INTO portfolio_activities (tenant_id, ${column}, author_id, type, content) VALUES ($1, $2, $3, 'comment', 'Seen.')`, [seeded.tenantId, recordId, authorId]);
   return [
@@ -250,6 +253,44 @@ function childCases(seeded: Seeded): ChildCase[] {
       write: pair('portfolio_request_dependencies', 'depends_on_project_id', 'request_id', (r) => other(r, 'portfolio_requests')),
     },
     { family: family('portfolio_projects'), child: 'portfolio_activities', write: activity('project_id'), authored: true },
+    // Review N1b (C3, C4): the other column of a link between two records of the family, audited on
+    // the other record only.
+    { family: family('applications'), child: 'application_suites', write: pair('application_suites', 'suite_id', 'application_id', (r) => other(r, 'applications')) },
+    { family: family('assets'), child: 'asset_cluster_members', write: pair('asset_cluster_members', 'asset_id', 'cluster_id', (r) => other(r, 'assets')) },
+    { family: family('assets'), child: 'asset_relations', write: pair('asset_relations', 'related_asset_id', 'asset_id', (r) => other(r, 'assets'), 'relation_type=depends_on') },
+    { family: family('interfaces'), child: 'interface_dependencies', write: pair('interface_dependencies', 'related_interface_id', 'interface_id', (r) => other(r, 'interfaces'), 'direction=upstream') },
+    {
+      family: family('portfolio_projects'),
+      child: 'portfolio_project_dependencies',
+      write: pair('portfolio_project_dependencies', 'depends_on_project_id', 'project_id', (r) => other(r, 'portfolio_projects')),
+    },
+    {
+      family: family('portfolio_requests'),
+      child: 'portfolio_request_dependencies',
+      write: pair('portfolio_request_dependencies', 'depends_on_request_id', 'request_id', (r) => other(r, 'portfolio_requests')),
+    },
+    { family: family('documents'), child: 'document_references', write: pair('document_references', 'target_document_id', 'source_document_id', (r) => other(r, 'documents')) },
+    {
+      // A relation set after the creation, from the other record's Knowledge panel (review C2).
+      family: family('documents'),
+      child: 'document_applications',
+      write: async (runner, recordId) =>
+        runner.query(
+          `INSERT INTO document_applications (tenant_id, document_id, application_id, created_at) VALUES ($1, $2, $3, now() + interval '1 second')`,
+          [seeded.tenantId, recordId, await other(runner, 'applications')],
+        ),
+    },
+    {
+      // Another person's editor open on the new document: their text is not saved yet.
+      family: family('documents'),
+      child: 'document_edit_locks',
+      write: (runner, recordId, authorId) =>
+        runner.query(
+          `INSERT INTO document_edit_locks (tenant_id, document_id, holder_user_id, lock_token_hash, expires_at) VALUES ($1, $2, $3, 'hash', now() + interval '5 minutes')`,
+          [seeded.tenantId, recordId, authorId],
+        ),
+      authored: true,
+    },
     { family: family('portfolio_requests'), child: 'portfolio_activities', write: activity('request_id'), authored: true },
     { family: family('tasks'), child: 'portfolio_activities', write: activity('task_id'), authored: true },
     {
@@ -293,6 +334,81 @@ async function testOtherChildren() {
       await testCase.write(runner, record.id, seeded.otherId);
       await refuses(runner, seeded, testCase.family, record, label);
       assert.equal(await childCount(runner, seeded, testCase, record.id), 1, `${label}: the child stays`);
+      console.log(`    ok ${label}`);
+    }
+  });
+}
+
+// Review N1b: what does not refuse a new document. Its relations written by its creation share the
+// creation's transaction, so its time; another person's edit lock that has expired holds no text.
+async function testDocumentControls() {
+  await inRolledBackTransaction(async (runner) => {
+    const seeded = await seedTenant(runner);
+    const documents = family('documents');
+    const atCreation = await created(runner, seeded, documents);
+    await knowledge.addDocumentRelationByEntity(atCreation.id, 'applications', await family('applications').insert(runner, seeded.tenantId, ++numbers), runner.manager);
+    await cancels(runner, seeded, documents, atCreation, 'a document with the relation of its creation');
+    const expired = await created(runner, seeded, documents);
+    await runner.query(
+      `INSERT INTO document_edit_locks (tenant_id, document_id, holder_user_id, lock_token_hash, acquired_at, heartbeat_at, expires_at)
+       VALUES ($1, $2, $3, 'hash', now() - interval '1 hour', now() - interval '1 hour', now() - interval '30 minutes')`,
+      [seeded.tenantId, expired.id, seeded.otherId],
+    );
+    await cancels(runner, seeded, documents, expired, 'a document with an expired lock of another person');
+  });
+}
+
+// Review N1b (B1, C1, lock): a managed document of the record that another person typed in (an
+// autosave writes no version, only `updated_by`), commented, or holds open in the editor refuses
+// Cancel. The creator's own work, a write of nobody (a title synced) and an expired lock do not.
+async function testManagedDocumentsOfOthers() {
+  await inRolledBackTransaction(async (runner) => {
+    const seeded = await seedTenant(runner);
+    const applications = family('applications');
+    const t = seeded.tenantId;
+    const withManaged = async () => {
+      const record = await created(runner, seeded, applications);
+      const document = await seeded.document();
+      await runner.query(`UPDATE documents SET created_by = $3, updated_by = $3 WHERE tenant_id = $1 AND id = $2`, [t, document, seeded.creatorId]);
+      await runner.query(
+        `INSERT INTO integrated_document_bindings (tenant_id, source_entity_type, source_entity_id, slot_key, document_id) VALUES ($1, 'applications', $2, 'description', $3)`,
+        [t, record.id, document],
+      );
+      return { record, document };
+    };
+    const autosave = (document: string, userId: string | null) =>
+      runner.query(`UPDATE documents SET content_markdown = 'Typed.', updated_by = $3 WHERE tenant_id = $1 AND id = $2`, [t, document, userId]);
+    const comment = (document: string, userId: string) =>
+      runner.query(`INSERT INTO document_activities (tenant_id, document_id, author_id, type, content) VALUES ($1, $2, $3, 'comment', 'Seen.')`, [t, document, userId]);
+    const editLock = (document: string, userId: string, expires: string) =>
+      runner.query(
+        `INSERT INTO document_edit_locks (tenant_id, document_id, holder_user_id, lock_token_hash, acquired_at, heartbeat_at, expires_at)
+         VALUES ($1, $2, $3, 'hash', now() - interval '1 hour', now() - interval '1 hour', now() + $4::interval)`,
+        [t, document, userId, expires],
+      );
+    const passing: Array<[string, (document: string) => Promise<unknown>]> = [
+      ['its creator\'s autosave', (d) => autosave(d, seeded.creatorId)],
+      ['a write of nobody', (d) => autosave(d, null)],
+      ['its creator\'s comment', (d) => comment(d, seeded.creatorId)],
+      ['its creator\'s edit lock', (d) => editLock(d, seeded.creatorId, '5 minutes')],
+      ['an expired lock of another person', (d) => editLock(d, seeded.otherId, '-30 minutes')],
+    ];
+    for (const [label, write] of passing) {
+      const { record, document } = await withManaged();
+      await write(document);
+      await cancels(runner, seeded, applications, record, `a managed document with ${label}`);
+    }
+    const refusing: Array<[string, (document: string) => Promise<unknown>]> = [
+      ['another person\'s autosave', (d) => autosave(d, seeded.otherId)],
+      ['another person\'s comment', (d) => comment(d, seeded.otherId)],
+      ['another person\'s live edit lock', (d) => editLock(d, seeded.otherId, '5 minutes')],
+    ];
+    for (const [label, write] of refusing) {
+      const { record, document } = await withManaged();
+      await write(document);
+      await refuses(runner, seeded, applications, record, `a managed document with ${label}`);
+      const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM documents WHERE tenant_id = $1 AND id = $2`, [t, document]);
+      assert.equal(n, 1, `a managed document with ${label}: the document stays`);
       console.log(`    ok ${label}`);
     }
   });
@@ -382,6 +498,10 @@ async function main() {
     console.log('  ok testOtherChildren');
     await testInterfaceBindingConnections();
     console.log('  ok testInterfaceBindingConnections');
+    await testDocumentControls();
+    console.log('  ok testDocumentControls');
+    await testManagedDocumentsOfOthers();
+    console.log('  ok testManagedDocumentsOfOthers');
     await testIncidentJournal();
     console.log('  ok testIncidentJournal');
     await testOtherTenant();
