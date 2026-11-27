@@ -1734,7 +1734,7 @@ export default function TaskWorkspacePage() {
         convertDisabledTitle={
           hasConvertedRequest
             ? (task?.converted_request_item_number
-              ? t('portfolio:workspace.task.actions.alreadyConvertedWithReference', { ref: `REQ-${task.converted_request_item_number}` })
+              ? t('portfolio:workspace.task.actions.alreadyConvertedWithReference', { reference: `REQ-${task.converted_request_item_number}` })
               : t('portfolio:workspace.task.actions.alreadyConverted'))
             : (!canCreateRequest ? t('portfolio:workspace.task.actions.convertRequiresPermission') : undefined)
         }
