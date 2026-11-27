@@ -34,9 +34,7 @@ const LINKED_REFERENCE_FAMILIES: Record<string, { entityType: string; resource: 
   CTCT: { entityType: 'contacts', resource: 'contacts' },
 };
 
-/** Contributors are absent from `buildEntityUrl`: they are no mention family. */
 function referenceUrl(entityType: string, reference: string): string | null {
-  if (entityType === 'contributors') return `/portfolio/contributors/${reference}`;
   return buildEntityUrl(entityType, reference);
 }
 

@@ -27,7 +27,8 @@ function setup(existing: boolean) {
   const context: any = {
     tenantId: 'tenant-1',
     userId: 'user-1',
-    manager: { query: async () => [{ id: ITEM_ID, product_name: 'Monitoring', description: 'Servers' }] },
+    // Every read answers the line; the line's lock also returns the instant it is held (`withLockedAt`).
+    manager: { query: async () => [{ id: ITEM_ID, product_name: 'Monitoring', description: 'Servers', locked_at: '2026-01-01 00:00:00+00' }] },
   };
   return { service, context, calls };
 }

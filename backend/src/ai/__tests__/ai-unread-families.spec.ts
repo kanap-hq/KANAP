@@ -53,9 +53,42 @@ function testWordsThatAskForAFamily() {
     ['Globale Leistungsverrechnung 2026', 'chargeback by beneficiary company'],
     ['contracargo global', 'chargeback by beneficiary company'],
     ['calendarios laborales', 'working-day calendars'],
+    // Portfolio › Contributors (lot I7d of 26.12.1), in the four languages and by reference.
+    ['Qui est le contributeur MEM-1 ?', 'contributors'],
+    ['Who is MEM-4?', 'contributors'],
+    ['contributors of the Platform team', 'contributors'],
+    ['Mitwirkende im Team Plattform', 'contributors'],
+    ['colaboradores del equipo', 'contributors'],
+    ['liste les contributeurs', 'contributors'],
+    ['contributeur MEM-3', 'contributors'],
+    ['contributors of the portfolio', 'contributors'],
+    ['Mitwirkender im Portfolio', 'contributors'],
   ];
   for (const [query, family] of cases) {
     assert.ok(families(query).includes(family), `"${query}" asks for ${family}`);
+  }
+}
+
+/**
+ * The project team labels (business and IT contributors of a project) and the Business Contributor
+ * role, in the four languages as the locale files write them, never name Portfolio › Contributors.
+ */
+function testTheProjectTeamsAndTheRoleAreNotTheContributors() {
+  for (const query of [
+    'Qui sont les contributeurs métier du projet PRJ-2 ?',
+    'les contributeurs IT de PRJ-2',
+    'rôle Contributeur métier',
+    'Business  Contributor',
+    'Business contributors of PRJ-2',
+    'IT contributors of PRJ-2',
+    'Fachbereichs-Mitwirkende des Projekts PRJ-2',
+    'IT-Mitwirkende von PRJ-2',
+    'Rolle Fachbereichs-Mitwirkender',
+    'colaboradores de negocio del proyecto PRJ-2',
+    'colaboradores IT de PRJ-2',
+    'rol Colaborador de negocio',
+  ]) {
+    assert.equal(families(query).includes('contributors'), false, `"${query}" does not ask for the contributors`);
   }
 }
 
@@ -83,6 +116,8 @@ function testCommonWordsAskForNone() {
     'USD Partners',
     'Devise Consulting',
     'Cryptocurrency wallet',
+    // The Business Contributor role, never the contributors of the portfolio.
+    'Business Contributor',
   ]) {
     assert.deepEqual(families(query), [], `"${query}" asks for no unread family`);
   }
@@ -239,7 +274,7 @@ async function testTheReferenceDataFollowTheirRights() {
   const probed: string[] = [];
   const policy = { canReadEntityType: async (_context: unknown, type: string) => { probed.push(type); return type === 'cost_centers'; } };
   assert.deepEqual(await unreadFamiliesReachOf(policy, {}, {}), { reports: false, readable: ['cost_centers'] });
-  assert.deepEqual(probed, ['chargeback', 'cost_centers', 'working_day_calendars', 'exchange_rates', 'analytics_axes']);
+  assert.deepEqual(probed, ['chargeback', 'cost_centers', 'working_day_calendars', 'exchange_rates', 'analytics_axes', 'contributors']);
 }
 
 /**
@@ -255,6 +290,8 @@ function testTheWordsOfAReferenceSearch() {
   assert.deepEqual(referenceSearchWords('working_day_calendars', 'working-day calendar CAD218').words, ['cad218']);
   assert.deepEqual(referenceSearchWords('analytics_axes', 'axe analytique it_tower').words, ['it_tower']);
   assert.deepEqual(referenceSearchWords('analytics_axes', 'dimension Priorité').words, ['priorite']);
+  assert.deepEqual(referenceSearchWords('contributors', 'contributeur Durand'), { words: ['durand'], rest: 'durand', named: true });
+  assert.deepEqual(referenceSearchWords('contributors', 'MEM-4').words, ['mem-4']);
   assert.ok(referenceSearchMatches(['group', 'it'], 'DSI-GRP', 'Group IT'));
   assert.ok(referenceSearchMatches(['securite'], 'FR-1', 'Sécurité'), 'without accents');
   assert.equal(referenceSearchMatches(['group', 'paris'], 'DSI-GRP', 'Group IT'), false, 'every word');
@@ -275,8 +312,17 @@ function testUnknownReachLeavesTheReferenceDataOut() {
   assert.match(sentence, /audit log/);
 }
 
+/** The contributors are read with the portfolio settings at reader level: the hint names the level, never "manage". */
+function testTheContributorsRightNamesItsLevel() {
+  const hint = 'The tools read it (the family contributors) for a person with the Portfolio settings right at reader level';
+  assert.ok(unreadFamilyLines('en', null, { readable: [] }).some((line) => line.includes(`${hint}, which this person's role does not give.`)));
+  assert.ok(unreadFamilyLines('en').some((line) => line.includes(`${hint} only.`)));
+}
+
 async function run() {
   testWordsThatAskForAFamily();
+  testTheProjectTeamsAndTheRoleAreNotTheContributors();
+  testTheContributorsRightNamesItsLevel();
   testTheWordsOfAReferenceSearch();
   testUnknownReachLeavesTheReferenceDataOut();
   await testTheReferenceDataFollowTheirRights();

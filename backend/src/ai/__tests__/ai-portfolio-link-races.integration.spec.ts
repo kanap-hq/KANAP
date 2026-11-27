@@ -150,9 +150,12 @@ async function main() {
       writes: { processes: true },
     });
     const noDeadlock = (o: Outcome) => assert.notEqual(o.error?.code, '40P01', 'no deadlock');
-    const nothingWritten = (o: Outcome) => {
+    // The first gesture dates the record at the other end too (K2f): an approval posted from that
+    // record waits for its lock, then finds the link already there and refuses before writing.
+    const relationChanged = (o: Outcome) => {
       assert.equal(o.ok, false, 'the approval is refused');
-      assert.match(String(o.error?.message ?? ''), /nothing was written/, String(o.error?.message ?? o.error));
+      assert.equal(o.error?.getStatus?.(), 409, 'a conflict');
+      assert.match(String(o.error?.message ?? ''), /relation changed after the preview was created/, String(o.error?.message ?? o.error));
     };
 
     const cells: Array<[string, () => Promise<void>]> = [
@@ -165,9 +168,9 @@ async function main() {
         const o = await race((m) => assistant.executePreview(ctx(m), fromApp), (m) => assistant.executePreview(ctx(m), fromProject));
         noDeadlock(o);
         assert.equal(o.waited, true, 'the second approval waits for the first');
-        nothingWritten(o);
+        relationChanged(o);
         assert.equal(await projectLinks(a.id, p.id), 1, 'one link');
-        assert.equal(await aiRows() - before, 1, 'one audit row by the assistant');
+        assert.equal(await aiRows() - before, 2, 'two audit rows by the first approval: the application and the project');
         assert.equal(await projectActivities(p.id), 0, 'no activity on the project for a link it did not write');
       }],
       ['approval projects.applications held, then the application tab links the project', async () => {
@@ -189,7 +192,7 @@ async function main() {
         const o = await race((m) => appTabs.setLink('projects', a.id, p.id, true, appTabCtx(m)), (m) => assistant.executePreview(ctx(m), fromProject));
         noDeadlock(o);
         assert.equal(o.waited, true, 'the approval waits for the screen');
-        nothingWritten(o);
+        relationChanged(o);
         assert.equal(await aiRows() - before, 0, 'no audit row by the assistant');
         assert.equal(await projectLinks(a.id, p.id), 1, 'one link');
         assert.equal(await projectActivities(p.id), 0, 'no activity on the project');
@@ -214,7 +217,7 @@ async function main() {
         noDeadlock(o);
         assert.equal(o.ok, true, 'the screen answers');
         assert.equal(await projectLinks(a.id, p.id), 1, 'one link');
-        assert.equal(await linkAudits('application_projects', a.id, p.id), 1, 'one audit row: the approval');
+        assert.equal(await linkAudits('application_projects', a.id, p.id), 2, 'two audit rows, both by the approval: the application and the project');
         assert.equal(await projectActivities(p.id), 0, 'no activity from the project tab for a link it did not write');
       }],
       ['screens only: the application tab and the project tab link the same pair at once', async () => {
@@ -229,7 +232,7 @@ async function main() {
         assert.equal(o.waited, true, 'the project tab waits for the application tab');
         assert.deepEqual(second, { ok: true, changed: false }, 'the project tab wrote nothing');
         assert.equal(await projectLinks(a.id, p.id), 1, 'one link');
-        assert.equal(await linkAudits('application_projects', a.id, p.id), 1, 'one audit row');
+        assert.equal(await linkAudits('application_projects', a.id, p.id), 2, 'two audit rows, both by the application tab: the application and the project');
         assert.equal(await projectActivities(p.id), 0, 'no activity from the project tab');
       }],
       ['screens only: the application tab and the request tab link the same pair at once', async () => {
@@ -244,7 +247,7 @@ async function main() {
         assert.equal(o.waited, true, 'the request tab waits for the application tab');
         assert.deepEqual(second, { ok: true, changed: false }, 'the request tab wrote nothing');
         assert.equal(await requestLinks(a.id, r), 1, 'one link');
-        assert.equal(await linkAudits('portfolio_request_applications', a.id, r), 1, 'one audit row');
+        assert.equal(await linkAudits('portfolio_request_applications', a.id, r), 2, 'two audit rows by the gesture that wrote: the request and the application');
         // The application tab writes the request's list through the request's own replacement: its
         // activity is the only one.
         assert.equal(await requestActivities(r), 1, 'one activity: the application tab');
@@ -260,7 +263,7 @@ async function main() {
         noDeadlock(o);
         assert.deepEqual(second, { ok: true, changed: false }, 'the application tab wrote nothing');
         assert.equal(await requestLinks(a.id, r), 1, 'one link');
-        assert.equal(await linkAudits('portfolio_request_applications', a.id, r), 1, 'one audit row');
+        assert.equal(await linkAudits('portfolio_request_applications', a.id, r), 2, 'two audit rows by the gesture that wrote: the request and the application');
         assert.equal(await requestActivities(r), 1, 'one activity: the request tab');
       }],
     ];

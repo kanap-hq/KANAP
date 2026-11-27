@@ -382,6 +382,7 @@ export async function setBudgetLineRelation(
     link: LINE_LINKS[kind],
     projectScope: kind === 'projects' ? ctx.projectScope : undefined,
     audit,
+    otherEnd: deps.audit,
   });
 }
 

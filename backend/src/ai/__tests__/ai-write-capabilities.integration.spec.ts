@@ -1087,14 +1087,16 @@ async function testApplicationLineRelationAuditByNature(harness: Harness) {
     const relation = (extra: Record<string, unknown>) => ({
       entity_type: 'applications', ref: seed.applicationId, relation: 'budget_lines', ...extra,
     });
-    const auditTables = async (previewId: string) => (await runner.query(
-      `SELECT table_name FROM audit_log WHERE tenant_id = $1 AND source = 'ai_chat' AND source_ref = $2 ORDER BY table_name`,
-      [seed.tenantId, previewId],
+    // The application's own rows; each line it reached gets its own row too, under the same label (K2f).
+    const auditTables = async (previewId: string, recordId: string = seed.applicationId) => (await runner.query(
+      `SELECT table_name FROM audit_log WHERE tenant_id = $1 AND source = 'ai_chat' AND source_ref = $2 AND record_id = $3 ORDER BY table_name`,
+      [seed.tenantId, previewId, recordId],
     )).map((row: any) => row.table_name);
 
     const capexOnly = await executeToolPreview(harness, context(seed, runner, 'audit-capex-only'), 'update_entity_relations', relation({ add: [seed.capexItemId] }));
     await approvePreview(harness, context(seed, runner, 'audit-capex-only'), capexOnly);
     assert.deepEqual(await auditTables(capexOnly.preview_id), ['application_capex_items'], 'a CAPEX-only relation is audited as application_capex_items');
+    assert.deepEqual(await auditTables(capexOnly.preview_id, seed.capexItemId), ['application_capex_items'], 'the CAPEX line is marked under its own label');
 
     const opexOnly = await executeToolPreview(harness, context(seed, runner, 'audit-opex-only'), 'update_entity_relations', relation({ add: [seed.spendItemId] }));
     await approvePreview(harness, context(seed, runner, 'audit-opex-only'), opexOnly);
@@ -1103,6 +1105,7 @@ async function testApplicationLineRelationAuditByNature(harness: Harness) {
     const mixed = await executeToolPreview(harness, context(seed, runner, 'audit-both'), 'update_entity_relations', relation({ remove: [seed.capexItemId, seed.spendItemId] }));
     await approvePreview(harness, context(seed, runner, 'audit-both'), mixed);
     assert.deepEqual(await auditTables(mixed.preview_id), ['application_capex_items', 'application_spend_items'], 'a mixed relation is audited under both tables');
+    assert.deepEqual(await auditTables(mixed.preview_id, seed.spendItemId), ['application_spend_items'], 'the OPEX line is marked under its own label');
   });
 }
 

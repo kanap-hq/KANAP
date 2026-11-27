@@ -55,6 +55,8 @@ A restored column lists them the same way. Older entries show them too.
 
 On the other records, the history lists in the same way the links and parts they hold: budget lines, applications, assets, contracts, team members, contacts, dependencies, web links, embedded documents, attachments, tasks, deployments and criteria scores.
 
+A link between a project or a request and an application, an asset or a budget line, or between an application and a budget line, shows in the history of both records, whichever of the two it was added to or removed from. A change of several links at once gives each linked record its own entry.
+
 ## Records you cannot read
 
 An entry can name another record, for example a contract linked to the line. If you cannot open that record, the entry names it by its kind only, for example "a contract". A record deleted since then shows as "a deleted contract".

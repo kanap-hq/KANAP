@@ -17,6 +17,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
 import { AI_BUDGET_DELTA_DEFAULT_LIMIT, AI_BUDGET_GROUP_LIMIT, AiAggregateExecutor } from './query/ai-aggregate.executor';
 import { AI_QUERY_DEFAULT_LIMIT, AI_QUERY_FAMILY_MAX_LIMIT, AI_QUERY_MAX_LIMIT, AiQueryExecutor } from './query/ai-query.executor';
 import { describeAiEntityFilters } from './query/ai-filter-description.util';
+import { AI_CONTRIBUTOR_COMPANY_WITHHELD, readsCompanyLookup } from './query/ai-contributors.query';
 import { getAiEntityRegistry, resolveAiEntityRegistry } from './query/registries';
 import { readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { localizedBudgetColumnsAiContext } from '../budget-columns/budget-column-labels';
@@ -198,7 +199,8 @@ const REFERENCE_DATA_FAMILIES_SENTENCE = 'The reference data are families too: o
   + 'on `analytics_axes` (the analytics dimensions and their settings), `required_for` is where a value is required now, an enabled dimension only; '
   + '`exchange_rates` gives each currency\'s rate for a year in the reporting currency for 1 unit of that currency, '
   + 'with `inverse_rate` and, with the `against` filter, `cross_rate` computed by the server; '
-  + 'a pair with the reporting currency reads on the row of the other currency (`rate` and `inverse_rate`), and `against` serves a pair of two other currencies.';
+  + 'a pair with the reporting currency reads on the row of the other currency (`rate` and `inverse_rate`), and `against` serves a pair of two other currencies. '
+  + 'On `contributors` (Portfolio › Contributors, MEM-4), a row is a person with a portfolio profile: their team, manager, contract type, availability in days per month and skills with their level.';
 
 const DescribeEntityFiltersInputSchema = z.object({
   entity_type: AiQueryEntityTypeSchema.describe('The entity family to describe.'),
@@ -414,7 +416,7 @@ export class AiToolRegistry {
         {
           name: 'search_all',
           category: 'discovery',
-          description: 'Searches the readable records of every family (applications, assets, projects, requests, tasks, documents, budget lines, contracts and more) by text or by reference such as PRJ-12, and returns the matches with their reference, name and status. It also searches the cost centers, working-day calendars and analytics dimensions by code and by name (`ref` is the code; at most five of each family): an exact code or name ranks as a reference, a part of one as a name. Suited to finding a record whose family or exact name is unknown; query_entities lists, filters and counts one family. When `complete` is true and `truncated` false, the results hold every match. `failed_entity_types` lists the families that could not be searched: the results are then partial, and query_entities on those families gives the authoritative answer. `not_read_here` names the families the search words ask for that this server does not read, with the screen that shows them; without any match, `families_not_read` lists them all. The exchange rates are not searched here: query_entities on `exchange_rates` reads them, and `not_searched_here` says so when the search words ask for rates or currencies. Vulnerabilities are not searched here: query_entities on `vulnerabilities` finds a CVE by `cve_id` or `q`. The roles, their rights and the data access of people (`roles`, `role_permissions`, `data_access`) are not searched here either: query_entities reads them, for an administrator of users with access to all data. ' + AI_UNREAD_FAMILIES_SENTENCE + ` ${AI_PAGE_URL_NOTE}`,
+          description: 'Searches the readable records of every family (applications, assets, projects, requests, tasks, documents, budget lines, contracts and more) by text or by reference such as PRJ-12, and returns the matches with their reference, name and status. It also searches the cost centers, working-day calendars, analytics dimensions and contributors (MEM-n) by code and by name (`ref` is the code, the MEM-n of a contributor; at most five of each family): an exact code or name ranks as a reference, a part of one as a name. Suited to finding a record whose family or exact name is unknown; query_entities lists, filters and counts one family. When `complete` is true and `truncated` false, the results hold every match. `failed_entity_types` lists the families that could not be searched: the results are then partial, and query_entities on those families gives the authoritative answer. `not_read_here` names the families the search words ask for that this server does not read, with the screen that shows them; without any match, `families_not_read` lists them all. The exchange rates are not searched here: query_entities on `exchange_rates` reads them, and `not_searched_here` says so when the search words ask for rates or currencies. Vulnerabilities are not searched here: query_entities on `vulnerabilities` finds a CVE by `cve_id` or `q`. The roles, their rights and the data access of people (`roles`, `role_permissions`, `data_access`) are not searched here either: query_entities reads them, for an administrator of users with access to all data. ' + AI_UNREAD_FAMILIES_SENTENCE + ` ${AI_PAGE_URL_NOTE}`,
           inputSchema: SearchAllInputSchema,
           inputSummary: fieldDescriptions(SearchAllInputSchema),
           surfaces: ['chat', 'mcp'],
@@ -445,6 +447,10 @@ export class AiToolRegistry {
                 await unreadFamiliesReachOf(this.policy, context, context.manager),
               ),
             };
+            if (input.entity_type === 'contributors' && !readsCompanyLookup(await this.policy.effectiveAccess(context, context.manager))) {
+              // The default company is read with the company lookup, as the drawer's field: withheld, said so.
+              return { ...description, fields_withheld: [...(description.fields_withheld ?? []), AI_CONTRIBUTOR_COMPANY_WITHHELD] };
+            }
             if (input.entity_type !== 'budget_lines') return description;
             // Amount field descriptions are positional; the column names come with them, in the person's language
             // (MCP clients have no system prompt). A workspace name wins over the product name.

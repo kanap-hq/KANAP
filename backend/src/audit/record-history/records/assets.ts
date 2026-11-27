@@ -30,6 +30,9 @@ export const assetsRecord = {
     asset_cluster_members: 'member',
     asset_contracts: 'contract',
     asset_projects: 'project',
+    // Written by the request's replacements, with the request in `record_id`; the asset's own row of
+    // each link names it (`common/relations/linked-ends.ts`).
+    portfolio_request_assets: 'request',
     asset_spend_items: 'budget_line',
     asset_capex_items: 'budget_line',
     // The children whose audit row names the asset in `asset_id`.
@@ -49,6 +52,7 @@ export const assetsRecord = {
     asset_cluster_members: 'record',
     asset_contracts: 'record',
     asset_projects: 'record',
+    portfolio_request_assets: 'record',
     asset_spend_items: 'record',
     asset_capex_items: 'record',
     asset_hardware_info: { payloadKey: 'asset_id' },

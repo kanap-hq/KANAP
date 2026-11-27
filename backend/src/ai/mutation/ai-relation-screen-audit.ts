@@ -7,6 +7,8 @@ import { auditTableOf, BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNatu
 import type { AiMutationAuditOptions } from './ai-mutation-audit.util';
 import { lockApplicationRow } from '../../applications/application-rules';
 import { lockClusterForMembers } from '../../assets/asset-rules';
+import { withLockedAt } from '../../common/relations/locked-at';
+import { linkedEndOf, markLinkedEnds } from '../../common/relations/linked-ends';
 
 /**
  * The audit trace a relation the assistant replaces leaves, in the form the screen writes for the
@@ -24,7 +26,9 @@ import { lockClusterForMembers } from '../../assets/asset-rules';
  *   removals first, each from the set the previous one left. A budget line's link is labelled by
  *   the line's nature (`auditTableOf`) and counts the lines the person cannot read
  *   (`auditedLinkSet`); the row names the parent the screen names (from an asset, the line toggled;
- *   from a line, the line itself);
+ *   from a line, the line itself). A link both of whose records read it (an application's or an
+ *   asset's project, an application's line, a line's project or application) then marks the other
+ *   record, one row per link, as the tab does (`common/relations/linked-ends.ts`);
  * - the rows the screen writes one per link (web links, server assignments, the contacts of a
  *   supplier, a contract or a line, a site's contacts and sub-locations) are audited row by row by
  *   the writer itself (`ROW_AUDITED_RELATIONS`).
@@ -38,7 +42,12 @@ type TraceContext = { manager: EntityManager; tenantId: string; userId: string |
 
 type ScreenTrace = {
   read: (context: TraceContext, sourceId: string) => Promise<unknown>;
-  log: (context: TraceContext, audit: AuditService, source: AiMutationAuditOptions, sourceId: string, before: unknown) => Promise<void>;
+  /**
+   * `written`: the target ids the writer really wrote, when it says so (a simple relation): the
+   * trace writes its steps for those only, so a link another gesture posted meanwhile is not
+   * written as the assistant's.
+   */
+  log: (context: TraceContext, audit: AuditService, source: AiMutationAuditOptions, sourceId: string, before: unknown, written?: ReadonlySet<string> | null) => Promise<void>;
 };
 
 function sortedIds(rows: Array<{ id: string }>): string[] {
@@ -70,7 +79,14 @@ const stateList = (sql: string) => async (context: TraceContext, sourceId: strin
  * set of budget lines (the lines the person cannot read are counted). `parent`: the record the
  * screen names for the link toggled (`id`) from the source (`sourceId`).
  */
-type ToggleSet = { label: string; sql: string; line: boolean; parent?: (sourceId: string, id: string) => AuditParent };
+type ToggleSet = {
+  label: string;
+  sql: string;
+  line: boolean;
+  parent?: (sourceId: string, id: string) => AuditParent;
+  /** The other end, when its History reads the link too (`linked-ends.ts`): marked as the screen marks it. */
+  other?: ReturnType<typeof linkedEndOf>;
+};
 
 /**
  * One row per link added or removed (`setOwnedLink`): each one from the set the previous one left,
@@ -89,15 +105,16 @@ function toggles(
   };
   return {
     read,
-    log: async (context, audit, source, sourceId, beforeValue) => {
+    log: async (context, audit, source, sourceId, beforeValue, written) => {
       const before = beforeValue as Record<string, string[]>;
       const after = await read(context, sourceId);
+      const wrote = (id: string) => !written || written.has(id.toLowerCase());
       const steps: Array<{ set: ToggleSet; id: string; add: boolean }> = [];
       for (const add of [false, true]) {
         for (const set of sets) {
           const from = new Set(before[set.label]);
           const to = new Set(after[set.label]);
-          const changed = add ? after[set.label].filter((id) => !from.has(id)) : before[set.label].filter((id) => !to.has(id));
+          const changed = (add ? after[set.label].filter((id) => !from.has(id)) : before[set.label].filter((id) => !to.has(id))).filter(wrote);
           for (const id of changed) steps.push({ set, id, add });
         }
       }
@@ -123,6 +140,13 @@ function toggles(
           },
           { manager: context.manager },
         );
+        if (step.set.other) {
+          await markLinkedEnds({
+            manager: context.manager, audit, ...step.set.other, from: sourceId, tenantId: context.tenantId,
+            written: step.add ? { added: [step.id], removed: [] } : { added: [], removed: [step.id] },
+            userId: context.userId, source,
+          });
+        }
       }
     },
   };
@@ -141,11 +165,18 @@ function lineSets(table: string, ownerColumn: string, lineColumn: string, parent
     sql: `SELECT l.${lineColumn} AS id FROM ${table} l WHERE l.tenant_id = $1 AND l.${ownerColumn} = $2${linkedLineOf('l.tenant_id', `l.${lineColumn}`, nature)}`,
     line: true,
     parent,
+    other: linkedEndOf(table, lineColumn),
   }));
 }
 
 function plainSet(table: string, ownerColumn: string, targetColumn: string, parent?: ToggleSet['parent']): ToggleSet[] {
-  return [{ label: table, sql: `SELECT l.${targetColumn} AS id FROM ${table} l WHERE l.tenant_id = $1 AND l.${ownerColumn} = $2`, line: false, parent }];
+  return [{
+    label: table,
+    sql: `SELECT l.${targetColumn} AS id FROM ${table} l WHERE l.tenant_id = $1 AND l.${ownerColumn} = $2`,
+    line: false,
+    parent,
+    other: linkedEndOf(table, targetColumn),
+  }];
 }
 
 /**
@@ -173,9 +204,9 @@ function fromLine(table: string, lineColumn: string, targetColumn: string): Scre
       const nature = await natureOf(context, lineId);
       return { nature, set: await traces.get(nature)!.read(context, lineId) };
     },
-    log: async (context, audit, source, lineId, before) => {
+    log: async (context, audit, source, lineId, before, written) => {
       const { nature, set } = before as { nature: BudgetNature; set: unknown };
-      await traces.get(nature)!.log(context, audit, source, lineId, set);
+      await traces.get(nature)!.log(context, audit, source, lineId, set, written);
     },
   };
 }
@@ -295,12 +326,19 @@ const SCREEN_TRACES: Readonly<Record<string, ScreenTrace>> = {
  * departments and support contacts, an asset's support contacts and web links, a supplier's, a
  * contract's and a site's contacts and links, a site's sub-locations): neither does the approval.
  */
-type ScreenLock = (manager: EntityManager, tenantId: string, id: string) => Promise<boolean>;
+/**
+ * False when the record is gone; a row lock returns the instant it is held (`withLockedAt`), which
+ * dates the record if the approval is refused (`AiRelationMutationSupportService.executePreview`).
+ */
+type ScreenLock = (manager: EntityManager, tenantId: string, id: string) => Promise<string | boolean>;
 
 const rowLock = (table: 'applications' | 'assets' | 'contracts' | 'portfolio_projects' | 'portfolio_requests'): ScreenLock =>
   async (manager, tenantId, id) => {
-    const rows: unknown[] = await manager.query(`SELECT 1 FROM ${table} WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, id]);
-    return rows.length > 0;
+    const rows: Array<{ locked_at: string }> = await manager.query(
+      withLockedAt(`SELECT 1 FROM ${table} WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`),
+      [tenantId, id],
+    );
+    return rows[0]?.locked_at ?? false;
   };
 
 const SCREEN_LOCKS: Readonly<Record<string, ScreenLock>> = {

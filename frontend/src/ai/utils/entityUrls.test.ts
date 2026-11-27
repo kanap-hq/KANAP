@@ -66,3 +66,15 @@ describe('business reference mentions of the five families numbered in 26.11.9',
     expect(buildEntityUrl(entityType, 'abc')).toBe(`${path}/abc`);
   });
 });
+
+describe('contributor mentions', () => {
+  it('narrows @MEM-n to the contributors and searches the number', () => {
+    expect(parseAtMentionQuery('MEM-4')).toEqual({ entityType: 'contributors', entityTypes: ['contributors'], searchTerm: '4' });
+    expect(parseAtMentionQuery('mem')).toEqual({ entityType: 'contributors', entityTypes: ['contributors'], searchTerm: '' });
+  });
+
+  it('links a mentioned contributor to their page, by id or by reference', () => {
+    expect(buildEntityUrl('contributors', 'abc')).toBe('/portfolio/contributors/abc');
+    expect(buildEntityUrl('contributors', 'MEM-4')).toBe('/portfolio/contributors/MEM-4');
+  });
+});

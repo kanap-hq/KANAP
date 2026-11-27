@@ -1,3 +1,4 @@
+import { markLinkedEnds } from '../../common/relations/linked-ends';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { copyClassification } from './application-classification';
 import { Injectable, NotFoundException, Optional } from '@nestjs/common';
@@ -151,8 +152,18 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
     if (copyOpts.copyDataResidency) await this.copyDataResidencyInternal(sourceId, saved.id, mg);
     if (copyOpts.copyLinks) await this.copyLinksInternal(sourceId, saved.id, mg);
     if (copyOpts.copySupportContacts) await this.copySupportContactsInternal(sourceId, saved.id, mg);
-    if (copyOpts.copySpendItems) await this.copySpendItemsInternal(sourceId, saved.id, mg);
-    if (copyOpts.copyCapexItems) await this.copyCapexItemsInternal(sourceId, saved.id, mg);
+    const copiedLines = [
+      ...(copyOpts.copySpendItems ? await this.copySpendItemsInternal(sourceId, saved.id, mg) : []),
+      ...(copyOpts.copyCapexItems ? await this.copyCapexItemsInternal(sourceId, saved.id, mg) : []),
+    ];
+    // Each budget line the new version is linked to reads it in its History too
+    // (`common/relations/linked-ends.ts`).
+    if (copiedLines.length > 0) {
+      await markLinkedEnds({
+        manager: mg, audit: this.audit, table: 'application_spend_items', end: 'budget_line', from: saved.id,
+        tenantId: source.tenant_id, written: { added: copiedLines, removed: [] }, userId,
+      });
+    }
     if (copyOpts.copyContracts) await this.copyContractsInternal(sourceId, saved.id, mg);
 
     let instanceMapping = new Map<string, string>();
@@ -376,7 +387,7 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
   }
 
   /** The source's links to OPEX lines (`spend/budget-nature.ts`); the CAPEX links are copied below. */
-  private async copySpendItemsInternal(sourceId: string, targetId: string, mg: EntityManager) {
+  private async copySpendItemsInternal(sourceId: string, targetId: string, mg: EntityManager): Promise<string[]> {
     const items = await mg.getRepository(ApplicationSpendItemLink).createQueryBuilder('l')
       .innerJoin(SpendItem, 'i', `i.id = l.spend_item_id AND i.tenant_id = l.tenant_id AND i.nature = 'opex'`)
       .where('l.application_id = :sourceId', { sourceId })
@@ -384,10 +395,11 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
     if (items.length) {
       await mg.getRepository(ApplicationSpendItemLink).save(items.map(s => ({ ...s, id: undefined, application_id: targetId })));
     }
+    return items.map((item) => String(item.spend_item_id));
   }
 
   /** The source's links to CAPEX lines (the same table as the OPEX ones since lot Z1, told apart by the line's nature). */
-  private async copyCapexItemsInternal(sourceId: string, targetId: string, mg: EntityManager) {
+  private async copyCapexItemsInternal(sourceId: string, targetId: string, mg: EntityManager): Promise<string[]> {
     const items = await mg.getRepository(ApplicationSpendItemLink).createQueryBuilder('l')
       .innerJoin(SpendItem, 'i', `i.id = l.spend_item_id AND i.tenant_id = l.tenant_id AND i.nature = 'capex'`)
       .where('l.application_id = :sourceId', { sourceId })
@@ -395,6 +407,7 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
     if (items.length) {
       await mg.getRepository(ApplicationSpendItemLink).save(items.map(c => ({ ...c, id: undefined, application_id: targetId })));
     }
+    return items.map((item) => String(item.spend_item_id));
   }
 
   private async copyContractsInternal(sourceId: string, targetId: string, mg: EntityManager) {

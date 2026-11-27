@@ -2,7 +2,8 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException, 
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AuditService } from '../../audit/audit.service';
-import { lockBudgetLine } from '../../spend/budget-locks';
+import { lockBudgetLineAt } from '../../spend/budget-locks';
+import { dateRecordMarkedMeanwhile, linkedEndOf } from '../../common/relations/linked-ends';
 import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { assertContractReadable, assertContractsEditable } from '../../data-access/contract-write-checks';
 import { parseItemNumber } from '../../common/parse-item-number';
@@ -32,6 +33,7 @@ import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewRel
 import { AiMutationAuditOptions, buildAiMutationAudit } from './ai-mutation-audit.util';
 import { firstReturnedRow } from '../../analytics/analytics-context';
 import {
+  afterExecutionRollback,
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
@@ -697,12 +699,14 @@ export class AiRelationMutationSupportService {
     // A budget line is locked, by its stored nature, before its relations are compared and
     // replaced (lock order, `spend/budget-locks.ts`): no writer of the line changes them in between.
     let sourceNature: BudgetNature | null = null;
+    // The instant the record's lock is held (`common/relations/locked-at.ts`), for its dating if the
+    // approval is refused (below).
+    let lockedAt: string | null = null;
     if (config.sourceEntity === 'budget_lines') {
       const line = await this.resolveReference(context, 'budget_lines', preview.target_entity_id);
       sourceNature = line.row.nature === 'capex' ? 'capex' : 'opex';
-      if (!(await lockBudgetLine(context.manager, sourceNature, context.tenantId, preview.target_entity_id))) {
-        throw new NotFoundException(`${config.label}: the line was not found.`);
-      }
+      lockedAt = await lockBudgetLineAt(context.manager, sourceNature, context.tenantId, preview.target_entity_id);
+      if (!lockedAt) throw new NotFoundException(`${config.label}: the line was not found.`);
     }
     // A cluster's members follow the rules of the members endpoint (the members added read, then the
     // cluster row locked).
@@ -711,9 +715,37 @@ export class AiRelationMutationSupportService {
     // and compared with the preview (`screenLockOf`): a gesture on the screen at the same time either
     // committed first, and the links changed (409), or waits for this approval.
     const lock = screenLockOf(config.sourceEntity, config.relation);
-    if (lock && !(await lock(context.manager, context.tenantId, preview.target_entity_id))) {
-      throw new NotFoundException(`${config.label}: the record was not found.`);
+    const held = lock ? await lock(context.manager, context.tenantId, preview.target_entity_id) : true;
+    if (!held) throw new NotFoundException(`${config.label}: the record was not found.`);
+    if (typeof held === 'string') lockedAt = held;
+    // A link both of whose records read it (`common/relations/linked-ends.ts`): the other end may mark
+    // this record while the approval holds it, its dating skipping the record. Refused after the lock
+    // (a 409 when the other end posted the same link), the approval's writes are rolled back to the
+    // savepoint, the dating it would have run with them: the record is then dated from the entries
+    // written since the lock, in the approval's transaction, which goes on and commits the failed card.
+    const end = config.kind === 'simple' ? linkedEndOf(config.table, config.sourceColumn)?.end ?? null : null;
+    try {
+      await this.replaceUnderLock(context, preview, config, expectedItems, nextItems, sourceNature);
+    } catch (error) {
+      const id = preview.target_entity_id;
+      if (end && lockedAt) {
+        const since = lockedAt;
+        afterExecutionRollback(error, (manager) => dateRecordMarkedMeanwhile(manager, end, context.tenantId, id, since));
+      }
+      throw error;
     }
+  }
+
+  /** `executePreview` once the record is locked: the comparison with the card, then the writes. */
+  private async replaceUnderLock(
+    context: AiExecutionContextWithManager,
+    preview: AiMutationPreview,
+    config: RelationConfig,
+    expectedItems: RelationItem[],
+    nextItems: RelationItem[],
+    sourceNature: BudgetNature | null,
+  ): Promise<void> {
+    if (!preview.target_entity_id) throw new BadRequestException('Preview is missing the target record.');
     // Assignments: the clusters are locked and the cluster rules checked again before the rows are
     // compared; an absorption that would now differ from the preview is a change since the preview.
     const checkedItems = await this.applyAssignmentRules(context, config, expectedItems, nextItems);
@@ -746,8 +778,8 @@ export class AiRelationMutationSupportService {
     // writer, as the screen does (`ROW_AUDITED_RELATIONS`).
     const trace = screenTraceOf(config.sourceEntity, config.relation);
     const traceBefore = trace ? await trace.read(context, preview.target_entity_id) : null;
-    await this.replaceRelationItems(context, config, preview.target_entity_id, nextItems, audit, sourceNature);
-    if (trace) await trace.log(context, this.audit, audit, preview.target_entity_id, traceBefore);
+    const written = await this.replaceRelationItems(context, config, preview.target_entity_id, expectedItems, nextItems, audit, sourceNature);
+    if (trace) await trace.log(context, this.audit, audit, preview.target_entity_id, traceBefore, written);
     // R1: the host links the cluster replaces, removed after the cluster's own relations are in
     // place, with the preview's audit source.
     if (placement.length > 0) {
@@ -1673,21 +1705,26 @@ export class AiRelationMutationSupportService {
    * `nature`: a budget line's stored nature, read under its lock, when the source is a line. The
    * rows of the relations in `ROW_AUDITED_RELATIONS` are audited as the screen audits them.
    */
+  /**
+   * Writes the relation from the items compared under the lock (`expectedItems`, the preview's,
+   * equal to the stored ones) to `nextItems`. A simple relation returns the target ids it wrote,
+   * which the screen's trace follows (`ai-relation-screen-audit.ts`); the others return null.
+   */
   private async replaceRelationItems(
     context: AiExecutionContextWithManager,
     config: RelationConfig,
     sourceId: string,
+    expectedItems: RelationItem[],
     nextItems: RelationItem[],
     audit: AiMutationAuditOptions,
     nature: BudgetNature | null,
-  ): Promise<void> {
+  ): Promise<ReadonlySet<string> | null> {
     if (config.kind === 'simple' && SCREEN_SERVICE_RELATIONS.has(`${config.sourceEntity}.${config.relation}`)) {
-      await this.replaceThroughPortfolioTab(context, config, sourceId, nextItems, audit);
-      return;
+      await this.replaceThroughPortfolioTab(context, config, sourceId, expectedItems, nextItems, audit);
+      return null;
     }
     if (config.kind === 'simple') {
-      await this.replaceSimpleRelation(context, config, sourceId, nextItems);
-      return;
+      return this.replaceSimpleRelation(context, config, sourceId, expectedItems, nextItems);
     }
     // An asset's support contacts: the Support panel's replacement of the whole set, with the card's
     // audit source (its row on the asset, `SCREEN_SERVICE_RELATIONS`).
@@ -1700,37 +1737,37 @@ export class AiRelationMutationSupportService {
         context.userId,
         { manager: context.manager, tenantId: context.tenantId, audit },
       );
-      return;
+      return null;
     }
     const rowAudit = ROW_AUDITED_RELATIONS.has(`${config.sourceEntity}.${config.relation}`) ? audit : null;
     switch (config.kind) {
       case 'owner_role':
         await this.replaceOwnerRoles(context, sourceId, nextItems);
-        return;
+        return null;
       case 'contact_role':
         await this.replaceContactRoles(context, config, sourceId, nextItems, rowAudit, nature);
-        return;
+        return null;
       case 'supplier_contacts':
         await this.replaceSupplierContacts(context, sourceId, nextItems, audit);
-        return;
+        return null;
       case 'asset_relations':
         await this.replaceAssetRelations(context, sourceId, nextItems);
-        return;
+        return null;
       case 'link':
         await this.replaceLinks(context, config, sourceId, nextItems, rowAudit, nature);
-        return;
+        return null;
       case 'location_internal_contacts':
         await this.replaceLocationContacts(context, 'location_user_contacts', 'user_id', sourceId, nextItems, rowAudit);
-        return;
+        return null;
       case 'location_external_contacts':
         await this.replaceLocationContacts(context, 'location_contacts', 'contact_id', sourceId, nextItems, rowAudit);
-        return;
+        return null;
       case 'sub_locations':
         await this.replaceSubLocations(context, sourceId, nextItems, rowAudit);
-        return;
+        return null;
       case 'app_asset_assignments':
         await this.replaceAppAssetAssignments(context, sourceId, nextItems, audit);
-        return;
+        return null;
       default:
         throw new BadRequestException(`Unsupported relation kind ${(config as any).kind}.`);
     }
@@ -1752,7 +1789,13 @@ export class AiRelationMutationSupportService {
     );
   }
 
-  private async replaceSimpleRelation(context: AiExecutionContextWithManager, config: SimpleRelationConfig, sourceId: string, nextItems: RelationItem[]): Promise<void> {
+  private async replaceSimpleRelation(
+    context: AiExecutionContextWithManager,
+    config: SimpleRelationConfig,
+    sourceId: string,
+    expectedItems: RelationItem[],
+    nextItems: RelationItem[],
+  ): Promise<ReadonlySet<string> | null> {
     const targetIds = Array.from(new Set(nextItems
       .map((item) => item.payload[config.targetColumn])
       .filter((value): value is string => typeof value === 'string' && value !== '')
@@ -1822,29 +1865,34 @@ export class AiRelationMutationSupportService {
         );
         assertWritten(config.label, inserted.length);
       }
-      return;
+      return null;
     }
-    // Only the links the person reads are replaced (`loadSimpleRelation`, the read the preview showed):
-    // a link to a record they do not read (outside their participation, a line hidden by their data
-    // access, a line of no nature) stays, and a link that stays linked is not rewritten.
-    const visible = new Set((await this.loadSimpleRelation(context, config, sourceId)).map((item) => item.key.toLowerCase()));
-    const removed = Array.from(visible).filter((id) => !targetIds.includes(id));
-    const added = targetIds.filter((id) => !visible.has(id));
+    // Only the links the person reads are replaced, from the ones compared under the lock with the
+    // preview (`loadSimpleRelation`, the read the card showed), never from a second read: a link to
+    // a record they do not read (outside their participation, a line hidden by their data access,
+    // a line of no nature) stays, a link that stays linked is not rewritten, and a link the other
+    // end posted or removed since the comparison makes the write differ from the card: 409, nothing
+    // written (the approval's transaction is rolled back).
+    const compared = new Set(expectedItems.map((item) => item.key.toLowerCase()));
+    const removed = Array.from(compared).filter((id) => !targetIds.includes(id));
+    const added = targetIds.filter((id) => !compared.has(id));
+    const changedMeanwhile = () => new ConflictException(`The ${config.label} relation changed after the preview was created.`);
     if (removed.length > 0) {
       const [{ n }]: Array<{ n: number }> = await context.manager.query(
         `WITH gone AS (DELETE FROM ${config.table} WHERE tenant_id = $1 AND ${config.sourceColumn} = $2 AND ${config.targetColumn} = ANY($3::uuid[]) RETURNING 1)
          SELECT count(*)::int AS n FROM gone`,
         [context.tenantId, sourceId, removed],
       );
-      assertWritten(config.label, Number(n), removed.length);
+      if (Number(n) !== removed.length) throw changedMeanwhile();
     }
     for (const targetId of added) {
       const inserted: unknown[] = await context.manager.query(
         `INSERT INTO ${config.table} (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING 1`,
         [context.tenantId, sourceId, targetId],
       );
-      assertWritten(config.label, inserted.length);
+      if (inserted.length !== 1) throw changedMeanwhile();
     }
+    return new Set([...removed, ...added]);
   }
 
   /**
@@ -1853,18 +1901,21 @@ export class AiRelationMutationSupportService {
    * removals first, with the card's audit source. The record's lock, its activity entry
    * (`portfolio_activities`, by the person, as on the screen), its audit row and the lines the person
    * cannot read (kept and counted) come from the screen's code. Only the links the person reads are
-   * compared (`loadSimpleRelation`); the module's read was checked (`assertLinkedModuleRead`).
+   * compared, as they were read under the lock with the preview (`loadSimpleRelation`); the module's
+   * read was checked (`assertLinkedModuleRead`).
    */
   private async replaceThroughPortfolioTab(
     context: AiExecutionContextWithManager,
     config: SimpleRelationConfig,
     sourceId: string,
+    expectedItems: RelationItem[],
     nextItems: RelationItem[],
     audit: AiMutationAuditOptions,
   ): Promise<void> {
     if (!this.portfolioRelations) throw new Error('The Relations tab of the portfolio is not available.');
     const kind = config.relation as 'applications' | 'assets' | 'budget_lines';
-    const visible = (await this.loadSimpleRelation(context, config, sourceId)).map((item) => item.key.toLowerCase());
+    // The links compared under the lock with the preview, never a second read (`replaceSimpleRelation`).
+    const visible = expectedItems.map((item) => item.key.toLowerCase());
     const next = Array.from(new Set(nextItems
       .map((item) => String(item.payload[config.targetColumn] ?? '').toLowerCase())
       .filter((id) => id !== '')));
@@ -1887,7 +1938,9 @@ export class AiRelationMutationSupportService {
           access: { budget_lines: false, applications: false, assets: false, processes: false, resulting_projects: false, [kind]: true } as RequestRelationsAccess,
           writes: { processes: false },
         }, owner);
-      assertWritten(config.label, result.changed ? 1 : 0);
+      // The other end posted or removed the same link since the comparison: the write differs from
+      // the card, nothing is written.
+      if (!result.changed) throw new ConflictException(`The ${config.label} relation changed after the preview was created.`);
     }
   }
 
