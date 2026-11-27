@@ -413,12 +413,14 @@ function ReferenceCatalogAutocomplete({
   field,
   value,
   label,
+  catalogsEnabled = true,
   onChange,
 }: {
   agentId: string;
   field: 'category' | 'entity';
   value: string;
   label?: string;
+  catalogsEnabled?: boolean;
   onChange: (next: { value: string; label?: string }) => void;
 }) {
   const { t } = useTranslation(['agents']);
@@ -434,7 +436,7 @@ function ReferenceCatalogAutocomplete({
   const optionsQuery = useQuery({
     queryKey: ['ai-agent-targeting-options', agentId, field, lookupQuery],
     queryFn: () => aiAgentControlApi.getAgentTargetingOptions(agentId, field, { query: lookupQuery || undefined, limit: TARGETING_CATALOG_OPTIONS_LIMIT }),
-    enabled: !!agentId,
+    enabled: !!agentId && catalogsEnabled !== false,
     staleTime: TARGETING_OPTIONS_STALE_TIME_MS,
   });
   const options = optionsQuery.data?.options ?? [];
@@ -482,13 +484,16 @@ export function HelpdeskTargetingFilterBuilder({
   agentId,
   filters,
   onChange,
+  catalogsEnabled = true,
 }: {
   agentId: string | null | undefined;
   filters: TargetingFilter[];
   onChange: (filters: TargetingFilter[]) => void;
+  /** False when the space has no ticket connection: the lists stay empty and nothing is requested. */
+  catalogsEnabled?: boolean;
 }) {
   const { t } = useTranslation(['agents']);
-  const queryEnabled = !!agentId;
+  const queryEnabled = !!agentId && catalogsEnabled;
   const statusOptionsQuery = useQuery({
     queryKey: ['ai-agent-targeting-options', agentId, 'status', ''],
     queryFn: () => aiAgentControlApi.getAgentTargetingOptions(agentId || '', 'status', { limit: 50 }),
@@ -633,6 +638,7 @@ export function HelpdeskTargetingFilterBuilder({
               field="category"
               value={typeof filter.value === 'string' ? filter.value : ''}
               label={filter.label}
+              catalogsEnabled={catalogsEnabled}
               onChange={(next) => updateFilter(filter.id, next)}
             />
           )}
@@ -648,6 +654,7 @@ export function HelpdeskTargetingFilterBuilder({
                 field="entity"
                 value={typeof filter.value === 'string' ? filter.value : ''}
                 label={filter.label}
+                catalogsEnabled={catalogsEnabled}
                 onChange={(next) => updateFilter(filter.id, next)}
               />
               <Typography sx={(theme) => ({ fontSize: 12, color: theme.palette.kanap.text.tertiary })}>

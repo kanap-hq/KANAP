@@ -38,6 +38,7 @@ import {
   MetricBlock,
   providerBindingForDefinition,
   ReasonDialog,
+  ticketingProviderKeyForDefinition,
   Section,
   statusLabel,
 } from '../../components/agents/agentControlPrimitives';
@@ -63,7 +64,7 @@ import {
   targetingPresetFilters,
   type TargetingFilter,
 } from '../../components/agents/helpdeskTargeting';
-import { aiAgentControlApi } from '../../ai/aiApi';
+import { aiAdminApi, aiAgentControlApi, legacyTicketConnectionReady } from '../../ai/aiApi';
 import { compactSelectMenuProps, drawerMenuItemSx, pageSelectSx } from '../../theme/formSx';
 import { formatEuro } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
@@ -385,13 +386,26 @@ export default function AgentsOverviewPage() {
     [definitions],
   );
   const targetingOptionsAgentId = helpdeskTemplateDefinition?.id ?? null;
+  const templateProviderKey = ticketingProviderKeyForDefinition(helpdeskTemplateDefinition);
+  const legacyTicketProvider = !templateProviderKey || templateProviderKey === LEGACY_GLPI_TICKETING_PROVIDER_KEY;
+  const canReadTicketConnection = hasLevel('ai_settings', 'admin');
+  const connectionQuery = useQuery({
+    queryKey: ['admin-ai-settings'],
+    queryFn: () => aiAdminApi.getSettings(),
+    enabled: canAdmin && !!targetingOptionsAgentId && legacyTicketProvider && canReadTicketConnection,
+    staleTime: 60_000,
+    retry: false,
+  });
+  const ticketCatalogs = !legacyTicketProvider || !canReadTicketConnection
+    || (connectionQuery.isSuccess && legacyTicketConnectionReady(connectionQuery.data.settings));
   const targetingStatusOptionsQuery = useQuery({
     // Same key as the workspace's status query (AgentWorkspacePage / the targeting
     // builder), so this prefetch also warms the Settings tab the user lands on.
     queryKey: ['ai-agent-targeting-options', targetingOptionsAgentId, 'status', ''],
     queryFn: () => aiAgentControlApi.getAgentTargetingOptions(targetingOptionsAgentId || '', 'status', { limit: 50 }),
     // Prefetch on the overview so Create on first paint still has open-status values.
-    enabled: canAdmin && !!targetingOptionsAgentId,
+    // Skip it when the space has no ticket connection: the read would be refused.
+    enabled: canAdmin && !!targetingOptionsAgentId && ticketCatalogs,
     staleTime: TARGETING_OPTIONS_STALE_TIME_MS,
   });
   const presetStatusValues = React.useMemo(
