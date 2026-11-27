@@ -20,6 +20,7 @@ import {
   taskCsvConfig,
   taskProjectClassifications,
 } from './task-csv.config';
+import { shownTaskClassification } from './task-shown-classification';
 import { inIdOrder } from '../common/pagination';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
 import {
@@ -199,7 +200,8 @@ export class TasksCsvService {
 
   /**
    * The classification the list shows: a task of a project without a value of its own takes its
-   * project's (`TASK_INHERITED_CLASSIFICATION`). Set on the exported copies only; the import reads
+   * project's (`TASK_INHERITED_CLASSIFICATION`, the stream only with the project's category:
+   * `task-shown-classification.ts`). Set on the exported copies only; the import reads
    * that value back as unchanged (`taskCsvConfig.afterValidate`).
    */
   private async loadInheritedClassification(tasks: Task[], manager: EntityManager, tenantId: string): Promise<void> {
@@ -209,8 +211,9 @@ export class TasksCsvService {
     for (const task of projectTasks) {
       const project = projects.get(task.related_object_id!.toLowerCase());
       if (!project) continue;
+      const shown = shownTaskClassification(task, project);
       for (const key of TASK_INHERITED_CLASSIFICATION) {
-        if (task[key] == null) task[key] = project[key];
+        if (task[key] == null) task[key] = shown[key];
       }
     }
   }

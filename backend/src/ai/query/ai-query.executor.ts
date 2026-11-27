@@ -4,6 +4,7 @@ import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
 import { AnalyticsCategoriesService } from '../../analytics/analytics-categories.service';
 import { ApplicationsService } from '../../applications/services';
+import { addOfferedClassification, AI_PORTFOLIO_CLASSIFIED_TYPES, withClassificationNames } from './ai-portfolio-classification';
 import { AssetsService } from '../../assets/services';
 import { BusinessProcessesService } from '../../business-processes/business-processes.service';
 import { CompaniesService } from '../../companies/companies.service';
@@ -3888,7 +3889,7 @@ export class AiQueryExecutor {
     }
 
     if (entityType === 'projects') {
-      const row = await this.projects.get(
+      const row = await withClassificationNames(context.manager, context.tenantId, await this.projects.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,source_requests,urls,dependencies,attachments,phases,milestones,financials' },
         {
@@ -3898,12 +3899,12 @@ export class AiQueryExecutor {
           readsBudget: await this.readsBudget(context),
           linked: await this.portfolioLinkedReads(context),
         },
-      );
+      ));
       return this.toDetailResult(this.mapProject(row), row);
     }
 
     if (entityType === 'requests') {
-      const row = await this.requests.get(
+      const row = await withClassificationNames(context.manager, context.tenantId, await this.requests.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,origin_task,urls,attachments,projects,dependencies,financials,business_processes' },
         {
@@ -3913,7 +3914,7 @@ export class AiQueryExecutor {
           viewer: await resolveAiIncidentViewer(context),
           linked: await this.portfolioLinkedReads(context),
         },
-      );
+      ));
       return this.toDetailResult(this.mapRequest(row), row);
     }
 
@@ -4819,6 +4820,10 @@ export class AiQueryExecutor {
         const field = registry.fields[aiField];
         if (field) raw[field.grid] = fieldValues;
       }
+    }
+
+    if (AI_PORTFOLIO_CLASSIFIED_TYPES.has(input.entity_type)) {
+      await addOfferedClassification(context.manager, context.tenantId, raw, dynamicFieldMap);
     }
 
     for (const [gridField, aiFields] of dynamicFieldMap.entries()) {

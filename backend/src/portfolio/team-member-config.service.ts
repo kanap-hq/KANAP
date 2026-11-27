@@ -12,6 +12,10 @@ import { TeamMemberConfig, SkillProficiency } from './team-member-config.entity'
 import { AuditService } from '../audit/audit.service';
 import { ItemNumberService } from '../common/item-number.service';
 import { UsersService } from '../users/users.service';
+import { givenMembership, type MembershipPair, settleRecordMembership } from '../common/record-membership';
+
+/** A contributor's default stream belongs to their default category (`common/record-membership.ts`). */
+const DEFAULT_STREAM_PAIR: MembershipPair = { kind: 'stream', child: 'default_stream_id', parent: 'default_category_id' };
 
 /**
  * Who is editing the person behind the contributor. `job_title` lives on
@@ -383,6 +387,7 @@ export class TeamMemberConfigService {
     }
     // A contributor is never without a contract type: Internal unless said otherwise.
     const employmentTypeId = body.employment_type_id || await this.defaultEmploymentTypeId(mg, tenantId);
+    const defaults = await settleRecordMembership(mg, [DEFAULT_STREAM_PAIR], givenMembership([DEFAULT_STREAM_PAIR], body as Record<string, unknown>), null, tenantId);
 
     const entity = repo.create({
       tenant_id: tenantId,
@@ -396,8 +401,8 @@ export class TeamMemberConfigService {
       manager_source: body.manager_user_id ? (opts?.managerSource ?? 'manual') : null,
       employment_type_id: employmentTypeId,
       default_source_id: body.default_source_id ?? null,
-      default_category_id: body.default_category_id ?? null,
-      default_stream_id: body.default_stream_id ?? null,
+      default_category_id: defaults.default_category_id ?? null,
+      default_stream_id: defaults.default_stream_id ?? null,
       default_company_id: body.default_company_id ?? null,
     });
 
@@ -493,12 +498,10 @@ export class TeamMemberConfigService {
     if (body.default_source_id !== undefined) {
       existing.default_source_id = body.default_source_id ?? null;
     }
-    if (body.default_category_id !== undefined) {
-      existing.default_category_id = body.default_category_id ?? null;
-    }
-    if (body.default_stream_id !== undefined) {
-      existing.default_stream_id = body.default_stream_id ?? null;
-    }
+    // The default stream in the default category: a category changed alone drops a stream of another one.
+    Object.assign(existing, await settleRecordMembership(
+      mg, [DEFAULT_STREAM_PAIR], givenMembership([DEFAULT_STREAM_PAIR], body as Record<string, unknown>), existing as unknown as Record<string, unknown>, existing.tenant_id,
+    ));
     if (body.default_company_id !== undefined) {
       existing.default_company_id = body.default_company_id ?? null;
     }

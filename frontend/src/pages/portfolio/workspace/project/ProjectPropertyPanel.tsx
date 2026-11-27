@@ -21,12 +21,15 @@ import { PropertyGroup, PropertyRow } from '../../../../components/design';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx, selectPlaceholderSx } from '../../../../theme/formSx';
 import { getApiErrorMessage } from '../../../../utils/apiErrorMessage';
 import { getRequestStatusLabel } from '../../../../utils/portfolioI18n';
+import { withCarriedStream, withCarriedValue, type ClassificationCatalog } from '../../../../utils/carriedStream';
 
 type PanelSection = 'core' | 'team';
 
 type ProjectPropertyPanelProps = {
   canManage: boolean;
   categories: Array<{ id: string; name: string }>;
+  /** The full classification lists, to name a stream the project carries outside the offered ones. */
+  classification?: ClassificationCatalog;
   form: any;
   focusSection?: Exclude<PanelSection, 'core'> | null;
   onCategoryChange: (value: string) => void;
@@ -51,6 +54,7 @@ const DIRECT_ORIGINS = ['fast_track', 'legacy'] as const;
 export default function ProjectPropertyPanel({
   canManage,
   categories,
+  classification,
   form,
   onCategoryChange,
   onCompanyChange,
@@ -96,10 +100,14 @@ export default function ProjectPropertyPanel({
     }
   }, [onLocalUpdate, onRefetch, t]);
 
+  // An inactive source or category the record carries stays shown by its name.
+  const sourceOptions = React.useMemo(() => withCarriedValue(sources, form?.source_id, classification?.sources), [classification?.sources, form?.source_id, sources]);
+  const categoryOptions = React.useMemo(() => withCarriedValue(categories, form?.category_id, classification?.categories), [categories, classification?.categories, form?.category_id]);
+
   const filteredStreams = React.useMemo(() => {
-    if (!form?.category_id) return [];
-    return streams.filter((stream) => stream.category_id === form.category_id);
-  }, [form?.category_id, streams]);
+    const offered = form?.category_id ? streams.filter((stream) => stream.category_id === form.category_id) : [];
+    return withCarriedStream(offered, form?.stream_id, form?.category_id, classification);
+  }, [classification, form?.category_id, form?.stream_id, streams]);
 
   return (
     <Stack spacing={0}>
@@ -155,11 +163,11 @@ export default function ProjectPropertyPanel({
             disabled={coreFieldsDisabled}
             variant="standard"
             displayEmpty
-            renderValue={(v) => (v ? (sources.find((o) => o.id === v)?.name ?? '') : <Box component="span" sx={selectPlaceholderSx}>{noneLabel}</Box>)}
+            renderValue={(v) => (v ? (sourceOptions.find((o) => o.id === v)?.name ?? '') : <Box component="span" sx={selectPlaceholderSx}>{noneLabel}</Box>)}
             sx={drawerSelectSx}
           >
             <MenuItem value="" sx={drawerMenuItemSx}>{noneLabel}</MenuItem>
-            {sources.map((source) => (
+            {sourceOptions.map((source) => (
               <MenuItem key={source.id} value={source.id} sx={drawerMenuItemSx}>
                 {source.name}
               </MenuItem>
@@ -174,11 +182,11 @@ export default function ProjectPropertyPanel({
             disabled={coreFieldsDisabled}
             variant="standard"
             displayEmpty
-            renderValue={(v) => (v ? (categories.find((o) => o.id === v)?.name ?? '') : <Box component="span" sx={selectPlaceholderSx}>{noneLabel}</Box>)}
+            renderValue={(v) => (v ? (categoryOptions.find((o) => o.id === v)?.name ?? '') : <Box component="span" sx={selectPlaceholderSx}>{noneLabel}</Box>)}
             sx={drawerSelectSx}
           >
             <MenuItem value="" sx={drawerMenuItemSx}>{noneLabel}</MenuItem>
-            {categories.map((category) => (
+            {categoryOptions.map((category) => (
               <MenuItem key={category.id} value={category.id} sx={drawerMenuItemSx}>
                 {category.name}
               </MenuItem>
