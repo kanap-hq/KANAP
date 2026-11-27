@@ -221,7 +221,7 @@ Le retrait d'un responsable, d'un processus métier, d'une suite ou d'un contact
 
 L'onglet Vue d'ensemble est le récit de l'application. Il contient :
 
-**Description** : Une description en texte enrichi de l'application. L'éditeur sauvegarde automatiquement au fur et à mesure que vous tapez. Toute personne qui peut modifier l'application peut modifier sa description, sans droit sur la base de connaissances. La description est conservée comme document managé dans la base de connaissances. Son titre reprend la référence et le nom de l'application, dans la langue de la personne qui l'a créée. Renommer l'application, dans l'espace de travail ou par un import, met ce titre à jour.
+**Description** : Une description en texte enrichi de l'application. L'éditeur sauvegarde automatiquement au fur et à mesure que vous tapez. Toute personne qui peut modifier l'application peut modifier sa description, sans droit sur la base de connaissances. La description est conservée comme document managé dans la base de connaissances. Son titre reprend la référence et le nom de l'application, dans la langue de la personne qui l'a créée. Renommer l'application, dans l'espace de travail ou par un import, met ce titre à jour. Un import, l'API et Kad écrivent cette même description, et l'export la lit. Chaque modification qu'ils font est conservée comme une version du document.
 
 **Connexions** : Un résumé en lecture seule construit à partir des interfaces de l'application. Pour les apps non-middleware, il affiche deux lignes : **Reçoit de** et **Envoie vers**. Pour les apps ETL/middleware, il affiche une seule ligne **Connecté à**. Chaque entrée est une pastille cliquable qui ouvre l'application liée ; « + N de plus dans Interfaces » saute à l'onglet Interfaces.
 
@@ -629,7 +629,7 @@ Un fichier avec une seule ligne refusée ne charge rien. Voir [Fichiers CSV et E
 |-------------|-------------|-------------|-------|
 | `id` | UUID de l'application | Non | Pour les mises à jour ; laisser vide pour les nouvelles applications |
 | `name` | Nom de l'application | Oui | 200 caractères au plus. Sert à retrouver les applications existantes |
-| `description` | Ce que fait l'application | Non | |
+| `description` | Ce que fait l'application | Non | La description de l'onglet **Vue d'ensemble**. Un texte que la description contient déjà ne change rien |
 | `category` | Objectif principal | Non | Accepte un code ou un libellé depuis les Paramètres. Une valeur inconnue fait refuser la ligne |
 | `supplier_name` | Nom du fournisseur | Non | Doit correspondre à un fournisseur existant |
 | `editor` | Éditeur du logiciel | Non | Texte libre (ex. : Microsoft, SAP) |

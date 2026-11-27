@@ -221,7 +221,7 @@ Wenn Sie einen Verantwortlichen, einen Geschäftsprozess, eine Suite oder einen 
 
 Der Reiter Übersicht ist die Erzählung der Anwendung. Er enthält:
 
-**Beschreibung**: Eine Rich-Text-Beschreibung der Anwendung. Der Editor speichert automatisch beim Tippen. Wer die Anwendung bearbeiten darf, darf auch ihre Beschreibung bearbeiten, ohne Berechtigung für die Wissensdatenbank. Die Beschreibung wird als verwaltetes Dokument in der Wissensdatenbank geführt. Ihr Titel enthält die Referenz und den Namen der Anwendung, in der Sprache der Person, die sie erstellt hat. Wird die Anwendung umbenannt, im Arbeitsbereich oder per Import, folgt dieser Titel.
+**Beschreibung**: Eine Rich-Text-Beschreibung der Anwendung. Der Editor speichert automatisch beim Tippen. Wer die Anwendung bearbeiten darf, darf auch ihre Beschreibung bearbeiten, ohne Berechtigung für die Wissensdatenbank. Die Beschreibung wird als verwaltetes Dokument in der Wissensdatenbank geführt. Ihr Titel enthält die Referenz und den Namen der Anwendung, in der Sprache der Person, die sie erstellt hat. Wird die Anwendung umbenannt, im Arbeitsbereich oder per Import, folgt dieser Titel. Ein Import, die API und Kad schreiben dieselbe Beschreibung, und der Export liest sie. Jede ihrer Änderungen wird als Version des Dokuments aufbewahrt.
 
 **Verbindungen**: Eine schreibgeschützte Zusammenfassung, die aus den Schnittstellen der Anwendung erstellt wird. Bei Nicht-Middleware-Apps zeigt sie zwei Zeilen: **Empfängt von** und **Sendet an**. Bei ETL/Middleware-Apps zeigt sie eine einzelne Zeile **Verbunden mit**. Jeder Eintrag ist eine anklickbare Pille, die die zugehörige Anwendung öffnet; „+ N weitere in Schnittstellen" springt zum Reiter Schnittstellen.
 
@@ -629,7 +629,7 @@ Eine Datei mit einer einzigen abgelehnten Zeile lädt nichts. Siehe [CSV- und Ex
 |------------|-------------|----------|-------|
 | `id` | Anwendungs-UUID | Nein | Für Updates; bei neuen Anwendungen leer lassen |
 | `name` | Anwendungsname | Ja | Höchstens 200 Zeichen. Dient dem Abgleich mit vorhandenen Anwendungen |
-| `description` | Was die Anwendung tut | Nein | |
+| `description` | Was die Anwendung tut | Nein | Die Beschreibung des Reiters **Übersicht**. Ein Text, den die Beschreibung bereits enthält, ändert nichts |
 | `category` | Hauptzweck | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen. Ein unbekannter Wert führt zur Ablehnung der Zeile |
 | `supplier_name` | Lieferantenname | Nein | Muss mit vorhandenem Lieferanten übereinstimmen |
 | `editor` | Software-Herausgeber | Nein | Freitext (z. B. Microsoft, SAP) |

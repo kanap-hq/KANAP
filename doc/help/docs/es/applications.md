@@ -221,7 +221,7 @@ Al quitar un responsable, un proceso de negocio, una suite o un contacto de sopo
 
 La pestaña Visión general es la narrativa de la aplicación. Contiene:
 
-**Descripción**: Una descripción enriquecida de la aplicación. El editor guarda automáticamente mientras escribe. Quien puede modificar la aplicación puede modificar su descripción, sin permiso sobre la base de conocimiento. La descripción se guarda como documento gestionado en la base de conocimiento. Su título lleva la referencia y el nombre de la aplicación, en el idioma de la persona que lo creó. Al renombrar la aplicación, en el espacio de trabajo o por una importación, ese título se actualiza.
+**Descripción**: Una descripción enriquecida de la aplicación. El editor guarda automáticamente mientras escribe. Quien puede modificar la aplicación puede modificar su descripción, sin permiso sobre la base de conocimiento. La descripción se guarda como documento gestionado en la base de conocimiento. Su título lleva la referencia y el nombre de la aplicación, en el idioma de la persona que lo creó. Al renombrar la aplicación, en el espacio de trabajo o por una importación, ese título se actualiza. Una importación, la API y Kad escriben esta misma descripción, y la exportación la lee. Cada cambio que hacen se guarda como una versión del documento.
 
 **Conexiones**: Un resumen de solo lectura construido a partir de las interfaces de la aplicación. Para apps no middleware muestra dos filas: **Recibe de** y **Envía a**. Para apps ETL/middleware muestra una única fila **Conectado a**. Cada entrada es una píldora clicable que abre la aplicación relacionada; "+ N más en Interfaces" salta a la pestaña Interfaces.
 
@@ -629,7 +629,7 @@ Un archivo con una sola fila rechazada no carga nada. Consulte [Archivos CSV y E
 |-------------|-------------|-------------|-------|
 | `id` | UUID de la aplicación | No | Para actualizaciones; deje en blanco para nuevas aplicaciones |
 | `name` | Nombre de la aplicación | Sí | 200 caracteres como máximo. Sirve para encontrar las aplicaciones existentes |
-| `description` | Qué hace la aplicación | No | |
+| `description` | Qué hace la aplicación | No | La descripción de la pestaña **Vista general**. Un texto que la descripción ya contiene no cambia nada |
 | `category` | Propósito principal | No | Acepta código o etiqueta de Configuración. Un valor desconocido hace rechazar la fila |
 | `supplier_name` | Nombre del proveedor | No | Debe coincidir con un proveedor existente |
 | `editor` | Editor del software | No | Texto libre (p. ej., Microsoft, SAP) |
