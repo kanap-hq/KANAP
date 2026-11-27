@@ -179,7 +179,7 @@ export function aiWriteRequirements(
   }
   if (toolName === 'prepare_import_mapping') {
     // Offered to anyone who prepares changes with Kad. The call still refuses a family the person
-    // may not import, before the file is read, and names that right (lot I6d). `resources` is unused:
+    // may not import, before the file is read, and names that right. `resources` is unused:
     // the import's own level stays on `aiWriteLevel`, checked when the tool is called.
     void resources;
     return [{ resource: 'ai_chat', level: 'member' }];

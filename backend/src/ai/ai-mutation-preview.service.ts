@@ -388,7 +388,7 @@ export class AiMutationPreviewService {
 
   /**
    * The module right of a write. An import the person may not run is refused here, before the file
-   * is read, with the name of that right (lot I6d). Any other refusal is left as it was.
+   * is read, with the name of that right. Any other refusal is left as it was.
    */
   private async assertModuleRight(
     context: AiExecutionContextWithManager,

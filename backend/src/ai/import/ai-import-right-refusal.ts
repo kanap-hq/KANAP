@@ -5,7 +5,7 @@ import { aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
 import type { AiScreenLanguage } from '../ai-unread-families';
 
 /**
- * One refusal for every import the person may not run (lot I6d). The code stays
+ * One refusal for every import the person may not run. The code stays
  * `MODULE_RIGHT_REQUIRED`: the screen already translates it with the words of Admin › Roles.
  * The message is what the model reads. It is English, as every tool result is, and the right's
  * name is the one that screen shows in the person's language. The model names that right, points
