@@ -42,6 +42,7 @@ import { chargebackRegistry } from './chargeback.registry';
 import { chargebackLinesRegistry } from './chargeback-lines.registry';
 import { costCentersRegistry } from './cost-centers.registry';
 import { workingDayCalendarsRegistry } from './working-day-calendars.registry';
+import { contributorsRegistry } from './contributors.registry';
 import { analyticsAxesRegistry } from './analytics-axes.registry';
 import { exchangeRatesRegistry } from './exchange-rates.registry';
 
@@ -79,6 +80,7 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   chargeback_lines: chargebackLinesRegistry,
   cost_centers: costCentersRegistry,
   working_day_calendars: workingDayCalendarsRegistry,
+  contributors: contributorsRegistry,
   analytics_axes: analyticsAxesRegistry,
   exchange_rates: exchangeRatesRegistry,
 };

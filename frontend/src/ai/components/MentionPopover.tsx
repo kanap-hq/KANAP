@@ -46,6 +46,7 @@ const ENTITY_TYPE_LABEL_KEYS: Record<string, string> = {
   suppliers: 'mention.entityTypes.suppliers',
   business_processes: 'mention.entityTypes.businessProcesses',
   users: 'mention.entityTypes.users',
+  contributors: 'mention.entityTypes.contributors',
 };
 
 const MentionPopover = React.forwardRef<MentionPopoverHandle, MentionPopoverProps>(

@@ -46,6 +46,16 @@ import {
   listAiWorkingDayCalendars,
 } from './ai-working-day-calendars.query';
 import { AI_AXIS_VALUES_NOTE, aggregateAnalyticsAxisRows, listAiAnalyticsAxes } from './ai-analytics-axes.query';
+import { PortfolioClassificationService } from '../../portfolio/portfolio-classification.service';
+import { PortfolioSkillsService } from '../../portfolio/portfolio-skills.service';
+import { TeamMemberConfigService } from '../../portfolio/team-member-config.service';
+import {
+  AI_CONTRIBUTOR_COMPANY_WITHHELD,
+  AI_CONTRIBUTOR_NOTE,
+  aggregateContributorRows,
+  listAiContributors,
+  readsCompanyLookup,
+} from './ai-contributors.query';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
@@ -714,6 +724,10 @@ export class AiAggregateExecutor {
     @Optional() private readonly manualRates?: ManualRatesService,
     /** The currency settings, in every `exchange_rates` response. */
     @Optional() private readonly currencySettings?: CurrencySettingsService,
+    /** Portfolio › Contributors and the reads of its drawer, which `contributors` groups. */
+    @Optional() private readonly teamMembers?: TeamMemberConfigService,
+    @Optional() private readonly portfolioSkills?: PortfolioSkillsService,
+    @Optional() private readonly portfolioClassification?: PortfolioClassificationService,
   ) {
     // Absent, a technology filter on application_count matches nothing: say so once, at start.
     if (!policy) new Logger(AiAggregateExecutor.name).warn('AiPolicyService is not injected: technology aggregates see no application.');
@@ -2303,6 +2317,43 @@ export class AiAggregateExecutor {
         // A dimension required for both natures counts in each group of required_for.
         total: result.items.length,
         returned: groups.length,
+      };
+    }
+    if (input.entity_type === 'contributors') {
+      // Read with the right of their page, as the screen: checked again here, the database not guarding it.
+      if (!this.policy || !this.teamMembers || !this.portfolioSkills || !this.portfolioClassification) {
+        throw new BadRequestException('The contributors are not available.');
+      }
+      await this.policy.assertEntityTypeReadRight(context, 'contributors', context.manager);
+      if (input.scope) throw new BadRequestException(`scope "${input.scope}" is not supported for contributors.`);
+      const readsCompanies = readsCompanyLookup(await this.policy.effectiveAccess(context, context.manager));
+      const result = await listAiContributors(
+        { members: this.teamMembers, skills: this.portfolioSkills, classification: this.portfolioClassification },
+        { q: input.q?.trim(), filters: adapted.filters },
+        {
+          manager: context.manager,
+          tenantId: context.tenantId,
+          language: await readAiScreenLanguage(context.manager, context.tenantId, context.userId),
+          readsCompanies,
+        },
+        true,
+      );
+      const groups = aggregateContributorRows(result.items, input.group_by);
+      return {
+        contributor_note: AI_CONTRIBUTOR_NOTE,
+        ...(readsCompanies ? {} : { fields_withheld: [AI_CONTRIBUTOR_COMPANY_WITHHELD] }),
+        group_by: input.group_by,
+        metric: null,
+        function: 'count',
+        groups,
+        // Grouped by skill, a contributor counts in each of their skills.
+        total: result.items.length,
+        returned: groups.length,
+        truncated: false,
+        complete: true,
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: null,
       };
     }
     if (input.entity_type === 'chargeback' || input.entity_type === 'chargeback_lines') {
