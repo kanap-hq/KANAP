@@ -669,6 +669,8 @@ export class ApplicationsListService extends ApplicationsBaseService {
       supplierNames = new Map(entities.map((app, idx) => [app.id, ((result.raw[idx] || {}) as any).s_name ?? null]));
     }
     const pageIds = entities.map((e) => e.id);
+    // Each description as its page shows it: its document's text (the column is its seed).
+    if (entities.length > 0) await withApplicationDescriptions(mg, String((entities[0] as any).tenant_id), entities);
 
     // Prepare expansions
     const expansions = await this.buildExpansions(pageIds, include, mg);

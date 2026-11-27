@@ -76,6 +76,7 @@ import {
 } from '../auth/business-contributor-scope';
 import { RecordInUseException } from '../common/record-in-use';
 import { orderListQuery } from '../common/list-sort';
+import { applicationDescriptionSql } from '../applications/application-description';
 
 type InvolvementScope = { involvedUserId?: string; involvedTeamId?: string };
 type RequestServiceOpts = { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope };
@@ -1819,7 +1820,7 @@ export class PortfolioRequestsService {
     const mg = opts?.manager ?? this.repo.manager;
     const request = await this.getRequestOrThrow(requestId, mg);
     const rows = await mg.query<Array<{ id: string; name: string | null; description: string | null }>>(
-      `SELECT l.application_id AS id, a.name, a.description
+      `SELECT l.application_id AS id, a.name, ${applicationDescriptionSql('a')} AS description
        FROM portfolio_request_applications l
        JOIN applications a ON a.id = l.application_id
        WHERE l.request_id = $1

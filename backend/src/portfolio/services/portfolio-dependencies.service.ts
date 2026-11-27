@@ -13,6 +13,7 @@ import { singleChangedId } from '../../audit/audit-parent-rules';
 import { replacedLinks } from '../../common/relations/linked-reads';
 import { markLinkedEnds } from '../../common/relations/linked-ends';
 import { appliedLinks, OwnerLinkTable, writeOwnerLinks, wroteLinks } from '../portfolio-link-writes.util';
+import { applicationDescriptionSql } from '../../applications/application-description';
 
 const PROJECT_APPLICATION_LINKS: OwnerLinkTable = { table: 'application_projects', owner: 'project_id', target: 'application_id' };
 const PROJECT_ASSET_LINKS: OwnerLinkTable = { table: 'asset_projects', owner: 'project_id', target: 'asset_id' };
@@ -310,7 +311,7 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
     const mg = this.getManager(opts);
     const project = await this.ensureProject(projectId, mg);
     const rows = await mg.query(
-      `SELECT ap.application_id as id, a.name, a.description, a.lifecycle, a.criticality
+      `SELECT ap.application_id as id, a.name, ${applicationDescriptionSql('a')} AS description, a.lifecycle, a.criticality
        FROM application_projects ap
        JOIN applications a ON a.id = ap.application_id
        WHERE ap.project_id = $1

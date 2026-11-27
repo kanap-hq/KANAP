@@ -746,7 +746,6 @@ export class AiEntityService {
                 WHEN $1::text IS NOT NULL AND UPPER(COALESCE(a.sequential_id, '')) = 'APP-' || $1 THEN 4
                 WHEN $1::text IS NOT NULL AND COALESCE(a.sequential_id, '') ILIKE 'APP-' || $1 || '%' THEN 3.5
                 WHEN a.name ILIKE $2 THEN 3
-                WHEN COALESCE(a.description, '') ILIKE $2 THEN 2
                 ELSE 1
               END AS score
        FROM applications a
@@ -757,7 +756,8 @@ export class AiEntityService {
            OR ($1::text IS NOT NULL AND COALESCE(a.sequential_id, '') ILIKE 'APP-' || $1 || '%')
            OR COALESCE(a.sequential_id, '') ILIKE $2
            OR a.name ILIKE $2
-           OR COALESCE(a.description, '') ILIKE $2
+           -- The description is no search field (migration 1856300000000): its words find its
+           -- document, as in the indexed search.
            OR COALESCE(a.editor, '') ILIKE $2
            OR COALESCE(a.notes, '') ILIKE $2
            OR COALESCE(a.support_notes, '') ILIKE $2

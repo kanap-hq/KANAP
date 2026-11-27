@@ -15,7 +15,8 @@ import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-docum
 // - Another tenant's application and document are never reached.
 // - The search (migration 1856300000000): an application's entry carries no description; the search
 //   shows the document's text as its summary; the document, saved on the page (autosave included), is
-//   found by a word of its text by a person who reads the Knowledge, as a project's purpose is.
+//   found by a word of its text by a person who reads the Knowledge, as a project's purpose is. The
+//   search without the index follows the same rule.
 
 process.env.AI_CHAT_ENABLED = 'true';
 process.env.AI_SETTINGS_ENABLED = 'true';
@@ -380,6 +381,17 @@ async function testSearchReadsTheDocument(harness: Harness) {
     assert.deepEqual(await search('zebrafish'), [], 'the seed left behind finds nothing');
     assert.deepEqual(await search('narwhal'), [], 'without the Knowledge, the document is not searched');
     assert.deepEqual(await search('Ledger'), [['applications', 'Ledger', 'Keeps the narwhal accounts']], 'the summary is the document\'s text');
+    // The search without the index (`AI_SEARCH_INDEX_ENABLED=false`) follows the same rule.
+    process.env.AI_SEARCH_INDEX_ENABLED = 'false';
+    try {
+      const legacy = async (query: string) => (await harness.entities.searchAll(ctx, { query, entity_types: ['applications'] })).items
+        .map((item: any) => [item.type, item.label, item.summary ?? null]);
+      assert.deepEqual(await legacy('zebrafish'), [], 'without the index: the seed left behind finds nothing');
+      assert.deepEqual(await legacy('narwhal'), [], 'without the index: the description is no search field');
+      assert.deepEqual(await legacy('Ledger'), [['applications', 'Ledger', 'Keeps the narwhal accounts']], 'without the index: the document\'s text');
+    } finally {
+      delete process.env.AI_SEARCH_INDEX_ENABLED;
+    }
 
     // With the Knowledge read: the document is found by its words.
     await runner.query(
