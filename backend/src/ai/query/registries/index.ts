@@ -166,7 +166,14 @@ export type AiReadProbe = (entityType: AiQueryEntityType) => Promise<boolean>;
 const LINKED_COUNT_FIELDS: Partial<Record<AiQueryEntityType, Record<string, AiQueryEntityType>>> = {
   applications: { budget_lines_count: 'budget_lines', contracts_count: 'contracts' },
   contracts: { application: 'applications' },
-  tasks: { application: 'applications', asset: 'assets', project_name: 'projects' },
+  tasks: {
+    application: 'applications',
+    asset: 'assets',
+    project_name: 'projects',
+    phase: 'projects',
+    project_stream: 'projects',
+    project_category: 'projects',
+  },
   incidents: { asset: 'assets', application: 'applications', technology: 'technologies', asset_count: 'assets' },
   documents: {
     linked_application: 'applications',

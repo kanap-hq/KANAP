@@ -45,6 +45,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 //      projects and requests inside their participation (page, get_document), the count follows,
 //      a member of the modules reads them all, and a replacement keeps the links the person
 //      does not see.
+//  18. The task list and Kad sort a value the person does not see (a Business Contributor's
+//      project outside their participation, its phase and classification) as an empty value.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -860,6 +862,182 @@ async function testContractRelations(h: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual([await contractLinks(runner, 'application_contracts', s.contract), await contractLinks(runner, 'asset_contracts', s.contract)], [1, 1], 'B: one application left, the server stays');
 }
 
+/**
+ * The people of the follow-ups 18 to 20, besides E (a Business Contributor outside the dependency
+ * project and its converted request) and the Administrator: a Business Contributor on the team of
+ * the dependency project and of the converted request (reads them, as before), a reader of the
+ * modules who is not a Business Contributor (unchanged), a reader of tasks who does not read
+ * projects, and a person of another workspace. E's role gets the levels of the shipped role
+ * (requests and tasks member), which the conversion route asks for.
+ */
+type FollowUpPeople = { team: string; reader: string; tasksOnly: string; otherTenant: string; otherUser: string };
+
+async function followUpPeople(runner: QueryRunner, s: Seed): Promise<FollowUpPeople> {
+  const tag = s.tenantId.slice(0, 8);
+  const [{ role_id: bcRole }] = await runner.query(`SELECT role_id FROM users WHERE id = $1`, [s.users.e]);
+  await runner.query(
+    `UPDATE role_permissions SET level = 'member' WHERE tenant_id = $1 AND role_id = $2 AND resource IN ('tasks', 'portfolio_requests')`,
+    [s.tenantId, bcRole],
+  );
+  const role = async (name: string, permissions: Record<string, string>) => {
+    const id = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, $2, $2)`, [s.tenantId, name]);
+    for (const [resource, level] of Object.entries(permissions)) {
+      await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, $3, $4)`, [s.tenantId, id, resource, level]);
+    }
+    return id;
+  };
+  const user = (name: string, roleId: string) => insertId(runner,
+    `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, $3, 'Tester', $4, 'enabled')`,
+    [s.tenantId, `${name}-${tag}@example.test`, name, roleId]);
+  const team = await user('Team member', bcRole);
+  for (const project of [s.project, s.dependency]) {
+    await runner.query(`INSERT INTO portfolio_project_team (tenant_id, project_id, user_id, role) VALUES ($1, $2, $3, 'member')`, [s.tenantId, project, team]);
+  }
+  const [{ id: converted }] = await runner.query(`SELECT id FROM portfolio_requests WHERE tenant_id = $1 AND origin_task_id = $2`, [s.tenantId, s.outsideTask]);
+  await runner.query(`INSERT INTO portfolio_request_team (tenant_id, request_id, user_id, role) VALUES ($1, $2, $3, 'member')`, [s.tenantId, converted, team]);
+  const reader = await user('Module reader', await role('Portfolio and tasks members', READER_PERMISSIONS));
+  const tasksOnly = await user('Tasks reader', await role('Tasks readers', { tasks: 'reader' }));
+
+  const otherTenant = randomUUID();
+  await runner.query(
+    `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
+     VALUES ($1, $2, $3, 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
+    [otherTenant, `linked-rights-other-${tag}`, `linked-rights-other-${tag}`],
+  );
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [otherTenant]);
+  const otherRole = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Administrator', 'Administrator')`, [otherTenant]);
+  const otherUser = await insertId(runner,
+    `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, 'Other', 'Tester', $3, 'enabled')`,
+    [otherTenant, `other-${tag}@example.test`, otherRole]);
+  const otherProject = await insertId(runner, `INSERT INTO portfolio_projects (tenant_id, name, item_number) VALUES ($1, 'Other workspace project', 1)`, [otherTenant]);
+  await runner.query(
+    `INSERT INTO tasks (tenant_id, item_number, title, description, status, related_object_type, related_object_id, labels, owner_ids, viewer_ids, creator_id)
+     VALUES ($1, 3, 'Other workspace task', '', 'open', 'project', $2, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $3)`,
+    [otherTenant, otherProject, otherUser],
+  );
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [s.tenantId]);
+  return { team, reader, tasksOnly, otherTenant, otherUser };
+}
+
+/** Refused, by an error or by the tool's answer, in a savepoint as `rejects`. */
+async function refused(runner: QueryRunner, fn: () => Promise<unknown>, pattern: RegExp, label: string) {
+  await runner.query('SAVEPOINT expected_refusal');
+  try {
+    assert.match(JSON.stringify(await fn()), pattern, label);
+  } catch (error: any) {
+    if (error?.code === 'ERR_ASSERTION') throw error;
+    assert.match(String(error?.message ?? error), pattern, label);
+  } finally {
+    await runner.query('ROLLBACK TO SAVEPOINT expected_refusal');
+  }
+}
+
+/** A request or a Kad context for a person outside the seed's profiles. */
+function personRequest(runner: QueryRunner, tenantId: string, userId: string, permissions: Record<string, string> | 'admin') {
+  const isAdmin = permissions === 'admin';
+  return { queryRunner: runner, isAdmin, permissions: isAdmin ? {} : permissions, tenant: { id: tenantId }, user: { sub: userId } };
+}
+
+/** The levels of the follow-ups' people, as the guards hand them to the routes. */
+const TEAM_PERMISSIONS = { ...PERMISSIONS.e, tasks: 'member', portfolio_requests: 'member' };
+const READER_PERMISSIONS = { portfolio_projects: 'reader', portfolio_requests: 'member', tasks: 'member' };
+function personContext(runner: QueryRunner, tenantId: string, userId: string, surface: 'chat' | 'mcp' = 'mcp') {
+  return { tenantId, userId, isPlatformHost: false, surface, authMethod: surface === 'mcp' ? 'api_key' as const : 'session' as const, manager: runner.manager };
+}
+
+/** In another workspace's context: the queries read that workspace only. */
+async function inTenant<T>(runner: QueryRunner, tenantId: string, back: string, fn: () => Promise<T>): Promise<T> {
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+  try {
+    return await fn();
+  } finally {
+    await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [back]);
+  }
+}
+
+const MAIN_PHASE = 'Main phase';
+const HIDDEN_STREAM = 'Dependency stream';
+const HIDDEN_CATEGORY = 'Dependency category';
+
+/**
+ * The project of T-1 gets a phase, and both projects a stream and a category, whose names sort
+ * after those of the dependency project: a sort that read the hidden values would put T-3 first.
+ */
+async function seedProjectValues(runner: QueryRunner, s: Seed): Promise<void> {
+  const phase = await insertId(runner, `INSERT INTO portfolio_project_phases (tenant_id, project_id, name) VALUES ($1, $2, $3)`, [s.tenantId, s.project, MAIN_PHASE]);
+  await runner.query(`UPDATE tasks SET phase_id = $2 WHERE id = $1`, [s.projectTask, phase]);
+  for (const [project, category, stream] of [[s.project, 'Main category', 'Main stream'], [s.dependency, HIDDEN_CATEGORY, HIDDEN_STREAM]]) {
+    const categoryId = await insertId(runner, `INSERT INTO portfolio_categories (tenant_id, name) VALUES ($1, $2)`, [s.tenantId, category]);
+    const streamId = await insertId(runner, `INSERT INTO portfolio_streams (tenant_id, category_id, name) VALUES ($1, $2, $3)`, [s.tenantId, categoryId, stream]);
+    await runner.query(`UPDATE portfolio_projects SET category_id = $2, stream_id = $3 WHERE id = $1`, [project, categoryId, streamId]);
+  }
+}
+
+/** The position of each task in an answer, by its id or its reference. */
+function order(items: any[], ids: Record<string, string>): Record<string, number> {
+  const positions: Record<string, number> = {};
+  for (const [key, id] of Object.entries(ids)) positions[key] = items.findIndex((item) => JSON.stringify(item).includes(id));
+  return positions;
+}
+
+// 18. The task list and Kad sort a value the person does not see (the project of a task outside a
+//     Business Contributor's participation, its phase and classification, a contract without the
+//     module) as an empty value: the order tells nothing of it.
+async function testTaskSortsOnHiddenValues(h: Harness, runner: QueryRunner, s: Seed, people: FollowUpPeople) {
+  // The task's own classification falls back on its project's (`stream_name`, `category_name`) and
+  // is not part of this rule: the project's columns (`project_stream_name`, ...) are.
+  const hidden = [DEPENDENCY, PHASE, CONVERTED, s.dependency];
+  const eReq = rawRequest(runner, s, 'e');
+  const ids = { inside: s.projectTask, contract: s.contractTask, outside: s.outsideTask };
+  const row = (await h.tasksController.list({ limit: 50 }, eReq)).items.find((item: any) => item.id === s.outsideTask);
+  assert.deepEqual([row.project_stream_name, row.project_category_name], [null, null], 'E: no project classification');
+  for (const field of ['phase_name', 'related_object_name', 'project_stream_name', 'project_category_name']) {
+    const asc = await h.tasksController.list({ sort: `${field}:ASC`, limit: 50 }, eReq);
+    hasNot(asc, hidden, `E, tasks list sorted on ${field}`);
+    const ascOrder = order(asc.items, ids);
+    assert.ok(ascOrder.inside >= 0 && ascOrder.outside >= 0, `E: both tasks listed (${field})`);
+    assert.ok(ascOrder.inside < ascOrder.outside, `E: ${field} ascending puts the hidden value with the empty ones, last`);
+    const desc = order((await h.tasksController.list({ sort: `${field}:DESC`, limit: 50 }, eReq)).items, ids);
+    assert.ok(desc.outside >= 0 && desc.outside < desc.inside, `E: ${field} descending puts the hidden value with the empty ones, first`);
+    const navigation = await h.tasksController.listIds({ sort: `${field}:ASC` }, eReq);
+    assert.ok(navigation.ids.indexOf(s.projectTask) < navigation.ids.indexOf(s.outsideTask), `E: the navigation ids follow (${field})`);
+  }
+  // E does not read contracts: the contract task's name sorts as empty too.
+  const byName = order((await h.tasksController.list({ sort: 'related_object_name:ASC', limit: 50 }, eReq)).items, ids);
+  assert.ok(byName.inside < byName.contract, 'E: the contract name, a module they do not read, sorts as empty');
+
+  // The team member and the module reader read the dependency project: its phase sorts as before.
+  for (const [label, req] of [['team member', personRequest(runner, s.tenantId, people.team, TEAM_PERMISSIONS)], ['module reader', personRequest(runner, s.tenantId, people.reader, READER_PERMISSIONS)]] as const) {
+    const asc = await h.tasksController.list({ sort: 'phase_name:ASC', limit: 50 }, req);
+    const positions = order(asc.items, ids);
+    assert.ok(positions.outside >= 0 && positions.outside < positions.inside, `${label}: the phase of the dependency project sorts by its name`);
+    has(asc, [PHASE], `${label}, tasks list`);
+  }
+
+  // Kad and MCP: query_entities sorted on the phase.
+  for (const surface of ['chat', 'mcp'] as const) {
+    const sorted = await h.tools.execute(ctx(runner, s, 'e', surface), 'query_entities', { entity_type: 'tasks', sort: { field: 'phase', direction: 'asc' }, limit: 50 });
+    hasNot(sorted, hidden, `E (${surface}), query_entities sorted on phase`);
+    const positions = order(sorted.items, { inside: 'T-1', outside: 'T-3' });
+    assert.ok(positions.inside >= 0 && positions.inside < positions.outside, `E (${surface}): sorted on phase, the hidden phase sorts as empty`);
+    assert.ok((sorted.fields_partial ?? []).some((note: any) => note.field === 'phase'), `E (${surface}): the phase is said partial`);
+  }
+  const teamSorted = await h.tools.execute(personContext(runner, s.tenantId, people.team), 'query_entities', { entity_type: 'tasks', sort: { field: 'phase', direction: 'asc' }, limit: 50 });
+  const teamPositions = order(teamSorted.items, { inside: 'T-1', outside: 'T-3' });
+  assert.ok(teamPositions.outside >= 0 && teamPositions.outside < teamPositions.inside, 'team member (Kad): the phase sorts by its name');
+  const unread = await h.tools.execute(personContext(runner, s.tenantId, people.tasksOnly), 'query_entities', { entity_type: 'tasks', sort: { field: 'phase', direction: 'asc' } });
+  assert.deepEqual(unread.sort_ignored, ['phase'], 'tasks reader without projects: no sort on the phase');
+  assert.ok((unread.fields_withheld ?? []).some((note: any) => note.field === 'phase'), 'tasks reader without projects: the phase is said withheld');
+  hasNot(unread, hidden.concat([MAIN_PHASE]), 'tasks reader without projects, query_entities');
+
+  // Another workspace: its own task only, sorted, nothing of this one.
+  const other: any = await inTenant(runner, people.otherTenant, s.tenantId, () =>
+    h.tasksController.list({ sort: 'phase_name:ASC', limit: 50 }, personRequest(runner, people.otherTenant, people.otherUser, 'admin')));
+  assert.equal(other.total, 1, 'other workspace: its own task');
+  hasNot(other, hidden.concat([PROJECT, MAIN_PHASE]), 'other workspace, tasks list');
+}
+
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -885,6 +1063,9 @@ async function run() {
       await testRelationOptions(harness, runner, s);
       await testContractRelations(harness, runner, s);
       await testDocumentPageParticipation(harness, runner, s);
+      const people = await followUpPeople(runner, s);
+      await seedProjectValues(runner, s);
+      await testTaskSortsOnHiddenValues(harness, runner, s, people);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
