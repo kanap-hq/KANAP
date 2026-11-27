@@ -79,13 +79,11 @@ export default function TaskWorkLog({ taskId, projectId, readOnly = false, relat
     enabled: !!taskId,
   });
 
+  // The task's own route, as the task page reads the same entry: the total does not depend on the project.
   const { data: totalHours = 0 } = useQuery({
     queryKey: ['task-time-entries-sum', taskId],
     queryFn: async () => {
-      const endpoint = projectId
-        ? `/portfolio/projects/${projectId}/tasks/${taskId}/time-entries/sum`
-        : `/tasks/${taskId}/time-entries/sum`;
-      const res = await api.get<{ total: number }>(endpoint);
+      const res = await api.get<{ total: number }>(`/tasks/${taskId}/time-entries/sum`);
       return res.data.total;
     },
     enabled: !!taskId,
@@ -106,10 +104,12 @@ export default function TaskWorkLog({ taskId, projectId, readOnly = false, relat
       await refetch();
       queryClient.invalidateQueries({ queryKey: ['task-time-entries-sum', taskId] });
       queryClient.invalidateQueries({ queryKey: ['task-activities', taskId] });
-      // Invalidate project queries so Progress tab updates with new actual effort
+      // The project's effort tab: the task time it reads, and the project, whose actual effort the server
+      // recomputes (read under its address, `PRJ-7`, which this panel does not know).
       if (projectId) {
-        queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-        queryClient.invalidateQueries({ queryKey: ['project-tasks-time-summary', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time-entries', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['portfolio-project'] });
       }
     } catch (e: any) {
       setError(getApiErrorMessage(
@@ -148,10 +148,12 @@ export default function TaskWorkLog({ taskId, projectId, readOnly = false, relat
     queryClient.invalidateQueries({ queryKey: ['task-time-entries-sum', taskId] });
     queryClient.invalidateQueries({ queryKey: ['tasks', taskId] });
     queryClient.invalidateQueries({ queryKey: ['task-activities', taskId] });
-    // Invalidate project queries so Progress tab updates with new actual effort
+    // The project's effort tab: the task time it reads, and the project, whose actual effort the server
+    // recomputes (read under its address, `PRJ-7`, which this panel does not know).
     if (projectId) {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project-tasks-time-summary', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time-entries', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['portfolio-project'] });
     }
   };
 

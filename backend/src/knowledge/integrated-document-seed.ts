@@ -324,8 +324,7 @@ async function ensureTemplateDocument(
       `UPDATE documents
        SET summary = $2,
            content_markdown = $3,
-           content_plain = $4,
-           updated_at = now()
+           content_plain = $4
        WHERE id = $1`,
       [existing[0].id, params.summary, contentMarkdown, contentPlain],
     );

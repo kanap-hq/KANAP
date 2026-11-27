@@ -4098,6 +4098,63 @@ async function testAnswerAfterARefusedWriteToolIsShownAsIs() {
   assert.equal(streamedText(events), answer);
 }
 
+const RELATION_TOOL = {
+  name: 'update_entity_relations',
+  category: 'mutation',
+  description: 'Add or remove the links of one record.',
+  input_summary: {},
+  read_only: false,
+  surfaces: ['chat'],
+  write_preview: {
+    entity_type: 'entity_relation',
+    fields: ['contacts'],
+    reversible: true,
+    prompt_hint: 'Use update_entity_relations to add or remove a contact.',
+  },
+};
+
+/**
+ * Lot K2d (browser pass of 24/11): a contact added without a role. The tool's refusal names the
+ * roles and the model asks the person: the question is shown as it is. Asked without calling the
+ * tool, the question is sent back with an instruction to call the write tool, which says what is
+ * missing; the model's question after that refusal is then shown.
+ */
+async function testContactRoleQuestionGoesThroughTheTool() {
+  const prompt = 'Ajoute le contact Anita Patel au contrat CTR-9';
+  const question = 'Quel rôle faut-il donner à Anita Patel sur CTR-9 : Commercial, Technique, Support ou Autre ? Je préparerai ensuite la modification.';
+  const refusal = new Error('A contact role is required, one of: Commercial, Technique, Support, Autre. Ask the person which one with these words; nothing was prepared.');
+  const call = [
+    { type: 'tool_call_start', id: 'tc-rel', name: 'update_entity_relations' },
+    { type: 'tool_call_delta', id: 'tc-rel', arguments: JSON.stringify({ entity_type: 'contracts', ref: 'CTR-9', relation: 'contacts', add: [{ contact_ref: 'Anita Patel' }] }) },
+    { type: 'tool_call_end', id: 'tc-rel' },
+    { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+  ];
+
+  const afterRefusal = createOrchestrator({
+    historyMessages: [{ role: 'user', content: prompt }],
+    availableTools: [RELATION_TOOL],
+    providerEventBatches: [call, textBatch(question), textBatch(question), textBatch(question)],
+    toolOutcomes: [refusal],
+  });
+  const shown = await collectEvents(afterRefusal.orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: prompt }));
+  assert.deepEqual(afterRefusal.executedToolCalls.map((call) => call.toolName), ['update_entity_relations']);
+  assert.equal(afterRefusal.providerCallCount.value, 2, 'the question after the refusal is not sent back');
+  assert.ok(!sentInstructions(afterRefusal.recordedRequests).some((content) => /was blocked/i.test(content)), 'no repair instruction');
+  assert.equal(streamedText(shown), question);
+
+  const withoutTheTool = createOrchestrator({
+    historyMessages: [{ role: 'user', content: prompt }],
+    availableTools: [RELATION_TOOL],
+    providerEventBatches: [textBatch(question), call, textBatch(question), textBatch(question)],
+    toolOutcomes: [refusal],
+  });
+  const repaired = await collectEvents(withoutTheTool.orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: prompt }));
+  const instruction = sentInstructions(withoutTheTool.recordedRequests).find((content) => /was blocked/i.test(content)) ?? '';
+  assert.match(instruction, /misses a detail the user has not given \(a role, a value\), call the write tool anyway .* its answer says what is missing/);
+  assert.deepEqual(withoutTheTool.executedToolCalls.map((call) => call.toolName), ['update_entity_relations']);
+  assert.equal(streamedText(repaired), question, 'the question that follows the refusal is shown, not the fixed sentence');
+}
+
 /**
  * Plaid L6 (lot F): a "nothing to change", or a refused write tool, does not let through an answer
  * that asks to run a change without its preview: it is repaired then stopped as before.
@@ -5136,6 +5193,7 @@ async function run() {
   await testRefusalWordsDoNotCoverARequestToApply();
   await testNothingToChangeWithAnOfferIsShownAsIs();
   await testAnswerAfterARefusedWriteToolIsShownAsIs();
+  await testContactRoleQuestionGoesThroughTheTool();
   await testNothingToChangeDoesNotCoverARequestToApply();
   await testProviderReceivesAbortSignal();
   await testProviderRequestUsesChatTimeout();

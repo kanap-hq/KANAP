@@ -34,6 +34,8 @@ export interface TaskListItem {
   related_object_type: string | null;
   related_object_id: string | null;
   related_object_name: string | null;
+  /** A project task's project number, for the project's address (`PRJ-12`): detail reads only. */
+  project_item_number?: number | null;
   /**
    * Set (true) when the task names a budget line or a contract the person cannot read (data-scoped
    * access, spec §5.4 "Champ simple"): `related_object_name` is then the line's reference alone
@@ -892,7 +894,7 @@ export type TaskVisibleLinks = {
  * A task row without the linked records of the modules the person does not read, as on the
  * records' own pages: applications and assets are null (the field disappears from the screen), the
  * object the task belongs to loses its id and its name (`related_object_hidden`, without a kind:
- * the screen shows nothing in its place), and so do the project's name, phase and classification
+ * the screen shows nothing in its place), and so do the project's name, number, phase and classification
  * and the converted request. A record outside a Business Contributor's participation (`visible`)
  * reads the same way; of the applications, only those of the participation show. The task keeps its
  * own type of object, so an edit of another field leaves the link untouched.
@@ -928,7 +930,7 @@ export function withReadableTaskLinks<T extends Record<string, any>>(row: T, rea
   }
   if ((!reads.projects || projectHidden) && 'project_name' in task) task.project_name = null;
   if (projectHidden) {
-    for (const field of ['phase_name', 'project_stream_name', 'project_category_name']) {
+    for (const field of ['phase_name', 'project_stream_name', 'project_category_name', 'project_item_number']) {
       if (field in task) task[field] = null;
     }
   }
@@ -1381,6 +1383,7 @@ export class TasksService {
           WHEN t.related_object_type = 'project' THEN pp.name
           ELSE ''
         END as related_object_name,
+        CASE WHEN t.related_object_type = 'project' THEN pp.item_number END AS project_item_number,
         ${TASK_HIDDEN_LINE_REFERENCE_SQL} AS related_object_reference,
         ${TASK_HIDDEN_CONTRACT_SQL} AS related_object_contract_hidden,
         t.task_type_id,

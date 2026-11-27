@@ -27,6 +27,7 @@ import { budgetLineReference } from '../../spend/budget-nature';
 import { TaskLinkedScopes, TasksService } from '../../spend/tasks.service';
 import { AllocationCalculatorService } from '../../spend/allocation-calculator.service';
 import { describeAllocationWarning } from '../../spend/allocation-distribution';
+import { STANDARD_DEFAULT, buildDefaultByYear } from '../../spend/allocation-rule-resolver';
 import type { SpendVersion } from '../../spend/spend-version.entity';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { TechnologiesService } from '../../technologies/technologies.service';
@@ -72,6 +73,8 @@ import { aiAmountsCurrency } from './ai-amounts-currency.util';
 import { aiLinkedReadNotes, mergeFieldNotes } from './ai-linked-read-notes.util';
 import { aiDataAccessCountsNote, aiDataAccessNote } from './ai-data-access-note.util';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
+import { readEntryChecks } from '../../spend/budget-line-entry-check';
+import { describeEntryCheckForAi } from './ai-entry-check-detail';
 import { compareNullableText } from '../../common/list-engine/sql-fragments';
 import type { BudgetListAccess } from '../../spend/budget-list/budget-list.runtime';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
@@ -153,6 +156,9 @@ import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMA
 import { classificationLabels } from '../../applications/services/application-classification';
 import { readClassificationCatalog } from '../ai-classification-catalog.util';
 import { AI_SCREEN_RESOURCES, aiPermissionLevelLabel, aiResourceLabel } from '../ai-role-labels';
+import { BUDGET_LINE_CHECKS } from '../../spend/budget-line-checks';
+import { budgetLineCheckName, budgetLineCheckNames } from './ai-line-check-names';
+import { describeAccountChartForAi } from './ai-account-chart-detail';
 import {
   readAiScreenLanguage,
   referenceSearchExact,
@@ -461,12 +467,21 @@ function withDetailAiKeys(row: Record<string, any> | undefined, registry: AiEnti
  * `consolidation`: each line's consolidation account (`consolidationLabels`), for a registry that
  * holds the field (a person who reads the accounts).
  */
-function budgetItemMetadata(row: any, registry: AiEntityFilterRegistry, consolidation?: Map<string, string | null>): AiEntityMetadata {
+function budgetItemMetadata(
+  row: any,
+  registry: AiEntityFilterRegistry,
+  consolidation?: Map<string, string | null>,
+  language: AiScreenLanguage | null = null,
+): AiEntityMetadata {
+  const toCheck = Array.isArray(row.to_check) && row.to_check.length ? row.to_check.map(String) : null;
   return {
     supplier: scalar(row.supplier_name),
     paying_company: scalar(row.paying_company_name ?? row.company_name),
     account: scalar(row.account_display),
     ...(registry.fields.consolidation_account ? { consolidation_account: consolidation?.get(row.id) ?? null } : {}),
+    to_check: toCheck,
+    // The checks by their names on screen, in the person's language: the answer quotes these, never the codes.
+    to_check_names: budgetLineCheckNames(toCheck, language),
     owner_it: scalar(row.owner_it_name),
     owner_business: scalar(row.owner_business_name),
     analytics_category: registry.fields.analytics_category?.nature && registry.fields.analytics_category.nature !== row.nature
@@ -1010,7 +1025,12 @@ export class AiQueryExecutor {
    * A budget line of either nature, in the native shape of the unified list: `product_name` is
    * the title, `description` the description, and `nature` says which nature the line is.
    */
-  private mapBudgetLine(row: any, registry: AiEntityFilterRegistry, consolidation?: Map<string, string | null>): AiEntitySummaryDto {
+  private mapBudgetLine(
+    row: any,
+    registry: AiEntityFilterRegistry,
+    consolidation?: Map<string, string | null>,
+    language: AiScreenLanguage | null = null,
+  ): AiEntitySummaryDto {
     const anchorYear = new Date().getFullYear();
     const summary = row.description
       ?? ([row.supplier_name, row.paying_company_name, row.account_display].filter(Boolean).join(' | ') || null);
@@ -1025,7 +1045,7 @@ export class AiQueryExecutor {
       updated_at: row.updated_at ?? null,
       metadata: {
         nature: scalar(row.nature),
-        ...budgetItemMetadata(row, registry, consolidation),
+        ...budgetItemMetadata(row, registry, consolidation, language),
         budget_anchor_year: anchorYear,
         ...budgetAmountMetadata(row, anchorYear),
       },
@@ -1047,6 +1067,8 @@ export class AiQueryExecutor {
         consolidation_account_number: numericScalar(row.consolidation_account_number),
         consolidation_account_name: scalar(row.consolidation_account_name),
         nature: scalar(row.nature),
+        // True when the account sets it, null otherwise (never stored false).
+        quantity_price_expected: row.quantity_price_expected === true ? true : null,
       },
     });
   }
@@ -2431,13 +2453,14 @@ export class AiQueryExecutor {
         { manager: context.manager, access },
       );
       const consolidation = await this.consolidationLabels(context, result.items || [], registry, access);
+      const language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
       // The list has no cap: the total is every matching line of either nature.
       const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapBudgetLine(row, registry, consolidation)),
+        items: (result.items || []).map((row: any) => this.mapBudgetLine(row, registry, consolidation, language)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -3279,8 +3302,12 @@ export class AiQueryExecutor {
         }))
         .sort((a, b) => String(a.company_name ?? '').localeCompare(String(b.company_name ?? ''))
           || String(a.department_name ?? '').localeCompare(String(b.department_name ?? '')));
+      // The driver weighs the chosen companies of a manual split by company, the only method whose
+      // Allocations tab shows it ("Allocate by"): the other methods do not read it, nor does Kad.
+      const { allocation_driver: driver, ...stored } = version;
       return {
-        ...version,
+        ...stored,
+        ...(version.allocation_method === 'manual_company' ? { allocation_driver: driver } : {}),
         amounts: amountsByVersion[version.id] ?? [],
         resolved_allocation_method: allocation?.resolvedMethod ?? null,
         allocation_warning: allocation?.error ?? (allocation?.warning ? describeAllocationWarning(allocation.warning) : null),
@@ -3331,6 +3358,11 @@ export class AiQueryExecutor {
   ): Promise<Record<string, unknown>> {
     const anchorYear = new Date().getFullYear();
     const reads = await this.readableLinks(context);
+    // Quantity and price expected: the rule as the line's route reads it, the consolidation account
+    // named for a reader of the accounts only. Read once: the line's row (`to_check`) takes it
+    // too, and `quantity_price_entry` says it in words.
+    const access = await aiBudgetListAccess(this.policy, context);
+    const checks = await readEntryChecks(context.manager, context.tenantId, [lineId], { accounts: access.accounts });
     const [row] = await this.budgetLines.summaryRowsByIds(
       [lineId],
       {
@@ -3338,6 +3370,7 @@ export class AiQueryExecutor {
         includeRecipientDetails: true,
         includeLatestTask: true,
         includeNextYearAllocation: true,
+        entryChecks: checks,
       },
       { manager: context.manager },
     );
@@ -3380,11 +3413,30 @@ export class AiQueryExecutor {
       : null;
     const links = await this.budgetLines.listLinks(lineId, nature, { manager: context.manager }).catch(() => []);
     const attachments = await this.budgetLines.listAttachments(lineId, nature, { manager: context.manager }).catch(() => []);
+    // In plain words (`describeEntryCheckForAi`); without the right on accounts the consolidation
+    // account is not named, and the detail says why, so that a missing read never reads as "none".
+    const entryCheck = await describeEntryCheckForAi(context.manager, {
+      tenantId: context.tenantId,
+      userId: context.userId,
+      lineId,
+      lineAccount: typeof summary?.account_display === 'string' && summary.account_display ? summary.account_display : null,
+      accounts: access.accounts,
+    }, checks.get(lineId) ?? null);
+    // The account's chart against the paying company's (`coa_mismatch`), the charts named on the person's rights.
+    const canRead = this.readProbe(context);
+    const charts = await canRead('chart_of_accounts');
+    const accountChart = await describeAccountChartForAi(context.manager, {
+      tenantId: context.tenantId,
+      lineId,
+      charts,
+      companyCharts: charts && await canRead('companies'),
+    });
 
     return {
       ...(summary ?? {}),
       financial_summary: summary ?? null,
       financial_versions: financialVersions,
+      allocation_by_year: await this.allocationByYear(context, financialVersions, budgetQueryYears(anchorYear)),
       contacts,
       linked_applications: linkedApplications,
       projects: linkedProjects,
@@ -3392,7 +3444,38 @@ export class AiQueryExecutor {
       // The native child names: both natures carry `spend_item_id`, never the CAPEX alias.
       links: nativeLineChildren(links),
       attachments: nativeLineChildren(attachments),
+      quantity_price_entry: entryCheck,
+      account_chart: accountChart,
     };
+  }
+
+  /**
+   * The allocation method each year applies, as the line's Allocations tab shows it: the year's
+   * version's own method, else the workspace's default for the year (`default` true), also for a
+   * year the line has no version of. A year without a version is not a year without a method.
+   */
+  private async allocationByYear(
+    context: AiExecutionContextWithManager,
+    versions: any[],
+    years: number[],
+  ): Promise<Array<{ budget_year: number; allocation_method: string; default: boolean; version: boolean }>> {
+    const rules = await context.manager.query(
+      `SELECT tenant_id, fiscal_year, method, mode, company_ids
+       FROM allocation_rules
+       WHERE fiscal_year = ANY($2::int[]) AND (tenant_id IS NULL OR tenant_id = $1)`,
+      [context.tenantId, years],
+    );
+    const defaults = buildDefaultByYear(rules, context.tenantId);
+    return years.map((year) => {
+      // The latest version of the year comes first (`loadFinancialVersions`).
+      const version = versions.find((row: any) => Number(row.budget_year) === year);
+      const own = !!version?.allocation_method && version.allocation_method !== 'default';
+      const rule = defaults.get(year) ?? STANDARD_DEFAULT;
+      const method = own
+        ? version.resolved_allocation_method ?? version.allocation_method
+        : version?.resolved_allocation_method ?? (rule.kind === 'manual_company' ? 'manual_company' : rule.method);
+      return { budget_year: year, allocation_method: method, default: !own, version: !!version };
+    });
   }
 
   private async loadContractDeepDetail(
@@ -3816,7 +3899,7 @@ export class AiQueryExecutor {
       Object.assign(row, await this.loadBudgetLineDeepDetail(context, row.id as string, row.nature, registry));
       const consolidation = await this.consolidationLabels(context, [row], registry, await aiBudgetListAccess(this.policy, context));
       return {
-        ...this.toDetailResult(this.mapBudgetLine(row, registry, consolidation), row),
+        ...this.toDetailResult(this.mapBudgetLine(row, registry, consolidation, await readAiScreenLanguage(context.manager, context.tenantId, context.userId)), row),
         ...await this.linkedListNotes(context, row, [
           { field: 'linked_applications', family: 'applications' },
           { field: 'projects', family: 'projects' },
@@ -4384,6 +4467,13 @@ export class AiQueryExecutor {
     return values;
   }
 
+  /** `value_names` of the filter values: each budget line check by its name on screen, in the person's language. */
+  private async checkValueNames(context: AiExecutionContextWithManager, fields: string[]): Promise<Record<string, Record<string, string>>> {
+    const language = await readAiScreenLanguage(context.manager, context.tenantId, context.userId);
+    const names = Object.fromEntries(BUDGET_LINE_CHECKS.map((check) => [check, budgetLineCheckName(check, language)]));
+    return Object.fromEntries(fields.map((field) => [field, names]));
+  }
+
   async executeFilterValues(
     context: AiExecutionContextWithManager,
     input: {
@@ -4402,6 +4492,8 @@ export class AiQueryExecutor {
     const values: Record<string, Array<string | boolean | null>> = {};
     const fieldsIgnored = new Set<string>();
     const dynamicFieldMap = new Map<string, string[]>();
+    // The values given with their names on screen (the budget line checks): the answer quotes the name.
+    const checkNamesFor: string[] = [];
 
     // The requested fields the person may not read, with the reason.
     const withheld = (registry.withheldFields ?? []).filter((entry) => requestedFields.includes(entry.field));
@@ -4413,6 +4505,7 @@ export class AiQueryExecutor {
       }
       if (Array.isArray(field.values)) {
         values[fieldName] = [...field.values];
+        if (input.entity_type === 'budget_lines' && fieldName === 'to_check') checkNamesFor.push(fieldName);
         continue;
       }
       if (field.dynamic) {
@@ -4424,10 +4517,12 @@ export class AiQueryExecutor {
       fieldsIgnored.add(fieldName);
     }
 
+    const valueNames = checkNamesFor.length ? await this.checkValueNames(context, checkNamesFor) : null;
     if (dynamicFieldMap.size === 0) {
       const ignoredFields = Array.from(fieldsIgnored);
       return {
         values,
+        ...(valueNames ? { value_names: valueNames } : {}),
         fields_ignored: ignoredFields,
         ...(withheld.length ? { fields_withheld: withheld } : {}),
         total: requestedFields.length,
@@ -4589,6 +4684,7 @@ export class AiQueryExecutor {
     const ignoredFields = Array.from(fieldsIgnored);
     return {
       values,
+      ...(valueNames ? { value_names: valueNames } : {}),
       fields_ignored: ignoredFields,
       ...(withheld.length ? { fields_withheld: withheld } : {}),
       total: requestedFields.length,

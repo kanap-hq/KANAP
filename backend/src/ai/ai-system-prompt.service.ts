@@ -411,7 +411,10 @@ export class AiSystemPromptService {
         'Date-time values in tool results are written in `time_zone` with an explicit UTC offset ' +
         '(for example 2026-06-02T07:50:00+02:00): quote them as given. ' +
         'If a value carries another offset (including `Z`), convert it to `time_zone` before quoting. ' +
-        'A value with no offset is UTC. Date-only fields keep their calendar day.',
+        'A value with no offset is UTC. Date-only fields keep their calendar day. ' +
+        'A code of a list (status, lifecycle, category, criticality, type, role, method) comes with its name in the user\'s language ' +
+        '(`<field>_name`, `key_name` in a group, `names` beside filter values, `before_label` and `after_label` in a history entry): ' +
+        'quote the name, never the code, not even in brackets or as a translation.',
     };
 
     if (profile.promptMode === 'minimal') {
@@ -582,7 +585,7 @@ export class AiSystemPromptService {
       'formatting',
       'Formatting',
       'Formatting:\n' +
-      '- Write every text the user sees in the language of their last message (the language of the conversation when that message is only a reference or a "yes"), including a short text written before or between tool calls: in a French conversation, "Je relance une recherche plus large", never "Let me try a looser search".\n' +
+      '- Write every text the user sees in the language of their last message (the language of the conversation when that message is only a reference or a "yes"), including a short text written before or between tool calls, which quotes no code or technical field name either, not even in brackets: in a French conversation, "Je relance une recherche plus large", never "Let me try a looser search" or "The to_check field with coa_mismatch".\n' +
       replyLanguageRule(params.currentUser.screenLanguage ?? null) +
       '- Use Markdown for formatting responses.\n' +
       '- Keep responses concise and well-structured.\n' +

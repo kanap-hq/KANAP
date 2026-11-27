@@ -8,8 +8,9 @@ import { DataSource, QueryRunner } from 'typeorm';
 // - a contact of a supplier, a contract or a budget line (OPEX and CAPEX) takes one of the four
 //   roles, said by its code or by its word in any of the four languages, the contact named by the
 //   keys the model writes (`contact`, a CTCT-n reference). Without a role, or with another word, the
-//   card is not proposed and the refusal lists the four roles (the screens ask the role in their
-//   dialog, with nothing chosen beforehand);
+//   card is not proposed and the refusal lists the four roles by their names in the person's
+//   language, never by their codes (the screens ask the role in their dialog, with nothing chosen
+//   beforehand), so that the model asks with the words the person sees (lot K2d);
 // - an application's or an asset's support contact takes any text, or none, as their Support panel;
 // - a card stored without a role refuses at its approval in words, never with the database's text;
 // - the other relations with a required value refuse it before the card (owner role, server role).
@@ -28,7 +29,9 @@ const FULL = {
 } as const;
 
 const PG_TEXT = /violates|null value|invalid input value/i;
-const FOUR_ROLES = /commercial, technical, support or other/;
+// The workspace has no language and the person none: the roles in English, by their names.
+const FOUR_ROLES = /Commercial, Technical, Support, Other/;
+const ROLE_CODES = /commercial|technical|\bsupport\b|\bother\b/;
 
 async function insertId(runner: QueryRunner, sql: string, params: unknown[]): Promise<string> {
   return (await runner.query(`${sql} RETURNING id`, params))[0].id;
@@ -148,6 +151,85 @@ async function run() {
       });
     }
 
+    await cell('contract: the refusal without a role names the roles in the person\'s language, never by their codes', async () => {
+      const said: Record<string, string> = {};
+      for (const screenLanguage of ['fr', 'en', 'de', 'es']) {
+        await runner.query('SAVEPOINT words');
+        try {
+          await previews.createPreview({ ...ctx, screenLanguage }, 'update_entity_relations', {
+            entity_type: 'contracts', ref: `CTR-${contractNumber}`, relation: 'contacts', add: [{ contact: contactRef }],
+          });
+        } catch (error: any) {
+          said[screenLanguage] = String(error?.message ?? error);
+        }
+        await runner.query('ROLLBACK TO SAVEPOINT words');
+      }
+      const roles = (refusal: string) => /one of: ([^.]+)\./.exec(refusal)?.[1];
+      assert.deepEqual(Object.fromEntries(Object.entries(said).map(([language, refusal]) => [language, roles(refusal)])), {
+        fr: 'Commercial, Technique, Support, Autre',
+        en: 'Commercial, Technical, Support, Other',
+        de: 'Vertrieb, Technik, Support, Sonstige',
+        es: 'Comercial, Técnico, Soporte, Otro',
+      });
+      for (const refusal of Object.values(said)) assert.doesNotMatch(refusal, ROLE_CODES, refusal);
+      // An unknown word: the same names.
+      await runner.query('SAVEPOINT words');
+      const unknown = await previews.createPreview({ ...ctx, screenLanguage: 'de' }, 'update_entity_relations', {
+        entity_type: 'contracts', ref: `CTR-${contractNumber}`, relation: 'contacts', add: [{ contact: contactRef, role: 'Responsable' }],
+      }).then(() => '', (error: any) => String(error?.message ?? error));
+      await runner.query('ROLLBACK TO SAVEPOINT words');
+      assert.match(unknown, /The roles are: Vertrieb, Technik, Support, Sonstige;/);
+    });
+
+    // Lot K2d, browser pass of 24/11: in Kad's chat, a role the person never said is refused as no
+    // role, even when the model passes one (`other` taken by itself); a role said by its name in any
+    // language, or in an earlier message of the conversation, is taken.
+    const conversation = async (...messages: string[]) => {
+      const id = await insertId(runner, `INSERT INTO ai_conversations (tenant_id, user_id, title) VALUES ($1, $2, 'Rôles')`, [tenantId, writer]);
+      for (const content of messages) {
+        await runner.query(`INSERT INTO ai_messages (tenant_id, conversation_id, user_id, role, content) VALUES ($1, $2, $3, 'user', $4)`, [tenantId, id, writer, content]);
+      }
+      // A reply of the assistant names a role: it is not the person's word.
+      await runner.query(`INSERT INTO ai_messages (tenant_id, conversation_id, role, content) VALUES ($1, $2, 'assistant', 'Quel rôle : Commercial, Technique, Support ou Autre ?')`, [tenantId, id]);
+      return { ...ctx, conversationId: id, screenLanguage: 'fr' };
+    };
+    const contractAdd = (role: unknown) => ({ entity_type: 'contracts', ref: `CTR-${contractNumber}`, relation: 'contacts', add: [{ contact: contactRef, role }] });
+    const roleOfCard = async (chat: any, role: unknown): Promise<string> => {
+      await runner.query('SAVEPOINT said');
+      try {
+        const preview = await previews.createPreview(chat, 'update_entity_relations', contractAdd(role));
+        const to = (preview.changes?.contacts?.relation_items?.to ?? []) as Array<{ role: { code: string } | null }>;
+        return to.map((item) => item.role?.code).filter(Boolean).join(',');
+      } catch (error: any) {
+        return `refused: ${String(error?.message ?? error)}`;
+      } finally {
+        await runner.query('ROLLBACK TO SAVEPOINT said');
+      }
+    };
+    await cell('chat: a role the person did not say is refused as no role, even when the model passes it', async () => {
+      const chat = await conversation('Ajoute le contact Maëlle Kerbrat au contrat');
+      for (const role of ['other', 'Autre', 'technical']) {
+        const refusal = await roleOfCard(chat, role);
+        assert.match(refusal, /^refused: A contact role is required, one of: Commercial, Technique, Support, Autre\./, `${role}: ${refusal}`);
+      }
+    });
+    await cell('chat: the role said by its name in each language, or by its code, is taken', async () => {
+      for (const [said, role, code] of [
+        ['Ajoute Maëlle Kerbrat au contrat comme contact technique', 'technical', 'technical'],
+        ['Add Maëlle Kerbrat to the contract as the sales contact, role Commercial', 'Commercial', 'commercial'],
+        ['Füge Maëlle Kerbrat als technischen Kontakt hinzu', 'Technik', 'technical'],
+        ['Añade a Maëlle Kerbrat como contacto de soporte', 'support', 'support'],
+        ['Ajoute-la avec le rôle autre', 'other', 'other'],
+      ] as const) {
+        assert.equal(await roleOfCard(await conversation(said), role), code, said);
+      }
+    });
+    await cell('chat: the role said in an earlier message of the conversation is taken', async () => {
+      const chat = await conversation('Ajoute le contact Maëlle Kerbrat au contrat', 'Technique');
+      assert.equal(await roleOfCard(chat, 'technical'), 'technical');
+      assert.match(await roleOfCard(chat, 'support'), /^refused: A contact role is required/);
+    });
+
     await cell('contract: a card stored without a role refuses at its approval in words', async () => {
       const preview = await previews.createPreview(ctx, 'update_entity_relations', {
         entity_type: 'contracts', ref: `CTR-${contractNumber}`, relation: 'contacts', add: [{ contact: contactRef, role: 'support' }],
@@ -238,7 +320,7 @@ async function run() {
         await linkContact(family.table, family.column, family.id, 'technical', manual);
         await linkContact(family.table, family.column, family.id, 'commercial', manual);
         const refusal = await refused({ ...base, remove: [{ contact: contactRef, role: 'other' }] });
-        assert.match(refusal, /with the roles commercial, technical, not other/, `a role it does not have is refused (${refusal})`);
+        assert.match(refusal, /with the roles Commercial, Technical, not Other/, `a role it does not have is refused (${refusal})`);
         const executed = await approve({ ...base, remove: [{ contact: contactRef, role: 'Technical' }] });
         assert.equal(executed.status, 'executed', executed.error_message ?? '');
         assert.deepEqual(await rolesLeft(family.table, family.column, family.id), [{ role: 'commercial', ...(family.origin ? { origin: 'manual' } : {}) }]);

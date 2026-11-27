@@ -511,7 +511,6 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const requestBefore = { ...request };
     request.status = 'converted';
     request.converted_date = new Date();
-    request.updated_at = new Date();
     await requestRepo.save(request);
     // The request's row names the project it became (`converted_to_project_id`, beside the saved
     // row): its history reads "Converted to project: PRJ-7".
@@ -689,8 +688,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     if (has('it_sponsor_id')) existing.it_sponsor_id = body.it_sponsor_id || null;
     if (has('it_lead_id')) existing.it_lead_id = body.it_lead_id || null;
 
-    existing.updated_at = new Date();
-
+    // The purpose lives in a bound document: its change writes the project's history entry
+    // (portfolio_project_documents), which dates it (audit/record-dating.ts).
     const saved = await repo.save(existing);
     const sourceDescriptor = {
       id: saved.id,
@@ -1351,11 +1350,12 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     // Set mode to manual
     const modeColumn = effortType === 'it' ? 'it_effort_allocation_mode' : 'business_effort_allocation_mode';
     await mg.query(
-      `UPDATE portfolio_projects SET ${modeColumn} = 'manual', updated_at = now() WHERE id = $1`,
+      `UPDATE portfolio_projects SET ${modeColumn} = 'manual' WHERE id = $1`,
       [projectId]
     );
 
     const after = await this.effortAllocationState(mg, projectId, effortType);
+    // The allocations are rows of their own: their audit row below dates the project (the mode dates it by its trigger).
     await this.auditEffortAllocations(mg, projectId, before, after, opts?.userId ?? null);
 
     return { ok: true };
@@ -1382,7 +1382,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     // Set mode back to auto
     const modeColumn = effortType === 'it' ? 'it_effort_allocation_mode' : 'business_effort_allocation_mode';
     await mg.query(
-      `UPDATE portfolio_projects SET ${modeColumn} = 'auto', updated_at = now() WHERE id = $1`,
+      `UPDATE portfolio_projects SET ${modeColumn} = 'auto' WHERE id = $1`,
       [projectId]
     );
 

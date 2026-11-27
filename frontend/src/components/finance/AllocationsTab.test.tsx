@@ -14,9 +14,14 @@ vi.mock('react-i18next', () => {
 const localeState = vi.hoisted(() => ({ value: 'en' }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => localeState.value }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn() } }));
-// May the user change budget lines (budget right at member level or above).
-const auth = vi.hoisted(() => ({ canEdit: true }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' }, hasLevel: () => auth.canEdit }) }));
+// May the user change budget lines (budget right at member level or above), and read the companies and departments lists.
+const auth = vi.hoisted(() => ({ canEdit: true, readsOrganisation: true }));
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({
+    profile: { id: 'me' },
+    hasLevel: (resource: string) => (resource === 'companies' || resource === 'departments' ? auth.readsOrganisation : auth.canEdit),
+  }),
+}));
 
 import api from '../../api';
 import AllocationsTab, { type AllocationsTabHandle } from './AllocationsTab';
@@ -31,7 +36,7 @@ let plannedTotal = 1000;
 
 /** The allocation the server holds for the lines, with the signature it was read with (a test replaces it). */
 type Stored = {
-  items: Array<{ company_id: string; department_id: string | null; allocation_pct: number }>;
+  items: Array<{ company_id: string; company_name?: string; department_id: string | null; department_name?: string | null; allocation_pct: number }>;
   method: string; driver: string; base_signature: string; budget_rev?: number; totals?: Record<string, number>;
 };
 let stored: Stored;
@@ -123,6 +128,45 @@ describe('AllocationsTab for a budget reader', () => {
     for (const pct of pcts) expect(pct).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'opex.allocations.splitEqually' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'opex.allocations.clearPins' })).toBeNull();
+  });
+});
+
+describe('AllocationsTab for a budget reader who does not read the companies or departments', () => {
+  beforeEach(() => {
+    mocked.get.mockReset();
+    mocked.put.mockReset();
+    serve();
+    auth.canEdit = false;
+    auth.readsOrganisation = false;
+    // The names the line carries come with its split.
+    stored.method = 'manual_department';
+    stored.items = [
+      { company_id: 'c-1', company_name: 'Alpha Industries', department_id: 'd-1', department_name: 'Finance', allocation_pct: 60 },
+      { company_id: 'c-2', company_name: 'Beta Services', department_id: 'd-2', department_name: 'Sales', allocation_pct: 40 },
+    ];
+  });
+  afterEach(() => { auth.canEdit = true; auth.readsOrganisation = true; });
+
+  it('shows the names the split carries and never asks for the lists', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderTab('item-1', client);
+    expect(await screen.findByRole('button', { name: 'Alpha Industries' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Beta Services' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Finance' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Sales' })).toBeDisabled();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(reads(/^\/companies$/)).toBe(0);
+    expect(reads(/^\/departments$/)).toBe(0);
+  });
+
+  it('an automatic split names each company', async () => {
+    stored.method = 'headcount';
+    stored.items = stored.items.map((item) => ({ ...item, department_id: null, department_name: null }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderTab('item-1', client);
+    expect(await screen.findByText('Alpha Industries')).toBeInTheDocument();
+    expect(screen.getByText('Beta Services')).toBeInTheDocument();
+    expect(reads(/^\/companies$/)).toBe(0);
   });
 });
 

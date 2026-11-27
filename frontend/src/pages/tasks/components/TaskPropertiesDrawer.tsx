@@ -431,9 +431,12 @@ export default function TaskPropertiesDrawer({
             queryClient.invalidateQueries({ queryKey: ['task-time-entries', task.id] });
             queryClient.invalidateQueries({ queryKey: ['tasks', task.id] });
             queryClient.invalidateQueries({ queryKey: ['task-activities', task.id] });
+            // The project's effort tab: the task time it reads, and the project, whose actual effort the server
+            // recomputes (read under its address, `PRJ-7`, which this panel does not know).
             if (isProjectTask && task.related_object_id) {
-              queryClient.invalidateQueries({ queryKey: ['project', task.related_object_id] });
-              queryClient.invalidateQueries({ queryKey: ['project-tasks-time-summary', task.related_object_id] });
+              queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time', task.related_object_id] });
+              queryClient.invalidateQueries({ queryKey: ['portfolio-project-task-time-entries', task.related_object_id] });
+              queryClient.invalidateQueries({ queryKey: ['portfolio-project'] });
             }
           }}
         />

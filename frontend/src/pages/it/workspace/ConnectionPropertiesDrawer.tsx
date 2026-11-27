@@ -5,7 +5,7 @@ import { Box, MenuItem, Switch, TextField, Typography } from '@mui/material';
 import { PropertyGroup, PropertyRow } from '../../../components/design/PropertyRow';
 import { drawerSelectSx, drawerMenuItemSx } from '../../../theme/formSx';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
-import { formatShortDate } from '../../../lib/dateFormat';
+import { formatShortInstantDate } from '../../../lib/dateFormat';
 import { useLocale } from '../../../i18n/useLocale';
 import { classificationText } from '../../../utils/applicationClassification';
 
@@ -205,10 +205,10 @@ export default function ConnectionPropertiesDrawer({
 
       <PropertyGroup>
         <PropertyRow label={t('it:workspace.connection.properties.created')}>
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(createdAt, locale, { empty: classificationText('Not set') })}</Typography>
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortInstantDate(createdAt, locale, { empty: classificationText('Not set') })}</Typography>
         </PropertyRow>
         <PropertyRow label={t('it:workspace.connection.properties.updated')}>
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortDate(updatedAt, locale, { empty: classificationText('Not set') })}</Typography>
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{formatShortInstantDate(updatedAt, locale, { empty: classificationText('Not set') })}</Typography>
         </PropertyRow>
       </PropertyGroup>
     </>

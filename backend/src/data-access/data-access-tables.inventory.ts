@@ -146,6 +146,7 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
   { name: 'spend_item_analytics_values_row_version', cls: 'definer', reason: 'statement trigger: row_version of the lines' },
   { name: 'spend_item_analytics_values_search_index', cls: 'definer', reason: 'statement trigger: search entries of the lines' },
   { name: 'search_index_delete', cls: 'definer', reason: 'search index family' },
+  { name: 'search_index_stamp_source', cls: 'definer', reason: 'search index family: trigger, copies a record\'s date to its entry when only the date changed (migration 1856275000000)' },
   ...[
     'accounts', 'analytics_categories', 'applications', 'assets', 'budget_lines', 'business_processes',
     'capex_items', 'chart_of_accounts', 'companies', 'connections', 'contacts', 'contracts', 'departments',

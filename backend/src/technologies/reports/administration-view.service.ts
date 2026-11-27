@@ -585,7 +585,7 @@ export class AdministrationViewService {
       // An UPDATE answers [rows, rowCount], RETURNING included.
       const [afterRows] = await mg.query(
         `UPDATE assets
-            SET admin_zone = $3, updated_at = clock_timestamp()
+            SET admin_zone = $3
           WHERE tenant_id = $1 AND id = ANY($2::uuid[])
           RETURNING id, name, asset_reference, kind, status, admin_zone, updated_at`,
         [tenantId, batch.map((row) => row.id), zone],

@@ -21,7 +21,8 @@ import DependencySelector from './components/DependencySelector';
 import RelationsSectionTitle from './components/RelationsSectionTitle';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { buildInlineImageUrl, resolveInlineImageTenantSlug } from '../../utils/inlineImageUrls';
-import { formatItemRef } from '../../utils/item-ref';
+import { buildItemPath, formatItemRef, itemAddress } from '../../utils/item-ref';
+import useRecordEditorKey from '../../components/workspace/useRecordEditorKey';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import { type IntegratedDocumentEditorHandle } from '../../components/IntegratedDocumentEditor';
 import MetadataUserPicker, { formatMetadataUserName } from '../../components/workspace/MetadataUserPicker';
@@ -187,20 +188,6 @@ export default function RequestWorkspacePage() {
   // Browser tab title
   useRecordTitle(data?.item_number && data?.name ? `REQ-${data.item_number} ${data.name}` : null);
 
-  // Replace UUID in URL with human-readable ref
-  React.useEffect(() => {
-    if (!data?.item_number) return;
-    const currentParam = params.id || '';
-    const isUuid = /^[0-9a-f]{8}-/.test(currentParam);
-    // Only rewrite once the loaded data matches the current route id — during a
-    // placeholderData nav, `data` is briefly still the previous item.
-    if (isUuid && data.id === currentParam) {
-      const ref = formatItemRef('request', data.item_number);
-      const newPath = location.pathname.replace(currentParam, ref);
-      window.history.replaceState(null, '', newPath + location.search);
-    }
-  }, [data?.id, data?.item_number, params.id, location.pathname, location.search]);
-
   const requestMatchesCurrentRoute = React.useMemo(() => {
     const raw = String(idParam || '').trim();
     if (!data || !raw) return false;
@@ -209,6 +196,19 @@ export default function RequestWorkspacePage() {
     if (data.item_number != null && raw.toUpperCase() === formatItemRef('request', data.item_number)) return true;
     return false;
   }, [data?.id, data?.item_number, idParam]);
+  // The editors are keyed by request: the same key through the move from a legacy address to the reference.
+  const recordKey = useRecordEditorKey('portfolio-request', id, [requestInclude]);
+
+  // A legacy address (a uuid, `req-3`, `3`) becomes the request's reference through the router, tab, query
+  // and hash kept: the request read is put under the reference's entry first, so the page shows it at once
+  // (one quiet refresh follows) and the editors stay mounted (`recordKey`). Back and reload then show the reference.
+  React.useEffect(() => {
+    if (isCreate || !data?.item_number || !requestMatchesCurrentRoute) return;
+    const reference = formatItemRef('request', data.item_number);
+    if (id === reference) return;
+    queryClient.setQueryData(['portfolio-request', reference, requestInclude], data);
+    navigate(`${buildItemPath('request', reference)}${params.tab ? `/${params.tab}` : ''}${location.search}${location.hash}`, { replace: true });
+  }, [data, id, isCreate, location.hash, location.search, navigate, params.tab, requestInclude, queryClient, requestMatchesCurrentRoute]);
 
   // Fetch classification data (types, categories, streams)
   const { data: classificationData, isError: classificationFailed } = useQuery({
@@ -312,7 +312,7 @@ export default function RequestWorkspacePage() {
       purposeEditorRef.current?.reset?.(),
       risksEditorRef.current?.reset?.(),
     ]);
-  }, [id, isCreate]);
+  }, [recordKey, isCreate]);
 
   React.useEffect(() => () => {
     if (feasibilityAutosaveTimerRef.current !== null) {
@@ -1120,7 +1120,7 @@ export default function RequestWorkspacePage() {
             {form?.origin_task?.id && originTaskLabel && (
               <PortfolioMetadataItem
                 label={t('portfolio:workspace.request.originTask.sourceLabel')}
-                onClick={() => navigate(`/portfolio/tasks/${form.origin_task.id}/overview`)}
+                onClick={() => navigate(`${buildItemPath('task', itemAddress('task', form.origin_task))}/overview`)}
                 title={t('portfolio:workspace.request.originTask.title', { name: form.origin_task.title || form.origin_task.id })}
                 mono={!!form.origin_task.item_number}
               >
@@ -1236,7 +1236,7 @@ export default function RequestWorkspacePage() {
             <RequestSummaryTab
               canEditManagedDocs={canEditManagedDocs}
               form={form}
-              id={id}
+              id={recordKey}
               isCreate
               onPurposeDirtyChange={ignoreDraftChange}
               onPurposeDraftChange={ignoreDraftChange}
@@ -1249,7 +1249,7 @@ export default function RequestWorkspacePage() {
             <RequestSummaryTab
               canEditManagedDocs={canEditManagedDocs}
               form={form}
-              id={id}
+              id={recordKey}
               isCreate={isCreate}
               onPurposeDirtyChange={setPurposeDirty}
               onPurposeDraftChange={(value) => updateManagedDocDraft({ purpose: value })}
@@ -1284,7 +1284,7 @@ export default function RequestWorkspacePage() {
               categoryName={categoryName}
               form={form}
               highlightLatestRecommendation={highlightLatestRecommendation}
-              id={id}
+              id={recordKey}
               latestAnalysisRecommendation={latestAnalysisRecommendation}
               latestRecommendationAuthor={latestRecommendationAuthor}
               latestRecommendationCreatedAt={latestRecommendationCreatedAt}
@@ -1377,9 +1377,9 @@ export default function RequestWorkspacePage() {
             name: form.name || '',
             target_delivery_date: form.target_delivery_date,
           }}
-          onSuccess={(projectId) => {
+          onSuccess={(projectAddress) => {
             setConvertDialogOpen(false);
-            navigate(`/portfolio/projects/${projectId}/summary`);
+            navigate(`${buildItemPath('project', projectAddress)}/summary`);
           }}
         />
       )}

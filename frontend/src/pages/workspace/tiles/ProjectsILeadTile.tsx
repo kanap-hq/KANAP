@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../api';
+import { buildItemPath, itemAddress } from '../../../utils/item-ref';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../../i18n/useLocale';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
@@ -17,6 +18,7 @@ import { getDotColor, getPillBg, PROJECT_STATUS_COLORS } from '../../../utils/st
 
 interface MyLeadershipProject {
   id: string;
+  item_number?: number | null;
   name: string;
   status: string;
   role: 'it_lead' | 'business_lead' | 'it_sponsor' | 'business_sponsor';
@@ -86,7 +88,7 @@ export default function ProjectsILeadTile({ config }: ProjectsILeadTileProps) {
           {projects.map((project) => (
             <ListItemButton
               key={project.id}
-              onClick={() => navigate(`/portfolio/projects/${project.id}`)}
+              onClick={() => navigate(buildItemPath('project', itemAddress('project', project)))}
               sx={{ py: 0.5, alignItems: 'flex-start' }}
             >
               <ListItemText

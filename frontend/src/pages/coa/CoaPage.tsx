@@ -25,6 +25,8 @@ import { statusColumnProps } from '../../components/grid/statusColumn';
 import { lineTypeUsageColumnProps } from '../../components/grid/lineTypeUsageColumn';
 import type { AccountNature } from '../../constants/accountNature';
 import { ImportLabel } from '../../components/csv/importFiles';
+import CheckboxSetFilter from '../../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 
 type AccountRow = {
   id: string;
@@ -39,6 +41,8 @@ type AccountRow = {
   consolidation_status?: 'mapped' | 'outside' | 'unmapped' | null;
   /** The lines that may use the account: null for OPEX and CAPEX lines. */
   nature?: AccountNature | null;
+  /** Its budget lines are expected as quantity and price: true, or null when not set. */
+  quantity_price_expected?: true | null;
   created_at?: string;
   status?: string;
 };
@@ -198,6 +202,26 @@ export default function CoaPage() {
       headerName: t('coa.columns.nature'),
       width: 150,
       ...lineTypeUsageColumnProps(t),
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer {...params} linkType="internal" getHref={getAccountHref} onNavigate={(href) => navigate(href)} />
+      ),
+    },
+    {
+      field: 'quantity_price_expected',
+      headerName: t('coa.columns.quantityPriceExpected'),
+      width: 180,
+      defaultHidden: true,
+      // Yes for the accounts that set it; the others (stored null) are "No" in the filter, blank in the cell.
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: [
+          { value: 'true', label: t('shared.labels.yes') },
+          { value: null, label: t('shared.labels.no') },
+        ],
+        searchable: false,
+      },
+      valueFormatter: (params: any) => (params.value === true ? t('shared.labels.yes') : ''),
       cellRenderer: (params: any) => (
         <LinkCellRenderer {...params} linkType="internal" getHref={getAccountHref} onNavigate={(href) => navigate(href)} />
       ),
@@ -500,7 +524,7 @@ export default function CoaPage() {
             enableColumnChooser={true}
             statusScopeConfig={{ defaultScope: consolidationFilter ? 'all' : 'enabled' }}
             requiredColumns={['account_number', 'account_name']}
-            defaultHiddenColumns={['description', 'consolidation_account_description', 'created_at']}
+            defaultHiddenColumns={['description', 'consolidation_account_description', 'quantity_price_expected', 'created_at']}
             enableRowSelection={canAdmin}
             onSelectionChanged={setSelectedRows}
             onGridApiReady={(apiInstance) => {

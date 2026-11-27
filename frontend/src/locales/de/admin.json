@@ -563,6 +563,7 @@
       "parent_id": "Übergeordnete Gruppe",
       "process_type": "Prozesstyp",
       "accountNature": "Verwendet für",
+      "quantity_price_expected": "Erfassung nach Menge und Preis",
       "costCenterOwner": "Budgetverantwortlicher",
       "summary": "Zusammenfassung",
       "folder_id": "Ordner",

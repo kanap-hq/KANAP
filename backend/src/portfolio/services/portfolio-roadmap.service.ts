@@ -40,8 +40,22 @@ type ServiceOpts = { manager?: EntityManager };
  */
 const NO_TEAM_SORT_NAME = 'No team';
 
+/** The numbers of the projects a response names (`PRJ-12` addresses), read from the rows already loaded. */
+function projectItemNumbersOf(
+  rows: Map<string, { item_number: number }>,
+  named: ReadonlyArray<{ projectId: string }>,
+): Record<string, number> {
+  const numbers: Record<string, number> = {};
+  for (const { projectId } of named) {
+    const itemNumber = rows.get(projectId)?.item_number;
+    if (itemNumber != null) numbers[projectId] = itemNumber;
+  }
+  return numbers;
+}
+
 type ProjectRow = {
   id: string;
+  item_number: number;
   name: string;
   status: ProjectStatus;
   scheduling_mode: ProjectSchedulingMode;
@@ -390,6 +404,10 @@ export class PortfolioRoadmapService {
       explanations: baseResult.explanations,
       scenarioWarnings: baseResult.scenarioWarnings,
       impactSummary,
+      projectItemNumbers: projectItemNumbersOf(
+        prepared.projectRowsById,
+        [...baseResult.schedule, ...baseResult.reservations, ...baseResult.unschedulable],
+      ),
       options,
       diagnostics: {
         modeLabel: options.optimizationMode,
@@ -497,6 +515,7 @@ export class PortfolioRoadmapService {
       `
       SELECT
         p.id,
+        p.item_number,
         p.name,
         p.status,
         p.scheduling_mode,

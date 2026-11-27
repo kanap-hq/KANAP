@@ -1442,6 +1442,9 @@ export class AiChatOrchestratorService {
         ? 'It also contained raw pseudo tool-call markup; never write raw <tool_call> text.'
         : 'Do not ask the user for textual confirmation before backend preview cards exist.',
       `Use the provider tool-calling API now with one of: ${toolList}.`,
+      // A question about a missing detail (a contact's role) goes through the tool: its refusal says
+      // what is missing, with the words to ask for it (lot K2d).
+      'If the change misses a detail the user has not given (a role, a value), call the write tool anyway with what they said, without that detail: its answer says what is missing and how to ask for it; relay that question.',
       hasMutationPlanTool
         ? 'For multiple related changes, mixed object changes, or dependencies between changes, call prepare_mutation_plan with stable operation_id values, depends_on, and placeholders such as {{create_project.ref}}.'
         : null,

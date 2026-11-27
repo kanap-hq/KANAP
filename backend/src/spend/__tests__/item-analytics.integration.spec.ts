@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { BadRequestException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
+import { writeAuditLog } from '../../audit/audit.service';
 import { ensureDefaultAnalyticsAxis } from '../../analytics/analytics-axes.util';
 import { backendPid, closeRunner, committed, openTenantTransaction, waitUntilBlocked } from '../../cost-centers/__tests__/cost-center-test-helpers';
 import { assert, inRolledBackTransaction, Kind, runSpecs, seedTenant, setTenant } from './round-inputs.fixtures';
@@ -473,10 +474,12 @@ async function testChangeAloneIsAnEdit(kind: Kind) {
 
     await runner.query(`UPDATE ${LINE_TABLE} SET updated_at = '2020-01-01T00:00:00Z' WHERE id = $1`, [line.id]);
     await svc.update(line.id, { analytics_values: { [s.nature]: s.hardware } }, undefined, opts);
-    const [row] = await runner.query(`SELECT updated_at FROM ${LINE_TABLE} WHERE id = $1`, [line.id]);
-    assert.ok(new Date(row.updated_at).getUTCFullYear() > 2020, `${kind}: updated_at moves`);
     const entry = svc.audit.entries.filter((e: any) => e.recordId === line.id && e.action === 'update').pop();
     assert.ok(entry, `${kind}: an audit row is written`);
+    // The audit row is what dates the line (audit/record-dating.ts): written as AuditService writes it.
+    await writeAuditLog(runner.manager, entry);
+    const [row] = await runner.query(`SELECT updated_at FROM ${LINE_TABLE} WHERE id = $1`, [line.id]);
+    assert.ok(new Date(row.updated_at).getUTCFullYear() > 2020, `${kind}: updated_at moves`);
     assert.equal(entry.table, AUDIT_TABLE[kind]);
     assert.deepEqual(entry.before.analytics_values, { [s.main]: s.licences }, `${kind}: before snapshot`);
     assert.deepEqual(entry.after.analytics_values, { [s.main]: s.licences, [s.nature]: s.hardware }, `${kind}: after snapshot`);

@@ -37,7 +37,7 @@ import {
 import { useDataAccessAdmin } from '../../auth/dataAccess';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { useLocale } from '../../i18n/useLocale';
-import { formatShortDate } from '../../lib/dateFormat';
+import { formatShortInstantDate } from '../../lib/dateFormat';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDocPageUrl } from '../../utils/docUrls';
 import api from '../../api';
@@ -244,10 +244,10 @@ function DataAccessAdminContent() {
                       {person.updated_at && person.updated_by_name
                         ? t('admin:dataAccess.modified', {
                           name: person.updated_by_name,
-                          date: formatShortDate(person.updated_at, locale, { year: 'always' }),
+                          date: formatShortInstantDate(person.updated_at, locale, { year: 'always' }),
                         })
                         : person.updated_at
-                          ? formatShortDate(person.updated_at, locale, { year: 'always' })
+                          ? formatShortInstantDate(person.updated_at, locale, { year: 'always' })
                           : null}
                     </TableCell>
                   </TableRow>

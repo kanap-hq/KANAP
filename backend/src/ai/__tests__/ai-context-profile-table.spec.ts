@@ -360,6 +360,14 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Make a report of the business owners of each technology', profile: 'read_query', mode: 'read' },
   { prompt: 'Make a table of the support contacts of Redis', profile: 'read_query', mode: 'read' },
   { prompt: 'Make me a summary of PostgreSQL versions with their IT owner', profile: 'read_query', mode: 'read' },
+  // Lot K2d: the person naming themselves as the owner writes ("Make me the … owner of",
+  // "Mets-moi responsable … de"); the question and the report on the same owner stay reads.
+  { prompt: 'Make me the business owner of APP-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Mets-moi responsable métier de APP-3', profile: 'write_business', mode: 'write' },
+  { prompt: 'Qui est le responsable métier de APP-3 ?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Who is the business owner of APP-3?', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Make me a list of the business owners of APP-3', profile: 'entity_inspection', mode: 'entity' },
+  { prompt: 'Mets-moi la liste des responsables métier de APP-3', profile: 'entity_inspection', mode: 'entity' },
 
   // Lot 7: the contact of a technology names the support or a technology; these name a master
   // data contact, so they are master data writes.
@@ -444,9 +452,6 @@ const FIXTURE_ROWS: Row[] = [
   { prompt: 'Mets en évidence les lignes sans centre de coûts puis mets-les sur le centre IT-01', profile: 'write_financial', mode: 'write' },
   { prompt: 'Change de vue et passe APP-3 en retiré', profile: 'write_business', mode: 'write' },
   { prompt: 'Keep me posted and set APP-3 to retired', profile: 'write_business', mode: 'write' },
-  // Read as an inspection before lot K2e as after it: a defect of its own, outside the lot.
-  { prompt: 'Make me the business owner of APP-3', profile: 'entity_inspection', mode: 'entity' },
-  { prompt: 'Mets-moi responsable métier de APP-3', profile: 'entity_inspection', mode: 'entity' },
   { prompt: 'Présente les lignes du fournisseur Acme dans un tableau par centre de coûts', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
   { prompt: 'Show the applications in a report by lifecycle', profile: 'read_query', mode: 'read', tools: ['aggregate_entities'] },
   { prompt: 'Combien de failles sont traitées ?', profile: 'read_query', mode: 'read' },

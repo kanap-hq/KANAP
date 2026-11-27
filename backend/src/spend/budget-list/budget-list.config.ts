@@ -22,6 +22,8 @@ import {
 import { fxKeyCurrency, fxSetKeySql, fxTableSql } from './budget-fx-table';
 import type { BudgetListRuntime, RuntimeNeeds } from './budget-list.runtime';
 import { BUDGET_NATURES, lineNumberSql, natureAnd, naturesAnd } from '../budget-nature';
+import { columnsToCheckSql, expectedAccountsSql, lineColumnsToCheckSql } from '../budget-line-entry-check';
+import { BUDGET_LINE_CHECKS, type BudgetLineCheck, checksNamedByFilter, TO_CHECK_FIELD } from '../budget-line-checks';
 
 /**
  * The OPEX and CAPEX lists as a list-engine config, built from the scope
@@ -408,6 +410,70 @@ export class BudgetListConfig implements ListConfig {
     };
   }
 
+  /**
+   * The `quantity_price` check: true when the line's account, or its consolidation account, expects
+   * quantity and price and one of its columns is not built so (`budget-line-entry-check.ts`).
+   * Its CTEs start from the accounts that set it; the shown and frozen columns were read once
+   * (`loadBudgetRuntime`) and are bound. With every row readable, the columns to check of the whole
+   * tenant are built once and joined; under data-scoped access they are probed line by line, only
+   * for the lines the person sees on such an account, stopping at the first column to check, as
+   * `has_fte` does (`lineColumnsToCheckSql` says why). Read whatever the caller's right on
+   * accounts: the check names no account.
+   */
+  private quantityPriceCheck(stmt: SqlStatement): { sql: string; joins: string[] } {
+    const settings = this.rt.entryCheck;
+    if (!settings) throw new Error('The entry check settings were not loaded for this statement');
+    stmt.cte('ec_accounts', () => expectedAccountsSql(stmt));
+    if (settings.lineByLine) {
+      this.join(stmt, 'eca', 'LEFT JOIN ec_accounts eca ON eca.account_id = i.account_id');
+      return { sql: `(eca.account_id IS NOT NULL AND EXISTS (${lineColumnsToCheckSql(stmt, 'i', settings)}))`, joins: ['eca'] };
+    }
+    const s = this.scope;
+    const natures = s.nature ? [s.nature] : BUDGET_NATURES;
+    stmt.cte('ec_columns', () => columnsToCheckSql(stmt, 'ec_accounts', settings, natures));
+    // Materialized: built once per statement whatever the statistics say (`SqlStatement.cte`).
+    stmt.cte('ec_lines', () => 'SELECT DISTINCT item_id FROM ec_columns', { materialized: true });
+    this.join(stmt, 'ecl', 'LEFT JOIN ec_lines ecl ON ecl.item_id = i.id');
+    return { sql: '(ecl.item_id IS NOT NULL)', joins: ['ecl'] };
+  }
+
+  /** The `coa_mismatch` check: the line's account is in another chart of accounts than its paying company's. */
+  private coaMismatchCheck(stmt: SqlStatement): { sql: string; joins: string[] } {
+    const acc = this.account(stmt);
+    const pc = this.payingCompany(stmt);
+    return { sql: `(${acc}.coa_id IS NOT NULL AND ${pc}.coa_id IS NOT NULL AND ${acc}.coa_id <> ${pc}.coa_id)`, joins: [acc, pc] };
+  }
+
+  /** Each check of `budget-line-checks.ts` as a predicate on the line: one entry per check. */
+  private readonly checkSql: Record<BudgetLineCheck, (stmt: SqlStatement) => { sql: string; joins: string[] }> = {
+    quantity_price: (stmt) => this.quantityPriceCheck(stmt),
+    coa_mismatch: (stmt) => this.coaMismatchCheck(stmt),
+  };
+
+  /**
+   * `to_check`: the names of the checks the line fails, in the table's order (a `multi` field: its
+   * joined text sorts and groups, each name filters). Only the checks the runtime asks for
+   * (`RuntimeNeeds.checks`): a filter on one check alone evaluates that one, as a plain text value
+   * (the check's name or null), which filters as each check's own field did. Several checks are a
+   * `multi` field; their names are computed once per line in a lateral (`OFFSET 0`) when a check
+   * probes line by line, so a filter that reads them as text and as names does not probe the columns
+   * twice under data-scoped access. Without a probe, the lateral would cost more than it saves.
+   */
+  private toCheck(stmt: SqlStatement): FieldSql {
+    const checks = this.rt.checks ?? BUDGET_LINE_CHECKS;
+    const parts = checks.map((check) => ({ check, ...this.checkSql[check](stmt) }));
+    const joins = parts.flatMap((part) => part.joins);
+    if (parts.length === 1) return { kind: 'text', sql: `(CASE WHEN ${parts[0].sql} THEN ${sqlLiteral(parts[0].check)} END)`, joins };
+    const names = parts.length
+      ? `array_remove(ARRAY[${parts.map((part) => `CASE WHEN ${part.sql} THEN ${sqlLiteral(part.check)} END`).join(', ')}]::text[], NULL)`
+      : 'ARRAY[]::text[]';
+    if (!checks.includes('quantity_price') || !this.rt.entryCheck?.lineByLine) {
+      return { kind: 'multi', sql: `NULLIF(array_to_string(${names}, ', '), '')`, names, joins };
+    }
+    this.join(stmt, 'tck', `LEFT JOIN LATERAL (SELECT ${names} AS names OFFSET 0) tck ON true`, joins);
+    return { kind: 'multi', sql: "NULLIF(array_to_string(tck.names, ', '), '')", names: 'tck.names', joins: ['tck'] };
+  }
+
   /** The allocation label of the version of `year` ('' without one): its own method, else the year's rule. */
   private allocationLabelSql(versionAlias: string, year: number): string {
     const ruleLabel = this.rt.ruleLabels?.get(year);
@@ -677,14 +743,10 @@ export class BudgetListConfig implements ListConfig {
         return this.consolidationKey(stmt);
       case 'account_consolidation_label':
         return this.consolidationLabel(stmt);
+      // The `coa_mismatch` check alone, the field the list had before `to_check`: kept for the API's readers.
       case 'account_warning': {
-        const acc = this.account(stmt);
-        const pc = this.payingCompany(stmt);
-        return {
-          kind: 'text',
-          sql: `(CASE WHEN ${acc}.coa_id IS NOT NULL AND ${pc}.coa_id IS NOT NULL AND ${acc}.coa_id <> ${pc}.coa_id THEN 'coa_mismatch' END)`,
-          joins: [acc, pc],
-        };
+        const check = this.coaMismatchCheck(stmt);
+        return { kind: 'text', sql: `(CASE WHEN ${check.sql} THEN 'coa_mismatch' END)`, joins: check.joins };
       }
       case 'owner_it_name':
         return this.owner(stmt, 'owner_it_id');
@@ -743,6 +805,8 @@ export class BudgetListConfig implements ListConfig {
         return this.allocationLabel(stmt, Y + 1);
       case 'has_fte':
         return this.hasFte(stmt);
+      case TO_CHECK_FIELD:
+        return this.toCheck(stmt);
       case 'spread_mode_for_y': {
         const v = this.version(stmt, Y);
         return { kind: 'text', sql: `(CASE WHEN ${v}.id IS NULL THEN NULL WHEN ${v}.input_grain::text = 'annual' THEN 'flat' ELSE 'manual' END)`, joins: [v] };
@@ -885,12 +949,23 @@ function consolidationLabelSql(alias: string): string {
     WHEN ${number} IS NOT NULL THEN '[' || ${number}::text || ']' END)`;
 }
 
-/** The runtime pre-reads the fields of a request need. */
-export function budgetRuntimeNeeds(currentYear: number, keys: string[], hasQuickSearch: boolean): RuntimeNeeds {
+/**
+ * The runtime pre-reads the fields of a request need. `keys`: every key the statement reads, its
+ * filters' included; `filters`: the request's filter models, when `keys` holds their keys. A
+ * `to_check` read by its filter alone evaluates the checks that filter names (`checksNamedByFilter`);
+ * read otherwise too (a sort, a group, the filter values), every check.
+ */
+export function budgetRuntimeNeeds(currentYear: number, keys: string[], hasQuickSearch: boolean, filters?: Record<string, unknown>): RuntimeNeeds {
   const fxYears = new Set<number>();
   const ruleYears = new Set<number>();
   let axes = hasQuickSearch;
   let costCenters = hasQuickSearch;
+  let checks: readonly BudgetLineCheck[] | undefined;
+  const checkUses = keys.filter((key) => key === TO_CHECK_FIELD).length;
+  if (checkUses > 0) {
+    const filterOnly = checkUses === 1 && filters != null && Object.prototype.hasOwnProperty.call(filters, TO_CHECK_FIELD);
+    checks = (filterOnly ? checksNamedByFilter(filters[TO_CHECK_FIELD]) : null) ?? BUDGET_LINE_CHECKS;
+  }
   if (hasQuickSearch) ruleYears.add(currentYear);
   for (const key of keys) {
     const amount = resolveAmountField(key) ?? resolveLocalAmountField(key);
@@ -909,7 +984,7 @@ export function budgetRuntimeNeeds(currentYear: number, keys: string[], hasQuick
     if (key === 'allocation_label' || key === 'allocation_method_label') ruleYears.add(currentYear);
     if (key === 'next_year_allocation_method_label') ruleYears.add(currentYear + 1);
   }
-  return { fxYears: Array.from(fxYears), ruleYears: Array.from(ruleYears), axes, costCenters };
+  return { fxYears: Array.from(fxYears), ruleYears: Array.from(ruleYears), axes, costCenters, ...(checks ? { checks } : {}) };
 }
 
 /** Project fields are lists of names; the others one value. */

@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { useLocale } from '../../../i18n/useLocale';
-import { formatShortDate } from '../../../lib/dateFormat';
+import { formatShortInstantDate } from '../../../lib/dateFormat';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
 import { useRelativeTime } from './useRelativeTime';
 
@@ -90,7 +90,7 @@ export default function KnowledgeOverviewTile({ config: _config }: KnowledgeOver
                           sx={{ height: 20, fontSize: '0.7rem' }}
                         />
                         <Typography variant="caption" color="text.secondary">
-                          {t('dashboard.tiles.requestedAgo', { time: relativeTime(item.requestedAt, () => formatShortDate(item.requestedAt, locale)) })}
+                          {t('dashboard.tiles.requestedAgo', { time: relativeTime(item.requestedAt, () => formatShortInstantDate(item.requestedAt, locale)) })}
                         </Typography>
                       </Box>
                       {item.requestedByName && (

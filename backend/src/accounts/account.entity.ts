@@ -13,6 +13,14 @@ const BIGINT_AS_NUMBER: ValueTransformer = {
 export const ACCOUNT_NATURES = ['opex', 'capex'] as const;
 export type AccountNature = (typeof ACCOUNT_NATURES)[number];
 
+/**
+ * A "quantity and price expected" setting as stored: true, or null when not set. Every writer
+ * (API, CSV import, Kad) goes through it, so a false never reaches the column.
+ */
+export function expectedSetting(value: boolean | null | undefined): true | null {
+  return value === true ? true : null;
+}
+
 @Entity('accounts')
 export class Account {
   @PrimaryGeneratedColumn('uuid')
@@ -54,6 +62,13 @@ export class Account {
   @Column('text', { nullable: true })
   nature!: AccountNature | null;
 
+  /**
+   * Its budget lines are expected to be entered as quantity and price: true, or null when not set.
+   * Never false (`expectedSetting`): a later "not expected" setting would misread a stored false.
+   */
+  @Column('boolean', { nullable: true })
+  quantity_price_expected!: true | null;
+
   @Column({
     type: 'enum',
     enum: StatusState,
@@ -68,6 +83,7 @@ export class Account {
   @Column('timestamptz', { default: () => 'now()' })
   created_at!: Date;
 
-  @Column('timestamptz', { default: () => 'now()' })
+  /** Kept by the database (migration 1856270000000): never written by TypeORM, see touchUpdatedAt. */
+  @Column({ type: 'timestamptz', default: () => 'now()', update: false })
   updated_at!: Date;
 }

@@ -27,6 +27,7 @@ import { codedForbidden, moduleRightRequired, outsideParticipation, requestConte
 import { AuditService } from '../audit/audit.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { displayName } from '../common/display-name';
+import { touchUpdatedAt } from '../common/updated-at-trigger';
 import { ItemNumberService } from '../common/item-number.service';
 import { DocumentImportService, ImportedDocumentResult } from '../common/document-import.service';
 import { assertMarkdownSize } from '../common/markdown-limits';
@@ -2071,7 +2072,7 @@ export class KnowledgeService {
       const latestVersionNumber = Number(latestVersion.version_number || 0);
       if (Number(document.current_version_number || 0) !== latestVersionNumber) {
         document.current_version_number = latestVersionNumber;
-        await docsRepo.save(document);
+        await docsRepo.update({ id: document.id } as any, { current_version_number: latestVersionNumber } as any);
       }
       return { version: latestVersion, created: false };
     }
@@ -2094,8 +2095,11 @@ export class KnowledgeService {
     });
     const savedVersion = await versionsRepo.save(version);
 
+    // The counter alone, by a targeted write: saving the whole document again would write back the
+    // modification date it was loaded with, over the one the database gave its save (migration
+    // 1856270000000).
     document.current_version_number = nextVersion;
-    await docsRepo.save(document);
+    await docsRepo.update({ id: document.id } as any, { current_version_number: nextVersion } as any);
     return { version: savedVersion, created: true };
   }
 
@@ -2255,6 +2259,15 @@ export class KnowledgeService {
       changed_fields: changedFields ?? null,
     });
     return manager.getRepository(DocumentActivity).save(activity);
+  }
+
+  /** What the contributors, classifications and links of a document hold, without their ids and times. */
+  private async documentChildrenState(documentId: string, manager: EntityManager): Promise<string> {
+    const tables = [...new Set(['document_contributors', 'document_classifications', ...Object.values(RELATION_TABLE_MAP).map((map) => map.table)])];
+    const states = tables.map((table) => `coalesce((SELECT string_agg(r, ';' ORDER BY r) FROM (
+        SELECT (to_jsonb(t) - 'id' - 'tenant_id' - 'created_at' - 'updated_at')::text AS r FROM ${table} t WHERE t.document_id = $1) x), '')`);
+    const [row] = await manager.query(`SELECT concat_ws('|', ${states.join(', ')}) AS state`, [documentId]);
+    return row.state;
   }
 
   private async applyDocumentRelations(
@@ -2757,7 +2770,6 @@ export class KnowledgeService {
     existing.library_id = target.libraryId;
     existing.folder_id = target.folderId;
     existing.updated_by = userId ?? existing.updated_by;
-    existing.updated_at = new Date();
 
     const saved = await repo.save(existing);
 
@@ -4550,7 +4562,6 @@ export class KnowledgeService {
 
       if (changed) {
         saved.updated_by = userId;
-        saved.updated_at = new Date();
         saved = await repo.save(saved);
       }
     }
@@ -4653,7 +4664,6 @@ export class KnowledgeService {
 
     existing.revision = Number(existing.revision) + 1;
     existing.updated_by = userId;
-    existing.updated_at = new Date();
 
     const saved = await repo.save(existing);
 
@@ -4977,7 +4987,11 @@ export class KnowledgeService {
 
     existing.revision = Number(existing.revision) + 1;
     existing.updated_by = userId;
-    existing.updated_at = new Date();
+    // The contributors, classifications and links are rows of their own, which the trigger of the
+    // document does not see: their change dates the document, after they are written (migration 1856270000000).
+    const childrenBefore = body?.contributors !== undefined || body?.classifications !== undefined || body?.relations !== undefined
+      ? await this.documentChildrenState(existing.id, manager)
+      : null;
 
     const saved = await repo.save(existing);
 
@@ -5001,6 +5015,9 @@ export class KnowledgeService {
     }
 
     await this.applyDocumentRelations(saved.id, body?.relations, manager, userId);
+    if (childrenBefore !== null && childrenBefore !== await this.documentChildrenState(saved.id, manager)) {
+      await touchUpdatedAt(manager, 'documents', saved.id);
+    }
 
     await this.syncReferences(saved.id, saved.content_markdown, manager);
 
@@ -5744,7 +5761,6 @@ export class KnowledgeService {
     doc.content_plain = version.content_plain;
     doc.revision = Number(doc.revision) + 1;
     doc.updated_by = userId;
-    doc.updated_at = new Date();
 
     const saved = await manager.getRepository(Document).save(doc);
 

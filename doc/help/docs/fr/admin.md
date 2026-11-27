@@ -345,6 +345,8 @@ Les ressources sont organisées en groupes pour faciliter la gestion :
 
 La ressource Budget couvre les lignes OPEX et CAPEX de la même façon. Un rôle qui avait auparavant des niveaux OPEX et CAPEX distincts garde le plus élevé des deux sur Budget.
 
+Les noms du fournisseur, des sociétés et des départements portés par une ligne budgétaire que vous pouvez lire restent lisibles, même lorsque votre rôle ne peut pas ouvrir ces listes.
+
 **Gestion du portefeuille**
 | Ressource | Ce qu'elle contrôle |
 |-----------|---------------------|
