@@ -230,7 +230,7 @@ Mit derselben Stufe ändert Kad, wenn Schwachstellen verfolgt werden, den Status
 
 Wenn Kad eine Budgetzeile anlegt, fragt es, ob die Zeile OPEX oder CAPEX ist, falls Sie es nicht gesagt haben. Den Typ einer bestehenden Zeile ändert es nicht: Verwenden Sie **Typ ändern...** im Arbeitsbereich der Zeile (siehe [Typ ändern](budget-lines.md#typ-andern)). Kad setzt den Vertrag nur bei OPEX-Zeilen. Eine CAPEX-Zeile erreicht ihre Verträge über die Verknüpfungen ihres Reiters **Verknüpfungen**.
 
-Kad schreibt nur Gesamtbeträge. Wenn das Konto einer Zeile eine Erfassung nach Menge und Preis erwartet, warnen seine Vorschauen zum Budget vor der Genehmigung unter **Zu prüfen**, dass die Zeile danach zu prüfen ist: bei den Beträgen einer Zeile, einer neuen Zeile mit Beträgen, einem Kontowechsel und einer Änderung in großer Zahl. Ergänzen Sie Menge und Preis im Tab **Budget** der Zeile. Siehe [Wenn das Konto eine Erfassung nach Menge und Preis erwartet](budget-lines.md#quantity-and-price-expected).
+Kad schreibt nur Gesamtbeträge. Wenn das Konto einer Zeile eine Erfassung nach Menge und Preis erwartet, warnen seine Vorschauen zum Budget vor der Genehmigung unter **Zu prüfen**, dass die Zeile danach zu prüfen ist: bei den Beträgen einer Zeile, einer neuen Zeile mit Beträgen, einem Wechsel des Kontos oder des Endes der Gültigkeit und einer Änderung in großer Zahl. Ergänzen Sie Menge und Preis im Tab **Budget** der Zeile. Siehe [Wenn das Konto eine Erfassung nach Menge und Preis erwartet](budget-lines.md#quantity-and-price-expected).
 
 ### Datensätze in großer Zahl ändern { #changing-records-in-bulk }
 

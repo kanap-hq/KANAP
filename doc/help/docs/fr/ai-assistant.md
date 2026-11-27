@@ -230,7 +230,7 @@ Avec le même niveau, quand les vulnérabilités sont suivies, Kad change l'éta
 
 Quand Kad crée une ligne budgétaire, il demande si la ligne est OPEX ou CAPEX si vous ne l'avez pas dit. Il ne change pas le type d'une ligne existante : utilisez **Changer le type...** dans l'espace de travail de la ligne (voir [Changer le type](budget-lines.md#changer-le-type)). Kad ne définit le contrat que des lignes OPEX. Une ligne CAPEX rejoint ses contrats par les liens de son onglet **Relations**.
 
-Kad n'écrit que des totaux. Quand le compte d'une ligne attend une saisie en quantité et prix, ses aperçus sur le budget préviennent avant l'approbation que la ligne sera à vérifier, sous **À vérifier** : les montants d'une ligne, une nouvelle ligne avec des montants, un changement de compte et une modification en masse. Complétez la quantité et le prix dans l'onglet **Budget** de la ligne. Voir [Quand le compte attend une saisie en quantité et prix](budget-lines.md#quantity-and-price-expected).
+Kad n'écrit que des totaux. Quand le compte d'une ligne attend une saisie en quantité et prix, ses aperçus sur le budget préviennent avant l'approbation que la ligne sera à vérifier, sous **À vérifier** : les montants d'une ligne, une nouvelle ligne avec des montants, un changement de compte ou de fin de validité, et une modification en masse. Complétez la quantité et le prix dans l'onglet **Budget** de la ligne. Voir [Quand le compte attend une saisie en quantité et prix](budget-lines.md#quantity-and-price-expected).
 
 ### Modifier des fiches en masse { #changing-records-in-bulk }
 

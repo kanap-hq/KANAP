@@ -230,7 +230,7 @@ Con el mismo nivel, cuando se siguen las vulnerabilidades, Kad cambia el estado 
 
 Cuando Kad crea una línea presupuestaria, pregunta si la línea es OPEX o CAPEX si usted no lo ha dicho. No cambia el tipo de una línea existente: use **Cambiar el tipo...** en el espacio de trabajo de la línea (consulte [Cambiar el tipo](budget-lines.md#cambiar-el-tipo)). Kad solo define el contrato de las líneas OPEX. Una línea CAPEX llega a sus contratos mediante los vínculos de su pestaña **Relaciones**.
 
-Kad solo escribe totales. Cuando la cuenta de una línea espera una introducción por cantidad y precio, sus vistas previas sobre el presupuesto avisan antes de la aprobación de que la línea quedará por verificar, en **Por verificar**: los importes de una línea, una nueva línea con importes, un cambio de cuenta y una modificación en bloque. Complete la cantidad y el precio en la pestaña **Presupuesto** de la línea. Vea [Cuando la cuenta espera una introducción por cantidad y precio](budget-lines.md#quantity-and-price-expected).
+Kad solo escribe totales. Cuando la cuenta de una línea espera una introducción por cantidad y precio, sus vistas previas sobre el presupuesto avisan antes de la aprobación de que la línea quedará por verificar, en **Por verificar**: los importes de una línea, una nueva línea con importes, un cambio de cuenta o de fin de validez, y una modificación en bloque. Complete la cantidad y el precio en la pestaña **Presupuesto** de la línea. Vea [Cuando la cuenta espera una introducción por cantidad y precio](budget-lines.md#quantity-and-price-expected).
 
 ### Modificar registros en bloque { #changing-records-in-bulk }
 

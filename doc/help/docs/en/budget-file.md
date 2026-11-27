@@ -172,7 +172,7 @@ The check also points out values that look unusual. These are warnings: the load
 - An amount ten times above or below comparable lines: the line the row updates, or the other lines of the same supplier.
 - A start date after the years of the amounts, or an end date before them.
 - A currency other than the currency of the paying company.
-- An amount on an account that expects quantity and price entry, which leaves the line to check (see [When the account expects quantity and price](budget-lines.md#quantity-and-price-expected)). The same goes for a line the file moves onto such an account from one that does not expect it, for the columns it already holds. The warning names the account and the columns to complete on the line's **Budget** tab, for example "Account 6100 expects quantity and price entry: complete Budget 2026 on the line's Budget tab."
+- An amount on an account that expects quantity and price entry, which leaves the line to check (see [When the account expects quantity and price](budget-lines.md#quantity-and-price-expected)). The same goes for a line the file moves onto such an account from one that does not expect it, for the columns it already holds. It also warns when the file moves the end of validity of a line on such an account to a later year, or clears it, for the columns of the years this brings back. The warning names the account and the columns to complete on the line's **Budget** tab, for example "Account 6100 expects quantity and price entry: complete Budget 2026 on the line's Budget tab."
 
 ### Columns built from quantity and price
 

@@ -147,7 +147,7 @@ Jeder Teil hat in jeder Zeile seinen eigenen Status:
 
 ### Zusammenfassung
 
-Über der Tabelle fasst ein Banner die Vorschau zusammen, zum Beispiel „136 Zeilen in der Vorschau. 6 Zeilen, die 2027 nicht gültig sind, werden ausgelassen. Beträge: 120 zu kopieren, 10 übersprungen. Zuordnungen: 124 zu kopieren, 6 übersprungen.“ Die Zeilenzahl entspricht der Tabelle. Die im Zieljahr nicht gültigen Zeilen stehen darin, und die Zahlen für Beträge und Zuordnungen lassen sie aus. Nach der Kopie zeigt es „Kopie abgeschlossen.“ mit denselben Zahlen.
+Über der Tabelle fasst ein Banner die Vorschau zusammen, zum Beispiel „136 Zeilen in der Vorschau. 6 Zeilen, die 2027 nicht gültig sind, werden ausgelassen. Beträge: 120 zu kopieren, 10 übersprungen. Zuordnungen: 124 zu kopieren, 6 übersprungen.“ Die Zeilenzahl entspricht der Tabelle. Die im Zieljahr nicht gültigen Zeilen stehen darin, und die Zahlen für Beträge und Zuordnungen lassen sie aus. Nach der Kopie zeigt es „Kopie abgeschlossen.“ mit denselben Zahlen. Wenn kopierte Zeilen in der Spalte **Zu prüfen** der Liste der Budgetzeilen erscheinen, nennt es auch ihre Anzahl, zum Beispiel „Zu prüfen: 3“.
 
 Warnungen erscheinen, wenn sie zutreffen:
 

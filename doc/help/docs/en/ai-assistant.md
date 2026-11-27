@@ -230,7 +230,7 @@ With the same level, when vulnerabilities are followed, Kad changes the state of
 
 When Kad creates a budget line, it asks whether the line is OPEX or CAPEX if you did not say. It does not change the type of an existing line: use **Change type...** in the line's workspace (see [Changing the type](budget-lines.md#changing-the-type)). Kad sets the contract of OPEX lines only. A CAPEX line reaches its contracts through the links of its **Relations** tab.
 
-Kad writes totals only. When the account of a line expects quantity and price entry, its budget previews warn before approval that the line will be to check, under **To check**: the amounts of a line, a new line with amounts, a change of account and a change in bulk. Complete the quantity and price on the line's **Budget** tab. See [When the account expects quantity and price](budget-lines.md#quantity-and-price-expected).
+Kad writes totals only. When the account of a line expects quantity and price entry, its budget previews warn before approval that the line will be to check, under **To check**: the amounts of a line, a new line with amounts, a change of account or of the end of validity, and a change in bulk. Complete the quantity and price on the line's **Budget** tab. See [When the account expects quantity and price](budget-lines.md#quantity-and-price-expected).
 
 ### Changing records in bulk { #changing-records-in-bulk }
 
