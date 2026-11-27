@@ -50,6 +50,7 @@ import { DataSource, QueryRunner } from 'typeorm';
 //  19. Kad's task groups by phase, project stream and project category follow the same rule.
 //  20. A task converted into a request the person does not read reads as converted, without the
 //      request, and a second conversion is refused without its reference.
+//  21. Kad's detail of a task whose project the person does not read says the project is withheld.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -1105,6 +1106,23 @@ async function testConvertedRequestOutsideParticipation(h: Harness, runner: Quer
   hasNot(other, hidden, 'other workspace, task page');
 }
 
+// 21. Kad's detail of a task whose project the person does not read: the project, its phase and
+//     classification are null, and the answer says they are withheld, so it never reads "no phase".
+async function testTaskDetailSaysProjectWithheld(h: Harness, runner: QueryRunner, s: Seed, people: FollowUpPeople) {
+  const withheld = (result: any) => (result.fields_withheld ?? []).map((note: { field: string }) => note.field);
+  for (const surface of ['chat', 'mcp'] as const) {
+    const e = await h.tools.execute(ctx(runner, s, 'e', surface), 'get_entity_detail', { entity_type: 'tasks', entity_id: 'T-3' });
+    assert.ok(withheld(e).includes('project'), `E (${surface}): the project of T-3 is said withheld`);
+    hasNot(e, [DEPENDENCY, PHASE, s.dependency], `E (${surface}), get_entity_detail(T-3)`);
+    const inside = await h.tools.execute(ctx(runner, s, 'e', surface), 'get_entity_detail', { entity_type: 'tasks', entity_id: 'T-1' });
+    assert.equal(withheld(inside).includes('project'), false, `E (${surface}): the project of T-1 is read`);
+  }
+  for (const [label, userId] of [['team member', people.team], ['module reader', people.reader]] as const) {
+    const read = await h.tools.execute(personContext(runner, s.tenantId, userId), 'get_entity_detail', { entity_type: 'tasks', entity_id: 'T-3' });
+    assert.equal(withheld(read).includes('project'), false, `${label}: the project of T-3 is read`);
+    has(read, [PHASE], `${label}, get_entity_detail(T-3)`);
+  }
+}
 
 async function run() {
   const harness = await createHarness();
@@ -1136,6 +1154,7 @@ async function run() {
       await testTaskSortsOnHiddenValues(harness, runner, s, people);
       await testTaskAggregatesOnHiddenProjects(harness, runner, s, people);
       await testConvertedRequestOutsideParticipation(harness, runner, s, people);
+      await testTaskDetailSaysProjectWithheld(harness, runner, s, people);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

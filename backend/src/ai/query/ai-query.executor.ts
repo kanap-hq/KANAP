@@ -653,9 +653,16 @@ export function resolveAiQuerySort(
  * the person does not read (the field is null), `fields_partial` for a Business Contributor, whose
  * list holds the applications of their participation only.
  */
-function taskLinkedReadNotes(reads: LinkedReads, scopes: TaskLinkedScopes): { fields_withheld?: AiWithheldField[]; fields_partial?: AiWithheldField[] } {
+function taskLinkedReadNotes(
+  reads: LinkedReads,
+  scopes: TaskLinkedScopes,
+  row?: { related_object_type?: string | null; related_object_hidden?: true },
+): { fields_withheld?: AiWithheldField[]; fields_partial?: AiWithheldField[] } {
   const withheld: AiWithheldField[] = [];
   const partial: AiWithheldField[] = [];
+  if (row?.related_object_type === 'project' && row.related_object_hidden === true) {
+    withheld.push({ field: 'project', reason: 'This person does not read the project of this task (no read of Projects, or a project outside a Business Contributor\'s participation): its name, phase and classification are withheld (null), which does not mean the task has none.' });
+  }
   if (!reads.applications) {
     withheld.push({ field: 'applications', reason: 'This person does not read applications (Applications, reader level): the linked applications are withheld (null), which does not mean there are none.' });
   } else if (scopes.applications) {
@@ -3883,7 +3890,7 @@ export class AiQueryExecutor {
       // The stored `spend_item` / `capex_item` never reaches the model: both natures are one
       // `budget_line` family on the AI surface.
       if (task.related_object_type) task.related_object_type = taskRelatedFamily(task.related_object_type);
-      return { ...this.toDetailResult(this.mapTask(row), task), ...taskLinkedReadNotes(linkedReads, linkedScopes) };
+      return { ...this.toDetailResult(this.mapTask(row), task), ...taskLinkedReadNotes(linkedReads, linkedScopes, row) };
     }
 
     if (entityType === 'projects') {
