@@ -144,7 +144,7 @@ Sie können die Zustimmung auch im Azure-Portal erteilen, mit **Grant admin cons
 Nach der Autorisierung kontaktiert Kadratis Microsoft Graph jede Nacht um 03:00 UTC (die Uhr des API-Containers) und führt für jeden mit Entra verknüpften Benutzer Folgendes aus:
 
 - Aktualisiert Vorname, Nachname, Position, geschäftliche Telefonnummer und Mobiltelefonnummer
-- Ordnet die Abteilung und das Unternehmen aus dem Verzeichnis **nach Namen** bestehenden Kadratis-Datensätzen zu. Es wird nichts automatisch angelegt, und ein Name ohne Treffer lässt die Zuordnung unverändert.
+- Ordnet die Abteilung und das Unternehmen aus dem Verzeichnis **nach Namen** bestehenden Kadratis-Datensätzen zu. Es wird nichts automatisch angelegt, und ein Name ohne Treffer lässt die Zuordnung unverändert. Die Abteilung wird im Unternehmen der Person gesucht; ohne Unternehmen ändert ein Abteilungsname, den mehrere Unternehmen teilen, nichts. Ein neues Unternehmen leert eine Abteilung des bisherigen.
 - Setzt die Sprache der Oberfläche nur, wenn die Person keine gewählt hat
 - Deaktiviert das Kadratis-Konto, wenn die Person aus dem Verzeichnis entfernt wurde oder ihr Verzeichniskonto deaktiviert ist (`accountEnabled` ist false)
 

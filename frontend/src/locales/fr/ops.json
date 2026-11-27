@@ -1101,6 +1101,7 @@
         "redo": "Rétablir",
         "refusedMissing": "{{dimension}} : {{value}} → {{target}} : valeur absente",
         "refusedDisabled": "{{dimension}} : {{value}} → {{target}} : valeur désactivée",
+        "refusedShared": "{{dimension}} : {{value}} → {{target}} : nom porté par plusieurs fiches",
         "closeTo": "Proche de : {{names}}",
         "lines": "Lignes {{lines}}",
         "lines_one": "Ligne {{lines}}"

@@ -126,6 +126,8 @@ Estos campos dan forma a cómo se enruta, filtra y revisa la solicitud en otras 
 - cambiar **Categoría** o **Línea** cambia el contexto analítico para la viabilidad y la evaluación
 - cambiar **Empresa** o **Solicitante** cambia los informes y la visibilidad de propiedad en todo el portafolio
 
+Una línea pertenece a su categoría y un departamento a su empresa, en esta página, en las importaciones y con Kad: una línea indicada sola aporta su categoría, y una línea de otra categoría se rechaza, al igual que un departamento de otra empresa. Cambiar solo la categoría vacía una línea de otra categoría, y cambiar solo la empresa vacía un departamento de otra empresa.
+
 #### Equipo
 
 La asignación de equipo nombra responsabilidad en lugar de simplemente mantener una lista de contactos:

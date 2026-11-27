@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { CsvCallerAccess, CsvFieldDefinition, CsvFieldType } from './csv-field.types';
 import { SHIPPED_TASK_TYPE_LABELS } from '../../it-ops-settings/catalog-shipped-labels.data';
 import { accentFreeKey, AMBIGUOUS_NAMES_SHOWN, type MatchHow } from '../name-matching';
+import { parentReadLock } from '../record-membership';
 
 /**
  * Supported FK entity types for resolution
@@ -27,8 +28,12 @@ interface FkEntityConfig {
   lookupColumn: string;
   idColumn: string;
   additionalColumns?: string[];
-  /** Optional scope column (e.g., project_id for phases) */
-  scopeColumn?: string;
+  /**
+   * The record a name belongs to, when several records may share it (lot I7a of 26.12.1, P12): a
+   * stream's category, a department's company. `column` is the column of the family's table, and also
+   * the property of the record that holds the pair (`category_id`); `entity` the parent's family.
+   */
+  parent?: { column: string; entity: FkEntityType };
   /**
    * A family looked up by its name (not by an e-mail or a code): a file's name finds a record once
    * accents are set aside too (lot I3 of 26.11.9), for a person who reads one of these modules
@@ -42,7 +47,7 @@ interface FkEntityConfig {
 /** What a name of the file finds: nothing, several records (named), or one record and how. */
 export type FkNameLookup =
   | { kind: 'none' }
-  | { kind: 'many'; names: string[] }
+  | { kind: 'many'; names: string[]; scoped?: { entries: FkCacheEntry[]; how: MatchHow } }
   | { kind: 'one'; entry: FkCacheEntry; how: MatchHow; target: string; ref: string | null };
 
 
@@ -56,7 +61,7 @@ const PORTFOLIO_LIST_READERS = [
 /**
  * FK resolution cache entry
  */
-interface FkCacheEntry {
+export interface FkCacheEntry {
   id: string;
   [key: string]: any;
 }
@@ -99,6 +104,7 @@ export class CsvResolverService {
       idColumn: 'id',
       additionalColumns: ['category_id'],
       byName: { readers: PORTFOLIO_LIST_READERS },
+      parent: { column: 'category_id', entity: 'portfolio_categories' },
     },
     portfolio_sources: {
       tableName: 'portfolio_sources',
@@ -128,6 +134,7 @@ export class CsvResolverService {
       additionalColumns: ['company_id', 'item_number'],
       byName: { readers: ['departments'] },
       refPrefix: 'DEPT',
+      parent: { column: 'company_id', entity: 'companies' },
     },
     locations: {
       tableName: 'locations',
@@ -139,7 +146,6 @@ export class CsvResolverService {
       tableName: 'portfolio_project_phases',
       lookupColumn: 'name',
       idColumn: 'id',
-      scopeColumn: 'project_id',
       byName: { readers: ['portfolio_projects'] },
     },
   };
@@ -151,6 +157,13 @@ export class CsvResolverService {
    * records of the same name are two (T-I3a, lot I3 of 26.11.9, fixes D).
    */
   private readonly accentIndexes = new WeakMap<Map<string, FkCacheEntry>, Map<string, FkCacheEntry[]>>();
+
+  /**
+   * For a family whose names several records may share (`parent`), every record read: by its name
+   * case aside (the cache keeps the first one), and by id (lot I7a of 26.12.1).
+   */
+  private readonly sameNames = new WeakMap<Map<string, FkCacheEntry>, Map<string, FkCacheEntry[]>>();
+  private readonly byId = new WeakMap<Map<string, FkCacheEntry>, Map<string, FkCacheEntry>>();
 
   /**
    * Preload all necessary FK tables for the given field definitions.
@@ -165,6 +178,8 @@ export class CsvResolverService {
     tenantId: string,
     fieldDefs: CsvFieldDefinition[],
     manager: EntityManager,
+    /** An import that writes (`lock`): the families with a parent are read `FOR KEY SHARE` (`parentReadLock`). */
+    opts?: { lock?: boolean },
   ): Promise<Map<string, Map<string, FkCacheEntry>>> {
     const cache = new Map<string, Map<string, FkCacheEntry>>();
 
@@ -173,30 +188,11 @@ export class CsvResolverService {
 
     // One after the other: the request's single connection runs its queries in turn anyway.
     for (const entityType of fkTypes) {
-      const entityCache = await this.loadEntityCache(tenantId, entityType, manager);
+      const entityCache = await this.loadEntityCache(tenantId, entityType, manager, opts?.lock === true);
       cache.set(entityType, entityCache);
     }
 
     return cache;
-  }
-
-  /**
-   * Preload a specific entity type with optional scope.
-   * Useful for scoped lookups like phases within a project.
-   *
-   * @param tenantId - Current tenant ID
-   * @param entityType - FK entity type
-   * @param manager - TypeORM EntityManager
-   * @param scope - Optional scope filter (e.g., { project_id: '...' })
-   * @returns Cache map: lookupValue -> entity
-   */
-  async preloadScopedResolver(
-    tenantId: string,
-    entityType: FkEntityType,
-    manager: EntityManager,
-    scope?: Record<string, string>,
-  ): Promise<Map<string, FkCacheEntry>> {
-    return this.loadEntityCache(tenantId, entityType, manager, scope);
   }
 
   /**
@@ -250,6 +246,9 @@ export class CsvResolverService {
    * answering, even of the same name (two departments "Finance" of two companies), are an ambiguity,
    * named by the records' references, else their names (the first five). A record found by a name other
    * than its own beyond case (a shipped task type's name in another language) is a `translation`.
+   * In a family whose names several records may share (`parent`, lot I7a of 26.12.1), several records
+   * of the name, case aside, are an ambiguity too; there, an ambiguity carries its records (`scoped`),
+   * for the import to look the name up in the row's parent.
    */
   resolveName(
     entityType: string,
@@ -262,6 +261,8 @@ export class CsvResolverService {
     if (!entityCache) return { kind: 'none' };
     const config = this.entityConfigs[entityType as FkEntityType];
     const normalizedValue = this.normalizeValue(lookupValue);
+    const sameName = config?.parent ? this.sameNames.get(entityCache)?.get(normalizedValue) ?? [] : [];
+    if (sameName.length > 1) return this.ambiguous(config, sameName, 'case');
     const found = entityCache.get(normalizedValue);
     if (found) {
       const own = this.normalizeValue(String(found._originalLookupValue ?? ''));
@@ -273,12 +274,7 @@ export class CsvResolverService {
     if (!options.beyondCase || !config?.byName) return { kind: 'none' };
     const candidates = this.accentIndexes.get(entityCache)?.get(accentFreeKey(lookupValue)) ?? [];
     if (candidates.length === 0) return { kind: 'none' };
-    if (candidates.length > 1) {
-      return {
-        kind: 'many',
-        names: candidates.slice(0, AMBIGUOUS_NAMES_SHOWN).map((entry) => this.refOf(config, entry) ?? String(entry._originalLookupValue ?? '')),
-      };
-    }
+    if (candidates.length > 1) return this.ambiguous(config, candidates, 'accents');
     const [entry] = candidates;
     const how: MatchHow = accentFreeKey(String(entry._originalLookupValue ?? '')) === accentFreeKey(lookupValue) ? 'accents' : 'translation';
     return this.found(config, entry, how);
@@ -298,6 +294,36 @@ export class CsvResolverService {
 
   private found(config: FkEntityConfig | undefined, entry: FkCacheEntry, how: MatchHow): FkNameLookup {
     return { kind: 'one', entry, how, target: String(entry._originalLookupValue ?? ''), ref: this.refOf(config, entry) };
+  }
+
+  /** Several records for one name: named by their references, else their names (the first five). */
+  private ambiguous(config: FkEntityConfig | undefined, entries: FkCacheEntry[], how: MatchHow): FkNameLookup {
+    return {
+      kind: 'many',
+      names: entries.slice(0, AMBIGUOUS_NAMES_SHOWN).map((entry) => this.refOf(config, entry) ?? String(entry._originalLookupValue ?? '')),
+      ...(config?.parent ? { scoped: { entries, how } } : {}),
+    };
+  }
+
+  /** The record a name of the file found, as a match is noted (its name and business reference). */
+  describeEntry(entityType: string, entry: FkCacheEntry): { target: string; ref: string | null } {
+    return { target: String(entry._originalLookupValue ?? ''), ref: this.refOf(this.entityConfigs[entityType as FkEntityType], entry) };
+  }
+
+  /**
+   * The parent of a family whose names several records may share (lot I7a of 26.12.1): the column of
+   * the family's table, which is also the record's property holding it, and the parent's family. None
+   * for the other families.
+   */
+  parentOf(entityType: string): { column: string; entity: FkEntityType } | null {
+    return this.entityConfigs[entityType as FkEntityType]?.parent ?? null;
+  }
+
+  /** A record of a family whose names several records may share, read in the cache, by its id; null when none. */
+  entryById(entityType: string, id: string | null | undefined, cache: Map<string, Map<string, FkCacheEntry>>): FkCacheEntry | null {
+    const entityCache = id ? cache.get(entityType) : undefined;
+    if (!entityCache) return null;
+    return this.byId.get(entityCache)?.get(String(id).toLowerCase()) ?? null;
   }
 
   private refOf(config: FkEntityConfig | undefined, entry: FkCacheEntry): string | null {
@@ -399,7 +425,7 @@ export class CsvResolverService {
     tenantId: string,
     entityType: FkEntityType,
     manager: EntityManager,
-    scope?: Record<string, string>,
+    lock = false,
   ): Promise<Map<string, FkCacheEntry>> {
     const cache = new Map<string, FkCacheEntry>();
     const config = this.entityConfigs[entityType];
@@ -415,20 +441,10 @@ export class CsvResolverService {
     }
 
     // Build query
-    let query = `SELECT ${columns.join(', ')} FROM ${config.tableName} WHERE tenant_id = $1`;
-    const params: any[] = [tenantId];
-
-    // Add scope conditions if provided
-    if (scope && config.scopeColumn) {
-      const scopeValue = scope[config.scopeColumn];
-      if (scopeValue) {
-        query += ` AND ${config.scopeColumn} = $${params.length + 1}`;
-        params.push(scopeValue);
-      }
-    }
-
-    // Execute query
-    const rows = await manager.query(query, params);
+    // A department or a stream an import writes on a record cannot move to another parent before the
+    // import commits (lot I7a of 26.12.1): the rows of a family with a parent are read `FOR KEY SHARE`.
+    const query = `SELECT ${columns.join(', ')} FROM ${config.tableName} WHERE tenant_id = $1${config.parent ? parentReadLock(manager, lock) : ''}`;
+    const rows = await manager.query(query, [tenantId]);
     // Every record read, by its own name, for the accent-free index (the cache keeps one per name).
     const read: Array<[string, FkCacheEntry]> = [];
 
@@ -459,6 +475,12 @@ export class CsvResolverService {
 
     if (entityType === 'portfolio_task_types') this.addShippedTaskTypeNames(cache);
     if (config.byName) this.accentIndexes.set(cache, this.accentIndex([...read, ...cache]));
+    if (config.parent) {
+      const sameNames = new Map<string, FkCacheEntry[]>();
+      for (const [name, entry] of read) sameNames.set(name, [...(sameNames.get(name) ?? []), entry]);
+      this.sameNames.set(cache, sameNames);
+      this.byId.set(cache, new Map(read.map(([, entry]) => [String(entry.id).toLowerCase(), entry])));
+    }
     return cache;
   }
 

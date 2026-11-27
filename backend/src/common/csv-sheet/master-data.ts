@@ -58,6 +58,8 @@ export interface ImportReportError {
   column?: string;
   code?: string;
   params?: Record<string, string | number>;
+  /** What still uses the record, counted per kind (`{{usages}}` in the sentence of `code`), as a refused delete gives them. */
+  usages?: Array<{ type: string; total: number }>;
 }
 
 /**
