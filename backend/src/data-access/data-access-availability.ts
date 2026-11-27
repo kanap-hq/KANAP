@@ -44,6 +44,14 @@ const AVAILABILITY_TTL_MS = 60_000;
 const SYNC_LOCK_TIMEOUT = '5s';
 
 /**
+ * The advisory lock (`hashtext` key) the lead's sync holds for its transaction, and that an ANALYZE
+ * of the application only tries (`analyzeTables`): the two would otherwise wait for each other on a
+ * table's lock and its `pg_class` row (deadlock). Taken before the sync touches any table, so the
+ * sync waits for the ANALYZE (5 s at most) or the ANALYZE skips its turn.
+ */
+export const DATA_ACCESS_SYNC_LOCK = 'data-access:policy-sync';
+
+/**
  * The SECURITY DEFINER functions the application calls as the limited role outside any policy
  * (disclosure, spec §6.6): EXECUTE is revoked from PUBLIC and granted by the sync, so the check
  * tests them by name. A function not created yet is not a missing grant.
@@ -212,7 +220,8 @@ function errorMessage(error: unknown): string {
 }
 
 /**
- * `data_access_sync_policies()` in a transaction of its own, under the 5 s lock timeout, then
+ * `data_access_sync_policies()` in a transaction of its own, under the 5 s lock timeout and
+ * `DATA_ACCESS_SYNC_LOCK`, then
  * EXECUTE on the functions the application calls directly (DIRECT_CALL_FUNCTIONS, those that
  * exist): the sync of migration 1854500000000 grants only the functions it knows, and a later one
  * (`data_access_can_read`, lot 4) would stay missing on a database where the role came after it.
@@ -220,6 +229,7 @@ function errorMessage(error: unknown): string {
 async function runSync(session: DataAccessSession): Promise<void> {
   await session.inTransaction(async () => {
     await session.query(`SET LOCAL lock_timeout = '${SYNC_LOCK_TIMEOUT}'`);
+    await session.query(`SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, [DATA_ACCESS_SYNC_LOCK]);
     await session.query(`SELECT public.data_access_sync_policies()`);
     await session.query(`
       DO $$
