@@ -165,7 +165,11 @@ vi.mock('./components/TaskDetailHeader', () => ({
     tabs,
     activeTab,
     onTabChange,
+    hasConvertedRequest,
+    convertDisabledTitle,
   }: {
+    hasConvertedRequest?: boolean;
+    convertDisabledTitle?: string;
     tabs?: Array<{ key: string; label: string }>;
     activeTab?: string;
     onTabChange?: (next: string) => void;
@@ -180,7 +184,11 @@ vi.mock('./components/TaskDetailHeader', () => ({
   }) => {
     const parent = crumbs?.find((crumb) => crumb.key === 'parent');
     return (
-      <div data-testid="task-detail-header">
+      <div
+        data-testid="task-detail-header"
+        data-converted={hasConvertedRequest ? 'true' : 'false'}
+        data-convert-title={convertDisabledTitle ?? ''}
+      >
         <button type="button" onClick={() => onClose?.()}>close-task</button>
         <button type="button" onClick={() => onOriginClick?.()}>back-task</button>
         {canDelete ? <button type="button" onClick={() => onDelete?.()}>delete-task</button> : null}
@@ -476,6 +484,14 @@ describe('TaskWorkspacePage relation changes', () => {
         dispatchEvent: vi.fn(),
       })),
     });
+  });
+
+  it('offers no conversion of a task converted into a request the person does not read, and names none', async () => {
+    taskQueryMock.task = { ...makeTask(), converted_request_id: null, converted_request_item_number: null, converted_request_hidden: true };
+    renderEditPage();
+    const header = await screen.findByTestId('task-detail-header');
+    expect(header).toHaveAttribute('data-converted', 'true');
+    expect(header).toHaveAttribute('data-convert-title', expect.stringMatching(/^portfolio:workspace\.task\.actions\.alreadyConverted(__\d+)?$/));
   });
 
   it('uses the global move endpoint when moving a task into another project', async () => {

@@ -82,6 +82,8 @@ export interface TaskListItem {
   assets?: Array<{ id: string; name: string | null; asset_reference?: string | null; hostname?: string | null }> | null;
   converted_request_id?: string | null;
   converted_request_item_number?: number | null;
+  /** The task was converted into a request the person does not read: neither its id nor its number. */
+  converted_request_hidden?: true;
 }
 
 function parsePagination(query: any) {
@@ -967,6 +969,8 @@ export function withReadableTaskLinks<T extends Record<string, any>>(row: T, rea
   const requestHidden = !reads.requests
     || (!!visible.requests && !!task.converted_request_id && !visible.requests.has(String(task.converted_request_id)));
   if (requestHidden) {
+    // The task stays converted (the screen offers no second conversion), without naming the request.
+    if (task.converted_request_id) task.converted_request_hidden = true;
     if ('converted_request_id' in task) task.converted_request_id = null;
     if ('converted_request_item_number' in task) task.converted_request_item_number = null;
   }

@@ -48,6 +48,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 //  18. The task list and Kad sort a value the person does not see (a Business Contributor's
 //      project outside their participation, its phase and classification) as an empty value.
 //  19. Kad's task groups by phase, project stream and project category follow the same rule.
+//  20. A task converted into a request the person does not read reads as converted, without the
+//      request, and a second conversion is refused without its reference.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -1070,6 +1072,39 @@ async function testTaskAggregatesOnHiddenProjects(h: Harness, runner: QueryRunne
   assert.equal(other.total, 1, 'other workspace: its own task only');
 }
 
+// 20. A task converted into a request the person does not read: the task says it is converted
+//     (the screen offers no second conversion) without naming the request, and a conversion
+//     attempt is refused without its reference.
+async function testConvertedRequestOutsideParticipation(h: Harness, runner: QueryRunner, s: Seed, people: FollowUpPeople) {
+  const [{ id: converted }] = await runner.query(`SELECT id FROM portfolio_requests WHERE tenant_id = $1 AND origin_task_id = $2`, [s.tenantId, s.outsideTask]);
+  const hidden = [CONVERTED, 'REQ-2', converted];
+  const eReq = rawRequest(runner, s, 'e');
+  const page = await h.tasksController.getOne('T-3', eReq);
+  assert.equal(page.converted_request_hidden, true, 'E: the task reads as converted');
+  hasNot(page, hidden, 'E, task page');
+  const listed = (await h.tasksController.list({ limit: 50 }, eReq)).items.find((item: any) => item.id === s.outsideTask);
+  assert.equal(listed.converted_request_hidden, true, 'E: the list row reads as converted');
+  hasNot(listed, hidden, 'E, tasks list row');
+  await rejects(runner, () => h.requestsController.convertFromTask('T-3', {}, eReq), /^Task is already linked to a request$/, 'E: refused without the reference');
+
+  for (const [label, req] of [['team member', personRequest(runner, s.tenantId, people.team, TEAM_PERMISSIONS)], ['module reader', personRequest(runner, s.tenantId, people.reader, READER_PERMISSIONS)]] as const) {
+    const read = await h.tasksController.getOne('T-3', req);
+    assert.deepEqual([read.converted_request_id, read.converted_request_item_number, read.converted_request_hidden], [converted, 2, undefined], `${label}: the converted request, as before`);
+    await rejects(runner, () => h.requestsController.convertFromTask('T-3', {}, req), /already linked to request REQ-2/, `${label}: refused, naming the request`);
+  }
+  // Kad and MCP read the task without the request either.
+  for (const surface of ['chat', 'mcp'] as const) {
+    hasNot(await h.tools.execute(ctx(runner, s, 'e', surface), 'get_entity_detail', { entity_type: 'tasks', entity_id: 'T-3' }), hidden, `E (${surface}), get_entity_detail(tasks)`);
+    hasNot(await h.tools.execute(ctx(runner, s, 'e', surface), 'get_entity_context', { entity_type: 'tasks', entity_id: 'T-3' }), hidden, `E (${surface}), get_entity_context(tasks)`);
+  }
+  // Another workspace: T-3 there is its own task, not converted, and this workspace's request is unknown.
+  const other: any = await inTenant(runner, people.otherTenant, s.tenantId, () =>
+    h.tasksController.getOne('T-3', personRequest(runner, people.otherTenant, people.otherUser, 'admin')));
+  assert.equal(other.title, 'Other workspace task', 'other workspace: its own T-3');
+  assert.deepEqual([other.converted_request_id, other.converted_request_hidden], [null, undefined], 'other workspace: not converted');
+  hasNot(other, hidden, 'other workspace, task page');
+}
+
 
 async function run() {
   const harness = await createHarness();
@@ -1100,6 +1135,7 @@ async function run() {
       await seedProjectValues(runner, s);
       await testTaskSortsOnHiddenValues(harness, runner, s, people);
       await testTaskAggregatesOnHiddenProjects(harness, runner, s, people);
+      await testConvertedRequestOutsideParticipation(harness, runner, s, people);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

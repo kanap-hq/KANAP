@@ -1250,7 +1250,7 @@ export class PortfolioRequestsService {
     overrides: ConvertFromTaskOverrides,
     tenantId: string,
     userId: string | null,
-    opts?: { manager?: EntityManager; viewer?: IncidentViewer | null },
+    opts?: { manager?: EntityManager; viewer?: IncidentViewer | null; requestScope?: ParticipationAccessScope },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const requestRepo = mg.getRepository(PortfolioRequest);
@@ -1278,6 +1278,10 @@ export class PortfolioRequestsService {
 
     const existingRequest = await requestRepo.findOne({ where: { origin_task_id: taskId } });
     if (existingRequest) {
+      // The request is named only to a person who reads it (a Business Contributor: inside their
+      // participation), as the task page names it.
+      const readable = (await idsInScope(mg, 'requests', [existingRequest.id], opts?.requestScope)).has(existingRequest.id);
+      if (!readable) throw new BadRequestException('Task is already linked to a request');
       const requestRef = existingRequest.item_number ? `REQ-${existingRequest.item_number}` : existingRequest.id;
       throw new BadRequestException(`Task is already linked to request ${requestRef}`);
     }

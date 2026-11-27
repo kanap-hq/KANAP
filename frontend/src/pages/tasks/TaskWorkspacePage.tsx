@@ -116,6 +116,8 @@ interface TaskData {
   company_name: string | null;
   converted_request_id?: string | null;
   converted_request_item_number?: number | null;
+  /** Converted into a request the person does not read: neither its id nor its number. */
+  converted_request_hidden?: true;
   created_at: string;
   updated_at: string;
 }
@@ -1571,7 +1573,7 @@ export default function TaskWorkspacePage() {
   // The new page shows the draft; a task page, the task.
   const effectiveTask = (isCreate ? createDraft : displayedTask || task) as TaskData;
   const isProjectTask = effectiveTask.related_object_type === 'project';
-  const hasConvertedRequest = Boolean(task?.converted_request_id);
+  const hasConvertedRequest = Boolean(task?.converted_request_id || task?.converted_request_hidden);
   const canConvertToRequest = canManageCurrentTask && canCreateRequest;
   const headerRelatedType = effectiveTask.related_object_type;
   const headerRelatedId = effectiveTask.related_object_id;
