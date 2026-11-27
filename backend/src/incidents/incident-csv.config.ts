@@ -197,6 +197,23 @@ function importViewer(context: CsvImportContext): IncidentViewer {
 const UNKNOWN_REF_HINT = 'Leave the ref column empty to create new incidents.';
 
 /**
+ * The refusal of a reference the import does not find for the person (lot I6c of 26.12.1): no
+ * incident of the workspace has it, or the person does not read that incident (a confidential one
+ * outside their participation). One answer for both, as the reference lookup of the other families
+ * (`CSV_RECORD_REFERENCE_NOT_FOUND`): nothing tells a hidden incident from a missing one.
+ */
+function unknownReferenceError(row: { rowNumber: number }, itemNumber: number): CsvImportRow['errors'][number] {
+  const reference = `INC-${itemNumber}`;
+  return {
+    row: row.rowNumber,
+    column: 'ref',
+    message: `"${reference}" is no reference in this workspace. ${UNKNOWN_REF_HINT}`,
+    code: 'CSV_RECORD_REFERENCE_NOT_FOUND',
+    params: { value: reference },
+  };
+}
+
+/**
  * Accept an incident reference (INC-12), a bare item number, or nothing.
  * Kept in sync with the ref stripping done on the raw rows in beforeValidate,
  * which is what identity resolution matches on.
@@ -637,8 +654,7 @@ export const incidentCsvConfig: CsvEntityConfig = {
    * the existing incidents are loaded. Mutating `raw` here is what the import
    * service then matches and parses.
    */
-  beforeValidate: async (rows, context) => {
-    const itemNumbers: number[] = [];
+  beforeValidate: async (rows) => {
     for (const row of rows) {
       const value = row.raw.ref;
       if (typeof value !== 'string') continue;
@@ -656,40 +672,25 @@ export const incidentCsvConfig: CsvEntityConfig = {
           continue;
         }
         row.raw.ref = match[1];
-        itemNumbers.push(number);
       }
     }
-    if (itemNumbers.length === 0 || !context.manager?.query) return;
+  },
 
-    const existing: Array<{
-      item_number: number;
-      confidential: boolean;
-      reporter_user_id: string | null;
-      owner_user_id: string | null;
-    }> = await context.manager.query(
-      `SELECT item_number, confidential, reporter_user_id, owner_user_id
-       FROM incidents WHERE tenant_id = $1 AND item_number = ANY($2::int[])`,
-      [context.tenantId, itemNumbers],
-    );
+  /**
+   * A reference that names no incident the person reads (lot I6c of 26.12.1): none of the workspace,
+   * or one they do not read (confidential, outside their participation). Both rows are read as a row
+   * that finds no incident, refused on the reference with one same error, at the check and at the
+   * load: the stored incident a hidden reference finds is never the row's, so nothing of it (its
+   * values, its title, its category, its state) reaches the report.
+   */
+  settleRows: async (rows, context) => {
     const viewer = importViewer(context);
-    const hidden = new Set(
-      existing
-        .filter((row) => !incidentVisibleToViewer(row, viewer))
-        .map((row) => row.item_number),
-    );
-    if (hidden.size === 0) return;
-    for (const row of rows) {
-      const n = Number(row.raw.ref);
-      if (!hidden.has(n)) continue;
-      const reference = `INC-${n}`;
-      row.errors.push({
-        row: row.rowNumber,
-        column: 'ref',
-        message: `Unknown incident reference(s): ${reference}. ${UNKNOWN_REF_HINT}`,
-        code: 'CSV_REFERENCE_NOT_FOUND',
-        params: { value: reference },
-      });
-    }
+    return rows.map(({ raw, rowNumber, found }) => {
+      const itemNumber = typeof raw.ref === 'string' && /^\d+$/.test(raw.ref) ? parseItemNumber(raw.ref) : null;
+      if (itemNumber == null) return { entity: found ?? null };
+      if (found && incidentVisibleToViewer(found, viewer)) return { entity: found };
+      return { entity: null, errors: [unknownReferenceError({ rowNumber }, itemNumber)] };
+    });
   },
 
   /**

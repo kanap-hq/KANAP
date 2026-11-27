@@ -95,20 +95,43 @@ function updateStatusRow(itemNumber: number, from: string, to: string): CsvImpor
   };
 }
 
+/**
+ * A confidential incident the person may not read is refused as a reference this workspace does
+ * not hold (lot I6c of 26.12.1): the check reads the ref, `settleRows` answers with the one message
+ * of an unknown reference, so the answer tells nothing of the incident.
+ */
 async function testHiddenRefIsUnknownOnValidate(): Promise<void> {
   const row = importRow('INC-12');
-  await incidentCsvConfig.beforeValidate!([row], mockContext([hiddenRow]));
+  const context = mockContext([hiddenRow]);
+  await incidentCsvConfig.beforeValidate!([row], context);
   assert.equal(row.raw.ref, '12');
-  assert.equal(row.errors.length, 1);
-  assert.equal(row.errors[0].code, 'CSV_REFERENCE_NOT_FOUND');
-  assert.deepEqual(row.errors[0].params, { value: 'INC-12' });
-  assert.match(row.errors[0].message, /Unknown incident reference\(s\): INC-12/);
+  assert.equal(row.errors.length, 0);
+  const [hidden, unknown] = await incidentCsvConfig.settleRows!([
+    { raw: { ref: '12' }, rowNumber: 2, found: hiddenRow },
+    { raw: { ref: '99' }, rowNumber: 3, found: null },
+  ], context);
+  const answer = (settled: typeof hidden) => {
+    assert.ok(!settled.leaveOut);
+    assert.equal(settled.entity, null);
+    assert.equal(settled.errors?.length, 1);
+    const [error] = settled.errors!;
+    return { column: error.column, code: error.code, message: error.message.replace(/INC-\d+/, 'INC-n'), params: Object.keys(error.params ?? {}) };
+  };
+  assert.deepEqual(answer(hidden), answer(unknown));
+  assert.equal(hidden.leaveOut ? undefined : hidden.errors![0].code, 'CSV_RECORD_REFERENCE_NOT_FOUND');
+  assert.deepEqual(hidden.leaveOut ? undefined : hidden.errors![0].params, { value: 'INC-12' });
+  assert.match(hidden.leaveOut ? '' : hidden.errors![0].message, /"INC-12" is no reference in this workspace/);
 }
 
 async function testVisibleRestrictedRefIsAllowed(): Promise<void> {
   const row = importRow('INC-13');
-  await incidentCsvConfig.beforeValidate!([row], mockContext([visibleRestrictedRow]));
+  const context = mockContext([visibleRestrictedRow]);
+  await incidentCsvConfig.beforeValidate!([row], context);
   assert.equal(row.errors.length, 0);
+  const [settled] = await incidentCsvConfig.settleRows!([{ raw: { ref: '13' }, rowNumber: 2, found: visibleRestrictedRow }], context);
+  assert.ok(!settled.leaveOut);
+  assert.equal(settled.entity, visibleRestrictedRow);
+  assert.equal(settled.errors, undefined);
 }
 
 async function testEmptyConfidentialCellIsUnchangedOnUpdate(): Promise<void> {

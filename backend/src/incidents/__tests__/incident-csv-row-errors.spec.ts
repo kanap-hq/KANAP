@@ -125,9 +125,9 @@ async function testDryRunCodesTheSixRowErrors(): Promise<void> {
     {
       row: 4,
       column: 'ref',
-      code: 'CSV_REFERENCE_NOT_FOUND',
+      code: 'CSV_RECORD_REFERENCE_NOT_FOUND',
       params: { value: 'INC-12' },
-      message: 'Unknown incident reference(s): INC-12. Leave the ref column empty to create new incidents.',
+      message: '"INC-12" is no reference in this workspace. Leave the ref column empty to create new incidents.',
     },
     {
       row: 5,
@@ -177,6 +177,7 @@ function testCodesExistInEveryLanguage(): void {
   assertPlaceholders('CSV_DATE_INVALID', ['{{value}}']);
   assertPlaceholders('CSV_ENUM_INVALID', ['{{value}}', '{{allowed}}']);
   assertPlaceholders('CSV_REFERENCE_NOT_FOUND', ['{{value}}']);
+  assertPlaceholders('CSV_RECORD_REFERENCE_NOT_FOUND', ['{{value}}']);
 }
 
 async function run(): Promise<void> {

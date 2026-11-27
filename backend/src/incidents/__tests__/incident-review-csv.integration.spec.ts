@@ -1099,7 +1099,7 @@ async function testInvisibleIncidentRefused() {
       importOpts(runner, f, f.users.other, false),
     );
     assert.equal(result.ok, false);
-    assert.match(result.errors[0].message, /Unknown incident reference/);
+    assert.match(result.errors[0].message, /is no reference in this workspace/);
 
     const after = await readReview(runner, f, incident.id);
     assert.equal(after.content_markdown, before.content_markdown);
