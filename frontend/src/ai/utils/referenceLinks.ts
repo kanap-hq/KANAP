@@ -39,6 +39,17 @@ function referenceUrl(entityType: string, reference: string): string | null {
 }
 
 /**
+ * The page of a record picked in the composer: by its reference when its family's page opens by it
+ * (`/portfolio/tasks/T-5`), by its id otherwise (a location, a business process); null for a family
+ * without a page.
+ */
+export function entityPageUrl(entityType: string, id: string, ref: string | null | undefined): string | null {
+  const match = ref ? /^([A-Z]+)-[1-9]\d*$/.exec(ref) : null;
+  const family = match ? LINKED_REFERENCE_FAMILIES[match[1]] : undefined;
+  return buildEntityUrl(entityType, ref && family?.entityType === entityType ? ref : id);
+}
+
+/**
  * The page of a business reference (`APP-12`, `BL-7`) the person may open, as the conversation links
  * it; null for another text or a page the person may not read.
  */
