@@ -19,6 +19,10 @@ import { parseMcpApiKeyPolicy } from '../control-plane/mcp/ai-mcp-access-policy'
 import { AiMcpAuditService } from '../control-plane/mcp/ai-mcp-audit.service';
 import { AiMcpExposureService } from '../control-plane/mcp/ai-mcp-exposure.service';
 import { AiTenantExecutionService } from '../execution/ai-tenant-execution.service';
+import { McpOAuthService } from '../oauth/mcp-oauth.service';
+import { issueRefreshToken, newGrantPrefix, signAccessToken } from '../oauth/mcp-oauth-tokens';
+import { mcpResourceUrl } from '../oauth/mcp-oauth.util';
+import { buildMcpApiKeyPolicyRecord } from '../control-plane/mcp/ai-mcp-access-policy';
 
 // The MCP journal against PostgreSQL (brief plaid-mcp-annuaire, P3-9): a refused or failed call,
 // and a request with a revoked key, each leave one line in ai_runs / ai_tool_executions under FORCE
@@ -26,7 +30,8 @@ import { AiTenantExecutionService } from '../execution/ai-tenant-execution.servi
 // never a key; the admin list pages (offset, period, person, key, result) with names and labels; a
 // tenant reads none of another tenant's lines, even without the tenant predicate. The controller,
 // the guard, the key service, the journal and the tenant runner are the real ones; the tools and
-// the dispatcher are stubbed.
+// the dispatcher are stubbed. A known OAuth connection that is revoked or expired leaves the same
+// line and the same audit row as a known key; an unknown connection leaves none.
 
 const TAG = randomBytes(4).toString('hex');
 const executor = new AiTenantExecutionService(dataSource);
@@ -79,6 +84,55 @@ const apiKeys = new AiApiKeysService(
   executor,
 );
 
+// The resource server side of the OAuth service: only authenticateAccessToken runs here.
+const oauth = new McpOAuthService(apiKeys, users, {} as any, {} as any, executor, {} as any);
+
+/** An OAuth connection (grant row) of the seed's person, as the token endpoint creates it. */
+async function createGrant(seed: Seed, expiresAt: Date): Promise<string> {
+  const prefix = newGrantPrefix();
+  return executor.run(seed.tenantId, async (manager) => {
+    const repo = manager.getRepository(AiApiKey);
+    const record = await repo.save(repo.create({
+      tenant_id: seed.tenantId,
+      user_id: seed.userId,
+      key_hash: issueRefreshToken(seed.tenantId, prefix).hash,
+      key_prefix: prefix,
+      label: `Journal connection ${TAG}`,
+      expires_at: expiresAt,
+      ...buildMcpApiKeyPolicyRecord({ maxEffect: 'read' }),
+      created_by_user_id: seed.userId,
+      credential_kind: 'oauth',
+      oauth_client_id: 'https://client.example.invalid/metadata.json',
+      oauth_client_name: `Journal client ${TAG}`,
+      oauth_redirect_uri: 'http://localhost:53682/callback',
+      refresh_rotated_at: new Date(),
+      oauth_remember: false,
+      last_used_at: new Date(),
+    }));
+    return record.id;
+  });
+}
+
+function accessToken(url: string, claims: { sub: string; tenantId: string; grant: string }): string {
+  const origin = new URL(url).origin;
+  return signAccessToken({
+    sub: claims.sub,
+    tenant_id: claims.tenantId,
+    iss: origin,
+    aud: mcpResourceUrl(origin),
+    grant: claims.grant,
+    scope: 'mcp:read',
+  });
+}
+
+async function journalLines(seed: Seed): Promise<number> {
+  const rows = await executor.run(seed.tenantId, (manager) => manager.query(
+    `SELECT count(*)::int AS n FROM ai_tool_executions WHERE tenant_id = $1 AND surface = 'mcp'`,
+    [seed.tenantId],
+  ));
+  return rows[0].n;
+}
+
 async function createKey(seed: Seed): Promise<void> {
   const created = await executor.run(seed.tenantId, (manager) => apiKeys.createKey(
     { tenantId: seed.tenantId, userId: seed.userId, label: `Journal key ${TAG}`, createdByUserId: seed.userId },
@@ -123,7 +177,7 @@ async function withServer(seeds: Seed[], fn: (url: string) => Promise<void>): Pr
     { assertAllowed: () => undefined } as any,
     executor,
   );
-  const guard = new McpApiKeyAuthGuard(apiKeys, executor, {} as any, audit);
+  const guard = new McpApiKeyAuthGuard(apiKeys, executor, oauth, audit);
   const byTenant = new Map(seeds.map((seed) => [seed.tenantId, seed]));
   const app = express();
   app.use((req: any, _res, next) => {
@@ -154,13 +208,19 @@ async function withServer(seeds: Seed[], fn: (url: string) => Promise<void>): Pr
   }
 }
 
-async function call(url: string, seed: Seed, name: string, args: Record<string, unknown>): Promise<{ status: number; body: any }> {
+async function call(
+  url: string,
+  seed: Seed,
+  name: string,
+  args: Record<string, unknown>,
+  bearer: string = seed.key,
+): Promise<{ status: number; body: any }> {
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       accept: 'application/json, text/event-stream',
-      authorization: `Bearer ${seed.key}`,
+      authorization: `Bearer ${bearer}`,
       'x-test-tenant': seed.tenantId,
     },
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }),
@@ -318,6 +378,70 @@ async function testTenantsReadOnlyTheirOwnLines(a: Seed, b: Seed) {
   assert.equal(own[0].tools, 4);
 }
 
+async function testRefusedOAuthConnectionsAreJournaled(c: Seed, b: Seed) {
+  const live = await createGrant(c, new Date(Date.now() + 86_400_000));
+  const expired = await createGrant(c, new Date(Date.now() - 60_000));
+  const linesOfB = await journalLines(b);
+  const auditOfB = (await failedAuthentications(b)).length;
+  let liveToken = '';
+  await withServer([b, c], async (url) => {
+    liveToken = accessToken(url, { sub: c.userId, tenantId: c.tenantId, grant: live });
+    const ok = await call(url, c, 'search_all', { query: 'SAP' }, liveToken);
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.equal(await journalLines(c), 0, 'a completed call is the dispatcher\'s line, stubbed here');
+
+    // An unknown connection (a valid token naming no grant of this workspace) leaves nothing.
+    const unknown = await call(url, c, 'search_all', { query: 'unknown' }, accessToken(url, { sub: c.userId, tenantId: c.tenantId, grant: randomUUID() }));
+    assert.equal(unknown.status, 401);
+    assert.equal(await journalLines(c), 0);
+    assert.equal((await failedAuthentications(c)).length, 0);
+
+    await executor.run(c.tenantId, (manager) => apiKeys.revokeKey(live, { manager, userId: c.userId, revocationReason: 'user_self_service' }));
+    const revoked = await call(url, c, 'search_all', { query: 'after revocation' }, liveToken);
+    assert.equal(revoked.status, 401);
+    assert.equal(revoked.body.message, 'MCP connection has been revoked.');
+    // Again inside the gap: no second line, no second row.
+    assert.equal((await call(url, c, 'search_all', { query: 'again' }, liveToken)).status, 401);
+
+    const lapsed = await call(url, c, 'search_all', { query: 'after expiry' }, accessToken(url, { sub: c.userId, tenantId: c.tenantId, grant: expired }));
+    assert.equal(lapsed.status, 401);
+
+    // Tenant B's address: a token of C's connection, then one forged for B naming C's grant.
+    assert.equal((await call(url, b, 'search_all', { query: 'other' }, liveToken)).status, 401);
+    const forged = accessToken(url, { sub: c.userId, tenantId: b.tenantId, grant: live });
+    assert.equal((await call(url, b, 'search_all', { query: 'forged' }, forged)).status, 401);
+  });
+
+  const page = await asAdmin(c, (ctx) => audit.list(ctx, { limit: 50 }));
+  assert.deepEqual(
+    page.items.map((item) => [item.capability_name, item.result, item.reason, item.ai_api_key_id, item.key_kind, item.error_message]).sort(),
+    [
+      ['search_all', 'refused', 'key_expired', expired, 'oauth', 'MCP connection has expired.'],
+      ['search_all', 'refused', 'key_revoked', live, 'oauth', 'MCP connection has been revoked.'],
+    ].sort(),
+  );
+  const revokedLine = page.items.find((item) => item.reason === 'key_revoked')!;
+  assert.equal(revokedLine.user_id, c.userId);
+  assert.deepEqual(revokedLine.input_summary, { arguments: { query: 'after revocation' } });
+  assert.ok(revokedLine.duration_ms != null && revokedLine.duration_ms >= 0);
+
+  const rows = await failedAuthentications(c);
+  assert.deepEqual(
+    rows.map((row) => [row.record_id, row.user_id, row.after_json.reason]).sort(),
+    [[expired, c.userId, 'expired'], [live, c.userId, 'revoked']].sort(),
+  );
+  const dump = await executor.run(c.tenantId, (manager) => manager.query(
+    `SELECT (SELECT json_agg(t)::text FROM ai_tool_executions t WHERE t.tenant_id = $1) AS tools,
+            (SELECT json_agg(a)::text FROM audit_log a WHERE a.tenant_id = $1) AS audit`,
+    [c.tenantId],
+  ));
+  assert.equal(`${dump[0].tools}${dump[0].audit}`.includes(liveToken), false);
+
+  // Nothing at tenant B's.
+  assert.equal(await journalLines(b), linesOfB);
+  assert.equal((await failedAuthentications(b)).length, auditOfB);
+}
+
 async function cleanup(seeds: Seed[]) {
   for (const seed of seeds) {
     try {
@@ -339,12 +463,14 @@ async function run() {
   try {
     const a = await seedTenant('a');
     const b = await seedTenant('b');
-    seeds.push(a, b);
+    const c = await seedTenant('c');
+    seeds.push(a, b, c);
     await createKey(a);
     await createKey(b);
     await testRefusalsAndRevokedKeyAreJournaled(a);
     await testListPagesAndFilters(a);
     await testTenantsReadOnlyTheirOwnLines(a, b);
+    await testRefusedOAuthConnectionsAreJournaled(c, b);
   } finally {
     await cleanup(seeds);
     await dataSource.destroy();

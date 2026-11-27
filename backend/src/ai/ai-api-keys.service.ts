@@ -64,7 +64,8 @@ export type AiApiKeyAuthentication = {
 };
 
 /**
- * A presented key KANAP recognises (its hash matches) and refuses. The MCP guard writes the
+ * A presented key KANAP recognises (its hash matches), or an OAuth access token whose connection
+ * it recognises (McpOAuthService.authenticateAccessToken), and refuses. The MCP guard writes the
  * refusal to the MCP journal and to the general audit log, each in its own transaction, with
  * the key's id and never its value.
  */

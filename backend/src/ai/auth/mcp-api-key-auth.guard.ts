@@ -131,7 +131,7 @@ export class McpApiKeyAuthGuard implements CanActivate {
   }
 
   /**
-   * A known key refused (revoked, expired, owner no longer allowed) leaves a line in the MCP
+   * A known key or OAuth connection refused (revoked, expired, owner no longer allowed) leaves a line in the MCP
    * journal: the tool named by a tools/call, or the JSON-RPC method. The key's value never does.
    * The request transaction rolled back, so the line has a transaction of its own. The duration is
    * the time the key check took, as for the other refusals. The gap is applied by the caller.
