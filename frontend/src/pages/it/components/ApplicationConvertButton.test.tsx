@@ -79,7 +79,8 @@ describe('ApplicationConvertButton', () => {
     fireEvent.click(await screen.findByRole('option', { name: 'Hypervisor' }));
     expect(confirm).toBeEnabled();
     fireEvent.click(confirm);
-    await waitFor(() => expect(onConverted).toHaveBeenCalledWith('tec-9'));
+    // The new technology opens by its reference.
+    await waitFor(() => expect(onConverted).toHaveBeenCalledWith('/it/technologies/TEC-9'));
     expect(post).toHaveBeenCalledWith('/applications/app-1/convert-to-technology', { family: 'hypervisor' });
     const predicate = (invalidate.mock.calls[0][0] as any).predicate;
     expect(predicate({ queryKey: ['application-workspace', 'app-1'] })).toBe(true);

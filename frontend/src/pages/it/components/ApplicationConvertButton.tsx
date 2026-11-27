@@ -6,6 +6,7 @@ import api from '../../../api';
 import { KanapDialog, PropertyRow } from '../../../components/design';
 import { useLocalizedItOpsSettings } from '../../../hooks/useLocalizedItOpsSettings';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { buildItemPath } from '../../../utils/item-ref';
 
 /** A count is `null` when the caller cannot read its module. */
 type Counts = Record<string, number | null>;
@@ -23,7 +24,8 @@ export type ConversionPreview = {
 type Props = {
   applicationId: string;
   applicationName: string;
-  onConverted: (technologyId: string) => void;
+  /** Called with the address of the new technology's page, by its reference (`TEC-3`). */
+  onConverted: (technologyPath: string) => void;
 };
 
 const MOVE_KEYS = ['owners', 'support_contacts', 'contracts', 'budget_lines', 'projects', 'links', 'attachments', 'incidents', 'servers'];
@@ -72,12 +74,13 @@ export default function ApplicationConvertButton({ applicationId, applicationNam
     setSaving(true);
     setError(null);
     try {
-      const res = await api.post<{ technology: { id: string } }>(`/applications/${applicationId}/convert-to-technology`, { family });
+      const res = await api.post<{ technology: { id: string; reference: string | null } }>(`/applications/${applicationId}/convert-to-technology`, { family });
       await queryClient.invalidateQueries({
         predicate: (query) => ['applications', 'application-workspace', 'app-filter-values', 'technologies'].some((key) => String(query.queryKey[0]).startsWith(key)),
       });
       setOpen(false);
-      onConverted(res.data.technology.id);
+      const { technology } = res.data;
+      onConverted(buildItemPath('technology', technology.reference || technology.id));
     } catch (err) {
       setError(getApiErrorMessage(err, t, t('workspace.application.convert.failed')));
       void previewQuery.refetch();
