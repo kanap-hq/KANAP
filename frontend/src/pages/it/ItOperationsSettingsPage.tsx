@@ -970,6 +970,21 @@ function listRows(state: SettingsState, id: ListId): any[] {
   return state.enums[id as EnumListId] || [];
 }
 
+/** What a person types in a row (selects and boxes keep their defaults). A new row with none of it is blank. */
+const TYPED_FIELDS = ['label', 'cidr', 'typicalPorts', 'description', 'admin_group', 'dns_suffix', 'forest', 'vlan_number', 'account_count', 'machine_count'];
+
+function isBlankRow(id: ListId, row: any): boolean {
+  const fields = id === 'connectionTypes' ? [...TYPED_FIELDS, 'category'] : TYPED_FIELDS;
+  return !row.code && fields.every((key) => row[key] === undefined || row[key] === null || String(row[key]).trim() === '');
+}
+
+function setListAction(id: ListId, items: any[]): Action {
+  if (id === 'connectionTypes') return { type: 'setConnectionTypes', items };
+  if (id === 'subnets') return { type: 'setSubnets', items };
+  if (id === 'domains') return { type: 'setDomains', items };
+  return { type: 'setEnum', id, items };
+}
+
 /** The list still holds exactly the rows the server refused: saving them again would be refused again. */
 export function autosaveBlocked(state: SettingsState, id: ListId): boolean {
   const refused = state.rejected[id];
@@ -1101,6 +1116,12 @@ function ItSettingsLists() {
   React.useEffect(() => {
     saveOnLeaveRef.current = readOnly ? null : () => {
       leftRef.current = true;
+      // A row added and left blank is dropped, so that it does not keep the rest of its list from being saved.
+      (Object.keys(latestStateRef.current.dirty) as ListId[]).forEach((id) => {
+        const rows = listRows(latestStateRef.current, id);
+        const kept = rows.filter((row) => !isBlankRow(id, row));
+        if (kept.length !== rows.length) dispatch(setListAction(id, kept));
+      });
       saveLists(savableLists(latestStateRef.current).filter((id) => !inFlightRef.current.has(id)));
     };
   });

@@ -166,4 +166,35 @@ describe('Leaving the IT landscape settings page right after typing', () => {
     await wait(1600);
     expect(patch).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['connectionTypes', 'common:enumEditor.name', 'HTTPS', 'label'],
+    ['subnets', 'pages.settings.placeholders.cidr', '10.0.0.0/24', 'cidr'],
+    ['accessMethods', 'enumEditor.name', 'Kiosk', 'label'],
+  ])('drops a blank row of %s on leaving and saves the rest', async (listId, field, value, key) => {
+    const view = renderPage();
+    const section = await addRow(listId);
+    const find = () => (listId === 'subnets'
+      ? within(section).findAllByPlaceholderText(field)
+      : within(section).findAllByRole('textbox', { name: field }));
+    fireEvent.change((await find())[0], { target: { value } });
+    await wait(50);
+    fireEvent.click(within(section).getByRole('button', { name: /settingsSection.addItem/ }));
+    expect(await find()).toHaveLength(2);
+    view.unmount();
+    await wait(50);
+    const sent = sentLists(listId);
+    expect(sent).toHaveLength(1);
+    expect(sent[0][listId].map((row: Record<string, unknown>) => row[key])).toEqual([value]);
+  }, 20000);
+
+  it('still keeps a partly filled row from being saved on leaving', async () => {
+    const view = renderPage();
+    const section = await addRow('connectionTypes');
+    fireEvent.change(await within(section).findByPlaceholderText('pages.settings.placeholders.typicalPorts'), { target: { value: '443' } });
+    await wait(50);
+    view.unmount();
+    await wait(1600);
+    expect(patch).not.toHaveBeenCalled();
+  }, 20000);
 });
