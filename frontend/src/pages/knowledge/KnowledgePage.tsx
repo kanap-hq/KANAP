@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -68,13 +69,10 @@ import {
 } from '../../utils/knowledgeNames';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 
-const STATUS_LABELS: Record<string, string> = {
-  draft: 'Draft',
-  in_review: 'In review',
-  published: 'Published',
-  archived: 'Archived',
-  obsolete: 'Obsolete',
-};
+/** A document status in the reader's language, the same in the cell and in the boxes of its filter. */
+function knowledgeStatusLabel(t: TFunction, status: string): string {
+  return t(`knowledge:statuses.${status}`, { defaultValue: status });
+}
 
 const TEMPLATE_LIBRARY_SLUG = 'templates';
 const MANAGED_DOCS_LIBRARY_SLUG = 'managed-docs';
@@ -176,7 +174,7 @@ function StatusCellRenderer(props: any) {
       <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
         <StatusDot color={getDotColor(colorKey, mode)} />
         <Typography variant="body2" sx={{ color: getDotColor(colorKey, mode), fontWeight: 500, fontSize: '0.8125rem' }}>
-          {t(`knowledge:statuses.${status}`, { defaultValue: STATUS_LABELS[status] || status })}
+          {knowledgeStatusLabel(t, status)}
         </Typography>
       </Box>
       {props.data?.is_validated_current_revision && (
@@ -536,11 +534,11 @@ export default function KnowledgePage() {
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
         getValues: getDocFilterValues('status', {
-          labelMap: STATUS_LABELS,
+          formatLabel: (value) => knowledgeStatusLabel(t, value),
           order: ['draft', 'in_review', 'published', 'archived', 'obsolete'],
         }),
         // A value the server omits (no document has it) is still selected by a restored or linked filter.
-        labelFormatter: (value: string | null) => (value == null ? t('shared.blank') : (STATUS_LABELS[value] ?? value)),
+        labelFormatter: (value: string | null) => (value == null ? t('shared.blank') : knowledgeStatusLabel(t, value)),
         searchable: false,
       },
       cellRenderer: StatusCellRenderer,
