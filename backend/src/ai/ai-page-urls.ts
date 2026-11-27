@@ -56,6 +56,8 @@ export const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
   accounts: (id) => `/master-data/accounts/${id}`,
   // A dimension value; the dimensions themselves are at /master-data/analytics/dimensions/:id.
   analytics_categories: (id) => `/master-data/analytics/${id}`,
+  // A contributor's page opens by its MEM-n reference (and by its id).
+  contributors: (id) => `/portfolio/contributors/${id}`,
 };
 
 /** The sentence the read tools give about `page_url` (chat and MCP share the descriptions). */

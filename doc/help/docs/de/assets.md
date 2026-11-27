@@ -166,6 +166,8 @@ Eine Adresse, die kein Asset bezeichnet, öffnet eine Seite **Asset nicht gefund
 
 Die Reiter sind **Übersicht**, **Betrieb**, **Netzwerk**, **Hardware** (nur physische Asset-Typen), **Abhängigkeiten**, **Beziehungen** und **Verlauf** (die Änderungen am Asset, siehe [Verlauf der Datensätze](record-history.md)). Ein neues Asset zeigt nur seinen Titel, seinen Typ und seinen Standort. Alle Reiter öffnen sich, sobald das Asset erstellt ist.
 
+**Nicht mehr angebotene Werte**: Typ, Lebenszyklus, Domäne, Administrationszone, Typ und Subnetz einer IP-Adresse sowie die Rolle eines Servers in einer Bereitstellung bieten die Werte an, die in den [IT-Landschaft-Einstellungen](it-ops-settings.md) noch angeboten werden. Ein als **Nicht mehr anbieten** markierter Wert bleibt bei den Assets, die ihn bereits haben, und sie behalten ihn beim Speichern. Andere Assets können ihn nicht übernehmen, weder auf dieser Seite noch per CSV-Import oder über Kad.
+
 ### Kopfzeile
 
 Die Kopfzeile zeigt:

@@ -59,7 +59,9 @@ export const spendItemsRecord = {
   // single line changed (`singleChangedId`). The line side always does
   // (`item-applications.ts`, `item-technologies.ts`, `budget-line-relations.ts`); the asset,
   // contract, project and request sides do it when their write adds or removes a single line;
-  // the application and technology sides never (`audit-parent-rules.ts`).
+  // the application and technology sides never (`audit-parent-rules.ts`). A link to a project or an
+  // application written from that side also gives the line its own row, the line in `record_id`
+  // and as `parent` (`common/relations/linked-ends.ts`).
   explicitParentLabels: [
     'application_spend_items',
     'application_capex_items',

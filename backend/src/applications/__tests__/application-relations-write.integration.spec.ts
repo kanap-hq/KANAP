@@ -79,8 +79,11 @@ async function testSingleLinks() {
       [seed.appId],
     );
     assert.deepEqual(lines.map((r) => r.spend_item_id), [seed.lines.linked, seed.lines.noVersion, seed.lines.sameSupplier].sort());
-    assert.equal(audit.at(-1)?.table, 'application_spend_items');
-    assert.deepEqual(audit.at(-1)?.after, [seed.lines.linked, seed.lines.sameSupplier].sort());
+    // The application's own row, then the line's (the other end, `common/relations/linked-ends.ts`).
+    const own = audit.filter((entry) => entry.recordId === seed.appId).at(-1);
+    assert.equal(own?.table, 'application_spend_items');
+    assert.deepEqual(own?.after, [seed.lines.linked, seed.lines.sameSupplier].sort());
+    assert.deepEqual(audit.at(-1)?.recordId, seed.lines.sameSupplier, 'the line linked is marked');
 
     // Linking again changes nothing and writes no audit row.
     const auditCount = audit.length;

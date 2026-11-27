@@ -843,13 +843,43 @@ function activityShape(rows: ActivityRow[], name: Namer) {
   return rows.map((row) => neutral(row, name)).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 }
 
+/** The link tables whose other end gets its own row (K2f, `common/relations/linked-ends.ts`). */
+const LINKED_END_TABLES = new Set([
+  'application_projects', 'asset_projects', 'portfolio_project_opex', 'portfolio_project_capex',
+  'application_spend_items', 'application_capex_items', 'portfolio_request_opex', 'portfolio_request_capex',
+  'portfolio_request_applications', 'portfolio_request_assets',
+]);
+
+/** The ids of a stored link set (a list, or `{ ids }`), or null for another value. */
+function linkIds(value: unknown): string[] | null {
+  if (Array.isArray(value)) return value.map(String);
+  const ids = (value as { ids?: unknown } | null)?.ids;
+  return Array.isArray(ids) ? ids.map(String) : null;
+}
+
+/**
+ * The row of the record at the other end of a link is compared by what it gained and lost: its
+ * whole set also holds the records of the earlier cells (the target is shared), so it differs
+ * between the assistant's record and the screen's twin, which comes after it.
+ */
+function otherEndChange(row: AuditRow, name: Namer): { before: unknown; after: unknown } | null {
+  if (!LINKED_END_TABLES.has(row.table_name) || neutral(row.record_id, name) === 'SELF') return null;
+  const before = linkIds(row.before_json);
+  const after = linkIds(row.after_json);
+  if (!before || !after) return null;
+  const kept = (value: unknown) => (value as { hidden_kept?: unknown } | null)?.hidden_kept ?? null;
+  return {
+    before: { lost: neutral(before.filter((id) => !after.includes(id)), name), hidden_kept: kept(row.before_json) },
+    after: { gained: neutral(after.filter((id) => !before.includes(id)), name), hidden_kept: kept(row.after_json) },
+  };
+}
+
 function shape(rows: AuditRow[], name: Namer) {
   return rows.map((row) => ({
     table: row.table_name,
     action: row.action,
     record_id: neutral(row.record_id, name),
-    before: neutral(row.before_json, name),
-    after: neutral(row.after_json, name),
+    ...(otherEndChange(row, name) ?? { before: neutral(row.before_json, name), after: neutral(row.after_json, name) }),
     parent_table: row.parent_table,
     parent_id: neutral(row.parent_id, name),
   }));

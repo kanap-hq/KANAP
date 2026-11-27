@@ -11,6 +11,7 @@ import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 import { LOCATION_OPTIONS_QUERY_KEY, useLocationOptions, type LocationOption } from '../../hooks/useLocationOptions';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { foldText } from '../../utils/foldText';
+import { offeredCatalogOptions } from '../../utils/catalogOffered';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 
 /** The option that opens the creation of a site, with what the person typed as its name. */
@@ -48,7 +49,8 @@ function CreateLocationDialog({
   const nameRef = React.useRef<HTMLInputElement>(null);
   const { byField } = useItOpsEnumOptions({ enabled: typed !== null });
   const hostingOptions = React.useMemo(
-    () => (byField.hostingType || []).filter((option) => !option.deprecated),
+    // Rule P7: a new location holds nothing, so only the types still offered.
+    () => offeredCatalogOptions(byField.hostingType),
     [byField.hostingType],
   );
   const [name, setName] = React.useState('');

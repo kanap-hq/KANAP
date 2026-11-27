@@ -308,6 +308,8 @@ Incident categories are yours to define, in **IT Landscape > Settings**, under *
 
 Keep the list short. Categories are what you will group a year of incidents by, and a list of thirty is a list nobody uses consistently. Rather than deleting a category that is already in use, mark it deprecated: it disappears from the selector for new incidents while the existing ones keep their history.
 
+A category marked **No longer offered** stays on the incidents that already have it, which keep it when they are saved. The other incidents cannot take it, on this page, in a CSV import or through Kad.
+
 ---
 
 ## Ask the assistant

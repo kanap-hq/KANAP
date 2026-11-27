@@ -18,8 +18,8 @@ vi.mock('../../../api', () => ({
 
 vi.mock('../../../hooks/useItOpsEnumOptions', () => {
   const byField = {
-    serverRole: [{ code: 'app', label: 'Application server' }],
-    lifecycleStatus: [{ code: 'active', label: 'Active' }, { code: 'deprecated', label: 'Deprecated' }],
+    serverRole: [{ code: 'web', label: 'Web server', deprecated: true }, { code: 'app', label: 'Application server' }],
+    lifecycleStatus: [{ code: 'active', label: 'Active' }, { code: 'deprecated', label: 'Deprecated' }, { code: 'frozen', label: 'Gelé', deprecated: true }],
   };
   return { default: () => ({ byField, labelFor: () => '' }) };
 });
@@ -77,6 +77,30 @@ function routeGets(url: string) {
   if (url.endsWith('/clusters') || url.endsWith('/members')) return Promise.resolve({ data: { items: [] } });
   return Promise.resolve({ data: { items: [{ id: 'srv-9', name: 'PAR-ESX-09', environment: 'prod', kind: 'vm', provider: 'on_prem' }] } });
 }
+
+describe('DeploymentsEditor lifecycle', () => {
+  beforeEach(() => {
+    apiGet.mockReset();
+    apiGet.mockImplementation((url: string) => routeGets(url));
+  });
+
+  it('offers a retired lifecycle only to the deployment that holds it (rule P7)', async () => {
+    renderEditor(false, undefined, [{ ...deployment, id: 'dep-q', environment: 'qa', lifecycle: 'frozen' }, deployment]);
+    const offered = async (name: string) => {
+      fireEvent.click(screen.getByRole('button', { name }));
+      const menu = await screen.findByRole('menu');
+      const items = within(menu).getAllByRole('menuitem').map((item) => item.textContent);
+      fireEvent.keyDown(menu, { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+      return items;
+    };
+    const held = await offered('frozen');
+    expect(held).toHaveLength(3);
+    expect(held.slice(0, 2)).toEqual(['Active', 'Deprecated']);
+    expect(held[2]).toContain('Gelé');
+    expect(await offered('active')).toEqual(['Active', 'Deprecated']);
+  });
+});
 
 describe('DeploymentsEditor servers', () => {
   beforeEach(() => {
@@ -159,6 +183,16 @@ describe('DeploymentsEditor servers', () => {
     const css = Array.from(document.querySelectorAll('style')).map((node) => node.textContent).join('');
     expect(hidden).toBeTruthy();
     expect(css).toMatch(/tr:focus-within \.hover-actions/);
+  });
+
+  it('gives a new assignment a role still offered (rule P7)', async () => {
+    renderEditor(false);
+    await screen.findByRole('link', { name: 'CAVE-EDGE-01' });
+    fireEvent.click(screen.getByRole('button', { name: 'Add server' }));
+    const dialog = await screen.findByRole('dialog');
+    // The role list is not opened: in jsdom, the list of a select inside this dialog never ends opening.
+    const comboboxes = within(dialog).getAllByRole('combobox');
+    expect(comboboxes[comboboxes.length - 1].textContent).toBe('Application server');
   });
 
   it('shows the refusal of a server in the dialog, which stays open', async () => {

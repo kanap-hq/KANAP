@@ -3,6 +3,7 @@ import { Box, Checkbox, Link, Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { AiImportChoice, AiImportHostingSite, AiImportReportMessage, AiImportRun } from '../aiTypes';
 import { csvMessageColumn, csvMessageText } from '../../components/csv/csvMessage';
+import { withCatalogValueName } from '../../utils/catalogReportMessage';
 import { ReportView as BudgetFileReportView } from '../../components/finance/BudgetFileImportDialog';
 import { useAuth } from '../../auth/AuthContext';
 import ImportMatchesView from '../../components/csv/ImportMatchesView';
@@ -38,7 +39,7 @@ type ImportRunReportProps = {
 /** One message: its line of the person's file, the sentence of the import screen, then its column. */
 function MessageLine({ item, titles, tone }: { item: AiImportReportMessage; titles: ReadonlyMap<string, string>; tone: 'error' | 'warning' }) {
   const { t } = useTranslation(['common']);
-  const text = csvMessageText(item, t, (key) => titles.get(key) ?? key);
+  const text = csvMessageText(withCatalogValueName(item, t), t, (key) => titles.get(key) ?? key);
   const column = csvMessageColumn(item, text);
   return (
     <Box component="li" sx={{ color: tone === 'error' ? 'error.main' : 'kanap.text.primary' }}>

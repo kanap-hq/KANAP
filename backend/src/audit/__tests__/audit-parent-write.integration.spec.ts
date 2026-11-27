@@ -243,11 +243,16 @@ async function testLinksFromBothSides() {
     const tech = await insertId(runner, `INSERT INTO technologies (tenant_id, name, item_number) VALUES ($1, 'History tech', 1)`, [tenantId]);
     const asset = await insertId(runner, `INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, 'srv-history', 'server', 'prod')`, [tenantId]);
     let seen = 0;
-    const next = async (expected: number, what: string): Promise<AuditRow[]> => {
+    // `marked`: the records of the other end, whose own rows (`common/relations/linked-ends.ts`, no
+    // parent but a line's) are counted apart; the writer's rows are returned.
+    const next = async (expected: number, what: string, marks = 0, marked: string[] = []): Promise<AuditRow[]> => {
       const rows = await linkRows(runner, tenantId, seen);
-      assert.equal(rows.length, expected, `${what}: ${expected} audit row(s)`);
       seen += rows.length;
-      return rows;
+      const others = rows.filter((row) => marked.includes(row.record_id as string));
+      const own = rows.filter((row) => !marked.includes(row.record_id as string));
+      assert.equal(own.length, expected, `${what}: ${expected} audit row(s)`);
+      assert.equal(others.length, marks, `${what}: ${marks} row(s) of the other end`);
+      return own;
     };
     const expectParent = (row: AuditRow, lineId: string | null, what: string) => {
       assert.equal(row.parent_id, lineId, `${what}: parent id`);
@@ -258,7 +263,7 @@ async function testLinksFromBothSides() {
     await replaceItemApplications({ manager, audit }, 'opex', { id: line, tenant_id: tenantId }, [app], null);
     await replaceItemApplications({ manager, audit }, 'capex', { id: capexLine, tenant_id: tenantId }, [app], null);
     await replaceItemTechnologies({ manager, audit }, 'opex', { id: line, tenant_id: tenantId }, [tech], null);
-    const fromLine = await next(3, 'line-side replacements');
+    const fromLine = await next(3, 'line-side replacements', 2, [app]);
     expectParent(fromLine[0], line, 'application from the OPEX line');
     assert.equal(fromLine[1].table_name, 'application_capex_items');
     expectParent(fromLine[1], capexLine, 'application from the CAPEX line');
@@ -266,7 +271,7 @@ async function testLinksFromBothSides() {
     const access = { applications: true, technologies: true, projects: true, contracts: true, assets: true } as any;
     await setBudgetLineRelation({ manager, audit }, 'applications', line, app, false, null, { access });
     await setBudgetLineRelation({ manager, audit }, 'technologies', second, tech, true, null, { access });
-    const fromLineOne = await next(2, 'line-side single links');
+    const fromLineOne = await next(2, 'line-side single links', 1, [app]);
     expectParent(fromLineOne[0], line, 'application unlinked from the line');
     expectParent(fromLineOne[1], second, 'technology linked from the second line');
 
@@ -274,7 +279,7 @@ async function testLinksFromBothSides() {
     const instances = new ApplicationsInstancesService(manager.getRepository(Application), manager.getRepository(PortfolioProject), audit);
     await instances.bulkReplaceLinkedSpendItems(app, [line], null, { manager });
     await instances.bulkReplaceLinkedSpendItems(app, [line, second], null, { manager });
-    for (const row of await next(2, 'application-side replacements')) {
+    for (const row of await next(2, 'application-side replacements', 2, [line, second])) {
       assert.equal(row.record_id, app, 'the application is the record');
       expectParent(row, null, 'application side');
     }
@@ -340,11 +345,16 @@ async function testBudgetLinkFamilies() {
       [tenantId, companyId, supplier],
     );
     let seen = 0;
-    const next = async (expected: number, what: string): Promise<AuditRow[]> => {
+    // `marked`: the records of the other end, whose own rows (`common/relations/linked-ends.ts`, no
+    // parent but a line's) are counted apart; the writer's rows are returned.
+    const next = async (expected: number, what: string, marks = 0, marked: string[] = []): Promise<AuditRow[]> => {
       const rows = await linkRows(runner, tenantId, seen);
-      assert.equal(rows.length, expected, `${what}: ${expected} audit row(s)`);
       seen += rows.length;
-      return rows;
+      const others = rows.filter((row) => marked.includes(row.record_id as string));
+      const own = rows.filter((row) => !marked.includes(row.record_id as string));
+      assert.equal(own.length, expected, `${what}: ${expected} audit row(s)`);
+      assert.equal(others.length, marks, `${what}: ${marks} row(s) of the other end`);
+      return own;
     };
     const expectParent = (row: AuditRow, lineId: string | null, what: string) => {
       assert.equal(row.parent_id, lineId, `${what}: parent id`);
@@ -355,7 +365,7 @@ async function testBudgetLinkFamilies() {
     // From the line: a project and a contract name the line, whichever its nature.
     await setBudgetLineRelation({ manager, audit }, 'projects', line, project, true, null, { access });
     await setBudgetLineRelation({ manager, audit }, 'contracts', line, contractOne, true, null, { access });
-    const fromLine = await next(2, 'line-side budget links');
+    const fromLine = await next(2, 'line-side budget links', 1, [project]);
     assert.equal(fromLine[0].table_name, 'portfolio_project_opex');
     expectParent(fromLine[0], line, 'project linked from the line');
     assert.equal(fromLine[1].table_name, 'contract_spend_items');

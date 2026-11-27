@@ -40,6 +40,9 @@ export const applicationsRecord = {
     application_capex_items: 'budget_line',
     application_contracts: 'contract',
     application_projects: 'project',
+    // Written by the request's replacements (its tab, this application's tab), with the request in
+    // `record_id`; the application's own row of each link names it (`common/relations/linked-ends.ts`).
+    portfolio_request_applications: 'request',
     // The parent columns: the payload names the application, or its deployment.
     app_instances: 'instance',
     application_links: 'link',
@@ -60,6 +63,7 @@ export const applicationsRecord = {
     application_capex_items: 'record',
     application_contracts: 'record',
     application_projects: 'record',
+    portfolio_request_applications: 'record',
     application_business_processes: { payloadKey: 'application_id' },
     application_technologies: { payloadKey: 'application_id' },
   },

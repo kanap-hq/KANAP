@@ -156,7 +156,7 @@ Eine Zelle ohne Wert zeigt einen Strich.
 - Eine Änderung umfasst höchstens 5.000 Anwendungen. Darüber grenzen Sie die Filter ein oder wählen weniger Anwendungen aus
 - Ändert sich die Liste zwischen der Zählung und Ihrer Bestätigung, zeigt der Dialog die neue Zählung. Prüfen Sie sie und bestätigen Sie erneut
 - Schlägt die Zählung fehl, klicken Sie neben der Meldung auf **Erneut versuchen**, um erneut zu zählen
-- **Kategorie**, **Geschäftskritikalität** und **Cyberkritikalität** bieten nur die Werte an, die unter **IT-Landschaft > Einstellungen** noch angeboten werden
+- **Kategorie**, **Lebenszyklus**, **Geschäftskritikalität** und **Cyberkritikalität** bieten nur die Werte an, die unter **IT-Landschaft > Einstellungen** noch angeboten werden
 - Eine neue Geschäfts- oder Cyberkritikalität setzt eine geprüfte Anwendung auf **Erneut prüfen**, wie auf der Seite der Anwendung
 - Jede geänderte Anwendung erhält einen eigenen Eintrag in ihrem Tab **Verlauf**
 - [Kad](ai-assistant.md#changing-records-in-bulk) nimmt dieselbe Änderung vor, wenn Sie in einer Unterhaltung darum bitten, mit denselben Rechten. Seine Vorschau listet die Anwendungen, die er ändert, und Sie können einzelne ausschließen, bevor Sie sie genehmigen
@@ -168,6 +168,8 @@ Eine Zelle ohne Wert zeigt einen Strich.
 Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat eine **Kopfzeile** mit schnellen Metadaten, einen **Eigenschaftenbereich** auf der rechten Seite (die Identitätskarte der Anwendung, immer sichtbar) und einen **Inhaltsbereich** in der Mitte, der mit jedem Reiter wechselt.
 
 Die Reiter sind **Übersicht**, **Bereitstellungen**, **Schnittstellen**, **Betrieb**, **Compliance**, **Beziehungen** und **Verlauf** (die Änderungen an der Anwendung, siehe [Verlauf der Datensätze](record-history.md)).
+
+**Nicht mehr angebotene Werte**: Kategorie, Lebenszyklus, Zugriffsmethoden und der Lebenszyklus einer Bereitstellung bieten die Werte an, die in den [IT-Landschaft-Einstellungen](it-ops-settings.md) noch angeboten werden. Ein als **Nicht mehr anbieten** markierter Wert bleibt bei den Anwendungen, die ihn bereits haben, und sie behalten ihn beim Speichern. Andere Anwendungen können ihn nicht übernehmen, weder auf dieser Seite noch per Massenänderung, CSV-Import oder über Kad.
 
 ### Kopfzeile
 
@@ -712,6 +714,8 @@ Für Felder, die in **IT-Landschaft > Einstellungen** konfiguriert sind, können
 
 Das System normalisiert Werte automatisch beim Import, sodass `Line-of-business`, `line-of-business` und `lob` alle zur gleichen Kategorie aufgelöst werden. Die Bezeichnungen, die der Bildschirm zeigt, werden auf Englisch, Französisch, Deutsch und Spanisch akzeptiert: `Active`, `Actif`, `Aktiv` und `Activo` bezeichnen denselben Lebenszyklus. Eine in einer Sprache exportierte Datei lässt sich daher in einer anderen importieren.
 
+Eine Kategorie, ein Lebenszyklus oder eine Zugriffsmethode, die als **Nicht mehr anbieten** markiert ist, wird in einer Zeile abgelehnt, deren Anwendung den Wert nicht bereits hat. Der Zeilenfehler listet die zulässigen Werte auf.
+
 ### Abgleich und Updates
 
 Anwendungen werden nach **Name** abgeglichen, ohne Rücksicht auf Groß- und Kleinschreibung und auf Leerzeichen am Anfang und Ende. Wenn ein Treffer gefunden wird, behält eine leere Zelle den gespeicherten Wert, und `-` leert ihn. Spalten, die in der Datei fehlen, behalten ihre Werte. Name, `id`, Lebenszyklus, Kategorie, `is_suite`, `external_facing`, `etl_enabled`, `contains_pii` und die anderen Pflichtfelder können nicht geleert werden: `-` führt dort zur Ablehnung der Zeile, und die Meldung nennt die Spalte. Eine neue Anwendung erhält die Standardwerte.
@@ -781,6 +785,8 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 [Kad](ai-assistant.md) liest die Version, das Datum der Inbetriebnahme, das Datum des Supportendes und das Datum der Außerbetriebnahme jeder Anwendung. Es filtert, sortiert und gruppiert die Anwendungen nach diesen Daten. Seine Liste behält die außer Betrieb genommenen Anwendungen, während der Bericht [Supportende](end-of-support.md) nur die Anwendungen in Betrieb behält.
 
 Kad deklariert auch eine Technologie für eine Anwendung oder entfernt sie, mit ihrer Version und, wenn Sie es verlangen, auf den Deployment-Servern der Anwendung. Dazu brauchen Sie das Recht, Anwendungen zu lesen, und die Stufe Mitglied für die Infrastruktur. Ein Business Contributor tut dies nur für die Anwendungen, an denen er beteiligt ist. Kad verknüpft kein Betriebssystem: Erfassen Sie es auf der Seite des Servers. Jede Änderung kommt als Vorschau, die Sie genehmigen. Wenn Sie Kad bitten, sie rückgängig zu machen, stellt es genau das wieder her, was es geändert hat. Eine dabei angelegte Version bleibt bei der Technologie.
+
+Kad setzt Kategorie, Lebenszyklus und Zugriffsmethoden einer Anwendung über ihren Namen oder ihren Code. Einen nicht mehr angebotenen Wert lehnt Kad ab, außer die Anwendung hat ihn bereits, und listet die zulässigen Werte auf.
 
 Fragen Sie zum Beispiel: „Füge CheeseTrack und seinen Servern PostgreSQL 16 hinzu“, „Entferne PostgreSQL 14 von CheeseTrack“, „Welche Anwendungen erreichen in den nächsten sechs Monaten ihr Supportende?“ oder „Welche Anwendungen deklarieren PostgreSQL 14?“
 

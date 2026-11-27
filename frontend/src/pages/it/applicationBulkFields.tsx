@@ -6,6 +6,7 @@ import UserMultiSelect from '../../components/fields/UserMultiSelect';
 import useApplicationClassificationCatalog from '../../hooks/useApplicationClassificationCatalog';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { classificationText } from '../../utils/applicationClassification';
+import { offeredCatalogOptions } from '../../utils/catalogOffered';
 
 /** The dialog holds one value per field: a list of people travels as their ids joined by commas. */
 const toIds = (value: string | null): string[] => (value ? value.split(',') : []);
@@ -33,8 +34,8 @@ function ownersField(field: 'owners_business' | 'owners_it', label: string): Bul
  * The fields "Change the selection" changes on applications (`POST /applications/bulk-update`, lot F2
  * of 26.11.8): business owners and IT owners (the people picked replace that role's, as on the
  * application page; emptied, the role has nobody), category (the categories still offered, never
- * empty; decision D15 of 26.11.9), lifecycle (never empty), business and cyber criticality (the
- * levels still offered, as on the application page; may be emptied).
+ * empty; decision D15 of 26.11.9), lifecycle (the lifecycles still offered, never empty), business
+ * and cyber criticality (the levels still offered, as on the application page; may be emptied).
  */
 export function useApplicationBulkFields(): BulkEditField[] {
   const { t } = useTranslation(['it', 'common']);
@@ -42,12 +43,12 @@ export function useApplicationBulkFields(): BulkEditField[] {
   const { data: catalog } = useApplicationClassificationCatalog();
 
   return useMemo<BulkEditField[]>(() => {
-    const lifecycleOptions = (byField.lifecycleStatus || [])
+    // Rule P7: a retired value is offered to no record of a selection (the API refuses it on the
+    // records that do not hold it).
+    const offered = (options: ReadonlyArray<{ code: string; label?: string | null; deprecated?: boolean }> | undefined) => offeredCatalogOptions(options)
       .filter((option) => typeof option.code === 'string' && option.code.trim() !== '')
       .map((option) => ({ value: option.code, label: option.label || option.code }));
-    const offered = (options: ReadonlyArray<{ code: string; label?: string | null; deprecated?: boolean }> | undefined) => (options || [])
-      .filter((option) => !option.deprecated)
-      .map((option) => ({ value: option.code, label: option.label || option.code }));
+    const lifecycleOptions = offered(byField.lifecycleStatus);
     const categoryOptions = offered(byField.applicationCategory);
     const criticalityOptions = offered(catalog?.businessCriticalityLevels);
     const cyberOptions = offered(catalog?.cyberCriticalityLevels);

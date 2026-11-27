@@ -127,4 +127,33 @@ describe('InterfacePropertyPanel', () => {
     expect(screen.queryByRole('option', { name: 'Legacy (deprecated)' })).toBeNull();
     expect(screen.getByRole('option', { name: 'Active' })).toBeInTheDocument();
   });
+
+  it('does not offer a retired lifecycle to an interface that does not hold it (rule P7)', async () => {
+    enumOptions.byField = {
+      lifecycleStatus: [
+        { code: 'active', label: 'Active' },
+        { code: 'legacy', label: 'Legacy', deprecated: true },
+      ],
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <InterfacePropertyPanel
+            canManage
+            isCreate={false}
+            data={{ id: 'int-1', lifecycle: 'active', owners: [], companies: [], data_residency: [] } as never}
+            onPatch={async () => undefined}
+            onReplaceCompanies={async () => undefined}
+            onReplaceDataResidency={async () => undefined}
+            onReplaceOwners={async () => undefined}
+          />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.mouseDown(screen.getByDisplayValue('Active'));
+    expect(await screen.findByRole('option', { name: 'Active' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /Legacy/ })).toBeNull();
+  });
 });

@@ -44,6 +44,7 @@ import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../utils/applicationClassification';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { legTypeLabel } from '../../utils/interfaceLegType';
+import { catalogOptionLabel } from '../../utils/catalogOffered';
 type ApiConnectionMapNode = {
   id: string;
   name: string;
@@ -390,7 +391,7 @@ export default function ConnectionMapPage() {
     if (list.length === 0) return [{ label: t('pages.maps.active'), value: 'active' }];
     return list.map((item) => ({
       value: item.code,
-      label: item.deprecated ? `${item.label} (${t('common:enumEditor.retiredSuffix')})` : item.label,
+      label: catalogOptionLabel(item, t),
       deprecated: !!item.deprecated,
     }));
   }, [byField.lifecycleStatus, t]);

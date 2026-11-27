@@ -6,6 +6,7 @@ import { InterfaceMiddlewareApplication } from '../interface-middleware-applicat
 import { InterfaceBinding } from '../../interface-bindings/interface-binding.entity';
 import { Application } from '../../applications/application.entity';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { resolveOfferedCatalogCode } from '../../it-ops-settings/catalog-resolve';
 import { highestClassification, resolveClassificationOption } from '../../it-ops-settings/classification-catalog';
 
 /**
@@ -189,21 +190,21 @@ export abstract class InterfacesBaseService {
     return code;
   }
 
+  /**
+   * The catalog values of an interface follow rule P7 (`resolveOfferedCatalogCode`): a retired value,
+   * or one the catalog does not know, only on the interface that already holds it (`held`).
+   */
   protected async normalizeDataCategory(
     value: unknown,
     tenantId: string,
     manager?: EntityManager,
+    held?: string | null,
   ): Promise<string> {
-    const code = String(value || '').trim().toLowerCase();
-    if (!code) {
+    if (!String(value ?? '').trim()) {
       throw new BadRequestException('data_category is required');
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set((settings.interfaceDataCategories || []).map((o) => o.code));
-    if (!allowed.has(code)) {
-      throw new BadRequestException(`Invalid data_category "${value}"`);
-    }
-    return code;
+    return resolveOfferedCatalogCode(value, settings.interfaceDataCategories || [], { held, what: 'data category', list: 'interfaceDataCategories' });
   }
 
   protected normalizeRouteType(value: unknown): RouteType {
@@ -250,6 +251,7 @@ export abstract class InterfacesBaseService {
     tenantId: string,
     manager?: EntityManager,
     fallback?: string,
+    held?: string | null,
   ): Promise<Lifecycle> {
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
     const allowed = (settings.lifecycleStates || []).map((item) => item.code);
@@ -257,11 +259,7 @@ export abstract class InterfacesBaseService {
     if (value === undefined || value === null || String(value).trim() === '') {
       return fallbackCode;
     }
-    const normalized = String(value).trim().toLowerCase();
-    if (!allowed.includes(normalized)) {
-      throw new BadRequestException(`Invalid lifecycle "${value}"`);
-    }
-    return normalized as Lifecycle;
+    return resolveOfferedCatalogCode(value, settings.lifecycleStates || [], { held, what: 'lifecycle', list: 'lifecycleStates' }) as Lifecycle;
   }
 
   protected pickLifecycleFallback(candidate: string, allowed: string[]): string {
@@ -281,18 +279,13 @@ export abstract class InterfacesBaseService {
     settingsKey: 'interfaceTriggerTypes' | 'interfacePatterns' | 'interfaceFormats',
     label: string,
     manager?: EntityManager,
+    held?: unknown[] | null,
   ): Promise<string> {
-    const code = String(value || '').trim().toLowerCase();
-    if (!code) {
+    if (!String(value ?? '').trim()) {
       throw new BadRequestException(`${label} is required`);
     }
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const list = (settings as any)?.[settingsKey] || [];
-    const allowed = new Set((list as Array<{ code: string }>).map((o) => o.code));
-    if (!allowed.has(code)) {
-      throw new BadRequestException(`Invalid ${label} "${value}"`);
-    }
-    return code;
+    return resolveOfferedCatalogCode(value, settings[settingsKey] || [], { held, what: label.replace(/_/g, ' '), list: String(settingsKey) });
   }
 
   protected parseInclude(raw: any): Set<string> {

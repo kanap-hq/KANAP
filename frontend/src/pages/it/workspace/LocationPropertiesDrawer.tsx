@@ -7,6 +7,7 @@ import CompanySelect from '../../../components/fields/CompanySelect';
 import type { CountryOption } from '../../../constants/isoOptions';
 import { filterCountryOptions, useCountryOptions } from '../../../i18n/countries';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../../utils/catalogOffered';
 import CommitTextField from './CommitTextField';
 
 export type LocationDrawerData = {
@@ -46,8 +47,9 @@ export default function LocationPropertiesDrawer({
 }: Props) {
   const { t } = useTranslation('it');
   const { byField } = useItOpsEnumOptions();
-  const hostingOptions = byField.hostingType || [];
-  const providerOptions = byField.serverProvider || [];
+  // Rule P7: the values still offered, plus the one the location holds.
+  const hostingOptions = offeredCatalogOptions(byField.hostingType, data.hosting_type);
+  const providerOptions = offeredCatalogOptions(byField.serverProvider, data.provider);
 
   const countryOptions = useCountryOptions();
   const countryValue: CountryOption | null =
@@ -70,7 +72,7 @@ export default function LocationPropertiesDrawer({
           >
             {hostingOptions.map((opt) => (
               <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
-                {opt.deprecated ? t('common.deprecatedOption', { label: opt.label }) : opt.label}
+                {catalogOptionLabel(opt, t)}
               </MenuItem>
             ))}
           </TextField>
@@ -101,7 +103,7 @@ export default function LocationPropertiesDrawer({
                 <MenuItem value="" sx={drawerMenuItemSx}>—</MenuItem>
                 {providerOptions.map((opt) => (
                   <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
-                    {opt.deprecated ? t('common.deprecatedOption', { label: opt.label }) : opt.label}
+                    {catalogOptionLabel(opt, t)}
                   </MenuItem>
                 ))}
               </TextField>

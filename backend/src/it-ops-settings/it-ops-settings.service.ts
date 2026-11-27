@@ -1,6 +1,7 @@
 import { AuditService } from '../audit/audit.service';
 import { ClassificationCatalog, ClassificationLevel, CLASSIFICATION_CATALOG_KEYS, OBSOLETE_CATALOG_METADATA_KEYS, catalogFromMetadata, catalogToMetadata, validateClassificationCatalog } from './classification-catalog';
 import { CatalogTranslations, normalizeTranslations, prepareCatalogListForWrite } from './catalog-codes';
+import { catalogValueRefusal, findCatalogOption, offeredCatalogList, offeredCatalogOptions, resolveOfferedCatalogCode } from './catalog-resolve';
 import { CATALOG_USAGE, CatalogUsageItem, UsageKey, countCatalogUsage } from './catalog-usage';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { englishList, RecordInUseException } from '../common/record-in-use';
@@ -133,6 +134,9 @@ export const DEFAULT_ADMIN_ZONES: AdminZoneOption[] = [
     description: 'User workstations and devices.',
   },
 ];
+
+/** What a saved subnet list checks its network zones against (rule P7): the retired zones, each stored subnet's zone, the zones offered, each zone's name. */
+type SubnetZoneRule = { retired: Set<string>; held: Map<string, string>; offered: string; names: Map<string, string> };
 
 export type SubnetOption = {
   location_id: string;    // Mandatory, references locations table
@@ -803,7 +807,7 @@ export class ItOpsSettingsService {
     defaults: SubnetOption[],
     networkZoneCodes: Set<string>,
     validLocationIds: Set<string>,
-    opts?: { strict?: boolean },
+    opts?: { strict?: boolean; zones?: SubnetZoneRule },
   ): SubnetOption[] {
     const strict = opts?.strict ?? false;
     // Key: location_id:cidr for uniqueness within a location
@@ -848,6 +852,15 @@ export class ItOpsSettingsService {
             throw new BadRequestException(`Invalid network_zone "${raw?.network_zone}" for subnet ${cidr}`);
           }
           continue; // Skip subnets with invalid network_zone when reading
+        }
+        // Rule P7 on a saved list: a retired network zone only on the subnet that already has it.
+        if (strict && opts?.zones?.retired.has(network_zone)
+          && opts.zones.held.get(`${location_id}:${cidr}`) !== network_zone) {
+          const name = opts.zones.names.get(network_zone) || network_zone;
+          throw catalogValueRefusal(
+            { value: name, allowed: opts.zones.offered, retired: true, valueCode: network_zone, list: 'networkSegments' },
+            `The network zone "${name}" of subnet ${cidr} is retired: only a subnet that already has it keeps it. Use one of: ${opts.zones.offered}.`,
+          );
         }
 
         const vlan_number =
@@ -1151,10 +1164,20 @@ export class ItOpsSettingsService {
     return fallbackCode;
   }
 
+  /**
+   * The category a write stores, by its code or its name (rule P7: a retired category only on the
+   * application that holds it, `current`; a value the catalog does not know only when the
+   * application already holds it). Empty takes the default when `useDefaultForEmpty` is set.
+   */
   async resolveApplicationCategoryOption(
     tenantId: string,
     value: unknown,
-    opts?: { manager?: EntityManager; useDefaultForEmpty?: boolean },
+    opts?: {
+      manager?: EntityManager;
+      useDefaultForEmpty?: boolean;
+      current?: string | null;
+      unknownCode?: string;
+    },
   ): Promise<ItOpsEnumOption> {
     const options = await this.getApplicationCategoryOptions(tenantId, { manager: opts?.manager });
     const text = String(value ?? '').trim();
@@ -1164,25 +1187,30 @@ export class ItOpsSettingsService {
         const fallback = options.find((option) => option.code === fallbackCode);
         if (fallback) return fallback;
       }
-      throw new BadRequestException('Application category is required');
+      const allowed = offeredCatalogList(options, opts?.current);
+      throw catalogValueRefusal({ value: '', allowed, retired: false }, `Application category is required. Use one of: ${allowed}.`, opts?.unknownCode, {
+        what: 'application category', list: 'applicationCategories', retired: false, value: '',
+        offered: offeredCatalogOptions(options, opts?.current).map(({ code, label }) => ({ code, label })),
+      });
     }
-
-    const codeKey = this.normalizeLookupKey(text);
-    const byCode = options.find((option) => this.normalizeLookupKey(option.code) === codeKey);
-    if (byCode) return byCode;
-
-    const byLabel = options.find((option) => this.normalizeLookupKey(option.label) === codeKey);
-    if (byLabel) return byLabel;
-
-    throw new BadRequestException(
-      `Invalid application category "${text}". Valid application categories for this tenant: ${formatApplicationCategoryOptions(options)}.`,
-    );
+    // A code or a name typed with spaces for its underscores or dashes ("line of business") still names it.
+    const key = this.normalizeLookupKey(text);
+    const loose = findCatalogOption(text, options)
+      ? null
+      : options.find((option) => this.normalizeLookupKey(option.code) === key || this.normalizeLookupKey(option.label) === key);
+    const code = resolveOfferedCatalogCode(loose?.code ?? text, options, { held: opts?.current, what: 'application category', list: 'applicationCategories', unknownCode: opts?.unknownCode });
+    return options.find((option) => option.code === code) ?? { code, label: code };
   }
 
   async resolveApplicationCategoryCode(
     tenantId: string,
     value: unknown,
-    opts?: { manager?: EntityManager; useDefaultForEmpty?: boolean },
+    opts?: {
+      manager?: EntityManager;
+      useDefaultForEmpty?: boolean;
+      current?: string | null;
+      unknownCode?: string;
+    },
   ): Promise<string> {
     return (await this.resolveApplicationCategoryOption(tenantId, value, opts)).code;
   }
@@ -1289,12 +1317,18 @@ export class ItOpsSettingsService {
     if (patch.subnets) {
       const networkZoneCodes = new Set(next.networkSegments.map((n) => n.code));
       const validLocationIds = await this.getValidLocationIds(tenantId, opts?.manager);
+      const zones: SubnetZoneRule = {
+        retired: new Set(next.networkSegments.filter((n) => n.deprecated).map((n) => n.code)),
+        held: new Map((current.subnets || []).map((subnet) => [`${subnet.location_id}:${subnet.cidr}`, subnet.network_zone])),
+        offered: offeredCatalogList(next.networkSegments),
+        names: new Map(next.networkSegments.map((n) => [n.code, n.label || n.code])),
+      };
       next.subnets = this.normalizeSubnets(
         patch.subnets,
         this.defaultSubnets,
         networkZoneCodes,
         validLocationIds,
-        { strict: true },
+        { strict: true, zones },
       );
     }
     if (patch.domains) {

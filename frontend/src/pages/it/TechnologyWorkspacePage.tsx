@@ -11,6 +11,7 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useTechnologyItemNav } from '../../hooks/useModuleItemNav';
 import { useLocale } from '../../i18n/useLocale';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
+import { catalogOptionLabel, offeredCatalogOptions } from '../../utils/catalogOffered';
 import { deleteFailureReason, refusalCounts } from '../../utils/deleteRefusal';
 import type { DeleteCheck } from '../../components/DeleteSelectedButton';
 import { getDotColor, LIFECYCLE_COLORS } from '../../utils/statusColors';
@@ -180,11 +181,13 @@ export default function TechnologyWorkspacePage() {
     return run;
   }, [queryClient, setCache, t, technology?.id, technologyQuery]);
 
-  const lifecycleOptions = React.useMemo(() => (byField.lifecycleStatus || []).map((option) => ({
+  // Rule P7: the lifecycles still offered, plus the one the technology holds.
+  const heldLifecycle = technology?.lifecycle;
+  const lifecycleOptions = React.useMemo(() => offeredCatalogOptions(byField.lifecycleStatus, heldLifecycle).map((option) => ({
     value: option.code,
-    label: option.label,
+    label: catalogOptionLabel(option, t),
     color: getDotColor(LIFECYCLE_COLORS[option.code] || 'default', theme.palette.mode),
-  })), [byField.lifecycleStatus, theme.palette.mode]);
+  })), [byField.lifecycleStatus, heldLifecycle, theme.palette.mode, t]);
 
   if (!hasLevel('infrastructure', 'reader')) {
     return <Box sx={{ p: 2 }}><Alert severity="error">{t('workspace.technology.notFound')}</Alert></Box>;

@@ -2336,6 +2336,11 @@ export class AiCapabilityRegistry {
     };
   }
 
+  /** A capability's result as the model reads it (`AiToolRegistry.resultForModel`). */
+  resultForModel(context: AiExecutionContextWithManager, result: unknown): Promise<unknown> {
+    return this.tools.resultForModel(context, result);
+  }
+
   private async executeInternalCapability(
     context: AiExecutionContextWithManager,
     capabilityName: string,

@@ -52,7 +52,7 @@ vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({
   default: () => ({ data: { businessCriticalityLevels: [{ code: 'high', label: 'High', rank: 1 }], cyberCriticalityLevels: [], dataClasses: [], recoveryWaves: [] } }),
 }));
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({
-  default: () => ({ byField: { accessMethod: [], applicationCategory: [], lifecycleStatus: [{ code: 'active', label: 'Active' }] }, labelFor: (_f: string, code: string) => code }),
+  default: () => ({ byField: { accessMethod: [], applicationCategory: [{ code: 'business', label: 'Business' }, { code: 'erp', label: 'ERP suite' }], lifecycleStatus: [{ code: 'active', label: 'Active' }, { code: 'retired', label: 'Retired' }] }, labelFor: (_f: string, code: string) => code }),
 }));
 
 const mocked = vi.mocked(api);
@@ -67,7 +67,7 @@ const application = {
 function renderPage(path = '/it/applications/app-1/overview', detail: () => unknown = () => application) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/applications/app-1') return { data: detail() } as never;
-    if (url === '/departments/d-1') return { data: { id: 'd-1', company_id: 'co-1', name: 'Finance' } } as never;
+    if (url === '/departments/lookup/d-1') return { data: { id: 'd-1', company_id: 'co-1', name: 'Finance' } } as never;
     if (url === '/applications/app-1/version-lineage') {
       return { data: { predecessors: [{ id: 'app-0', sequential_id: 'APP-3', name: 'Atlas 1' }], successors: [{ id: 'app-2', sequential_id: 'APP-9', name: 'Atlas 3' }] } } as never;
     }
@@ -182,7 +182,7 @@ describe('Application workspace, recette C1a', () => {
     const pick = await screen.findByRole('button', { name: 'pick department' });
     const mountsBefore = departmentField.mounts;
     fireEvent.click(pick);
-    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/departments/d-1'));
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/departments/lookup/d-1'));
     await waitFor(() => expect(screen.getByRole('button', { name: 'pick department' }).getAttribute('data-value')).toBe('d-1'));
     expect(departmentField.mounts).toBe(mountsBefore);
   });
@@ -190,6 +190,50 @@ describe('Application workspace, recette C1a', () => {
   it('says why the users are 0 when the audience is departments without a headcount', async () => {
     renderPage(undefined, () => ({ ...application, departments: [{ department_id: 'd-1' }], derived_total_users: 0 }));
     expect(await screen.findByText('workspace.application.ownership.usersNoDepartmentHeadcount')).toBeTruthy();
+  });
+
+  it('shows a refused category without an unhandled rejection', async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => { unhandled.push(reason); };
+    const nodeProcess = (globalThis as unknown as { process: {
+      on(event: 'unhandledRejection', listener: (reason: unknown) => void): void;
+      off(event: 'unhandledRejection', listener: (reason: unknown) => void): void;
+    } }).process;
+    nodeProcess.on('unhandledRejection', onUnhandled);
+    try {
+      mocked.patch.mockRejectedValueOnce({ response: { status: 400, data: { code: 'catalog_value_retired', message: 'retired', params: { value: 'ERP suite', allowed: 'Business' } } } });
+      renderPage();
+      fireEvent.mouseDown((await screen.findByText('Business')).closest('[role="combobox"]') as HTMLElement);
+      fireEvent.click(await screen.findByRole('option', { name: 'ERP suite' }));
+      await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/applications/app-1', { category: 'erp' }));
+      expect((await screen.findAllByText('errors:catalog_value_no_longer_offered(value=ERP suite,allowed=Business)')).length).toBeGreaterThan(0);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(unhandled).toEqual([]);
+    } finally {
+      nodeProcess.off('unhandledRejection', onUnhandled);
+    }
+  });
+
+  it('shows a refused lifecycle without an unhandled rejection', async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => { unhandled.push(reason); };
+    const nodeProcess = (globalThis as unknown as { process: {
+      on(event: 'unhandledRejection', listener: (reason: unknown) => void): void;
+      off(event: 'unhandledRejection', listener: (reason: unknown) => void): void;
+    } }).process;
+    nodeProcess.on('unhandledRejection', onUnhandled);
+    try {
+      mocked.patch.mockRejectedValueOnce({ response: { status: 400, data: { code: 'catalog_value_retired', message: 'retired', params: { value: 'Retired', allowed: 'Active' } } } });
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: 'Active' }));
+      fireEvent.click(await screen.findByText('Retired'));
+      await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/applications/app-1', { lifecycle: 'retired' }));
+      expect((await screen.findAllByText('errors:catalog_value_no_longer_offered(value=Retired,allowed=Active)')).length).toBeGreaterThan(0);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(unhandled).toEqual([]);
+    } finally {
+      nodeProcess.off('unhandledRejection', onUnhandled);
+    }
   });
 
   it('keeps an empty title open with the message', async () => {

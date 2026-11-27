@@ -23,7 +23,7 @@ import { AiMutationPreview } from './ai-mutation-preview.entity';
 import { AiPolicyService, isRightRefusalMessage } from './ai-policy.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
-import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview, AiPreviewExecutionRefusal } from './mutation/ai-mutation-operation.types';
+import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview, AiPreviewExecutionRefusal, runAfterExecutionRollback } from './mutation/ai-mutation-operation.types';
 import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
 import { isBudgetOperationRunning } from '../spend/budget-locks';
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
@@ -1339,6 +1339,9 @@ export class AiMutationPreviewService {
     } catch (error: any) {
       if (useSavepoint) {
         await queryRunner.query(`ROLLBACK TO SAVEPOINT ${EXECUTION_SAVEPOINT_NAME}`);
+        // What the operation still writes once its own writes are undone (a relation's record
+        // marked by the other end while the approval held it is dated).
+        await runAfterExecutionRollback(error, context.manager);
         preview.target_entity_id = originalTargetEntityId;
         preview.current_values = originalCurrentValues;
         // The data was held by another operation (a lock wait that ran out, a deadlock, a
@@ -1414,11 +1417,13 @@ export class AiMutationPreviewService {
       : preview.id;
     // Expired first: the pending cards of the conversation stay within their number.
     await this.getRepo(context.manager).update({ tenant_id: context.tenantId, id: preview.id, status: 'pending' }, { status: 'expired' });
+    // The model's assumptions were written for the card it prepared, before the person's choice: the
+    // new card has none (lot I6a of 26.12.1), even once the choices are back to that card's.
     const created = await this.createPreview(context, 'prepare_import_mapping', {
       entity_type: input.entity_type,
       attachment_id: input.attachment_id,
       columns: input.columns,
-      assumptions: input.assumptions ?? [],
+      assumptions: [],
       ...(Array.isArray(input.left_aside) && input.left_aside.length > 0 ? { left_aside: input.left_aside } : {}),
       choices,
     });

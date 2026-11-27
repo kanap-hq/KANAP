@@ -98,6 +98,8 @@ async function testApplications(kind: Kind) {
     );
 
     const audit = captureAudit();
+    // The line's own rows; each application reached gets its own row too (K2f).
+    const own = () => audit.entries.filter((entry) => entry.recordId === itemId);
     const svc = itemService(kind, audit);
     const sql: string[] = [];
     const mg = recordingManager(runner.manager, sql);
@@ -106,9 +108,14 @@ async function testApplications(kind: Kind) {
     assert.deepEqual(replaced.items.map((a: any) => a.name), ['Alpha', 'Zeta'], `${kind}: trimmed, deduplicated, sorted by name`);
     assert.deepEqual(await linkedApplications(runner, kind, tenantId, itemId), [alpha, zeta].sort(), `${kind}: stored set`);
     const expectedAfter = [alpha, zeta].sort();
-    assert.deepEqual(audit.entries, [
+    assert.deepEqual(own(), [
       { table: T[kind].auditLinks, recordId: itemId, action: 'update', before: [], after: expectedAfter, userId: USER, parent: { table: 'spend_items', id: itemId } },
     ], `${kind}: one audit row with the sorted application ids`);
+    assert.deepEqual(
+      audit.entries.filter((entry) => entry.recordId !== itemId).map((entry) => [entry.recordId, entry.before, entry.after]).sort(),
+      [[alpha, [otherItemId], [itemId, otherItemId].sort()], [zeta, [], [itemId]]].sort(),
+      `${kind}: each application linked gets its own row, with its own lines`,
+    );
 
     const listed = await svc.listApplications(itemId, { manager: mg });
     assert.deepEqual(listed.items, [{ id: alpha, name: 'Alpha' }, { id: zeta, name: 'Zeta' }], `${kind}: list`);
@@ -125,7 +132,8 @@ async function testApplications(kind: Kind) {
     await svc.bulkReplaceApplications(itemId, [zeta, alpha], USER, { manager: mg });
     const upper = await svc.bulkReplaceApplications(itemId, [zeta.toUpperCase(), alpha, alpha.toUpperCase()], USER, { manager: mg });
     assert.deepEqual(upper.items.map((a: any) => a.id), [alpha, zeta], `${kind}: upper-case ids name the same applications`);
-    assert.equal(audit.entries.length, 1, `${kind}: an unchanged set writes no audit row`);
+    assert.equal(own().length, 1, `${kind}: an unchanged set writes no audit row`);
+    assert.equal(audit.entries.length, 3, `${kind}: nor any row for the applications`);
 
     // An application of another tenant (or not an application at all) is refused and nothing changes.
     for (const ids of [[beta, foreignApp], ['not-a-uuid']]) {
@@ -140,7 +148,7 @@ async function testApplications(kind: Kind) {
     // Emptying the set.
     const emptied = await svc.bulkReplaceApplications(itemId, [], USER, { manager: mg });
     assert.deepEqual(emptied.items, [], `${kind}: emptied`);
-    assert.deepEqual(audit.entries[1], { table: T[kind].auditLinks, recordId: itemId, action: 'update', before: expectedAfter, after: [], userId: USER, parent: { table: 'spend_items', id: itemId } });
+    assert.deepEqual(own()[1], { table: T[kind].auditLinks, recordId: itemId, action: 'update', before: expectedAfter, after: [], userId: USER, parent: { table: 'spend_items', id: itemId } });
 
     assert.deepEqual(await linkedApplications(runner, kind, tenantId, otherItemId), [alpha], `${kind}: the other line's link is untouched`);
     await setTenant(runner, otherTenant);

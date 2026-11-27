@@ -2,6 +2,10 @@ import '../i18n';
 import i18n from 'i18next';
 import { describe, expect, it } from 'vitest';
 import { getApiErrorMessage, getDocumentSaveErrorMessage, isDataAccessRefusal } from './apiErrorMessage';
+import { appQueryClient } from '../lib/appQueryClient';
+import { csvMessageText } from '../components/csv/csvMessage';
+import { withCatalogValueName } from './catalogReportMessage';
+import './itOpsSettingsLocalization';
 import { AGENT_NAME, PRODUCT_NAME } from '../config/product';
 
 const t = i18n.getFixedT('en');
@@ -425,9 +429,15 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(inUse, t, 'fallback')).toMatch(/^This deployment still has 2 .+\. Remove them first\.$/);
     const inherited = { response: { status: 409, data: { code: 'assignment_inherited', message: 'Already inherited', params: { cluster: 'ESX Paris' } } } };
     expect(getApiErrorMessage(inherited, fr, 'fallback')).toBe('Déjà hébergée par ce serveur via ESX Paris.');
+    const role = { response: { status: 400, data: { code: 'assignment_role_invalid', message: 'server words', params: { value: 'Citrix', allowed: 'app (Application server), db (Database server)' } } } };
+    expect(getApiErrorMessage(role, fr, 'fallback')).toBe('Rôle inconnu\u00a0: Citrix. Valeurs possibles\u00a0: app (Application server), db (Database server).');
+    const unknownValue = { response: { status: 400, data: { code: 'catalog_value_unknown', message: 'server words', params: { value: 'Mainframe room', allowed: 'on_prem (On-prem), public_cloud (Public Cloud)' } } } };
+    expect(getApiErrorMessage(unknownValue, fr, 'fallback')).toBe('Valeur inconnue\u00a0: Mainframe room. Valeurs possibles\u00a0: on_prem (On-prem), public_cloud (Public Cloud).');
+    const lifecycle = { response: { status: 400, data: { code: 'deployment_lifecycle_invalid', message: 'server words', params: { value: 'Bogus', allowed: 'active (Active)' } } } };
+    expect(getApiErrorMessage(lifecycle, t, 'fallback')).toBe('Unknown lifecycle: Bogus. Use one of: active (Active).');
     for (const code of ['assignment_duplicate', 'assignment_inherited', 'assignment_role_invalid', 'deployment_environment_taken', 'deployment_lifecycle_invalid', 'date_invalid', 'asset_location_required']) {
       for (const language of ['en', 'fr', 'de', 'es']) {
-        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', environment: 'prod', field: 'since_date', cluster: 'ESX Paris' } } } }, i18n.getFixedT(language), 'fallback');
+        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', environment: 'prod', field: 'since_date', cluster: 'ESX Paris', allowed: 'app (Application server)' } } } }, i18n.getFixedT(language), 'fallback');
         expect(text, `${code} in ${language}`).not.toBe('server words');
         expect(text).not.toMatch(/{{|since_date|\bprod\b/);
       }
@@ -766,5 +776,37 @@ describe('a rich text refused for the address of a link', () => {
   it('says the same for a document', () => {
     expect(getDocumentSaveErrorMessage(refused, t, 'fallback'))
       .toBe('This link is not accepted. Use a web address, an email address, a phone number or a page of the application.');
+  });
+
+  it('names a retired catalog value as its selector does, without the list, on screen (rule P7)', () => {
+    const fr = i18n.getFixedT('fr');
+    const refusal = (params: Record<string, string>) => ({ response: { status: 400, data: { code: 'catalog_value_retired', message: 'The application category "Analytics" is retired: only a record that already holds it keeps it. Use one of: development (Development).', params } } });
+    const params = { value: 'Analytics', allowed: 'development (Development)', valueCode: 'analytics', list: 'applicationCategories' };
+    appQueryClient.setQueryData(['it-ops-settings'], {
+      applicationCategories: [{ code: 'analytics', label: 'Analytics', deprecated: true }, { code: 'development', label: 'Development' }],
+      connectionTypes: [{ code: 'veeam', label: 'Veeam', deprecated: true }],
+    });
+    try {
+      // The name the selector shows in the person's language (a shipped value), no list of values.
+      expect(getApiErrorMessage(refusal(params), fr, 'fallback')).toBe('Analytique n\'est plus proposé\u00a0: seule une fiche qui le porte déjà le garde.');
+      expect(getApiErrorMessage(refusal(params), t, 'fallback')).toBe('Analytics is no longer offered: only a record that already holds it keeps it.');
+      expect(getApiErrorMessage(refusal({ value: 'Veeam', allowed: 'https (HTTPS)', valueCode: 'veeam', list: 'connectionTypes' }), fr, 'fallback'))
+        .toBe('Veeam n\'est plus proposé\u00a0: seule une fiche qui le porte déjà le garde.');
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage(refusal(params), i18n.getFixedT(language), 'fallback');
+        expect(text, language).not.toMatch(/development|{{|analytics/);
+      }
+      // The import report keeps the values allowed, and names the value as the selector does.
+      expect(csvMessageText(withCatalogValueName({ row: 2, column: 'category', message: 'server words', code: 'catalog_value_retired', params }, fr), fr))
+        .toBe('Analytique n\'est plus proposé\u00a0: seule une fiche qui le porte déjà le garde. Valeurs possibles\u00a0: development (Development).');
+    } finally {
+      appQueryClient.clear();
+    }
+    // No catalog loaded, or a value with no list (a subnet): the name the server gave.
+    expect(getApiErrorMessage(refusal(params), t, 'fallback')).toBe('Analytics is no longer offered: only a record that already holds it keeps it.');
+    expect(getApiErrorMessage(refusal({ value: '10.9.0.0/24', allowed: '10.0.0.0/24' }), t, 'fallback')).toBe('10.9.0.0/24 is no longer offered: only a record that already holds it keeps it.');
+    // A value the catalog does not know keeps the list: the person needs the values allowed.
+    const unknown = { response: { status: 400, data: { code: 'catalog_value_unknown', message: 'server words', params: { value: 'Telnet', allowed: 'https (HTTPS)' } } } };
+    expect(getApiErrorMessage(unknown, t, 'fallback')).toBe('Unknown value: Telnet. Use one of: https (HTTPS).');
   });
 });

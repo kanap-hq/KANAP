@@ -12,7 +12,9 @@ const MAX_LIMIT = 50;
  * pool by content tier and trims to the user's limit, so we want enough candidates
  * to make sure tier-1 (ref) and tier-2 (label) matches surface from every type. */
 const CANDIDATE_POOL = 200;
-const PICKER_ENTITY_TYPES: AiSearchEntityType[] = [
+/** The families of the picker: the indexed ones, and the contributors (MEM-n), searched through their read. */
+type AiMentionEntityType = AiSearchEntityType | 'contributors';
+const PICKER_ENTITY_TYPES: AiMentionEntityType[] = [
   'applications',
   'assets',
   'budget_lines',
@@ -31,10 +33,11 @@ const PICKER_ENTITY_TYPES: AiSearchEntityType[] = [
   'suppliers',
   'tasks',
   'technologies',
+  'contributors',
 ];
-const KNOWN_ENTITY_TYPES: ReadonlySet<string> = new Set<string>(AI_SEARCH_ENTITY_TYPES);
+const KNOWN_ENTITY_TYPES: ReadonlySet<string> = new Set<string>([...AI_SEARCH_ENTITY_TYPES, 'contributors']);
 
-function isKnownEntityType(value: string): value is AiSearchEntityType {
+function isKnownEntityType(value: string): value is AiMentionEntityType {
   return KNOWN_ENTITY_TYPES.has(value);
 }
 

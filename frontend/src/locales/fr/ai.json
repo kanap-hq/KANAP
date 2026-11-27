@@ -168,7 +168,8 @@
       "departments": "Départements",
       "suppliers": "Fournisseurs",
       "businessProcesses": "Processus métier",
-      "users": "Utilisateurs"
+      "users": "Utilisateurs",
+      "contributors": "Contributeurs"
     }
   },
   "previewCard": {

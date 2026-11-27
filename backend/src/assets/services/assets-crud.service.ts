@@ -308,10 +308,10 @@ export class AssetsCrudService extends AssetsBaseService {
       existing.environment = this.normalizeEnvironment((body as any).environment);
     }
     if (has('kind')) {
-      existing.kind = await this.validation.resolveKind((body as any).kind, tenant, opts?.manager);
+      existing.kind = await this.validation.resolveKind((body as any).kind, tenant, opts?.manager, existing.kind);
     }
     if (has('provider')) {
-      existing.provider = await this.validation.resolveProvider((body as any).provider, tenant, opts?.manager);
+      existing.provider = await this.validation.resolveProvider((body as any).provider, tenant, opts?.manager, existing.provider);
     }
     if (has('region')) {
       existing.region = this.normalizeNullable((body as any).region);
@@ -322,10 +322,10 @@ export class AssetsCrudService extends AssetsBaseService {
 
     // Handle domain, hostname, aliases, and FQDN together
     if (has('domain')) {
-      existing.domain = await this.validation.resolveDomain((body as any).domain, tenant, opts?.manager);
+      existing.domain = await this.validation.resolveDomain((body as any).domain, tenant, opts?.manager, existing.domain);
     }
     if (has('admin_zone')) {
-      existing.admin_zone = await this.validation.resolveAdminZone((body as any).admin_zone, tenant, opts?.manager);
+      existing.admin_zone = await this.validation.resolveAdminZone((body as any).admin_zone, tenant, opts?.manager, existing.admin_zone);
     }
     if (has('hostname')) {
       existing.hostname = this.normalizeNullable((body as any).hostname);
@@ -362,7 +362,7 @@ export class AssetsCrudService extends AssetsBaseService {
     }
 
     if (has('ip_addresses')) {
-      existing.ip_addresses = await this.validation.validateIpAddresses((body as any).ip_addresses, tenant, this.getManager(opts), existing.id);
+      existing.ip_addresses = await this.validation.validateIpAddresses((body as any).ip_addresses, tenant, this.getManager(opts), existing.id, existing.ip_addresses as any);
     }
     if (has('notes')) {
       // Rich text: a changed text is checked as a write, the stored one is kept as it is.
@@ -386,6 +386,7 @@ export class AssetsCrudService extends AssetsBaseService {
         (body as any).status,
         tenant,
         opts?.manager,
+        existing.status,
         existing.status,
       );
     }

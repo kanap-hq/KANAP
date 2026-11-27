@@ -51,9 +51,9 @@ const PrepareImportMappingInputSchema = z.object({
   columns: z.array(ColumnMappingSchema).min(1).max(150)
     .describe('One entry per template column the file fills, in any order. A template column left out stays empty.'),
   assumptions: z.array(z.string().trim().min(1).max(300)).max(12).optional()
-    .describe('What the mapping supposes about the whole file, in the person\'s language (one row per server, the amounts are in euros). '
-      + 'A row is named by its line of the file, as the summary numbers it (header counted). The card shows the rows and the values '
-      + 'not read: do not describe them here.'),
+    .describe('What the mapping supposes about the whole file, in the person\'s language: a column left out, a date format, '
+      + 'the currency of the amounts. Never about one row, never what the import creates, updates or leaves out, nor what a value '
+      + 'becomes: the card shows the rows, what each one does, the matches and the values not read.'),
   left_aside: z.array(z.string().trim().min(1).max(200)).max(150).optional()
     .describe('Only the file columns, by header, that the person\'s message asks to leave out: a column named like a template '
       + 'column is read even when you do not map it. Never a column that holds only `-`, '
@@ -93,7 +93,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     attachment_id: 'The id of the attached spreadsheet, from its `<attached_table id="...">` summary.',
     entity_type: `The import the file fills: ${AI_IMPORT_KEYS.join(', ')}.`,
     columns: 'One entry per template column the file fills: column, source (file column position) or value (for every row), confidence, and optionally date_order, decimal_mark, values (file value to the value it stands for) and note.',
-    assumptions: 'What the mapping supposes about the whole file, in the user\'s language.',
+    assumptions: 'What the mapping supposes about the whole file, never about one row, in the user\'s language.',
     left_aside: 'Optional: the file columns, by header, that the person\'s message asks to leave out.',
   };
   readonly businessResource = 'applications';
@@ -106,7 +106,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'call `describe_import_template` for the import it fits, then `prepare_import_mapping` with the attachment id and the mapping. '
       + 'Map a column only when its header or its first rows say what it holds; say what you supposed in `note` or `assumptions`, '
       + 'and name the file columns you leave out. In `note` and `assumptions`, never say that a row creates or updates a record, nor what a record '
-      + 'already holds: the check tells it, and the card shows it. When the card shows values not read, ask the user what they stand for and call again with `values`. '
+      + 'already holds: the check tells it, and the card shows it. `assumptions` speak of the whole file, never of one row, and never say what the import creates, updates or leaves out, nor what a value becomes. When the card shows values not read, ask the user what they stand for and call again with `values`. '
       + 'The import checks the references to other records (a company, a supplier, a server, a person) when it runs. '
       + 'For a column that names a record by its name, `values` proposes only the name of an existing record (read in the template, '
       + 'else found by a search), never a case or accents variant: the check matches those itself, and refuses a proposal whose record '

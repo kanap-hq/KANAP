@@ -74,6 +74,7 @@ import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { CreationActions, CreationPreview, useCreationReturn, useRecordCreation, useTitleCreation } from '../../components/workspace/creation';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
+import { catalogOptionLabel, isHeldUnknown, offeredCatalogOptions } from '../../utils/catalogOffered';
 
 type TabKey = 'overview' | 'deployments' | 'interfaces' | 'operations' | 'compliance' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
@@ -331,15 +332,11 @@ function ApplicationProperties({
   const feedback = useApplicationFeedback();
   const { byField } = useItOpsEnumOptions();
   const categoryOptions = byField.applicationCategory || [];
-  const categorySelectOptions = React.useMemo(() => {
-    if (!app.category || categoryOptions.some((option) => option.code === app.category)) {
-      return categoryOptions;
-    }
-    return [
-      { code: app.category, label: t('common.legacyOption', { label: app.category }), deprecated: true },
-      ...categoryOptions,
-    ];
-  }, [app.category, categoryOptions, t]);
+  // Rule P7: the categories still offered, plus the one the application holds.
+  const categorySelectOptions = React.useMemo(
+    () => offeredCatalogOptions(categoryOptions, app.category, (code) => t('common.legacyOption', { label: code })),
+    [app.category, categoryOptions, t],
+  );
   const [savingAudience, setSavingAudience] = React.useState(false);
   const [audienceRows, setAudienceRows] = React.useState<Array<{ key: string; company_id: string | null; department_ids: string[] }>>([]);
 
@@ -352,7 +349,9 @@ function ApplicationProperties({
     queryKey: ['application-audience-departments', app.id, selectedDepartmentIds],
     queryFn: async () => {
       const entries = await Promise.all(selectedDepartmentIds.map(async (departmentId) => {
-        const res = await api.get<{ id: string; company_id: string; name: string }>(`/departments/${departmentId}`);
+        // The department record requires the departments reader level. The lookup returns the same
+        // id, name and company, and every reader of applications may call it.
+        const res = await api.get<{ id: string; company_id: string; name: string }>(`/departments/lookup/${departmentId}`);
         return [departmentId, res.data] as const;
       }));
       return Object.fromEntries(entries) as Record<string, { id: string; company_id: string; name: string }>;
@@ -466,7 +465,8 @@ function ApplicationProperties({
         <PropertyRow label={t('workspace.application.overview.category')}>
           <Select
             value={app.category || ''}
-            onChange={(event) => { void onPatch({ category: event.target.value }); }}
+            // The save shows its own refusal (a category retired meanwhile, rule P7): nothing left to throw.
+            onChange={(event) => { void onPatch({ category: event.target.value }).catch(() => undefined); }}
             variant="standard"
             disabled={!canManage}
             sx={drawerSelectSx}
@@ -475,10 +475,10 @@ function ApplicationProperties({
               <MenuItem
                 key={option.code}
                 value={option.code}
-                disabled={option.code === app.category && !categoryOptions.some((known) => known.code === option.code)}
+                disabled={isHeldUnknown(option)}
                 sx={drawerMenuItemSx}
               >
-                {option.label}
+                {catalogOptionLabel(option, t)}
               </MenuItem>
             ))}
           </Select>
@@ -1274,7 +1274,11 @@ export function OperationsTab({
 }) {
   const { t } = useTranslation(['it', 'common']);
   const { byField } = useItOpsEnumOptions();
-  const accessOptions = byField.accessMethod || [];
+  // Rule P7: the access methods still offered, plus those the application holds (an unknown one under its code).
+  const accessOptions = React.useMemo(
+    () => offeredCatalogOptions(byField.accessMethod, app.access_methods),
+    [byField.accessMethod, app.access_methods],
+  );
   const horizontalRowSx = { display: 'grid', gridTemplateColumns: '140px minmax(0, 1fr)', columnGap: '18px', alignItems: 'center' } as const;
   const horizontalLabelSx = { pt: '3px' } as const;
 
@@ -1288,8 +1292,9 @@ export function OperationsTab({
               multiple
               options={accessOptions}
               value={accessOptions.filter((option) => (app.access_methods || []).includes(option.code))}
-              onChange={(_, value) => { void onPatch({ access_methods: value.map((item) => item.code) } as Partial<ApplicationDetail>); }}
-              getOptionLabel={(option) => option.label}
+              // The save shows its own refusal (a method retired meanwhile, rule P7): nothing left to throw.
+              onChange={(_, value) => { void onPatch({ access_methods: value.map((item) => item.code) } as Partial<ApplicationDetail>).catch(() => undefined); }}
+              getOptionLabel={(option) => catalogOptionLabel(option, t)}
               disabled={!canManage}
               renderInput={(params) => (
                 <TextField
@@ -1456,6 +1461,8 @@ export default function ApplicationWorkspacePage() {
   const canDelete = hasLevel('applications', 'admin');
   const canConvert = canDelete && hasLevel('infrastructure', 'member');
   const canCreateKnowledge = hasLevel('knowledge', 'member');
+  // The incident count is its own read. Without the incidents reader level the page does not call it.
+  const canReadIncidents = hasLevel('incidents', 'reader');
   const overviewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
   const previewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
   const [versionDialogOpen, setVersionDialogOpen] = React.useState(false);
@@ -1510,7 +1517,7 @@ export default function ApplicationWorkspacePage() {
   const incidentsCountQuery = useQuery({
     queryKey: ['application-workspace-incidents-count', app?.id],
     queryFn: () => fetchApplicationIncidentsCount(app!.id),
-    enabled: !isCreate && !!app?.id,
+    enabled: !isCreate && !!app?.id && canReadIncidents,
   });
   // One read for the Operations section and the badge of the metadata bar. Technology link writes
   // and CVE state changes invalidate every `vulnerabilities` query. While the search is still
@@ -1671,14 +1678,16 @@ export default function ApplicationWorkspacePage() {
     }
   }, [t]);
 
+  // Rule P7: the lifecycles still offered, plus the one the application holds.
+  const heldLifecycle = app?.lifecycle;
   const lifecycleOptions = React.useMemo(() => {
-    const list = byField.lifecycleStatus || [];
+    const list = offeredCatalogOptions(byField.lifecycleStatus, heldLifecycle);
     return list.map((option) => ({
       value: option.code,
-      label: option.label,
+      label: catalogOptionLabel(option, t),
       color: getDotColor(LIFECYCLE_COLORS[option.code] || 'default', theme.palette.mode),
     }));
-  }, [byField.lifecycleStatus, theme.palette.mode]);
+  }, [byField.lifecycleStatus, heldLifecycle, theme.palette.mode, t]);
 
   // Creating an application takes the member level, as the server does.
   if (isCreate && !canManage) return <ForbiddenPage resource="applications" level="member" />;
@@ -1705,7 +1714,7 @@ export default function ApplicationWorkspacePage() {
   const deploymentCount = deployments.length;
   const interfaceCount = distinctInterfaceCount(interfacesQuery.data);
   const relationCount = (relationsCountQuery.data?.total ?? ((app?.links?.length || 0) + (app?.attachments?.length || 0)))
-    + (incidentsCountQuery.data || 0);
+    + (canReadIncidents ? (incidentsCountQuery.data || 0) : 0);
   // The knowledge documents live in the Overview tab: open it and bring the section into view.
   const openKnowledge = () => {
     handleTabChange('overview');
@@ -1794,7 +1803,8 @@ export default function ApplicationWorkspacePage() {
                 label={lifecycleOptions.find((option) => option.value === app.lifecycle)?.label || humanize(app.lifecycle, t('common:selects.notSet'))}
                 color={getDotColor(LIFECYCLE_COLORS[app.lifecycle] || 'default', theme.palette.mode)}
                 options={lifecycleOptions}
-                onChange={(value) => { void patchApplication({ lifecycle: value }); }}
+                // The save shows its own refusal (a state retired meanwhile, rule P7): nothing left to throw.
+                onChange={(value) => { void patchApplication({ lifecycle: value }).catch(() => undefined); }}
               />
             ) : (
               // Read only: the status is text, not a button that opens nothing.
@@ -1966,7 +1976,8 @@ export default function ApplicationWorkspacePage() {
             isSuite={!!app.is_suite}
             onRelationsChange={() => {
               void relationsCountQuery.refetch();
-              void incidentsCountQuery.refetch();
+              // refetch ignores `enabled`: a person who cannot read incidents must not call the route.
+              if (canReadIncidents) void incidentsCountQuery.refetch();
             }}
             onOpenKnowledge={openKnowledge}
           />

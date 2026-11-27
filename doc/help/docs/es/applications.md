@@ -156,7 +156,7 @@ Una celda sin valor muestra un guion.
 - Una modificación abarca como máximo 5000 aplicaciones. Por encima, acote los filtros o seleccione menos aplicaciones
 - Si la lista cambia entre el recuento y su confirmación, el diálogo muestra el nuevo recuento. Revíselo y vuelva a confirmar
 - Si el recuento falla, haga clic en **Reintentar** junto al mensaje para volver a contar
-- **Categoría**, **Criticidad de negocio** y **Criticidad cibernética** solo ofrecen los valores que siguen disponibles en **Panorama IT > Configuración**
+- **Categoría**, **Ciclo de vida**, **Criticidad de negocio** y **Criticidad cibernética** solo ofrecen los valores que siguen disponibles en **Panorama IT > Configuración**
 - Una nueva criticidad de negocio o cibernética pasa una aplicación revisada a **Por revisar**, como en la página de la aplicación
 - Cada aplicación modificada tiene su propia entrada en su pestaña **Historial**
 - [Kad](ai-assistant.md#changing-records-in-bulk) hace el mismo cambio cuando usted se lo pide en una conversación, con los mismos derechos. Su vista previa lista las aplicaciones que modifica, y usted puede excluir algunas antes de aprobarla
@@ -168,6 +168,8 @@ Una celda sin valor muestra un guion.
 Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un **encabezado** con metadatos rápidos, un **panel de propiedades** a la derecha (la tarjeta de identidad de la aplicación, siempre visible) y un **área de contenido** en el centro que cambia con cada pestaña.
 
 Las pestañas son **Vista general**, **Despliegues**, **Interfaces**, **Operaciones**, **Conformidad**, **Relaciones** e **Historial** (los cambios de la aplicación, vea [Historial de los registros](record-history.md)).
+
+**Valores que ya no se proponen**: la categoría, el ciclo de vida, los métodos de acceso y el ciclo de vida de un despliegue ofrecen los valores que siguen disponibles en [Configuración del Panorama IT](it-ops-settings.md). Un valor marcado **Dejar de proponer** permanece en las aplicaciones que ya lo tienen, que lo conservan al guardarse. Las demás aplicaciones no pueden tomarlo, ni en esta página, ni en masa, ni en una importación CSV, ni a través de Kad.
 
 ### Encabezado
 
@@ -712,6 +714,8 @@ Para campos configurados en **Panorama IT > Configuración**, puede usar tanto e
 
 El sistema normaliza automáticamente los valores durante la importación, por lo que `Line-of-business`, `line-of-business` y `lob` se resuelven a la misma categoría. Las etiquetas que muestra la pantalla se aceptan en inglés, francés, alemán y español: `Active`, `Actif`, `Aktiv` y `Activo` designan el mismo ciclo de vida. Un archivo exportado en un idioma se importa por tanto en otro.
 
+Una categoría, un ciclo de vida o un método de acceso marcado **Dejar de proponer** se rechaza en una fila cuya aplicación no lo tiene ya. El error de la fila lista los valores permitidos.
+
 ### Coincidencia y actualizaciones
 
 Las aplicaciones se emparejan por **nombre**, sin distinguir mayúsculas de minúsculas e ignorando los espacios al principio y al final. Cuando se encuentra una coincidencia, una celda vacía conserva el valor guardado, y `-` lo borra. Las columnas que faltan en el archivo conservan sus valores. El nombre, el `id`, el ciclo de vida, la categoría, `is_suite`, `external_facing`, `etl_enabled`, `contains_pii` y los demás campos obligatorios no se pueden borrar: `-` en ellos rechaza la fila, y el mensaje nombra la columna. Una aplicación nueva recibe los valores predeterminados.
@@ -781,6 +785,8 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 [Kad](ai-assistant.md) lee la versión, la fecha de puesta en servicio, la fecha de fin de soporte y la fecha de retirada de cada aplicación. Filtra, ordena y agrupa las aplicaciones según estas fechas. Su lista conserva las aplicaciones retiradas, mientras que el informe [Fin de soporte](end-of-support.md) solo conserva las que están en servicio.
 
 Kad también declara una tecnología en una aplicación, o la quita, con su versión y, si usted lo pide, en los servidores de despliegue de la aplicación. Para ello necesita el derecho de leer las aplicaciones y el nivel Miembro en la infraestructura. Un Business Contributor solo lo hace en las aplicaciones en las que participa. Kad no vincula un sistema operativo: indíquelo en la página del servidor. Cada cambio llega como una vista previa que usted aprueba. Cuando pide a Kad que lo deshaga, restablece exactamente lo que cambió. Una versión creada de paso se queda en la tecnología.
+
+Kad define la categoría, el ciclo de vida y los métodos de acceso de una aplicación por su nombre o su código. Rechaza un valor que ya no se propone, salvo si la aplicación ya lo tiene, y lista los valores permitidos.
 
 Pregunte, por ejemplo: «Añade PostgreSQL 16 a CheeseTrack y a sus servidores», «Quita PostgreSQL 14 de CheeseTrack», «¿Qué aplicaciones llegan al fin de soporte en los próximos seis meses?» o «¿Qué aplicaciones declaran PostgreSQL 14?»
 

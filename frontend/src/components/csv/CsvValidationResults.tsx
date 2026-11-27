@@ -18,13 +18,14 @@ import { useTranslation } from 'react-i18next';
 import { CsvImportResult } from './csv.types';
 import { csvFieldLabel } from './csvLabels';
 import { csvMessageColumn, csvMessageText, type CsvReportMessage } from './csvMessage';
+import { withCatalogValueName } from '../../utils/catalogReportMessage';
 
 /** One error or warning: its row, the sentence, then its column when the sentence does not name it. */
 function ReportLine({ item, entity }: { item: CsvReportMessage; entity: string }) {
   const { t } = useTranslation('common');
   // The report names a column by its key. The screen uses the same label as the export.
   const label = (key: string) => csvFieldLabel(t, entity, { csvColumn: key, label: key });
-  const text = csvMessageText(item, t, label);
+  const text = csvMessageText(withCatalogValueName(item, t), t, label);
   const column = csvMessageColumn(item, text);
   const columnLabel = column ? label(column) : null;
   return (
