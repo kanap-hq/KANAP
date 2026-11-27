@@ -119,7 +119,7 @@ describe('AssetImpactSection', () => {
     expect(within(screen.getByRole('table', { name: `${P}.sections.processes` })).getByText('Finance')).toBeInTheDocument();
 
     fireEvent.click(within(assetRows[1]).getByText('WEB-01'));
-    expect(screen.getByTestId('location')).toHaveTextContent('/it/assets/web/overview');
+    expect(screen.getByTestId('location')).toHaveTextContent('/it/assets/AST-3/overview');
   });
 
   it('words the members of a cluster that falls, and the VMs it takes down', async () => {

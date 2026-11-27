@@ -177,7 +177,7 @@ export default function AssetImpactSection({ assetId, isServer = true }: Props) 
                 columns={applicationColumns}
                 rows={shown(applications)}
                 rowKey={(row) => row.id}
-                rowHref={(row) => `/it/applications/${row.id}/overview`}
+                rowHref={(row) => `/it/applications/${row.reference || row.id}/overview`}
               />
               {more(totals.applications)}
             </RelationsSection>
@@ -189,7 +189,7 @@ export default function AssetImpactSection({ assetId, isServer = true }: Props) 
                 columns={assetColumns}
                 rows={shown(assets)}
                 rowKey={(row) => row.id}
-                rowHref={(row) => `/it/assets/${row.id}/overview`}
+                rowHref={(row) => `/it/assets/${row.reference || row.id}/overview`}
               />
               {more(totals.assets)}
             </RelationsSection>
@@ -201,7 +201,7 @@ export default function AssetImpactSection({ assetId, isServer = true }: Props) 
                 columns={clusterColumns}
                 rows={shown(clusters)}
                 rowKey={(row) => row.id}
-                rowHref={(row) => `/it/assets/${row.id}/overview`}
+                rowHref={(row) => `/it/assets/${row.reference || row.id}/overview`}
               />
               {more(clusterTotal)}
             </RelationsSection>
