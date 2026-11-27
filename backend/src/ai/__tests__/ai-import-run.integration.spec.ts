@@ -283,13 +283,13 @@ async function testIncidentRights(h: Harness, runner: QueryRunner, s: Seed) {
 
   // A reader is refused the card.
   const reader = ctx(runner, s, 'reader');
-  assert.match(await refusal(() => h.previews.createPreview(reader, 'prepare_import_mapping', input)), /right to contribute to incidents/);
+  assert.match(await refusal(() => h.previews.createPreview(reader, 'prepare_import_mapping', input)), /"Contributor" on "Incidents"/);
   // A contributor whose level drops to reader before approving: refused, nothing written.
   const other = attach(h, 'more incidents.csv', 'Titre,Gravité\nPower cut,minor\n');
   const pending = await h.previews.createPreview(contributor, 'prepare_import_mapping', { ...input, attachment_id: other });
   assert.equal(pending.import_mapping.validation.ok, true, JSON.stringify(pending.import_mapping.validation));
   await runner.query(`UPDATE role_permissions SET level = 'reader' WHERE tenant_id = $1 AND role_id = $2 AND resource = 'incidents'`, [s.tenantId, s.roles.contributor]);
-  assert.match(await refusal(() => h.previews.executePreview(contributor, pending.preview_id)), /right to contribute to incidents/);
+  assert.match(await refusal(() => h.previews.executePreview(contributor, pending.preview_id)), /"Contributor" on "Incidents"/);
   await runner.query(`UPDATE role_permissions SET level = 'contributor' WHERE tenant_id = $1 AND role_id = $2 AND resource = 'incidents'`, [s.tenantId, s.roles.contributor]);
   const [count] = await runner.query(`SELECT count(*)::int AS n FROM incidents WHERE tenant_id = $1`, [s.tenantId]);
   assert.equal(count.n, 2);

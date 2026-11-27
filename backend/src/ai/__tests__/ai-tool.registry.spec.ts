@@ -45,6 +45,8 @@ function createRegistry(overrides?: {
   mutationOperations?: any;
   /** null: a registry built without the history service. */
   recordHistory?: any;
+  /** Set when the import template tool should be registered as present. */
+  importMapping?: any;
 }) {
   const recordHistory = overrides && 'recordHistory' in overrides
     ? overrides.recordHistory ?? undefined
@@ -534,6 +536,8 @@ function createRegistry(overrides?: {
     } as any,
     undefined,
     recordHistory,
+    undefined,
+    overrides?.importMapping,
   );
 }
 
@@ -1099,6 +1103,54 @@ async function testPrepareMutationPlanDelegatesToPreviewService() {
     'create_project',
     'task_1',
   ]);
+}
+
+/** A person who prepares changes is offered the import even without an import right (lot I6d). The call still refuses the family. */
+async function testImportToolsAreOfferedToAWriterWithoutTheImportRight() {
+  const operation = {
+    toolName: 'prepare_import_mapping',
+    description: 'Map an attached spreadsheet onto an import.',
+    inputSchema: { safeParse: (value: any) => ({ success: true, data: value }) },
+    inputSummary: { attachment_id: 'The file.', entity_type: 'The import.' },
+    businessResource: 'applications',
+    businessResources: ['budget', 'applications', 'incidents', 'infrastructure'],
+    writePreview: {
+      entity_type: 'applications',
+      fields: ['columns'],
+      reversible: false,
+      prompt_hint: 'Map the file with prepare_import_mapping.',
+    },
+  };
+  const registry = (allow: (resource: string, level: string) => boolean) => createRegistry({
+    policy: {
+      assertWriteAccess: async (_context: any, resource: string, _manager: any, options: { level: string }) => {
+        if (!allow(resource, options.level)) throw new Error(`missing ${resource}:${options.level}`);
+      },
+    },
+    mutationOperations: {
+      listOperations: () => [operation],
+      getOperationOrNull: (toolName: string) => (toolName === operation.toolName ? operation : null),
+      isSupportedToolName: (toolName: string) => toolName === operation.toolName,
+    },
+    importMapping: { describeTemplate: async () => ({}) },
+  });
+  const names = async (built: ReturnType<typeof createRegistry>, context: Parameters<AiToolRegistry['listAvailableTools']>[0]) =>
+    (await built.listAvailableTools(context)).map((tool) => tool.name);
+  const writer = await names(
+    registry((resource, level) => resource === 'ai_chat' && level === 'member'),
+    createChatContext(),
+  );
+  assert.ok(writer.includes('prepare_import_mapping'), 'a writer without an import right is offered the import');
+  assert.ok(writer.includes('describe_import_template'), 'and the template description');
+  const reader = await names(registry(() => false), createChatContext());
+  assert.ok(!reader.includes('prepare_import_mapping'), 'a reader is not offered the import');
+  assert.ok(!reader.includes('describe_import_template'));
+  const mcp = await names(
+    registry((resource, level) => resource === 'ai_chat' && level === 'member'),
+    createContext(),
+  );
+  assert.ok(!mcp.includes('prepare_import_mapping'), 'MCP has no import');
+  assert.ok(!mcp.includes('describe_import_template'));
 }
 
 /** The vulnerability state tool needs infrastructure member and the vulnerability feed, as the screen's route. */
@@ -2456,6 +2508,7 @@ async function run() {
   await testWritePreviewToolsStayHiddenWithoutWriteAccess();
   await testDeleteRecordIsOfferedOnChatOnly();
   await testVulnerabilityStateToolFollowsTheRightAndTheFeed();
+  await testImportToolsAreOfferedToAWriterWithoutTheImportRight();
   await testUpdateTaskAssigneesCreatesOnePreviewPerTaskAndReturnsPartialErrors();
   await testPrepareMutationPlanDelegatesToPreviewService();
   await testUndoPreviewStaysHiddenWhenOnlyNonReversibleWritesExist();
