@@ -97,7 +97,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
       ? accountFormSchema
       : accountFormSchema.extend({
         coa_id: z.string().min(1, t('master-data:formSchemas.account.chartOfAccountsRequired')),
-      })) as z.ZodType<AccountUpdateFormValues>,
+      })) as unknown as z.ZodType<AccountUpdateFormValues>,
     [isTemplateAccount, t],
   );
 

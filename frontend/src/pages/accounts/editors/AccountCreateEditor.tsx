@@ -68,7 +68,7 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
       ? accountFormSchema
       : accountFormSchema.extend({
         coa_id: z.string().min(1, t('master-data:formSchemas.account.chartOfAccountsRequired')),
-      })) as z.ZodType<AccountCreateFormValues>,
+      })) as unknown as z.ZodType<AccountCreateFormValues>,
     [isTemplateAccount, t],
   );
 
