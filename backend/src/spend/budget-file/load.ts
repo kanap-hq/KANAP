@@ -1,7 +1,9 @@
 import { EntityManager } from 'typeorm';
 import { loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import { toCents } from '../../common/amount';
-import { budgetColumnName, readBudgetColumns } from '../../budget-columns/budget-columns.util';
+import { readBudgetColumns, type BudgetColumnsSettings } from '../../budget-columns/budget-columns.util';
+import { localizedMeasureName } from '../../budget-columns/budget-column-labels';
+import type { CsvLanguage } from '../../common/csv-sheet';
 import { ItemAnalyticsValue, loadItemAnalyticsValues } from '../item-analytics.util';
 import { BUDGET_NATURES, natureAnd, naturesAnd, type BudgetNature } from '../budget-nature';
 import { AMOUNT_MEASURES, type AmountMeasure } from '../amounts-write.util';
@@ -67,11 +69,15 @@ export async function loadFileDimensions(manager: EntityManager, tenantId: strin
   return enabled.map((axis) => ({ code: axis.code, appliesTo: axis.applies_to ?? null }));
 }
 
-export async function loadColumnLabels(manager: EntityManager, tenantId: string): Promise<Record<string, string>> {
-  const settings = await readBudgetColumns(manager, tenantId);
+/** File column name (`budget`) to the column's name: the tenant's, else the product name in `language`. */
+export function columnLabels(settings: BudgetColumnsSettings, language: CsvLanguage): Record<string, string> {
   const labels: Record<string, string> = {};
-  for (const measure of AMOUNT_MEASURES) labels[columnOfMeasure(measure)] = budgetColumnName(settings, measure);
+  for (const measure of AMOUNT_MEASURES) labels[columnOfMeasure(measure)] = localizedMeasureName(settings, measure, language);
   return labels;
+}
+
+export async function loadColumnLabels(manager: EntityManager, tenantId: string, language: CsvLanguage = 'en'): Promise<Record<string, string>> {
+  return columnLabels(await readBudgetColumns(manager, tenantId), language);
 }
 
 /**

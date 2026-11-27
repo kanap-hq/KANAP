@@ -127,6 +127,16 @@ function natureLabel(nature: BudgetNature): string {
   return nature.toUpperCase();
 }
 
+/** A file column (`budget`) in the English `message`: the tenant's label, else the English product name. */
+function columnLabel(input: PreflightInput, column: string): string {
+  return input.labels[column] || column;
+}
+
+/** A file column in the parameters the screen and Kad's card translate: its name in the person's language. */
+function localColumnLabel(input: PreflightInput, column: string): string {
+  return input.localLabels?.[column] || columnLabel(input, column);
+}
+
 /** `an OPEX`, `a CAPEX`. */
 function aNature(nature: BudgetNature): string {
   return nature === 'opex' ? 'an OPEX' : 'a CAPEX';
@@ -156,8 +166,13 @@ export interface PreflightInput {
   createSuppliers: boolean;
   canCreateSuppliers: boolean;
   currentYear: number;
-  /** File column name (`budget`) to the tenant's label. */
+  /** File column name (`budget`) to the tenant's label, else the English product name: the English `message`. */
   labels: Record<string, string>;
+  /**
+   * The same in the person's language (the tenant's label first): the parameters the screen and Kad's
+   * card translate. Absent: `labels`.
+   */
+  localLabels?: Record<string, string>;
   /** A limited person's access (planning/data-scoped-access spec §4.2); absent for an unscoped person. */
   access?: BudgetFileAccess;
   /**
@@ -1514,8 +1529,9 @@ function resolveAmounts(
     // The freeze of the row's nature only: a column frozen for the other nature does not stop it.
     const frozenKey = `${nature}:${amount.year}:${MEASURE_FREEZE_COLUMN[amount.measure]}`;
     if (input.catalog.frozen.includes(frozenKey)) {
-      const label = input.labels[amount.column] || amount.column;
-      fail(amount.id, `${label} for ${amount.year} is frozen.`, 'BUDGET_FILE_FROZEN', { label, year: amount.year });
+      fail(amount.id, `${columnLabel(input, amount.column)} for ${amount.year} is frozen.`, 'BUDGET_FILE_FROZEN', {
+        label: localColumnLabel(input, amount.column), year: amount.year,
+      });
       continue;
     }
     const when = amount.month == null ? String(amount.year) : `${amount.year}-${String(amount.month).padStart(2, '0')}`;
@@ -1550,7 +1566,7 @@ function noteCalculationLines(
     year: amount.year,
     count: round.lineCount,
     total,
-    message: calculationLinesMessage(item, input.labels[column] || column, amount.year, round.lineCount, total),
+    message: calculationLinesMessage(item, columnLabel(input, column), amount.year, round.lineCount, total),
   });
 }
 
@@ -1593,7 +1609,8 @@ function checkConsistency(
   for (const [key, cents] of sums) {
     const [year, measure] = key.split('|');
     const column = columnOfMeasure(measure as AmountMeasure);
-    const label = input.labels[column] || column;
+    const label = columnLabel(input, column);
+    const local = localColumnLabel(input, column);
     const amount = wholeUnits(cents);
     if (look) {
       const other = (look.currency ?? '') === currency ? bag.index.totalOf(look, key) : undefined;
@@ -1601,7 +1618,7 @@ function checkConsistency(
       const ref = lineRef(look.itemNumber);
       warn({
         message: `${label} ${year} at ${amount}, against ${wholeUnits(other)} on ${ref}.`,
-        code: 'BUDGET_FILE_AMOUNT_FAR_FROM_LINE', params: { label, year: Number(year), amount, other: wholeUnits(other), ref },
+        code: 'BUDGET_FILE_AMOUNT_FAR_FROM_LINE', params: { label: local, year: Number(year), amount, other: wholeUnits(other), ref },
       });
       break;
     }
@@ -1613,7 +1630,7 @@ function checkConsistency(
       warn({
         message: `${label} ${year} at ${amount}, against a median of ${wholeUnits(median.cents)} on ${median.count} lines of the same supplier.`,
         code: 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER_UNREAD',
-        params: { label, year: Number(year), amount, median: wholeUnits(median.cents), count: median.count },
+        params: { label: local, year: Number(year), amount, median: wholeUnits(median.cents), count: median.count },
       });
       break;
     }
@@ -1621,7 +1638,7 @@ function checkConsistency(
     warn({
       message: `${label} ${year} at ${amount}, against a median of ${wholeUnits(median.cents)} on ${median.count} lines of ${supplier}.`,
       code: 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER',
-      params: { label, year: Number(year), amount, median: wholeUnits(median.cents), count: median.count, supplier },
+      params: { label: local, year: Number(year), amount, median: wholeUnits(median.cents), count: median.count, supplier },
     });
     break;
   }
@@ -1706,14 +1723,14 @@ function checkQuantityPrice(
     typeof endOfValidity === 'string' ? endOfValidity : null,
   );
   if (left.length === 0) return;
-  const named = left
-    .map((column) => `${input.labels[columnOfMeasure(column.measure)] || columnOfMeasure(column.measure)} ${column.year}`)
+  const named = (label: (input: PreflightInput, column: string) => string) => left
+    .map((column) => `${label(input, columnOfMeasure(column.measure))} ${column.year}`)
     .join(', ');
   bag.consistency.push({
     line: row.line,
-    message: `Account ${account.number} expects quantity and price entry: complete ${named} on the line's Budget tab.`,
+    message: `Account ${account.number} expects quantity and price entry: complete ${named(columnLabel)} on the line's Budget tab.`,
     code: 'BUDGET_FILE_QUANTITY_PRICE_EXPECTED',
-    params: { account: account.number, columns: named },
+    params: { account: account.number, columns: named(localColumnLabel) },
   });
 }
 

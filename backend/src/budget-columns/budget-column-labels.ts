@@ -34,6 +34,11 @@ const COLUMN_OF_MEASURE = Object.fromEntries(
   (Object.entries(BUDGET_COLUMN_MEASURE) as Array<[BudgetColumn, AmountMeasure]>).map(([column, measure]) => [measure, column]),
 ) as Record<AmountMeasure, BudgetColumn>;
 
+/** The tenant's name for the column of `measure`, else its product name in `language`. */
+export function localizedMeasureName(settings: BudgetColumnsSettings, measure: AmountMeasure, language: CsvLanguage): string {
+  return localizedBudgetColumnName(settings, COLUMN_OF_MEASURE[measure], language);
+}
+
 type BudgetColumnAiEntry = ReturnType<typeof budgetColumnsAiContext>[number];
 
 /** One column as the assistant sees it: `name` to use, or `names` when the profile sets no language. */

@@ -273,6 +273,7 @@ async function prepare(input: {
   return checkBudgetFile(input.manager, input.tenantId, {
     scope: input.scope,
     read,
+    language: input.language,
     createSuppliers: input.createSuppliers,
     canCreateSuppliers: input.canCreateSuppliers,
     canReadSuppliers: input.canReadSuppliers,
