@@ -60,6 +60,46 @@ export const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
   contributors: (id) => `/portfolio/contributors/${id}`,
 };
 
+/**
+ * The reference prefix by which a family's page opens (`/portfolio/tasks/T-4`, `/it/locations/LOC-2`).
+ * Keep in line with `LINKED_REFERENCE_FAMILIES` (`frontend/src/ai/utils/referenceLinks.ts`).
+ */
+const PAGE_REFERENCE_PREFIXES: Readonly<Record<string, string>> = {
+  tasks: 'T',
+  projects: 'PRJ',
+  requests: 'REQ',
+  technologies: 'TEC',
+  documents: 'DOC',
+  incidents: 'INC',
+  applications: 'APP',
+  assets: 'AST',
+  interfaces: 'INT',
+  connections: 'CONN',
+  locations: 'LOC',
+  budget_lines: 'BL',
+  contracts: 'CTR',
+  companies: 'COMP',
+  contacts: 'CTCT',
+  departments: 'DEPT',
+  suppliers: 'SUP',
+  contributors: 'MEM',
+};
+
+/** The segment of a record's page address: its reference when its family's page opens by it, else its id. */
+function pageAddress(entityType: string, id: string, ref: unknown): string {
+  const prefix = PAGE_REFERENCE_PREFIXES[entityType];
+  return prefix && typeof ref === 'string' && new RegExp(`^${prefix}-[1-9]\\d*$`).test(ref) ? ref : id;
+}
+
+/**
+ * The page of a record (`/portfolio/tasks/T-4`): by its reference when its family's page opens by it,
+ * by its id otherwise; null for a family without a page.
+ */
+export function entityPageUrl(entityType: string, id: string, ref: unknown): string | null {
+  const builder = ENTITY_URL_BUILDERS[entityType];
+  return builder ? builder(pageAddress(entityType, id, ref)) : null;
+}
+
 /** The sentence the read tools give about `page_url` (chat and MCP share the descriptions). */
 export const AI_PAGE_URL_NOTE = 'A record whose page does not open by its `ref` (business process, account, analytics value, site, connection, role, data access row, chargeback row, which opens its report), and a cost center, working-day calendar or analytics dimension, whose `ref` is its code, carries `page_url`, the address of its page, when the user can open that page: an absolute address over MCP when the workspace address is configured on the server, otherwise a path from the workspace address.';
 
@@ -70,7 +110,7 @@ export type AiPageUrlOptions = {
   origin: () => Promise<string | null>;
 };
 
-type LinkableItem = { type?: unknown; id?: unknown; page_url?: unknown; metadata?: unknown };
+type LinkableItem = { type?: unknown; id?: unknown; ref?: unknown; page_url?: unknown; metadata?: unknown };
 
 function asItem(value: unknown): LinkableItem | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as LinkableItem : null;
@@ -119,7 +159,8 @@ export async function withAiPageUrls<T>(result: T, options: AiPageUrlOptions): P
     const readable = await options.readableResources(resources);
     for (const item of linkable) {
       const route = AI_PAGE_ROUTES[item.type as string];
-      if (readable.has(route.resource)) links.push({ holder: item, path: route.path(item.id as string) });
+      // A site's page opens by its reference (`LOC-2`) when the record carries it.
+      if (readable.has(route.resource)) links.push({ holder: item, path: route.path(pageAddress(item.type as string, item.id as string, item.ref)) });
     }
   }
   // The links the vulnerabilities already carry (`ai-vulnerabilities.query.ts`), in the item's
