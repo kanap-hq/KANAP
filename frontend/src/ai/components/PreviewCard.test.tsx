@@ -1480,3 +1480,62 @@ describe('PreviewCard in French', () => {
     expect(document.body.textContent).not.toMatch(/BUDGET_FILE_|is not in the company's chart/);
   });
 });
+
+describe('PreviewCard names project and request fields as on their screens', () => {
+  // The screen's own keys. The expected words are read from them, never retyped.
+  const screenKeys = {
+    override_justification: 'portfolio:activity.history.fields.overrideJustification',
+    criteria_values: 'portfolio:editors.scoring.sections.evaluationCriteria',
+    risks: 'portfolio:workspace.request.analysis.fields.risksMitigations',
+  } as const;
+
+  afterEach(async () => {
+    cleanup();
+    await i18n.changeLanguage('en');
+  });
+
+  function textChange(label: string, to: string) {
+    return { label, from: null, to, format: 'text' as const };
+  }
+
+  function expectScreenLabel(field: keyof typeof screenKeys) {
+    const key = screenKeys[field];
+    const screenLabel = i18n.t(key);
+    expect(i18n.exists(key)).toBe(true);
+    expect(screenLabel).not.toMatch(/[:：]\s*$/);
+    expect(screen.getByText(screenLabel)).toBeInTheDocument();
+    const cardLabel = i18n.t(`ai:previewCard.fields.${field}`);
+    if (cardLabel !== screenLabel) {
+      expect(screen.queryByText(cardLabel)).not.toBeInTheDocument();
+    }
+  }
+
+  it.each(['en', 'fr', 'de', 'es'] as const)('reads the %s screen labels of a project change and a request change', async (language) => {
+    await i18n.changeLanguage(language);
+
+    renderCard(preview({
+      tool_name: 'update_business_record',
+      target: { entity_type: 'projects', entity_id: 'prj-1', ref: 'PRJ-1', title: 'PRJ-1 - Renewal' },
+      changes: {
+        override_justification: textChange('Override Justification', 'The sponsor asked for a higher rank.'),
+        criteria_values: textChange('Criteria Values', 'cost=3; risk=1'),
+      },
+    }));
+    expectScreenLabel('override_justification');
+    expectScreenLabel('criteria_values');
+    cleanup();
+
+    renderCard(preview({
+      tool_name: 'update_business_record',
+      target: { entity_type: 'requests', entity_id: 'req-1', ref: 'REQ-1', title: 'REQ-1 - Portal' },
+      changes: {
+        override_justification: textChange('Override Justification', 'The sponsor asked for a higher rank.'),
+        criteria_values: textChange('Criteria Values', 'cost=3; risk=1'),
+        risks: textChange('Risks and Mitigations', 'The supplier may slip the date.'),
+      },
+    }));
+    expectScreenLabel('override_justification');
+    expectScreenLabel('criteria_values');
+    expectScreenLabel('risks');
+  });
+});
