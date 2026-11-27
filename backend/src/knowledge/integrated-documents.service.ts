@@ -4022,6 +4022,8 @@ export class IntegratedDocumentsService {
     const manager = this.getManager(opts);
     const normalizedUserId = this.normalizeUserId(userId);
     const managedSlotKey = slotKey as IntegratedDocumentSlotKey;
+    // The record before its document, as `updateBySource`: the restore ends with an activity on it.
+    await this.lockSourceRow(sourceEntityType, sourceEntityId, manager);
     const documentId = await this.resolveManagedDocumentId(
       sourceEntityType,
       sourceEntityId,

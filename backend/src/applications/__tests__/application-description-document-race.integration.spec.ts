@@ -16,6 +16,7 @@ import { assert, assertSucceeded, describe, pgCode, progress, runRaceSpecs, sett
 // - P: the page making the overview document while the application is deleted.
 // - K: an import of the description and the owners (an export imported again) against the page.
 // - O: the owners saved from the page against that import.
+// - R: the restore of a project document version against the cancel of the project's creation.
 
 process.env.JWT_SECRET ||= 'test-jwt-secret';
 process.env.STRIPE_SECRET_KEY = '';
@@ -340,6 +341,40 @@ async function ownersImportAgainstOwnersPage() {
   });
 }
 
+/**
+ * R1: the restore of a project's document version against the cancel of the project's creation (the
+ * project FOR UPDATE, then its documents): the restore locks the project first (FOR KEY SHARE), so the
+ * cancel waits for it, never the other way round (40P01).
+ */
+async function restoreAgainstProjectCancel() {
+  await withRace('app-desc-restore-project-cancel', async (race) => {
+    const s = await prepare(race, false);
+    const projectId = await race.seedWith(async (runner: QueryRunner) => {
+      const [project] = await runner.query(
+        `INSERT INTO portfolio_projects (tenant_id, item_number, name, origin, status, scheduling_mode, execution_progress, criteria_values)
+         VALUES ($1, 1, 'Race project', 'fast_track', 'planned', 'independent', 0, '{}'::jsonb) RETURNING id::text AS id`, [race.tenantId]);
+      await h.docs.repairSourceSlot('projects', project.id, 'purpose', { manager: runner.manager, actorUserId: s.userId });
+      return String(project.id);
+    });
+    const lock: any = await race.seedWith((runner: QueryRunner) => h.docs.acquireLockBySource('projects', projectId, 'purpose', s.userId, { manager: runner.manager }));
+    const restore = await race.open('restore of a version');
+    const cancel = await race.open('cancel of the creation');
+    const gate = race.gate(restore, { label: 'document locked', when: 'after', match: (t) => /SELECT id FROM documents WHERE id = \$1 FOR UPDATE/.test(t) });
+    const restoring = race.start(restore, async (m) => { await bounded(m); return h.docs.revertBySource('projects', projectId, 'purpose', 1, s.userId, String(lock.lock_token), { manager: m }); });
+    assert.equal(await progress(restoring, { party: restore, gate }), 'gated', 'harness: the restore must pause holding the document');
+    const cancelling = race.start(cancel, async (m) => { await bounded(m); return h.projects.deleteCreated(projectId, race.tenantId, s.userId, m); });
+    assert.equal(await progress(cancelling, { party: cancel }), 'blocked', 'the cancel waits for the restore');
+    gate.release();
+    const restored = await settle(restoring);
+    const cancelled = await settle(cancelling);
+    assert.ok(!deadlocked(restored) && !deadlocked(cancelled), `no deadlock: restore ${describe(restored)}, cancel ${describe(cancelled)}`);
+    assertSucceeded(restored, 'the restore');
+    assertSucceeded(cancelled, 'the cancel');
+    const left = await race.read(`SELECT count(*)::int AS n FROM portfolio_projects WHERE id = $1`, [projectId]);
+    assert.equal(left[0].n, 0, 'the project is gone');
+  });
+}
+
 void (async () => {
   await boot();
   try {
@@ -356,6 +391,7 @@ void (async () => {
       ['K1: an import of the description and owners writes the document, then an autosave: no deadlock, the autosave gets a 409', () => ownersImportAgainstAutosave()],
       ['K2: the same import makes the document, then the page opens the application: no deadlock, one document', () => ownersImportAgainstFirstOpen()],
       ['O1: the owners saved from the page wait for an import that holds the application, then write after it', () => ownersImportAgainstOwnersPage()],
+      ['R1: a restore of a project document version, then the cancel of the project creation: no deadlock', () => restoreAgainstProjectCancel()],
     ]);
   } finally {
     await h.app.close();
