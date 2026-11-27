@@ -106,7 +106,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'call `describe_import_template` for the import it fits, then `prepare_import_mapping` with the attachment id and the mapping. '
       + 'Map a column only when its header or its first rows say what it holds; say what you supposed in `note` or `assumptions`, '
       + 'and name the file columns you leave out. In `note` and `assumptions`, never say that a row creates or updates a record, nor what a record '
-      + 'already holds: the check tells it, and the card shows it. `assumptions` speak of the whole file, never of one row, and never say what the import creates, updates or leaves out, nor what a value becomes. When the card shows values not read, ask the user what they stand for and call again with `values`. '
+      + 'already holds: the check tells it, and the card shows it. `assumptions` speak of the whole file, never of one row, and never say what the import creates, updates or leaves out, nor what a value becomes, nor in which time zone times are read: the card says it when it matters. When the card shows values not read, ask the user what they stand for and call again with `values`. '
       + 'The import checks the references to other records (a company, a supplier, a server, a person) when it runs. '
       + 'For a column that names a record by its name, `values` proposes only the name of an existing record (read in the template, '
       + 'else found by a search), never a case or accents variant: the check matches those itself, and refuses a proposal whose record '

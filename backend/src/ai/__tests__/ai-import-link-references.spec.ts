@@ -143,7 +143,38 @@ async function testDoubledColumnOnTheCard() {
   console.log('  a doubled column: the card builds the column once: OK');
 }
 
+/**
+ * The card says once how times are read, and only when it reads some in the person's zone (lot I6c of
+ * 26.12.1): an assumption of the model about time zones is left out, a file whose headers name their
+ * zone (an export imported again) gets none, a file without one gets the card's own sentence.
+ */
+async function testOneZoneSentence() {
+  const template = await templateOf('incidents');
+  const mapped = (header: string) => readTableAttachment(Buffer.from([`Titre;Gravité;${header}`, 'Panne;Majeure;25/10/2026 02:30'].join('\n'), 'utf8'));
+  const request = (assumptions: string[]) => ({
+    importKey: 'incidents' as const, filename: 'incidents.csv', assumptions, timeZone: 'Europe/Paris', columns: [
+      { column: 'title', source: 1, confidence: 'high' as const }, { column: 'severity', source: 2, confidence: 'high' as const },
+      { column: 'detected_at', source: 3, confidence: 'high' as const, date_order: 'day-first' as const },
+    ],
+  });
+  const model = [
+    'Les heures sont lues dans le fuseau Europe/Paris, comme l\'en-tête l\'indique.',
+    'Heures exprimées en heure de Paris (fuseau horaire de l\'export).',
+    'Times are in the Europe/Paris time zone.',
+    'Une ligne par incident.',
+    'La colonne Restreint lit Oui/Non comme oui ou non.',
+  ];
+  const zoned = buildImportMapping(await mapped('Détecté (Europe/Paris)'), template, request(model), 'fr');
+  assert.deepEqual(zoned.preview.assumptions, ['Une ligne par incident.', 'La colonne Restreint lit Oui/Non comme oui ou non.']);
+  const zoneless = buildImportMapping(await mapped('Détecté'), template, request(model), 'fr');
+  assert.deepEqual(zoneless.preview.assumptions, [
+    'Les heures sans fuseau horaire sont lues dans votre fuseau, Europe/Paris.', 'Une ligne par incident.', 'La colonne Restreint lit Oui/Non comme oui ou non.',
+  ]);
+  console.log('  one sentence on time zones, the card\'s, and only when it reads times in the person\'s zone: OK');
+}
+
 async function main() {
+  await testOneZoneSentence();
   await testDoubledColumnOnTheCard();
   await testIncidentReferenceFormsAsTheScreen();
   await testLinkReferencesNeedTheirPrefix();

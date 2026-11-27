@@ -228,6 +228,18 @@ export function namesARow(assumption: string): boolean {
   return ROW_NUMBER.test(assumption);
 }
 
+/** A time zone, by its word in the four languages or by its name (`Europe/Paris`, `UTC`). */
+const TIME_ZONE_WORD = /fuseau|time ?zone|zeitzone|zona horaria|(?<![\p{L}])(?:utc|gmt)(?![\p{L}])/iu;
+const TIME_ZONE_NAME = /(?<![\p{L}])(?:Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)\/[A-Z][A-Za-z_]+/u;
+
+/**
+ * An assumption of the model about time zones (lot I6c of 26.12.1): the card leaves it out, as it says
+ * itself how it reads the times, and only when it reads some in the person's zone.
+ */
+export function namesATimeZone(assumption: string): boolean {
+  return TIME_ZONE_WORD.test(assumption) || TIME_ZONE_NAME.test(assumption);
+}
+
 /** What the card supposes of the times a file writes without a zone (lot I6c of 26.12.1), in the person's language. */
 function zoneAssumption(timeZone: string, language: CsvLanguage): string {
   switch (language) {
@@ -413,7 +425,7 @@ export function buildImportMapping(
       // The server's supposition first: it says the card's state, whatever the model wrote.
       assumptions: [
         ...(personZoneRead ? [zoneAssumption(request.timeZone!, language)] : []),
-        ...request.assumptions.map(oneLine).filter((assumption) => assumption !== '' && !namesARow(assumption)),
+        ...request.assumptions.map(oneLine).filter((assumption) => assumption !== '' && !namesARow(assumption) && !namesATimeZone(assumption)),
       ],
       sample: { columns: mapped.map((column) => column.column), rows: sampleRows, unread: sampleUnread },
       rows_missing_required: rowLacksRequired.filter(Boolean).length,
