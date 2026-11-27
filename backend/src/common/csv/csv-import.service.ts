@@ -1506,8 +1506,10 @@ export class CsvImportService {
    * record's key alone, as the update itself does: rows that reference the record (time entries,
    * attachments, activities) are saved without waiting. A record deleted since the first read is
    * returned in `deleted`: its row is refused (`CSV_RECORD_DELETED`), never inserted again. The check
-   * (`dryRun`) locks nothing. The other records the config says the load updates (`lockAlso`) are
-   * locked in the same statement: one id order for every record the load writes.
+   * (`dryRun`) locks none of the records it finds here; a config's hooks may still lock in a check (the
+   * applications lock their tenant row, their names and their "Update APP-n" targets). The other
+   * records the config says the load updates (`lockAlso`) are locked in the same statement: one id
+   * order for every record the load writes.
    */
   private async lockExistingEntities(
     config: CsvEntityConfig,
