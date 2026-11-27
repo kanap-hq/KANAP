@@ -37,7 +37,7 @@ assertScopeNatures('scheduled-notifications', BUDGET_ITEM_TABLES, (t) => t.table
 /** The person is the task's assignee or one of its owners (named on it); `user` is the SQL parameter. */
 const NAMED_ON_TASK = (user: string) => `(t.assignee_user_id IS NOT DISTINCT FROM ${user}::uuid OR t.owner_ids @> to_jsonb(${user}::text))`;
 
-type WeeklyTaskRow = { id: string; title: string; named: boolean; related_object_type: string | null };
+type WeeklyTaskRow = { id: string; item_number: number | null; title: string; named: boolean; related_object_type: string | null };
 
 @Injectable()
 export class ScheduledNotificationsService implements OnModuleInit {
@@ -609,11 +609,11 @@ export class ScheduledNotificationsService implements OnModuleInit {
     weekStart: string,
     weekEnd: string,
   ): Promise<{
-    tasksClosed: Array<{ id: string; title: string }>;
-    topTasks: Array<{ id: string; title: string; dueDate: string | Date | null; priority: string }>;
+    tasksClosed: Array<{ id: string; itemNumber: number | null; title: string }>;
+    topTasks: Array<{ id: string; itemNumber: number | null; title: string; dueDate: string | Date | null; priority: string }>;
   }> {
     const closed: WeeklyTaskRow[] = await mg.query(
-      `SELECT t.id, t.title, t.related_object_type, ${NAMED_ON_TASK('$4')} AS named
+      `SELECT t.id, t.item_number, t.title, t.related_object_type, ${NAMED_ON_TASK('$4')} AS named
        FROM tasks t
        WHERE t.tenant_id = $1
          AND t.status = 'done'
@@ -624,7 +624,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
       [tenantId, weekStart, weekEnd, userId],
     );
     const active: Array<WeeklyTaskRow & { dueDate: string | Date | null; priority: string }> = await mg.query(
-      `SELECT t.id, t.title, t.due_date as "dueDate", t.priority_level as priority, t.related_object_type, ${NAMED_ON_TASK('$2')} AS named
+      `SELECT t.id, t.item_number, t.title, t.due_date as "dueDate", t.priority_level as priority, t.related_object_type, ${NAMED_ON_TASK('$2')} AS named
        FROM tasks t
        WHERE t.tenant_id = $1
          AND t.status = ANY($3)
@@ -644,8 +644,10 @@ export class ScheduledNotificationsService implements OnModuleInit {
     const readable = await tasksReadableBy(mg, userId, [...closed, ...active].filter(toCheck).map((row) => row.id));
     const listed = <T extends WeeklyTaskRow>(row: T) => !toCheck(row) || readable.has(String(row.id).toLowerCase());
     return {
-      tasksClosed: closed.filter(listed).slice(0, 20).map((row) => ({ id: row.id, title: row.title })),
-      topTasks: active.filter(listed).slice(0, 10).map((row) => ({ id: row.id, title: row.title, dueDate: row.dueDate, priority: row.priority })),
+      tasksClosed: closed.filter(listed).slice(0, 20).map((row) => ({ id: row.id, itemNumber: row.item_number, title: row.title })),
+      topTasks: active.filter(listed).slice(0, 10).map((row) => ({
+        id: row.id, itemNumber: row.item_number, title: row.title, dueDate: row.dueDate, priority: row.priority,
+      })),
     };
   }
 
@@ -678,7 +680,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
 
     // Query 2: My projects with status changes
     const projectsWithChanges = await mg.query(
-      `SELECT DISTINCT ON (p.id) p.id, p.name, p.status,
+      `SELECT DISTINCT ON (p.id) p.id, p.item_number, p.name, p.status,
               al.before_json->>'status' as "oldStatus"
        FROM portfolio_projects p
        JOIN audit_log al ON al.record_id = p.id
@@ -704,7 +706,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
 
     // Query 3: Tasks closed on my projects (excluding my own tasks)
     const tasksClosedOnProjects = await mg.query(
-      `SELECT t.id, t.title, p.name as "projectName"
+      `SELECT t.id, t.item_number, t.title, p.name as "projectName"
        FROM tasks t
        JOIN portfolio_projects p ON t.related_object_id = p.id
          AND t.related_object_type = 'project'
@@ -734,7 +736,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
 
     // Query 5: Top priority projects as lead
     const topProjectsAsLead = await mg.query(
-      `SELECT p.id, p.name, p.status
+      `SELECT p.id, p.item_number, p.name, p.status
        FROM portfolio_projects p
        WHERE p.tenant_id = $1
          AND p.status IN ('planned', 'in_progress', 'in_testing')
@@ -748,7 +750,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
 
     // Query 6: Top priority projects as contributor
     const topProjectsAsContributor = await mg.query(
-      `SELECT p.id, p.name, p.status
+      `SELECT p.id, p.item_number, p.name, p.status
        FROM portfolio_projects p
        WHERE p.tenant_id = $1
          AND p.status IN ('planned', 'in_progress', 'in_testing')
@@ -771,7 +773,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
 
     // Query 7: New requests where the user is involved (team member, lead, or sponsor)
     const newRequests = await mg.query(
-      `SELECT r.id, r.name
+      `SELECT r.id, r.item_number, r.name
        FROM portfolio_requests r
        WHERE r.tenant_id = $1
          AND r.created_at >= $3
@@ -799,36 +801,42 @@ export class ScheduledNotificationsService implements OnModuleInit {
       weekStart: userNow.subtract(7, 'day').format('YYYY-MM-DD'),
       weekEnd: userNow.subtract(1, 'day').format('YYYY-MM-DD'),
       appUrl: await this.getTenantAppUrl(tenantId),
-      tasksClosed: tasksClosed.map((t: any) => ({ id: t.id, title: t.title })),
+      tasksClosed: tasksClosed.map((t: any) => ({ id: t.id, itemNumber: t.itemNumber, title: t.title })),
       projectsWithChanges: projectsWithChanges.map((p: any) => ({
         id: p.id,
+        itemNumber: p.item_number,
         name: p.name,
         oldStatus: p.oldStatus || 'unknown',
         newStatus: p.status,
       })),
       tasksClosedOnProjects: tasksClosedOnProjects.map((t: any) => ({
         id: t.id,
+        itemNumber: t.item_number,
         title: t.title,
         projectName: t.projectName,
       })),
       topTasks: topTasks.map((t: any) => ({
         id: t.id,
+        itemNumber: t.itemNumber,
         title: t.title,
         priority: t.priority,
         dueDate: t.dueDate ? dayjs(t.dueDate).format('YYYY-MM-DD') : undefined,
       })),
       topProjectsAsLead: topProjectsAsLead.map((p: any) => ({
         id: p.id,
+        itemNumber: p.item_number,
         name: p.name,
         status: p.status,
       })),
       topProjectsAsContributor: topProjectsAsContributor.map((p: any) => ({
         id: p.id,
+        itemNumber: p.item_number,
         name: p.name,
         status: p.status,
       })),
       newRequests: newRequests.map((r: any) => ({
         id: r.id,
+        itemNumber: r.item_number,
         name: r.name,
       })),
       branding,

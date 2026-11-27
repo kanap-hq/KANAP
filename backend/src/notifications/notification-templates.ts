@@ -1192,6 +1192,9 @@ function weekRange(strings: EmailStrings, locale: string | undefined, start: str
   });
 }
 
+/** A task, project or request of the weekly review: its uuid and its number. */
+type WeeklyReviewRecord = { id: string; itemNumber?: number | null };
+
 /** Template: Weekly Review. Null for a week with nothing to report: no e-mail is sent. */
 export function buildWeeklyReviewEmail(params: {
   firstName: string | null;
@@ -1199,13 +1202,14 @@ export function buildWeeklyReviewEmail(params: {
   weekStart: string;
   weekEnd: string;
   appUrl: string;
-  tasksClosed: Array<{ id: string; title: string }>;
-  projectsWithChanges: Array<{ id: string; name: string; oldStatus: string; newStatus: string }>;
-  tasksClosedOnProjects: Array<{ id: string; title: string; projectName: string }>;
-  topTasks: Array<{ id: string; title: string; priority: string; dueDate?: string }>;
-  topProjectsAsLead: Array<{ id: string; name: string; status: string }>;
-  topProjectsAsContributor: Array<{ id: string; name: string; status: string }>;
-  newRequests: Array<{ id: string; name: string }>;
+  // `itemNumber`: the record's number, its page's address (`T-4`); the uuid without one.
+  tasksClosed: Array<WeeklyReviewRecord & { title: string }>;
+  projectsWithChanges: Array<WeeklyReviewRecord & { name: string; oldStatus: string; newStatus: string }>;
+  tasksClosedOnProjects: Array<WeeklyReviewRecord & { title: string; projectName: string }>;
+  topTasks: Array<WeeklyReviewRecord & { title: string; priority: string; dueDate?: string }>;
+  topProjectsAsLead: Array<WeeklyReviewRecord & { name: string; status: string }>;
+  topProjectsAsContributor: Array<WeeklyReviewRecord & { name: string; status: string }>;
+  newRequests: Array<WeeklyReviewRecord & { name: string }>;
   branding?: EmailBranding;
   locale?: string;
 }): EmailContent | null {
@@ -1228,9 +1232,11 @@ export function buildWeeklyReviewEmail(params: {
   const intro = params.firstName ? interpolate(s.intro, { userName: params.firstName }) : s.introNoName;
   const openWorkspace = interpolate(strings.common.buttons.openWorkspace, { organisation: emailWorkspaceName(branding) });
   const preferencesUrl = params.appUrl + '/settings/notifications';
-  const taskUrl = (id: string) => `${params.appUrl}/portfolio/tasks/${id}`;
-  const projectUrl = (id: string) => `${params.appUrl}/portfolio/projects/${id}`;
-  const requestUrl = (id: string) => `${params.appUrl}/portfolio/requests/${id}`;
+  // A record's page by its reference (`T-4`), by its uuid without a number, as the notification e-mails.
+  const address = (prefix: string, record: WeeklyReviewRecord) => (record.itemNumber ? `${prefix}-${record.itemNumber}` : record.id);
+  const taskUrl = (task: WeeklyReviewRecord) => `${params.appUrl}/portfolio/tasks/${address('T', task)}`;
+  const projectUrl = (project: WeeklyReviewRecord) => `${params.appUrl}/portfolio/projects/${address('PRJ', project)}`;
+  const requestUrl = (request: WeeklyReviewRecord) => `${params.appUrl}/portfolio/requests/${address('REQ', request)}`;
   const link = (url: string, label: string) =>
     `<a href="${escapeHtml(url)}" style="color:${pc};text-decoration:none;font-weight:600;">${escapeHtml(label)}</a>`;
   const projectStatus = (status: string) => statusLabel(strings, 'project', status);
@@ -1250,14 +1256,14 @@ export function buildWeeklyReviewEmail(params: {
 
   // Section 1: Tasks You Completed
   if (params.tasksClosed.length > 0) {
-    const items = params.tasksClosed.map((t) => buildItemRow(link(taskUrl(t.id), t.title))).join('');
+    const items = params.tasksClosed.map((t) => buildItemRow(link(taskUrl(t), t.title))).join('');
     body += buildSection(s.sections.tasksCompleted, items);
   }
 
   // Section 2: Project Status Changes
   if (params.projectsWithChanges.length > 0) {
     const items = params.projectsWithChanges
-      .map((p) => buildItemRow(link(projectUrl(p.id), p.name), `${statusBadge(strings, p.oldStatus)} &rarr; ${statusBadge(strings, p.newStatus)}`))
+      .map((p) => buildItemRow(link(projectUrl(p), p.name), `${statusBadge(strings, p.oldStatus)} &rarr; ${statusBadge(strings, p.newStatus)}`))
       .join('');
     body += buildSection(s.sections.projectStatusChanges, items);
   }
@@ -1265,7 +1271,7 @@ export function buildWeeklyReviewEmail(params: {
   // Section 3: Tasks Completed on Your Projects
   if (params.tasksClosedOnProjects.length > 0) {
     const items = params.tasksClosedOnProjects
-      .map((t) => buildItemRow(link(taskUrl(t.id), t.title), escapeHtml(t.projectName)))
+      .map((t) => buildItemRow(link(taskUrl(t), t.title), escapeHtml(t.projectName)))
       .join('');
     body += buildSection(s.sections.tasksCompletedOnProjects, items);
   }
@@ -1275,7 +1281,7 @@ export function buildWeeklyReviewEmail(params: {
     const items = params.topTasks
       .map((t) => {
         const meta = [priorityBadge(strings, t.priority), t.dueDate ? escapeHtml(dueOf(t.dueDate)) : ''].filter(Boolean).join(' &middot; ');
-        return buildItemRow(link(taskUrl(t.id), t.title), meta);
+        return buildItemRow(link(taskUrl(t), t.title), meta);
       })
       .join('');
     body += buildSection(s.sections.topTasks, items);
@@ -1284,7 +1290,7 @@ export function buildWeeklyReviewEmail(params: {
   // Section 5: Projects You Lead
   if (params.topProjectsAsLead.length > 0) {
     const items = params.topProjectsAsLead
-      .map((p) => buildItemRow(link(projectUrl(p.id), p.name), statusBadge(strings, p.status)))
+      .map((p) => buildItemRow(link(projectUrl(p), p.name), statusBadge(strings, p.status)))
       .join('');
     body += buildSection(s.sections.projectsLead, items);
   }
@@ -1292,14 +1298,14 @@ export function buildWeeklyReviewEmail(params: {
   // Section 6: Projects You Contribute To
   if (params.topProjectsAsContributor.length > 0) {
     const items = params.topProjectsAsContributor
-      .map((p) => buildItemRow(link(projectUrl(p.id), p.name), statusBadge(strings, p.status)))
+      .map((p) => buildItemRow(link(projectUrl(p), p.name), statusBadge(strings, p.status)))
       .join('');
     body += buildSection(s.sections.projectsContribute, items);
   }
 
   // Section 7: New Requests
   if (params.newRequests.length > 0) {
-    const items = params.newRequests.map((r) => buildItemRow(link(requestUrl(r.id), r.name))).join('');
+    const items = params.newRequests.map((r) => buildItemRow(link(requestUrl(r), r.name))).join('');
     body += buildSection(s.sections.newRequests, items);
   }
 
@@ -1313,15 +1319,15 @@ export function buildWeeklyReviewEmail(params: {
   const text = joinTextBlocks([
     subject,
     intro,
-    section(s.sections.tasksCompleted, params.tasksClosed.map((t) => linkLine(t.title, taskUrl(t.id)))),
+    section(s.sections.tasksCompleted, params.tasksClosed.map((t) => linkLine(t.title, taskUrl(t)))),
     section(s.sections.projectStatusChanges, params.projectsWithChanges.map((p) =>
-      linkLine(`${p.name} (${projectStatus(p.oldStatus)} → ${projectStatus(p.newStatus)})`, projectUrl(p.id)))),
-    section(s.sections.tasksCompletedOnProjects, params.tasksClosedOnProjects.map((t) => linkLine(`${t.title} (${t.projectName})`, taskUrl(t.id)))),
+      linkLine(`${p.name} (${projectStatus(p.oldStatus)} → ${projectStatus(p.newStatus)})`, projectUrl(p)))),
+    section(s.sections.tasksCompletedOnProjects, params.tasksClosedOnProjects.map((t) => linkLine(`${t.title} (${t.projectName})`, taskUrl(t)))),
     section(s.sections.topTasks, params.topTasks.map((t) =>
-      linkLine(`[${priorityLabel(strings, t.priority)}] ${t.title}${t.dueDate ? ` (${dueOf(t.dueDate)})` : ''}`, taskUrl(t.id)))),
-    section(s.sections.projectsLead, params.topProjectsAsLead.map((p) => linkLine(`${p.name} (${projectStatus(p.status)})`, projectUrl(p.id)))),
-    section(s.sections.projectsContribute, params.topProjectsAsContributor.map((p) => linkLine(`${p.name} (${projectStatus(p.status)})`, projectUrl(p.id)))),
-    section(s.sections.newRequests, params.newRequests.map((r) => linkLine(r.name, requestUrl(r.id)))),
+      linkLine(`[${priorityLabel(strings, t.priority)}] ${t.title}${t.dueDate ? ` (${dueOf(t.dueDate)})` : ''}`, taskUrl(t)))),
+    section(s.sections.projectsLead, params.topProjectsAsLead.map((p) => linkLine(`${p.name} (${projectStatus(p.status)})`, projectUrl(p)))),
+    section(s.sections.projectsContribute, params.topProjectsAsContributor.map((p) => linkLine(`${p.name} (${projectStatus(p.status)})`, projectUrl(p)))),
+    section(s.sections.newRequests, params.newRequests.map((r) => linkLine(r.name, requestUrl(r)))),
     linkLine(openWorkspace, params.appUrl),
     buildManagePreferencesText(params.locale, preferencesUrl),
   ]);
