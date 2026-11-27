@@ -5,6 +5,7 @@ import {
   CsvAmountColumn,
   CsvAmountHeader,
   CsvColumn,
+  CsvHeaderErrorCode,
   CsvReadSchema,
 } from './types';
 
@@ -14,6 +15,8 @@ export interface ClassifiedHeaders {
   slots: Array<CsvColumn | null>;
   ignoredColumns: string[];
   headerErrors: string[];
+  /** The code of each header error the interface translates, in the order of `headerErrors`; null for the others. */
+  headerErrorCodes: Array<CsvHeaderErrorCode | null>;
 }
 
 interface AmountSplit {
@@ -33,6 +36,11 @@ export function classifyHeaders(headers: readonly string[], schema: CsvReadSchem
   const slots: Array<CsvColumn | null> = [];
   const ignoredColumns: string[] = [];
   const headerErrors: string[] = [];
+  const headerErrorCodes: Array<CsvHeaderErrorCode | null> = [];
+  const refuse = (message: string, code: CsvHeaderErrorCode | null = null) => {
+    headerErrors.push(message);
+    headerErrorCodes.push(code);
+  };
   const seenFields = new Set<string>();
   const seenAmounts = new Map<string, string>();
   const seenAnalytics = new Set<string>();
@@ -43,7 +51,7 @@ export function classifyHeaders(headers: readonly string[], schema: CsvReadSchem
     const header = raw.trim().replace(/^\uFEFF/, '');
     if (header === '') {
       slots.push(null);
-      headerErrors.push('A column header is empty.');
+      refuse('A column header is empty.', { code: 'CSV_HEADER_EMPTY' });
       return;
     }
 
@@ -51,12 +59,12 @@ export function classifyHeaders(headers: readonly string[], schema: CsvReadSchem
     if (analytics) {
       if (analytics.unknown) {
         slots.push(null);
-        headerErrors.push(analytics.code === '' ? 'A dimension column has no code.' : `Unknown dimension '${analytics.code}'.`);
+        refuse(analytics.code === '' ? 'A dimension column has no code.' : `Unknown dimension '${analytics.code}'.`);
         return;
       }
       if (seenAnalytics.has(analytics.id)) {
         slots.push(null);
-        headerErrors.push(`Column '${header}' appears twice.`);
+        refuse(`Column '${header}' appears twice.`);
         return;
       }
       seenAnalytics.add(analytics.id);
@@ -69,16 +77,14 @@ export function classifyHeaders(headers: readonly string[], schema: CsvReadSchem
     const amount = schema.amounts ? matchAmount(header, schema.amounts) : null;
     if (amount?.kind === 'error') {
       slots.push(null);
-      headerErrors.push(amount.message);
+      refuse(amount.message);
       return;
     }
     if (amount?.kind === 'column') {
       const previous = seenAmounts.get(amount.column.id);
       if (previous) {
         slots.push(null);
-        headerErrors.push(
-          previous === header ? `Column '${header}' appears twice.` : `Column '${header}' repeats '${previous}'.`,
-        );
+        refuse(previous === header ? `Column '${header}' appears twice.` : `Column '${header}' repeats '${previous}'.`);
         return;
       }
       seenAmounts.set(amount.column.id, header);
@@ -95,7 +101,7 @@ export function classifyHeaders(headers: readonly string[], schema: CsvReadSchem
     if (field) {
       if (seenFields.has(field)) {
         slots.push(null);
-        headerErrors.push(`Column '${header}' appears twice.`);
+        refuse(`Column '${header}' appears twice.`, { code: 'CSV_HEADER_DUPLICATE_COLUMN', params: { columns: field } });
         return;
       }
       seenFields.add(field);
@@ -114,10 +120,10 @@ export function classifyHeaders(headers: readonly string[], schema: CsvReadSchem
     const [measure, year] = slot.split(':');
     const column = schema.amounts?.find((item) => item.measure === measure);
     const name = column?.names[0] ?? measure;
-    headerErrors.push(`A yearly total and months are both present for ${name} ${year}.`);
+    refuse(`A yearly total and months are both present for ${name} ${year}.`);
   }
 
-  return { columns, slots, ignoredColumns, headerErrors };
+  return { columns, slots, ignoredColumns, headerErrors, headerErrorCodes };
 }
 
 /** Programmer errors in the schema, thrown before the file is read. */

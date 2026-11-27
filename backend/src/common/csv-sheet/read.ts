@@ -221,6 +221,7 @@ function readGrid(
     columns: classified.columns,
     ignoredColumns: classified.ignoredColumns,
     headerErrors: classified.headerErrors,
+    headerErrorCodes: classified.headerErrorCodes,
     fileErrors: built.fileErrors,
     rows: built.rows,
     dates: built.dates,

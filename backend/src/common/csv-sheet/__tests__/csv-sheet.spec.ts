@@ -766,10 +766,28 @@ async function main() {
   await testRowCap();
   testHeaderMismatch();
   await testNoticeUnknown();
+  await testCodedHeaderRefusals();
   console.log('csv-sheet.spec: ok');
 }
 
 /** An unknown header the caller notices stays in the report and does not refuse the file. */
+/**
+ * A doubled column and an empty header are refusals the interface words (lot I6c of 26.12.1): the
+ * doubled columns by their keys, which the screen names by their labels, however the file titles them.
+ */
+async function testCodedHeaderRefusals() {
+  const request = { fields: ['name', 'city'], fieldLabels: { name: { fr: 'Nom', en: 'Name' }, city: { fr: 'Ville', en: 'City' } }, language: 'fr' as const };
+  const doubled = await readMasterDataFile({ ...request, file: Buffer.from('Nom;name;Ville;City\nAda;Ada;Paris;Paris\n') });
+  assert.deepEqual(doubled.headerError, {
+    row: 0, message: "Column 'name' appears twice. Column 'City' appears twice.", code: 'CSV_HEADER_DUPLICATE_COLUMN', params: { columns: 'name, city' },
+  });
+  const empty = await readMasterDataFile({ ...request, file: Buffer.from('Nom;;Ville\nAda;x;Paris\n') });
+  assert.deepEqual(empty.headerError, { row: 0, message: 'A column header is empty.', code: 'CSV_HEADER_EMPTY' });
+  // Two kinds at once: the reader's sentences, uncoded.
+  const both = await readMasterDataFile({ ...request, file: Buffer.from('Nom;;Nom\nAda;x;Ada\n') });
+  assert.equal(both.headerError?.code, undefined);
+}
+
 async function testNoticeUnknown() {
   const noticed = await readMasterDataFile({
     file: Buffer.from('name,headcount_2031\nAda,4\n'),

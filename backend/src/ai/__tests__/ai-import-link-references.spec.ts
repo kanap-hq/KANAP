@@ -123,7 +123,28 @@ async function testIncidentReferenceFormsAsTheScreen() {
   console.log('  Kad reads the forms of an incident reference the screen reads, a bare number aside: OK');
 }
 
+/**
+ * A file with a column twice (lot I6c of 26.12.1): Kad maps each template column from one of them, so
+ * the file it builds names the column once and the screen's refusal of a doubled column never
+ * reaches the card; mapping both is a refusal for the model, never for the person.
+ */
+async function testDoubledColumnOnTheCard() {
+  const template = await templateOf('suppliers');
+  const grid = await readTableAttachment(Buffer.from(['Nom;Nom;Pays', 'Acme;Acme SA;FR'].join('\n'), 'utf8'));
+  const { file } = buildImportMapping(grid, template, {
+    importKey: 'suppliers', filename: 'f.csv', assumptions: [], columns: [{ column: 'name', source: 2, confidence: 'high' }],
+  }, 'fr');
+  assert.deepEqual(file.columns.filter((column) => column.column === 'name').length, 1);
+  assert.throws(() => buildImportMapping(grid, template, {
+    importKey: 'suppliers', filename: 'f.csv', assumptions: [], columns: [
+      { column: 'name', source: 1, confidence: 'high' }, { column: 'name', source: 2, confidence: 'high' },
+    ],
+  }, 'fr'), /mapped twice/);
+  console.log('  a doubled column: the card builds the column once: OK');
+}
+
 async function main() {
+  await testDoubledColumnOnTheCard();
   await testIncidentReferenceFormsAsTheScreen();
   await testLinkReferencesNeedTheirPrefix();
   await testZoneOfTheFile();
