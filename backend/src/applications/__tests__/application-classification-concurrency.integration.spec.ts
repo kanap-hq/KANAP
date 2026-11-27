@@ -1,4 +1,6 @@
+// @throwaway-db-spec: commits fixtures across connections; refuses a developer's appdb
 import 'reflect-metadata';
+import { assertThrowawayConnection, assertThrowawayDatabase } from '../../common/__tests__/throwaway-database';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { BadRequestException } from '@nestjs/common';
@@ -24,11 +26,11 @@ async function setTenant(runner: any, tenantId: string) {
 }
 
 async function main() {
-  if (!process.env.DATABASE_URL?.endsWith('/kanap_classification_v1_test')) {
-    throw new Error('Only isolated kanap_classification_v1_test is allowed');
-  }
+  assertThrowawayDatabase('application-classification-concurrency.integration.spec.ts');
 
   await dataSource.initialize();
+
+  await assertThrowawayConnection(dataSource, 'application-classification-concurrency.integration.spec.ts');
   const tenantId = randomUUID();
   const applicationId = randomUUID();
   const setup = dataSource.createQueryRunner();

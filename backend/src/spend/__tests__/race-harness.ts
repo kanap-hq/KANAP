@@ -1,3 +1,4 @@
+import { assertThrowawayConnection, assertThrowawayDatabase, databaseName } from '../../common/__tests__/throwaway-database';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { HttpException } from '@nestjs/common';
@@ -25,29 +26,15 @@ import dataSource from '../../data-source';
 
 export { assert };
 
-/** The database name of DATABASE_URL, or null. */
-export function databaseName(url = process.env.DATABASE_URL): string | null {
-  if (!url) return null;
-  try {
-    return decodeURIComponent(new URL(url).pathname.replace(/^\//, '')) || null;
-  } catch {
-    return null;
-  }
-}
+/** The database name of DATABASE_URL, or null (`common/__tests__/throwaway-database.ts`). */
+export { databaseName };
 
 /**
- * GitHub Actions' `appdb` is a throwaway service container: a spec whose race
- * is fixed moves into test:ci and must run there.
+ * Refuses to run without DATABASE_URL or against `appdb` (the developer database), except on
+ * GitHub Actions, whose `appdb` is a throwaway service container.
  */
-const ON_CI = process.env.GITHUB_ACTIONS === 'true';
-
-/** Refuses to run without DATABASE_URL or against `appdb` (the developer database), except on CI. */
 export function assertRaceDatabase() {
-  const name = databaseName();
-  if (!name) throw new Error('DATABASE_URL is required: the race specs run on a dedicated database such as appdb_perf.');
-  if (name === 'appdb' && !ON_CI) {
-    throw new Error('The race specs never run against appdb: point DATABASE_URL at a dedicated database (appdb_perf).');
-  }
+  assertThrowawayDatabase('The race specs');
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -402,7 +389,7 @@ export async function runRaceSpecs(name: string, tests: Array<[string, () => Pro
     const [identity] = await dataSource.query(
       `SELECT current_database() AS db, current_user AS name, rolsuper FROM pg_roles WHERE rolname = current_user`,
     );
-    if (identity?.db === 'appdb' && !ON_CI) throw new Error('The race specs never run against appdb.');
+    await assertThrowawayConnection({ query: async () => [identity] }, 'The race specs');
     assert.equal(identity?.rolsuper, false, `the race specs must use the non-superuser app role (RLS enforced), got ${identity?.name}`);
     for (const [label, test] of tests) {
       try {

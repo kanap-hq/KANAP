@@ -2344,7 +2344,16 @@ export function presentItem(row: AuditRow, entry: RecordHistoryRecord, ctx: Page
   };
 }
 
-function referenceValue(ctx: PageContext, family: FamilyKey, value: unknown): RecordHistoryReference | RecordHistoryHiddenReference | null {
+/**
+ * One record named with the reader's rights: its label and reference, or its kind alone (withheld,
+ * or deleted). Also names the object of a task's move in the task's activity
+ * (`tasks/task-related-activity.ts`).
+ */
+export function referenceValue(
+  ctx: Pick<PageContext, 'readable' | 'references' | 'deleted'>,
+  family: FamilyKey,
+  value: unknown,
+): RecordHistoryReference | RecordHistoryHiddenReference | null {
   if (value === null || value === undefined) return null;
   if (!isUuid(value)) return null;
   const id = value.toLowerCase();

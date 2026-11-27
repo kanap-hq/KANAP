@@ -1,3 +1,4 @@
+// @throwaway-db-spec: commits fixtures across connections; refuses a developer's appdb
 import { CsvImportService } from '../../common/csv/csv-import.service';
 import { CsvExportService } from '../../common/csv/csv-export.service';
 import { CsvResolverService } from '../../common/csv/csv-resolver.service';
@@ -5,6 +6,7 @@ import { CsvJsonValidators } from '../../common/csv/csv-json-validators';
 import { ApplicationsCsvService } from '../applications-csv.service';
 import { ApplicationClassificationV11853480000000 } from '../../migrations/1853480000000-application-classification-v1';
 import 'reflect-metadata';
+import { assertThrowawayConnection, assertThrowawayDatabase } from '../../common/__tests__/throwaway-database';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import dataSource from '../../data-source';
@@ -23,8 +25,9 @@ import { adaptFilters } from '../../ai/query/ai-filter.adapter';
 import { applicationsRegistry } from '../../ai/query/registries/applications.registry';
 
 async function main() {
-  if (!process.env.DATABASE_URL?.endsWith('/kanap_classification_v1_test')) throw new Error('Only isolated kanap_classification_v1_test is allowed');
+  assertThrowawayDatabase('application-classification.integration.spec.ts');
   await dataSource.initialize();
+  await assertThrowawayConnection(dataSource, 'application-classification.integration.spec.ts');
   const runner = dataSource.createQueryRunner(); await runner.connect(); await runner.startTransaction();
   const manager = runner.manager;
   const audit = new AuditService(manager.getRepository(AuditLog));

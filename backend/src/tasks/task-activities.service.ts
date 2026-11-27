@@ -11,6 +11,7 @@ import { displayName } from '../common/display-name';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { writeTaskColumns } from './task-column-write';
 import { personReadsPartOf, withCountedLinkChanges } from '../common/relations/linked-activity';
+import { withRelatedObjectsForReader } from './task-related-activity';
 
 export interface TaskActivityItem {
   id: string;
@@ -49,6 +50,26 @@ export interface CreateImportedTaskCommentDto {
 }
 
 export type ActivityBodyDto = CreateTaskActivityDto | CreateUnifiedActivityDto;
+
+/**
+ * What the activity routes accept from a person (lot I7e of 26.12.1): a comment, or the unified
+ * form of the task screen (comment, status, time). A `change` row is written by the server alone,
+ * from the change it made (`logChange`): a posted one, or a comment carrying `changed_fields`, would
+ * let a member forge a move the activity then names for its readers. A comment keeps its text and
+ * its context only.
+ */
+export function postedActivityBody(body: unknown): ActivityBodyDto {
+  const dto = (body ?? {}) as Record<string, unknown>;
+  if (dto.type === 'unified') return dto as unknown as CreateUnifiedActivityDto;
+  if (dto.type !== undefined && dto.type !== 'comment') {
+    throw new BadRequestException('Only a comment can be posted: type must be "comment" or "unified".');
+  }
+  return {
+    type: 'comment',
+    content: typeof dto.content === 'string' ? dto.content : undefined,
+    context: typeof dto.context === 'string' ? dto.context : undefined,
+  };
+}
 
 type TaskActivityAuditOptions = {
   source?: string;
@@ -127,14 +148,24 @@ export class TaskActivitiesService {
    */
   async listForTask(
     taskId: string,
-    opts?: { manager?: EntityManager; userId?: string | null },
+    opts?: {
+      manager?: EntityManager;
+      userId?: string | null;
+      /** The reader's rights (PermissionGuard): the object of a move is named with them. */
+      isAdmin?: boolean;
+      permissions?: Record<string, string>;
+    },
   ): Promise<TaskActivityItem[]> {
     const mg = opts?.manager ?? this.activityRepo.manager;
 
     // The history of a task the person can read only (spec §5.6): the task first, under the
     // person's access (the tasks policy hides a task of a line or contract out of access), the same
     // 404 for a hidden task and an unknown id. `portfolio_activities` itself carries no policy.
-    const visible = await mg.query(`SELECT 1 FROM tasks WHERE id = $1 AND tenant_id = app_current_tenant()`, [taskId]);
+    const visible: Array<{ tenant_id: string; related_object_type: string | null; related_object_id: string | null }> = await mg.query(
+      `SELECT tenant_id::text AS tenant_id, related_object_type, related_object_id::text AS related_object_id
+         FROM tasks WHERE id = $1 AND tenant_id = app_current_tenant()`,
+      [taskId],
+    );
     if (visible.length === 0) throw new NotFoundException('Task not found');
 
     const rows = await mg.query<Array<{
@@ -172,7 +203,16 @@ export class TaskActivitiesService {
       [taskId],
     );
 
-    return this.withLinkNamesForReader(mg, rows, opts?.userId);
+    // The object a move left or reached, named with the reader's rights, and the phases of a project
+    // the reader does not read hidden (`task-related-activity.ts`).
+    const named = await withRelatedObjectsForReader(rows, {
+      manager: mg,
+      tenantId: visible[0].tenant_id,
+      userId: opts?.userId,
+      isAdmin: opts?.isAdmin,
+      permissions: opts?.permissions,
+    }, { type: visible[0].related_object_type, id: visible[0].related_object_id });
+    return this.withLinkNamesForReader(mg, named, opts?.userId);
   }
 
   /**

@@ -129,7 +129,7 @@ The Task Management system (frontend `TasksPage` + workspace and backend `TasksS
   - Generic update route: `PATCH /tasks/:id` (`tasks:member`) supports field updates and context targets `standalone|spend_item|contract|capex_item`.
   - Project-target update route: `PATCH /portfolio/projects/:projectId/tasks/:taskId` (`portfolio_projects:contributor`) is required for any save where the target context is project.
   - Move convenience: `PATCH /tasks/:id/move` (`tasks:member`) supports context-only changes for `standalone|spend_item|contract|capex_item`.
-  - Activities: `GET/POST /tasks/:id/activities` and `GET/POST /portfolio/projects/:projectId/tasks/:taskId/activities`; POST supports standard comment/change payloads and unified payloads (`type: 'unified'`).
+  - Activities: `GET/POST /tasks/:id/activities` and `GET/POST /portfolio/projects/:projectId/tasks/:taskId/activities`; POST accepts a comment (`type: 'comment'`) or a unified payload (`type: 'unified'`); any other type answers 400.
   - Activity comment editing: `PATCH /tasks/:id/activities/:activityId` and `PATCH /portfolio/projects/:projectId/tasks/:taskId/activities/:activityId`.
   - Time entries: `GET/POST/PATCH/DELETE` task time-entry routes exist for both standalone and project-task paths.
   - Bulk delete: `DELETE /tasks/bulk` (admin) returns `{ deleted: string[]; failed: { id, name, reason }[] }`.

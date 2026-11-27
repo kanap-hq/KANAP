@@ -10,7 +10,7 @@ import { cancelTaskCreation, readTaskCreationChanges } from '../tasks/task-creat
 import { creationContextOf, withCreationToken } from '../common/creation/creation-routes';
 import type { CreationChanges } from '../common/creation/creation-changes';
 import { TaskTimeEntriesService } from '../tasks/task-time-entries.service';
-import { TaskActivitiesService, ActivityBodyDto } from '../tasks/task-activities.service';
+import { TaskActivitiesService, ActivityBodyDto, postedActivityBody } from '../tasks/task-activities.service';
 import { Task } from '../tasks/task.entity';
 import { TaskTimeEntryCategory } from '../tasks/task-time-entry.entity';
 import { resolveToUuid } from '../common/resolve-item-id';
@@ -368,7 +368,12 @@ export class PortfolioProjectTasksController {
   ) {
     const projectId = await this.resolveProjectForAccess(projectIdOrRef, req, 'reader');
     const taskId = await this.resolveProjectTaskForAccess(projectId, taskIdOrRef, req);
-    return this.activitiesSvc.listForTask(taskId, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
+    return this.activitiesSvc.listForTask(taskId, {
+      manager: req?.queryRunner?.manager,
+      userId: req?.user?.sub ?? null,
+      isAdmin: req?.isAdmin === true,
+      permissions: req?.permissions,
+    });
   }
 
   @UseGuards(PermissionGuard)
@@ -383,13 +388,15 @@ export class PortfolioProjectTasksController {
     const projectId = await this.resolveProjectForAccess(projectIdOrRef, req, 'contributor');
     const taskId = await this.resolveProjectTaskForAccess(projectId, taskIdOrRef, req);
     const tenantId = req?.tenant?.id ?? '';
-    if (body.type === 'unified') {
-      return this.activitiesSvc.createUnified(taskId, body, tenantId, req.user?.sub ?? null, {
+    // A comment or the unified form only: a change row is the server's (`postedActivityBody`).
+    const posted = postedActivityBody(body);
+    if (posted.type === 'unified') {
+      return this.activitiesSvc.createUnified(taskId, posted, tenantId, req.user?.sub ?? null, {
         manager: req?.queryRunner?.manager,
         isAdmin: req?.isAdmin === true,
       });
     }
-    return this.activitiesSvc.create(taskId, body, tenantId, req.user?.sub ?? null, {
+    return this.activitiesSvc.create(taskId, posted, tenantId, req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
     });
   }

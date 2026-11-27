@@ -27,6 +27,7 @@ import { ParticipationAccessScope, taskParticipantCondition } from '../auth/busi
 import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
 import { givenMembership, loadMembershipParents, membershipReadLock, settleRecordMembership, STREAM_PAIR } from '../common/record-membership';
 import { shownTaskClassification } from './task-shown-classification';
+import { storedRelatedObject } from './task-related-activity';
 import {
   IncidentViewer,
   taskIncidentVisibilityQueryBuilderClause,
@@ -56,13 +57,6 @@ type TaskRelationPayload = Partial<Task> & {
   application_ids?: string[];
   asset_ids?: string[];
 };
-
-/**
- * A task's object its author does not read, as the activity names it: true for every reader of the
- * task, in English as the activity's stored prefixes.
- */
-const UNREAD_CONTRACT = 'A contract';
-const UNREAD_LINE = 'A budget line';
 
 @Injectable()
 export class TasksUnifiedService {
@@ -712,70 +706,6 @@ export class TasksUnifiedService {
   }
 
   /**
-   * The name of a task's object in its activity ("related to"), which every reader of the task reads
-   * as stored. A budget line or a contract the author does not read is absent from its table
-   * (data-scoped access): the activity names its kind alone, never its id, name or reference. A
-   * contract is named without its reference, which a reader in limited access may not read.
-   */
-  private async resolveRelatedObjectName(
-    type: RelatedType,
-    id: string | null,
-    manager: EntityManager,
-  ): Promise<string | null> {
-    if (!type || !id) return null;
-
-    if (type === 'project') {
-      const [row] = await manager.query(
-        'SELECT item_number, name FROM portfolio_projects WHERE id = $1 LIMIT 1',
-        [id],
-      );
-      if (!row) return id;
-      const prefix = row.item_number ? `PRJ-${row.item_number}: ` : '';
-      return `${prefix}${row.name}`;
-    }
-
-    if (type === 'spend_item') {
-      const [row] = await manager.query(
-        // An OPEX line only (`spend/budget-nature.ts`).
-        `SELECT product_name FROM spend_items WHERE id = $1 AND nature = 'opex' LIMIT 1`,
-        [id],
-      );
-      if (!row) return UNREAD_LINE;
-      return `Spend: ${row.product_name}`;
-    }
-
-    if (type === 'contract') {
-      const [row] = await manager.query(
-        'SELECT name FROM contracts WHERE id = $1 LIMIT 1',
-        [id],
-      );
-      if (!row) return UNREAD_CONTRACT;
-      return `Contract: ${row.name}`;
-    }
-
-    if (type === 'capex_item') {
-      const [row] = await manager.query(
-        // A CAPEX line only (lot Z1: in `spend_items`, its title in `product_name`).
-        `SELECT product_name FROM spend_items WHERE id = $1 AND nature = 'capex' LIMIT 1`,
-        [id],
-      );
-      if (!row) return UNREAD_LINE;
-      return `CAPEX: ${row.product_name}`;
-    }
-
-    if (type === 'incident') {
-      const [row] = await manager.query(
-        'SELECT item_number, title, confidential FROM incidents WHERE id = $1 LIMIT 1',
-        [id],
-      );
-      if (!row) return id;
-      return row.confidential ? `INC-${row.item_number}` : `INC-${row.item_number} · ${row.title}`;
-    }
-
-    return id;
-  }
-
-  /**
    * The object a task is created on or moved to: it exists (a line of the type's nature), or 404.
    * Callers check a line with `assertLinesEditable` first: the lock below passes the UPDATE policy
    * of the lines, so a read-only line must answer 403 before it, and a hidden one 404 here.
@@ -1276,11 +1206,13 @@ export class TasksUnifiedService {
 
     const changes = detectChanges(before as unknown as Record<string, unknown>, saved as unknown as Record<string, unknown>, TASK_TRACKED_FIELDS);
     if (relationChanged) {
-      const oldRelated = await this.resolveRelatedObjectName(before.related_object_type as RelatedType, before.related_object_id, manager);
-      const newRelated = await this.resolveRelatedObjectName(saved.related_object_type as RelatedType, saved.related_object_id, manager);
-      if (oldRelated !== newRelated) {
-        changes.push({ field: 'related_to', before: oldRelated, after: newRelated });
-      }
+      // The kind and the id of each side, never a name: the activity names them with the reader's
+      // rights (`task-related-activity.ts`).
+      changes.push({
+        field: 'related_to',
+        before: storedRelatedObject(before.related_object_type, before.related_object_id),
+        after: storedRelatedObject(saved.related_object_type, saved.related_object_id),
+      });
     }
     if (changes.length > 0) {
       if (!tenantId) throw new BadRequestException('tenantId is required for task change activity logging');
