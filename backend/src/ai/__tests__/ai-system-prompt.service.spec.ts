@@ -528,7 +528,7 @@ async function testPromptSaysItsLimitsAndRights() {
   assert.match(writer, new RegExp(`Their role lets them prepare changes with ${AGENT_NAME}\\.\\n- Their role lets them modify no module\\.`));
   assert.match(writer, /imported only with the import tool/);
   assert.match(writer, /refuses because a right is missing/);
-  assert.match(writer, /create no row of the file one by one/);
+  assert.match(writer, /create no row of the file one by one, nor offer to/);
   assert.match(writer, /record they describe in writing is created as usual/);
   assert.doesNotMatch(prompt, /imported only with the import tool/);
 }

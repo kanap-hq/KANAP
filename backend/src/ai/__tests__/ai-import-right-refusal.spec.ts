@@ -35,10 +35,10 @@ const LANGUAGES: readonly AiScreenLanguage[] = ['en', 'fr', 'de', 'es'];
 
 const EN_BUDGET = 'Import refused: the missing right is "Admin" on "Budget", as Admin › Roles names it. '
   + 'Tell the person that right in those words. Suggest they ask a person who has it, or import the file on the screen if they have the right there, and stop. '
-  + 'Create no row of the file.';
+  + 'Create no row of the file, and do not offer to create its rows one by one.';
 const FR_BUDGET = 'Import refused: the missing right is "Administrateur" on "Budget", as Admin › Roles names it. '
   + 'Tell the person that right in those words. Suggest they ask a person who has it, or import the file on the screen if they have the right there, and stop. '
-  + 'Create no row of the file.';
+  + 'Create no row of the file, and do not offer to create its rows one by one.';
 
 function testTheRefusalNamesEachImportRight() {
   assert.equal(importRightRefusal('budget', 'admin', 'en').message, EN_BUDGET);
@@ -55,7 +55,7 @@ function testTheRefusalNamesEachImportRight() {
       assert.deepEqual(body.params, { resource: access.resource, level: access.level }, `${key} ${language}`);
       assert.ok(error.message.includes(`"${levelName}" on "${moduleName}"`), `${key} ${language}: ${error.message}`);
       assert.equal(error.message.includes(`${access.resource}:${access.level}`), false, `${key}: no permission code`);
-      assert.match(error.message, /Create no row of the file\./);
+      assert.match(error.message, /Create no row of the file, and do not offer to create its rows one by one\./);
       assert.match(error.message, /ask a person who has it/);
       assert.match(error.message, /import the file on the screen/);
     }

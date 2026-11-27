@@ -23,7 +23,7 @@ export function importRightRefusal(
   const levelName = aiPermissionLevelLabel(level, language);
   const message = `Import refused: the missing right is "${levelName}" on "${moduleName}", as Admin › Roles names it. `
     + 'Tell the person that right in those words. Suggest they ask a person who has it, or import the file on the screen if they have the right there, and stop. '
-    + 'Create no row of the file.';
+    + 'Create no row of the file, and do not offer to create its rows one by one.';
   return moduleRightRequired(resource, level, message);
 }
 
