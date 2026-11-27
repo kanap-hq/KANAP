@@ -92,7 +92,9 @@ function renderPage(entry: string) {
 }
 
 // A project saved before a stream had to belong to its category (lot I7a of 26.12.1): saving another
-// field leaves the pair out of the save; another category clears the stream in the same save.
+// field leaves the pair out of the save; another category clears the stream in the same save. The page
+// opens at the project's reference: from a uuid address, the move to the reference may land after the
+// gesture and the save would go to the old address.
 describe('ProjectWorkspacePage, a stored stream of another category', () => {
   const CATALOG = {
     sources: [],
@@ -105,14 +107,14 @@ describe('ProjectWorkspacePage, a stored stream of another category', () => {
     patch.mockResolvedValue({ data: {} });
     panel.props = null;
     get.mockImplementation(async (url: string) => {
-      if (url === '/portfolio/projects/proj-1') return { data: { ...PROJECT, category_id: 'cat-biz', stream_id: 'ops-it' } };
+      if (url === '/portfolio/projects/proj-1' || url === '/portfolio/projects/PRJ-7') return { data: { ...PROJECT, category_id: 'cat-biz', stream_id: 'ops-it' } };
       if (url === '/portfolio/classification/all') return { data: CATALOG };
       return { data: {} };
     });
   });
 
   it('hands the full lists to the panel, and saves another field alone', async () => {
-    renderPage('/portfolio/projects/proj-1/summary');
+    renderPage('/portfolio/projects/PRJ-7/summary');
     await waitFor(() => expect(panel.props?.form?.stream_id).toBe('ops-it'));
     await waitFor(() => expect(panel.props.classification).toEqual(CATALOG));
     await act(async () => { panel.props.onUpdate({ department_id: 'dep-1' }); });
@@ -120,7 +122,7 @@ describe('ProjectWorkspacePage, a stored stream of another category', () => {
   });
 
   it('clears the stream with another category', async () => {
-    renderPage('/portfolio/projects/proj-1/summary');
+    renderPage('/portfolio/projects/PRJ-7/summary');
     await waitFor(() => expect(panel.props?.form?.stream_id).toBe('ops-it'));
     await act(async () => { panel.props.onCategoryChange('cat-it'); });
     expect(patch).toHaveBeenCalledWith('/portfolio/projects/PRJ-7', { category_id: 'cat-it', stream_id: null });
