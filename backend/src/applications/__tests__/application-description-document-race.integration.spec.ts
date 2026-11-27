@@ -12,6 +12,7 @@ import { assert, assertSucceeded, describe, pgCode, progress, runRaceSpecs, sett
 // - C: two first writers of a missing overview document (the page opening the application, a write of
 //   its description): the second one's binding meets the first one's; it is made under a savepoint
 //   (`ensureBoundDocument`), so both succeed, with one document.
+// - A: an autosave of the overview document against an import of the description, both orders.
 
 process.env.JWT_SECRET ||= 'test-jwt-secret';
 process.env.STRIPE_SECRET_KEY = '';
@@ -147,6 +148,60 @@ async function firstWriters(pageFirst: boolean) {
   });
 }
 
+/**
+ * A: the page autosaves the overview document (with the revision it read) while an import writes the
+ * description. The document is locked before its revision is read: whichever comes second compares
+ * against the revision the first one saved.
+ */
+async function autosaveAgainstImport(importFirst: boolean) {
+  await withRace(`app-desc-autosave-import-${importFirst ? 'import' : 'autosave'}-first`, async (race) => {
+    const s = await prepare(race, true);
+    const opened = await race.seedWith(async (runner: QueryRunner) => ({
+      doc: await h.docs.getBySource('applications', s.appId, 'overview', s.userId, { manager: runner.manager }),
+      lock: await h.docs.acquireLockBySource('applications', s.appId, 'overview', s.userId, { manager: runner.manager }),
+    }));
+    const lockToken = String(opened.lock.lock_token);
+    const readRevision = Number(opened.doc.revision);
+    const page = await race.open('autosave of the page');
+    const imp = await race.open('import of the description');
+    const autosave = (m: any, revision: number, text: string) => h.docs.updateBySource(
+      'applications', s.appId, 'overview', { content_markdown: text, revision, save_mode: 'autosave' }, s.userId, lockToken, { manager: m });
+    const runImport = () => race.start(imp, (m) => h.csv.import(
+      { buffer: Buffer.from(`name;description\n${s.appName};Imported text\n`), originalname: 'apps.csv' } as Express.Multer.File,
+      { dryRun: false, operation: 'update_only' },
+      { manager: m, tenantId: race.tenantId, userId: s.userId, access: { isAdmin: true, permissions: {} } },
+    ));
+    const runAutosave = () => race.start(page, (m) => autosave(m, readRevision, 'Typed on the page'));
+    const first = importFirst ? imp : page;
+    const gate = race.gate(first, { label: 'document written', when: 'after', match: (t) => /UPDATE "documents"/.test(t) });
+    const w1 = importFirst ? runImport() : runAutosave();
+    assert.equal(await progress(w1, { party: first, gate }), 'gated', 'harness: the first one must pause after writing the document');
+    const w2 = importFirst ? runAutosave() : runImport();
+    assert.equal(await progress(w2, { party: importFirst ? page : imp }), 'blocked', 'the second one waits on the document');
+    gate.release();
+    const o1 = await settle(w1);
+    const o2 = await settle(w2);
+    const [imported, saved] = importFirst ? [o1, o2] : [o2, o1];
+    assertSucceeded(imported, 'the import');
+    assert.equal((imported as any).value?.ok, true, JSON.stringify((imported as any).value?.errors));
+    if (importFirst) {
+      assert.equal(saved.ok, false, `the autosave that read revision ${readRevision} is refused, got ${describe(saved)}`);
+      assert.equal((saved as any).error?.status, 409, describe(saved));
+    } else {
+      assertSucceeded(saved, 'the autosave');
+      // The page's next autosave carries the revision its save returned: the import wrote after it.
+      const next = await settle(race.start(page, (m) => autosave(m, Number((saved as any).value?.revision), 'Typed again')));
+      assert.equal(next.ok, false, `the next autosave is refused, got ${describe(next)}`);
+      assert.equal((next as any).error?.status, 409, describe(next));
+    }
+    const doc = await race.read(
+      `SELECT d.content_markdown AS text, d.revision FROM integrated_document_bindings b JOIN documents d ON d.id = b.document_id
+        WHERE b.source_entity_type = 'applications' AND b.source_entity_id = $1 AND b.slot_key = 'overview'`, [s.appId]);
+    assert.equal(doc[0].text, 'Imported text', 'the document keeps the imported text');
+    assert.equal(Number(doc[0].revision), readRevision + (importFirst ? 1 : 2), 'each write took its own revision');
+  });
+}
+
 void (async () => {
   await boot();
   try {
@@ -157,6 +212,8 @@ void (async () => {
       ['D2: the delete started first, then an import "update only" of the description: no deadlock', () => writeAgainstDelete('import', false)],
       ['C1: the page opens first, then a PATCH, no document yet: both succeed', () => firstWriters(true)],
       ['C2: a PATCH first, then the page opens, no document yet: both succeed', () => firstWriters(false)],
+      ['A1: an import writes the description first, then an autosave that read the old revision: 409, the imported text stays', () => autosaveAgainstImport(true)],
+      ['A2: an autosave first, then an import: the import writes over it, the next autosave gets a 409', () => autosaveAgainstImport(false)],
     ]);
   } finally {
     await h.app.close();

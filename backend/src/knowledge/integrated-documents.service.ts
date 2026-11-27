@@ -2281,6 +2281,26 @@ export class IntegratedDocumentsService {
     };
   }
 
+  /**
+   * The record of a slot, `FOR KEY SHARE` until the transaction ends: its delete and the writers that
+   * hold it `FOR UPDATE` wait for this transaction, or this one for them; a writer holding it
+   * `FOR NO KEY UPDATE` (an import) does not. False when the record is gone.
+   */
+  private async lockSourceRow(
+    sourceEntityType: SourceScopedEntityType,
+    sourceEntityId: string,
+    manager: EntityManager,
+  ): Promise<boolean> {
+    if (!/^[0-9a-f-]{36}$/i.test(String(sourceEntityId || ''))) return false;
+    const rows = await manager.query(
+      `SELECT 1 FROM ${SOURCE_ENTITY_CONFIG[sourceEntityType].sourceTable}
+       WHERE id = $1 AND tenant_id = app_current_tenant()
+       FOR KEY SHARE`,
+      [sourceEntityId],
+    );
+    return rows.length > 0;
+  }
+
   /** The managed document of a slot and its binding (`ensureBoundDocument`). */
   private async createBoundDocument(
     sourceEntityType: SourceScopedEntityType,
@@ -3780,6 +3800,9 @@ export class IntegratedDocumentsService {
   ) {
     const manager = this.getManager(opts);
     const normalizedUserId = this.normalizeUserId(userId);
+    // The record before its document, as its writers and its delete hold them: a manual save ends
+    // with an activity on the record, which would otherwise wait on a writer waiting on the document.
+    await this.lockSourceRow(sourceEntityType, sourceEntityId, manager);
     const documentId = await this.resolveManagedDocumentId(
       sourceEntityType,
       sourceEntityId,
