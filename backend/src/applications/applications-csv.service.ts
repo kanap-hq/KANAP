@@ -26,6 +26,15 @@ import { ApplicationOwner } from './application-owner.entity';
 import { ApplicationDataResidency } from './application-data-residency.entity';
 import { AuditService, type AuditSourceOptions } from '../audit/audit.service';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
+import { loadSlotBodies } from '../knowledge/integrated-document-bodies';
+import { prepareRecoveredContent } from '../common/markdown-worker';
+import {
+  APPLICATION_DESCRIPTION_SLOT,
+  keepApplicationSeed,
+  sameApplicationDescription,
+  withApplicationDescriptions,
+  writeApplicationDescription,
+} from './application-description';
 import {
   CsvExportService,
   CsvImportService,
@@ -155,8 +164,9 @@ export class ApplicationsCsvService {
     const matching = await this.listService.listIds({ ...opts.query, filters: JSON.stringify(filters), __classificationExport: true }, { manager, tenantId });
     if (!matching.ids.length) queryBuilder.andWhere('FALSE');
     else queryBuilder.andWhere('app.id = ANY(:ids)', { ids: matching.ids });
-    // In the list's order (its sort, the id breaking ties), as the screen shows them.
-    const applications = inIdOrder(await queryBuilder.getMany(), matching.ids);
+    // In the list's order (its sort, the id breaking ties), as the screen shows them; each description
+    // as its page shows it (its document's text).
+    const applications = await withApplicationDescriptions(manager, tenantId, inIdOrder(await queryBuilder.getMany(), matching.ids));
     // Users never see codes: catalog-backed columns are exported as names (import accepts either).
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
     for (const app of applications) {
@@ -302,10 +312,13 @@ export class ApplicationsCsvService {
     // (it looks like an application) keeps the owners and residency of every application.
     const written: WrittenRow[] = [];
     const look: LookalikeState = { decisions: new Map(), followed: [], fields: new Map() };
+    // The description of each application a row updates, as its page shows it (`settleDescriptions`).
+    const descriptions = new Map<string, string | null>();
+    const changesDescription = async (entity: any) => !(await sameApplicationDescription(descriptions.get(String(entity.id)), entity.description));
     const config = {
       ...applicationCsvConfig,
-      settleRows: (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) =>
-        this.settleRows(rows, context, look),
+      settleRows: async (rows: Array<{ raw: Record<string, string>; rowNumber: number; found: any | null }>, context: CsvImportContext) =>
+        this.settleDescriptions(await this.settleRows(rows, context, look), context, descriptions),
       afterValidate: async (rows: CsvImportRow[], context: CsvImportContext) => {
         await applicationCsvConfig.afterValidate!(rows, context);
         for (const row of rows) {
@@ -323,8 +336,19 @@ export class ApplicationsCsvService {
         }
         return same;
       },
-      afterCommit: async (_entities: any[], _context: CsvImportContext, rows: Array<{ row: CsvImportRow; entity: any }> = []) => {
+      beforeCommit: async (entities: any[], context: CsvImportContext) => {
+        await applicationCsvConfig.beforeCommit!(entities, context);
+        // An updated application with no document yet, whose description changes: the document of the
+        // text it replaces, while the column still holds it (the save writes it next).
+        if (!this.integratedDocuments) return;
+        for (const entity of entities) {
+          if (!entity.id || !descriptions.has(String(entity.id)) || !(await changesDescription(entity))) continue;
+          await keepApplicationSeed(this.integratedDocuments, String(entity.id), { manager: context.manager, userId: context.userId, audit: context.audit });
+        }
+      },
+      afterCommit: async (_entities: any[], context: CsvImportContext, rows: Array<{ row: CsvImportRow; entity: any }> = []) => {
         for (const { row, entity } of rows) if (entity?.id) written.push({ id: String(entity.id), raw: row.raw });
+        await this.writeDescriptions(rows, context, changesDescription);
       },
     };
     // The names before the load, to find the renamed applications afterwards.
@@ -421,6 +445,56 @@ export class ApplicationsCsvService {
       }
       return { entity };
     });
+  }
+
+  /**
+   * The description of the application a row updates is its document's text, never the column, its
+   * seed (decision P14 of 26.12.1): the clearing rule and the unchanged check read the document. An
+   * application with no document yet holds it in that seed, read as the Markdown its page makes of it
+   * when it opens (`prepareRecoveredContent`), as for a project's purpose (`settleWithSlotBodies`).
+   */
+  private async settleDescriptions(settled: CsvSettledRow[], context: CsvImportContext, descriptions: Map<string, string | null>): Promise<CsvSettledRow[]> {
+    const entityOf = (row: CsvSettledRow) => ('entity' in row ? row.entity : null);
+    const ids = settled.flatMap((row) => (entityOf(row) ? [String(entityOf(row).id)] : []));
+    const bodies = await loadSlotBodies(context.manager, context.tenantId, 'applications', ids, [APPLICATION_DESCRIPTION_SLOT]);
+    return Promise.all(settled.map(async (row) => {
+      const entity = entityOf(row);
+      if (!entity || !('entity' in row)) return row;
+      const id = String(entity.id);
+      const description = bodies.get(id)?.get(APPLICATION_DESCRIPTION_SLOT) ?? await prepareRecoveredContent(entity.description);
+      descriptions.set(id, description);
+      return { ...row, entity: { ...entity, description } };
+    }));
+  }
+
+  /**
+   * The descriptions the load wrote, into each application's document (created with it when the
+   * application has none): a new application's when it has one, an updated one's when it changed.
+   */
+  private async writeDescriptions(
+    rows: Array<{ row: CsvImportRow; entity: any }>,
+    context: CsvImportContext,
+    changesDescription: (entity: any) => Promise<boolean>,
+  ): Promise<void> {
+    if (!this.integratedDocuments) return;
+    const writes: Array<{ id: string; description: string | null }> = [];
+    for (const { row, entity } of rows) {
+      if (!entity?.id) continue;
+      const write = row.isInsert ? !!String(entity.description ?? '').trim() : await changesDescription(entity);
+      if (write) writes.push({ id: String(entity.id), description: entity.description ?? null });
+    }
+    if (writes.length === 0) return;
+    // The name and reference the documents' titles carry (a new application's is given on insert).
+    const apps: Array<{ id: string; tenant_id: string; name: string; sequential_id: string | null }> = await context.manager.query(
+      `SELECT id::text AS id, tenant_id::text AS tenant_id, name, sequential_id FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [context.tenantId, writes.map((write) => write.id)],
+    );
+    const byId = new Map(apps.map((app) => [app.id, app]));
+    for (const { id, description } of writes) {
+      const app = byId.get(id);
+      if (!app) continue;
+      await writeApplicationDescription(this.integratedDocuments, app, description, { manager: context.manager, userId: context.userId, audit: context.audit });
+    }
   }
 
   /**

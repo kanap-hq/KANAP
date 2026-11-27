@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { withApplicationDescriptions } from '../../applications/application-description';
 import { codedForbidden } from '../../auth/module-right-required';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
@@ -2422,6 +2423,8 @@ export class AiQueryExecutor {
         tenantId: context.tenantId,
         accessScope,
       });
+      // Each summary is the description its page shows: its document's text.
+      await withApplicationDescriptions(context.manager, context.tenantId, (result.items || []) as any[]);
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;

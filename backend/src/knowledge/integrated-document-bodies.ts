@@ -8,7 +8,7 @@ import { IntegratedDocumentSlotKey } from './integrated-document.constants';
 export async function loadSlotBodies(
   manager: { query: (sql: string, params: unknown[]) => Promise<any[]> },
   tenantId: string,
-  sourceEntityType: 'projects' | 'requests' | 'incidents',
+  sourceEntityType: 'projects' | 'requests' | 'incidents' | 'applications',
   ids: string[],
   slots: IntegratedDocumentSlotKey[],
 ): Promise<Map<string, Map<string, string>>> {

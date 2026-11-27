@@ -394,6 +394,8 @@ async function testImportRenameSyncsDocumentTitle() {
     const atlas = await seedApp(ctx, 'Atlas');
     const nova = await seedApp(ctx, 'Nova');
     const calls: Array<{ type: string; source: any }> = [];
+    const repairs: string[][] = [];
+    const writes: string[][] = [];
     const manager = ctx.runner.manager;
     const audit = new AuditService(manager.getRepository(AuditLog));
     const resolver = new CsvResolverService();
@@ -402,7 +404,11 @@ async function testImportRenameSyncsDocumentTitle() {
       new CsvExportService(resolver), new CsvImportService(resolver, new CsvJsonValidators()), resolver, audit,
       new ApplicationsListService(manager.getRepository(Application)),
       new ItOpsSettingsService(manager.getRepository(Tenant), manager.getRepository(Location), audit),
-      { syncTitles: async (type: string, source: any) => { calls.push({ type, source }); return 1; } } as any,
+      {
+        syncTitles: async (type: string, source: any) => { calls.push({ type, source }); return 1; },
+        repairSourceSlot: async (type: string, id: string, slot: string) => { repairs.push([type, id, slot]); },
+        writeSourceSlotContent: async (type: string, source: any, slot: string, content: string) => { writes.push([type, source.name, slot, content]); },
+      } as any,
     );
     const run = (lines: string[], dryRun = false) => csv.import(
       { buffer: Buffer.from(lines.join('\n') + '\n'), originalname: 'apps.csv' } as Express.Multer.File,
@@ -416,6 +422,10 @@ async function testImportRenameSyncsDocumentTitle() {
     assert.deepEqual(calls.map((call) => [call.type, call.source.id, call.source.name]), [['applications', atlas, 'Atlas Prime']], 'only the renamed application');
     const [{ sequential_id }] = await ctx.runner.query(`SELECT sequential_id FROM applications WHERE id = $1 AND tenant_id = $2`, [atlas, ctx.tenantId]);
     assert.equal(calls[0].source.reference_label, String(sequential_id || '').trim() || atlas);
+    // The descriptions go to the documents (decision P14 of 26.12.1): the changed one, after its seed is
+    // kept, and the new application's; a blank cell clears Atlas's (it had none: nothing written).
+    assert.deepEqual(repairs, [['applications', nova, 'overview']]);
+    assert.deepEqual(writes, [['applications', 'Nova', 'overview', 'changed'], ['applications', 'Vega', 'overview', 'new']]);
   });
 }
 

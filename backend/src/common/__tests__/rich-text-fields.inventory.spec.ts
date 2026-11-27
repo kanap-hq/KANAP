@@ -443,6 +443,8 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
       ...column('document_activities', 'content', () => documentComment.id),
     });
     // --- Applications ------------------------------------------------------
+    // The description is the text of the application's document (decision P14 of 26.12.1), created
+    // with the application when it is given one.
     let applicationCount = 0;
     const application = ok('an application', await api('POST', '/applications', { name: 'Rich text application', description: 'Plain.' }));
     await check({
@@ -454,7 +456,7 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
       field: 'applications.description',
       route: 'PATCH /applications/:id',
       write: (text) => api('PATCH', `/applications/${application.id}`, { description: text, version: `1.${++applicationCount}` }),
-      ...column('applications', 'description', () => application.id),
+      ...boundDocument('applications', 'overview', () => application.id),
     });
     await check({
       field: 'applications.description',
@@ -464,7 +466,7 @@ async function testEveryFieldRefusesOtherTagsThroughItsRoutes() {
         await upload('/applications/import?dryRun=true&mode=enrich&operation=upsert', `id;name;description\n${application.id};Rich text application;${csvCell(text)}\n`),
         'description',
       ),
-      ...column('applications', 'description', () => application.id),
+      ...boundDocument('applications', 'overview', () => application.id),
     });
 
     // --- Interfaces (the texts of the specification) -------------------------
