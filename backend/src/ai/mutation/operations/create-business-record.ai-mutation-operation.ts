@@ -15,7 +15,8 @@ import {
   AiCreateBusinessRecordInput,
   getAiBusinessRecordBusinessResource,
 } from '../ai-business-record-mutation-support.service';
-import { AiFinancialPlanMutationSupportService, storedPreviewAmounts } from '../ai-financial-plan-mutation-support.service';
+import { AiFinancialPlanMutationSupportService, columnsAfterWrite, storedPreviewAmounts } from '../ai-financial-plan-mutation-support.service';
+import { amountsEntryCheckWarning, ENTRY_CHECK_STORE_KEY, entryCheckWarningChange } from '../ai-entry-check-warning';
 import { AiWriteLanguage } from '../../ai-write-texts';
 
 /** The families whose creation may carry the amounts of the new line. */
@@ -68,8 +69,15 @@ export class CreateBusinessRecordAiMutationOperation implements AiMutationOperat
     if (input.amounts == null) return prepared;
     const fields = prepared.mutationInput.fields as Record<string, unknown> | undefined;
     const lineAmounts = await this.financialPlan.prepareNewLineAmounts(context, input.amounts, fields?.currency);
+    // Kad writes totals: a new line on an account that expects quantity and price is to check (lot B12b).
+    const warning = await amountsEntryCheckWarning(context.manager, context.tenantId, {
+      nature: fields?.nature === 'capex' ? 'capex' : 'opex',
+      accountId: fields?.account_id,
+      endOfValidity: (fields?.disabled_at as string | null | undefined) ?? null,
+    }, columnsAfterWrite(lineAmounts.amounts));
     return {
       ...prepared,
+      ...(warning ? { currentValues: { ...(prepared.currentValues ?? {}), [ENTRY_CHECK_STORE_KEY]: warning } } : {}),
       mutationInput: {
         ...prepared.mutationInput,
         amounts: lineAmounts.amounts,
@@ -90,6 +98,7 @@ export class CreateBusinessRecordAiMutationOperation implements AiMutationOperat
       changes: {
         ...presentation.changes,
         amounts: { label: 'Amounts', from: null, to: display, format: 'text', ...(amounts ? { amounts: { from: null, to: amounts } } : {}) },
+        ...entryCheckWarningChange(preview.current_values, preview.status, language),
       },
     };
   }

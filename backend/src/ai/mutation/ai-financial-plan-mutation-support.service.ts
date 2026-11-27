@@ -16,6 +16,8 @@ import { budgetColumnName, BudgetColumnsSettings, readBudgetColumns } from '../.
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewAmounts } from '../ai.types';
 import { AiMutationAuditOptions, buildAiMutationAudit } from './ai-mutation-audit.util';
+import { amountsEntryCheckWarning, ENTRY_CHECK_STORE_KEY, entryCheckWarningChange } from './ai-entry-check-warning';
+import type { ColumnAfterWrite } from '../../spend/budget-line-entry-check';
 import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
@@ -360,6 +362,29 @@ function amountMeasures(payload: AmountPayload): AmountMeasure[] {
   return AMOUNT_MEASURES.filter((measure) => payload.months.some((row) => row[measure] !== undefined));
 }
 
+/**
+ * The columns a payload writes, each with its total for the year once written (lot B12b, the
+ * warning of a column left to check): a yearly or quarterly payload sets its columns' year, a
+ * monthly one its months over the months stored (`beforeItems`, the year's rows as listed).
+ */
+export function columnsAfterWrite(raw: unknown, beforeItems: readonly unknown[] = []): ColumnAfterWrite[] {
+  const payload = raw as AmountPayload;
+  const cents = (value: unknown) => Math.round(Number(value ?? 0) * 100) || 0;
+  const measures = amountMeasures(payload);
+  if (payload.kind === 'annual') return measures.map((measure) => ({ year: payload.year, measure, total: cents(payload.totals[measure]) }));
+  if (payload.kind === 'quarterly') {
+    return [{ year: payload.year, measure: payload.measure, total: (['Q1', 'Q2', 'Q3', 'Q4'] as const).reduce((sum, q) => sum + cents(payload[q]), 0) }];
+  }
+  const months = new Map<string, Record<string, unknown>>();
+  for (const row of beforeItems as Array<Record<string, unknown>>) months.set(String(row?.period ?? ''), { ...row });
+  for (const row of payload.months) months.set(row.period, { ...(months.get(row.period) ?? {}), ...Object.fromEntries(measures.filter((m) => row[m] !== undefined).map((m) => [m, row[m]])) });
+  return measures.map((measure) => ({
+    year: payload.year,
+    measure,
+    total: [...months.entries()].filter(([period]) => periodYear(period) === payload.year).reduce((sum, [, row]) => sum + cents(row[measure]), 0),
+  }));
+}
+
 /** How each column of `measures` is entered now (`ColumnInput`), from the version's records. */
 function columnInputs(roundInputs: unknown, measures: readonly AmountMeasure[]): ColumnInput[] {
   const records = Array.isArray(roundInputs) ? roundInputs as any[] : [];
@@ -460,6 +485,10 @@ export class AiFinancialPlanMutationSupportService {
       const columns = await readBudgetColumns(context.manager, context.tenantId);
       const beforeItems = Array.isArray(before.items) ? before.items : [];
       const reverseItems = completeAmountRowsForPeriods(beforeItems, amountTouchedPeriods(amounts));
+      // Kad writes totals: on an account that expects quantity and price, the card warns (lot B12b).
+      const warning = await amountsEntryCheckWarning(context.manager, context.tenantId,
+        { nature: item.nature, accountId: item.row.account_id, endOfValidity: item.row.disabled_at as string | Date | null },
+        columnsAfterWrite(amounts, beforeItems));
       return {
         targetEntityType: entityType,
         targetEntityId: item.id,
@@ -488,6 +517,7 @@ export class AiFinancialPlanMutationSupportService {
             from_amounts: this.previewTotals(before, columns, item.row.currency),
             to_amounts: this.previewPayload(amounts, columns, item.row.currency),
           },
+          ...(warning ? { [ENTRY_CHECK_STORE_KEY]: warning } : {}),
         },
       };
     }
@@ -568,7 +598,18 @@ export class AiFinancialPlanMutationSupportService {
       });
       // The months as they were, and how their columns were entered (`ColumnInput`).
       const inputs = storedColumnInputs(previousValues.inputs);
-      return inputs.length === 0 ? prepared : { ...prepared, mutationInput: { ...prepared.mutationInput, restore_inputs: inputs } };
+      if (inputs.length === 0) return prepared;
+      // A column entered again as quantity × price is not left to check: the warning reads the others.
+      const rebuilt = new Set(inputs.filter((input) => input.method === 'computed').map((input) => input.measure));
+      let currentValues = prepared.currentValues;
+      if (rebuilt.size > 0 && currentValues?.[ENTRY_CHECK_STORE_KEY]) {
+        const { [ENTRY_CHECK_STORE_KEY]: _warned, ...rest } = currentValues;
+        const warning = await amountsEntryCheckWarning(context.manager, context.tenantId,
+          { nature: item.nature, accountId: item.row.account_id, endOfValidity: item.row.disabled_at as string | Date | null },
+          columnsAfterWrite(prepared.mutationInput.amounts).filter((column) => !rebuilt.has(column.measure)));
+        currentValues = { ...rest, ...(warning ? { [ENTRY_CHECK_STORE_KEY]: warning } : {}) };
+      }
+      return { ...prepared, currentValues, mutationInput: { ...prepared.mutationInput, restore_inputs: inputs } };
     }
     if (action === 'replace_allocations') {
       const versionId = textOrNull(mutation.version_id);
@@ -628,6 +669,7 @@ export class AiFinancialPlanMutationSupportService {
         format: 'text',
         ...(toAmounts ? { amounts: { from: fromAmounts, to: toAmounts } } : {}),
       };
+      Object.assign(changes, entryCheckWarningChange(current, preview.status, language));
     } else if (action === 'replace_allocations') {
       const display = current.display_values && typeof current.display_values === 'object' ? current.display_values as Record<string, unknown> : {};
       // A card stored before the split was kept by name shows its texts as they were.
