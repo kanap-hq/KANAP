@@ -9,6 +9,7 @@ import { UpdateDashboardConfigDto, UpdateHomeDashboardConfigDto } from './dto/up
 import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
 import { existingRecentItems, type RecentItemRef } from './recent-items';
 import { incidentViewerFromContext } from '../incidents/incident-visibility';
+import { linkedReadsFromContext } from '../common/relations/linked-reads';
 
 /** Query numbers come in as strings; keep them inside the bounds the tiles offer (a negative LIMIT is a 500). */
 function clampInt(raw: string | undefined, fallback: number, min: number, max: number): number {
@@ -84,7 +85,7 @@ export class DashboardController {
   // These require specific permissions based on the data they access
 
   /** Same participant scope as the list endpoints: business contributors only see what they take part in. */
-  private participantScope(ctx: TenantRequest, resource: 'portfolio_projects' | 'tasks') {
+  private participantScope(ctx: TenantRequest, resource: 'portfolio_projects' | 'portfolio_requests' | 'tasks') {
     return resolveBusinessContributorScopeForUser(
       { manager: ctx.manager!, userId: ctx.userId!, tenantId: ctx.tenantId ?? null, isAdmin: ctx.isAdmin === true },
       resource,
@@ -141,7 +142,7 @@ export class DashboardController {
     return this.dataSvc.getTimeSummary(
       ctx.userId!,
       clampInt(days, 7, 1, 90),
-      { manager: ctx.manager },
+      { manager: ctx.manager, accessScope: await this.participantScope(ctx, 'portfolio_projects') },
     );
   }
 
@@ -195,6 +196,11 @@ export class DashboardController {
         manager: ctx.manager,
         accessScope: await this.participantScope(ctx, 'tasks'),
         incidentViewer: incidentViewerFromContext(ctx),
+        linkedReads: linkedReadsFromContext({ isAdmin: ctx.isAdmin === true, permissions: ctx.permissions }),
+        linkedScopes: {
+          projects: await this.participantScope(ctx, 'portfolio_projects'),
+          requests: await this.participantScope(ctx, 'portfolio_requests'),
+        },
       },
     );
   }

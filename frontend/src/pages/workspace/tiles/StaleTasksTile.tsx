@@ -30,6 +30,8 @@ interface StaleTaskItem {
   relatedObjectName: string | null;
   /** A contract outside the access has no name: the label alone (data-scoped access, spec §5.4). */
   relatedObjectHiddenKind?: 'contract' | null;
+  /** The record the task belongs to is one the person does not read: nothing names it. */
+  relatedObjectHidden?: true;
 }
 
 interface StaleTasksTileProps {
@@ -107,9 +109,14 @@ export default function StaleTasksTile({ config }: StaleTasksTileProps) {
                       </Box>
                     </Box>
                     <Typography variant="caption" color="text.secondary">
-                      {item.relatedObjectHiddenKind === 'contract'
-                        ? t('ops:contracts.outsideYourAccess')
-                        : item.relatedObjectName || t('dashboard.tiles.standaloneTask')} {String.fromCharCode(8226)} {t('dashboard.tiles.updated', { date: formatShortInstantDate(item.updatedAt, locale) })}
+                      {!item.relatedObjectHidden && (
+                        <>
+                          {item.relatedObjectHiddenKind === 'contract'
+                            ? t('ops:contracts.outsideYourAccess')
+                            : item.relatedObjectName || t('dashboard.tiles.standaloneTask')} {String.fromCharCode(8226)}{' '}
+                        </>
+                      )}
+                      {t('dashboard.tiles.updated', { date: formatShortInstantDate(item.updatedAt, locale) })}
                     </Typography>
                     {scope !== 'my' && item.assigneeName && (
                       <Typography variant="caption" color="text.secondary">

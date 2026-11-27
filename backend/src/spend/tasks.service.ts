@@ -988,7 +988,7 @@ export type TaskLinkedScopes = {
 };
 
 /** Task rows through `withReadableTaskLinks`, the participation of the page's records in one query per family. */
-async function readableTaskRows<T extends Record<string, any>>(
+export async function readableTaskRows<T extends Record<string, any>>(
   manager: EntityManager,
   rows: T[],
   reads: LinkedReads | undefined,

@@ -53,6 +53,9 @@ import { DataSource, QueryRunner } from 'typeorm';
 //      request, and a second conversion is refused without its reference.
 //  21. Kad's detail of a task whose project the person does not read says its name and phase are
 //      withheld, and that the classification shown is the task's own.
+//  22. The home page's stale tasks tile names the record of a task as the task does (no project
+//      outside the participation, no contract without the module), and the time tile's breakdown
+//      names the projects of the participation only.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -77,6 +80,7 @@ type Harness = {
   documentMutations: any;
   tasksController: any;
   knowledgeController: any;
+  dashboardController: any;
 };
 
 /**
@@ -148,6 +152,7 @@ async function createHarness(): Promise<Harness> {
   const { AiDocumentMutationSupportService } = require('../../../ai/mutation/ai-document-mutation-support.service');
   const { TasksController } = require('../../../spend/tasks.controller');
   const { KnowledgeController } = require('../../../knowledge/knowledge.controller');
+  const { DashboardController } = require('../../../dashboard/dashboard.controller');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   // The surface checks (tenant AI settings, provider, subscription) are not what this spec tests.
   app.get(AiPolicyService).assertSurfaceAccess = async () => undefined;
@@ -166,6 +171,7 @@ async function createHarness(): Promise<Harness> {
     documentMutations: app.get(AiDocumentMutationSupportService),
     tasksController: app.get(TasksController),
     knowledgeController: app.get(KnowledgeController),
+    dashboardController: app.get(DashboardController),
   };
 }
 
@@ -1135,6 +1141,53 @@ async function testTaskDetailSaysProjectWithheld(h: Harness, runner: QueryRunner
   }
 }
 
+// 22. The home page's tiles that name the record of a task: the stale tasks tile names it as the
+//     task does (a project outside a Business Contributor's participation, a contract of a module
+//     the person does not read: no name, no reference, no id), and the time tile's breakdown names
+//     the projects of the participation only, its hours staying in the totals.
+async function testHomeTilesFollowTaskLinks(h: Harness, runner: QueryRunner, s: Seed, people: FollowUpPeople) {
+  await runner.query(`UPDATE tasks SET updated_at = now() - interval '30 days' WHERE tenant_id = $1`, [s.tenantId]);
+  const [{ item_number: contractNumber }] = await runner.query(`SELECT item_number FROM contracts WHERE id = $1`, [s.contract]);
+  const hidden = [DEPENDENCY, CONTRACT, `CTR-${contractNumber}`, s.dependency, s.contract];
+  const home = (userId: string, permissions: Record<string, string>, tenantId = s.tenantId) => ({
+    tenantId, userId, isAdmin: false, permissions, manager: runner.manager, queryRunner: runner,
+  });
+  const log = (taskId: string, userId: string, hours: number) => runner.query(
+    `INSERT INTO task_time_entries (tenant_id, task_id, user_id, hours, logged_at, category) VALUES ($1, $2, $3, $4, now(), 'it')`,
+    [s.tenantId, taskId, userId, hours]);
+  await log(s.projectTask, s.users.e, 2);
+  await log(s.outsideTask, s.users.e, 3);
+  await log(s.outsideTask, people.team, 1);
+  await log(s.outsideTask, people.reader, 1);
+
+  const e = await h.dashboardController.getStaleTasks('all', '1', '10', home(s.users.e, PERMISSIONS.e));
+  const outside = e.find((item: any) => item.id === s.outsideTask);
+  assert.deepEqual([outside?.relatedObjectHidden, outside?.relatedObjectId, outside?.relatedObjectName], [true, null, null], 'E: the stale task of a hidden project keeps no link');
+  const contract = e.find((item: any) => item.id === s.contractTask);
+  assert.deepEqual([contract?.relatedObjectHidden, contract?.relatedObjectId, contract?.relatedObjectName], [true, null, null], 'E: the stale task of a contract keeps no link');
+  hasNot(e, hidden, 'E, stale tasks tile');
+  has(e, [PROJECT], 'E, stale tasks tile: their project');
+  const eTime = await h.dashboardController.getTimeSummary('7', home(s.users.e, PERMISSIONS.e));
+  assert.deepEqual(eTime.byProject.map((row: any) => row.projectName), [PROJECT], 'E: the time breakdown names their project only');
+  assert.equal(eTime.totalHours, 5, 'E: the hours of the hidden project stay in the total');
+  hasNot(eTime, hidden, 'E, time tile');
+
+  for (const [label, userId, permissions] of [['team member', people.team, TEAM_PERMISSIONS], ['module reader', people.reader, READER_PERMISSIONS]] as const) {
+    const stale = await h.dashboardController.getStaleTasks('all', '1', '10', home(userId, permissions));
+    const row = stale.find((item: any) => item.id === s.outsideTask);
+    assert.deepEqual([row?.relatedObjectId, row?.relatedObjectName, row?.relatedObjectHidden], [s.dependency, DEPENDENCY, undefined], `${label}: the dependency project, as before`);
+    const time = await h.dashboardController.getTimeSummary('7', home(userId, permissions));
+    has(time, [DEPENDENCY], `${label}, time tile`);
+  }
+
+  const other: any = await inTenant(runner, people.otherTenant, s.tenantId, async () => {
+    await runner.query(`UPDATE tasks SET updated_at = now() - interval '30 days' WHERE tenant_id = $1`, [people.otherTenant]);
+    return h.dashboardController.getStaleTasks('all', '1', '10', { ...home(people.otherUser, {}, people.otherTenant), isAdmin: true });
+  });
+  assert.deepEqual(other.map((item: any) => item.title), ['Other workspace task'], 'other workspace: its own task only');
+  hasNot(other, hidden.concat([PROJECT]), 'other workspace, stale tasks tile');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -1166,6 +1219,7 @@ async function run() {
       await testTaskAggregatesOnHiddenProjects(harness, runner, s, people);
       await testConvertedRequestOutsideParticipation(harness, runner, s, people);
       await testTaskDetailSaysProjectWithheld(harness, runner, s, people);
+      await testHomeTilesFollowTaskLinks(harness, runner, s, people);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
