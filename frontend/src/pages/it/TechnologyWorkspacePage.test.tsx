@@ -46,7 +46,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
       )}
       <h1>{props.title}</h1>
       <div role="tablist">
-        {props.tabs.map((tab: any) => <button key={tab.key} role="tab" disabled={tab.disabled} data-badge={tab.badge ?? ''}>{tab.label}</button>)}
+        {props.tabs.map((tab: any) => <button key={tab.key} role="tab" disabled={tab.disabled} data-badge={tab.badge ?? ''} onClick={() => props.onTabChange(tab.key)}>{tab.label}</button>)}
       </div>
       <div>{props.metadata}</div>
       <div>{props.actions}</div>
@@ -114,6 +114,27 @@ function renderPage(entry = '/it/technologies/TEC-3/overview') {
   );
 }
 
+/** The page on its own routes, with the address shown beside it. */
+function renderAddressed(entries: string[]) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
+            <LocationProbe />
+            <Routes>
+              <Route path="/it/technologies/:id" element={<TechnologyWorkspacePage />} />
+              <Route path="/it/technologies/:id/:tab" element={<TechnologyWorkspacePage />} />
+              <Route path="/it/technologies" element={<div>list page</div>} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
+      </ThemeProvider>
+    </QueryClientProvider>,
+  );
+}
+
 /** The CPE identifiers sit in the identifiers group, folded when the technology has one. */
 async function openIdentifiers() {
   fireEvent.click(await screen.findByRole('button', { name: /workspace\.technology\.identifiers\.title/ }));
@@ -155,6 +176,55 @@ describe('TechnologyWorkspacePage', () => {
     expect(await screen.findByTestId('location')).toHaveTextContent(
       `/it/technologies/TEC-9/servers?sort=editor%3ADESC&filters=${encodeURIComponent(filters)}`,
     );
+  });
+
+  it('moves an address by uuid to the reference, tab and list context kept, and keeps it on a tab change', async () => {
+    const base = get.getMockImplementation()!;
+    get.mockImplementation(async (url: string, config?: any) => (url === '/technologies/tech-1' ? { data: DETAIL } : base(url, config)));
+    renderAddressed(['/it/technologies', '/it/technologies/tech-1/servers?sort=name%3AASC']);
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/it/technologies/TEC-3/servers?sort=name%3AASC'));
+    expect(await screen.findByRole('heading', { name: 'Microsoft SQL Server' })).toBeInTheDocument();
+    expect(get.mock.calls.filter(([url]) => url === '/technologies/tech-1')).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'workspace.technology.tabs.applications' }));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/it/technologies/TEC-3/applications?sort=name%3AASC'));
+    expect(screen.getByRole('heading', { name: 'Microsoft SQL Server' })).toBeInTheDocument();
+  });
+
+  it('moves an address by uuid without a tab and a lower-case reference to the reference', async () => {
+    const base = get.getMockImplementation()!;
+    get.mockImplementation(async (url: string, config?: any) => (
+      url === '/technologies/tech-1' || url === '/technologies/tec-3' ? { data: DETAIL } : base(url, config)
+    ));
+    renderAddressed(['/it/technologies/tech-1']);
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(/^\/it\/technologies\/TEC-3$/));
+
+    renderAddressed(['/it/technologies/tec-3/overview']);
+    await waitFor(() => expect(screen.getAllByTestId('location')[1]).toHaveTextContent('/it/technologies/TEC-3/overview'));
+  });
+
+  it('stays on the next technology while it loads, never back on the one it leaves', async () => {
+    const base = get.getMockImplementation()!;
+    let release: () => void = () => undefined;
+    const next = { ...DETAIL, id: 'tech-9', reference: 'TEC-9', name: 'PostgreSQL' };
+    get.mockImplementation(async (url: string, config?: any) => {
+      if (url === '/technologies/ids') return { data: { ids: ['tech-1', 'tech-9'], refs: ['TEC-3', 'TEC-9'], total: 2 } };
+      if (url === '/technologies/TEC-9') return new Promise((resolve) => { release = () => resolve({ data: next }); });
+      return base(url, config);
+    });
+    renderAddressed(['/it/technologies/TEC-3/overview']);
+
+    const nav = await screen.findByTestId('nav');
+    await waitFor(() => expect(within(nav).getByRole('button', { name: 'workspace.technology.next' })).toBeEnabled());
+    fireEvent.click(within(nav).getByRole('button', { name: 'workspace.technology.next' }));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/it/technologies/TEC-9/overview'));
+    // The previous technology stays on screen while the next one loads: the address keeps the next one.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.getByTestId('location')).toHaveTextContent('/it/technologies/TEC-9/overview');
+    release();
+    expect(await screen.findByRole('heading', { name: 'PostgreSQL' })).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/it/technologies/TEC-9/overview');
   });
 
   it('shows the reference, the name, the ready tabs and the tabs of the next lots disabled', async () => {
