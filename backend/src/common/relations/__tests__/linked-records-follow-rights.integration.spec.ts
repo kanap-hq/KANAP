@@ -45,12 +45,14 @@ import { DataSource, QueryRunner } from 'typeorm';
 //      projects and requests inside their participation (page, get_document), the count follows,
 //      a member of the modules reads them all, and a replacement keeps the links the person
 //      does not see.
-//  18. The task list and Kad sort a value the person does not see (a Business Contributor's
-//      project outside their participation, its phase and classification) as an empty value.
+//  18. The task list and Kad sort a value the person does not see (the name, the phase and the
+//      project_* columns of a Business Contributor's project outside their participation) as an
+//      empty value; the task's own classification, inherited from that project, still shows.
 //  19. Kad's task groups by phase, project stream and project category follow the same rule.
 //  20. A task converted into a request the person does not read reads as converted, without the
 //      request, and a second conversion is refused without its reference.
-//  21. Kad's detail of a task whose project the person does not read says the project is withheld.
+//  21. Kad's detail of a task whose project the person does not read says its name and phase are
+//      withheld, and that the classification shown is the task's own.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -984,17 +986,20 @@ function order(items: any[], ids: Record<string, string>): Record<string, number
   return positions;
 }
 
-// 18. The task list and Kad sort a value the person does not see (the project of a task outside a
-//     Business Contributor's participation, its phase and classification, a contract without the
-//     module) as an empty value: the order tells nothing of it.
+// 18. The task list and Kad sort a value the person does not see (the name, the phase and the
+//     project_* columns of a project outside a Business Contributor's participation, a contract
+//     without the module) as an empty value: the order tells nothing of it. The task's own
+//     classification (inherited from its project when it has none) shows, as the task's.
 async function testTaskSortsOnHiddenValues(h: Harness, runner: QueryRunner, s: Seed, people: FollowUpPeople) {
-  // The task's own classification falls back on its project's (`stream_name`, `category_name`) and
-  // is not part of this rule: the project's columns (`project_stream_name`, ...) are.
+  // The task's own classification falls back on its project's (`stream_name`, `category_name`): it
+  // is the task's and shows. The project's own columns (`project_stream_name`, ...) are hidden.
   const hidden = [DEPENDENCY, PHASE, CONVERTED, s.dependency];
   const eReq = rawRequest(runner, s, 'e');
   const ids = { inside: s.projectTask, contract: s.contractTask, outside: s.outsideTask };
   const row = (await h.tasksController.list({ limit: 50 }, eReq)).items.find((item: any) => item.id === s.outsideTask);
   assert.deepEqual([row.project_stream_name, row.project_category_name], [null, null], 'E: no project classification');
+  assert.equal(row.category_name, HIDDEN_CATEGORY, 'E: the task shows its category, inherited from its project');
+  assert.equal(row.stream_name, HIDDEN_STREAM, 'E: the task shows its stream, inherited from its project');
   for (const field of ['phase_name', 'related_object_name', 'project_stream_name', 'project_category_name']) {
     const asc = await h.tasksController.list({ sort: `${field}:ASC`, limit: 50 }, eReq);
     hasNot(asc, hidden, `E, tasks list sorted on ${field}`);
@@ -1106,14 +1111,20 @@ async function testConvertedRequestOutsideParticipation(h: Harness, runner: Quer
   hasNot(other, hidden, 'other workspace, task page');
 }
 
-// 21. Kad's detail of a task whose project the person does not read: the project, its phase and
-//     classification are null, and the answer says they are withheld, so it never reads "no phase".
+// 21. Kad's detail of a task whose project the person does not read: the project's name and phase
+//     are null and said withheld, so it never reads "no phase"; the classification shown is the
+//     task's own (inherited from the project), and the note says so.
 async function testTaskDetailSaysProjectWithheld(h: Harness, runner: QueryRunner, s: Seed, people: FollowUpPeople) {
   const withheld = (result: any) => (result.fields_withheld ?? []).map((note: { field: string }) => note.field);
   for (const surface of ['chat', 'mcp'] as const) {
     const e = await h.tools.execute(ctx(runner, s, 'e', surface), 'get_entity_detail', { entity_type: 'tasks', entity_id: 'T-3' });
     assert.ok(withheld(e).includes('project'), `E (${surface}): the project of T-3 is said withheld`);
+    const note = e.fields_withheld.find((item: { field: string }) => item.field === 'project').reason;
+    assert.match(note, /name and phase are withheld/, `E (${surface}): the note names what is withheld`);
+    assert.match(note, /the task's own/, `E (${surface}): the note says the classification shown is the task's`);
     hasNot(e, [DEPENDENCY, PHASE, s.dependency], `E (${surface}), get_entity_detail(T-3)`);
+    has(e, [HIDDEN_CATEGORY], `E (${surface}): the task's category, inherited from its project, shows`);
+    has(e, [HIDDEN_STREAM], `E (${surface}): the task's stream, inherited from its project, shows`);
     const inside = await h.tools.execute(ctx(runner, s, 'e', surface), 'get_entity_detail', { entity_type: 'tasks', entity_id: 'T-1' });
     assert.equal(withheld(inside).includes('project'), false, `E (${surface}): the project of T-1 is read`);
   }

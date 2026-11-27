@@ -661,7 +661,7 @@ function taskLinkedReadNotes(
   const withheld: AiWithheldField[] = [];
   const partial: AiWithheldField[] = [];
   if (row?.related_object_type === 'project' && row.related_object_hidden === true) {
-    withheld.push({ field: 'project', reason: 'This person does not read the project of this task (no read of Projects, or a project outside a Business Contributor\'s participation): its name, phase and classification are withheld (null), which does not mean the task has none.' });
+    withheld.push({ field: 'project', reason: 'This person does not read the project of this task (no read of Projects, or a project outside a Business Contributor\'s participation): its name and phase are withheld (null), which does not mean the task has none. The category, stream, company and source shown are the task\'s own, taken from its project when the task has none of its own.' });
   }
   if (!reads.applications) {
     withheld.push({ field: 'applications', reason: 'This person does not read applications (Applications, reader level): the linked applications are withheld (null), which does not mean there are none.' });
