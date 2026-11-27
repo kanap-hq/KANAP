@@ -349,7 +349,9 @@ function ApplicationProperties({
     queryKey: ['application-audience-departments', app.id, selectedDepartmentIds],
     queryFn: async () => {
       const entries = await Promise.all(selectedDepartmentIds.map(async (departmentId) => {
-        const res = await api.get<{ id: string; company_id: string; name: string }>(`/departments/${departmentId}`);
+        // The department record requires the departments reader level. The lookup returns the same
+        // id, name and company, and every reader of applications may call it.
+        const res = await api.get<{ id: string; company_id: string; name: string }>(`/departments/lookup/${departmentId}`);
         return [departmentId, res.data] as const;
       }));
       return Object.fromEntries(entries) as Record<string, { id: string; company_id: string; name: string }>;
@@ -1459,6 +1461,8 @@ export default function ApplicationWorkspacePage() {
   const canDelete = hasLevel('applications', 'admin');
   const canConvert = canDelete && hasLevel('infrastructure', 'member');
   const canCreateKnowledge = hasLevel('knowledge', 'member');
+  // The incident count is its own read. Without the incidents reader level the page does not call it.
+  const canReadIncidents = hasLevel('incidents', 'reader');
   const overviewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
   const previewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
   const [versionDialogOpen, setVersionDialogOpen] = React.useState(false);
@@ -1513,7 +1517,7 @@ export default function ApplicationWorkspacePage() {
   const incidentsCountQuery = useQuery({
     queryKey: ['application-workspace-incidents-count', app?.id],
     queryFn: () => fetchApplicationIncidentsCount(app!.id),
-    enabled: !isCreate && !!app?.id,
+    enabled: !isCreate && !!app?.id && canReadIncidents,
   });
   // One read for the Operations section and the badge of the metadata bar. Technology link writes
   // and CVE state changes invalidate every `vulnerabilities` query. While the search is still
@@ -1710,7 +1714,7 @@ export default function ApplicationWorkspacePage() {
   const deploymentCount = deployments.length;
   const interfaceCount = distinctInterfaceCount(interfacesQuery.data);
   const relationCount = (relationsCountQuery.data?.total ?? ((app?.links?.length || 0) + (app?.attachments?.length || 0)))
-    + (incidentsCountQuery.data || 0);
+    + (canReadIncidents ? (incidentsCountQuery.data || 0) : 0);
   // The knowledge documents live in the Overview tab: open it and bring the section into view.
   const openKnowledge = () => {
     handleTabChange('overview');
@@ -1972,7 +1976,8 @@ export default function ApplicationWorkspacePage() {
             isSuite={!!app.is_suite}
             onRelationsChange={() => {
               void relationsCountQuery.refetch();
-              void incidentsCountQuery.refetch();
+              // refetch ignores `enabled`: a person who cannot read incidents must not call the route.
+              if (canReadIncidents) void incidentsCountQuery.refetch();
             }}
             onOpenKnowledge={openKnowledge}
           />
