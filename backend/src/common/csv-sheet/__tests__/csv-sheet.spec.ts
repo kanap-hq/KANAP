@@ -211,6 +211,19 @@ function testDateTimes() {
   assert.equal(instantInTimeZone('2026-10-16', null, 'Europe/Paris').toISOString(), '2026-10-15T22:00:00.000Z');
   // A time the clocks skip (02:30 on the March change day) still reads as an instant.
   assert.ok(!Number.isNaN(instantInTimeZone('2026-03-29', '02:30', 'Europe/Paris').getTime()));
+  // One rule on both sides of UTC (lot I6c of 26.12.1): a time the clocks skip moves forward with
+  // them, a time they repeat reads as its first pass.
+  for (const [date, time, zone, instant] of [
+    ['2026-03-29', '02:30', 'Europe/Paris', '2026-03-29T01:30:00.000Z'],
+    ['2026-03-08', '02:30', 'America/New_York', '2026-03-08T07:30:00.000Z'],
+    ['2026-10-25', '02:30', 'Europe/Paris', '2026-10-25T00:30:00.000Z'],
+    ['2026-11-01', '01:30', 'America/New_York', '2026-11-01T05:30:00.000Z'],
+    ['2026-10-04', '02:30', 'Australia/Sydney', '2026-10-03T16:30:00.000Z'],
+    ['2026-04-05', '02:30', 'Australia/Sydney', '2026-04-04T15:30:00.000Z'],
+    ['2026-07-14', '12:00', 'Asia/Kolkata', '2026-07-14T06:30:00.000Z'],
+  ] as const) {
+    assert.equal(instantInTimeZone(date, time, zone).toISOString(), instant, `${zone} ${date} ${time}`);
+  }
 
   // The zone travels in the header, after the stable column name.
   assert.equal(timeZoneHeader('detected_at', 'Europe/Paris'), 'detected_at (Europe/Paris)');
