@@ -14,6 +14,8 @@ import { assert, assertSucceeded, describe, pgCode, progress, runRaceSpecs, sett
 //   (`ensureBoundDocument`), so both succeed, with one document.
 // - A: an autosave of the overview document against an import of the description, both orders.
 // - P: the page making the overview document while the application is deleted.
+// - K: an import of the description and the owners (an export imported again) against the page.
+// - O: the owners saved from the page against that import.
 
 process.env.JWT_SECRET ||= 'test-jwt-secret';
 process.env.STRIPE_SECRET_KEY = '';
@@ -22,7 +24,7 @@ process.env.S3_BUCKET ||= 'test-bucket';
 process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
-let h!: { app: any; apps: any; deletes: any; docs: any; csv: any };
+let h!: { app: any; apps: any; deletes: any; docs: any; csv: any; owners: any; projects: any };
 
 async function boot() {
   const { AppModule } = require('../../app.module');
@@ -31,6 +33,8 @@ async function boot() {
   const { IntegratedDocumentsService } = require('../../knowledge/integrated-documents.service');
   const { ApplicationsCsvService } = require('../applications-csv.service');
   const { NotificationsService } = require('../../notifications/notifications.service');
+  const { ApplicationsOwnersService } = require('../services/applications-owners.service');
+  const { PortfolioProjectCreationService } = require('../../portfolio/services/portfolio-project-creation.service');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   // Nothing is sent from this spec.
   const notifications = app.get(NotificationsService, { strict: false });
@@ -38,14 +42,14 @@ async function boot() {
     if (method.startsWith('notify')) notifications[method] = async () => undefined;
   }
   const get = (type: any) => app.get(type, { strict: false });
-  h = { app, apps: get(ApplicationsService), deletes: get(ApplicationsDeleteService), docs: get(IntegratedDocumentsService), csv: get(ApplicationsCsvService) };
+  h = { app, apps: get(ApplicationsService), deletes: get(ApplicationsDeleteService), docs: get(IntegratedDocumentsService), csv: get(ApplicationsCsvService), owners: get(ApplicationsOwnersService), projects: get(PortfolioProjectCreationService) };
 }
 
 async function seedBase(runner: QueryRunner, tenantId: string) {
   const [role] = await runner.query(
     `INSERT INTO roles (tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
      VALUES ($1, 'Race', 'Race', false, false, now(), now()) RETURNING id`, [tenantId]);
-  for (const [resource, level] of [['applications', 'admin'], ['knowledge', 'admin']]) {
+  for (const [resource, level] of [['applications', 'admin'], ['knowledge', 'admin'], ['portfolio_projects', 'admin']]) {
     await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level, created_at, updated_at) VALUES ($1, $2, $3, $4, now(), now())`,
       [tenantId, role.id, resource, level]);
   }
@@ -57,7 +61,7 @@ async function seedBase(runner: QueryRunner, tenantId: string) {
   const [app] = await runner.query(
     `INSERT INTO applications (tenant_id, name, description, status, lifecycle) VALUES ($1, 'Race app', 'Old text', 'enabled', 'active') RETURNING id::text AS id, name`,
     [tenantId]);
-  return { userId: String(user.id), appId: String(app.id), appName: String(app.name) };
+  return { userId: String(user.id), email: `race-${tenantId.slice(0, 8)}@example.test`, roleId: String(role.id), appId: String(app.id), appName: String(app.name) };
 }
 
 async function prepare(race: any, withDocument: boolean) {
@@ -232,6 +236,110 @@ async function pageAgainstDelete() {
   });
 }
 
+const ownersFile = (s: { appName: string; email: string }) =>
+  `name;description;business_owner_email_1\n${s.appName};Imported text;${s.email}\n`;
+const importFile = (race: any, s: any, m: any, file: string) => h.csv.import(
+  { buffer: Buffer.from(file), originalname: 'apps.csv' } as Express.Multer.File,
+  { dryRun: false, operation: 'update_only' },
+  { manager: m, tenantId: race.tenantId, userId: s.userId, access: { isAdmin: true, permissions: {} } },
+);
+const bounded = (m: any) => m.query(`SET LOCAL lock_timeout = '10s'`);
+
+/**
+ * K1: an import of the description and the owners (an export imported again) writes the document, while
+ * the page autosaves it: the import holds the application FOR NO KEY UPDATE and takes no stronger lock
+ * for the owners, so the autosave (the application FOR KEY SHARE, then the document) waits on the
+ * document only, then gets its 409.
+ */
+async function ownersImportAgainstAutosave() {
+  await withRace('app-desc-owners-import-autosave', async (race) => {
+    const s = await prepare(race, true);
+    const opened = await race.seedWith(async (runner: QueryRunner) => ({
+      doc: await h.docs.getBySource('applications', s.appId, 'overview', s.userId, { manager: runner.manager }),
+      lock: await h.docs.acquireLockBySource('applications', s.appId, 'overview', s.userId, { manager: runner.manager }),
+    }));
+    const imp = await race.open('import of the description and owners');
+    const page = await race.open('autosave of the page');
+    const gate = race.gate(imp, { label: 'document written', when: 'after', match: (t) => /UPDATE "documents"/.test(t) });
+    const importing = race.start(imp, async (m) => { await bounded(m); return importFile(race, s, m, ownersFile(s)); });
+    assert.equal(await progress(importing, { party: imp, gate }), 'gated', 'harness: the import must pause after its document write');
+    const saving = race.start(page, async (m) => {
+      await bounded(m);
+      return h.docs.updateBySource('applications', s.appId, 'overview',
+        { content_markdown: 'Typed on the page', revision: Number(opened.doc.revision), save_mode: 'autosave' },
+        s.userId, String(opened.lock.lock_token), { manager: m });
+    });
+    assert.equal(await progress(saving, { party: page }), 'blocked', 'the autosave waits on the document');
+    gate.release();
+    const imported = await settle(importing);
+    const saved = await settle(saving);
+    assert.ok(!deadlocked(imported) && !deadlocked(saved), `no deadlock: import ${describe(imported)}, autosave ${describe(saved)}`);
+    assertSucceeded(imported, 'the import');
+    assert.equal((imported as any).value?.ok, true, JSON.stringify((imported as any).value?.errors));
+    assert.equal((saved as any).error?.status, 409, `the autosave is refused, got ${describe(saved)}`);
+    const owners = await race.read(`SELECT count(*)::int AS n FROM application_owners WHERE application_id = $1`, [s.appId]);
+    assert.equal(owners[0].n, 1, 'the import wrote the owner');
+  });
+}
+
+/** K2: the same import makes the document of an application with none, while the page opens it. */
+async function ownersImportAgainstFirstOpen() {
+  await withRace('app-desc-owners-import-first-open', async (race) => {
+    const s = await prepare(race, false);
+    const imp = await race.open('import of the description and owners');
+    const page = await race.open('the page opens the application');
+    const gate = race.gate(imp, { label: 'binding inserted', when: 'after', match: (t) => /INSERT INTO "integrated_document_bindings"/.test(t) });
+    const importing = race.start(imp, async (m) => { await bounded(m); return importFile(race, s, m, ownersFile(s)); });
+    assert.equal(await progress(importing, { party: imp, gate }), 'gated', 'harness: the import must pause after its binding');
+    const opening = race.start(page, async (m) => { await bounded(m); return h.docs.getBySource('applications', s.appId, 'overview', s.userId, { manager: m }); });
+    assert.equal(await progress(opening, { party: page }), 'blocked', 'the page waits on the binding');
+    gate.release();
+    const imported = await settle(importing);
+    const opened = await settle(opening);
+    assert.ok(!deadlocked(imported) && !deadlocked(opened), `no deadlock: import ${describe(imported)}, page ${describe(opened)}`);
+    assertSucceeded(imported, 'the import');
+    assert.equal((imported as any).value?.ok, true, JSON.stringify((imported as any).value?.errors));
+    assertSucceeded(opened, 'the page');
+    const docs = await race.read(
+      `SELECT count(*)::int AS n, max(d.content_markdown) AS text FROM integrated_document_bindings b JOIN documents d ON d.id = b.document_id
+        WHERE b.source_entity_type = 'applications' AND b.source_entity_id = $1`, [s.appId]);
+    assert.deepEqual(docs[0], { n: 1, text: 'Imported text' }, 'one document, holding the imported text');
+  });
+}
+
+/**
+ * O1: the import still keeps the owners from another writer: the page saving the owners of an
+ * application the import holds (FOR NO KEY UPDATE) waits for it (FOR UPDATE), then writes after it.
+ */
+async function ownersImportAgainstOwnersPage() {
+  await withRace('app-desc-owners-import-owners-page', async (race) => {
+    const s = await prepare(race, false);
+    const other = await race.seedWith(async (runner: QueryRunner) => {
+      const [user] = await runner.query(
+        `INSERT INTO users (tenant_id, first_name, last_name, email, role_id, mfa_enabled, status, locale, created_at, updated_at)
+         VALUES ($1, 'Ben', 'Race', $2, $3, false, 'enabled', 'en', now(), now()) RETURNING id`,
+        [race.tenantId, `ben-${race.tenantId.slice(0, 8)}@example.test`, s.roleId]);
+      return String(user.id);
+    });
+    const imp = await race.open('import of the owners');
+    const page = await race.open('owners saved from the page');
+    const gate = race.gate(imp, { label: 'read the owners', when: 'after', match: (t) => /FROM "application_owners"/.test(t) });
+    const importing = race.start(imp, async (m) => { await bounded(m); return importFile(race, s, m, ownersFile(s)); });
+    assert.equal(await progress(importing, { party: imp, gate }), 'gated', 'harness: the import must pause as it reads the owners');
+    const saving = race.start(page, async (m) => { await bounded(m); return h.owners.bulkReplaceOwners(s.appId, [{ user_id: other, owner_type: 'business' }], s.userId, { manager: m }); });
+    assert.equal(await progress(saving, { party: page }), 'blocked', 'the page waits for the import');
+    gate.release();
+    const imported = await settle(importing);
+    const saved = await settle(saving);
+    assert.ok(!deadlocked(imported) && !deadlocked(saved), `no deadlock: import ${describe(imported)}, page ${describe(saved)}`);
+    assertSucceeded(imported, 'the import');
+    assert.equal((imported as any).value?.ok, true, JSON.stringify((imported as any).value?.errors));
+    assertSucceeded(saved, 'the owners saved from the page');
+    const owners = await race.read(`SELECT user_id::text AS id FROM application_owners WHERE application_id = $1 AND owner_type = 'business'`, [s.appId]);
+    assert.deepEqual(owners.map((row: any) => row.id), [other], 'the page wrote after the import');
+  });
+}
+
 void (async () => {
   await boot();
   try {
@@ -245,6 +353,9 @@ void (async () => {
       ['A1: an import writes the description first, then an autosave that read the old revision: 409, the imported text stays', () => autosaveAgainstImport(true)],
       ['A2: an autosave first, then an import: the import writes over it, the next autosave gets a 409', () => autosaveAgainstImport(false)],
       ['P1: the delete first, then the page opens the application with no document: no document left', () => pageAgainstDelete()],
+      ['K1: an import of the description and owners writes the document, then an autosave: no deadlock, the autosave gets a 409', () => ownersImportAgainstAutosave()],
+      ['K2: the same import makes the document, then the page opens the application: no deadlock, one document', () => ownersImportAgainstFirstOpen()],
+      ['O1: the owners saved from the page wait for an import that holds the application, then write after it', () => ownersImportAgainstOwnersPage()],
     ]);
   } finally {
     await h.app.close();

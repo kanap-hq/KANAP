@@ -4,7 +4,7 @@ import { ApplicationsListService } from './services/applications-list.service';
 import { classificationReadState } from './services/application-classification';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { exportCatalogLabelsIn } from '../it-ops-settings/catalog-resolve';
-import { lockApplicationNames, lockApplicationRow } from './application-rules';
+import { lockApplicationNames } from './application-rules';
 import { requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
 import { noteNameMatch, proposalFor, undoneMatch } from '../common/name-matching';
 import type { CsvImportContext, CsvImportRow, CsvSettledRow, ImportLookalikeChoice } from '../common/csv';
@@ -431,14 +431,15 @@ export class ApplicationsCsvService {
     if (!decided) return rows.map((row) => ({ entity: row.found }));
     look.decisions = decided.decisions;
     look.followed = decided.followed;
-    // The applications updated, locked in id order (as `lockApplicationRow`, the first lock of every
-    // writer of their owners), then their state read again: nothing changes them before the commit.
-    // The load already holds them, with those the file finds (`lookalikeTargets`): no other order.
+    // The applications updated, locked in id order, then their state read again: nothing changes them
+    // before the commit (every other writer of their owners locks them FOR UPDATE first).
+    // The load already holds them FOR NO KEY UPDATE, with those the file finds (`lookalikeTargets`): no
+    // other order, and no stronger lock, which a page holding one FOR KEY SHARE would wait for.
     // A target the load did not lock (the application it looked like went, another one looks like
     // its row since): never locked here, out of the id order; its row is refused below.
     const ids = updateTargets(decided).filter((id) => !look.locked || look.locked.has(id));
     const stored: any[] = ids.length === 0 ? [] : await context.manager.query(
-      `SELECT * FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR UPDATE`,
+      `SELECT * FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR NO KEY UPDATE`,
       [context.tenantId, ids],
     );
     const states = new Map((ids.length === 0 ? [] : await storedApplications(context.manager, context.tenantId, ids)).map((app) => [app.id, applicationState(app)]));
@@ -629,8 +630,10 @@ export class ApplicationsCsvService {
     const userByEmail = await usersByEmail(manager, tenantId);
 
     for (const { id: appId, raw: row } of rows) {
-      // The application, then its owners (`lockApplicationRow`), as every writer of them.
-      await lockApplicationRow(manager, tenantId, appId);
+      // The load holds every application it wrote: FOR NO KEY UPDATE since it found it (by its id, its
+      // name or as "Update APP-n"), or made by it. The other writers of the owners lock the application
+      // FOR UPDATE first and wait for the import. No stronger lock here: a page holding the application
+      // FOR KEY SHARE waits on the document the import wrote, and would wait in a cycle.
       const ownerRepo = manager.getRepository(ApplicationOwner);
       const beforeRows = await ownerRepo.find({ where: { application_id: appId, tenant_id: tenantId } as any });
 
