@@ -1102,18 +1102,22 @@ async function testTasksExport(): Promise<void> {
 
 /**
  * Rita, responsible for tasks whose contract or line she does not read, takes them off it: the
- * task's activity, read as stored by every reader of the task, names the object she left by its kind
- * alone, never by its uuid, name or reference (lot R4 of 26.11.9). Runs last: the tasks leave their
- * objects.
+ * task's activity stores the kind and the id of the object left (lot I7e of 26.12.1), and reads it
+ * back to her by its kind alone, never by its uuid, name or reference (lot R4 of 26.11.9); Ulla, who
+ * reads everything, gets its reference. Runs last: the tasks leave their objects.
  */
 async function testTaskMoveActivity(): Promise<void> {
   const { rita } = s.persons;
   const { TasksUnifiedService } = require('../../tasks/tasks-unified.service');
+  const { TaskActivitiesService } = require('../../tasks/task-activities.service');
   const tasks = app.get(TasksUnifiedService, { strict: false });
-  for (const [taskId, label, traces] of [
-    [contractTaskId, 'A contract', [...contractTraces('hidden'), new RegExp(`${contractReferences.hidden}(?!\\d)`)]],
-    [hiddenTaskId, 'A budget line', tracesOf('L5')],
-  ] as Array<[string, string, Array<string | RegExp>]>) {
+  const activities = app.get(TaskActivitiesService, { strict: false });
+  // Rita and Ulla share their role (member of tasks, contracts and the budget).
+  const rights = { isAdmin: false, permissions: { tasks: 'member', contracts: 'member', budget: 'member' } };
+  for (const [taskId, kind, objectId, reference, traces] of [
+    [contractTaskId, 'contract', contractHidden, contractReferences.hidden, [...contractTraces('hidden'), new RegExp(`${contractReferences.hidden}(?!\\d)`)]],
+    [hiddenTaskId, 'budget_line', s.lines.L5, `BL-${itemNumbers.L5}`, tracesOf('L5')],
+  ] as Array<[string, string, string, string, Array<string | RegExp>]>) {
     await asPerson(rita, (ctx) => tasks.updateById(
       taskId,
       { related_object_type: null, related_object_id: null },
@@ -1125,14 +1129,19 @@ async function testTaskMoveActivity(): Promise<void> {
        ORDER BY created_at DESC LIMIT 1`,
       [s.tenantId, taskId],
     )).rows);
-    const related = row?.changed_fields?.related_to;
-    assert.deepEqual(related, [label, null], `task activity: the object left is named by its kind (${JSON.stringify(row?.changed_fields)})`);
-    const text = JSON.stringify(row.changed_fields);
+    assert.deepEqual(row?.changed_fields?.related_to, [{ kind, id: objectId }, null], `task activity: stored by kind and id (${JSON.stringify(row?.changed_fields)})`);
+    const read = async (person: string) => (await asPerson<any[]>(person, (ctx) => activities.listForTask(taskId, { manager: ctx.manager, userId: person, ...rights })))
+      .find((item) => Array.isArray(item.changed_fields?.related_to));
+    const ritaMove = await read(rita);
+    assert.deepEqual(ritaMove?.changed_fields?.related_to, [{ hidden: true, kind }, null], 'task activity: the object left is named by its kind to Rita');
+    const text = JSON.stringify(ritaMove);
     for (const trace of traces) {
       assert.ok(typeof trace === 'string' ? !text.includes(trace) : !trace.test(text), `task activity: no trace of ${String(trace)} in ${text}`);
     }
+    const ullaMove = await read(s.persons.ulla);
+    assert.equal(ullaMove?.changed_fields?.related_to?.[0]?.reference, reference, 'task activity: Ulla reads its reference');
   }
-  console.log('  task activity: an object outside the access is named by its kind when a task leaves it: OK');
+  console.log('  task activity: an object outside the access is named by its kind to a reader who does not read it: OK');
 }
 
 // ---------------------------------------------------------------------------------------------
