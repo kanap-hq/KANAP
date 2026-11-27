@@ -408,7 +408,7 @@ export class ChartOfAccountsService {
        ),
        changed AS (
          UPDATE chart_of_accounts c
-         SET ${role} = ${value ? 'true' : 'false'}, updated_at = now()
+         SET ${role} = ${value ? 'true' : 'false'}
          FROM prev
          WHERE c.id = prev.id AND c.tenant_id = ${CURRENT_TENANT}
          RETURNING to_jsonb(prev) AS before, to_jsonb(c) AS after

@@ -4,6 +4,9 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { ChartOfAccountsConsolidation1853860000000 as Migration } from '../../migrations/1853860000000-chart-of-accounts-consolidation';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // Migration 1853860000000 (the consolidation chart), against a real database,
 // each test in a transaction that is rolled back. The database is put back in
@@ -182,6 +185,7 @@ async function seedBeforeMigration(runner: QueryRunner): Promise<Seeded & { acco
 /** Backfill and repair per tenant, the index, row level security as found, the log. */
 async function testBackfillAndRepair() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const security = {
       chart_of_accounts: await rowSecurity(runner, 'chart_of_accounts'),
       accounts: await rowSecurity(runner, 'accounts'),
@@ -274,6 +278,7 @@ async function testBackfillAndRepair() {
 /** A second run: nothing changed, zero counts, the index kept. */
 async function testRerun() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const { accounts, ...seeded } = await seedBeforeMigration(runner);
     await captureLog(() => migration.up(runner));
     // One after the other: each read sets its tenant on the shared connection.

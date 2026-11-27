@@ -330,7 +330,8 @@
       "noPayingCompany": "No paying company",
       "noCostCenter": "No cost center",
       "noBudgetNextYear": "No {{column}} for next year",
-      "accountOutsideChart": "Account not in the company's chart"
+      "accountOutsideChart": "Account not in the company's chart",
+      "entryToCheck": "Quantity and price to check"
     },
     "topItems": "Top lines",
     "columnY": "{{column}}, Y",

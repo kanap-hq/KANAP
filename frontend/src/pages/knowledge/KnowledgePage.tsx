@@ -57,7 +57,7 @@ import ValidatedBadge from './components/ValidatedBadge';
 import KnowledgeTypesManager from './components/KnowledgeTypesManager';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useLocale } from '../../i18n/useLocale';
-import { formatShortDate } from '../../lib/dateFormat';
+import { formatShortInstantDate } from '../../lib/dateFormat';
 import { getDotColor, KNOWLEDGE_STATUS_COLORS } from '../../utils/statusColors';
 import { drawerAutocompleteListboxSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import {
@@ -629,7 +629,7 @@ export default function KnowledgePage() {
       width: 120,
       filter: 'agDateColumnFilter',
       cellRenderer: ClickableCell,
-      valueFormatter: (params) => formatShortDate(params.value, locale),
+      valueFormatter: (params) => formatShortInstantDate(params.value, locale),
     });
 
     return nextColumns;

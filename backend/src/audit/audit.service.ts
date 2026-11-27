@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AuditLog } from './audit.entity';
 import { resolveAuditParent, type AuditParent } from './audit-parent-rules';
+import { dateHistoryRecords, type AuditedRow } from './record-dating';
 
 export type AuditSourceOptions = {
   source?: 'user' | 'system' | 'webhook' | string;
@@ -73,10 +74,14 @@ export type AuditEntry = {
  * Writes one `audit_log` row with `manager`, whose transaction carries the tenant
  * (`app.current_tenant`, the default of `tenant_id`). `AuditService.log` and the security
  * events (security-events.service.ts, export-events.interceptor.ts, writeImportEvent) write
- * through here. Returns the new row's id.
+ * through here. The record whose history shows the row takes its modification date, with the same
+ * manager (`record-dating.ts`). Returns the new row's id.
  */
 export async function writeAuditLog(manager: EntityManager, params: AuditEntry): Promise<string | null> {
-  const result = await manager.getRepository(AuditLog).insert(await auditLogRow(manager, params));
+  const row = await auditLogRow(manager, params);
+  const result = await manager.getRepository(AuditLog).insert(row);
+  // The record whose history shows the row takes its date, in the same transaction.
+  await dateHistoryRecords(manager, [datedRow(row)]);
   const id = result?.identifiers?.[0]?.id;
   return typeof id === 'string' ? id : null;
 }
@@ -96,6 +101,20 @@ export async function writeAuditLogs(manager: EntityManager, entries: AuditEntry
   for (let i = 0; i < rows.length; i += AUDIT_LOG_BATCH) {
     await manager.getRepository(AuditLog).insert(rows.slice(i, i + AUDIT_LOG_BATCH));
   }
+  // One dating statement per table for the whole batch (`record-dating.ts`).
+  await dateHistoryRecords(manager, rows.map(datedRow));
+}
+
+/** An `audit_log` row as `dateHistoryRecords` reads it. */
+function datedRow(row: any): AuditedRow {
+  return {
+    table: row.table_name,
+    recordId: row.record_id,
+    action: row.action,
+    before: row.before_json,
+    after: row.after_json,
+    parent: row.parent_table && row.parent_id ? { table: row.parent_table, id: row.parent_id } : null,
+  };
 }
 
 async function auditLogRow(manager: EntityManager, params: AuditEntry): Promise<any> {

@@ -413,10 +413,10 @@ export class BudgetLineTypeChangeService {
     const legacy = target === 'capex' && legacyNumberOf('capex', line.legacy_number) === null
       ? `${LEGACY_PREFIX.capex}-${await this.itemNumbers.nextItemNumber('capex', tenantId, manager)}`
       : line.legacy_number;
-    const params: unknown[] = [tenantId, line.id, target, legacy, new Date()];
+    const params: unknown[] = [tenantId, line.id, target, legacy];
     const account = 'account_id' in write.values ? `, account_id = $${params.push(write.values.account_id)}` : '';
     await manager.query(
-      `UPDATE spend_items SET nature = $3, legacy_number = $4, updated_at = $5${account}
+      `UPDATE spend_items SET nature = $3, legacy_number = $4${account}
         WHERE tenant_id = $1 AND id = $2${natureAnd(null, nature)}`,
       params,
     );
@@ -505,8 +505,8 @@ export class BudgetLineTypeChangeService {
     const now = new Date();
     const end = parseEndOfValidityInput(`${year - 1}-12-31`)!;
     await manager.query(
-      `UPDATE spend_items SET disabled_at = $3, status = $4, updated_at = $5 WHERE tenant_id = $1 AND id = $2${natureAnd(null, nature)}`,
-      [tenantId, line.id, end, deriveStatusFromDisabledAt(end, now), now],
+      `UPDATE spend_items SET disabled_at = $3, status = $4 WHERE tenant_id = $1 AND id = $2${natureAnd(null, nature)}`,
+      [tenantId, line.id, end, deriveStatusFromDisabledAt(end, now)],
     );
     // Its contacts and links to other objects; tasks, attachments and web links stay with it.
     const copied: CopiedLinks = {};

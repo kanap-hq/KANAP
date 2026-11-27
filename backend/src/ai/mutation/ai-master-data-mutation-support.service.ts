@@ -268,6 +268,8 @@ const ENTITY_CONFIG: Record<AiMasterDataEntityType, EntityConfig> = {
         enumValues: ['opex', 'capex'],
         enumCase: 'lower',
       },
+      // Yes sets it; no or empty clears it (stored null, never false: `expectedSetting`).
+      quantity_price_expected: { label: 'Quantity and price entry', kind: 'boolean', nullable: true },
       status: { label: 'Status', kind: 'status' },
       disabled_at: { label: 'Disabled At', kind: 'date', nullable: true },
     },
@@ -639,7 +641,12 @@ export class AiMasterDataMutationSupportService {
     }
 
     if (field.kind === 'boolean') {
-      return this.normalizeBoolean(rawValue, field);
+      const normalized = this.normalizeBoolean(rawValue, field);
+      // An account's setting is set or not set: "no" clears it, as the screen and the import do.
+      if (entityType === 'accounts' && fieldName === 'quantity_price_expected' && !normalized.value) {
+        return { value: null, displayValue: null };
+      }
+      return normalized;
     }
 
     if (field.kind === 'integer') {

@@ -1388,7 +1388,7 @@ async function run() {
             refusal = String(error?.message ?? error);
           }
           await runner.query('ROLLBACK TO SAVEPOINT supplier_contact_preview');
-          assert.match(refusal, new RegExp(`already linked to this .* by its supplier ${supplierName}, with the role technical: there is nothing to do`), `${cell}: the card is not proposed (${refusal || 'proposed'})`);
+          assert.match(refusal, new RegExp(`already linked to this .* by its supplier ${supplierName}, with the role Technical: there is nothing to do`), `${cell}: the card is not proposed (${refusal || 'proposed'})`);
           assert.deepEqual(await links(rec), [{ role: 'technical', origin: 'supplier' }], `${cell}: the link stays as it is`);
           assert.deepEqual(await auditSince(marker), [], `${cell}: no audit row`);
           passed += 1;

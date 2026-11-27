@@ -30,6 +30,7 @@ import {
 import { markdownWorkBudget, normalizeMarkdownRichText } from '../../common/markdown-worker';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../../common/record-in-use';
 import type { BulkDeleteResult } from '../../common/delete.types';
+import { touchUpdatedAt } from '../../common/updated-at-trigger';
 
 /**
  * Texts the specification document of an interface is built from
@@ -419,12 +420,18 @@ export class InterfacesCrudService extends InterfacesBaseService {
     }
     await assertSpecificationSourceTexts(existing, before);
 
+    let middlewareChanged = false;
     if (Array.isArray(body.middleware_application_ids)) {
+      // The middleware applications are rows of their own, which the trigger of the interface does
+      // not see: their change dates the interface, after the save (migration 1856270000000).
+      const stored = (await this.getMiddlewareRepo(opts?.manager).find({ where: { interface_id: existing.id } as any })).map((row) => row.application_id);
+      const next = Array.from(new Set((body.middleware_application_ids as unknown[]).map((value) => String(value).trim()).filter(Boolean)));
+      middlewareChanged = [...stored].sort().join(',') !== [...next].sort().join(',');
       await this.syncMiddlewareApplications(existing, body.middleware_application_ids, opts?.manager);
     }
 
-    existing.updated_at = new Date();
     const saved = await repo.save(existing);
+    if (middlewareChanged) await touchUpdatedAt(repo.manager, 'interfaces', saved.id);
     const titleFieldsChanged = before.name !== saved.name
       || before.interface_reference !== saved.interface_reference
       || before.interface_id !== saved.interface_id;

@@ -1,5 +1,5 @@
 import { Transform, Type } from 'class-transformer';
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 import { StatusLifecycleDto } from '../../common/dto/status-lifecycle.dto';
 import { ACCOUNT_NATURES, AccountNature } from '../account.entity';
 import { IsAccountNumber } from '../account-number';
@@ -43,4 +43,12 @@ export class AccountUpsertDto extends StatusLifecycleDto {
   @IsOptional()
   @IsIn(ACCOUNT_NATURES)
   nature?: AccountNature | null;
+
+  /**
+   * Its budget lines are expected as quantity and price: true sets it; null or false clears it
+   * (stored as null, `expectedSetting`); absent leaves it unchanged.
+   */
+  @IsOptional()
+  @IsBoolean()
+  quantity_price_expected?: boolean | null;
 }

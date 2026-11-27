@@ -44,6 +44,25 @@ function countryTables(): { codes: Set<string>; byName: Map<string, string> } {
   return countries;
 }
 
+const nameIn = new Map<string, Intl.DisplayNames>();
+
+/**
+ * A country's name in `language` from its two-letter code, as the screens name it
+ * (`countryNameFor`: `Intl.DisplayNames`); null for a value that names no country.
+ */
+export function countryNameIn(value: string, language: (typeof NAME_LANGUAGES)[number]): string | null {
+  const text = value.trim();
+  if (!/^[A-Za-z]{2}$/.test(text)) return null;
+  const code = canonicalCode(text.toUpperCase());
+  if (!code || !countryTables().codes.has(code)) return null;
+  let namer = nameIn.get(language);
+  if (!namer) {
+    namer = new Intl.DisplayNames([language], { type: 'region', fallback: 'none' });
+    nameIn.set(language, namer);
+  }
+  return namer.of(code) ?? null;
+}
+
 /** The two-letter code of a country written by its code or its name; null when it names none. */
 export function countryCode(value: string): string | null {
   const { codes, byName } = countryTables();

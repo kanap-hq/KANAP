@@ -8,6 +8,9 @@ import { ApplicationsController } from '../../applications/applications.controll
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { TechnologiesController } from '../technologies.controller';
 import { one, services, technology, type AuditEntry } from './technologies.fixtures';
+// The database of these migrations' time: the modification date triggers (1856270000000) came
+// later, and their WHEN clause blocks dropping or retyping the columns it names.
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 
 // The support of a technology (lot T1c) against a real database, in transactions rolled back at
 // the end:
@@ -54,6 +57,7 @@ async function shape(runner: QueryRunner) {
 
 async function testMigration() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const before = await shape(runner);
     assert.deepEqual(before.table, [{ rls: true, forced: true }]);
     assert.deepEqual(before.policies, [{
@@ -100,6 +104,7 @@ async function rejectsWith(runner: QueryRunner, code: string, fn: () => Promise<
 
 async function testKeysAndPolicy() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const other = await seedTenant(runner, 'tsc-other');
     const foreignContact = await contact(runner, other, 'Olga');
     const tenantId = await seedTenant(runner, 'tsc-keys');
@@ -127,6 +132,7 @@ async function testKeysAndPolicy() {
 
 async function testService() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const other = await seedTenant(runner, 'tsc-svc-other');
     const foreignContact = await contact(runner, other, 'Olga');
     const foreignTech = await technology(runner, other, 1, 'Other', 'other');
@@ -174,6 +180,7 @@ async function testService() {
 /** A web link takes an http or https address. A missing scheme or another scheme is `link_url_invalid`. */
 async function testWebLinks() {
   await inRolledBackTransaction(async (runner) => {
+    await dropUpdatedAtTriggers(runner);
     const tenantId = await seedTenant(runner, 'tsc-links');
     const { technologies } = services([]);
     const opts = { manager: runner.manager, tenantId, userId: null };

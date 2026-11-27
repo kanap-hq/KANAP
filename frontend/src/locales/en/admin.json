@@ -563,6 +563,7 @@
       "parent_id": "Parent group",
       "process_type": "Process type",
       "accountNature": "Used for",
+      "quantity_price_expected": "Quantity and price entry",
       "costCenterOwner": "Budget holder",
       "summary": "Summary",
       "folder_id": "Folder",

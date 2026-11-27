@@ -134,7 +134,6 @@ export class KnowledgeWorkflowService {
     document.published_at = new Date();
     document.last_reviewed_at = new Date();
     document.updated_by = actedByUserId;
-    document.updated_at = new Date();
     await manager.getRepository(Document).save(document);
     await this.knowledge.ensureCurrentVersionSnapshot(document, 'Workflow approved', actedByUserId, manager);
 
@@ -241,7 +240,6 @@ export class KnowledgeWorkflowService {
     const previousStatus = document.status;
     document.status = 'in_review';
     document.updated_by = userId;
-    document.updated_at = new Date();
     await manager.getRepository(Document).save(document);
     await manager.getRepository(DocumentEditLock).delete({ document_id: documentId } as any);
 
@@ -407,7 +405,6 @@ export class KnowledgeWorkflowService {
 
     document.status = 'draft';
     document.updated_by = userId;
-    document.updated_at = new Date();
     await manager.getRepository(Document).save(document);
     await manager.getRepository(DocumentEditLock).delete({ document_id: documentId } as any);
 
@@ -473,7 +470,6 @@ export class KnowledgeWorkflowService {
 
     document.status = 'draft';
     document.updated_by = userId;
-    document.updated_at = new Date();
     await manager.getRepository(Document).save(document);
     await manager.getRepository(DocumentEditLock).delete({ document_id: documentId } as any);
 

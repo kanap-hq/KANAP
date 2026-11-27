@@ -33,7 +33,7 @@ import { KanapDialog, PropertyRow } from './design';
 import KnowledgeLinkPickerDialog, { type KnowledgeLinkOption } from './knowledge/KnowledgeLinkPickerDialog';
 import { drawerMenuItemSx, drawerSelectSx } from '../theme/formSx';
 import { useLocale } from '../i18n/useLocale';
-import { formatShortDate } from '../lib/dateFormat';
+import { formatShortInstantDate } from '../lib/dateFormat';
 
 export type EntityKnowledgeType =
   | 'applications'
@@ -324,7 +324,7 @@ function KnowledgeGroupTable({
                     ))}
                   </Stack>
                 </TableCell>
-                <TableCell>{formatShortDate(item.updated_at || item.created_at, locale)}</TableCell>
+                <TableCell>{formatShortInstantDate(item.updated_at || item.created_at, locale)}</TableCell>
                 <TableCell align="right">
                   <Stack direction="row" spacing={1} justifyContent="flex-end">
                     {showUnlink && (
@@ -428,8 +428,8 @@ function SidebarKnowledgeGroupList({
                   {item.linked_via_label}
                 </Typography>
               )}
-              <Typography variant="caption" color="text.secondary" noWrap title={formatShortDate(item.updated_at || item.created_at, locale)}>
-                {formatShortDate(item.updated_at || item.created_at, locale)}
+              <Typography variant="caption" color="text.secondary" noWrap title={formatShortInstantDate(item.updated_at || item.created_at, locale)}>
+                {formatShortInstantDate(item.updated_at || item.created_at, locale)}
               </Typography>
             </Stack>
 

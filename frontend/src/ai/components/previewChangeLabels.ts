@@ -377,6 +377,7 @@ const SCREEN_FIELD_KEYS: Record<string, Record<string, string>> = {
     consolidation_account_number: 'master-data:accounts.fields.consolidationAccountNumber',
     consolidation_account_name: 'master-data:accounts.fields.consolidationAccountName',
     consolidation_account_description: 'master-data:accounts.fields.consolidationAccountDescription',
+    quantity_price_expected: 'master-data:accounts.fields.quantityPriceExpected',
   },
   chart_of_accounts: {
     code: 'master-data:coa.manageDialog.columns.code',

@@ -84,6 +84,23 @@ export function formatShortDate(
   return [dayPart, monthPart, yearPart].filter(Boolean).join(' ') || empty;
 }
 
+/**
+ * The calendar day, in the reader's time zone, of an instant (`created_at`, `updated_at`, `closed_at`,
+ * any timestamptz). `formatShortDate` keeps the date part of an ISO string on purpose, which is right
+ * for a calendar date and one day off for an instant near midnight UTC: the History tab shows the
+ * local time, so the day shown next to it must be the local day too.
+ */
+export function formatShortInstantDate(
+  value: string | Date | null | undefined,
+  locale = 'en',
+  options: FormatShortDateOptions = {},
+): string {
+  const { empty = '' } = options;
+  if (!value) return empty;
+  const instant = value instanceof Date ? value : new Date(value);
+  return formatShortDate(instant, locale, options);
+}
+
 export function formatShortDateTime(
   value: string | Date | null | undefined,
   locale = 'en',

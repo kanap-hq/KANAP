@@ -92,7 +92,7 @@ export default forwardRef<BudgetTabHandle, BudgetTabProps>(function BudgetTab(pr
       {/* The years in the middle; on their right the saving hint and, once a column changed, the way back. */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) auto minmax(0, 1fr)' }, alignItems: 'center', columnGap: 1, rowGap: 0.5 }}>
         <Box sx={{ gridColumn: { md: 2 }, minWidth: 0 }}>
-          <YearTabs currentYear={year} availableYears={availableYears} onYearChange={(y) => void tab.handleYearChange(y)} disabled={loading} />
+          <YearTabs currentYear={year} availableYears={availableYears} onYearChange={(y) => void tab.handleYearChange(y)} disabled={loading} marks={tab.entryYearMarks} />
         </Box>
         <Box sx={{ gridColumn: { md: 3 }, justifySelf: { xs: 'center', md: 'end' }, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end', minWidth: 0 }}>
           {savingHint && (

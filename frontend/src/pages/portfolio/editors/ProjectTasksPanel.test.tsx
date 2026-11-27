@@ -1,8 +1,8 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 import i18n from '../../../i18n';
@@ -86,5 +86,36 @@ describe('ProjectTasksPanel task creation', () => {
 
     expect(await screen.findByText('Préparer la recette')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add task' })).toBeNull();
+  });
+});
+
+describe('ProjectTasksPanel task addresses', () => {
+  function Location() {
+    const location = useLocation();
+    return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
+  }
+
+  afterEach(() => cleanup());
+
+  it('names the project by its reference in the address of a task, and reads its tasks by its uuid', async () => {
+    get.mockReset();
+    get.mockResolvedValue({ data: [TASK] });
+    auth.levels = { tasks: 'member', portfolio_projects: 'contributor' };
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={['/portfolio/projects/PRJ-3/tasks']}>
+            <Location />
+            <Routes>
+              <Route path="/portfolio/projects/:id/:tab" element={<ProjectTasksPanel projectId="project-1" projectAddress="PRJ-3" />} />
+              <Route path="/portfolio/tasks/:id" element={null} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByText('Préparer la recette'));
+    expect(screen.getByTestId('location')).toHaveTextContent('/portfolio/tasks/T-4?projectId=PRJ-3&projectTab=tasks');
+    expect(get).toHaveBeenCalledWith('/portfolio/projects/project-1/tasks');
   });
 });

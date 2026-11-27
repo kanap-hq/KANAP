@@ -345,6 +345,8 @@ Resources are organized into groups for easier management:
 
 The Budget resource covers OPEX and CAPEX lines alike. A role that once had separate OPEX and CAPEX levels keeps the higher of the two on Budget.
 
+The names of the supplier, companies and departments carried by a budget line you can read stay readable, even when your role cannot open those lists.
+
 **Portfolio Management**
 | Resource | What it controls |
 |----------|------------------|

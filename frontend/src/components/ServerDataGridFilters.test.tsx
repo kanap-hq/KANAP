@@ -43,6 +43,9 @@ type GridProps = {
   /** Adds a column kept out of the chooser, the way a list carries a link filter. */
   withSuppressedColumn?: boolean;
   showFilteredColumns?: boolean;
+  filteredColumnsAfter?: string;
+  /** Adds a column hidden by default whose rows hold several values, as the budget list's "To check". */
+  withChecksColumn?: boolean;
   /** Adds a date column with the grid's date filter. */
   withDateColumn?: boolean;
   /** That date column uses the date menu under the header, as the asset list does. */
@@ -81,13 +84,24 @@ function SearchSpy({ onChange }: { onChange: (search: string) => void }) {
 const DATE_COLUMN = { field: 'due', headerName: 'Due', filter: 'agDateColumnFilter' } as any;
 const DATE_MENU_COLUMN = { field: 'due', headerName: 'Due', width: 170, ...DATE_COLUMN_FILTER } as any;
 
-function Grid({ queryClient, getValues, withSuppressedColumn, withDateColumn, withDateMenu, onSearchChange, ...props }: GridProps) {
+/** Shaped as the budget list's "To check" column: hidden by default, one box per check, several per row. */
+const CHECKS_COLUMN = {
+  colId: 'to_check',
+  headerName: 'To check',
+  defaultHidden: true,
+  filter: CheckboxSetFilter,
+  floatingFilterComponent: CheckboxSetFloatingFilter,
+  filterParams: { values: [{ value: 'quantity_price', label: 'Quantity and price' }, { value: 'coa_mismatch', label: 'Account outside the chart' }, { value: null }], searchable: false },
+  valueGetter: (p: any) => (p.data?.to_check ?? []).join(', '),
+} as any;
+
+function Grid({ queryClient, getValues, withSuppressedColumn, withDateColumn, withDateMenu, withChecksColumn, onSearchChange, ...props }: GridProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         {onSearchChange && <SearchSpy onChange={onSearchChange} />}
         <ServerDataGrid<Row>
-          columns={[...columns(!!withSuppressedColumn, getValues), ...(withDateColumn ? [withDateMenu ? DATE_MENU_COLUMN : DATE_COLUMN] : [])]}
+          columns={[...columns(!!withSuppressedColumn, getValues), ...(withDateColumn ? [withDateMenu ? DATE_MENU_COLUMN : DATE_COLUMN] : []), ...(withChecksColumn ? [CHECKS_COLUMN] : [])]}
           endpoint="/things"
           queryKey="things"
           defaultSort={{ field: 'name', direction: 'ASC' }}
@@ -421,6 +435,23 @@ describe('ServerDataGrid column filters follow the grid model', () => {
     await toggleInChooser('Status');
     expect(grid.api().getColumn('status').isVisible()).toBe(true);
     expect(savedHide('status')).toBe(false);
+  }, 30_000);
+
+  it('with showFilteredColumns, a link\'s filter on one check of a column hidden by default shows it right after the name, for the visit only (D12)', async () => {
+    const filter = { to_check: { filterType: 'set', values: ['quantity_price'] } };
+    const grid = await mount({
+      withChecksColumn: true,
+      initialState: { filter: { filterModel: filter } },
+      columnPreferencesKey: 'things',
+      showFilteredColumns: true,
+      filteredColumnsAfter: 'name',
+    });
+    await quiet();
+    expect(grid.api().getColumn('to_check').isVisible()).toBe(true);
+    expect((grid.api().getColumnState() as Array<{ colId: string }>).map((c) => c.colId).slice(0, 2)).toEqual(['name', 'to_check']);
+    expect(grid.api().getFilterModel()).toEqual(filter);
+    expect(JSON.parse(String(lastRequestFilters()))).toEqual(filter);
+    expect(savedHide('to_check')).not.toBe(false);
   }, 30_000);
 
   it('with showFilteredColumns, a column kept out of the chooser stays hidden with its filter', async () => {

@@ -6,6 +6,7 @@ import { DataAccessFoundations1854400000000 } from '../../migrations/18544000000
 import { DataAccessContractPolicies1855400000000 } from '../../migrations/1855400000000-data-access-contract-policies';
 import { Onboarding1856010000000 } from '../../migrations/1856010000000-onboarding';
 import { DataAccessEditByCentre1856250000000 } from '../../migrations/1856250000000-data-access-edit-by-centre';
+import { dropUpdatedAtTriggers } from '../../common/updated-at-trigger';
 import {
   DataAccessSession,
   checkDataAccessAvailability,
@@ -234,6 +235,9 @@ async function testForeignRelations(admin: PgClient): Promise<void> {
     const lotFive = new DataAccessContractPolicies1855400000000();
     const onboarding = new Onboarding1856010000000();
     const editByCentre = new DataAccessEditByCentre1856250000000();
+    // The modification date triggers (1856270000000) came later: their WHEN clause names
+    // contracts.cost_center_id, which lot 1's down() drops. The database of these migrations' time.
+    await dropUpdatedAtTriggers(queryRunner);
     await editByCentre.down(queryRunner);
     await onboarding.down(queryRunner);
     await lotFive.down(queryRunner);

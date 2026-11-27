@@ -3,8 +3,12 @@ import { Repository } from 'typeorm';
 import { Task } from './task.entity';
 import { assertTaskWritten } from './task-data-access';
 
-/** Columns a task write never sets: its identity, its tenant, its number, its creation time. */
-const FIXED_COLUMNS: ReadonlySet<string> = new Set(['id', 'tenant_id', 'item_number', 'created_at']);
+/**
+ * Columns a task write never sets: its identity, its tenant, its number, its creation time, and its
+ * modification date, which the database keeps (`common/updated-at-trigger.ts`), even when the body
+ * of a request names it.
+ */
+const FIXED_COLUMNS: ReadonlySet<string> = new Set(['id', 'tenant_id', 'item_number', 'created_at', 'updated_at']);
 
 /**
  * Writes the given columns of one task, and those only, then reads the task again. Never the whole

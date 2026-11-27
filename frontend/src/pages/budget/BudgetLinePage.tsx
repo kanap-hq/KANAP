@@ -52,6 +52,7 @@ import BudgetPropertiesDrawer, { RunBuild } from './workspace/BudgetPropertiesDr
 import { CreationActions, CreationPreview, saveEditsSince, useCreationReturn, useCreationTitle, useDraftCreation } from '../../components/workspace/creation';
 import { lineRefusalField, refusedValueName } from '../../components/finance/lineFieldRefusal';
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
+import { entryCheckKey, type BudgetLineEntryCheck } from '../../components/finance/budgetTab/entryCheck';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
 import EntityTasksPanel from '../../components/EntityTasksPanel';
@@ -803,9 +804,28 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   });
   othersPendingRef.current = others.hasPending;
   noteRowVersionRef.current = others.noteRowVersion;
+  // The quantity and price check of the line (`entryCheck.tsx`): read when the Budget tab opens and
+  // after a change of the line's account (its key); while the account expects it, read again after
+  // each change of the year's budget (a new counter, below). Kept while the same line reads it again.
+  const lineAccountId = (data?.account_id as string | null | undefined) || null;
+  const entryCheckQuery = useQuery({
+    queryKey: entryCheckKey(uuid, lineAccountId),
+    queryFn: async ({ signal }) => (await api.get<BudgetLineEntryCheck>(`/budget-lines/${uuid}/entry-check`, { signal })).data,
+    enabled: routeTab === 'budget' && !isCreate && !stale && !deleted && !!uuid,
+    placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[1] === uuid ? previous : undefined),
+  });
+  const entryExpectedRef = React.useRef(false);
+  entryExpectedRef.current = !!entryCheckQuery.data?.expected;
+  // The budget counter of each year as last noted: a new one means the year's budget changed.
+  const budgetRevsRef = React.useRef(new Map<string, number | null>());
   const noteBudgetRev = React.useCallback((year: number, rev: number | null) => {
-    if (uuid) others.noteBudgetRev(uuid, year, rev);
-  }, [uuid, others]);
+    if (!uuid) return;
+    others.noteBudgetRev(uuid, year, rev);
+    const key = `${uuid}:${year}`;
+    const changed = budgetRevsRef.current.has(key) && budgetRevsRef.current.get(key) !== rev;
+    budgetRevsRef.current.set(key, rev);
+    if (changed && entryExpectedRef.current) void queryClient.invalidateQueries({ queryKey: ['budget-line-entry-check', uuid] });
+  }, [uuid, others, queryClient]);
   const knownBudgetRev = React.useCallback((year: number) => (uuid ? others.knownBudgetRev(uuid, year) : undefined), [uuid, others]);
   // A conflict banner of the line already says someone else changed it: no mark beside it.
   const conflictBannerShown = conflicts.length > 0
@@ -1589,7 +1609,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
                   sx={composerSx}
                 />
               </Box>
-              {!stale && uuid && <EntityTasksPanel key={uuid} entityType={config.taskType} entityId={uuid} disabled={!hasLevel('tasks', 'member') || !lineEditable} />}
+              {!stale && uuid && <EntityTasksPanel key={uuid} entityType={config.taskType} entityId={uuid} entityAddress={data?.item_number ? formatItemRef('budget', data.item_number) : null} disabled={!hasLevel('tasks', 'member') || !lineEditable} />}
             </Stack>
           )
         )}
@@ -1598,7 +1618,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         <WorkspaceTabBoundary resetKey={routeTab} onRetry={retryTabs}>
           <React.Suspense fallback={null}>
             {routeTab === 'budget' && !isCreate && !stale && uuid && (
-              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} held={heldChoices.budget} openings={heldChoices.openings} onBudgetRev={noteBudgetRev} lineEditable={lineEditable} ref={budgetRef} />
+              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} held={heldChoices.budget} openings={heldChoices.openings} onBudgetRev={noteBudgetRev} lineEditable={lineEditable} entryCheck={entryCheckQuery.data ?? null} ref={budgetRef} />
             )}
             {routeTab === 'allocations' && !isCreate && !stale && uuid && (
               <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} held={heldChoices.allocation} onBudgetRev={noteBudgetRev} knownBudgetRev={knownBudgetRev} lineEditable={lineEditable} ref={allocRef} />

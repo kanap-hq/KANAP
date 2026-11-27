@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -119,4 +119,28 @@ describe('UnifiedActivityForm submit label', () => {
       expect(submitText()).toBe(withHours);
     },
   );
+});
+
+describe('UnifiedActivityForm time logged on a project task', () => {
+  it("refreshes the project's effort tab: its task time and the project, read under its address", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const keys = [
+      ['portfolio-project-task-time', 'prj-uuid'],
+      ['portfolio-project-task-time-entries', 'prj-uuid'],
+      ['portfolio-project', 'PRJ-7', 'summary'],
+    ];
+    for (const key of keys) client.setQueryData(key, {});
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <UnifiedActivityForm taskId="task-1" projectId="prj-uuid" currentStatus="open" onSuccess={() => {}} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    setHours(2);
+    fireEvent.click(screen.getByRole('button'));
+    await waitFor(() => {
+      for (const key of keys) expect(client.getQueryState(key)?.isInvalidated, JSON.stringify(key)).toBe(true);
+    });
+  });
 });

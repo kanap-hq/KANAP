@@ -71,6 +71,7 @@ const SEEDED_TABLES = [
   'analytics_axes', 'analytics_categories', 'portfolio_categories', 'portfolio_streams', 'portfolio_projects', 'contracts',
   'currency_rate_sets', 'allocation_rules', 'spend_items', 'spend_item_analytics_values', 'contract_spend_items',
   'portfolio_project_opex', 'tasks', 'spend_versions', 'spend_amounts', 'spend_version_totals', 'spend_round_inputs',
+  'spend_round_input_lines',
 ];
 
 type Column = [name: string, type: string];
@@ -531,6 +532,18 @@ export async function seedListFixture(
   if (capexEmptied.length) await runner.query(`DELETE FROM spend_amounts WHERE tenant_id = $1 AND version_id = ANY($2::uuid[])`, [t, capexEmptied]);
   await insert(runner, 'spend_round_inputs', [['tenant_id', 'uuid'], ['version_id', 'uuid'], ['measure', 'text'], ['period_start', 'date'], ['period_end', 'date'],
     ['method', 'text'], ['fte', 'numeric']], capexRounds);
+
+  // "Quantity and price expected" (lot B12a): six accounts set it, and part of the computed columns
+  // keep a line (picked from their version and column, so the same ones every run): the list's
+  // `to_check` holds `quantity_price` on some lines and not on others. Nothing is drawn from the streams.
+  await runner.query(`UPDATE accounts SET quantity_price_expected = true WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [t, accountIds.slice(0, 6)]);
+  await runner.query(
+    `INSERT INTO spend_round_input_lines (tenant_id, round_input_id, sort, label, quantity_unit, quantity, unit_price, price_basis, frequency, period_start, period_end)
+     SELECT r.tenant_id, r.id, 1, 'Licences', 'pieces', 1, 100, 'per_piece', 'once', r.period_start, r.period_end
+       FROM spend_round_inputs r
+      WHERE r.tenant_id = $1 AND r.method = 'computed' AND get_byte(decode(md5(r.version_id::text || r.measure), 'hex'), 0) < 160`,
+    [t],
+  );
 
   // Statistics, as on a loaded database: without them the planner reads the fixture tenant as unknown
   // (one row per table) and joins by nested loops, slower than at 5,000 lines. ANALYZE sees the

@@ -52,6 +52,8 @@ const LINK_KINDS = Object.keys(SECTION_READ) as LinkKind[];
 
 type Props = {
   incidentId: string;
+  /** The incident's reference (`INC-3`): it names the incident in the address of its tasks. */
+  incidentReference?: string | null;
   readOnly: boolean;
   /** The page sets the tab badge from the length of each section the caller can see. */
   onLinksChange: (kind: LinkKind, count: number) => void;
@@ -65,7 +67,7 @@ type Props = {
  * saved at once. A section the response leaves null is absent. Add and unlink also need a read
  * of that section's module. A closed or cancelled incident leaves Add, unlink and Link out.
  */
-export default function IncidentRelationsTab({ incidentId, readOnly, onLinksChange, onTasksChange }: Props) {
+export default function IncidentRelationsTab({ incidentId, incidentReference, readOnly, onLinksChange, onTasksChange }: Props) {
   const { t } = useTranslation('it');
   const { hasLevel } = useAuth();
   const queryClient = useQueryClient();
@@ -141,7 +143,7 @@ export default function IncidentRelationsTab({ incidentId, readOnly, onLinksChan
         onLink={(row) => { void link('technologies', row.id); }}
       />
 
-      <EntityTasksPanel entityType="incident" entityId={incidentId} disabled={readOnly} onTasksChange={onTasksChange} />
+      <EntityTasksPanel entityType="incident" entityId={incidentId} entityAddress={incidentReference} disabled={readOnly} onTasksChange={onTasksChange} />
     </Stack>
   );
 }

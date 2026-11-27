@@ -29,6 +29,7 @@ import { auditPageQuery, type AuditCursor } from './record-history/query';
 import { taskRelatedFamily } from './record-history/records/tasks';
 import { requestAuditPayload } from './record-history/records/portfolio_requests';
 import {
+  isHistoryEntry,
   linkReference,
   presentItem,
   type AuditRow,
@@ -571,7 +572,7 @@ export class RecordHistoryService {
       // A write the reader cannot see as a change is not an entry: an update that presents nothing
       // (an import marker, a copied method that did not move) stays out. A creation and a deletion
       // always stay, even when their title is all there is.
-      .filter((item) => item.action !== 'update' || item.changes.length > 0);
+      .filter(isHistoryEntry);
     return {
       items,
       // The cursor stays the last audit row of the page: a page may hold fewer entries than rows,
