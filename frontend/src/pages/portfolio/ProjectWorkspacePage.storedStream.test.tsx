@@ -116,13 +116,13 @@ describe('ProjectWorkspacePage, a stored stream of another category', () => {
     await waitFor(() => expect(panel.props?.form?.stream_id).toBe('ops-it'));
     await waitFor(() => expect(panel.props.classification).toEqual(CATALOG));
     await act(async () => { panel.props.onUpdate({ department_id: 'dep-1' }); });
-    expect(patch).toHaveBeenCalledWith('/portfolio/projects/proj-1', { department_id: 'dep-1' });
+    expect(patch).toHaveBeenCalledWith('/portfolio/projects/PRJ-7', { department_id: 'dep-1' });
   });
 
   it('clears the stream with another category', async () => {
     renderPage('/portfolio/projects/proj-1/summary');
     await waitFor(() => expect(panel.props?.form?.stream_id).toBe('ops-it'));
     await act(async () => { panel.props.onCategoryChange('cat-it'); });
-    expect(patch).toHaveBeenCalledWith('/portfolio/projects/proj-1', { category_id: 'cat-it', stream_id: null });
+    expect(patch).toHaveBeenCalledWith('/portfolio/projects/PRJ-7', { category_id: 'cat-it', stream_id: null });
   });
 });
