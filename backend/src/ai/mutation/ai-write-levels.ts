@@ -3,7 +3,7 @@ import { resolveBusinessContributorScopeForUser } from '../../auth/business-cont
 import { PermissionLevel } from '../../permissions/permissions.service';
 import { AiExecutionContextWithManager } from '../ai.types';
 import { participantConditionForAiEntity, ParticipationScopedAiEntityType } from '../query/ai-query-scope.util';
-import { AI_IMPORT_ACCESS, aiImportAccess } from '../import/ai-import-access';
+import { aiImportAccess } from '../import/ai-import-access';
 
 /**
  * The level each Plaid write needs: the level of the screen route that makes the same change
@@ -178,17 +178,11 @@ export function aiWriteRequirements(
     return resources.map((resource) => ({ resource, level: 'admin' as PermissionLevel }));
   }
   if (toolName === 'prepare_import_mapping') {
-    // Offered to a person who may run one of the imports, at the level of its route.
-    const seen = new Set<string>();
-    return Object.values(AI_IMPORT_ACCESS)
-      .filter((access) => resources.includes(access.resource))
-      .map((access) => ({ resource: access.resource, level: access.level }))
-      .filter((requirement) => {
-        const key = `${requirement.resource}:${requirement.level}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
+    // Offered to anyone who prepares changes with Kad. The call still refuses a family the person
+    // may not import, before the file is read, and names that right. `resources` is unused:
+    // the import's own level stays on `aiWriteLevel`, checked when the tool is called.
+    void resources;
+    return [{ resource: 'ai_chat', level: 'member' }];
   }
   if (toolName === 'delete_record') {
     return resources.map((resource) => DELETE_RECORD_FAMILIES[resource]

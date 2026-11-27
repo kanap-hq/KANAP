@@ -83,12 +83,10 @@ function testAccessMatchesTheImportRoutes() {
   assert.deepEqual(aiRelationTargetRequirement('prepare_import_mapping', 'technology_application_links', undefined), { resource: 'applications', level: 'reader' });
   assert.equal(aiRelationTargetRequirement('prepare_import_mapping', 'technology_asset_links', undefined), null);
   assert.equal(aiWriteLevel('prepare_import_mapping', 'users'), 'admin');
-  // Offered to a person who may run one import: each module at the level of its routes, once.
-  const requirements = aiWriteRequirements('prepare_import_mapping', AI_IMPORT_RESOURCES);
-  assert.equal(new Set(requirements.map((r) => `${r.resource}:${r.level}`)).size, requirements.length);
-  assert.ok(requirements.some((r) => r.resource === 'incidents' && r.level === 'contributor'));
-  assert.ok(requirements.some((r) => r.resource === 'infrastructure' && r.level === 'member'));
-  assert.ok(requirements.some((r) => r.resource === 'infrastructure' && r.level === 'admin'));
+  // Offered to anyone who prepares changes. The call still checks the import's own level.
+  assert.deepEqual(aiWriteRequirements('prepare_import_mapping', AI_IMPORT_RESOURCES), [
+    { resource: 'ai_chat', level: 'member' },
+  ]);
   console.log(`  ${AI_IMPORT_KEYS.length} imports: rights as their routes: OK`);
 }
 
@@ -692,13 +690,13 @@ async function testRights() {
   assert.ok(template.columns.some((column) => column.column === 'title' && column.required));
   // A reader is refused, on the template and on the mapping.
   const reader = createImport(files, { incidents: 'reader', applications: 'reader' });
-  await rejects(reader.previews.createPreview(reader.context, 'prepare_import_mapping', incidentInput), /right to contribute to incidents/, 'a reader maps nothing');
-  await rejects(reader.mapping.describeTemplate(reader.context, 'incidents', 'en'), /right to contribute to incidents/, 'nor reads the template');
+  await rejects(reader.previews.createPreview(reader.context, 'prepare_import_mapping', incidentInput), /"Contributor" on "Incidents"/, 'a reader maps nothing');
+  await rejects(reader.mapping.describeTemplate(reader.context, 'incidents', 'en'), /"Contributor" on "Incidents"/, 'nor reads the template');
   // The applications import needs the administrator level of its route.
   const member = createImport({ [FILE]: { csv: CLEAN_CSV, filename: 'apps.csv' } }, { applications: 'member' });
   await rejects(member.previews.createPreview(member.context, 'prepare_import_mapping', {
     attachment_id: FILE, entity_type: 'applications', columns: [{ column: 'name', source: 1, confidence: 'high' }],
-  }), /right to administer applications/, 'a member maps no application file');
+  }), /"Admin" on "Applications"/, 'a member maps no application file');
   // A reserved import is refused to a person whose access is limited; the others follow their rights.
   const supplierInput = { attachment_id: FILE, entity_type: 'suppliers', columns: [{ column: 'name', source: 1, confidence: 'high' }] };
   const limited = createImport({ [FILE]: { csv: 'name\nAcme\n', filename: 's.csv' } }, { suppliers: 'admin', applications: 'admin' }, { limited: true });

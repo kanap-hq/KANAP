@@ -10,7 +10,9 @@ import { AiAttachmentService } from '../ai-attachment.service';
 import { AiPolicyService } from '../ai-policy.service';
 import type { AiExecutionContextWithManager, AiImportMappingPreviewDto, AiImportRunDto } from '../ai.types';
 import { readTableAttachment, TABLE_ATTACHMENT_KIND } from '../attachments/table-attachment';
+import { personWriteLanguage } from '../ai-write-texts';
 import { AI_IMPORT_KEYS, aiImportAccess, type AiImportKey } from './ai-import-access';
+import { importRightRefusal, isImportModuleRefusal } from './ai-import-right-refusal';
 import { DESCRIBED_CATALOG_ENTRIES, enabledDimensionValues } from './ai-import-dimension-values';
 import { buildImportFile } from './ai-import-file';
 import { hostingWords, serverHosting } from './ai-import-hosting';
@@ -125,7 +127,13 @@ export class AiImportMappingService {
    * again (`ai-write-levels.ts`, `ai-mutation-reserved.ts`).
    */
   async assertImportRights(context: AiExecutionContextWithManager, target: AiImportTarget): Promise<void> {
-    await this.policy.assertWriteAccess(context, target.resource, context.manager, { level: target.level });
+    try {
+      await this.policy.assertWriteAccess(context, target.resource, context.manager, { level: target.level });
+    } catch (error) {
+      if (!isImportModuleRefusal(error, target.resource)) throw error;
+      const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
+      throw importRightRefusal(target.resource, target.level, language);
+    }
     if (target.alsoReads) await this.policy.assertBusinessPermission(context, target.alsoReads, 'reader', context.manager);
     if (target.reservedToUnscoped) await assertUnscopedDataAccess({ manager: context.manager, userId: context.userId });
   }

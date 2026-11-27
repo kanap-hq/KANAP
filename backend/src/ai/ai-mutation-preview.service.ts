@@ -31,6 +31,7 @@ import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
 import { assertLinesEditable } from '../data-access/line-write-checks';
 import { isReservedAiMutation } from './mutation/ai-mutation-reserved';
 import { aiRelationTargetRequirement, aiWriteLevel, assertRecordInWriteScope } from './mutation/ai-write-levels';
+import { importRightRefusal, isImportModuleRefusal } from './import/ai-import-right-refusal';
 import {
   AiWriteLanguage,
   PREVIEW_DATA_BUSY_MESSAGE,
@@ -377,15 +378,35 @@ export class AiMutationPreviewService {
     const level = aiWriteLevel(operation.toolName, family);
     const resource = this.getOperationBusinessResource(operation, params as any);
     if (!change) {
-      await this.policy.assertWriteAccess(context, resource, context.manager, { level });
+      await this.assertModuleRight(context, operation.toolName, resource, level, { level });
       // A new write: the linked family is checked before its records are looked up.
       if (params.input !== undefined) await this.assertRelationTargetRights(context, operation, family, params);
       return;
     }
     const fields = level === 'member' ? undefined : this.writtenFields(change.mutationInput);
-    await this.policy.assertWriteAccess(context, resource, context.manager, { level, toolName: operation.toolName, family, fields });
+    await this.assertModuleRight(context, operation.toolName, resource, level, { level, toolName: operation.toolName, family, fields });
     await this.assertRelationTargetRights(context, operation, family, params, change.mutationInput);
     await assertRecordInWriteScope(context, change.targetEntityType, change.targetId, level);
+  }
+
+  /**
+   * The module right of a write. An import the person may not run is refused here, before the file
+   * is read, with the name of that right. Any other refusal is left as it was.
+   */
+  private async assertModuleRight(
+    context: AiExecutionContextWithManager,
+    toolName: string,
+    resource: string,
+    level: ReturnType<typeof aiWriteLevel>,
+    requirement: { level: ReturnType<typeof aiWriteLevel>; toolName?: string; family?: string; fields?: Record<string, string> },
+  ): Promise<void> {
+    try {
+      await this.policy.assertWriteAccess(context, resource, context.manager, requirement);
+    } catch (error) {
+      if (toolName !== 'prepare_import_mapping' || !isImportModuleRefusal(error, resource)) throw error;
+      const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
+      throw importRightRefusal(resource, level, language);
+    }
   }
 
   /**
