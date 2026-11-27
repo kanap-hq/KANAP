@@ -152,8 +152,11 @@ function compile() {
 }
 
 const RACE_SPEC = /-race\.integration\.spec\.ts$/;
-/** The marker of a spec that refuses a developer's appdb, as the race specs do (throwaway-database.ts). */
-const THROWAWAY_MARKER = /@throwaway-db-spec\b/;
+/**
+ * The marker of a spec that refuses a developer's appdb, as the race specs do (throwaway-database.ts):
+ * a comment line of its own, so a spec that only names the marker is not taken for one.
+ */
+const THROWAWAY_MARKER = /^\/\/ @throwaway-db-spec\b/m;
 
 /** A spec that never runs against a developer's appdb: a race spec, or one marked `@throwaway-db-spec`. */
 function throwawayOnly(file) {

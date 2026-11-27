@@ -86,19 +86,26 @@ function testThrowawayOnly() {
     assert.doesNotMatch(source, /kanap_classification_v1_test/, `no database of its own: ${file}`);
   }
   assert.equal(runner.throwawayOnly('src/spend/__tests__/allocations-unique-key-migration.integration.spec.ts'), false);
-  // Every spec that calls the guard carries the marker, so the runner leaves it out on appdb.
+  // This spec names the marker in its comments: it is not marked, so it runs on appdb.
+  assert.equal(runner.throwawayOnly('src/common/__tests__/run-ci-tests.script.spec.ts'), false, 'naming the marker is not carrying it');
+  // Every spec that calls the guard (a statement of its own) carries the marker, so the runner leaves it out on appdb, and
+  // the four specs above are the only ones marked.
   const guarded: string[] = [];
+  const marked: string[] = [];
   (function walk(dir: string) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(full);
-      else if (entry.name.endsWith('.spec.ts') && fs.readFileSync(full, 'utf8').includes('assertThrowawayDatabase(')) {
-        guarded.push(path.relative(backendPath(), full));
+      else if (entry.name.endsWith('.spec.ts')) {
+        const file = path.relative(backendPath(), full);
+        if (/^\s*assertThrowawayDatabase\(/m.test(fs.readFileSync(full, 'utf8'))) guarded.push(file);
+        if (!runner.RACE_SPEC.test(file) && runner.throwawayOnly(file)) marked.push(file);
       }
     }
   })(backendPath('src'));
-  assert.ok(guarded.length >= 4);
+  assert.equal(guarded.length, 4, guarded.join(', '));
   for (const file of guarded) assert.equal(runner.throwawayOnly(file), true, `guarded and marked: ${file}`);
+  assert.deepEqual(marked.sort(), [...guarded].sort(), 'the marked specs are the guarded ones');
 }
 
 function testCompiledPath() {
