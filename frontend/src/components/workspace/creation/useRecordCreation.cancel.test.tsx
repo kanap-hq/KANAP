@@ -18,13 +18,14 @@ vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), delete:
 
 const ID = '0f8b2f0e-7d3a-4c1e-9a55-1c2d3e4f5a6b';
 
-function mount() {
+function mount(family = 'assets', onError?: (message: string) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>
   );
   return renderHook(() => useRecordCreation({
-    family: 'assets',
+    family,
+    onError,
     apiBase: '/assets',
     recordId: ID,
     listPath: '/it/assets',
@@ -136,5 +137,23 @@ describe('useRecordCreation cancelCreation', () => {
     expect(isRecordDeleted('AST-4')).toBe(false);
     expect(isRecordDeleted('AST-9')).toBe(false);
     expect(getCreation(creationKey('assets', ID))).toBeUndefined();
+  });
+
+  it('says what to do instead when a family has no delete (a project), the general refusal otherwise', async () => {
+    vi.mocked(api.get).mockRejectedValue({ response: { status: 403, data: { code: 'CREATION_CANCEL_EXPIRED', message: 'over' } } });
+    for (const [family, expected] of [['projects', 'errors:CREATION_CANCEL_EXPIRED_PROJECT'], ['assets', 'errors:CREATION_CANCEL_EXPIRED']] as const) {
+      const onError = vi.fn();
+      const view = mount(family, onError);
+      act(() => view.result.current.startCreation({ recordId: ID, token: 'creation-1', returnTo: '/list' }));
+      let deleted = true;
+      await act(async () => {
+        deleted = await view.result.current.cancelCreation();
+      });
+      expect(deleted).toBe(false);
+      expect(onError).toHaveBeenCalledWith(expected);
+      expect(getCreation(creationKey(family, ID))).toBeUndefined();
+      expect(api.delete).not.toHaveBeenCalled();
+      view.unmount();
+    }
   });
 });
