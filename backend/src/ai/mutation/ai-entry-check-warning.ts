@@ -59,8 +59,10 @@ export async function amountsEntryCheckWarning(
  * The warning of a change of a line's account or end of validity (`change`: the values the card
  * writes, absent when it keeps the stored one), on its columns as they stand: a move onto an
  * account that expects quantity and price, when one of them will be to check there, up to the end
- * the line will have; on the same account, an end of validity that brings back a year with such a
- * column (lot B12b).
+ * the line will have, and was not already (the account before expected nothing, or the column's year
+ * followed the end); on the same account, an end of validity that brings back a year with such a
+ * column (lot B12b). Between two accounts that both expect it, a line already to check is not
+ * warned again, as the budget file does.
  */
 export async function accountEntryCheckWarning(
   manager: EntityManager,
@@ -78,8 +80,11 @@ export async function accountEntryCheckWarning(
   const end = (value: unknown) => (typeof value === 'string' || value instanceof Date ? value : null);
   const columns = (await readColumnsToCheckOnAnyAccount(manager, tenantId, [itemId], undefined, true)).get(itemId) ?? [];
   const after = withinEndOfValidity(columns, change.endOfValidity !== undefined ? end(change.endOfValidity) : stored.disabled_at);
-  if (moved) return after.length > 0 ? { kind: 'account', account } : null;
-  const before = new Set(withinEndOfValidity(columns, stored.disabled_at).map((column) => `${column.year}:${column.measure}`));
+  // The columns to check before the write: none when the line's account expected nothing.
+  const expectedBefore = !moved || (await expectedAccountLabel(manager, tenantId, stored.account_id)) !== null;
+  const before = new Set(expectedBefore
+    ? withinEndOfValidity(columns, stored.disabled_at).map((column) => `${column.year}:${column.measure}`)
+    : []);
   return after.some((column) => !before.has(`${column.year}:${column.measure}`)) ? { kind: 'account', account } : null;
 }
 

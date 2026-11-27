@@ -569,6 +569,16 @@ async function testKadCardsWarnIffToCheck(harness: Harness) {
       await iff('a move with an end after the budget', 1, 'update_business_record',
         { entity_type: 'budget_lines', ref: 'BL-1', fields: { account_id: seed.accounts.tick, disabled_at: `${Y}-12-31` } }, true);
     });
+    // T5: from the ticked account to one ticked through its consolidation account, a line already to
+    // check: the move leaves nothing new to check, no warning (as the budget file).
+    await savepoint(runner, async () => {
+      assert.equal(await listSaysToCheck(harness, runner, seed, 3), true, 'line 3 is to check before');
+      const ctx = context(seed, runner, 'between two expected accounts');
+      const preview = await card(harness, ctx, 'update_business_record', { entity_type: 'budget_lines', ref: 'BL-3', fields: { account_id: seed.accounts.cons } });
+      assert.equal(preview.changes[WARNING_FIELD], undefined, 'between two expected accounts: no warning');
+      await approve(harness, ctx, preview);
+      assert.equal(await listSaysToCheck(harness, runner, seed, 3), true, 'still to check, as before');
+    });
     // M3: on the ticked account, the end of validity alone, moved to a year with a spread Budget, or within its year.
     await savepoint(runner, async () => {
       await iff('an end brought to this year', 10, 'update_business_record',
