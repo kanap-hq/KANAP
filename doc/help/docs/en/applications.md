@@ -221,7 +221,7 @@ Removing an owner, a business process, a suite or a support contact shows a mess
 
 The Overview tab is the application's narrative. It contains:
 
-**Description**: A rich-text description of the application. The editor autosaves as you type. Anyone who can edit the application can edit its description, without a Knowledge permission. The description is kept as a managed document in Knowledge, titled with the application's reference and name, in the language of the person who created it. Renaming the application, in the workspace or by an import, updates that title.
+**Description**: A rich-text description of the application. The editor autosaves as you type. Anyone who can edit the application can edit its description, without a Knowledge permission. The description is kept as a managed document in Knowledge, titled with the application's reference and name, in the language of the person who created it. Renaming the application, in the workspace or by an import, updates that title. An import, the API and the assistant write this same description, and the export reads it. Each change they make is kept as a version of the document.
 
 **Connections**: A read-only summary built from the application's interfaces. For non-middleware apps it shows two rows: **Receives from** and **Sends to**. For ETL/middleware apps it shows a single **Connected to** row. Each entry is a clickable pill that opens the related application; "+ N more in Interfaces" jumps to the Interfaces tab.
 
@@ -629,7 +629,7 @@ A file with one refused row loads nothing. See [CSV and Excel files](csv-files.m
 |------------|-------------|----------|-------|
 | `id` | Application UUID | No | For updates; leave blank for new applications |
 | `name` | Application name | Yes | Up to 200 characters. Used to match existing applications |
-| `description` | What the application does | No | |
+| `description` | What the application does | No | The description of the **Overview** tab. A text the description already holds changes nothing |
 | `category` | Primary purpose | No | Accepts code or label from Settings. An unknown value refuses the row |
 | `supplier_name` | Vendor name | No | Must match existing supplier |
 | `editor` | Software publisher | No | Free text (e.g., Microsoft, SAP) |
