@@ -19,9 +19,9 @@ import { creationCancelExpired } from './creation-token';
  * - `live`: a row that refuses only until the time in that column (an edit lock).
  * - `afterRecord`: a row that refuses only when written after the record's creation (a document's
  *   relations: those of the creation share its transaction, so its `now()`).
- * - Every family: a managed document of the record that another person wrote (a version, an
- *   autosave: `updated_by`), commented, or holds open in the editor (a live edit lock); the
- *   creator's own versions are counted before Cancel (`countEditedManagedDocuments`).
+ * - Every family: a managed document of the record that another person wrote (a row of its
+ *   history, a version), commented, or holds open in the editor (a live edit lock); the creator's
+ *   own versions are counted before Cancel (`countEditedManagedDocuments`).
  *
  * A link table with two columns towards the family (a dependency, a relation between two assets)
  * is audited on the record whose page writes it: the other column is declared here, since another
@@ -147,24 +147,34 @@ function linkCondition(link: CreationLink, recordTable: string): string {
 }
 
 /**
- * A managed document of the record (any family) that another person wrote (a version, or an
- * autosave, which writes no version: `updated_by`), commented, or holds open in the editor. A write
- * of nobody (a title synced by the system) leaves `updated_by` empty.
+ * A managed document of the record (any family) that another person wrote, commented, or holds open
+ * in the editor. "Wrote" reads the document's own history: every save of a managed document writes
+ * an `update` row under its author (`KnowledgeService.update`, `updateManagedDocument`, so the
+ * source routes, the import and Kad), and a revert writes a version. `updated_by` keeps only the
+ * last writer, so it is not read. The rows of the document's provisioning do not count: its
+ * `create` row, its first version and its "created" activity carry whoever opened the record first.
+ * A row of nobody (a title synced by the system) or of the creator does not count either.
  */
-const MANAGED_EDITED_BY_OTHERS = `EXISTS (
+function managedEditedByOthers(recordTable: string): string {
+  const since = `(SELECT r.created_at FROM ${recordTable} r WHERE r.tenant_id = $1 AND r.id = $2::uuid)`;
+  return `EXISTS (
   SELECT 1 FROM integrated_document_bindings b
     JOIN documents d ON d.tenant_id = b.tenant_id AND d.id = b.document_id
    WHERE b.tenant_id = $1 AND b.source_entity_id = $2::uuid
-     AND ((d.updated_by IS NOT NULL AND lower(d.updated_by::text) <> $3::text)
+     AND (EXISTS (SELECT 1 FROM audit_log h
+                   WHERE h.tenant_id = d.tenant_id AND h.table_name = 'documents' AND h.record_id = d.id
+                     AND h.action = 'update' AND h.created_at >= ${since}
+                     AND h.user_id IS NOT NULL AND lower(h.user_id::text) <> $3::text)
        OR EXISTS (SELECT 1 FROM document_versions v
-                   WHERE v.tenant_id = d.tenant_id AND v.document_id = d.id
+                   WHERE v.tenant_id = d.tenant_id AND v.document_id = d.id AND v.created_at > d.created_at
                      AND v.created_by IS NOT NULL AND lower(v.created_by::text) <> $3::text)
        OR EXISTS (SELECT 1 FROM document_activities a
-                   WHERE a.tenant_id = d.tenant_id AND a.document_id = d.id
+                   WHERE a.tenant_id = d.tenant_id AND a.document_id = d.id AND a.type = 'comment'
                      AND a.author_id IS NOT NULL AND lower(a.author_id::text) <> $3::text)
        OR EXISTS (SELECT 1 FROM document_edit_locks l
                    WHERE l.tenant_id = d.tenant_id AND l.document_id = d.id
                      AND lower(l.holder_user_id::text) <> $3::text AND l.expires_at > now())))`;
+}
 
 /**
  * 403 `CREATION_CANCEL_EXPIRED` when a child of `CREATION_CANCEL_LINKS[table]` stands for `userId`,
@@ -195,7 +205,8 @@ export async function assertNoCreationLinks(
     );
   }
   const recordTable = recordHistoryEntry(table)?.table ?? table;
-  const conditions = [...links.map((link) => linkCondition(link, recordTable)), MANAGED_EDITED_BY_OTHERS];
+  identifiers(recordTable);
+  const conditions = [...links.map((link) => linkCondition(link, recordTable)), managedEditedByOthers(recordTable)];
   const [row]: Array<{ linked: boolean }> = await manager.query(
     `SELECT ${conditions.join(' OR ')} AS linked`,
     [tenantId, recordId, String(userId ?? '').toLowerCase()],

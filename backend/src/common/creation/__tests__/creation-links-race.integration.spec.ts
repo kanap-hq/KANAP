@@ -26,7 +26,9 @@ import { assert, describe, progress, runRaceSpecs, settle, sql, withRace, type O
 // autosave writes no version, only the document (`updated_by`): it waits and refuses the same way.
 // Another person saving a request's purpose takes the document, then the request's key (its
 // activity): against the cancel, which holds the request and waits for the document, PostgreSQL
-// ends the cancel on a deadlock (409 `retry`); the save goes through and nothing is deleted.
+// ends one of the two on a deadlock (409 `retry`), whichever its detector picks, and nothing is
+// lost without an error: the save goes through and everything stays, or the save is refused and
+// the request is gone.
 // (The connections' links race in `connections/__tests__/connection-cancel-linked-race`.)
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'creation-links-race-spec-secret';
@@ -96,10 +98,14 @@ async function editManaged(seeded: Seeded, manager: EntityManager, tenantId: str
   );
 }
 
-/** Another person's autosave of the managed document: the document only, no version. */
-function autosave(seeded: Seeded, manager: EntityManager, tenantId: string) {
-  return manager.query(
+/** Another person's autosave of the managed document: the document and its history row, no version. */
+async function autosave(seeded: Seeded, manager: EntityManager, tenantId: string) {
+  await manager.query(
     `UPDATE documents SET content_markdown = 'Typed by the other person.', updated_by = $3 WHERE tenant_id = $1 AND id = $2`,
+    [tenantId, seeded.document, seeded.otherId],
+  );
+  await manager.query(
+    `INSERT INTO audit_log (tenant_id, table_name, record_id, action, before_json, after_json, user_id) VALUES ($1, 'documents', $2, 'update', '{}', '{}', $3)`,
     [tenantId, seeded.document, seeded.otherId],
   );
 }
@@ -225,16 +231,18 @@ async function purposeSavedDuringCancel() {
     updated.release();
     const written = await settle(writing);
     const cancelled = await settle(cancelling);
-    assert.ok(written.ok, `the save goes through; it ${describe(written)}`);
-    assert.ok(!cancelled.ok, `the cancel ends on the deadlock; it ${describe(cancelled)}`);
-    assert.equal(mapDatabaseError((cancelled as { error: unknown }).error)?.code, 'retry', `the cancel answers 409 retry; it ended with ${describe(cancelled)}`);
+    const failed = [written, cancelled].filter((outcome) => !outcome.ok);
+    assert.equal(failed.length, 1, `exactly one ends on the deadlock; the save ${describe(written)}, the cancel ${describe(cancelled)}`);
+    assert.equal(mapDatabaseError((failed[0] as { error: unknown }).error)?.code, 'retry', `it answers 409 retry; it ended with ${describe(failed[0])}`);
     const state = await race.readOne(
       `SELECT (SELECT count(*)::int FROM portfolio_requests WHERE tenant_id = $1 AND id = $2) AS record,
               (SELECT count(*)::int FROM documents WHERE tenant_id = $1 AND id = $3 AND updated_by = $4::uuid) AS document,
               (SELECT count(*)::int FROM portfolio_activities WHERE tenant_id = $1 AND request_id = $2 AND author_id = $4::uuid) AS activity`,
       [race.tenantId, seeded.requestId, seeded.document, seeded.otherId],
     );
-    assert.deepEqual({ record: Number(state.record), document: Number(state.document), activity: Number(state.activity) }, { record: 1, document: 1, activity: 1 }, 'nothing is deleted');
+    const found = { record: Number(state.record), document: Number(state.document), activity: Number(state.activity) };
+    if (written.ok) assert.deepEqual(found, { record: 1, document: 1, activity: 1 }, 'the cancel lost: nothing is deleted');
+    else assert.deepEqual(found, { record: 0, document: 0, activity: 0 }, 'the save lost: it is undone and the request is gone');
   });
 }
 

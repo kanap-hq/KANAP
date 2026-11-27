@@ -135,6 +135,10 @@ async function editManagedDocumentAs(runner: QueryRunner, tenantId: string, reco
   );
   const row = doc[0];
   await runner.query(
+    `INSERT INTO audit_log (tenant_id, table_name, record_id, action, before_json, after_json, user_id) VALUES ($1, 'documents', $2, 'update', '{}', '{}', $3)`,
+    [tenantId, row.id, userId],
+  );
+  await runner.query(
     `INSERT INTO document_versions (tenant_id, document_id, version_number, title, content_markdown, content_plain, created_by)
      VALUES ($1, $2, (SELECT coalesce(max(version_number), 0) + 1 FROM document_versions WHERE tenant_id = $1 AND document_id = $2), $3, $4, $4, $5)`,
     [tenantId, row.id, row.title, content, userId],

@@ -9,6 +9,7 @@ import { recordHistoryChildKind, recordHistoryEntry, type RecordHistoryRecord } 
 import { backendPath } from '../../__tests__/backend-root';
 import { CREATION_CANCEL_LINKS, type CreationLink } from '../creation-links';
 import { CREATION_CANCEL_KEPT } from '../creation-links.inventory';
+import { SOURCE_ENTITY_CONFIG } from '../../../knowledge/integrated-documents.service';
 
 // Every cascade foreign key towards a record that has a "Cancel" of its creation is in one of four
 // cases (`creation-links.inventory.ts`), column by column: declared in `CREATION_CANCEL_LINKS` (it
@@ -81,11 +82,17 @@ async function main() {
       `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
         WHERE conrelid = 'integrated_document_bindings'::regclass AND contype = 'c' AND pg_get_constraintdef(oid) LIKE '%source_entity_type%'`,
     );
+    // The record tables that may have managed documents: every source type the bindings accept,
+    // through the service's own table of sources (`requests` is `portfolio_requests`).
+    const sourceTypes = [...String(def).matchAll(/'([a-z_]+)'::text/g)].map((match) => match[1]);
+    assert.ok(sourceTypes.length >= 5, `the source types of the managed documents are read (${sourceTypes.join(', ')})`);
+    const managedTables = sourceTypes.map((type) => (SOURCE_ENTITY_CONFIG as Record<string, { sourceTable: string }>)[type]?.sourceTable ?? type);
+    assert.ok(managedTables.includes('portfolio_requests'), 'a source type is read as its record table');
     for (const family of unlocked) {
       for (const link of CREATION_CANCEL_LINKS[family] ?? []) {
         assert.ok(!link.through && !link.managedDocuments, `${family} cancels without the framework's lock: ${link.table} needs it`);
       }
-      assert.ok(!String(def).includes(`'${family}'`), `${family} cancels without the framework's lock: its managed documents need it`);
+      assert.ok(!managedTables.includes(family), `${family} cancels without the framework's lock: its managed documents need it`);
     }
 
     const used = new Set<string>();

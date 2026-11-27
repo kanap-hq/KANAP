@@ -175,7 +175,7 @@ const PERMISSION_RANK: Record<PermissionLevel, number> = {
   admin: 4,
 };
 
-const SOURCE_ENTITY_CONFIG: Record<
+export const SOURCE_ENTITY_CONFIG: Record<
   SourceScopedEntityType,
   {
     sourceTable: 'portfolio_requests' | 'portfolio_projects' | 'interfaces' | 'applications' | 'incidents';

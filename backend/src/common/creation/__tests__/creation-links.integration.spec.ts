@@ -358,9 +358,38 @@ async function testDocumentControls() {
   });
 }
 
+// Règle simple, décision du 27/11 (D26): a link with no author stops Cancel even when its creator
+// set it; Cancel comes back once no such link is left.
+async function testSimpleRule() {
+  await inRolledBackTransaction(async (runner) => {
+    const seeded = await seedTenant(runner);
+    const t = seeded.tenantId;
+    // The creator touches the relations of his new document after its creation: the set is written anew.
+    const documents = family('documents');
+    const document = await created(runner, seeded, documents);
+    await runner.query(`UPDATE documents SET created_at = now() - interval '1 minute' WHERE tenant_id = $1 AND id = $2`, [t, document.id]);
+    const project = await family('portfolio_projects').insert(runner, t, ++numbers);
+    await knowledge.replaceDocumentRelationsByEntity(document.id, 'projects', [project], runner.manager);
+    await refuses(runner, seeded, documents, document, 'the creator\'s relation set after the creation');
+    await knowledge.replaceDocumentRelationsByEntity(document.id, 'projects', [], runner.manager);
+    await cancels(runner, seeded, documents, document, 'the creator\'s relations taken back');
+
+    // The creator sets the host of his new VM from its Relations tab: the row names the host's side.
+    const assets = family('assets');
+    const vm = await created(runner, seeded, assets);
+    const host = await assets.insert(runner, t, ++numbers);
+    await runner.query(`INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type) VALUES ($1, $2, $3, 'contains')`, [t, host, vm.id]);
+    await refuses(runner, seeded, assets, vm, 'the host set by the creator');
+    await runner.query(`DELETE FROM asset_relations WHERE tenant_id = $1 AND related_asset_id = $2`, [t, vm.id]);
+    await cancels(runner, seeded, assets, vm, 'the host taken back');
+  });
+}
+
 // Review N1b (B1, C1, lock): a managed document of the record that another person typed in (an
-// autosave writes no version, only `updated_by`), commented, or holds open in the editor refuses
-// Cancel. The creator's own work, a write of nobody (a title synced) and an expired lock do not.
+// autosave writes no version, only its history row), commented, or holds open in the editor
+// refuses Cancel, even when the creator wrote after them. The creator's own work, a write of nobody
+// (a title synced by the system), the provisioning by whoever opened the record first and an
+// expired lock do not.
 async function testManagedDocumentsOfOthers() {
   await inRolledBackTransaction(async (runner) => {
     const seeded = await seedTenant(runner);
@@ -376,8 +405,34 @@ async function testManagedDocumentsOfOthers() {
       );
       return { record, document };
     };
-    const autosave = (document: string, userId: string | null) =>
-      runner.query(`UPDATE documents SET content_markdown = 'Typed.', updated_by = $3 WHERE tenant_id = $1 AND id = $2`, [t, document, userId]);
+    // A save as `KnowledgeService.update` and `updateManagedDocument` write it: the row, then its history row.
+    const autosave = async (document: string, userId: string | null) => {
+      await runner.query(`UPDATE documents SET content_markdown = 'Typed.', updated_by = $3 WHERE tenant_id = $1 AND id = $2`, [t, document, userId]);
+      await runner.query(
+        `INSERT INTO audit_log (tenant_id, table_name, record_id, action, before_json, after_json, user_id) VALUES ($1, 'documents', $2, 'update', '{}', '{}', $3)`,
+        [t, document, userId],
+      );
+    };
+    // The provisioning on the first read of the record (`resolveManagedDocumentId`), by that reader.
+    const provisionedBy = async (document: string, userId: string) => {
+      await runner.query(`UPDATE documents SET created_by = $3, updated_by = $3 WHERE tenant_id = $1 AND id = $2`, [t, document, userId]);
+      await runner.query(
+        `INSERT INTO audit_log (tenant_id, table_name, record_id, action, before_json, after_json, user_id) VALUES ($1, 'documents', $2, 'create', null, '{}', $3)`,
+        [t, document, userId],
+      );
+      await runner.query(
+        `INSERT INTO document_versions (tenant_id, document_id, version_number, title, content_markdown, content_plain, created_by) VALUES ($1, $2, 1, 'Overview', '', '', $3)`,
+        [t, document, userId],
+      );
+      await runner.query(`INSERT INTO document_activities (tenant_id, document_id, author_id, type, content) VALUES ($1, $2, $3, 'change', 'Document created')`, [t, document, userId]);
+    };
+    // A revert writes a version, in a later request.
+    const revert = (document: string, userId: string) =>
+      runner.query(
+        `INSERT INTO document_versions (tenant_id, document_id, version_number, title, content_markdown, content_plain, created_by, created_at)
+         VALUES ($1, $2, 2, 'Overview', '', '', $3, now() + interval '1 second')`,
+        [t, document, userId],
+      );
     const comment = (document: string, userId: string) =>
       runner.query(`INSERT INTO document_activities (tenant_id, document_id, author_id, type, content) VALUES ($1, $2, $3, 'comment', 'Seen.')`, [t, document, userId]);
     const editLock = (document: string, userId: string, expires: string) =>
@@ -388,7 +443,8 @@ async function testManagedDocumentsOfOthers() {
       );
     const passing: Array<[string, (document: string) => Promise<unknown>]> = [
       ['its creator\'s autosave', (d) => autosave(d, seeded.creatorId)],
-      ['a write of nobody', (d) => autosave(d, null)],
+      ['a write of nobody (a title synced by the system)', (d) => autosave(d, null)],
+      ['the provisioning by another person who opened the record first', (d) => provisionedBy(d, seeded.otherId)],
       ['its creator\'s comment', (d) => comment(d, seeded.creatorId)],
       ['its creator\'s edit lock', (d) => editLock(d, seeded.creatorId, '5 minutes')],
       ['an expired lock of another person', (d) => editLock(d, seeded.otherId, '-30 minutes')],
@@ -400,6 +456,11 @@ async function testManagedDocumentsOfOthers() {
     }
     const refusing: Array<[string, (document: string) => Promise<unknown>]> = [
       ['another person\'s autosave', (d) => autosave(d, seeded.otherId)],
+      ['another person\'s autosave, then the creator\'s rename and autosave', async (d) => {
+        await autosave(d, seeded.otherId);
+        await autosave(d, seeded.creatorId);
+      }],
+      ['another person\'s revert', (d) => revert(d, seeded.otherId)],
       ['another person\'s comment', (d) => comment(d, seeded.otherId)],
       ['another person\'s live edit lock', (d) => editLock(d, seeded.otherId, '5 minutes')],
     ];
@@ -502,6 +563,8 @@ async function main() {
     console.log('  ok testDocumentControls');
     await testManagedDocumentsOfOthers();
     console.log('  ok testManagedDocumentsOfOthers');
+    await testSimpleRule();
+    console.log('  ok testSimpleRule');
     await testIncidentJournal();
     console.log('  ok testIncidentJournal');
     await testOtherTenant();
