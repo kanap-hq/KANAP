@@ -8,7 +8,7 @@ import CloseIcon from '@mui/icons-material/CloseRounded';
 import { useTranslation } from 'react-i18next';
 import { isTableFile, type PendingAttachment } from '../useChat';
 import type { EntitySearchResult } from '../aiApi';
-import { buildEntityUrl } from '../utils/entityUrls';
+import { entityPageUrl } from '../utils/referenceLinks';
 import MentionPopover, { MentionPopoverHandle } from './MentionPopover';
 import AttachmentFileChip from './AttachmentFileChip';
 
@@ -152,7 +152,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     // Track entity type + id for every @-mention the user inserted via the picker.
     // The textarea stays readable (`@DOC-152`, `@SAP S/4HANA`, ...); each selected
     // mention is expanded into a markdown link only when the user sends the message.
-    const mentionLookupRef = useRef<Map<string, { entity_type: string; id: string; label: string }>>(new Map());
+    const mentionLookupRef = useRef<Map<string, { entity_type: string; id: string; ref: string | null; label: string }>>(new Map());
 
     const updateMentionFromCaret = useCallback((nextValue: string, caret: number) => {
       // Look back from the caret for the most recent `@`. If we find one with no
@@ -206,7 +206,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const entries = Array.from(lookup.entries()).sort((a, b) => b[0].length - a[0].length);
       for (const [visible, meta] of entries) {
-        const url = buildEntityUrl(meta.entity_type, meta.id);
+        const url = entityPageUrl(meta.entity_type, meta.id, meta.ref);
         if (!url) continue;
         const pattern = new RegExp(`(?<![\\[\\w-])@${escapeRegExp(visible)}(?=$|\\s|[.,;:!?)]|\\n)`, 'g');
         expanded = expanded.replace(pattern, `[${meta.label}](${url})`);
@@ -240,7 +240,8 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const handleMentionSelect = useCallback((item: EntitySearchResult) => {
       if (!mentionState) return;
-      const url = buildEntityUrl(item.entity_type, item.id);
+      // The record by its reference (`T-5`) when its page opens by it, by its id otherwise.
+      const url = entityPageUrl(item.entity_type, item.id, item.ref);
       if (!url) {
         setMentionState(null);
         return;
@@ -248,7 +249,7 @@ const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       const visible = (item.ref || item.label || item.id).replace(/\s+/g, ' ').trim();
       const label = (item.ref || item.label || item.id).replace(/\s+/g, ' ').trim();
       const insertion = `@${visible} `;
-      mentionLookupRef.current.set(visible, { entity_type: item.entity_type, id: item.id, label });
+      mentionLookupRef.current.set(visible, { entity_type: item.entity_type, id: item.id, ref: item.ref, label });
       const before = value.slice(0, mentionState.start);
       const after = value.slice(mentionState.start + 1 + mentionState.query.length);
       const next = before + insertion + after;

@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert, Box, IconButton, LinearProgress, Typography, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
@@ -30,6 +30,7 @@ import TechnologyRelationsTab, { fetchTechnologyRelations, technologyRelationsCo
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import { RECORD_HISTORY_TAB_KEY } from '../../components/history/recordHistoryTabKey';
+import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 
 type TabKey = 'overview' | 'servers' | 'applications' | 'operations' | 'compliance' | 'relations' | typeof RECORD_HISTORY_TAB_KEY;
 const historyTab = retryableLazy(() => import('../../components/history/RecordHistoryTab'));
@@ -92,6 +93,7 @@ export default function TechnologyWorkspacePage() {
   const { t } = useTranslation(['it', 'common']);
   const theme = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const params = useParams();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -112,6 +114,22 @@ export default function TechnologyWorkspacePage() {
     placeholderData: (previous) => previous,
   });
   const technology = technologyQuery.data || null;
+  // The technology the address names, not the previous one kept on screen while the next one loads.
+  const technologyMatchesRoute = !!technology && !technologyQuery.isPlaceholderData
+    && (technology.id === routeId.toLowerCase() || technology.reference?.toUpperCase() === routeId.toUpperCase());
+
+  // An address by uuid (or `tec-3`) becomes the technology's reference through the router, tab, query
+  // and hash kept: the read is put under the reference's entry first, so the page shows it at once.
+  // Back and reload then show the reference.
+  React.useEffect(() => {
+    if (!technology || !technologyMatchesRoute || !technology.reference || routeId === technology.reference) return;
+    queryClient.setQueryData(['technology-workspace', technology.reference], technology);
+    navigate(`/it/technologies/${technology.reference}${params.tab ? `/${params.tab}` : ''}${location.search}${location.hash}`, { replace: true });
+  }, [location.hash, location.search, navigate, params.tab, queryClient, routeId, technology, technologyMatchesRoute]);
+  const { addToRecent } = useRecentlyViewed();
+  React.useEffect(() => {
+    if (technologyMatchesRoute && technology?.id && technology.name) addToRecent('technology', technology.id, technology.name, technology.reference || undefined);
+  }, [addToRecent, technology?.id, technology?.name, technology?.reference, technologyMatchesRoute]);
   // One read per tab: the badges and the tabs share these queries.
   const technologyId = technology?.id ?? '';
   const serversQuery = useQuery({

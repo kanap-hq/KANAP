@@ -41,6 +41,7 @@ import {
   isFixedPreviewError,
 } from './ai-write-texts';
 import { AGENT_NAME } from '../config/product';
+import { entityPageUrl } from './ai-page-urls';
 import { AI_BULK_EDIT_TOOLS, BULK_EDIT_PLAN_REFUSAL } from './mutation/ai-bulk-edit';
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
@@ -237,7 +238,7 @@ export class AiMutationPreviewService {
       preview_id: preview.id,
       tool_name: preview.tool_name as AiMutationWriteToolName,
       status: preview.status,
-      target: presentation.target,
+      target: withTargetPage(presentation.target),
       changes: presentation.changes,
       ...(presentation.importMapping ? { import_mapping: presentation.importMapping } : {}),
       ...(presentation.bulkEdit ? { bulk_edit: presentation.bulkEdit } : {}),
@@ -1446,6 +1447,8 @@ export class AiMutationPreviewService {
       columns: input.columns,
       assumptions: [],
       ...(Array.isArray(input.left_aside) && input.left_aside.length > 0 ? { left_aside: input.left_aside } : {}),
+      // The zone the card read the file's times in (lot I6c of 26.12.1).
+      ...(typeof input.time_zone === 'string' ? { time_zone: input.time_zone } : {}),
       choices,
     });
     if (created.status !== 'pending' || created.preview_id === preview.id) {
@@ -1796,4 +1799,13 @@ export class AiMutationPreviewService {
 
     return count > 0;
   }
+}
+
+/**
+ * The page of a card's existing record (`page_url`, by its reference where its page opens by it),
+ * so that Kad links the record it is about to change as it does once the change is made.
+ */
+export function withTargetPage(target: AiMutationPreviewDto['target']): AiMutationPreviewDto['target'] {
+  const url = target.entity_id ? entityPageUrl(target.entity_type, target.entity_id, target.ref) : null;
+  return url ? { ...target, page_url: url } : target;
 }

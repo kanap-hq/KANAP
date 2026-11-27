@@ -246,8 +246,8 @@ export default function ApplicationTechnologiesSection({
       key: 'via', header: t('workspace.application.relations.columns.via'), width: 140, wrap: true, hideOrder: 1,
       render: (row) => (
         <ViaAssetNames
-          assets={row.via.map((via) => ({ id: via.asset_id, name: serverLabel(via) }))}
-          href={(asset) => `/it/assets/${asset.id}/operations`}
+          assets={row.via.map((via) => ({ id: via.asset_id, name: serverLabel(via), reference: via.asset_reference ?? null }))}
+          href={(asset) => `/it/assets/${asset.reference || asset.id}/operations`}
         />
       ),
     },

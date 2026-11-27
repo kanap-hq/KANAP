@@ -1119,7 +1119,7 @@ Task;16/10/2026 14:30;;;16/10/2026 15:00`;
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     assert.deepEqual(
       zoneless(result),
-      [{ row: 0, params: { columns: 'started_at, detected_at', example: 'started_at' } }],
+      [{ row: 0, params: { columns: 'started_at, detected_at', example: 'started_at', zone: 'UTC' } }],
       `dryRun=${dryRun}: the date-times without a zone, in the order of the file`,
     );
   }
@@ -1218,7 +1218,7 @@ async function testTimeZoneColumnsAreNamedInTheScreenLanguage() {
   assert.equal(zoneless.ok, true, JSON.stringify(zoneless.errors));
   assert.deepEqual(
     zoneless.warnings.filter((warning) => warning.code === 'CSV_HEADER_ZONELESS_DATE_TIMES').map((warning) => warning.params),
-    [{ columns: 'Début, detected_at', example: 'Début' }],
+    [{ columns: 'Début, detected_at', example: 'Début', zone: 'UTC' }],
   );
   assert.match(
     zoneless.warnings.find((warning) => warning.code === 'CSV_HEADER_ZONELESS_DATE_TIMES')?.message ?? '',

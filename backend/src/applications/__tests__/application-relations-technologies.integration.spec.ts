@@ -86,8 +86,12 @@ async function testTechnologiesDeclaredAndHostedMerged() {
     assert.equal(sql.version_unknown, false);
     assert.equal(sql.standard_support_end, '2020-01-14');
     assert.equal(sql.family, 'database');
-    assert.deepEqual(sql.via, [{ asset_id: seed.servers.etl1, asset_name: 'srv-etl-1-tech', host_name: null }]);
-    assert.deepEqual(vsphere.via, [{ asset_id: seed.servers.etl2, asset_name: 'srv-etl-2-tech', host_name: 'esx-tech' }], 'carried by the host of the server');
+    // Each server with its reference, the address of its page.
+    const referenceOf = async (id: string) => (await runner.query(`SELECT asset_reference FROM assets WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, id]))[0].asset_reference;
+    const [etl1Ref, etl2Ref] = [await referenceOf(seed.servers.etl1), await referenceOf(seed.servers.etl2)];
+    assert.match(etl1Ref, /^[A-Z]+-\d+$/);
+    assert.deepEqual(sql.via, [{ asset_id: seed.servers.etl1, asset_name: 'srv-etl-1-tech', asset_reference: etl1Ref, host_name: null }]);
+    assert.deepEqual(vsphere.via, [{ asset_id: seed.servers.etl2, asset_name: 'srv-etl-2-tech', asset_reference: etl2Ref, host_name: 'esx-tech' }], 'carried by the host of the server');
     assert.deepEqual(tomcat.versions, []);
     assert.equal(tomcat.version_unknown, true);
     assert.deepEqual(tomcat.via.map((v) => v.asset_id), [seed.servers.etl1]);

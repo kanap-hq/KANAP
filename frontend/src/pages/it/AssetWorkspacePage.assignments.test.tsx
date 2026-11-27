@@ -91,7 +91,7 @@ const direct = {
 };
 const inherited = {
   id: 'as-cl', app_instance_id: 'dep-1', asset_id: 'asset-1', role: 'db', since_date: null, notes: null,
-  application: { id: 'app-1', name: 'CheeseTrack' }, environment: 'prod', inherited: true, via_clusters: [{ id: 'cl-1', name: 'PAR-SQL-CL01' }], groupable: null,
+  application: { id: 'app-1', name: 'CheeseTrack' }, environment: 'prod', inherited: true, via_clusters: [{ id: 'cl-1', name: 'PAR-SQL-CL01', reference: 'SRV-1' }], groupable: null,
 };
 
 function renderOperations(tab = 'operations') {
@@ -163,7 +163,8 @@ describe('Asset workspace: assignments and clusters', () => {
     wire.assignments = { items: [direct, inherited], groupable: [] };
     renderOperations();
     const link = await screen.findByRole('link', { name: 'PAR-SQL-CL01' });
-    expect(link.getAttribute('href')).toBe('/it/assets/cl-1/overview');
+    // The cluster opens by its reference (by its id without one: AssetConnectionsSection).
+    expect(link.getAttribute('href')).toBe('/it/assets/SRV-1/overview');
     const inheritedRow = screen.getByText('CheeseTrack').closest('tr') as HTMLElement;
     expect(within(inheritedRow).queryAllByRole('button').map((button) => button.textContent)).toEqual(['CheeseTrack']);
     expect(within(inheritedRow).getByText(/^via/)).toBeTruthy();

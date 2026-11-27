@@ -573,10 +573,11 @@ export class AppAssetAssignmentsService {
       via_clusters: ViaCluster[];
       app_id: string;
       app_name: string;
+      app_reference: string | null;
       environment: string;
     }> = await mg.query(
       `SELECT e.assignment_id AS id, e.app_instance_id, e.asset_id, e.role, e.since_date, e.notes, e.created_at, e.updated_at,
-              e.inherited, e.via_clusters, ai.application_id AS app_id, ai.environment, a.name AS app_name
+              e.inherited, e.via_clusters, ai.application_id AS app_id, ai.environment, a.name AS app_name, a.sequential_id AS app_reference
        FROM (${effectiveAssignmentsSql({ tenant: '$2', assets: 'ARRAY[$1::uuid]' })}) e
        JOIN app_instances ai ON ai.id = e.app_instance_id AND ai.tenant_id = e.tenant_id
        JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
@@ -609,7 +610,7 @@ export class AppAssetAssignmentsService {
       notes: row.notes,
       created_at: row.created_at,
       updated_at: row.updated_at,
-      application: { id: row.app_id, name: row.app_name },
+      application: { id: row.app_id, reference: row.app_reference ?? null, name: row.app_name },
       environment: row.environment,
       inherited: !!row.inherited,
       via_clusters: row.via_clusters ?? [],

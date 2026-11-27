@@ -366,6 +366,18 @@ describe('Application workspace vulnerabilities', () => {
     expect(screen.getByText('enums.environment.prod')).toBeInTheDocument();
   });
 
+  it('opens a connected application of the overview by its reference, by its id when it has none', async () => {
+    const row = { environment: 'prod', via_middleware: false, middleware_application_ids: [], middleware_application_names: [] };
+    renderPage('/it/applications/app-1/overview', reach, null, [
+      { ...row, id: 'int-1', name: 'Orders', interface_reference: 'INT-1', source_application_id: 'app-1', source_application_name: 'Billing', target_application_id: 'app-2', target_application_name: 'ERP', target_application_reference: 'APP-2' },
+      { ...row, id: 'int-2', name: 'Leads', interface_reference: 'INT-2', source_application_id: 'app-3', source_application_name: 'CRM', target_application_id: 'app-1', target_application_name: 'Billing' },
+    ]);
+    fireEvent.click(await screen.findByRole('button', { name: 'ERP' }));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toContain('/it/applications/APP-2/overview'));
+    fireEvent.click(await screen.findByRole('button', { name: 'CRM' }));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toContain('/it/applications/app-3/overview'));
+  });
+
   it('says the interfaces could not be loaded and reads them again on retry', async () => {
     let calls = 0;
     renderPage('/it/applications/app-1/interfaces', reach, null, async () => {

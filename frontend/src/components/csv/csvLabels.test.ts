@@ -18,6 +18,19 @@ describe('csv labels', () => {
   it('names the entity of an endpoint', () => {
     expect(csvEntityOf('/applications')).toBe('applications');
     expect(csvEntityOf('/it/assets?x=1')).toBe('it_assets');
+    // A record's own list is the list it ends with; a record names its list (lot I6c of 26.12.1).
+    expect(csvEntityOf('/chart-of-accounts/3f1c2a4e-9b7d-4c1e-8a2b-1d2e3f4a5b6c/accounts')).toBe('accounts');
+    expect(csvEntityOf('/admin/coa-templates/3f1c2a4e-9b7d-4c1e-8a2b-1d2e3f4a5b6c')).toBe('admin_coa-templates');
+    expect(csvEntityOf('/technologies/asset-links')).toBe('technologies_asset-links');
+  });
+
+  it('names a column of one year by its base and its year', () => {
+    const yearly = ((key: string, options?: { defaultValue?: string }) => (
+      ({ 'csv.fields.companies.headcount': 'Effectif' } as Record<string, string>)[key] ?? options?.defaultValue ?? key
+    )) as never;
+    expect(csvFieldLabel(yearly, 'companies', { csvColumn: 'headcount_2027', label: 'headcount_2027' })).toBe('Effectif 2027');
+    expect(csvFieldLabel(yearly, 'companies', { csvColumn: 'budget_2027', label: 'budget_2027' })).toBe('budget_2027');
+    expect(csvFieldLabel(t, 'companies', { csvColumn: 'headcount_2027', label: 'headcount_2027' })).toBe('headcount_2027');
   });
 
   it('translates a known field, group and preset', () => {

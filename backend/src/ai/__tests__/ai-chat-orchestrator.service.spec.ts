@@ -1673,11 +1673,11 @@ async function testApprovalMarkerExecutesPreviewWithoutProviderRoundTrip() {
   assert.ok(previewResult);
   assert.equal(previewResult.status, 'executed');
   const textDeltas = events.filter((event) => event.type === 'text_delta') as any[];
-  assert.equal(textDeltas.map((event) => event.text).join(''), '[T-1](/portfolio/tasks/task-1) status updated to done.');
+  assert.equal(textDeltas.map((event) => event.text).join(''), '[T-1](/portfolio/tasks/T-1) status updated to done.');
   assert.equal(persistedMessages[0].role, 'user');
   assert.equal(persistedMessages[0].content, '[APPROVE:11111111-1111-4111-8111-111111111111]');
   assert.equal(persistedMessages[1].role, 'assistant');
-  assert.equal(persistedMessages[1].content, '[T-1](/portfolio/tasks/task-1) status updated to done.');
+  assert.equal(persistedMessages[1].content, '[T-1](/portfolio/tasks/T-1) status updated to done.');
   assert.equal(providerCallCount.value, 0);
   assert.equal(recordedRequests.length, 0);
 }
@@ -3741,7 +3741,7 @@ async function testRejectedPreviewEndsUnlessThePersonAskedForMore() {
   const singleEvents = await collectEvents(single.orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: reject }));
   assert.equal(single.providerCallCount.value, 0);
   assert.equal(single.approvalCalls.reject, 1);
-  assert.equal(streamedText(singleEvents), 'Status update for [T-1](/portfolio/tasks/task-1) was rejected.');
+  assert.equal(streamedText(singleEvents), 'Status update for [T-1](/portfolio/tasks/T-1) was rejected.');
 
   const multi = createOrchestrator({
     historyMessages: [
@@ -5046,7 +5046,7 @@ async function testFailedApprovalStatesTheErrorOnce() {
     summary: 'Task "T-4" not found.',
     error_message: 'Task "T-4" not found.',
   }, 'en');
-  assert.equal(linked, 'Task "[T-4](/portfolio/tasks/task-1)" not found.');
+  assert.equal(linked, 'Task "[T-4](/portfolio/tasks/T-4)" not found.');
 
   const imported = await say({
     target: { entity_type: 'imports', entity_id: null, ref: null, title: 'budget.xlsx' },
@@ -5112,6 +5112,20 @@ async function run() {
     target: { entity_type: 'budget_lines', entity_id: '11111111-2222-3333-4444-555555555555', ref: 'CPX-2' }, status: 'executed', summary: 'Updated CPX-2.',
   }]);
   assert.equal(linked, 'Updated [CPX-2](/ops/budget/BL-127).');
+  // Every family whose page opens by its reference is linked by it (technologies, the families of
+  // 26.11.9, contributors); a record without a reference keeps its id.
+  for (const [entityType, ref, url] of [
+    ['technologies', 'TEC-7', '/it/technologies/TEC-7'],
+    ['suppliers', 'SUP-3', '/master-data/suppliers/SUP-3'],
+    ['contracts', 'CTR-2', '/ops/contracts/CTR-2'],
+    ['contributors', 'MEM-2', '/portfolio/contributors/MEM-2'],
+    ['projects', 'PRJ-12', '/portfolio/projects/PRJ-12'],
+  ]) {
+    const byReference = await (orchestrator as any).buildPreviewResultsAssistantText({ query: async () => [] }, [{
+      target: { entity_type: entityType, entity_id: '11111111-2222-3333-4444-555555555555', ref }, status: 'executed', summary: `Updated ${ref}.`,
+    }]);
+    assert.equal(byReference, `Updated [${ref}](${url}).`, `${entityType}: linked by its reference`);
+  }
   // Accounts and dimension values have pages of their own: their confirmations link to them.
   const account = await (orchestrator as any).buildPreviewResultsAssistantText({ query: async () => [] }, [{
     target: { entity_type: 'accounts', entity_id: 'account-id', ref: '612100' }, status: 'executed', summary: 'Updated 612100.',

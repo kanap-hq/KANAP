@@ -474,6 +474,7 @@ export default function CostCenterWorkspacePage() {
           <CostCenterAccessTab
             costCenterId={data.id}
             companyId={data.company_id}
+            companyItemNumber={data.company_item_number}
             nodeLabel={data.code ? `${data.name} (${data.code})` : data.name}
           />
         )}

@@ -25,12 +25,14 @@ type Props = {
   costCenterId: string;
   /** The company of the center: an access inherited from it links to the company's Access tab. */
   companyId?: string | null;
+  /** The company's number: its page opens by its reference (`COMP-3`). */
+  companyItemNumber?: number | null;
   /** The center or group as the tab labels its nodes ("Infrastructure (INF)"). */
   nodeLabel: string;
 };
 
 /** The "Access" tab of a cost center or group (spec §7.2): direct access, then what covers it. */
-export default function CostCenterAccessTab({ costCenterId, companyId = null, nodeLabel }: Props) {
+export default function CostCenterAccessTab({ costCenterId, companyId = null, companyItemNumber = null, nodeLabel }: Props) {
   const { t } = useTranslation(['admin', 'common']);
   const queryClient = useQueryClient();
   const queryKey = React.useMemo(() => ['cost-center-data-access', costCenterId] as const, [costCenterId]);
@@ -70,7 +72,7 @@ export default function CostCenterAccessTab({ costCenterId, companyId = null, no
       via = (
         <Link
           component={RouterLink}
-          to={`/master-data/companies/${companyId}/access`}
+          to={`/master-data/companies/${companyItemNumber ? `COMP-${companyItemNumber}` : companyId}/access`}
           underline="hover"
           sx={{ fontSize: 13, color: 'kanap.text.secondary' }}
         >

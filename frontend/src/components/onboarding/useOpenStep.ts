@@ -10,7 +10,7 @@ import type { OnboardingAngle } from './onboardingApi';
 import { STEP_PARAM, stepHref, stepScreen, type StepLocationState } from './onboardingPaths';
 
 type TopLine = { id: string; item_number: number | null; product_name: string | null };
-type Application = { id: string; name: string | null };
+type Application = { id: string; name: string | null; sequential_id?: string | null };
 type PortfolioItem = { id: string; item_number: number | null; name: string | null };
 
 const portfolioRef = (type: 'request' | 'project', item: PortfolioItem) =>
@@ -78,7 +78,7 @@ export function useOpenStep() {
       }
       const res = await api.get<{ item: Application | null }>('/onboarding/showcase-application');
       const application = res.data.item;
-      return application ? { path: buildItemPath('application', application.id), record: application.name } : null;
+      return application ? { path: buildItemPath('application', application.sequential_id || application.id), record: application.name } : null;
     };
     try {
       const opened = await find();

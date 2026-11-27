@@ -126,22 +126,22 @@ async function run() {
     const onM1 = await of(m1);
     const m1Source = onM1.byId.get(cSource) as any;
     assert.deepEqual(m1Source.asset_roles, [
-      { part: 'source', hop_order: null, inherited: true, via_clusters: [{ id: cluster1, name: 'cluster-1' }] },
+      { part: 'source', hop_order: null, inherited: true, via_clusters: [{ id: cluster1, name: 'cluster-1', reference: 'AST-CL1' }] },
     ]);
     assert.equal(m1Source.inherited, true);
-    assert.deepEqual(m1Source.via_clusters, [{ id: cluster1, name: 'cluster-1' }]);
+    assert.deepEqual(m1Source.via_clusters, [{ id: cluster1, name: 'cluster-1', reference: 'AST-CL1' }]);
     assert.deepEqual(m1Source.servers, [], 'a server-to-server connection names no server list');
     assert.deepEqual((onM1.byId.get(cDestination) as any).asset_roles, [
-      { part: 'destination', hop_order: null, inherited: true, via_clusters: [{ id: cluster1, name: 'cluster-1' }] },
+      { part: 'destination', hop_order: null, inherited: true, via_clusters: [{ id: cluster1, name: 'cluster-1', reference: 'AST-CL1' }] },
     ]);
     const m1Servers = onM1.byId.get(cServers) as any;
     assert.deepEqual(m1Servers.asset_roles, [
-      { part: 'server', hop_order: null, inherited: true, via_clusters: [{ id: cluster1, name: 'cluster-1' }] },
+      { part: 'server', hop_order: null, inherited: true, via_clusters: [{ id: cluster1, name: 'cluster-1', reference: 'AST-CL1' }] },
     ]);
     assert.equal(m1Servers.inherited, true);
     const m1Hop = onM1.byId.get(cHop) as any;
     assert.deepEqual(m1Hop.asset_roles, [
-      { part: 'hop', hop_order: 1, inherited: true, via_clusters: [{ id: cluster1, name: 'cluster-1' }] },
+      { part: 'hop', hop_order: 1, inherited: true, via_clusters: [{ id: cluster1, name: 'cluster-1', reference: 'AST-CL1' }] },
     ]);
     assert.equal(m1Hop.inherited, true);
 
@@ -155,10 +155,10 @@ async function run() {
     // --- Direct and inherited on the same connection: one role, the direct one wins.
     const m1Both = onM1.byId.get(cBoth) as any;
     assert.deepEqual(m1Both.asset_roles, [
-      { part: 'server', hop_order: null, inherited: false, via_clusters: [{ id: cluster1, name: 'cluster-1' }] },
+      { part: 'server', hop_order: null, inherited: false, via_clusters: [{ id: cluster1, name: 'cluster-1', reference: 'AST-CL1' }] },
     ]);
     assert.equal(m1Both.inherited, false, 'a direct row and an inherited one: the direct one wins');
-    assert.deepEqual(m1Both.via_clusters, [{ id: cluster1, name: 'cluster-1' }], 'the cluster stays named');
+    assert.deepEqual(m1Both.via_clusters, [{ id: cluster1, name: 'cluster-1', reference: 'AST-CL1' }], 'the cluster stays named');
     assert.deepEqual(m1Both.servers, [
       { id: cluster1, name: 'cluster-1', asset_reference: 'AST-CL1', is_cluster: true },
       { id: m1, name: 'srv-1', asset_reference: 'AST-01', is_cluster: false },
@@ -167,13 +167,13 @@ async function run() {
     // --- The union of the clusters of every role of one connection, sorted by name.
     const m2Mixed = (await of(m2)).byId.get(cMixed) as any;
     assert.deepEqual(m2Mixed.asset_roles, [
-      { part: 'destination', hop_order: null, inherited: true, via_clusters: [{ id: cluster1, name: 'cluster-1' }] },
-      { part: 'hop', hop_order: 1, inherited: true, via_clusters: [{ id: cluster2, name: 'cluster-2' }] },
+      { part: 'destination', hop_order: null, inherited: true, via_clusters: [{ id: cluster1, name: 'cluster-1', reference: 'AST-CL1' }] },
+      { part: 'hop', hop_order: 1, inherited: true, via_clusters: [{ id: cluster2, name: 'cluster-2', reference: 'AST-CL2' }] },
     ]);
     assert.equal(m2Mixed.inherited, true);
     assert.deepEqual(m2Mixed.via_clusters, [
-      { id: cluster1, name: 'cluster-1' },
-      { id: cluster2, name: 'cluster-2' },
+      { id: cluster1, name: 'cluster-1', reference: 'AST-CL1' },
+      { id: cluster2, name: 'cluster-2', reference: 'AST-CL2' },
     ]);
 
     // --- The hop equipment sees its own role, with its order; source sorts before hop.

@@ -891,7 +891,7 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onClose, onChanged }: {
                 const quiet = server.alerts === false;
                 return (
                   <li key={`${server.asset_id}:${server.technology_id}:${index}`}>
-                    <RecordLink to={`/it/assets/${server.asset_id}`} quiet={quiet}>{server.name ?? server.reference ?? ''}</RecordLink>
+                    <RecordLink to={`/it/assets/${server.reference || server.asset_id}`} quiet={quiet}>{server.name ?? server.reference ?? ''}</RecordLink>
                     <Box component="span" sx={{ color: quiet ? 'kanap.text.tertiary' : 'kanap.text.secondary' }}>
                       {' · '}{server.technology_name} {versionText(server, t)}
                       {server.via_asset_name && <>{' · '}{t('pages.vulnerabilities.detail.via', { name: server.via_asset_name })}</>}
@@ -924,7 +924,7 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onClose, onChanged }: {
                 const servers = names.length > 3 ? `${shown} ${t('pages.vulnerabilities.detail.moreServers', { count: names.length - 3 })}` : shown;
                 return (
                   <li key={app.key}>
-                    <RecordLink to={`/it/applications/${app.application_id}`} quiet={quiet}>
+                    <RecordLink to={`/it/applications/${app.reference || app.application_id}`} quiet={quiet}>
                       {app.reference && <><RelationRef>{app.reference}</RelationRef>{' '}</>}
                       {app.name ?? ''}
                     </RecordLink>

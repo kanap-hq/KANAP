@@ -184,10 +184,13 @@ type ApplicationRelationsCount = {
   total: number;
 };
 
+/** An application the overview links to; `reference` is its APP-n, the address of its page. */
+type ConnectedApp = { id: string; name: string; reference: string | null };
+
 type ConnectionsResult =
   | { type: 'none' }
-  | { type: 'directed'; receivesFrom: Array<{ id: string; name: string }>; sendsTo: Array<{ id: string; name: string }> }
-  | { type: 'undirected'; connected: Array<{ id: string; name: string }> };
+  | { type: 'directed'; receivesFrom: ConnectedApp[]; sendsTo: ConnectedApp[] }
+  | { type: 'undirected'; connected: ConnectedApp[] };
 
 type SupportContactRow = {
   id?: string;
@@ -267,29 +270,29 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 function computeConnections(app: ApplicationDetail, interfaces: InterfaceMiniRow[], untitledLabel: string): ConnectionsResult {
-  const addUniqueApp = (target: Map<string, { id: string; name: string }>, id: string | null | undefined, name: string | null | undefined) => {
+  const addUniqueApp = (target: Map<string, ConnectedApp>, id: string | null | undefined, name: string | null | undefined, reference: string | null | undefined) => {
     if (!id || target.has(id)) return;
-    target.set(id, { id, name: name || untitledLabel });
+    target.set(id, { id, name: name || untitledLabel, reference: reference || null });
   };
   const isMiddleware = app.etl_enabled === true;
   if (isMiddleware) {
-    const connected = new Map<string, { id: string; name: string }>();
+    const connected = new Map<string, ConnectedApp>();
     interfaces.forEach((row) => {
-      addUniqueApp(connected, row.source_application_id === app.id ? null : row.source_application_id, row.source_application_name);
-      addUniqueApp(connected, row.target_application_id === app.id ? null : row.target_application_id, row.target_application_name);
+      addUniqueApp(connected, row.source_application_id === app.id ? null : row.source_application_id, row.source_application_name, row.source_application_reference);
+      addUniqueApp(connected, row.target_application_id === app.id ? null : row.target_application_id, row.target_application_name, row.target_application_reference);
     });
     if (connected.size === 0) return { type: 'none' };
     return { type: 'undirected', connected: Array.from(connected.values()) };
   }
 
-  const receivesFrom = new Map<string, { id: string; name: string }>();
-  const sendsTo = new Map<string, { id: string; name: string }>();
+  const receivesFrom = new Map<string, ConnectedApp>();
+  const sendsTo = new Map<string, ConnectedApp>();
   interfaces.forEach((row) => {
     if (row.target_application_id === app.id && row.source_application_id !== app.id) {
-      addUniqueApp(receivesFrom, row.source_application_id, row.source_application_name);
+      addUniqueApp(receivesFrom, row.source_application_id, row.source_application_name, row.source_application_reference);
     }
     if (row.source_application_id === app.id && row.target_application_id !== app.id) {
-      addUniqueApp(sendsTo, row.target_application_id, row.target_application_name);
+      addUniqueApp(sendsTo, row.target_application_id, row.target_application_name, row.target_application_reference);
     }
   });
 
@@ -900,7 +903,7 @@ export function OverviewTab({
   onRefresh: () => Promise<void>;
 }) {
   const { t } = useTranslation(['it', 'common']);
-  const renderConnectionRow = (label: string, items: Array<{ id: string; name: string }>) => {
+  const renderConnectionRow = (label: string, items: ConnectedApp[]) => {
     if (items.length === 0) return null;
     const visible = items.slice(0, 8);
     const overflow = items.length - visible.length;
@@ -915,7 +918,7 @@ export function OverviewTab({
               key={item.id}
               component="button"
               type="button"
-              onClick={() => onOpenApplication(item.id)}
+              onClick={() => onOpenApplication(item.reference || item.id)}
               sx={(theme) => ({
                 border: `1px solid ${theme.palette.kanap.pill.border}`,
                 borderRadius: '999px',
@@ -1851,7 +1854,7 @@ export default function ApplicationWorkspacePage() {
               <ApplicationConvertButton
                 applicationId={app.id}
                 applicationName={app.name || t('workspace.application.untitled')}
-                onConverted={(technologyId) => navigate(`/it/technologies/${technologyId}`)}
+                onConverted={(technologyPath) => navigate(technologyPath)}
               />
             )}
             {!isCreate && !creation.beingCreated && canDelete && app && (
@@ -2000,7 +2003,7 @@ export default function ApplicationWorkspacePage() {
           onSuccess={(newApp) => {
             setVersionDialogOpen(false);
             feedbackRef.current.info(t('messages.versionCreated', { reference: newApp.sequential_id || newApp.name }));
-            navigate(`/it/applications/${newApp.id}/overview`);
+            navigate(`/it/applications/${newApp.sequential_id || newApp.id}/overview`);
           }}
         />
       )}

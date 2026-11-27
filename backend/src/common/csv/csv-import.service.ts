@@ -79,6 +79,8 @@ export interface CsvImportOptions {
   access?: CsvCallerAccess;
   /** The source of each record's history row (Kad's card); without it, the person's. See CsvImportContext. */
   audit?: AuditSourceOptions;
+  /** The zone of the date-times whose header names none: the person's (`timeZoneOf`). UTC when absent. */
+  timeZone?: string;
 }
 
 /** A reference cell nothing finds, or that may name several records: what parseFk and the lists do with it. */
@@ -159,7 +161,7 @@ export class CsvImportService {
     opts: CsvImportOptions,
   ): Promise<CsvImportResult> {
     // Decode and parse CSV
-    const { rows, headerErrors, headerWarnings, timeZones, firstSheetOnly } = await this.parseCsv(config, file, opts.language);
+    const { rows, headerErrors, headerWarnings, timeZones, firstSheetOnly } = await this.parseCsv(config, file, opts.language, opts.timeZone);
     // A workbook of several sheets: the report says which one was read, on every outcome.
     if (firstSheetOnly !== undefined) {
       headerWarnings.push({
@@ -372,6 +374,7 @@ export class CsvImportService {
     config: CsvEntityConfig,
     file: Express.Multer.File,
     language?: CsvLanguage,
+    personZone?: string,
   ): Promise<{
     rows: Record<string, string>[];
     headerErrors: CsvImportError[];
@@ -408,8 +411,8 @@ export class CsvImportService {
 
     // A date-time column may name the zone of its cells after its name (`detected_at
     // (Europe/Paris)`, as the export writes it): the row is read by the plain name, and the
-    // transform reads the cells in that zone. Without a zone, the cells are UTC, and the report
-    // says which columns were read that way.
+    // transform reads the cells in that zone. Without a zone, the cells are read in the person's
+    // zone (UTC when none is known), and the report says which columns were read that way.
     const zonedColumns = new Set(
       config.fields.filter((f) => f.zonedDateTime && f.importable !== false).map((f) => f.csvColumn),
     );
@@ -501,12 +504,14 @@ export class CsvImportService {
           }
 
           if (zoneless.length > 0) {
+            const zone = knownTimeZone(personZone) ?? 'UTC';
+            for (const column of zoneless) timeZones[column] = zone;
             const columns = zoneless.map(columnTitle);
             headerWarnings.push({
               row: 0,
-              message: `Times without a time zone, read as UTC: ${columns.join(', ')}`,
+              message: `Times without a time zone, read in ${zone}: ${columns.join(', ')}`,
               code: 'CSV_HEADER_ZONELESS_DATE_TIMES',
-              params: { columns: columns.join(', '), example: columns[0] },
+              params: { columns: columns.join(', '), example: columns[0], zone },
             });
           }
 

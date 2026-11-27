@@ -267,7 +267,7 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
             columns={columns}
             rows={rows}
             rowKey={(row) => `${row.kind}:${row.link_id ?? ''}:${row.application_id}:${row.environment ?? ''}:${row.asset_id ?? ''}:${row.via_asset_id ?? ''}:${row.technology_version_id ?? ''}`}
-            rowHref={(row) => `/it/applications/${row.application_id}/overview`}
+            rowHref={(row) => `/it/applications/${row.application_reference || row.application_id}/overview`}
             onRemove={canManage ? (row) => { void remove(row); } : undefined}
             canRemove={(row) => withdrawRows.has(row)}
             removeLabel={(row) => t('workspace.technology.applications.remove', { name: row.application_name ?? '' })}

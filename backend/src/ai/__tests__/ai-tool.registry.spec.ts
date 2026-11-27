@@ -2035,7 +2035,7 @@ async function testWithheldFieldsAndChargebackAreDescribed() {
     assert.match(description, /`chargeback.warnings` names in words what the figures leave out, for the answer to repeat/);
     assert.match(description, /a group by department keyed "company › department"/);
   }
-  assert.match(text('query_entities'), /data access row, chargeback row, which opens its report\), and a cost center, working-day calendar or analytics dimension, whose `ref` is its code, carries `page_url`/);
+  assert.match(text('query_entities'), /data access row, chargeback row, which opens its report\), and a cost center, working-day calendar or analytics dimension, whose `ref` is its code, carries `page_url`, the address of its page, when the user can open that page, as does a site or a connection, whose page opens by its `ref` \(LOC-2, CONN-4\)/);
   const mcp = registry.listRegisteredTools().filter((tool) => tool.surfaces.includes('mcp'));
   assert.equal(mcp.find((tool) => tool.name === 'aggregate_entities')?.description, text('aggregate_entities'), 'the MCP server reads the same description');
 }

@@ -1422,9 +1422,9 @@ export class ApplicationsListService extends ApplicationsBaseService {
     // The servers the application runs on (effective: a cluster and its members in service), an
     // inherited one marked with the clusters it comes through.
     const assetRows: Array<{
-      asset_id: string; asset_name: string; is_cluster: boolean; environment: string; inherited: boolean; via_clusters: Array<{ id: string; name: string }>;
+      asset_id: string; asset_reference: string | null; asset_name: string; is_cluster: boolean; environment: string; inherited: boolean; via_clusters: Array<{ id: string; name: string; reference: string | null }>;
     }> = await mg.query(
-      `SELECT s.id AS asset_id, s.name AS asset_name, s.is_cluster, ai.environment, asa.inherited, asa.via_clusters
+      `SELECT s.id AS asset_id, s.asset_reference, s.name AS asset_name, s.is_cluster, ai.environment, asa.inherited, asa.via_clusters
        FROM (${effectiveAssignmentsSql({ tenant: 'app_current_tenant()', applications: 'ARRAY[$1::uuid]' })}) asa
        JOIN app_instances ai ON ai.id = asa.app_instance_id AND ai.tenant_id = asa.tenant_id
        JOIN assets s ON s.id = asa.asset_id AND s.tenant_id = asa.tenant_id
@@ -1436,6 +1436,8 @@ export class ApplicationsListService extends ApplicationsBaseService {
 
     const assigned_servers = assetRows.map((row) => ({
       id: row.asset_id,
+      // The server's AST-n: the map opens its page by it.
+      asset_reference: row.asset_reference ?? null,
       name: row.asset_name,
       is_cluster: !!row.is_cluster,
       environment: row.environment,
@@ -1447,6 +1449,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
 
     return {
       id: app.id,
+      reference: app.sequential_id ?? null,
       name: app.name,
       description: app.description,
       editor: app.editor,

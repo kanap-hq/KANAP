@@ -29,6 +29,7 @@ import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downlo
 import ExportFormatButton from '../../components/csv/ExportFormatButton';
 import type { ExportFormat } from '../../components/csv/exportFormat';
 import { catalogOptionLabel } from '../../utils/catalogOffered';
+import { buildItemPath } from '../../utils/item-ref';
 
 const ENDPOINT = '/technologies/reports/administration';
 const ASSETS_ENDPOINT = `${ENDPOINT}/assets`;
@@ -119,6 +120,9 @@ function useDirectories() {
     queryFn: async () => (await api.get<AdministrationDirectories>(`${ENDPOINT}/directories`)).data,
   });
 }
+
+/** A directory service's page, by its reference (`TEC-3`), by its uuid without one. */
+const technologyPath = (row: { id: string; reference: string | null }) => buildItemPath('technology', row.reference || row.id);
 
 /** The value of the "No zone" choice of the assignment (the server takes `null`). */
 const NO_ZONE = '__none__';
@@ -685,7 +689,7 @@ function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => s
       header: t('pages.administrationView.columns.reference'),
       width: 96,
       render: (row) => (
-        <RecordLink to={`/it/technologies/${row.id}`}>{row.reference ? <RelationRef>{row.reference}</RelationRef> : row.name}</RecordLink>
+        <RecordLink to={technologyPath(row)}>{row.reference ? <RelationRef>{row.reference}</RelationRef> : row.name}</RecordLink>
       ),
     },
     { key: 'name', header: t('common.name'), width: 240, render: (row) => row.name },
@@ -744,7 +748,7 @@ function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => s
     <Stack spacing={2.5}>
       <RelationsSection title={t('pages.administrationView.attributes.directoryServices')} count={services.length}>
         {services.length
-          ? <RelationsTable columns={serviceColumns} rows={services} rowKey={(row) => row.id} rowHref={(row) => `/it/technologies/${row.id}`} ariaLabel={t('pages.administrationView.attributes.directoryServices')} />
+          ? <RelationsTable columns={serviceColumns} rows={services} rowKey={(row) => row.id} rowHref={technologyPath} ariaLabel={t('pages.administrationView.attributes.directoryServices')} />
           : <RelationsEmpty>{t('pages.administrationView.noDirectories')}</RelationsEmpty>}
       </RelationsSection>
       <RelationsSection title={t('pages.administrationView.domains')} count={domainCount} hint={t('pages.administrationView.domainsHint')}>

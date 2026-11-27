@@ -24,6 +24,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import PeopleIcon from '@mui/icons-material/People';
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
 import { useRecentlyViewed, ENTITY_TYPE_CONFIG, RecentEntityType } from '../hooks/useRecentlyViewed';
 import { useAuth } from '../../../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -56,6 +57,7 @@ const ICON_COMPONENTS: Record<string, typeof FolderOpenIcon> = {
   AccountTree: AccountTreeIcon,
   LocalShipping: LocalShippingIcon,
   People: PeopleIcon,
+  Layers: LayersOutlinedIcon,
 };
 
 const MAX_TILE_ITEMS = 10;

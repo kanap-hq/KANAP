@@ -32,6 +32,7 @@ async function testExisting() {
     const processId = await one(`INSERT INTO business_processes (tenant_id, name) VALUES ($1, 'Order to cash') RETURNING id`, [tenantId]);
     const goneProcessId = await one(`INSERT INTO business_processes (tenant_id, name) VALUES ($1, 'Gone process') RETURNING id`, [tenantId]);
     await runner.query(`DELETE FROM business_processes WHERE id = $1`, [goneProcessId]);
+    const technologyId = await one(`INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, 1, 'PostgreSQL', 'database') RETURNING id`, [tenantId]);
     const capexId = await one(
       `INSERT INTO spend_items (tenant_id, nature, product_name, ppe_type, investment_type, priority, currency, effective_start, item_number, legacy_number)
        VALUES ($1, 'capex', 'Line', 'hardware', 'replacement', 'medium', 'EUR', '2026-01-01', $2, 'CPX-1') RETURNING id`,
@@ -51,6 +52,8 @@ async function testExisting() {
       { type: 'application', id: otherApp },
       { type: 'business_process', id: processId },
       { type: 'business_process', id: goneProcessId },
+      { type: 'technology', id: technologyId },
+      { type: 'technology', id: randomUUID() },
       // A budget line stays one entry whatever its nature.
       { type: 'spend_item', id: capexId },
       { type: 'project', id: randomUUID() },
@@ -61,7 +64,7 @@ async function testExisting() {
     assert.deepEqual(
       existing.map((item) => `${item.type}:${item.id}`).sort(),
       [`application:${appId}`, `business_process:${processId}`, `company:${companyId}`, `contact:${contactId}`, `contract:${contractId}`,
-        `department:${departmentId}`, `spend_item:${capexId}`, `supplier:${supplierId}`, `task:${taskId}`].sort(),
+        `department:${departmentId}`, `spend_item:${capexId}`, `supplier:${supplierId}`, `task:${taskId}`, `technology:${technologyId}`].sort(),
     );
 
     // The task goes with its contract: the next check no longer lists it.

@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import en from '../../locales/en/it.json';
 import fr from '../../locales/fr/it.json';
@@ -50,7 +50,8 @@ const SERVERS = [
   { id: 'web-1', name: 'PAR-WEB-01', environment: 'prod', is_cluster: false, inherited: false, via_clusters: [] },
 ];
 
-let servers: typeof SERVERS = SERVERS;
+let servers: Array<(typeof SERVERS)[number] & { asset_reference?: string }> = SERVERS;
+let summaryReference: string | undefined;
 
 const CONNECTION_LINK = {
   id: 'link-1',
@@ -118,7 +119,7 @@ function renderPage(entry = '/it/interface-map', map: typeof MAP | typeof LINKED
     if (url === '/applications/app-1/map-summary') {
       return {
         data: {
-          id: 'app-1', name: 'CheeseTrack', description: null, editor: null, criticality: 'high',
+          id: 'app-1', reference: summaryReference, name: 'CheeseTrack', description: null, editor: null, criticality: 'high',
           assigned_servers: servers, business_owners: [], it_owners: [], support_contacts: [],
         },
       };
@@ -208,6 +209,28 @@ describe('InterfaceMapPage application panel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'node CheeseTrack' }));
     fireEvent.click(await screen.findByRole('button', { name: 'pages.interfaceMap.openApplication' }));
     expect(screen.getByTestId('where').textContent).toBe('/it/applications/app-1/overview');
+  });
+});
+
+describe('InterfaceMapPage panel addresses', () => {
+  beforeEach(() => { get.mockReset(); });
+  afterEach(() => { servers = SERVERS; summaryReference = undefined; });
+
+  it('opens a server by its reference', async () => {
+    servers = SERVERS.map((server) => (server.id === 'sql-2' ? { ...server, asset_reference: 'SRV-12' } : server));
+    summaryReference = 'APP-1';
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'node CheeseTrack' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'PAR-SQL-02' }));
+    expect(screen.getByTestId('where').textContent).toBe('/it/assets/SRV-12/overview');
+  });
+
+  it('opens the application by its reference', async () => {
+    summaryReference = 'APP-1';
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'node CheeseTrack' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'pages.interfaceMap.openApplication' }));
+    expect(screen.getByTestId('where').textContent).toBe('/it/applications/APP-1/overview');
   });
 });
 

@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../../common/csv-sheet';
+import { knownTimeZone, readTimeZoneHeader } from '../../common/csv-sheet/date';
 import { readImportCell } from '../../common/csv-sheet/clear';
 import { classifyHeaders } from '../../common/csv-sheet/headers';
 import { labelLists } from '../../common/csv-sheet/master-data';
@@ -56,6 +57,12 @@ export interface AiImportMappingRequest {
   assumptions: string[];
   /** The file's columns the person asked to leave aside, by header: never read by their header alone. */
   leftAside?: string[];
+  /**
+   * The zone of the person who imports (lot I6c of 26.12.1): a date-time column whose header names no
+   * zone is read in it, and the card says so. A header that names one (`Detected (Europe/Paris)`, as
+   * the export writes it) keeps its own.
+   */
+  timeZone?: string | null;
 }
 
 /**
@@ -66,7 +73,8 @@ export type AiImportFileCell = string | { unread: string };
 
 /** The file the import reads: the template columns the mapping fills, one row per data row of the person's file. */
 export interface AiImportFileContent {
-  columns: Array<{ column: string; kind: AiImportColumnKind }>;
+  /** `timeZone`: the zone a date-time column's cells are written in, which the file's header names. */
+  columns: Array<{ column: string; kind: AiImportColumnKind; timeZone?: string }>;
   rows: AiImportFileCell[][];
   /**
    * The model's `values` for the columns its import finds by name (`isImportMatchedColumn`: a budget
@@ -220,6 +228,34 @@ export function namesARow(assumption: string): boolean {
   return ROW_NUMBER.test(assumption);
 }
 
+/** A time zone, by its word in the four languages or by its name (`Europe/Paris`, `UTC`). */
+const TIME_ZONE_WORD = /fuseau|time ?zone|zeitzone|zona horaria|(?<![\p{L}])(?:utc|gmt)(?![\p{L}])/iu;
+const TIME_ZONE_NAME = /(?<![\p{L}])(?:Africa|America|Antarctica|Asia|Atlantic|Australia|Europe|Indian|Pacific)\/[A-Z][A-Za-z_]+/u;
+
+/**
+ * An assumption of the model about time zones (lot I6c of 26.12.1): the card leaves it out, as it says
+ * itself how it reads the times, and only when it reads some in the person's zone.
+ */
+export function namesATimeZone(assumption: string): boolean {
+  return TIME_ZONE_WORD.test(assumption) || TIME_ZONE_NAME.test(assumption);
+}
+
+/** What the card supposes of the times a file writes without a zone (lot I6c of 26.12.1), in the person's language. */
+function zoneAssumption(timeZone: string, language: CsvLanguage): string {
+  switch (language) {
+    case 'fr': return `Les heures sans fuseau horaire sont lues dans votre fuseau, ${timeZone}.`;
+    case 'de': return `Uhrzeiten ohne Zeitzone werden in Ihrer Zeitzone gelesen, ${timeZone}.`;
+    case 'es': return `Las horas sin zona horaria se leen en su zona horaria, ${timeZone}.`;
+    default: return `Times without a time zone are read in your time zone, ${timeZone}.`;
+  }
+}
+
+/** The zone a date-time column's header names (`Detected (Europe/Paris)`), when it is one; null otherwise. */
+function headerZone(header: string | null): string | null {
+  const named = header ? readTimeZoneHeader(header) : null;
+  return named ? knownTimeZone(named.zone) : null;
+}
+
 /** The model's own words on the card, on one line: the input schema bounds their length. */
 function oneLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
@@ -261,6 +297,9 @@ export function buildImportMapping(
   const rowLacksRequired = new Array<boolean>(grid.rows.length).fill(false);
   const fileRows: AiImportFileCell[][] = grid.rows.map(() => []);
   const proposals: Record<string, Record<string, string>> = {};
+  // The zone of each date-time column the file fills: its header's, else the person's.
+  const zones = new Map<string, string>();
+  let personZoneRead = false;
 
   // The person's `-` reaches every import as the clearing mark, in every kind of column: the row imports
   // and the budget file, which reads it by its own reader (lot I6 of 26.11.9, pass F).
@@ -286,6 +325,12 @@ export function buildImportMapping(
     }
     const hints = { dateOrder: entry.date_order, decimalMark: entry.decimal_mark, values, clearMark };
     const note = entry.note ? oneLine(entry.note) || null : null;
+    let inPersonZone = false;
+    if (column.kind === 'datetime' && request.timeZone) {
+      const own = entry.source != null ? headerZone(headerText(grid, entry.source)) : null;
+      zones.set(column.column, own ?? request.timeZone);
+      inPersonZone = !own;
+    }
 
     if (entry.source === undefined || entry.source === null) {
       // A value for every row: it must be one the column takes.
@@ -305,6 +350,7 @@ export function buildImportMapping(
         sampleUnread[index].push(false);
       }
       for (const row of fileRows) row.push(result.value);
+      if (inPersonZone && grid.rows.length > 0) personZoneRead = true;
       continue;
     }
 
@@ -331,6 +377,7 @@ export function buildImportMapping(
       return result;
     });
     if (examples.length > 0) unreadValues[column.column] = examples;
+    if (inPersonZone && filled > 0) personZoneRead = true;
     if (reader.error) readErrors[column.column] = reader.error;
     columns.push({
       column: column.column, title: column.title, required: column.required, kind: column.kind,
@@ -375,12 +422,18 @@ export function buildImportMapping(
         .filter((column) => column.required && !entries.has(column.column))
         .map((column) => ({ column: column.column, title: column.title })),
       unplaced,
-      assumptions: request.assumptions.map(oneLine).filter((assumption) => assumption !== '' && !namesARow(assumption)),
+      // The server's supposition first: it says the card's state, whatever the model wrote.
+      assumptions: [
+        ...(personZoneRead ? [zoneAssumption(request.timeZone!, language)] : []),
+        ...request.assumptions.map(oneLine).filter((assumption) => assumption !== '' && !namesARow(assumption) && !namesATimeZone(assumption)),
+      ],
       sample: { columns: mapped.map((column) => column.column), rows: sampleRows, unread: sampleUnread },
       rows_missing_required: rowLacksRequired.filter(Boolean).length,
     },
     file: {
-      columns: mapped.map((column) => ({ column: column.column, kind: column.kind })),
+      columns: mapped.map((column) => ({
+        column: column.column, kind: column.kind, ...(zones.has(column.column) ? { timeZone: zones.get(column.column)! } : {}),
+      })),
       rows: fileRows,
       ...(Object.keys(proposals).length > 0 ? { proposals } : {}),
     },

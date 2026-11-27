@@ -116,8 +116,8 @@ describe('AssetTechnologiesSection', () => {
     const table = await screen.findByRole('table', { name: `${K}.title` });
     const rows = [...table.querySelectorAll('tbody tr')] as HTMLElement[];
     expect(rows).toHaveLength(2);
-    expect(within(rows[1]).getByRole('link', { name: 'PAR-SQL-01' }).getAttribute('href')).toBe('/it/assets/m1/overview');
-    expect(within(rows[1]).getByRole('link', { name: 'PAR-SQL-02' }).getAttribute('href')).toBe('/it/assets/m2/overview');
+    expect(within(rows[1]).getByRole('link', { name: 'PAR-SQL-01' }).getAttribute('href')).toBe('/it/assets/AST-1/overview');
+    expect(within(rows[1]).getByRole('link', { name: 'PAR-SQL-02' }).getAttribute('href')).toBe('/it/assets/AST-2/overview');
     expect(within(rows[1]).getByTitle('PAR-SQL-01, PAR-SQL-02')).toBeTruthy();
   });
 

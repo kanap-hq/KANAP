@@ -184,10 +184,21 @@ async function testShowcaseApplication() {
     // Workspace B: a critical application richer than any of A.
     const other = await application(b.tenantId, 'Other workspace critical', 'business_critical', { deployments: 6, technologies: 3 });
 
+    // The step opens the application by its APP-n, numbered at its creation.
+    const tenantA = a.tenantId;
+    const tenantB = b.tenantId;
+    const referenceOf = async (tenantId: string, appId: string): Promise<string> => (await inTenant(tenantId, (m) => m.query(
+      `SELECT sequential_id FROM applications WHERE tenant_id = $1 AND id = $2`, [tenantId, appId],
+    )))[0].sequential_id;
+    await inTenant(tenantA, (m) => m.query(`UPDATE applications SET sequential_id = 'APP-77' WHERE tenant_id = $1 AND id = $2`, [tenantA, rich]));
+    const otherReference = await referenceOf(tenantB, other);
+    const emptyReference = await referenceOf(tenantA, empty);
+    assert.match(otherReference, /^APP-\d+$/);
+
     const res = await showcase(served, a, ownerToken(a));
     assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.deepEqual(res.body, { item: { id: rich, name: 'Rich critical' } }, 'the richest enabled critical application of the workspace');
-    assert.deepEqual((await showcase(served, b, ownerToken(b))).body, { item: { id: other, name: 'Other workspace critical' } }, 'each workspace its own');
+    assert.deepEqual(res.body, { item: { id: rich, name: 'Rich critical', sequential_id: 'APP-77' } }, 'the richest enabled critical application of the workspace, with its reference');
+    assert.deepEqual((await showcase(served, b, ownerToken(b))).body, { item: { id: other, name: 'Other workspace critical', sequential_id: otherReference } }, 'each workspace its own');
 
     // A Business Contributor reads only the applications they own.
     const contributor = await inTenant(a.tenantId, async (manager) => {
@@ -206,7 +217,7 @@ async function testShowcaseApplication() {
     });
     const asContributor = await showcase(served, a, await userToken(a.tenantId, contributor));
     assert.equal(asContributor.status, 200, JSON.stringify(asContributor.body));
-    assert.deepEqual(asContributor.body, { item: { id: empty, name: 'Aaa empty critical' } }, 'a Business Contributor gets one of their own');
+    assert.deepEqual(asContributor.body, { item: { id: empty, name: 'Aaa empty critical', sequential_id: emptyReference } }, 'a Business Contributor gets one of their own');
 
     // A Budget Reader does not read the applications.
     const reader = await inTenant(a.tenantId, async (manager) => (await svc.users.createUser({
