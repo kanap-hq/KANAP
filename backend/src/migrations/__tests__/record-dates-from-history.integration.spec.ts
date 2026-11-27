@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import { RecordDatesFromHistory1856277000000 as Migration } from '../1856277000000-record-dates-from-history';
+import { RecordDatesRequestLinks1856290000000 } from '../1856290000000-record-dates-request-links';
 import { historyShowsRow, recordsToDate } from '../../audit/record-dating';
 import { RECORD_HISTORY, type RecordHistoryRecord } from '../../audit/record-history.inventory';
 import { UPDATED_AT_TABLES } from '../../common/updated-at.inventory';
@@ -10,7 +11,8 @@ import { assert, inRolledBackTransaction, runSpecs, seedItem, seedTenant, setTen
 
 // Migration 1856277000000 (the records that existed before their history dated them take the date
 // of their latest history entry), against a real database, in a transaction rolled back at the end:
-// - correspondence: the copy frozen in the migration is the dating code's (`audit/record-dating.ts`);
+// - correspondence: the copy frozen in the migration is the dating code's (`audit/record-dating.ts`),
+//   with applications and assets from 1856290000000, which widened them (lot K2f);
 // - a dirty database of two tenants: an entry later than the date moves it to that exact instant,
 //   a date later than every entry stays, a record without an entry stays, an entry in the future
 //   is capped at now(), a child entry (a contact added to a contract, an amount of a budget line)
@@ -56,10 +58,14 @@ function codeDating(): Record<string, Dating> {
   return out;
 }
 
-/** The migration's copy, sorted the same way. */
+/**
+ * The migrations' copy, sorted the same way: 1856277000000's, with the families a later dating
+ * migration widened taken from that one (1856290000000: applications and assets, lot K2f).
+ */
 function migrationDating(): Record<string, Dating> {
   const out: Record<string, Dating> = {};
-  for (const [table, dating] of Object.entries(migration.dating)) {
+  const latest = { ...migration.dating, ...new RecordDatesRequestLinks1856290000000().dating };
+  for (const [table, dating] of Object.entries(latest)) {
     const copy: Dating = { own: [...dating.own].sort() };
     if (dating.byRecord?.length) copy.byRecord = [...dating.byRecord].sort();
     if (dating.byParent?.length) copy.byParent = [...dating.byParent].sort();
@@ -81,10 +87,10 @@ async function testCorrespondenceIsTheCode() {
   assert.deepEqual(
     problems,
     [],
-    'audit/record-dating.ts and migration 1856277000000 no longer date the same records. Do not edit the migration: it '
-      + 'has run on installed databases. When the change of the dating is deliberate, decide whether the records that '
+    'audit/record-dating.ts and migrations 1856277000000 / 1856290000000 no longer date the same records. Do not edit them: they '
+      + 'have run on installed databases. When the change of the dating is deliberate, decide whether the records that '
       + 'already exist must take the dates of the rows the new correspondence reads; if so, write a new migration that '
-      + 'does it with its own frozen copy, as 1856277000000 does, and point this comparison at that migration.',
+      + 'does it with its own frozen copy, as 1856277000000 does, and point this comparison at that migration for its families.',
   );
 }
 

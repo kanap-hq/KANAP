@@ -315,6 +315,8 @@ const URL_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEntityType }
   { pattern: /\/master-data\/cost-centers\//i, entityType: 'cost_centers' },
   { pattern: /\/master-data\/working-day-calendars\//i, entityType: 'working_day_calendars' },
   { pattern: /\/master-data\/analytics\/dimensions\//i, entityType: 'analytics_axes' },
+  // Portfolio › Contributors, read only: no write tool routes it.
+  { pattern: /\/portfolio\/contributors\//i, entityType: 'contributors' },
 ];
 
 const TASK_ENTITY_TYPES = new Set<AiQueryEntityType>(['tasks']);

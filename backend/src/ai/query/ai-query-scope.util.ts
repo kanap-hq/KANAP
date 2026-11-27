@@ -49,6 +49,7 @@ export type ScopedAiEntityType =
   | 'vulnerabilities'
   | 'cost_centers'
   | 'working_day_calendars'
+  | 'contributors'
   | 'analytics_axes';
 
 export type ResolvedAiScope = {

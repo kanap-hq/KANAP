@@ -71,6 +71,13 @@ const L9_REFERENCE_DATA_PHRASES: Array<{ prompt: string; profile: AiContextProfi
   { prompt: 'Qui est responsable de /master-data/cost-centers/0b0e7c4e-1111-4222-8333-944455556666 ?', profile: 'entity_inspection', tool: 'get_entity_detail', family: 'cost_centers' },
   { prompt: 'Combien de jours ouvrés en 2026 sur /master-data/working-day-calendars/0b0e7c4e-1111-4222-8333-944455556666 ?', profile: 'entity_inspection', tool: 'get_entity_detail', family: 'working_day_calendars' },
   { prompt: 'Is /master-data/analytics/dimensions/0b0e7c4e-1111-4222-8333-944455556666 mandatory?', profile: 'entity_inspection', tool: 'get_entity_detail', family: 'analytics_axes' },
+  // Portfolio › Contributors (lot I7d of 26.12.1): a MEM-n reference is an inspection, a question
+  // on several contributors a read query.
+  { prompt: 'Qui est le contributeur MEM-1 ?', profile: 'entity_inspection', tool: 'get_entity_detail', family: 'contributors' },
+  { prompt: 'Who is contributor MEM-1?', profile: 'entity_inspection', tool: 'get_entity_detail', family: 'contributors' },
+  { prompt: 'Quels contributeurs ont la compétence SAP ?', profile: 'read_query', tool: 'query_entities', family: 'contributors' },
+  { prompt: 'Combien de contributeurs par équipe ?', profile: 'read_query', tool: 'aggregate_entities', family: 'contributors' },
+  { prompt: 'Quelle est la disponibilité de /portfolio/contributors/MEM-2 ?', profile: 'entity_inspection', tool: 'get_entity_detail', family: 'contributors' },
 ];
 
 const FIXTURE_ROWS: Row[] = [
@@ -839,9 +846,19 @@ function testTheReferenceDataPhrasesReadTheirFamily() {
   }
 }
 
+/** The contributors' phrases choose their profile and offer the tool that answers them. */
+function testTheContributorPhrasesReadTheirFamily() {
+  for (const { prompt, profile: expected, tool } of L9_REFERENCE_DATA_PHRASES.filter((row) => row.family === 'contributors')) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, expected, prompt);
+    assert.ok((profile.toolNames as readonly string[]).includes(tool), `${prompt}: ${tool} is offered`);
+  }
+}
+
 function run() {
   testTheTable();
   testTheReferenceDataPhrasesReadTheirFamily();
+  testTheContributorPhrasesReadTheirFamily();
   testTheReportPhrasesListTheReadableFamilies();
   testTheAccessWritesCarryNoAccessTool();
   testTheTechnologyLinkPhrasesCarryTheTool();

@@ -97,9 +97,9 @@ function services(runner: QueryRunner, audit = captureAudit()) {
   return { requests, audit };
 }
 
-/** The rows of one label, and nothing else written meanwhile. */
-function rowsOf(audit: ReturnType<typeof captureAudit>, table: string) {
-  return audit.entries.filter((entry) => entry.table === table);
+/** The rows of one label, and nothing else written meanwhile; of one record when `recordId` is given. */
+function rowsOf(audit: ReturnType<typeof captureAudit>, table: string, recordId?: string) {
+  return audit.entries.filter((entry) => entry.table === table && (!recordId || String(entry.recordId).toLowerCase() === recordId.toLowerCase()));
 }
 
 /** The `change` entries of the request's feed: they stay written beside the audit rows. */
@@ -116,12 +116,13 @@ async function onceThenNothing(
   audit: ReturnType<typeof captureAudit>,
   table: string,
   write: () => Promise<unknown>,
+  recordId?: string,
 ): Promise<any> {
   await write();
-  assert.equal(rowsOf(audit, table).length, 1, `${table}: one row for the change`);
+  assert.equal(rowsOf(audit, table, recordId).length, 1, `${table}: one row for the change`);
   await write();
-  assert.equal(rowsOf(audit, table).length, 1, `${table}: no row when nothing changes`);
-  return rowsOf(audit, table)[0];
+  assert.equal(rowsOf(audit, table, recordId).length, 1, `${table}: no row when nothing changes`);
+  return rowsOf(audit, table, recordId)[0];
 }
 
 async function testTeam() {
@@ -176,11 +177,15 @@ async function testApplicationsAndAssets() {
     const data = await seed(runner);
     const { requests, audit } = services(runner);
     const opts = { manager: runner.manager, userId: data.userA };
-    const app = await onceThenNothing(audit, 'portfolio_request_applications', () => requests.bulkReplaceApplications(data.requestId, [data.application], opts));
+    const app = await onceThenNothing(audit, 'portfolio_request_applications', () => requests.bulkReplaceApplications(data.requestId, [data.application], opts), data.requestId);
+    // The application reads the link in its History too (K2f): its own row, once.
+    assert.deepEqual(rowsOf(audit, 'portfolio_request_applications', data.application).map((entry) => [entry.before, entry.after]), [[[], [data.requestId.toLowerCase()]]], 'application: one row');
     assert.equal(app.recordId, data.requestId);
     assert.deepEqual(app.before, { ids: [] });
     assert.deepEqual(app.after, { ids: [data.application.toLowerCase()] });
-    const asset = await onceThenNothing(audit, 'portfolio_request_assets', () => requests.bulkReplaceAssets(data.requestId, [data.asset], opts));
+    const asset = await onceThenNothing(audit, 'portfolio_request_assets', () => requests.bulkReplaceAssets(data.requestId, [data.asset], opts), data.requestId);
+    // The asset reads the link in its History too (K2f): its own row, once.
+    assert.deepEqual(rowsOf(audit, 'portfolio_request_assets', data.asset).map((entry) => [entry.before, entry.after]), [[{ ids: [] }, { ids: [data.requestId.toLowerCase()] }]], 'asset: one row');
     assert.equal(asset.recordId, data.requestId);
     assert.deepEqual(asset.after, { ids: [data.asset.toLowerCase()] });
   });

@@ -136,7 +136,8 @@ async function testManualPctBulkUpsert() {
       if (/SELECT spend_item_id AS item_id FROM spend_versions WHERE tenant_id = \$1 AND id = \$2$/.test(sql)) return [{ item_id: 'item-1' }];
       if (/FROM spend_items WHERE tenant_id = \$1 AND id = \$2 AND nature = 'capex' FOR NO KEY UPDATE/.test(sql)) {
         locks.push(['line', ...params]);
-        return [{ locked: 1 }];
+        // The lock returns the instant it is held (`withLockedAt`).
+        return [{ locked_at: '2026-01-01 00:00:00+00' }];
       }
       // The version, locked only while it is still on the line locked (`lockVersionWithLine`).
       if (/FROM spend_versions\s+WHERE tenant_id = \$1 AND id = \$2 AND spend_item_id = \$3 AND EXISTS \(.*nature = 'capex'\)\s+FOR NO KEY UPDATE/s.test(sql)) {

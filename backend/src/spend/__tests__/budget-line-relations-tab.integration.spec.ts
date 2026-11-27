@@ -430,6 +430,8 @@ async function testContributor() {
   await inRolledBackTransaction(async (runner) => {
     const seed = await seedTab(runner, 'blrel-scope');
     const { audit, http } = httpOf();
+    // The line's rows (its own, or named as their parent); the application or project at the other end gets its own (K2f, see linked-ends.integration.spec.ts).
+    const lines = () => audit.entries.filter((entry) => [entry.recordId, entry.parent?.id].some((id) => id === seed.opexId || id === seed.capexId));
     const who = ctx(runner, seed, WRITE, seed.contributorId);
     const res = await http.relations(seed.opexId, who);
 
@@ -472,10 +474,10 @@ async function testContributor() {
       await http.unlinkRelation(seed.opexId, 'projects', seed.projects.alpha.id, who),
       { ok: true, changed: true },
     );
-    assert.equal(audit.entries.length, 2);
-    assert.equal(audit.entries[0].table, 'application_spend_items');
-    assert.equal(audit.entries[0].recordId, seed.opexId);
-    assert.equal(audit.entries[1].table, 'portfolio_project_opex');
+    assert.equal(lines().length, 2);
+    assert.equal(lines()[0].table, 'application_spend_items');
+    assert.equal(lines()[0].recordId, seed.opexId);
+    assert.equal(lines()[1].table, 'portfolio_project_opex');
     assert.ok(!(await linkIds(runner, 'portfolio_project_opex', 'project_id', 'opex_id', seed.opexId)).includes(seed.projects.alpha.id));
     assert.ok((await linkIds(runner, 'portfolio_project_opex', 'project_id', 'opex_id', seed.opexId)).includes(seed.projects.zulu.id));
   });
@@ -485,6 +487,8 @@ async function testLinksAndAudit() {
   await inRolledBackTransaction(async (runner) => {
     const seed = await seedTab(runner, 'blrel-write');
     const { audit, http } = httpOf();
+    // The line's rows (its own, or named as their parent); the application or project at the other end gets its own (K2f, see linked-ends.integration.spec.ts).
+    const lines = () => audit.entries.filter((entry) => [entry.recordId, entry.parent?.id].some((id) => id === seed.opexId || id === seed.capexId));
     const writer = ctx(runner, seed, WRITE, seed.readerId);
     const appIds = [seed.apps.alpha.id, seed.apps.delta.id, seed.apps.mid.id].sort();
 
@@ -492,7 +496,7 @@ async function testLinksAndAudit() {
       await http.linkRelation(seed.opexId, 'applications', { id: seed.apps.cedar.id.toUpperCase() }, writer),
       { ok: true, changed: true },
     );
-    assert.deepEqual(audit.entries[0], {
+    assert.deepEqual(lines()[0], {
       table: 'application_spend_items', recordId: seed.opexId, action: 'update',
       before: appIds, after: [...appIds, seed.apps.cedar.id].sort(), userId: seed.readerId,
       parent: { table: 'spend_items', id: seed.opexId },
@@ -501,7 +505,12 @@ async function testLinksAndAudit() {
       await http.linkRelation(seed.opexId, 'applications', { id: seed.apps.cedar.id }, writer),
       { ok: true, changed: false },
     );
-    assert.equal(audit.entries.length, 1, 'linking what is linked writes no audit row');
+    assert.equal(lines().length, 1, 'linking what is linked writes no audit row');
+    assert.deepEqual(
+      audit.entries.filter((entry) => !lines().includes(entry)).map((entry) => [entry.table, entry.recordId, entry.before, entry.after]),
+      [['application_spend_items', seed.apps.cedar.id, [], [seed.opexId]]],
+      'the application linked gets its own row, once',
+    );
     const afterLink = await http.relations(seed.opexId, writer);
     assert.ok(!afterLink.suggestions.some((row) => row.id === seed.apps.cedar.id));
 
@@ -509,7 +518,7 @@ async function testLinksAndAudit() {
       await http.unlinkRelation(seed.opexId, 'applications', seed.apps.cedar.id, writer),
       { ok: true, changed: true },
     );
-    assert.deepEqual(audit.entries[1].after, appIds);
+    assert.deepEqual(lines()[1].after, appIds);
     assert.deepEqual(
       await http.unlinkRelation(seed.opexId, 'applications', seed.apps.cedar.id, writer),
       { ok: true, changed: false },
@@ -517,7 +526,7 @@ async function testLinksAndAudit() {
 
     const projectIds = [seed.projects.alpha.id, seed.projects.zulu.id].sort();
     assert.deepEqual(await http.linkRelation(seed.opexId, 'projects', { id: seed.projects.free.id }, writer), { ok: true, changed: true });
-    assert.deepEqual(audit.entries[2], {
+    assert.deepEqual(lines()[2], {
       table: 'portfolio_project_opex', recordId: seed.opexId, action: 'update',
       before: projectIds, after: [...projectIds, seed.projects.free.id].sort(), userId: seed.readerId,
       parent: { table: 'spend_items', id: seed.opexId },
@@ -525,14 +534,14 @@ async function testLinksAndAudit() {
 
     const techIds = [seed.techs.alpha.id, seed.techs.mid.id].sort();
     assert.deepEqual(await http.unlinkRelation(seed.opexId, 'technologies', seed.techs.mid.id, writer), { ok: true, changed: true });
-    assert.deepEqual(audit.entries[3], {
+    assert.deepEqual(lines()[3], {
       table: 'technology_spend_items', recordId: seed.opexId, action: 'update',
       before: techIds, after: [seed.techs.alpha.id], userId: seed.readerId,
       parent: { table: 'spend_items', id: seed.opexId },
     });
 
     assert.deepEqual(await http.linkRelation(seed.opexId, 'contracts', { id: seed.contracts.cedar }, writer), { ok: true, changed: true });
-    assert.deepEqual(audit.entries[4], {
+    assert.deepEqual(lines()[4], {
       table: 'contract_spend_items', recordId: seed.opexId, action: 'update',
       before: [seed.contracts.alpha], after: [seed.contracts.alpha, seed.contracts.cedar].sort(), userId: seed.readerId,
       parent: { table: 'spend_items', id: seed.opexId },
@@ -540,14 +549,14 @@ async function testLinksAndAudit() {
 
     // The asset audit names the asset and the lines of this nature. The spare OPEX link is already there.
     assert.deepEqual(await http.linkRelation(seed.opexId, 'assets', { id: seed.assets.free.id }, writer), { ok: true, changed: true });
-    assert.deepEqual(audit.entries[5], {
+    assert.deepEqual(lines()[5], {
       table: 'asset_spend_items', recordId: seed.assets.free.id, action: 'update',
       before: { ids: [seed.spareId] }, after: { ids: [seed.opexId, seed.spareId].sort() }, userId: seed.readerId,
       parent: { table: 'spend_items', id: seed.opexId },
     });
     assert.deepEqual(await http.linkRelation(seed.opexId, 'assets', { id: seed.assets.free.id }, writer), { ok: true, changed: false });
     assert.deepEqual(await http.unlinkRelation(seed.opexId, 'assets', seed.assets.alpha.id, writer), { ok: true, changed: true });
-    assert.deepEqual(audit.entries[6], {
+    assert.deepEqual(lines()[6], {
       table: 'asset_spend_items', recordId: seed.assets.alpha.id, action: 'update',
       before: { ids: [seed.opexId] }, after: { ids: [] }, userId: seed.readerId,
       parent: { table: 'spend_items', id: seed.opexId },
@@ -562,24 +571,24 @@ async function testLinksAndAudit() {
 
     // A CAPEX line keeps the CAPEX audit labels. Technologies keep the one table name.
     assert.deepEqual(await http.linkRelation(seed.capexId, 'applications', { id: seed.apps.cedar.id }, writer), { ok: true, changed: true });
-    assert.equal(audit.entries[7].table, 'application_capex_items');
-    assert.equal(audit.entries[7].recordId, seed.capexId);
-    assert.deepEqual(audit.entries[7].before, [seed.apps.capex.id]);
+    assert.equal(lines()[7].table, 'application_capex_items');
+    assert.equal(lines()[7].recordId, seed.capexId);
+    assert.deepEqual(lines()[7].before, [seed.apps.capex.id]);
 
     assert.deepEqual(await http.linkRelation(seed.capexId, 'projects', { id: seed.projects.free.id }, writer), { ok: true, changed: true });
-    assert.equal(audit.entries[8].table, 'portfolio_project_capex');
+    assert.equal(lines()[8].table, 'portfolio_project_capex');
     assert.deepEqual(await http.linkRelation(seed.capexId, 'contracts', { id: seed.contracts.cedar }, writer), { ok: true, changed: true });
-    assert.equal(audit.entries[9].table, 'contract_capex_items');
+    assert.equal(lines()[9].table, 'contract_capex_items');
     assert.deepEqual(await http.linkRelation(seed.capexId, 'technologies', { id: seed.techs.alpha.id }, writer), { ok: true, changed: true });
-    assert.equal(audit.entries[10].table, 'technology_spend_items');
-    assert.equal(audit.entries[10].recordId, seed.capexId);
+    assert.equal(lines()[10].table, 'technology_spend_items');
+    assert.equal(lines()[10].recordId, seed.capexId);
     for (const index of [7, 8, 9, 10]) {
-      assert.deepEqual(audit.entries[index].parent, { table: 'spend_items', id: seed.capexId }, `entry ${index}: the CAPEX line`);
+      assert.deepEqual(lines()[index].parent, { table: 'spend_items', id: seed.capexId }, `entry ${index}: the CAPEX line`);
     }
 
     // The OPEX link of this asset is not part of the CAPEX audit.
     assert.deepEqual(await http.linkRelation(seed.capexId, 'assets', { id: seed.assets.free.id }, writer), { ok: true, changed: true });
-    assert.deepEqual(audit.entries[11], {
+    assert.deepEqual(lines()[11], {
       table: 'asset_capex_items', recordId: seed.assets.free.id, action: 'update',
       before: { ids: [] }, after: { ids: [seed.capexId] }, userId: seed.readerId,
       parent: { table: 'spend_items', id: seed.capexId },

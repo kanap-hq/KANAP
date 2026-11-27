@@ -481,6 +481,7 @@ const ENTITY_TYPE_FROM_URL_PREFIX: Array<{ prefix: string; entityType: string }>
   { prefix: '/master-data/departments/', entityType: 'departments' },
   { prefix: '/master-data/suppliers/', entityType: 'suppliers' },
   { prefix: '/master-data/business-processes/', entityType: 'business_processes' },
+  { prefix: '/portfolio/contributors/', entityType: 'contributors' },
 ];
 
 function normalizeContextLabel(value: unknown, fallback = 'Item'): string {

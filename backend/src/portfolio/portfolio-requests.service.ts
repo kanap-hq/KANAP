@@ -2,6 +2,7 @@ import { PortfolioLinkedReads, idsInScope } from './portfolio-linked-reads';
 import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { codedForbidden } from '../auth/module-right-required';
 import { webLinkUrlsOf } from '../common/web-link-url';
+import { markLinkedEnds } from '../common/relations/linked-ends';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, ILike, In, IsNull, Repository, SelectQueryBuilder } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -1893,6 +1894,11 @@ export class PortfolioRequestsService {
         source: opts?.audit?.source,
         sourceRef: opts?.audit?.sourceRef,
       }, { manager: mg });
+      // The other end: each application the set gained or lost (`common/relations/linked-ends.ts`).
+      await markLinkedEnds({
+        manager: mg, audit: this.audit, table: 'portfolio_request_applications', end: 'application', from: requestId, tenantId: request.tenant_id,
+        written, userId: actorId, source: opts?.audit,
+      });
     }
 
     return { ok: true, count: unique.length, added: written.added.length, removed: written.removed.length };
@@ -1927,7 +1933,8 @@ export class PortfolioRequestsService {
     const actorId = this.requireActivityAuthor(opts?.userId);
     const request = await this.getRequestOrThrow(requestId, mg);
 
-    const unique = Array.from(new Set((assetIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
+    // Stored ids are lower case: an upper-case id names the same asset (as for the applications).
+    const unique = Array.from(new Set((assetIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean)));
     if (unique.length > 0) {
       const rows = await mg.query<Array<{ id: string }>>(
         `SELECT id
@@ -1979,6 +1986,11 @@ export class PortfolioRequestsService {
         source: opts?.audit?.source,
         sourceRef: opts?.audit?.sourceRef,
       }, { manager: mg });
+      // The other end: each asset the set gained or lost (`common/relations/linked-ends.ts`).
+      await markLinkedEnds({
+        manager: mg, audit: this.audit, table: 'portfolio_request_assets', end: 'asset', from: requestId, tenantId: request.tenant_id,
+        written, userId: actorId, source: opts?.audit,
+      });
     }
 
     return { ok: true, count: unique.length, added: written.added.length, removed: written.removed.length };
@@ -2038,7 +2050,7 @@ export class PortfolioRequestsService {
         type: 'change',
         changed_fields: { capex_items: [beforeLabels, afterLabels] },
       });
-      await this.auditBudgetLines(mg, 'capex', requestId, beforeSorted, afterSorted, actorId, opts?.audit);
+      await this.auditBudgetLines(mg, 'capex', requestId, beforeSorted, afterSorted, actorId, opts?.audit, request.tenant_id);
     }
 
     return { ok: true, added: written.added.length, removed: written.removed.length };
@@ -2098,7 +2110,7 @@ export class PortfolioRequestsService {
         type: 'change',
         changed_fields: { opex_items: [beforeLabels, afterLabels] },
       });
-      await this.auditBudgetLines(mg, 'opex', requestId, beforeSorted, afterSorted, actorId, opts?.audit);
+      await this.auditBudgetLines(mg, 'opex', requestId, beforeSorted, afterSorted, actorId, opts?.audit, request.tenant_id);
     }
 
     return { ok: true, added: written.added.length, removed: written.removed.length };
@@ -2117,7 +2129,8 @@ export class PortfolioRequestsService {
     beforeIds: string[],
     afterIds: string[],
     userId: string,
-    source?: AuditSourceOptions,
+    source: AuditSourceOptions | undefined,
+    tenantId: string,
   ): Promise<void> {
     const hidden = await hiddenLineCount(mg, 'request', requestId);
     const lineId = singleChangedId(beforeIds, afterIds);
@@ -2132,6 +2145,14 @@ export class PortfolioRequestsService {
       sourceRef: source?.sourceRef,
       parent: lineId ? { table: 'spend_items', id: lineId } : null,
     }, { manager: mg });
+    // The other end: each line the set gained or lost, but the one named as parent above.
+    const beforeSet = new Set(beforeIds);
+    const afterSet = new Set(afterIds);
+    await markLinkedEnds({
+      manager: mg, audit: this.audit, table: 'portfolio_request_opex', end: 'budget_line', from: requestId, tenantId,
+      written: { added: afterIds.filter((id) => !beforeSet.has(id)), removed: beforeIds.filter((id) => !afterSet.has(id)) },
+      userId, source, covered: lineId,
+    });
   }
 
   // ==================== BUSINESS PROCESSES MANAGEMENT ====================

@@ -50,9 +50,9 @@ export function toolTitle(name: string): string {
 export const MCP_SERVER_INSTRUCTIONS = [
   `${PRODUCT_NAME} MCP server. It only reads: changes are made in ${PRODUCT_NAME}.`,
   'Calls run with the rights of the person behind the key or connection; what they cannot read is left out.',
-  'To find a record, start with search_all (names, codes and references such as APP-4; cost centers, calendars and dimensions included). Call describe_entity_filters (fields) and get_filter_values (exact values) before query_entities or aggregate_entities. get_entity_detail and get_entity_context read one record.',
+  'To find a record, start with search_all (names, codes, references like APP-4 or MEM-4; cost centers, calendars, dimensions, contributors included). Call describe_entity_filters (fields) and get_filter_values (exact values) before query_entities or aggregate_entities. get_entity_detail and get_entity_context read one record.',
   'This server does not read the audit log or AI agents, and it reads roles and data access settings only for a person who administers users with access to all data: an empty answer about them is not "none". Exchange rates: query_entities on exchange_rates.',
-  'Budget lines are one family, budget_lines: a question that names no nature covers both OPEX and CAPEX. aggregate_entities lists their budget keys and computes FTE, cost per FTE and day rate per group (metric y_budget_cost_per_fte) directly.',
+  'Budget lines are one family, budget_lines: a question naming no nature covers OPEX and CAPEX. aggregate_entities lists their budget keys and computes FTE, cost per FTE and day rate per group (metric y_budget_cost_per_fte) directly.',
   'How-to questions (screens, menus, steps): answer from the user manual (list_help_topics, read_help_section), linking its url.',
 ].join('\n');
 

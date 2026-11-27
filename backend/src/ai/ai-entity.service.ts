@@ -134,6 +134,7 @@ const REFERENCE_FAMILY_WORDS: Record<AiSearchReferenceEntityType, string> = {
   cost_centers: 'cost centers',
   working_day_calendars: 'working-day calendars',
   analytics_axes: 'analytics dimensions',
+  contributors: 'contributors',
 };
 
 /** The rows of one page, the index's and the reference data's, by score; the index first on a tie. */
@@ -2744,23 +2745,24 @@ export class AiEntityService {
     context: AiExecutionContextWithManager,
     input: {
       query: string;
-      entity_types?: AiSearchEntityType[];
+      /** The indexed families, and the contributors (MEM-n), searched through their read. */
+      entity_types?: Array<AiSearchEntityType | 'contributors'>;
       limit?: number;
     },
   ) {
     const requested = input.entity_types && input.entity_types.length > 0
       ? input.entity_types
       : [...AI_SEARCH_ENTITY_TYPES] as AiSearchEntityType[];
-    const allowed = await this.policy.listReadableEntityTypes(context, requested, context.manager) as AiSearchEntityType[];
+    const allowed = await this.policy.listReadableEntityTypes(context, requested, context.manager) as Array<AiSearchEntityType | 'contributors'>;
     if (allowed.length === 0) {
-      return { items: [], total: 0, returned: 0, complete: false, entity_types: [] as AiSearchEntityType[] };
+      return { items: [], total: 0, returned: 0, complete: false, entity_types: [] as Array<AiSearchEntityType | 'contributors'> };
     }
 
     const limit = Math.min(Math.max(Number(input.limit) || 50, 1), 200);
     const empty: RankedSearchResult = { items: [], total: 0 };
     let savepointCounter = 0;
     const safeRun = async (
-      type: AiSearchEntityType,
+      type: AiSearchEntityType | 'contributors',
       run: () => Promise<RankedSearchResult>,
     ): Promise<RankedSearchResult> => {
       // Fixed prefix and counter only: an SQL identifier never takes a value from the request.
@@ -2794,7 +2796,9 @@ export class AiEntityService {
       const result = await safeRun(type, () => (
         type === 'documents'
           ? this.searchDocumentsForMentions(context, input.query, limit)
-          : this.runEntityTypeSearch(context, type, input.query, limit)
+          : type === 'contributors'
+            ? this.searchContributorsForMentions(context, input.query, limit)
+            : this.runEntityTypeSearch(context, type, input.query, limit)
       ));
       results.push(result);
     }
@@ -2812,6 +2816,21 @@ export class AiEntityService {
       complete: false,
       entity_types: allowed,
     };
+  }
+
+  /**
+   * The contributors of the picker (`@MEM`, `@Alice`), through the read of their family: a MEM-n
+   * reference names one, a word searches the person, the job title, the team and the skills, and a
+   * bare `@MEM` lists them in the screen's order. The right was checked with the other families.
+   */
+  private async searchContributorsForMentions(
+    context: AiExecutionContextWithManager,
+    query: string,
+    limit: number,
+  ): Promise<RankedSearchResult> {
+    if (!this.queryExecutor) return { items: [], total: 0 };
+    const result = await this.queryExecutor.execute(context, { entity_type: 'contributors', q: query, page: 1, limit });
+    return { items: result.items.map((item) => ({ ...item, _score: 0 })), total: result.total };
   }
 
   /**

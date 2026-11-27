@@ -10,6 +10,9 @@ import { projectParticipantCondition } from '../../auth/business-contributor-sco
 import { assertScopeNatures, auditTableOf, linkedLineOf, natureAnd, type BudgetNature } from '../../spend/budget-nature';
 import { UUID_RE } from '../../common/relations/relation-target';
 import { auditedLinkSet, hiddenLineCount } from '../../data-access/hidden-links';
+import { dateRecordMarkedMeanwhile, markLinkedEnds, type LinkedEnd, type LinkedTable } from '../../common/relations/linked-ends';
+import { withLockedAt } from '../../common/relations/locked-at';
+import { appliedLinks } from '../../portfolio/portfolio-link-writes.util';
 
 type LinkedItemKind = 'spend' | 'capex' | 'contract' | 'project';
 
@@ -27,11 +30,12 @@ type LinkedItemTable = {
   label: string;
   /** The name the list returns the label under, when not the column's own (a CAPEX title, `description`). */
   labelAs?: string;
-  unique: string;
   notFound: string;
   nature?: BudgetNature;
   /** The audit label of the link table (a CAPEX line's links keep `application_capex_items`). */
   audit: string;
+  /** The other end whose History reads the link too (`linked-ends.ts`). */
+  end?: LinkedEnd;
 };
 
 // Table and column names come only from here: never from the caller. `unique`
@@ -46,10 +50,10 @@ const LINKED_ITEMS: Record<LinkedItemKind, LinkedItemTable> = {
     items: 'spend_items',
     itemFk: 'spend_item_id',
     label: 'product_name',
-    unique: '(tenant_id, application_id, spend_item_id)',
     notFound: 'One or more OPEX items were not found.',
     nature: 'opex',
     audit: auditTableOf('opex', 'application_spend_items'),
+    end: 'budget_line',
   },
   capex: {
     links: 'application_spend_items',
@@ -57,17 +61,16 @@ const LINKED_ITEMS: Record<LinkedItemKind, LinkedItemTable> = {
     itemFk: 'spend_item_id',
     label: 'product_name',
     labelAs: 'description',
-    unique: '(tenant_id, application_id, spend_item_id)',
     notFound: 'One or more CAPEX items were not found.',
     nature: 'capex',
     audit: auditTableOf('capex', 'application_spend_items'),
+    end: 'budget_line',
   },
   contract: {
     links: 'application_contracts',
     items: 'contracts',
     itemFk: 'contract_id',
     label: 'name',
-    unique: '(tenant_id, application_id, contract_id)',
     notFound: 'One or more contracts were not found.',
     audit: 'application_contracts',
   },
@@ -76,9 +79,9 @@ const LINKED_ITEMS: Record<LinkedItemKind, LinkedItemTable> = {
     items: 'portfolio_projects',
     itemFk: 'project_id',
     label: 'name',
-    unique: '(application_id, project_id)',
     notFound: 'One or more projects were not found.',
     audit: 'application_projects',
+    end: 'project',
   },
 };
 
@@ -150,8 +153,9 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
    * of the same application waits, then reads the set the first one committed,
    * so the last one wins and its audit row matches what is stored. A link
    * another writer has just inserted is skipped, not duplicated. One audit row
-   * on the link table when the set changes: `recordId` the application, before
-   * and after the sorted ids.
+   * on the link table when this call wrote a link: `recordId` the application,
+   * before and after the sorted ids; then one row per project or line it
+   * reached, on that record's History (`common/relations/linked-ends.ts`).
    */
   private async replaceLinkedItems(
     kind: LinkedItemKind,
@@ -167,8 +171,8 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
     // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
     let nextIds = Array.from(new Set((itemIds || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean))).sort();
     if (nextIds.some((id) => !UUID_RE.test(id))) throw new BadRequestException(t.notFound);
-    const locked = await mg.query(
-      `SELECT 1 FROM applications WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+    const locked: Array<{ locked_at: string }> = await mg.query(
+      withLockedAt(`SELECT 1 FROM applications WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`),
       [tenantId, resolvedAppId],
     );
     if (locked.length === 0) throw new NotFoundException('Application not found');
@@ -190,26 +194,37 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
       const kept = await linksOutsideScope(mg, 'projects', beforeState, opts.projectAccessScope);
       nextIds = Array.from(new Set([...nextIds, ...kept])).sort();
     }
-    const [{ n: removed }] = await mg.query(
+    // Only the links read under the lock are removed, and only the ids asked for and not read are
+    // added: a link the other end posted meanwhile is left as it is. Only what this call wrote
+    // counts: a link the other end stored or removed meanwhile is neither audited nor marked twice.
+    const nextSet = new Set(nextIds);
+    const beforeSet = new Set(beforeState.map((id) => id.toLowerCase()));
+    const toRemove = beforeState.map((id) => id.toLowerCase()).filter((id) => !nextSet.has(id));
+    const toAdd = nextIds.filter((id) => !beforeSet.has(id));
+    const gone: Array<{ id: string }> = toRemove.length === 0 ? [] : await mg.query(
       `WITH d AS (
          DELETE FROM ${t.links} l
-         WHERE l.tenant_id = $1 AND l.application_id = $2 AND l.${t.itemFk} <> ALL($3::uuid[])${linkedNature(t, 'l')}
-         RETURNING 1
+         WHERE l.tenant_id = $1 AND l.application_id = $2 AND l.${t.itemFk} = ANY($3::uuid[])
+         RETURNING l.${t.itemFk}::text AS id
        )
-       SELECT count(*)::int AS n FROM d`,
-      [tenantId, resolvedAppId, nextIds],
+       SELECT id FROM d`,
+      [tenantId, resolvedAppId, toRemove],
     );
-    const [{ n: added }] = await mg.query(
+    const put: Array<{ id: string }> = toAdd.length === 0 ? [] : await mg.query(
       `WITH ins AS (
          INSERT INTO ${t.links} (tenant_id, application_id, ${t.itemFk})
          SELECT $1, $2, item_id FROM unnest($3::uuid[]) AS item_id
-         ON CONFLICT ${t.unique} DO NOTHING
-         RETURNING 1
+         ON CONFLICT DO NOTHING
+         RETURNING ${t.itemFk}::text AS id
        )
-       SELECT count(*)::int AS n FROM ins`,
-      [tenantId, resolvedAppId, nextIds],
+       SELECT id FROM ins`,
+      [tenantId, resolvedAppId, toAdd],
     );
-    if (JSON.stringify(beforeState) !== JSON.stringify(nextIds)) {
+    const written = { removed: gone.map((row) => row.id.toLowerCase()), added: put.map((row) => row.id.toLowerCase()) };
+    const removed = written.removed.length;
+    const added = written.added.length;
+    if (added + removed > 0) {
+      const afterState = appliedLinks(beforeState, written);
       // The lines a limited person cannot read stayed linked: the audit row says how many (spec §6.6).
       const hidden = t.items === 'spend_items' ? await hiddenLineCount(mg, 'application', resolvedAppId) : 0;
       await this.audit.log(
@@ -218,11 +233,22 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
           recordId: resolvedAppId,
           action: 'update',
           before: auditedLinkSet(beforeState, hidden),
-          after: auditedLinkSet(nextIds, hidden),
+          after: auditedLinkSet(afterState, hidden),
           userId: userId ?? null,
         },
         { manager: mg },
       );
+      // The other end: each project or line the set gained or lost (`linked-ends.ts`).
+      if (t.end) {
+        await markLinkedEnds({
+          manager: mg, audit: this.audit, table: t.links as LinkedTable, end: t.end, from: resolvedAppId, tenantId,
+          written, userId: userId ?? null,
+        });
+      }
+    } else if (t.end) {
+      // Nothing written: the other end may have posted a link meanwhile, its dating skipping the
+      // application this replacement held (`linked-ends.ts`).
+      await dateRecordMarkedMeanwhile(mg, 'application', tenantId, resolvedAppId, locked[0].locked_at);
     }
     return { ok: true, added, removed };
   }

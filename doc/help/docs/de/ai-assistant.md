@@ -126,6 +126,7 @@ Die Eingabe von `@` öffnet die **Erwähnungsauswahl** über dem Eingabefeld. Da
   - `@APP backup`: Anwendungen, die zu „backup“ passen
   - `@BL-12`: die Budgetzeile mit der Referenz BL-12. `@BL` allein listet Budgetzeilen beider Typen auf. Die früheren Nummern funktionieren weiterhin: `@OPX-12` oder `@CPX-3` findet seine Zeile
   - `@SUP-3`, `@COMP-1`, `@CTCT-2`, `@DEPT-4`, `@CTR-2`: der Lieferant, das Unternehmen, der Kontakt, die Abteilung oder der Vertrag mit dieser Referenz
+  - `@MEM-4`: der Mitwirkende mit dieser Referenz. `@MEM` allein listet die Mitwirkenden auf
   - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CTCT`, `@DEPT`, `@SUP`, `@BP`
 - **Klartext**: alles andere (`@payroll`, `@server-2`) startet eine typübergreifende Suche, sortiert nach Relevanz. Sie findet auch Budgetzeilen über die Namen ihrer Analysewerte.
 
@@ -208,6 +209,8 @@ Ohne das Recht, das eine Art von Stammdaten verlangt, nennt Kad das fehlende Rec
 Kad liest den Verlauf einer Kostenstelle, eines Kalenders oder einer Dimension, wie ihn der Tab **Verlauf** zeigt. `Search all` findet eine Kostenstelle, einen Kalender oder eine Dimension über Code oder Namen. Wechselkurse durchsucht es nicht: Kad listet sie stattdessen auf.
 
 Fragen Sie zum Beispiel: „Welche Kostenstellen liegen unter Group IT?“, „Wer ist der Budgetverantwortliche von FR-TRV-600?“, „Wie viele Arbeitstage hat Frankreich 2026?“, „Welche Dimensionen sind Pflicht?“ oder „Wie hoch ist der USD-Kurs für 2026?“ Über MCP verbundene Assistenten erhalten dieselben Antworten.
+
+Mit Leserecht auf die Portfolioeinstellungen liest Kad die Mitwirkenden so, wie **Portfolio › Mitwirkende** sie zeigt: die Person, ihre Stellenbezeichnung, ihr Team, ihre Führungskraft und ihre Vertragsart, ihre Verfügbarkeit in Tagen pro Monat, ihre Kompetenzen mit ihrer Stufe, ihre Standardklassifizierung, ihre Notizen und die erfassten Projekttage. Kad findet einen Mitwirkenden über seine Referenz, etwa `MEM-4`, oder über den Namen. Das Standardunternehmen eines Mitwirkenden nennt Kad nur, wenn Sie die Unternehmen lesen dürfen. Ohne das Recht auf die Portfolioeinstellungen sagt Kad, dass er die Mitwirkenden nicht liest. Fragen Sie zum Beispiel: „Wer ist MEM-4?“ oder „Welche Mitwirkenden sind SAP-Experten?“ Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
 Summen kommen von Kadratis. Eine Liste von Budgetzeilen oder Verträgen enthält die Summe aller passenden Datensätze über alle Seiten hinweg, und die Summe der aufgelisteten Datensätze. Kad nennt eine der beiden oder lässt Kadratis eine Summe bilden. Fragen Sie nach den zehn größten Zeilen und ihrer Summe, nennt Kad die Summe dieser zehn Zeilen. Wenn Ihr Datenzugriff auf bestimmte Unternehmen oder Kostenstellen beschränkt ist, sagt Kad, dass seine Anzahlen und Summen Ihren Zugriff abdecken, und stellt sie nicht als Summe des Arbeitsbereichs dar.
 
