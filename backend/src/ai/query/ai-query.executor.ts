@@ -2034,6 +2034,7 @@ export class AiQueryExecutor {
   private mapInterface(row: any): AiEntitySummaryDto {
     return toEntitySummary('interfaces', {
       id: row.id,
+      reference: row.interface_reference ?? null,
       label: [row.interface_reference || row.interface_id, row.name].filter(Boolean).join(' - ') || 'Untitled interface',
       status: row.lifecycle ?? null,
       summary: row.business_purpose ?? row.overview_notes ?? null,
@@ -2060,6 +2061,7 @@ export class AiQueryExecutor {
   private mapConnection(row: any): AiEntitySummaryDto {
     return toEntitySummary('connections', {
       id: row.id,
+      reference: row.connection_reference ?? null,
       label: [row.connection_reference, row.name].filter(Boolean).join(' - ') || 'Untitled connection',
       status: row.lifecycle ?? null,
       summary: row.description ?? null,

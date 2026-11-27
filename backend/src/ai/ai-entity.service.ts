@@ -459,6 +459,9 @@ function toIntegratedDocumentSummary(row: any): AiEntitySummaryDto {
   });
 }
 
+/** The families whose reference is text on the record (`INT-3`, `LOC-2`, `CONN-4`), with its prefix in the search index. */
+const TEXT_REFERENCE_PREFIXES: Readonly<Partial<Record<string, string>>> = { interfaces: 'INT', locations: 'LOC', connections: 'CONN' };
+
 /**
  * Feature flag for the unified `search_index` path (Phase B of
  * planning/search-revamp.md). Defaults to enabled; set
@@ -1087,6 +1090,7 @@ export class AiEntityService {
     const like = `%${query}%`;
     const rows = await context.manager.query<SearchRow[]>(
       `SELECT ranked.id,
+              ranked.ref,
               ranked.label,
               ranked.summary,
               ranked.status,
@@ -1095,6 +1099,7 @@ export class AiEntityService {
               COUNT(*) OVER()::int AS total_count
        FROM (
          SELECT DISTINCT ON (l.id) l.id,
+                l.location_reference AS ref,
                 l.location_reference || ' · ' || l.name AS label,
                 COALESCE(NULLIF(l.city, ''), l.country_iso) AS summary,
                 NULL::text AS status,
@@ -1843,6 +1848,7 @@ export class AiEntityService {
     const rows = await context.manager.query<SearchRow[]>(
       `SELECT i.id,
               NULL::int AS item_number,
+              i.interface_reference AS ref,
               NULLIF(TRIM(CONCAT_WS(' - ', i.interface_reference, i.name)), '') AS label,
               COALESCE(NULLIF(i.business_purpose, ''), NULLIF(CONCAT_WS(' | ', sa.name, ta.name), '')) AS summary,
               i.lifecycle AS status,
@@ -1905,6 +1911,7 @@ export class AiEntityService {
     const rows = await context.manager.query<SearchRow[]>(
       `SELECT cn.id,
               NULL::int AS item_number,
+              cn.connection_reference AS ref,
               NULLIF(TRIM(CONCAT_WS(' - ', cn.connection_reference, cn.name)), '') AS label,
               COALESCE(NULLIF(cn.description, ''), NULLIF(CONCAT_WS(' | ', src.name, dst.name), '')) AS summary,
               cn.lifecycle AS status,
@@ -2562,8 +2569,15 @@ export class AiEntityService {
     const extra = (row.extra_json ?? null) as Record<string, unknown> | null;
 
     let ref: string | null = null;
+    const textPrefix = TEXT_REFERENCE_PREFIXES[type];
     if (type === 'applications' || type === 'assets') {
       ref = (extra?.item_ref as string | undefined) ?? null;
+    } else if (textPrefix) {
+      // Interfaces, sites and connections keep their reference as text (`LOC-2`); the index holds its
+      // prefix and number. The reference is the one the label starts with, as the record writes it.
+      const candidate = row.ref_prefix === textPrefix && row.ref_number ? `${textPrefix}-${row.ref_number}` : null;
+      const label = String(row.label ?? '');
+      ref = candidate && (label === candidate || label.startsWith(`${candidate} `)) ? candidate : null;
     } else {
       ref = buildRef(type, row.ref_number ?? null);
     }
