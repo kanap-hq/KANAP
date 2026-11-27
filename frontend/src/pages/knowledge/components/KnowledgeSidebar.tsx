@@ -110,6 +110,8 @@ interface KnowledgeSidebarProps {
   onRelationSelectionsChange: (key: RelationKey, values: RelationOption[]) => void;
   relationSearch: Record<RelationKey, string>;
   onRelationSearchChange: (key: RelationKey, value: string) => void;
+  /** A relation's selector opened: its options load from then on. */
+  onRelationOpen?: (key: RelationKey) => void;
   relationOptions: Record<RelationKey, RelationOption[]>;
   relationsError: string | null;
   // Versions
@@ -222,6 +224,7 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
   onRelationSelectionsChange,
   relationSearch,
   onRelationSearchChange,
+  onRelationOpen,
   relationOptions,
   relationsError,
   versions,
@@ -1119,6 +1122,7 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
                             value={relationSelections[key]}
                             onChange={(_, values) => onRelationSelectionsChange(key, values)}
                             onInputChange={(_, value) => onRelationSearchChange(key, value)}
+                            onOpen={() => onRelationOpen?.(key)}
                             isOptionEqualToValue={(option, value) => option.id === value.id}
                             getOptionLabel={(option) => option.label}
                             ListboxProps={{ sx: drawerAutocompleteListboxSx }}

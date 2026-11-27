@@ -94,6 +94,16 @@ function renderSidebar(overrides: Record<string, unknown> = {}) {
   );
 }
 
+describe('KnowledgeSidebar relations', () => {
+  it('says which relation selector opens, so its options load then', () => {
+    const onRelationOpen = vi.fn();
+    renderSidebar({ editMode: true, relationKeys: ['applications', 'projects'], onRelationOpen });
+    expect(onRelationOpen).not.toHaveBeenCalled();
+    fireEvent.mouseDown(screen.getAllByPlaceholderText('sidebar.relations.search')[0]);
+    expect(onRelationOpen).toHaveBeenCalledWith('applications');
+  });
+});
+
 describe('KnowledgeSidebar history tab', () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -273,6 +273,15 @@ export default function KnowledgeWorkspacePage() {
     tasks: '',
     incidents: '',
   });
+  // A relation's options load when its selector first opens, not with the document.
+  const [relationOpened, setRelationOpened] = React.useState<Record<RelationKey, boolean>>({
+    applications: false,
+    assets: false,
+    projects: false,
+    requests: false,
+    tasks: false,
+    incidents: false,
+  });
   const [relationSelections, setRelationSelections] = React.useState<Record<RelationKey, RelationOption[]>>(
     () => (isCreate ? createRelationSelections : EMPTY_RELATIONS),
   );
@@ -552,7 +561,7 @@ export default function KnowledgeWorkspacePage() {
       });
       return (res.data.items || []).map((row) => ({ id: row.id, label: row.label || row.id }));
     },
-    enabled: !isCreate && sidebarOpen && canManageDocumentGlobal,
+    enabled: !isCreate && sidebarOpen && canManageDocumentGlobal && relationOpened.applications,
     staleTime: 60_000,
   });
 
@@ -564,7 +573,7 @@ export default function KnowledgeWorkspacePage() {
       });
       return (res.data.items || []).map((row) => ({ id: row.id, label: row.label || row.id }));
     },
-    enabled: !isCreate && sidebarOpen && canManageDocumentGlobal,
+    enabled: !isCreate && sidebarOpen && canManageDocumentGlobal && relationOpened.assets,
     staleTime: 60_000,
   });
 
@@ -576,7 +585,7 @@ export default function KnowledgeWorkspacePage() {
       });
       return (res.data.items || []).map((row) => ({ id: row.id, label: row.label || row.id }));
     },
-    enabled: !isCreate && sidebarOpen && canManageDocumentGlobal,
+    enabled: !isCreate && sidebarOpen && canManageDocumentGlobal && relationOpened.projects,
     staleTime: 60_000,
   });
 
@@ -588,7 +597,7 @@ export default function KnowledgeWorkspacePage() {
       });
       return (res.data.items || []).map((row) => ({ id: row.id, label: row.label || row.id }));
     },
-    enabled: !isCreate && sidebarOpen && canManageDocumentGlobal,
+    enabled: !isCreate && sidebarOpen && canManageDocumentGlobal && relationOpened.requests,
     staleTime: 60_000,
   });
 
@@ -600,7 +609,7 @@ export default function KnowledgeWorkspacePage() {
       });
       return (res.data.items || []).map((row) => ({ id: row.id, label: row.label || row.id }));
     },
-    enabled: !isCreate && sidebarOpen && canManageDocumentGlobal,
+    enabled: !isCreate && sidebarOpen && canManageDocumentGlobal && relationOpened.tasks,
     staleTime: 60_000,
   });
 
@@ -612,7 +621,7 @@ export default function KnowledgeWorkspacePage() {
       });
       return (res.data.items || []).map((row) => ({ id: row.id, label: row.label || row.id }));
     },
-    enabled: !isCreate && sidebarOpen && canManageDocumentGlobal,
+    enabled: !isCreate && sidebarOpen && canManageDocumentGlobal && relationOpened.incidents,
     staleTime: 60_000,
   });
 
@@ -1385,6 +1394,10 @@ export default function KnowledgeWorkspacePage() {
 
   const handleRelationSearchChange = React.useCallback((key: RelationKey, value: string) => {
     setRelationSearch((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const handleRelationOpen = React.useCallback((key: RelationKey) => {
+    setRelationOpened((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
   }, []);
 
   const handleDocumentImportError = React.useCallback((e: unknown) => {
@@ -2253,6 +2266,7 @@ export default function KnowledgeWorkspacePage() {
               onRelationSelectionsChange={handleRelationSelectionsChange}
               relationSearch={relationSearch}
               onRelationSearchChange={handleRelationSearchChange}
+              onRelationOpen={handleRelationOpen}
               relationOptions={allRelationOptions}
               relationsError={relationsError}
               versions={versionList}
