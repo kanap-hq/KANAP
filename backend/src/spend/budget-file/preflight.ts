@@ -7,7 +7,8 @@ import {
   normalizeAnalyticsName,
 } from '../../analytics/analytics-context';
 import { notApplicableDimensionMessage, requiredDimensionMessage } from '../item-analytics.util';
-import { AmountMeasure, MEASURE_FREEZE_COLUMN } from '../amounts-write.util';
+import { AMOUNT_MEASURES, AmountMeasure, MEASURE_FREEZE_COLUMN } from '../amounts-write.util';
+import { columnsLeftToCheck, type ColumnAfterWrite } from '../budget-line-entry-check';
 import { formatCentsFixed } from '../../common/amount';
 import { endOfValidityFromDate, isActiveAt } from '../../common/status';
 import type { BudgetNature } from '../budget-nature';
@@ -742,6 +743,7 @@ function resolveRow(
   if (creating || changes.length > 0) {
     bag.plans.push(toPlan(nature, row, live, creating, draft));
     checkConsistency(input, nature, row, live, draft, supplier.id, company.id, bag);
+    checkQuantityPrice(input, nature, row, live, draft, bag);
   }
   if (creating) {
     bag.created.push({ line: row.line, name: textOf(row.fields.name) || '(no name)' });
@@ -1654,6 +1656,73 @@ function checkConsistency(
       });
     }
   }
+}
+
+/**
+ * The "To check" rule of a line the file creates or updates (lot B12b), a warning among the
+ * consistency checks: the file writes totals, never quantity × price, so a changed amount on an
+ * account that expects quantity and price entry (itself or through its consolidation account) will be
+ * to check, unless its column is hidden, its total for the year is zero once written, or its year
+ * follows the line's end of validity (`columnsLeftToCheck`, the rule of `readEntryChecks` on values
+ * not yet stored). A frozen column never gets here: its amount is refused (`resolveAmounts`). An
+ * unchanged amount is not written, so a column built as quantity × price stays so. The account the
+ * line has once written is named by its number, as the file names it, never its consolidation account.
+ * One warning per row.
+ */
+function checkQuantityPrice(
+  input: PreflightInput,
+  nature: BudgetNature,
+  row: InterpretedRow,
+  live: StoredLine | null,
+  draft: LineDraft,
+  bag: Bag,
+): void {
+  const measures = input.catalog.shownMeasures;
+  if (!measures || draft.amounts.length === 0) return;
+  const accountId = Object.prototype.hasOwnProperty.call(draft.body, 'account_id') ? draft.body.account_id : live?.accountId;
+  const account = typeof accountId === 'string' ? input.catalog.accounts.find((item) => item.id === accountId) : undefined;
+  if (!account?.quantityPrice) return;
+  const endOfValidity = Object.prototype.hasOwnProperty.call(draft.body, 'disabled_at') ? draft.body.disabled_at : live?.endOfValidity;
+  const left = columnsLeftToCheck(
+    { measures, frozen: [] },
+    nature,
+    columnsAfterFile(draft, live),
+    typeof endOfValidity === 'string' ? endOfValidity : null,
+  );
+  if (left.length === 0) return;
+  const columns = left
+    .map((column) => `${input.labels[columnOfMeasure(column.measure)] || columnOfMeasure(column.measure)} ${column.year}`)
+    .join(', ');
+  bag.consistency.push({
+    line: row.line,
+    message: `Account ${account.number} expects quantity and price entry: complete ${columns} on the line's Budget tab.`,
+    code: 'BUDGET_FILE_QUANTITY_PRICE_EXPECTED',
+    params: { account: account.number, columns },
+  });
+}
+
+/**
+ * The columns the file writes on a line, each with its total for the year once written: a yearly
+ * amount replaces the year, monthly amounts replace their months among the stored ones.
+ */
+function columnsAfterFile(draft: LineDraft, live: StoredLine | null): ColumnAfterWrite[] {
+  const byColumn = new Map<string, { year: number; measure: AmountMeasure; annual: bigint | null; months: Map<number, bigint | null> }>();
+  for (const amount of draft.amounts) {
+    const key = `${amount.year}:${amount.measure}`;
+    const entry = byColumn.get(key) ?? { year: amount.year, measure: amount.measure, annual: null, months: new Map() };
+    if (amount.month == null) entry.annual = amount.cents ?? 0n;
+    else entry.months.set(amount.month, amount.cents);
+    byColumn.set(key, entry);
+  }
+  return [...byColumn.values()].map((entry) => {
+    if (entry.months.size === 0) return { year: entry.year, measure: entry.measure, total: entry.annual ?? 0n };
+    const stored = live?.versions.find((version) => version.year === entry.year)?.months[entry.measure] ?? [];
+    let total = 0n;
+    for (let month = 1; month <= 12; month += 1) {
+      total += (entry.months.has(month) ? entry.months.get(month) : stored[month - 1]?.cents) ?? 0n;
+    }
+    return { year: entry.year, measure: entry.measure, total };
+  }).sort((a, b) => a.year - b.year || AMOUNT_MEASURES.indexOf(a.measure) - AMOUNT_MEASURES.indexOf(b.measure));
 }
 
 function noteFreshness(row: InterpretedRow, live: StoredLine, bag: Bag): void {

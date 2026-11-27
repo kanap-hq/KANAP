@@ -483,6 +483,29 @@ describe('BudgetFileImportDialog, rows that look like an existing line', () => {
     expect(screen.getByText(`${K}andMore:{"count":2}`)).toBeInTheDocument();
   });
 
+  it('warns, by line, of an amount on an account that expects quantity and price, with the account and its columns (lot B12b)', async () => {
+    post.mockResolvedValueOnce({ data: report({
+      warnings: {
+        duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [],
+        consistency: [{
+          line: 5,
+          message: "Account 621100 expects quantity and price entry: complete Budget 2026 on the line's Budget tab.",
+          code: 'BUDGET_FILE_QUANTITY_PRICE_EXPECTED',
+          params: { account: '621100', columns: 'Budget 2026' },
+        }],
+        consistencyCount: 1,
+      },
+    }) });
+    renderDialog();
+    const warning = await screen.findByText(/BUDGET_FILE_QUANTITY_PRICE_EXPECTED/);
+    expect(warning.textContent).toMatch(/^operations\.budgetFile\.row:\{"line":5,/);
+    expect(warning.textContent).toContain('621100');
+    expect(warning.textContent).toContain('Budget 2026');
+    expect(screen.getByText(`${K}warningsTitle`)).toBeInTheDocument();
+    // A warning: the file is not refused.
+    expect(screen.queryByText(`${K}notReady`)).toBeNull();
+  });
+
   it('writes the days of a consistency warning in the screen\'s language', async () => {
     post.mockResolvedValueOnce({ data: report({
       warnings: {
