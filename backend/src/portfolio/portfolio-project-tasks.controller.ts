@@ -368,7 +368,12 @@ export class PortfolioProjectTasksController {
   ) {
     const projectId = await this.resolveProjectForAccess(projectIdOrRef, req, 'reader');
     const taskId = await this.resolveProjectTaskForAccess(projectId, taskIdOrRef, req);
-    return this.activitiesSvc.listForTask(taskId, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
+    return this.activitiesSvc.listForTask(taskId, {
+      manager: req?.queryRunner?.manager,
+      userId: req?.user?.sub ?? null,
+      isAdmin: req?.isAdmin === true,
+      permissions: req?.permissions,
+    });
   }
 
   @UseGuards(PermissionGuard)

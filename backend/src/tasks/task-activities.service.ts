@@ -11,6 +11,7 @@ import { displayName } from '../common/display-name';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { writeTaskColumns } from './task-column-write';
 import { personReadsPartOf, withCountedLinkChanges } from '../common/relations/linked-activity';
+import { withRelatedObjectsForReader } from './task-related-activity';
 
 export interface TaskActivityItem {
   id: string;
@@ -127,14 +128,23 @@ export class TaskActivitiesService {
    */
   async listForTask(
     taskId: string,
-    opts?: { manager?: EntityManager; userId?: string | null },
+    opts?: {
+      manager?: EntityManager;
+      userId?: string | null;
+      /** The reader's rights (PermissionGuard): the object of a move is named with them. */
+      isAdmin?: boolean;
+      permissions?: Record<string, string>;
+    },
   ): Promise<TaskActivityItem[]> {
     const mg = opts?.manager ?? this.activityRepo.manager;
 
     // The history of a task the person can read only (spec §5.6): the task first, under the
     // person's access (the tasks policy hides a task of a line or contract out of access), the same
     // 404 for a hidden task and an unknown id. `portfolio_activities` itself carries no policy.
-    const visible = await mg.query(`SELECT 1 FROM tasks WHERE id = $1 AND tenant_id = app_current_tenant()`, [taskId]);
+    const visible: Array<{ tenant_id: string }> = await mg.query(
+      `SELECT tenant_id::text AS tenant_id FROM tasks WHERE id = $1 AND tenant_id = app_current_tenant()`,
+      [taskId],
+    );
     if (visible.length === 0) throw new NotFoundException('Task not found');
 
     const rows = await mg.query<Array<{
@@ -172,7 +182,15 @@ export class TaskActivitiesService {
       [taskId],
     );
 
-    return this.withLinkNamesForReader(mg, rows, opts?.userId);
+    // The object a move left or reached, named with the reader's rights (`task-related-activity.ts`).
+    const named = await withRelatedObjectsForReader(rows, {
+      manager: mg,
+      tenantId: visible[0].tenant_id,
+      userId: opts?.userId,
+      isAdmin: opts?.isAdmin,
+      permissions: opts?.permissions,
+    });
+    return this.withLinkNamesForReader(mg, named, opts?.userId);
   }
 
   /**
