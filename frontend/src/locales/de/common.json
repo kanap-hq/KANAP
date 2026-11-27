@@ -1836,6 +1836,7 @@
     "doneChanged_applications_one": "{{count}} Anwendung geändert",
     "doneChanged_other": "{{count}} Zeilen geändert",
     "doneChanged_applications_other": "{{count}} Anwendungen geändert",
-    "applied": "{{field}}: {{value}}"
+    "applied": "{{field}}: {{value}}",
+    "toCheck": "Zu prüfen: {{count}}"
   }
 }

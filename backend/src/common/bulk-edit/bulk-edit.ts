@@ -239,7 +239,16 @@ export type BulkEditList<Row extends { id: string }> = {
   reach(selection: BulkSelection, asOf: string | null): Promise<Row[]>;
   apply(row: Row): Promise<BulkEditOutcome>;
   refusal(error: unknown, row: Row): string | null;
+  /**
+   * Optional: the rows written that the list's data checks flag, read after the last write, in the
+   * same transaction (the dry run's before it is rolled back, so the count is the write's). Only the
+   * budget lines declare it (their "To check" column, lot B12b); a list without it answers no `to_check`.
+   */
+  toCheck?(changedIds: string[]): Promise<BulkToCheck>;
 };
+
+/** The rows written that are to check: how many, and how many fail each check (a row may fail several). */
+export type BulkToCheck = { rows: number; checks: Record<string, number> };
 
 /**
  * The answer: `rows`, the rows reached (`changes` or `changed`, plus `unchanged`, plus every refused
@@ -266,6 +275,8 @@ export type BulkEditResult<Row extends { id: string } = { id: string }> = {
    * included (no query more). Kad lists them on its card, each with its value before.
    */
   changed_rows?: Row[];
+  /** With a list that declares `toCheck` only: the rows that would change, or that changed, and are to check. */
+  to_check?: BulkToCheck;
 };
 
 export type BulkEditOptions = {
@@ -317,6 +328,7 @@ export async function runBulkEdit<Row extends { id: string }>(
   let unchanged = 0;
   const changedIds: string[] = [];
   const changedRows: Row[] = [];
+  const written: string[] = [];
   for (const row of rows) {
     await manager.query(`SAVEPOINT ${ROW_SAVEPOINT}`);
     let outcome: BulkEditOutcome;
@@ -333,6 +345,7 @@ export async function runBulkEdit<Row extends { id: string }>(
     await manager.query(`RELEASE SAVEPOINT ${ROW_SAVEPOINT}`);
     if (outcome === 'changed') {
       changed += 1;
+      written.push(row.id);
       if (options.changedIds) changedIds.push(row.id);
       if (options.changedRows) changedRows.push(row);
     } else unchanged += 1;
@@ -340,6 +353,8 @@ export async function runBulkEdit<Row extends { id: string }>(
   const listed = {
     ...(options.changedIds ? { changed_ids: changedIds } : {}),
     ...(options.changedRows ? { changed_rows: changedRows } : {}),
+    // Before the dry run's rollback: the rows as the write leaves them.
+    ...(list.toCheck ? { to_check: await list.toCheck(written) } : {}),
   };
   if (confirmation.dryRun) {
     await manager.query(`ROLLBACK TO SAVEPOINT ${DRY_RUN_SAVEPOINT}`);

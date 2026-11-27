@@ -123,6 +123,27 @@ async function main() {
     assert.deepEqual(list.written, [rows[3].id, rows[4].id]);
     assert.ok(!statements.some((s) => s.includes('bulk_edit_dry_run')));
   }
+  // A list with a "To check" column (budget lines, lot B12b): asked for the rows written, the dry run's
+  // inside its savepoint (the writes are still there), and answered under `to_check`. A list without
+  // one (the applications) answers as before, without the field (the blocks above).
+  for (const dryRun of [true, false]) {
+    const { manager, statements } = fakeManager();
+    const asked: Array<{ ids: string[]; at: number }> = [];
+    const list: BulkEditList<Row> = {
+      ...fakeList(rows, refuse),
+      toCheck: async (changed) => {
+        asked.push({ ids: changed, at: statements.length });
+        return { rows: 1, checks: { quantity_price: 1 } };
+      },
+    };
+    const confirmation = dryRun
+      ? parseBulkConfirmation({ dry_run: true }, true)
+      : parseBulkConfirmation({ as_of: '2026-11-12T10:00:00Z', expected_rows: 5, fingerprint: bulkFingerprint(rows.map((row) => row.id), change) }, true);
+    const result = await runBulkEdit(manager, list, parseBulkSelection({ all: true }), confirmation, change);
+    assert.deepEqual(result.to_check, { rows: 1, checks: { quantity_price: 1 } }, `${dryRun ? 'dry run' : 'write'}: answered`);
+    assert.deepEqual(asked.map((call) => call.ids), [[rows[3].id, rows[4].id]], `${dryRun ? 'dry run' : 'write'}: the written rows only`);
+    if (dryRun) assert.ok(!statements.slice(0, asked[0].at).includes('ROLLBACK TO SAVEPOINT bulk_edit_dry_run'), 'asked before the dry run rolls back');
+  }
   // Kad's card (lot K2e of 26.12.1): the rows that change, as `reach` read them (their value before),
   // in the write order, for the dry run and for the write; neither the unchanged nor the refused.
   {

@@ -373,6 +373,9 @@ describe('BulkEditDialog', () => {
       "Account outside the company's chart of accounts: 1",
     ]);
     expect(done.textContent).not.toContain('6 rows');
+    // An answer without `to_check` (the applications' list): no "To check" line.
+    expect(screen.queryByTestId('bulk-edit-to-check')).toBeNull();
+    expect(done.textContent).not.toContain('To check');
     // Close alone: no picker, no confirmation, no Cancel; it has the focus, and closes.
     expect(screen.queryByRole('combobox', { name: 'Field' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'pick s-1' })).toBeNull();
@@ -384,6 +387,30 @@ describe('BulkEditDialog', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('says how many written rows will be to check when the list counts them (budget lines, lot B12b), and only then', async () => {
+    post.mockResolvedValueOnce({ data: COUNT });
+    post.mockResolvedValueOnce({ data: { dry_run: false, rows: 10, changed: 5, unchanged: 5, refused: {}, to_check: { rows: 4, checks: { quantity_price: 4 } } } });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-2' }));
+    await waitFor(() => expect(save()).toBeEnabled());
+    fireEvent.click(save());
+    const done = await screen.findByTestId('bulk-edit-done');
+    expect(screen.getByTestId('bulk-edit-to-check')).toHaveTextContent('To check: 4');
+    // One line, no link: the list's "To check" column says which rows.
+    expect(within(done).queryByRole('link')).toBeNull();
+  });
+
+  it('says nothing of the rows to check when none is', async () => {
+    post.mockResolvedValueOnce({ data: COUNT });
+    post.mockResolvedValueOnce({ data: { dry_run: false, rows: 10, changed: 5, unchanged: 5, refused: {}, to_check: { rows: 0, checks: {} } } });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-2' }));
+    await waitFor(() => expect(save()).toBeEnabled());
+    fireEvent.click(save());
+    await screen.findByTestId('bulk-edit-done');
+    expect(screen.queryByTestId('bulk-edit-to-check')).toBeNull();
   });
 
   it('names the change by the choice before the value when the field asks it (a dimension), as the selects show them', async () => {

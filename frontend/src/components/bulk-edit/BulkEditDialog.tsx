@@ -40,8 +40,11 @@ export type BulkEditField = {
 
 /** The count of a dry run (`common/bulk-edit/bulk-edit.ts`). */
 type BulkCount = { rows: number; changes: number; unchanged: number; refused: Record<string, number>; as_of: string; fingerprint?: string };
-/** The answer of the write. */
-export type BulkEditWriteResult = { rows: number; changed: number; unchanged: number; refused: Record<string, number> };
+/**
+ * The answer of the write. `to_check`: the written rows the list's "To check" column will show, for a
+ * list that has one (budget lines, lot B12b); absent elsewhere.
+ */
+export type BulkEditWriteResult = { rows: number; changed: number; unchanged: number; refused: Record<string, number>; to_check?: { rows: number } };
 
 /**
  * Counting or writing 5,000 rows takes about a minute, past the client's usual 120 s ceiling on a busy
@@ -300,6 +303,9 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
             <Typography sx={{ ...statusSx, color: 'kanap.text.primary' }}>{t('bulkEdit.doneChanged', { count: written.result.changed, context: family })}</Typography>
           </Stack>
           <Typography sx={statusSx}>{written.applied}</Typography>
+          {(written.result.to_check?.rows ?? 0) > 0 && (
+            <Typography sx={statusSx} data-testid="bulk-edit-to-check">{t('bulkEdit.toCheck', { count: written.result.to_check!.rows })}</Typography>
+          )}
           <OtherRows unchanged={written.result.unchanged} refused={written.result.refused ?? {}} />
         </Stack>
       </KanapDialog>

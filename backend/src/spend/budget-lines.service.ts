@@ -166,6 +166,7 @@ export class BudgetLinesService {
       listIds: (filters) => this.summaryIds(filters, opts),
       updateLine: (line, input) => this.updateLine(line, input, userId, { manager: opts.manager, audit: opts.audit }),
       options: opts.options,
+      lineChecks: (ids) => budgetList.budgetListLineChecksByIds(SUMMARY_SCOPES.all, this.deps(opts.access), opts.manager, ids),
     });
   }
 
