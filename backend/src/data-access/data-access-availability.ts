@@ -44,8 +44,8 @@ const AVAILABILITY_TTL_MS = 60_000;
 const SYNC_LOCK_TIMEOUT = '5s';
 
 /**
- * The advisory lock (`hashtext` key) the lead's sync holds for its transaction, and that an ANALYZE
- * of the application only tries (`analyzeTables`): the two would otherwise wait for each other on a
+ * The advisory lock (`hashtext` key) the lead's sync holds, exclusive, for its transaction, and that
+ * an ANALYZE of the application only tries, shared (`analyzeTables`): the two would otherwise wait for each other on a
  * table's lock and its `pg_class` row (deadlock). Taken before the sync touches any table, so the
  * sync waits for the ANALYZE (5 s at most) or the ANALYZE skips its turn.
  */

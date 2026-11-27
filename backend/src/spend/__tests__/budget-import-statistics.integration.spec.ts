@@ -21,7 +21,8 @@ import { DemoDataService } from '../../demo-data/demo-data.service';
 // and reported, never logged as analysed. Lot B12b: a sample data load ends with the same ANALYZE
 // (`DemoDataService.analyzeAfterLoad`, tracked as background work, never rejecting); an ANALYZE waits
 // for an autovacuum that holds its table (PostgreSQL cancels it after `deadlock_timeout`), skips its
-// table while the data access policies are synchronised (the sync's advisory lock), and gives up on a
+// table while the data access policies are synchronised (the sync's advisory lock, which two ANALYZE
+// take shared: both run), and gives up on a
 // lock held past 5 s. The sync against an ANALYZE, replayed: no deadlock.
 // @database-spec: run-ci-tests.js runs this file in its serial database lane.
 
@@ -205,6 +206,24 @@ async function testSkipsWhileTheSyncRuns() {
 }
 
 /**
+ * Two ANALYZE at once (two loads): each takes the sync's lock shared, so neither skips the other.
+ * Here one holds it, as an ANALYZE in its transaction does, while the other runs; then two run together.
+ */
+async function testTwoAnalyzeAtOnce() {
+  const release = await holdLock(`SELECT pg_advisory_xact_lock_shared(hashtext($1)::bigint)`, [DATA_ACCESS_SYNC_LOCK]);
+  try {
+    const report = await analyzeTables(dataSource, ['spend_items']);
+    assert.deepEqual([report.analysed, report.busy, report.failed], [['spend_items'], [], []], 'another ANALYZE holding the lock: analysed');
+  } finally {
+    await release();
+  }
+  const both = await Promise.all([analyzeTables(dataSource, ['spend_items', 'spend_versions']), analyzeTables(dataSource, ['spend_versions', 'spend_items'])]);
+  for (const report of both) {
+    assert.deepEqual([report.analysed.sort(), report.busy, report.failed], [['spend_items', 'spend_versions'], [], []], 'two at once: both analysed');
+  }
+}
+
+/**
  * The reviewer's probe of lot B12b, replayed: a transaction does what `data_access_sync_policies()`
  * does to a table (a grant, which updates its `pg_class` row, then its policies, which take the
  * table's exclusive lock) while an ANALYZE of the table starts in between. Without the sync's lock
@@ -271,5 +290,6 @@ void runSpecs('budget-import-statistics.integration.spec', [
   ['an autovacuum on the table: waited for, then analysed', testWaitsPastAnAutovacuum],
   ['a lock held past 5 s: given up, reported', testGivesUpOnALongLock],
   ['the data access sync running: skipped at once, logged', testSkipsWhileTheSyncRuns],
+  ['two ANALYZE at once: both analysed', testTwoAnalyzeAtOnce],
   ['the sync against an ANALYZE, twenty times: no deadlock', testNoDeadlockWithTheSync],
 ]);

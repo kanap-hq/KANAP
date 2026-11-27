@@ -41,8 +41,9 @@ import { DATA_ACCESS_SYNC_LOCK } from '../data-access/data-access-availability';
  * ANALYZE holds while it samples before it updates that same row; the two would wait for each
  * other (deadlock, one of them cancelled). The lead's sync holds the advisory lock
  * `DATA_ACCESS_SYNC_LOCK` for its transaction, taken before it touches a table; each ANALYZE here
- * tries it first, in its own transaction, and skips its table while the sync holds it (logged,
- * left to autovacuum), and the sync waits for an ANALYZE that holds it. The migrations that run
+ * tries it first, shared, in its own transaction, and skips its table while the sync holds it
+ * (logged, left to autovacuum), and the sync waits for an ANALYZE that holds it. Shared: two
+ * ANALYZE at once (two loads) both run. The migrations that run
  * the sync do not take the lock: they run before the API starts, when no ANALYZE of this process
  * runs (lot B12b).
  */
@@ -127,7 +128,7 @@ export async function analyzeTables(
       try {
         await runner.startTransaction();
         await runner.query(`SELECT set_config('lock_timeout', $1, true), set_config('statement_timeout', $2, true)`, [LOCK_TIMEOUT, STATEMENT_TIMEOUT]);
-        const [lock] = await runner.query(`SELECT pg_try_advisory_xact_lock(hashtext($1)::bigint) AS free`, [DATA_ACCESS_SYNC_LOCK]);
+        const [lock] = await runner.query(`SELECT pg_try_advisory_xact_lock_shared(hashtext($1)::bigint) AS free`, [DATA_ACCESS_SYNC_LOCK]);
         if (lock?.free !== true) {
           await runner.rollbackTransaction();
           report.busy.push(state.name);
