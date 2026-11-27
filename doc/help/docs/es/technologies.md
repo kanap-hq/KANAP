@@ -400,7 +400,7 @@ Una ficha creada como aplicación puede ser en realidad una tecnología, por eje
 
 Con el nivel Miembro en la infraestructura, Kad también escribe, y cada cambio llega como una vista previa que usted aprueba:
 
-- Adoptar una entrada del catálogo, completar una tecnología del mismo nombre introducida a mano o crear una tecnología que el catálogo no conoce.
+- Adoptar una entrada del catálogo, completar una tecnología del mismo nombre introducida a mano o crear una tecnología que el catálogo no conoce. Para una entrada del catálogo que ya está en sus tecnologías, aunque se haya renombrado, Kad no prepara una segunda tecnología: nombra la suya con su referencia y su nombre actual, y ofrece abrirla o modificarla.
 - Cambiar los campos de la tecnología.
 - Añadir versiones y cambiar sus etiquetas, fechas y notas.
 - Añadir o quitar responsables de TI, responsables de negocio y contactos de soporte.

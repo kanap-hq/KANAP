@@ -1395,6 +1395,8 @@ export class AiQueryExecutor {
       created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
       metadata: {
+        // Only on a technology adopted from the catalog: the entry's name, never its key.
+        ...(row.catalog_entry ? { catalog_entry: row.catalog_entry } : {}),
         family: scalar(row.family),
         publisher: scalar(row.editor),
         hosting_type: scalar(row.hosting_type),
@@ -4276,6 +4278,7 @@ export class AiQueryExecutor {
     return this.toDetailResult(this.mapTechnology(row), {
       reference: row.reference,
       name: record.name,
+      ...(row.catalog_entry ? { catalog_entry: row.catalog_entry } : {}),
       family: record.family,
       publisher: record.editor,
       hosting_type: record.hosting_type,

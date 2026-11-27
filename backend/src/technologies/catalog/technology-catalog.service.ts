@@ -101,6 +101,22 @@ type Descriptions = Record<string, Partial<Record<CatalogLanguage, string>>>;
  * (`technologies.catalog_key`, `technologies.catalog_state`, `technology_versions.catalog_key`).
  */
 const SHIPPED_PRODUCTS = (shipped as unknown as { products: CatalogProduct[] }).products;
+const SHIPPED_BY_KEY = new Map(SHIPPED_PRODUCTS.map((product) => [product.key, product]));
+
+/**
+ * The name of the catalog entry `key`, as the catalog screen shows it (the same in every
+ * language; the living catalog changes versions, never a name), or null for a key the shipped
+ * file does not hold.
+ */
+export function catalogEntryName(key: string | null | undefined): string | null {
+  return (key && SHIPPED_BY_KEY.get(key)?.name) || null;
+}
+
+/** The keys of the catalog entries whose name contains `text`, without case. */
+export function catalogKeysNameContaining(text: string): string[] {
+  const needle = text.trim().toLowerCase();
+  return needle ? SHIPPED_PRODUCTS.filter((product) => product.name.toLowerCase().includes(needle)).map((product) => product.key) : [];
+}
 
 /**
  * `product:version` keys whose shipped version says the vendor plans no end and stores both
@@ -121,7 +137,7 @@ export function shippedKeysWithoutPlannedEnd(): readonly string[] {
 @Injectable()
 export class TechnologyCatalogService {
   private readonly products: CatalogProduct[] = SHIPPED_PRODUCTS;
-  private readonly byKey = new Map(this.products.map((product) => [product.key, product]));
+  private readonly byKey = SHIPPED_BY_KEY;
   private readonly descriptions = (shippedDescriptions as unknown as { descriptions: Descriptions }).descriptions;
   /** The end of the day the shipped file was read from endoflife.date (`source.retrieved_on`). */
   private readonly shippedAt = Date.parse(`${(shipped as unknown as { source?: { retrieved_on?: string } }).source?.retrieved_on ?? '1970-01-01'}T23:59:59.999Z`);

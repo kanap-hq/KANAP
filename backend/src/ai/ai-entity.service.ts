@@ -40,6 +40,7 @@ import { deriveStatusFromDisabledAt } from '../common/status';
 import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
 import { loadContractCoverage, type ContractCoveredFamily } from './query/ai-contract-coverage';
 import { operatingSystemLabelSql } from '../technologies/operating-system-codes';
+import { catalogEntryName, catalogKeysNameContaining } from '../technologies/catalog/technology-catalog.service';
 import { TechnologyLinksService } from '../technologies/technology-links.service';
 import { assetInServiceSql, type ReachedApplication, TechnologyReachService } from '../technologies/technology-reach.service';
 import { INCIDENT_REVIEW_SLOT } from '../knowledge/integrated-document.constants';
@@ -2451,6 +2452,20 @@ export class AiEntityService {
             OR (${prefixRef}::text IS NOT NULL AND ts_filter(search_vector, '{a}') @@ ${prefixTsq}))`);
     }
 
+    // A technology adopted from the catalog is also found by the name of its catalog entry, which
+    // the index does not hold (it holds the record's own name): the entries are matched in memory,
+    // then their technologies by catalog key. The key is read back so the result names the entry.
+    const searchesTechnologies = indexEntityTypes.includes('technologies');
+    const catalogKeys = searchesTechnologies && !prefixed && !bare && q.length >= 3 ? catalogKeysNameContaining(q) : [];
+    const catalogHit = catalogKeys.length
+      ? `(entity_type = 'technologies' AND entity_id IN (
+           SELECT ct.id FROM technologies ct WHERE ct.tenant_id = ${tenantRef} AND ct.catalog_key = ANY(${push(catalogKeys)}::text[])))`
+      : null;
+    const catalogKey = searchesTechnologies
+      ? `CASE WHEN entity_type = 'technologies' THEN (
+           SELECT ct.catalog_key FROM technologies ct WHERE ct.tenant_id = search_index.tenant_id AND ct.id = search_index.entity_id) END`
+      : 'NULL::text';
+
     const limitRef = push(limit);
     const offsetRef = push(offset);
 
@@ -2465,6 +2480,7 @@ export class AiEntityService {
               END AS summary,
               status, extra_json, source_updated_at,
               COUNT(*) OVER()::int AS total_count,
+              ${catalogKey} AS catalog_key,
               CASE
                 WHEN ${legacyRefParam}::text IS NOT NULL AND extra_json->>'legacy_number' = ${legacyRefParam} THEN 4
                 WHEN ${refRef}::int IS NOT NULL AND ref_number = ${refRef}
@@ -2473,6 +2489,7 @@ export class AiEntityService {
                 WHEN ${numPrefixRef}::text IS NOT NULL
                      AND ref_number::text LIKE ${numPrefixRef} || '%' THEN 3.5
                 WHEN label ILIKE ${likeRef} THEN 3
+                ${catalogHit ? `WHEN ${catalogHit} THEN 3` : ''}
                 WHEN similarity(label, ${qRef}) > 0.35 THEN 2.5
                 ELSE 1 + LEAST(ts_rank(search_vector, ${tsq}), 0.99)
               END AS score
@@ -2488,6 +2505,7 @@ export class AiEntityService {
             OR search_vector @@ ${tsq}
             OR (${prefixRef}::text IS NOT NULL AND search_vector @@ ${prefixTsq})
             OR LOWER(COALESCE(extra_json->>'email', '')) = LOWER(${qRef})
+            ${catalogHit ? `OR ${catalogHit}` : ''}
          )
          ${scopeClauses.join('\n         ')}
        ORDER BY score DESC,
@@ -2604,6 +2622,9 @@ export class AiEntityService {
       // The index keeps one type per nature; the AI family says which nature the line is.
       if (type === 'budget_lines') metadata.nature = row.entity_type === 'capex_items' ? 'capex' : 'opex';
     }
+    // A technology adopted from the catalog names its entry, never the key.
+    const catalogEntry = type === 'technologies' ? catalogEntryName(row.catalog_key) : null;
+    if (catalogEntry) metadata = { catalog_entry: catalogEntry, ...(metadata ?? {}) };
 
     return {
       type,

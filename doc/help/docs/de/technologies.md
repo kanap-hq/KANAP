@@ -400,7 +400,7 @@ Ein als Anwendung angelegter Eintrag kann in Wirklichkeit eine Technologie sein,
 
 Mit der Stufe Mitglied für die Infrastruktur schreibt Kad auch, und jede Änderung kommt als Vorschau, die Sie genehmigen:
 
-- Einen Katalogeintrag übernehmen, eine von Hand erfasste Technologie gleichen Namens vervollständigen oder eine Technologie anlegen, die der Katalog nicht kennt.
+- Einen Katalogeintrag übernehmen, eine von Hand erfasste Technologie gleichen Namens vervollständigen oder eine Technologie anlegen, die der Katalog nicht kennt. Für einen Katalogeintrag, der schon unter Ihren Technologien steht, auch umbenannt, bereitet Kad keine zweite Technologie vor: Es nennt Ihre Technologie mit ihrer Referenz und ihrem aktuellen Namen und bietet an, sie zu öffnen oder zu ändern.
 - Die Felder der Technologie ändern.
 - Versionen hinzufügen und ihre Bezeichnungen, Daten und Notizen ändern.
 - IT-Verantwortliche, Business-Verantwortliche und Support-Kontakte hinzufügen oder entfernen.

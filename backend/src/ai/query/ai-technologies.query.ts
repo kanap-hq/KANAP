@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../../auth/business-contributor-scope';
 import { gridTextClause } from '../../technologies/technologies.service';
+import { catalogEntryName, catalogKeysNameContaining } from '../../technologies/catalog/technology-catalog.service';
 import { versionInUseSql, versionSupportSql } from '../../technologies/reports/version-support';
 import { countingRowSql, rowJoinsSql, vulnerabilityCountsEnabled } from '../../vulnerabilities/vulnerability-reach-counts';
 import { inServiceSql, technologyServerFiguresSql } from '../../technologies/technology-reach.service';
@@ -303,6 +304,16 @@ function manyToManyClause(column: string, model: any, bind: (value: unknown) => 
   return parts.length ? `(${parts.join(' OR ')})` : 'false';
 }
 
+/**
+ * The technologies adopted from a catalog entry whose name contains `text`, without case: the
+ * keys are read from the shipped catalog in memory, then matched on `r.catalog_key`. Null when no
+ * entry matches.
+ */
+function catalogEntryClause(text: string, bind: (value: unknown) => string): string | null {
+  const keys = catalogKeysNameContaining(text);
+  return keys.length ? `r.catalog_key = ANY(${bind(keys)}::text[])` : null;
+}
+
 /** One grid filter model on a column of `r`, or a 400 for a model this list cannot take. */
 function filterClause(column: string, model: any, bind: (value: unknown) => string): string | null {
   if (column === 'version' || Object.prototype.hasOwnProperty.call(OWNER_COLUMNS, column)) {
@@ -321,7 +332,12 @@ function filterClause(column: string, model: any, bind: (value: unknown) => stri
   }
   if (TEXT_COLUMNS.has(column)) {
     if (model?.filterType !== 'text') throw new BadRequestException(`Unsupported filter on ${column}.`);
-    return gridTextClause(expr, model, bind);
+    const clause = gridTextClause(expr, model, bind);
+    // A name that contains the text, or the name of the catalog entry the technology was adopted from.
+    const entry = clause && column === 'name' && (model.type || 'contains') === 'contains'
+      ? catalogEntryClause(String(model.filter ?? ''), bind)
+      : null;
+    return entry ? `(${clause} OR ${entry})` : clause;
   }
   if (NUMBER_COLUMNS.has(column)) {
     if (model?.filterType !== 'number') throw new BadRequestException(`Unsupported filter on ${column}.`);
@@ -353,6 +369,8 @@ export type AiTechnologyRow = {
   item_number: number;
   reference: string;
   name: string;
+  /** The name of the catalog entry the technology was adopted from (`catalogEntryName`), null when typed by hand. */
+  catalog_entry: string | null;
   editor: string | null;
   family: string | null;
   hosting_type: string | null;
@@ -372,8 +390,10 @@ export type AiTechnologyRow = {
 };
 
 /**
- * A page of technologies (`page`, `limit`, `sort` as `field:DIR`, `q` on name, publisher and
- * reference, `filters` keyed by grid column), or its ids only (`idsOnly`, for the aggregates).
+ * A page of technologies (`page`, `limit`, `sort` as `field:DIR`, `q` on name, publisher,
+ * reference and catalog entry name, `filters` keyed by grid column), or its ids only (`idsOnly`,
+ * for the aggregates). The name filter also matches the name of the catalog entry a technology was
+ * adopted from; `catalog_entry` is that name, read from the shipped catalog by key after the query.
  * An unknown sort falls back to the name. `ids` narrows to those technologies (the detail).
  */
 export async function listAiTechnologies(
@@ -397,7 +417,8 @@ export async function listAiTechnologies(
   const q = String(query.q ?? '').trim().slice(0, 100);
   if (q) {
     const needle = bind(`%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
-    where.push(`(r.name ILIKE ${needle} OR r.editor ILIKE ${needle} OR r.reference ILIKE ${needle})`);
+    const entry = catalogEntryClause(q, bind);
+    where.push(`(r.name ILIKE ${needle} OR r.editor ILIKE ${needle} OR r.reference ILIKE ${needle}${entry ? ` OR ${entry}` : ''})`);
   }
   const [sortField, sortDirection] = String(query.sort ?? 'name').split(':');
   const sort = SORTS[sortField] ?? SORTS.name;
@@ -407,10 +428,14 @@ export async function listAiTechnologies(
     : Math.min(Math.max(Number(query.limit) || 25, 1), 500);
   const page = Math.max(Number(query.page) || 1, 1);
   const offset = opts.idsOnly ? 0 : (page - 1) * limit;
-  const rows: Array<Omit<AiTechnologyRow, 'versions_in_use'> & { versions_in_use: VersionInUse[] | null; total: string }> = await mg.query(
+  const rows: Array<Omit<AiTechnologyRow, 'versions_in_use' | 'catalog_entry'> & {
+    catalog_key: string | null;
+    versions_in_use: VersionInUse[] | null;
+    total: string;
+  }> = await mg.query(
     `WITH r AS (
        SELECT t.id, t.item_number, ('TEC-' || t.item_number) AS reference, t.name, t.editor, t.family, t.hosting_type,
-              t.lifecycle, t.admin_zone, t.description, t.created_at, t.updated_at,
+              t.lifecycle, t.admin_zone, t.description, t.created_at, t.updated_at, t.catalog_key,
               ${TECHNOLOGY_SERVER_COUNT} AS server_count,
               ${applicationCount} AS application_count,
               ${technologySupportStatusSql('t')} AS support_status,
@@ -422,7 +447,7 @@ export async function listAiTechnologies(
          ${technologyServerFiguresJoin('t')}
         WHERE t.tenant_id = $1 ${idFilter}
      )
-     SELECT ${opts.idsOnly ? 'r.id' : `r.id, r.item_number, r.reference, r.name, r.editor, r.family, r.hosting_type, r.lifecycle,
+     SELECT ${opts.idsOnly ? 'r.id' : `r.id, r.item_number, r.reference, r.name, r.catalog_key, r.editor, r.family, r.hosting_type, r.lifecycle,
             r.admin_zone, r.description, r.created_at, r.updated_at, r.server_count, r.application_count, r.support_status,
             to_char(r.end_of_standard_support, 'YYYY-MM-DD') AS end_of_standard_support,
             to_char(r.end_of_support, 'YYYY-MM-DD') AS end_of_support, r.open_vulnerabilities, r.versions_in_use`},
@@ -433,8 +458,9 @@ export async function listAiTechnologies(
       LIMIT ${bind(limit)} OFFSET ${bind(offset)}`,
     params,
   );
-  const items = opts.idsOnly ? [] : rows.map(({ total: _total, ...row }) => ({
+  const items = opts.idsOnly ? [] : rows.map(({ total: _total, catalog_key, ...row }) => ({
     ...row,
+    catalog_entry: catalogEntryName(catalog_key),
     server_count: Number(row.server_count) || 0,
     application_count: row.application_count == null ? null : Number(row.application_count),
     open_vulnerabilities: row.open_vulnerabilities == null ? null : Number(row.open_vulnerabilities),
