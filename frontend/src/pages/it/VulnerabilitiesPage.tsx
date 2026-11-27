@@ -23,7 +23,7 @@ import { useFeatures } from '../../config/FeaturesContext';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
-import { getWithListContext } from '../../lib/listContext';
+import { getWithListContext, parseListFilters } from '../../lib/listContext';
 import { drawerMenuItemSx, drawerSelectSx, inlineControlSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
@@ -1183,6 +1183,11 @@ export default function VulnerabilitiesPage() {
   const initialModel = useMemo(() => {
     const model = filterModelFromSearch(location.search);
     if (!readsApplications) delete model.application;
+    // A cleared opening filter is `state: null` in `filters`. Drop that column so the list stays cleared.
+    const stored = parseListFilters(new URLSearchParams(location.search).get('filters'));
+    if (stored && Object.prototype.hasOwnProperty.call(stored, 'state') && stored.state == null) {
+      delete model.state;
+    }
     return model;
   }, [location.search, readsApplications]);
   const [selection, setSelection] = useState<Selection>(NO_SELECTION);

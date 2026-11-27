@@ -24,7 +24,7 @@ import { formatShortDate, formatShortInstantDate } from '../lib/dateFormat';
 import { getDotColor } from '../utils/statusColors';
 import { useTheme } from '@mui/material/styles';
 import { StatusDot } from '../components/design';
-import { setListFiltersParam, getWithListContext } from '../lib/listContext';
+import { setListFiltersParam, getWithListContext, withClearedDefaults } from '../lib/listContext';
 import { useUrlFilterModel } from '../hooks/useListContextSearch';
 import { ImportLabel } from '../components/csv/importFiles';
 
@@ -324,7 +324,7 @@ export default function TasksPage() {
     const filters = lastQueryRef.current?.filters || {};
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    setListFiltersParam(sp, '/tasks', filters);
+    setListFiltersParam(sp, '/tasks', lastQueryRef.current ? withClearedDefaults(filters, defaultFilterModel) : filters);
     const scope = taskScopeRef.current;
     const profileId = profileIdRef.current;
     const hasTeamNow = hasTeamRef.current;
@@ -337,7 +337,7 @@ export default function TasksPage() {
       sp.set('teamId', teamId);
     }
     return sp;
-  }, [t]);
+  }, [defaultFilterModel]);
 
   const getTaskFilterValues = useCallback((field: string, opts?: { labelMap?: Record<string, string>; order?: Array<string | null>; emptyLabel?: string; searchable?: boolean }) => {
     const labelMap = opts?.labelMap;

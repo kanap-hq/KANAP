@@ -43,7 +43,7 @@ function LocationProbe() {
 const rowCalls = () => mocked.get.mock.calls.filter(([url]) => url === '/things');
 const paramsOf = (call: unknown[]) => (call[1] as Config).params;
 
-function Grid(props: { url?: string; onGridApiReady?: (api: any) => void; pageParams?: (state: any[]) => Record<string, string | undefined>; context?: boolean; endpoint?: string }) {
+function Grid(props: { url?: string; onGridApiReady?: (api: any) => void; pageParams?: (state: any[]) => Record<string, string | undefined>; context?: boolean; endpoint?: string; defaultFilterModel?: Record<string, unknown> | null }) {
   return (
     <MemoryRouter initialEntries={[props.url ?? '/things']}>
       <ServerDataGrid<{ id: string; name: string }>
@@ -58,6 +58,7 @@ function Grid(props: { url?: string; onGridApiReady?: (api: any) => void; pagePa
         onGridApiReady={props.onGridApiReady}
         pageParams={props.pageParams}
         setFilterExcludeMode={props.context}
+        defaultFilterModel={props.defaultFilterModel}
       />
       <LocationProbe />
     </MemoryRouter>
@@ -195,6 +196,35 @@ describe('ServerDataGrid list contexts and page parameters', () => {
     await act(async () => { gridApi.setFilterModel(null); });
     await waitFor(() => expect(new URLSearchParams(address.search).get('filters')).toBeNull());
   });
+
+  it('writes a cleared default filter as null, and a reload does not put that filter back', async () => {
+    const opening = { name: { filterType: 'text', type: 'contains', filter: 'keep' } };
+    let gridApi: any = null;
+    const { unmount } = render(<Grid defaultFilterModel={opening} onGridApiReady={(a) => { gridApi = a; }} />);
+    await waitFor(() => expect(rowCalls()).toHaveLength(1));
+    // A filter the person chose, and the opening filter itself, stay written as they are.
+    const chosen = { name: { filterType: 'text', type: 'contains', filter: 'other' } };
+    await act(async () => { gridApi.setFilterModel(chosen); });
+    await waitFor(() => expect(new URLSearchParams(address.search).get('filters')).toBe(JSON.stringify(chosen)));
+    await act(async () => { gridApi.setFilterModel(opening); });
+    await waitFor(() => expect(new URLSearchParams(address.search).get('filters')).toBe(JSON.stringify(opening)));
+    // Cleared: the default column is null, so the next open does not restore the opening filter.
+    await act(async () => { gridApi.setFilterModel(null); });
+    await waitFor(() => {
+      const raw = new URLSearchParams(address.search).get('filters');
+      expect(JSON.parse(raw!).name).toBeNull();
+    });
+    const reloaded = address.search;
+    unmount();
+    mocked.get.mockClear();
+    gridApi = null;
+    render(<Grid url={`/things${reloaded}`} defaultFilterModel={opening} onGridApiReady={(a) => { gridApi = a; }} />);
+    await waitFor(() => expect(rowCalls()).toHaveLength(1));
+    expect(gridApi.getFilterModel().name ?? null).toBeNull();
+    const sent = paramsOf(rowCalls()[0]).filters;
+    if (sent) expect(JSON.parse(sent).name ?? null).toBeNull();
+    expect(JSON.parse(new URLSearchParams(address.search).get('filters')!).name).toBeNull();
+  }, 15_000);
 
   it('a request error shows its translated message, not the transport text', async () => {
     mocked.get.mockImplementation(async () => { throw notFound(); });

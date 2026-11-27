@@ -34,7 +34,7 @@ import { formatDuration } from './components/DurationEditor';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
-import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
+import { setListFiltersParam, getWithListContext, withClearedDefaults } from '../../lib/listContext';
 import { useUrlFilterModel } from '../../hooks/useListContextSearch';
 import { useFeatures } from '../../config/FeaturesContext';
 import VulnerabilityCountCell from '../../components/vulnerabilities/VulnerabilityCountCell';
@@ -270,7 +270,7 @@ export default function ApplicationsPage() {
     const filters = lastQueryRef.current?.filters || {};
     if (sort) sp.set('sort', sort);
     if (q) sp.set('q', q);
-    setListFiltersParam(sp, '/applications', filters);
+    setListFiltersParam(sp, '/applications', lastQueryRef.current && defaultFilterModel ? withClearedDefaults(filters, defaultFilterModel) : filters);
     sp.set('appScope', appScope);
     if (appScope === 'my' && profile?.id) {
       sp.set('ownerUserId', profile.id);
@@ -279,7 +279,7 @@ export default function ApplicationsPage() {
       if (profile?.id) sp.set('ownerUserId', profile.id);
     }
     return sp;
-  }, [appScope, profile?.id, hasTeam, myTeamConfig?.team_id]);
+  }, [appScope, profile?.id, hasTeam, myTeamConfig?.team_id, defaultFilterModel]);
   const extraParams = useMemo(() => {
     const params: Record<string, any> = {};
     if (includeFlags) params.include = includeFlags;

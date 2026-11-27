@@ -191,6 +191,18 @@ describe('VulnerabilitiesPage', () => {
     expect(getComputedStyle(severity).color).toBe('rgb(180, 83, 9)');
   });
 
+  it('drops the opening state filter when the address cleared it, and keeps a chosen state as today', () => {
+    const cleared = renderPage(`/it/vulnerabilities?filters=${encodeURIComponent(JSON.stringify({ state: null }))}`);
+    expect(grid.props!.initialState.filter.filterModel.state).toBeUndefined();
+    cleared.unmount();
+    const chosen = renderPage(`/it/vulnerabilities?filters=${encodeURIComponent(JSON.stringify({ state: { filterType: 'set', values: ['handled'] } }))}`);
+    expect(grid.props!.initialState.filter.filterModel.state).toEqual({ filterType: 'set', values: ['to_review'] });
+    chosen.unmount();
+    const none = renderPage(`/it/vulnerabilities?filters=${encodeURIComponent(JSON.stringify({ state: { filterType: 'set', values: [] } }))}`);
+    expect(grid.props!.initialState.filter.filterModel.state).toEqual({ filterType: 'set', values: ['to_review'] });
+    none.unmount();
+  });
+
   it('shows a version not recorded in quiet text, potentially concerned, and filters by version', async () => {
     renderPage();
     const Version = column('version').cellRenderer;
