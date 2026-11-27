@@ -271,22 +271,19 @@ const ConnectionTypesEditor = React.memo(function ConnectionTypesEditor({
 }: ConnectionTypesEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'ct'), [items]);
   const [localItems, setLocalItems] = React.useState(itemsWithIds);
-  const pendingCommitRef = React.useRef(false);
+  const sentListsRef = React.useRef(new WeakSet<object>());
   const { containerRef, onScroll, useVirtual, visibleItems, paddingTop, paddingBottom, maxHeight } =
     useVirtualRows({ items: localItems, rowHeight: 60 });
 
-  // Sync down from parent - skip if we just committed to avoid loops
+  // Sync down from parent, except a list this editor sent itself: the rows typed since are newer than it.
   React.useEffect(() => {
-    if (pendingCommitRef.current) {
-      pendingCommitRef.current = false;
-      return;
-    }
+    if (sentListsRef.current.has(itemsWithIds)) return;
     setLocalItems(itemsWithIds);
   }, [itemsWithIds]);
 
   const commitToParent = React.useCallback(
     (next: ConnectionTypeOption[]) => {
-      pendingCommitRef.current = true;
+      sentListsRef.current.add(next);
       React.startTransition(() => onChange(next));
     },
     [onChange]
@@ -390,22 +387,19 @@ const SubnetsEditor = React.memo(function SubnetsEditor({
 }: SubnetsEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'subnet'), [items]);
   const [localItems, setLocalItems] = React.useState(itemsWithIds);
-  const pendingCommitRef = React.useRef(false);
+  const sentListsRef = React.useRef(new WeakSet<object>());
   const { containerRef, onScroll, useVirtual, visibleItems, paddingTop, paddingBottom, maxHeight } =
     useVirtualRows({ items: localItems, rowHeight: 60 });
 
-  // Sync down from parent - skip if we just committed to avoid loops
+  // Sync down from parent, except a list this editor sent itself: the rows typed since are newer than it.
   React.useEffect(() => {
-    if (pendingCommitRef.current) {
-      pendingCommitRef.current = false;
-      return;
-    }
+    if (sentListsRef.current.has(itemsWithIds)) return;
     setLocalItems(itemsWithIds);
   }, [itemsWithIds]);
 
   const commitToParent = React.useCallback(
     (next: SubnetOption[]) => {
-      pendingCommitRef.current = true;
+      sentListsRef.current.add(next);
       React.startTransition(() => onChange(next));
     },
     [onChange]
@@ -526,22 +520,19 @@ interface DomainsEditorProps {
 export const DomainsEditor = React.memo(function DomainsEditor({ items, onChange, readOnly = false }: DomainsEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'domain'), [items]);
   const [localItems, setLocalItems] = React.useState(itemsWithIds);
-  const pendingCommitRef = React.useRef(false);
+  const sentListsRef = React.useRef(new WeakSet<object>());
   const { containerRef, onScroll, useVirtual, visibleItems, paddingTop, paddingBottom, maxHeight } =
     useVirtualRows({ items: localItems, rowHeight: 52 });
 
-  // Sync down from parent - skip if we just committed to avoid loops
+  // Sync down from parent, except a list this editor sent itself: the rows typed since are newer than it.
   React.useEffect(() => {
-    if (pendingCommitRef.current) {
-      pendingCommitRef.current = false;
-      return;
-    }
+    if (sentListsRef.current.has(itemsWithIds)) return;
     setLocalItems(itemsWithIds);
   }, [itemsWithIds]);
 
   const commitToParent = React.useCallback(
     (next: DomainOption[]) => {
-      pendingCommitRef.current = true;
+      sentListsRef.current.add(next);
       React.startTransition(() => onChange(next));
     },
     [onChange]
@@ -707,19 +698,16 @@ function SortableAdminZoneRow({ id, children }: { id: string; children: React.Re
 export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, onChange, readOnly = false }: AdminZonesEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'adminZones'), [items]);
   const [localItems, setLocalItems] = React.useState(itemsWithIds);
-  const pendingCommitRef = React.useRef(false);
+  const sentListsRef = React.useRef(new WeakSet<object>());
 
-  // Sync down from parent - skip if we just committed to avoid loops
+  // Sync down from parent, except a list this editor sent itself: the rows typed since are newer than it.
   React.useEffect(() => {
-    if (pendingCommitRef.current) {
-      pendingCommitRef.current = false;
-      return;
-    }
+    if (sentListsRef.current.has(itemsWithIds)) return;
     setLocalItems(itemsWithIds);
   }, [itemsWithIds]);
 
   const commitToParent = React.useCallback((next: AdminZoneOption[]) => {
-    pendingCommitRef.current = true;
+    sentListsRef.current.add(next);
     React.startTransition(() => onChange(next));
   }, [onChange]);
 
@@ -999,7 +987,14 @@ function ItSettingsLists() {
   const readOnly = !hasLevel('settings', 'admin');
   const queryClient = useQueryClient();
   const { data, isError } = useItOpsSettings();
-  const [state, dispatch] = React.useReducer(reducer, initialState);
+  const [state, applyAction] = React.useReducer(reducer, initialState);
+  // The editors hand their rows to the page inside a transition, which React may not have rendered yet when
+  // the page is left. This copy takes each action as it is sent, so a save reads the rows as last typed.
+  const latestStateRef = React.useRef(state);
+  const dispatch = React.useCallback((action: Action) => {
+    latestStateRef.current = reducer(latestStateRef.current, action);
+    applyAction(action);
+  }, []);
 
   const { data: locations } = useLocationOptions();
 
@@ -1030,7 +1025,7 @@ function ItSettingsLists() {
   const errorMessage = state.errorMessage;
 
   const handleSaveEnum = (id: EnumListId) => {
-    const current = state.enums[id] || [];
+    const current = latestStateRef.current.enums[id] || [];
     const ordered = withLocalIds(orderOf(id, current), id);
     dispatch({ type: 'setEnum', id, items: ordered });
     dispatch({ type: 'setPending', id });
@@ -1038,21 +1033,21 @@ function ItSettingsLists() {
   };
 
   const handleSaveConnections = () => {
-    const sorted = withLocalIds(sortConnectionTypes(state.connectionTypes), 'ct');
+    const sorted = withLocalIds(sortConnectionTypes(latestStateRef.current.connectionTypes), 'ct');
     dispatch({ type: 'setConnectionTypes', items: sorted });
     dispatch({ type: 'setPending', id: 'connectionTypes' });
     mutation.mutate({ id: 'connectionTypes', rows: stripLocalIds(sorted) });
   };
 
   const handleSaveSubnets = () => {
-    const sorted = withLocalIds(sortSubnets(state.subnets), 'subnet');
+    const sorted = withLocalIds(sortSubnets(latestStateRef.current.subnets), 'subnet');
     dispatch({ type: 'setSubnets', items: sorted });
     dispatch({ type: 'setPending', id: 'subnets' });
     mutation.mutate({ id: 'subnets', rows: stripLocalIds(sorted) });
   };
 
   const handleSaveDomains = () => {
-    const sorted = withLocalIds(sortDomains(state.domains), 'domain');
+    const sorted = withLocalIds(sortDomains(latestStateRef.current.domains), 'domain');
     dispatch({ type: 'setDomains', items: sorted });
     dispatch({ type: 'setPending', id: 'domains' });
     mutation.mutate({ id: 'domains', rows: stripLocalIds(sorted) });
@@ -1062,56 +1057,42 @@ function ItSettingsLists() {
   // only once every row is complete — half-typed rows stay local until filled.
   // Codes are generated by the server; a list is sent once every name is present and the names are valid
   // (unique, not another row's code, no comma where the CSV serializes the list with commas).
-  const listReadyToSave = (id: ListId): boolean => {
-    if (id === 'subnets') return state.subnets.every((row) => String(row.cidr || '').trim() !== '');
-    const rows: any[] = id === 'connectionTypes' ? state.connectionTypes : id === 'domains' ? state.domains : state.enums[id as EnumListId] || [];
-    const skipCodes = new Set((state.baseline?.lockedCodes?.[id] || []).map((code) => code.toLowerCase()));
+  const listReadyToSave = (current: SettingsState, id: ListId): boolean => {
+    if (id === 'subnets') return current.subnets.every((row) => String(row.cidr || '').trim() !== '');
+    const rows = listRows(current, id);
+    const skipCodes = new Set((current.baseline?.lockedCodes?.[id] || []).map((code) => code.toLowerCase()));
     return catalogListIssues(rows, { forbidComma: id === 'accessMethods', skipCodes }).size === 0;
   };
 
+  const savableLists = (current: SettingsState) => (Object.keys(current.dirty) as ListId[]).filter(
+    (id) => current.dirty[id] && listReadyToSave(current, id) && !autosaveBlocked(current, id),
+  );
+
+  const saveLists = (ids: ListId[]) => ids.forEach((id) => {
+    if (id === 'connectionTypes') handleSaveConnections();
+    else if (id === 'subnets') handleSaveSubnets();
+    else if (id === 'domains') handleSaveDomains();
+    else handleSaveEnum(id);
+  });
+
   React.useEffect(() => {
-    if (readOnly || submitting) return undefined;
-    const dirtyIds = (Object.keys(state.dirty) as ListId[]).filter(
-      (id) => state.dirty[id] && listReadyToSave(id) && !autosaveBlocked(state, id),
-    );
-    if (dirtyIds.length === 0) return undefined;
-    const timer = setTimeout(() => {
-      dirtyIds.forEach((id) => {
-        if (id === 'connectionTypes') handleSaveConnections();
-        else if (id === 'subnets') handleSaveSubnets();
-        else if (id === 'domains') handleSaveDomains();
-        else handleSaveEnum(id);
-      });
-    }, 1500);
+    if (readOnly || submitting || savableLists(state).length === 0) return undefined;
+    const timer = setTimeout(() => saveLists(savableLists(latestStateRef.current)), 1500);
     return () => clearTimeout(timer);
   });
 
-  // The effect above clears its timer on every render and on leaving the page, so a
-  // value typed just before leaving would be dropped. Remember the pending save and
-  // send it once when the page unmounts. A save already in flight is left alone.
-  const flushAutosaveRef = React.useRef<(() => void) | null>(null);
+  // The effect above clears its timer on every render and on leaving the page, so a value typed just before
+  // leaving would be dropped: send it once when the page unmounts. A save already in flight is left alone.
+  const saveOnLeaveRef = React.useRef<(() => void) | null>(null);
   React.useEffect(() => {
-    if (readOnly || submitting) {
-      flushAutosaveRef.current = null;
-      return;
-    }
-    const dirtyIds = (Object.keys(state.dirty) as ListId[]).filter(
-      (id) => state.dirty[id] && listReadyToSave(id) && !autosaveBlocked(state, id),
-    );
-    flushAutosaveRef.current = dirtyIds.length === 0
-      ? null
-      : () => {
-          dirtyIds.forEach((id) => {
-            if (id === 'connectionTypes') handleSaveConnections();
-            else if (id === 'subnets') handleSaveSubnets();
-            else if (id === 'domains') handleSaveDomains();
-            else handleSaveEnum(id);
-          });
-        };
+    saveOnLeaveRef.current = readOnly ? null : () => {
+      const latest = latestStateRef.current;
+      if (!submitting && latest.pending === null) saveLists(savableLists(latest));
+    };
   });
 
   React.useEffect(() => () => {
-    flushAutosaveRef.current?.();
+    saveOnLeaveRef.current?.();
   }, []);
 
   // Locked rows come from the server (lifecycle statuses, system domains); protected rows are defaults it re-adds.
@@ -1154,7 +1135,7 @@ function ItSettingsLists() {
                   return (
                     <SettingsSection key={section.id} title={section.title} description={t(listUsageKey('connectionTypes'))}>
                       <SettingsControls
-                        onAdd={() => dispatch({ type: 'setConnectionTypes', items: [{ category: '', label: '', code: '', typicalPorts: '', deprecated: false, localId: makeLocalId('ct') }, ...state.connectionTypes] })}
+                        onAdd={() => dispatch({ type: 'setConnectionTypes', items: [{ category: '', label: '', code: '', typicalPorts: '', deprecated: false, localId: makeLocalId('ct') }, ...latestStateRef.current.connectionTypes] })}
                         saving={state.pending === 'connectionTypes' && submitting}
                         dirty={!!state.dirty.connectionTypes}
                         readOnly={readOnly}
@@ -1168,7 +1149,7 @@ function ItSettingsLists() {
                   return (
                     <SettingsSection key={section.id} title={section.title} description={t(listUsageKey('subnets'))}>
                       <SettingsControls
-                        onAdd={() => dispatch({ type: 'setSubnets', items: [{ location_id: defaultLocationId, cidr: '', vlan_number: undefined, network_zone: 'lan', description: '', deprecated: false, localId: makeLocalId('subnet') }, ...state.subnets] })}
+                        onAdd={() => dispatch({ type: 'setSubnets', items: [{ location_id: defaultLocationId, cidr: '', vlan_number: undefined, network_zone: 'lan', description: '', deprecated: false, localId: makeLocalId('subnet') }, ...latestStateRef.current.subnets] })}
                         saving={state.pending === 'subnets' && submitting}
                         dirty={!!state.dirty.subnets}
                         readOnly={readOnly}
@@ -1181,7 +1162,7 @@ function ItSettingsLists() {
                   return (
                     <SettingsSection key={section.id} title={section.title} description={t(listUsageKey('domains'))} hint={listHint('domains')}>
                       <SettingsControls
-                        onAdd={() => dispatch({ type: 'setDomains', items: [{ code: '', label: '', dns_suffix: '', deprecated: false, system: false, localId: makeLocalId('domain') }, ...state.domains] })}
+                        onAdd={() => dispatch({ type: 'setDomains', items: [{ code: '', label: '', dns_suffix: '', deprecated: false, system: false, localId: makeLocalId('domain') }, ...latestStateRef.current.domains] })}
                         saving={state.pending === 'domains' && submitting}
                         dirty={!!state.dirty.domains}
                         readOnly={readOnly}
@@ -1201,7 +1182,7 @@ function ItSettingsLists() {
                 return (
                   <SettingsSection key={enumSection.id} title={enumSection.title} description={t(listUsageKey(enumSection.id))} hint={listHint(enumSection.id)}>
                     <SettingsControls
-                      onAdd={() => dispatch({ type: 'setEnum', id: enumSection.id, items: [{ ...makeEmptyEnumRow(enumSection.id), localId: makeLocalId(enumSection.id) }, ...items] })}
+                      onAdd={() => dispatch({ type: 'setEnum', id: enumSection.id, items: [{ ...makeEmptyEnumRow(enumSection.id), localId: makeLocalId(enumSection.id) }, ...(latestStateRef.current.enums[enumSection.id] || [])] })}
                       saving={saving}
                       dirty={dirty}
                       readOnly={readOnly}

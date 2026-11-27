@@ -170,7 +170,7 @@ export function EnumEditor<T extends EnumItem>({
   const [focusId, setFocusId] = React.useState<string | null>(null);
   const firstFieldRef = React.useRef<HTMLInputElement | null>(null);
   const lastAddToken = React.useRef<number | undefined>(undefined);
-  const pendingCommitRef = React.useRef(false);
+  const sentListsRef = React.useRef(new WeakSet<object>());
 
   const { containerRef, onScroll, useVirtual, visibleItems, paddingTop, paddingBottom, maxHeight } =
     useVirtualRows({
@@ -178,18 +178,15 @@ export function EnumEditor<T extends EnumItem>({
       rowHeight,
     });
 
-  // Sync down from parent - skip if we just committed to avoid loops
+  // Sync down from parent, except a list this editor sent itself: the rows typed since are newer than it.
   React.useEffect(() => {
-    if (pendingCommitRef.current) {
-      pendingCommitRef.current = false;
-      return;
-    }
+    if (sentListsRef.current.has(itemsWithIds)) return;
     setLocalItems(itemsWithIds);
   }, [itemsWithIds]);
 
   const commitToParent = React.useCallback(
     (next: T[]) => {
-      pendingCommitRef.current = true;
+      sentListsRef.current.add(next);
       React.startTransition(() => onChange(next));
     },
     [onChange]
