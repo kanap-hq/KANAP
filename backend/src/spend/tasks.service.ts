@@ -82,6 +82,8 @@ export interface TaskListItem {
   assets?: Array<{ id: string; name: string | null; asset_reference?: string | null; hostname?: string | null }> | null;
   converted_request_id?: string | null;
   converted_request_item_number?: number | null;
+  /** The task was converted into a request the person does not read: neither its id nor its number. */
+  converted_request_hidden?: true;
 }
 
 function parsePagination(query: any) {
@@ -654,10 +656,26 @@ function buildWhereConditions(
   /**
    * The sort key of a column of linked records, on the records the person reads only: the first
    * application of their participation by name, none for a module they do not read, so that the
-   * order says nothing of the others. Undefined: the column's usual key. Call it after the count
-   * query: it may add the person's id to the parameters.
+   * order says nothing of the others. The name of the object the task belongs to, and the phase and
+   * classification of its project, sort as empty where the list does not show them. Undefined: the
+   * column's usual key. Call it after the count query: it may add the person's id to the parameters.
    */
   const linkedSortExpression = (field: string): string | undefined => {
+    if (TASK_PROJECT_SORTS.has(field)) {
+      const expression = TASK_SORT_EXPRESSIONS[field];
+      const shown = projectField(expression);
+      return shown === expression ? undefined : shown;
+    }
+    if (field === 'related_object_name') {
+      const shown = {
+        budget: readsModule('budget'),
+        contracts: readsModule('contracts'),
+        incidents: readsModule('incidents'),
+        project: projectField('pp.name'),
+      };
+      const whole = shown.budget && shown.contracts && shown.incidents && shown.project === 'pp.name';
+      return whole ? undefined : taskRelatedNameSortSql(shown);
+    }
     if (field === 'application_name') {
       if (!readsModule('applications')) return 'NULL::text';
       const visible = applicationVisible('app');
@@ -814,6 +832,29 @@ export const TASK_HIDDEN_CONTRACT_SQL = `CASE
 /** Both stored budget line types are one family, so a sort on the context column groups them. */
 const TASK_RELATED_FAMILY_SQL = `CASE WHEN t.related_object_type IN ('spend_item', 'capex_item') THEN 'budget_line' ELSE t.related_object_type END`;
 
+/**
+ * The sort key of the object a task belongs to, the name the list shows: a hidden line by its
+ * reference (BL-n). `shown`: per family, whether the person sees that name (`linkedSortExpression`);
+ * a name the list does not show sorts as empty. `project`: the project's name, or its gated form.
+ */
+function taskRelatedNameSortSql(shown: { budget: boolean; contracts: boolean; incidents: boolean; project: string } = {
+  budget: true, contracts: true, incidents: true, project: 'pp.name',
+}): string {
+  const gate = (visible: boolean, expression: string) => (visible ? expression : 'NULL');
+  return `COALESCE(${gate(shown.budget, TASK_HIDDEN_LINE_REFERENCE_SQL)}, CASE
+      WHEN t.related_object_type IS NULL THEN NULL
+      WHEN t.related_object_type = 'spend_item' THEN ${gate(shown.budget, 'si.product_name')}
+      WHEN t.related_object_type = 'contract' THEN ${gate(shown.contracts, contractLabelSql('c'))}
+      WHEN t.related_object_type = 'capex_item' THEN ${gate(shown.budget, 'ci.product_name')}
+      WHEN t.related_object_type = 'incident' THEN ${gate(shown.incidents, incidentRelatedLabelSql('inc'))}
+      WHEN t.related_object_type = 'project' THEN ${shown.project}
+      ELSE ''
+    END)`;
+}
+
+/** The sort keys that are values of the task's project: empty where the project does not show. */
+const TASK_PROJECT_SORTS = new Set(['phase_name', 'project_stream_name', 'project_category_name']);
+
 const TASK_SORT_EXPRESSIONS: Record<string, string> = {
   title: 't.title',
   description: 't.description',
@@ -824,16 +865,7 @@ const TASK_SORT_EXPRESSIONS: Record<string, string> = {
   start_date: 't.start_date',
   assignee_name: `COALESCE(u.first_name || ' ' || u.last_name, u.email)`,
   creator_name: `COALESCE(uc.first_name || ' ' || uc.last_name, uc.email)`,
-  // A hidden line sorts by its reference (BL-n), the name the list shows.
-  related_object_name: `COALESCE(${TASK_HIDDEN_LINE_REFERENCE_SQL}, CASE
-      WHEN t.related_object_type IS NULL THEN NULL
-      WHEN t.related_object_type = 'spend_item' THEN si.product_name
-      WHEN t.related_object_type = 'contract' THEN ${contractLabelSql('c')}
-      WHEN t.related_object_type = 'capex_item' THEN ci.product_name
-      WHEN t.related_object_type = 'incident' THEN ${incidentRelatedLabelSql('inc')}
-      WHEN t.related_object_type = 'project' THEN pp.name
-      ELSE ''
-    END)`,
+  related_object_name: taskRelatedNameSortSql(),
   related_object_type: TASK_RELATED_FAMILY_SQL,
   // The family the assistant shows and groups by: the same key as the context column.
   related_family: TASK_RELATED_FAMILY_SQL,
@@ -937,6 +969,8 @@ export function withReadableTaskLinks<T extends Record<string, any>>(row: T, rea
   const requestHidden = !reads.requests
     || (!!visible.requests && !!task.converted_request_id && !visible.requests.has(String(task.converted_request_id)));
   if (requestHidden) {
+    // The task stays converted (the screen offers no second conversion), without naming the request.
+    if (task.converted_request_id) task.converted_request_hidden = true;
     if ('converted_request_id' in task) task.converted_request_id = null;
     if ('converted_request_item_number' in task) task.converted_request_item_number = null;
   }
@@ -954,7 +988,7 @@ export type TaskLinkedScopes = {
 };
 
 /** Task rows through `withReadableTaskLinks`, the participation of the page's records in one query per family. */
-async function readableTaskRows<T extends Record<string, any>>(
+export async function readableTaskRows<T extends Record<string, any>>(
   manager: EntityManager,
   rows: T[],
   reads: LinkedReads | undefined,

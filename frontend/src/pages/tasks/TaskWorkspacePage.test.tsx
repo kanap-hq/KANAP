@@ -49,6 +49,9 @@ const taskQueryMock = vi.hoisted(() => ({
 
 vi.mock('react-i18next', async () => {
   const React = await import('react');
+  const portfolioEn = (await import('../../locales/en/portfolio.json')).default as any;
+  // The conversion tooltip that names the request reads the English text, so its placeholder is checked.
+  const withReference = 'portfolio:workspace.task.actions.alreadyConvertedWithReference';
 
   return {
     initReactI18next: {
@@ -60,7 +63,10 @@ vi.mock('react-i18next', async () => {
       React.useEffect(() => translationMock.subscribe(() => forceRender()), []);
       const revision = translationMock.getRevision();
       return {
-        t: (key: string) => `${key}__${revision}`,
+        t: (key: string, options?: Record<string, unknown>) => (key === withReference
+          ? String(portfolioEn.workspace.task.actions.alreadyConvertedWithReference)
+            .replace(/\{\{(\w+)\}\}/g, (_: string, name: string) => String(options?.[name] ?? `{{${name}}}`))
+          : `${key}__${revision}`),
         i18n: {
           language: 'en',
           resolvedLanguage: 'en',
@@ -165,7 +171,11 @@ vi.mock('./components/TaskDetailHeader', () => ({
     tabs,
     activeTab,
     onTabChange,
+    hasConvertedRequest,
+    convertDisabledTitle,
   }: {
+    hasConvertedRequest?: boolean;
+    convertDisabledTitle?: string;
     tabs?: Array<{ key: string; label: string }>;
     activeTab?: string;
     onTabChange?: (next: string) => void;
@@ -180,7 +190,11 @@ vi.mock('./components/TaskDetailHeader', () => ({
   }) => {
     const parent = crumbs?.find((crumb) => crumb.key === 'parent');
     return (
-      <div data-testid="task-detail-header">
+      <div
+        data-testid="task-detail-header"
+        data-converted={hasConvertedRequest ? 'true' : 'false'}
+        data-convert-title={convertDisabledTitle ?? ''}
+      >
         <button type="button" onClick={() => onClose?.()}>close-task</button>
         <button type="button" onClick={() => onOriginClick?.()}>back-task</button>
         {canDelete ? <button type="button" onClick={() => onDelete?.()}>delete-task</button> : null}
@@ -476,6 +490,21 @@ describe('TaskWorkspacePage relation changes', () => {
         dispatchEvent: vi.fn(),
       })),
     });
+  });
+
+  it('offers no conversion of a task converted into a request the person does not read, and names none', async () => {
+    taskQueryMock.task = { ...makeTask(), converted_request_id: null, converted_request_item_number: null, converted_request_hidden: true };
+    renderEditPage();
+    const header = await screen.findByTestId('task-detail-header');
+    expect(header).toHaveAttribute('data-converted', 'true');
+    expect(header).toHaveAttribute('data-convert-title', expect.stringMatching(/^portfolio:workspace\.task\.actions\.alreadyConverted(__\d+)?$/));
+  });
+
+  it('names the request a task was converted into in the conversion tooltip', async () => {
+    taskQueryMock.task = { ...makeTask(), converted_request_id: 'request-7', converted_request_item_number: 7 };
+    renderEditPage();
+    const header = await screen.findByTestId('task-detail-header');
+    expect(header).toHaveAttribute('data-convert-title', 'Already converted (REQ-7)');
   });
 
   it('uses the global move endpoint when moving a task into another project', async () => {

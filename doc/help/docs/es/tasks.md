@@ -709,7 +709,7 @@ La solicitud se crea con estado **Pendiente de revisión** y queda vinculada a l
 ### Condiciones
 
 - **Permisos**: Necesita tanto `tasks:member` como `portfolio_requests:member`
-- **Conversión única**: Cada tarea solo puede convertirse una vez. Después de la conversión, el botón **Convertir en solicitud** se deshabilita y muestra la referencia de la solicitud vinculada (p. ej., "Ya convertida a REQ-42")
+- **Conversión única**: Cada tarea solo puede convertirse una vez. Después de la conversión, el botón **Convertir en solicitud** se deshabilita y su información emergente muestra la referencia de la solicitud vinculada (p. ej., "Ya convertida (REQ-42)")
 - **La tarea permanece**: La tarea original no se elimina. A menos que marque la opción de cerrar, permanece en su estado actual y puede seguir actualizándose de forma independiente
 
 **Consejo**: Esta funcionalidad es útil cuando una tarea revela una iniciativa más grande que necesita su propio ciclo de vida de solicitud: evaluación por criterios, flujo de trabajo de aprobación y eventual conversión a proyecto.

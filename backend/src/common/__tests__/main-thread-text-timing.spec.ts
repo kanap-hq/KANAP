@@ -74,6 +74,8 @@ function run() {
     ['/api/inline/3.png', '/api/x/inline/1.png', 'https://e.com/inline/2.png'],
   );
   assertFast('extractInlineImageUrls', ['![', '![a](', '![a](a ', '![a](/inline "', ' src="a'], extractInlineImageUrls);
+  // An image source opened once and never closed, over many inline paths.
+  assertFast('extractInlineImageUrls in an open source', ['/inline/', '/inline', 'src="/inline/'], (text) => extractInlineImageUrls(`<img src="${text}`));
 
   // Chat messages and assistant texts.
   assert.equal(

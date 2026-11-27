@@ -14,6 +14,9 @@ export function taskRelatedFamily(value: string | null | undefined): string | nu
 /** `taskRelatedFamily` in SQL, for the aggregate's group by. */
 export const TASK_RELATED_FAMILY_SQL = `CASE WHEN t.related_object_type IN ('spend_item', 'capex_item') THEN 'budget_line' ELSE t.related_object_type END`;
 
+/** A group that is a value of the task's project (`pp`): empty where the project does not show. */
+const TASK_PROJECT_PARTICIPATION = { entityType: 'projects', table: 'portfolio_projects', alias: 'pp' } as const;
+
 export const tasksRegistry: AiEntityFilterRegistry = {
   entityType: 'tasks',
   fields: {
@@ -300,11 +303,15 @@ export const tasksRegistry: AiEntityFilterRegistry = {
           `LEFT JOIN portfolio_sources ps ON ps.id = COALESCE(t.source_id, pp.source_id) AND ps.tenant_id = t.tenant_id`,
         ],
       },
+      // The phase and the classification of the task's project read as empty where the project
+      // does not show (a Business Contributor's project outside their participation), as on the task.
       phase: {
         expression: 'phase.name',
         joins: [
+          `LEFT JOIN portfolio_projects pp ON pp.id = t.related_object_id AND t.related_object_type = 'project' AND pp.tenant_id = t.tenant_id`,
           `LEFT JOIN portfolio_project_phases phase ON phase.id = t.phase_id AND phase.tenant_id = t.tenant_id`,
         ],
+        participation: TASK_PROJECT_PARTICIPATION,
       },
       project_stream: {
         expression: 'project_pst.name',
@@ -312,6 +319,7 @@ export const tasksRegistry: AiEntityFilterRegistry = {
           `LEFT JOIN portfolio_projects pp ON pp.id = t.related_object_id AND t.related_object_type = 'project' AND pp.tenant_id = t.tenant_id`,
           `LEFT JOIN portfolio_streams project_pst ON project_pst.id = pp.stream_id AND project_pst.tenant_id = t.tenant_id`,
         ],
+        participation: TASK_PROJECT_PARTICIPATION,
       },
       project_category: {
         expression: 'project_pc.name',
@@ -319,6 +327,7 @@ export const tasksRegistry: AiEntityFilterRegistry = {
           `LEFT JOIN portfolio_projects pp ON pp.id = t.related_object_id AND t.related_object_type = 'project' AND pp.tenant_id = t.tenant_id`,
           `LEFT JOIN portfolio_categories project_pc ON project_pc.id = pp.category_id AND project_pc.tenant_id = t.tenant_id`,
         ],
+        participation: TASK_PROJECT_PARTICIPATION,
       },
     },
   },

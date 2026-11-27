@@ -1,10 +1,15 @@
 import { APIError as AnthropicApiError } from '@anthropic-ai/sdk';
+import { readStreamWithCaps } from '../../common/bounded-stream';
 import { sameOriginRedirectFetch } from '../../common/outbound-redirects';
 import { isAbortError } from './streaming.util';
 
 const MAX_PROVIDER_ERROR_DETAIL_LENGTH = 300;
 const GENERIC_PROVIDER_ERROR = 'AI provider request failed.';
 const UNEXPECTED_PROVIDER_RESPONSE = 'The AI provider returned an unexpected response.';
+/** An error answer is a sentence or a small JSON object: past 1 MB, the SDK gets the status alone. */
+const MAX_PROVIDER_ERROR_BODY_BYTES = 1024 * 1024;
+/** The statuses whose answer has no body (`new Response` refuses one). */
+const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
 
 // The fetch of the provider SDK clients. A redirect to another origin is never
 // followed, so the key never leaves for another address; on-premise a redirect on the
@@ -31,24 +36,23 @@ export function wrapProviderErrorFetch(baseFetch: typeof fetch): typeof fetch {
 }
 
 async function withTopLevelMessageUnderError(response: Response): Promise<Response> {
-  // Read a clone so a body we do not rewrite stays readable for the SDK.
-  let text: string;
+  if (NULL_BODY_STATUSES.has(response.status)) return response;
+  // The body is read once, up to the limit (the stream is released past it), then handed to the
+  // SDK as it was, or rewritten.
+  let text = '';
   try {
-    text = await response.clone().text();
+    text = new TextDecoder().decode(await readStreamWithCaps({ web: response.body }, { maxBytes: MAX_PROVIDER_ERROR_BODY_BYTES }));
   } catch {
-    return response;
+    text = '';
   }
-  const wrapped = errorMemberBody(text);
-  if (wrapped === null) {
-    return response;
-  }
-  const rewritten = new Response(wrapped, {
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+  headers.delete('content-encoding');
+  return new Response(errorMemberBody(text) ?? text, {
     status: response.status,
     statusText: response.statusText,
-    headers: response.headers,
+    headers,
   });
-  await response.body?.cancel()?.catch(() => undefined);
-  return rewritten;
 }
 
 // The original JSON object nested under `error`, or null when the body is not

@@ -709,7 +709,7 @@ The request is created with a status of **Pending Review** and is linked back to
 ### Conditions
 
 - **Permissions**: You need both `tasks:member` and `portfolio_requests:member`
-- **One-time conversion**: Each task can only be converted once. After conversion, the **Convert to Request** button is disabled and shows the linked request reference (e.g., "Already converted to REQ-42")
+- **One-time conversion**: Each task can only be converted once. After conversion, the **Convert to Request** button is disabled and its tooltip shows the linked request reference (e.g., "Already converted (REQ-42)")
 - **Task remains**: The original task is not deleted. Unless you check the close option, it stays in its current status and can still be updated independently
 
 **Tip**: Use this when a task reveals a larger initiative that needs its own request lifecycle: criteria scoring, approval workflow, and eventual conversion to a project.

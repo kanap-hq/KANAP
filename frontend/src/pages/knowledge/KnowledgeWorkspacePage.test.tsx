@@ -224,6 +224,22 @@ describe('KnowledgeWorkspacePage — document load errors', () => {
   });
 });
 
+describe('KnowledgeWorkspacePage — relation options', () => {
+  it('loads none of the relation options when a document opens', async () => {
+    vi.clearAllMocks();
+    window.localStorage.setItem('kanap.knowledge.sidebarOpen', '1');
+    vi.mocked(api.get).mockImplementation(async (url: string) => (url === DOC_URL
+      ? { data: { id: 'doc-9', item_number: 9, title: 'Runbook', content_markdown: 'Body', revision: 1, can_write: true, edit_lock: null } }
+      : { data: [] }) as any);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+    renderWorkspace(queryClient);
+    const urls = () => vi.mocked(api.get).mock.calls.map(([url]) => String(url));
+    await waitFor(() => expect(urls()).toContain('/knowledge/contributor-options'));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(urls().filter((url) => url.startsWith('/knowledge/relation-options/'))).toEqual([]);
+  });
+});
+
 describe('KnowledgeWorkspacePage — edit lock', () => {
   const LOCKS_URL = '/knowledge/DOC-9/locks';
 

@@ -12,6 +12,7 @@ import {
   PrtgTableRow,
 } from './prtg.types';
 import { isRecord } from '../../common/object-guards';
+import { readStreamWithCaps, StreamLimitError } from '../../common/bounded-stream';
 
 // Sessionless HTTP client for the PRTG classic API (v1). Auth material rides
 // in the query string (apitoken, or username+passhash fallback), so NO error
@@ -30,6 +31,9 @@ const PRTG_TIMEOUT_MS = 30_000;
 // configured per-adapter timeout still applies so a slow-but-working server
 // can pass the test.
 const PRTG_TEST_TIMEOUT_MS = 5_000;
+// A JSON answer is one table page or one averaged history window: 16 MB is far
+// above either. Same bound as the Netbox and GLPI clients.
+const PRTG_MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
 
 // PRTG absolute `*_raw` datetime columns (lastcheck_raw, datetime_raw, ...)
 // are OLE automation dates (days since 1899-12-30) expressed in the PRTG
@@ -382,7 +386,15 @@ export class PrtgService {
         `PRTG ${endpoint} answered with a redirect (HTTP ${response.status}), which is not followed. Enter the address the PRTG web server is actually served on.`,
       );
     }
-    const raw = await response.text();
+    let raw: string;
+    try {
+      raw = new TextDecoder().decode(await readStreamWithCaps({ web: response.body }, { maxBytes: PRTG_MAX_RESPONSE_BYTES }));
+    } catch (error) {
+      if (error instanceof StreamLimitError) {
+        throw new PrtgApiError('invalid_response', `PRTG ${endpoint} response exceeds the 16 MB limit.`);
+      }
+      throw error;
+    }
     if (!response.ok) {
       throw this.httpError(response.status, endpoint);
     }

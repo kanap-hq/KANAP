@@ -1,7 +1,7 @@
 import { HttpException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AiApiKey } from '../ai-api-key.entity';
-import { AiApiKeysService } from '../ai-api-keys.service';
+import { AiApiKeysService, McpKeyRefusedException } from '../ai-api-keys.service';
 import { AiPolicyService } from '../ai-policy.service';
 import { AiSettingsService } from '../ai-settings.service';
 import { buildMcpApiKeyPolicyRecord } from '../control-plane/mcp/ai-mcp-access-policy';
@@ -624,7 +624,9 @@ export class McpOAuthService {
   /**
    * The MCP guard's check of an access token: signature and family, issuer and audience of this
    * address, tenant of the host, then the grant row read inside the tenant (live, not revoked, not
-   * expired, same owner) and its owner. Null when any check fails.
+   * expired, same owner) and its owner. Null when the token or the grant is not recognised; a
+   * recognised grant that is revoked or expired, or whose owner may no longer connect, throws
+   * McpKeyRefusedException.
    */
   async authenticateAccessToken(
     token: string,
@@ -636,9 +638,22 @@ export class McpOAuthService {
       const repo = manager.getRepository(AiApiKey);
       const grant = await repo.findOne({ where: { id: claims.grant, tenant_id: host.tenantId } });
       if (!grant || grant.credential_kind !== 'oauth' || grant.user_id !== claims.sub) return null;
-      if (grant.revoked_at || (grant.expires_at && grant.expires_at.getTime() <= Date.now())) return null;
+      // A known connection refused throws, as a known API key does: the MCP guard writes the
+      // refusal to the MCP journal and to the general audit log, each in its own transaction.
+      const refusal = { tenantId: host.tenantId, keyId: grant.id, userId: grant.user_id };
+      if (grant.revoked_at) {
+        throw new McpKeyRefusedException('MCP connection has been revoked.', { ...refusal, reason: 'key_revoked' });
+      }
+      if (grant.expires_at && grant.expires_at.getTime() <= Date.now()) {
+        throw new McpKeyRefusedException('MCP connection has expired.', { ...refusal, reason: 'key_expired' });
+      }
       const user = await this.users.findById(grant.user_id, { manager });
-      if (!this.apiKeys.ownerMayAuthenticate(user)) return null;
+      if (!this.apiKeys.ownerMayAuthenticate(user)) {
+        throw new McpKeyRefusedException('The MCP connection owner is not allowed to authenticate.', {
+          ...refusal,
+          reason: 'owner_not_allowed',
+        });
+      }
       const now = Date.now();
       if (!grant.last_used_at || now - grant.last_used_at.getTime() >= LAST_USED_RESOLUTION_MS) {
         grant.last_used_at = new Date(now);

@@ -71,7 +71,7 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
-import { aiLinkedReadNotes, mergeFieldNotes } from './ai-linked-read-notes.util';
+import { AI_TASK_CONVERTED_REQUEST_WITHHELD, aiLinkedReadNotes, mergeFieldNotes } from './ai-linked-read-notes.util';
 import { aiDataAccessCountsNote, aiDataAccessNote } from './ai-data-access-note.util';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { readEntryChecks } from '../../spend/budget-line-entry-check';
@@ -649,14 +649,23 @@ export function resolveAiQuerySort(
 }
 
 /**
- * What a task's detail says of its linked applications and assets the person reads in part or not
- * at all, so that the answer never turns a missing read into "none": `fields_withheld` for a family
+ * What a task's detail says of its linked records the person reads in part or not at all (its
+ * project, its converted request, its applications and assets), so that the answer never turns a
+ * missing read into "none" or "not converted": `fields_withheld` for a family
  * the person does not read (the field is null), `fields_partial` for a Business Contributor, whose
  * list holds the applications of their participation only.
  */
-function taskLinkedReadNotes(reads: LinkedReads, scopes: TaskLinkedScopes): { fields_withheld?: AiWithheldField[]; fields_partial?: AiWithheldField[] } {
+function taskLinkedReadNotes(
+  reads: LinkedReads,
+  scopes: TaskLinkedScopes,
+  row?: { related_object_type?: string | null; related_object_hidden?: true; converted_request_hidden?: true },
+): { fields_withheld?: AiWithheldField[]; fields_partial?: AiWithheldField[] } {
   const withheld: AiWithheldField[] = [];
   const partial: AiWithheldField[] = [];
+  if (row?.converted_request_hidden === true) withheld.push(AI_TASK_CONVERTED_REQUEST_WITHHELD);
+  if (row?.related_object_type === 'project' && row.related_object_hidden === true) {
+    withheld.push({ field: 'project', reason: 'This person does not read the project of this task (no read of Projects, or a project outside a Business Contributor\'s participation): its name and phase are withheld (null), which does not mean the task has none. The category, stream, company and source shown are the task\'s own, taken from its project when the task has none of its own.' });
+  }
   if (!reads.applications) {
     withheld.push({ field: 'applications', reason: 'This person does not read applications (Applications, reader level): the linked applications are withheld (null), which does not mean there are none.' });
   } else if (scopes.applications) {
@@ -3885,10 +3894,16 @@ export class AiQueryExecutor {
       });
       if (!row) throw new NotFoundException('Task not found.');
       const task: any = withoutHiddenLine(row);
+      // A request the person does not read: the task reads as converted (`converted_request_hidden`
+      // and its note), with no empty request field to read as "not converted".
+      if (task.converted_request_hidden === true) {
+        delete task.converted_request_id;
+        delete task.converted_request_item_number;
+      }
       // The stored `spend_item` / `capex_item` never reaches the model: both natures are one
       // `budget_line` family on the AI surface.
       if (task.related_object_type) task.related_object_type = taskRelatedFamily(task.related_object_type);
-      return { ...this.toDetailResult(this.mapTask(row), task), ...taskLinkedReadNotes(linkedReads, linkedScopes) };
+      return { ...this.toDetailResult(this.mapTask(row), task), ...taskLinkedReadNotes(linkedReads, linkedScopes, row) };
     }
 
     if (entityType === 'projects') {

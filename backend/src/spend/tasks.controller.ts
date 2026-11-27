@@ -277,6 +277,7 @@ export class TasksController {
       relatedObjectId,
       viewer: incidentViewerFromRequest(req),
       format,
+      ...await linkedOfRequest(req),
     });
     res.send(await csvExportBody(res, result));
   }

@@ -23,6 +23,8 @@ import {
 import { shownTaskClassification } from './task-shown-classification';
 import { inIdOrder } from '../common/pagination';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
+import type { LinkedReads } from '../common/relations/linked-reads';
+import { readableTaskRows, type TaskLinkedScopes } from '../spend/tasks.service';
 import {
   IncidentViewer,
   taskIncidentVisibilityQueryBuilderClause,
@@ -67,6 +69,9 @@ export class TasksCsvService {
     ids?: string[];
     /** `csv` (default) or `xlsx` (data only: a template is CSV). */
     format?: F;
+    /** What a task may name of its record, as the list (`withReadableTaskLinks`). Absent: everything (API scripts). */
+    linkedReads?: LinkedReads;
+    linkedScopes?: TaskLinkedScopes;
   }): Promise<CsvExportResult<F>> {
     const { manager, tenantId, scope, fields, preset, relatedObjectType, relatedObjectId, viewer, ids } = opts;
 
@@ -101,6 +106,7 @@ export class TasksCsvService {
     if (tasks.length > 0) {
       await this.loadRelatedObjectNames(tasks, manager, tenantId, opts.language);
       await this.loadInheritedClassification(tasks, manager, tenantId);
+      await this.withholdUnreadLinks(tasks, manager, opts.linkedReads, opts.linkedScopes);
     }
 
     return this.exportSvc.export(taskCsvConfig, tasks, {
@@ -129,6 +135,22 @@ export class TasksCsvService {
   ): Promise<CsvImportResult> {
     // The viewers and owners are written with the task (`taskCsvConfig`, `importPeople`).
     return this.importSvc.import(taskCsvConfig, file, params, opts);
+  }
+
+  /**
+   * A record the person does not read (its module, or a project outside a Business Contributor's
+   * participation) leaves its id and name empty, as the list shows it; the type stays, so the file
+   * read back keeps the task on its record. The classification inherited from the project stays.
+   */
+  private async withholdUnreadLinks(tasks: Task[], manager: EntityManager, reads?: LinkedReads, scopes?: TaskLinkedScopes): Promise<void> {
+    if (!reads) return;
+    const links: Array<Record<string, unknown>> = tasks.map((task) => ({ related_object_type: task.related_object_type, related_object_id: task.related_object_id }));
+    const shown = await readableTaskRows(manager, links, reads, scopes);
+    shown.forEach((link, index) => {
+      if (link.related_object_hidden !== true) return;
+      tasks[index].related_object_id = null;
+      (tasks[index] as any)._relatedObjectName = '';
+    });
   }
 
   /**

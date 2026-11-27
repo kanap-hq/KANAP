@@ -264,7 +264,7 @@ Filtrez la liste par **Personne**, **Clé ou connexion**, **Résultat** et **Pé
 
 Cliquez sur une ligne pour voir les arguments envoyés par l'appel, raccourcis. Pour un refus ou un échec, la ligne montre sa raison ; sa cause complète s'affiche pour l'auteur de l'appel et pour un Administrator. Les valeurs secrètes apparaissent comme *Masqué*.
 
-Le journal enregistre aussi les appels faits avec une clé révoquée ou expirée. Il ne conserve jamais de clé ni de jeton.
+Le journal enregistre aussi les appels faits avec une clé ou une connexion révoquée ou expirée, ou dont le propriétaire ne peut plus se connecter. Il ne conserve jamais de clé ni de jeton.
 
 ---
 

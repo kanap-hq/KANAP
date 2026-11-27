@@ -7,7 +7,7 @@ import { AiProviderTestService } from '../ai-provider-test.service';
 import { AnthropicAiProviderAdapter } from '../providers/anthropic-ai-provider.adapter';
 import { CustomAiProviderAdapter } from '../providers/custom-ai-provider.adapter';
 import { openaiCompatibleStream } from '../providers/openai-stream.util';
-import { describeProviderError } from '../providers/provider-http.util';
+import { describeProviderError, wrapProviderErrorFetch } from '../providers/provider-http.util';
 
 // Provider calls against a local stand-in server: a redirect is an error in
 // multi-tenant mode (no request reaches the redirect target), single-tenant keeps
@@ -321,11 +321,49 @@ function testDescribeProviderError() {
   assert.equal(describeProviderError(new Error('Connection error.')), 'Connection error.');
 }
 
+// An error answer is read up to 1 MB: a longer one reaches the SDK with its status and no body, and
+// the stream is released; a short one is kept, rewritten or not.
+async function testErrorBodyIsReadUpToTheLimit() {
+  const chunk = new Uint8Array(64 * 1024).fill(0x78);
+  let pulled = 0;
+  let cancelled = false;
+  // A finite answer, 4 MB past the limit: a reader without a limit takes it whole and fails on the
+  // assertions below, with no risk for the machine that runs the spec.
+  const total = 5 * 1024 * 1024;
+  const long = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (pulled >= total) {
+        controller.close();
+        return;
+      }
+      pulled += chunk.length;
+      controller.enqueue(chunk);
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  const fetchOf = (response: Response) => wrapProviderErrorFetch(async () => response);
+  const read = await fetchOf(new Response(long, { status: 500, headers: { 'content-type': 'text/plain' } }))('http://provider.invalid/v1');
+  assert.equal(read.status, 500);
+  assert.equal(await read.text(), '', 'past the limit, no body reaches the SDK');
+  assert.ok(pulled <= 1024 * 1024 + 2 * chunk.length, `read up to the limit (${pulled} bytes)`);
+  assert.equal(cancelled, true, 'the stream is released');
+
+  const mistral = await fetchOf(new Response('{"message":"Busy","type":"capacity"}', { status: 429 }))('http://provider.invalid/v1');
+  assert.deepEqual(await mistral.json(), { error: { message: 'Busy', type: 'capacity' } });
+  const plain = await fetchOf(new Response('\ufeffBad gateway', { status: 502 }))('http://provider.invalid/v1');
+  assert.equal(await plain.text(), 'Bad gateway');
+  const empty = await fetchOf(new Response(null, { status: 304 }))('http://provider.invalid/v1');
+  assert.equal(empty.status, 304);
+}
+
 async function run() {
   const originalSingleTenant = Features.SINGLE_TENANT;
   const { server, base } = await startServer();
   try {
     testDescribeProviderError();
+    await testErrorBodyIsReadUpToTheLimit();
     await testMultiTenantRedirectIsAnErrorWithoutFollowUp(base);
     await testSingleTenantRedirectIsFollowed(base);
     await testUnexpectedBodyIsNotRepeated(base);

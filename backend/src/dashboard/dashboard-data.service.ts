@@ -5,7 +5,8 @@ import {
   projectParticipantCondition,
   taskParticipantCondition,
 } from '../auth/business-contributor-scope';
-import { TASK_HIDDEN_CONTRACT_SQL, TASK_HIDDEN_LINE_REFERENCE_SQL } from '../spend/tasks.service';
+import { readableTaskRows, TASK_HIDDEN_CONTRACT_SQL, TASK_HIDDEN_LINE_REFERENCE_SQL, TaskLinkedScopes } from '../spend/tasks.service';
+import { LinkedReads } from '../common/relations/linked-reads';
 import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { contractLabelSql } from '../contracts/contract-reference';
 
@@ -15,6 +16,9 @@ interface ServiceOptions {
   accessScope?: ParticipationAccessScope;
   /** A task of an incident the reader cannot see stays out of the dashboard (empty for incidents:admin). */
   incidentViewer?: IncidentViewer | null;
+  /** What a task may name of the record it belongs to: the modules read, a Business Contributor's participation. */
+  linkedReads?: LinkedReads;
+  linkedScopes?: TaskLinkedScopes;
 }
 
 export interface MyLeadershipProject {
@@ -94,6 +98,8 @@ export interface StaleTaskItem {
   relatedObjectName: string | null;
   /** Set to `contract` when the task names a contract the person cannot read (no id, no name). */
   relatedObjectHiddenKind?: 'contract';
+  /** The record the task belongs to is one the person does not read (module or participation): no id, no name. */
+  relatedObjectHidden?: true;
 }
 
 export interface KnowledgeReviewItem {
@@ -250,6 +256,15 @@ export class DashboardDataService {
     const manager = opts?.manager;
     if (!manager) throw new Error('EntityManager required');
 
+    // A Business Contributor's breakdown names only the projects of their participation; the hours
+    // on the others stay in the totals.
+    const params: unknown[] = [userId, days];
+    let projectScopeSql = '';
+    if (opts?.accessScope?.userId) {
+      params.push(opts.accessScope.userId);
+      projectScopeSql = `AND ${projectParticipantCondition('p', `$${params.length}`)}`;
+    }
+
     // Query time entries from both task_time_entries and portfolio_project_time_entries
     const result = await manager.query(
       `
@@ -297,6 +312,7 @@ export class DashboardDataService {
         FROM all_time at
         JOIN portfolio_projects p ON p.id = at.project_id
         WHERE at.related_object_type = 'project'
+          ${projectScopeSql}
         GROUP BY at.project_id, p.name
         ORDER BY hours DESC
       ),
@@ -334,7 +350,7 @@ export class DashboardDataService {
       CROSS JOIN by_category bc
       CROSS JOIN non_project_hours np
       `,
-      [userId, days],
+      params,
     );
 
     const row = result[0] || {
@@ -567,7 +583,21 @@ export class DashboardDataService {
       params,
     );
 
-    return rows.map((row: any) => ({
+    // The record a task belongs to follows the reader's modules and participation, as on the task.
+    const readable = await readableTaskRows(manager, rows, opts?.linkedReads, opts?.linkedScopes);
+    return readable.map((row: any) => row.related_object_hidden === true ? {
+      id: row.id,
+      itemNumber: Number(row.item_number || 0),
+      title: row.title,
+      status: row.status,
+      updatedAt: row.updated_at,
+      staleDays: Number(row.stale_days || 0),
+      assigneeName: row.assignee_name || null,
+      relatedObjectType: row.related_object_type || null,
+      relatedObjectId: null,
+      relatedObjectName: null,
+      relatedObjectHidden: true as const,
+    } : {
       id: row.id,
       itemNumber: Number(row.item_number || 0),
       title: row.title,
@@ -581,7 +611,7 @@ export class DashboardDataService {
       relatedObjectId: (row.related_object_contract_hidden || row.related_object_reference) ? null : row.related_object_id || null,
       relatedObjectName: row.related_object_contract_hidden ? null : (row.related_object_reference || row.related_object_name || null),
       ...(row.related_object_contract_hidden ? { relatedObjectHiddenKind: 'contract' as const } : {}),
-    }));
+    });
   }
 
   async getKnowledgeReviewItems(

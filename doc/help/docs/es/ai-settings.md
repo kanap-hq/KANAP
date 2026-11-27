@@ -264,7 +264,7 @@ Filtre la lista por **Persona**, **Clave o conexión**, **Resultado** y **Period
 
 Haga clic en una línea para ver los argumentos que envió la llamada, acortados. Para un rechazo o un fallo, la línea muestra su motivo; su causa completa se muestra a la persona que hizo la llamada y a un Administrator. Los valores secretos aparecen como *Oculto*.
 
-El registro también guarda las llamadas hechas con una clave revocada o caducada. Nunca guarda una clave ni un token.
+El registro también guarda las llamadas hechas con una clave o una conexión revocada o caducada, o cuyo propietario ya no puede conectarse. Nunca guarda una clave ni un token.
 
 ---
 

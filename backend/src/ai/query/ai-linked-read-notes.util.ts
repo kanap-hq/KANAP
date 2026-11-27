@@ -5,11 +5,11 @@ import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
 
 /**
  * The fields of a list or an aggregate that name another module's records and follow a Business
- * Contributor's participation: the task's and the incident's linked applications (their column,
- * their filter, their sort and their group).
+ * Contributor's participation: the task's and the incident's linked applications, and the phase and
+ * classification of the task's project (their column, their filter, their sort and their group).
  */
-const PARTICIPATION_LINKED_FIELDS: Partial<Record<AiQueryEntityType, Record<string, 'applications'>>> = {
-  tasks: { application: 'applications' },
+const PARTICIPATION_LINKED_FIELDS: Partial<Record<AiQueryEntityType, Record<string, 'applications' | 'projects'>>> = {
+  tasks: { application: 'applications', phase: 'projects', project_stream: 'projects', project_category: 'projects' },
   incidents: { application: 'applications' },
 };
 
@@ -51,6 +51,17 @@ export async function aiLinkedReadNotes(
   }
   return { ...(withheld.length ? { fields_withheld: withheld } : {}), ...(partial.length ? { fields_partial: partial } : {}) };
 }
+
+/**
+ * A task converted into a request the person does not read (`converted_request_hidden`): the task is
+ * converted, and the answer must say so without naming the request (task detail and context).
+ */
+export const AI_TASK_CONVERTED_REQUEST_WITHHELD: AiWithheldField = {
+  field: 'converted_request',
+  reason: 'This task was converted into a request this person cannot read (converted_request_hidden: true). '
+    + 'Say that the task is converted into a request, give neither the reference nor the name of that request, '
+    + 'and never say that the task is not converted.',
+};
 
 /** Two lists of withheld or partial fields as one, each field once. */
 export function mergeFieldNotes(...lists: Array<AiWithheldField[] | undefined>): AiWithheldField[] | undefined {

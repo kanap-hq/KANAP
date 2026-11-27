@@ -141,7 +141,8 @@ async function run() {
     const unread = await detail(readerId);
     assert.equal(unread.data.applications, null, 'no reader of applications: null');
     assert.ok(unread.fields_withheld?.some((entry: { field: string }) => entry.field === 'applications'), 'no reader of applications: withheld, with the reason');
-    assert.deepEqual(withheldFields(await list(readerId)), ['application'], 'no reader of applications: the list says the field is withheld');
+    // The phase and classification of the task's project are withheld too: this person reads no project.
+    assert.deepEqual(withheldFields(await list(readerId)).sort(), ['application', 'phase', 'project_category', 'project_stream'], 'no reader of applications: the list says the field is withheld');
     const refusedGroup = await aggregate(readerId).then(() => null, (error: any) => error?.getResponse?.() ?? error);
     assert.equal(refusedGroup?.code, 'AI_FIELD_WITHHELD', 'no reader of applications: grouping by application refused with the reason');
     console.log('  a person who does not read applications: withheld, with the reason: OK');

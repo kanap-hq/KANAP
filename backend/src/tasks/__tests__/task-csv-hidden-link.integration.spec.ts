@@ -7,6 +7,7 @@ import { CsvJsonValidators } from '../../common/csv/csv-json-validators';
 import { CsvResolverService } from '../../common/csv/csv-resolver.service';
 import type { CsvImportParams, CsvImportResult } from '../../common/csv/csv-field.types';
 import { TasksCsvService } from '../tasks-csv.service';
+import { linkedReadsFromContext } from '../../common/relations/linked-reads';
 import { CONTRACT_OUTSIDE_ACCESS } from '../task-csv.config';
 import { seedCompany, seedUser } from '../../spend/__tests__/cost-center.fixtures';
 import { inRolledBackTransaction, runSpecs, seedItem, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
@@ -17,7 +18,9 @@ import { inRolledBackTransaction, runSpecs, seedItem, seedTenant } from '../../s
 // all cases, at the preflight as at the load: the label is never a contract's
 // name. A row that matches no task and carries the label is refused. The viewers and owners pass
 // that follows the import finds each row's task by its id, else by its object (a contract also by
-// its reference `CTR-n`), and never touches a homonym. Each test runs in a transaction rolled back.
+// its reference `CTR-n`), and never touches a homonym. The export of a person who does not read a
+// task's record (no read of contracts, a project outside a Business Contributor's participation)
+// leaves its id and name empty, as the list. Each test runs in a transaction rolled back.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file on a database lane.
 
 const resolver = new CsvResolverService();
@@ -142,8 +145,46 @@ async function testViewersReachTheRowsTask() {
   });
 }
 
+/** The export names a task's record as the list does: nothing of a module or a project the person does not read. */
+async function testExportFollowsLinkedReads() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, hidden, task } = await seed(runner);
+    const person = await seedUser(runner, tenantId, 'contributor@example.invalid');
+    const project = async (name: string, itemNumber: number): Promise<string> => (await runner.query(
+      `INSERT INTO portfolio_projects (tenant_id, item_number, name, status) VALUES ($1, $2, $3, 'in_progress') RETURNING id`,
+      [tenantId, itemNumber, name],
+    ))[0].id;
+    const inside = await project('Inside project', 1);
+    const outside = await project('Outside project', 2);
+    await runner.query(`INSERT INTO portfolio_project_team (tenant_id, project_id, user_id, role) VALUES ($1, $2, $3, 'member')`, [tenantId, inside, person]);
+    await task('Task of the contract', 'contract', hidden, 1);
+    await task('Task inside', 'project', inside, 2);
+    await task('Task outside', 'project', outside, 3);
+    const exported = async (permissions: Record<string, string>, scoped: boolean) => (await service.export({
+      manager: runner.manager,
+      tenantId,
+      language: 'en',
+      linkedReads: linkedReadsFromContext({ permissions }),
+      linkedScopes: scoped ? { projects: { userId: person } } : {},
+    })).content as string;
+
+    const contributor = await exported({ tasks: 'admin', portfolio_projects: 'reader' }, true);
+    for (const secret of ['Hidden contract', 'CTR-1', hidden, 'Outside project', outside]) {
+      assert.ok(!contributor.includes(secret), `the contributor's file does not name ${secret}`);
+    }
+    assert.ok(contributor.includes('Inside project') && contributor.includes(inside), 'their project, named with its id');
+    assert.match(contributor, /Task outside/, 'the task of the outside project is in the file');
+
+    const reader = await exported({ tasks: 'admin', portfolio_projects: 'reader', contracts: 'reader' }, false);
+    for (const name of ['Hidden contract', 'Outside project', outside, 'Inside project']) {
+      assert.ok(reader.includes(name), `a reader of the modules: ${name}, as before`);
+    }
+  });
+}
+
 void runSpecs('task-csv-hidden-link.integration.spec', [
   ['hidden objects kept', testHiddenObjectsAreKept],
   ['label names no contract', testLabelNamesNoContract],
   ['viewers reach the row\'s task', testViewersReachTheRowsTask],
+  ['export follows the linked reads', testExportFollowsLinkedReads],
 ]);

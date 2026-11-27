@@ -45,6 +45,17 @@ import { DataSource, QueryRunner } from 'typeorm';
 //      projects and requests inside their participation (page, get_document), the count follows,
 //      a member of the modules reads them all, and a replacement keeps the links the person
 //      does not see.
+//  18. The task list and Kad sort a value the person does not see (the name, the phase and the
+//      project_* columns of a Business Contributor's project outside their participation) as an
+//      empty value; the task's own classification, inherited from that project, still shows.
+//  19. Kad's task groups by phase, project stream and project category follow the same rule.
+//  20. A task converted into a request the person does not read reads as converted, without the
+//      request, and a second conversion is refused without its reference.
+//  21. Kad's detail of a task whose project the person does not read says its name and phase are
+//      withheld, and that the classification shown is the task's own.
+//  22. The home page's stale tasks tile names the record of a task as the task does (no project
+//      outside the participation, no contract without the module), and the time tile's breakdown
+//      names the projects of the participation only.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -69,6 +80,7 @@ type Harness = {
   documentMutations: any;
   tasksController: any;
   knowledgeController: any;
+  dashboardController: any;
 };
 
 /**
@@ -140,6 +152,7 @@ async function createHarness(): Promise<Harness> {
   const { AiDocumentMutationSupportService } = require('../../../ai/mutation/ai-document-mutation-support.service');
   const { TasksController } = require('../../../spend/tasks.controller');
   const { KnowledgeController } = require('../../../knowledge/knowledge.controller');
+  const { DashboardController } = require('../../../dashboard/dashboard.controller');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   // The surface checks (tenant AI settings, provider, subscription) are not what this spec tests.
   app.get(AiPolicyService).assertSurfaceAccess = async () => undefined;
@@ -158,6 +171,7 @@ async function createHarness(): Promise<Harness> {
     documentMutations: app.get(AiDocumentMutationSupportService),
     tasksController: app.get(TasksController),
     knowledgeController: app.get(KnowledgeController),
+    dashboardController: app.get(DashboardController),
   };
 }
 
@@ -860,6 +874,320 @@ async function testContractRelations(h: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual([await contractLinks(runner, 'application_contracts', s.contract), await contractLinks(runner, 'asset_contracts', s.contract)], [1, 1], 'B: one application left, the server stays');
 }
 
+/**
+ * The people of the follow-ups 18 to 20, besides E (a Business Contributor outside the dependency
+ * project and its converted request) and the Administrator: a Business Contributor on the team of
+ * the dependency project and of the converted request (reads them, as before), a reader of the
+ * modules who is not a Business Contributor (unchanged), a reader of tasks who does not read
+ * projects, and a person of another workspace. E's role gets the levels of the shipped role
+ * (requests and tasks member), which the conversion route asks for.
+ */
+type FollowUpPeople = { team: string; reader: string; tasksOnly: string; otherTenant: string; otherUser: string };
+
+async function followUpPeople(runner: QueryRunner, s: Seed): Promise<FollowUpPeople> {
+  const tag = s.tenantId.slice(0, 8);
+  const [{ role_id: bcRole }] = await runner.query(`SELECT role_id FROM users WHERE id = $1`, [s.users.e]);
+  await runner.query(
+    `UPDATE role_permissions SET level = 'member' WHERE tenant_id = $1 AND role_id = $2 AND resource IN ('tasks', 'portfolio_requests')`,
+    [s.tenantId, bcRole],
+  );
+  const role = async (name: string, permissions: Record<string, string>) => {
+    const id = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, $2, $2)`, [s.tenantId, name]);
+    for (const [resource, level] of Object.entries(permissions)) {
+      await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, $3, $4)`, [s.tenantId, id, resource, level]);
+    }
+    return id;
+  };
+  const user = (name: string, roleId: string) => insertId(runner,
+    `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, $3, 'Tester', $4, 'enabled')`,
+    [s.tenantId, `${name}-${tag}@example.test`, name, roleId]);
+  const team = await user('Team member', bcRole);
+  for (const project of [s.project, s.dependency]) {
+    await runner.query(`INSERT INTO portfolio_project_team (tenant_id, project_id, user_id, role) VALUES ($1, $2, $3, 'member')`, [s.tenantId, project, team]);
+  }
+  const [{ id: converted }] = await runner.query(`SELECT id FROM portfolio_requests WHERE tenant_id = $1 AND origin_task_id = $2`, [s.tenantId, s.outsideTask]);
+  await runner.query(`INSERT INTO portfolio_request_team (tenant_id, request_id, user_id, role) VALUES ($1, $2, $3, 'member')`, [s.tenantId, converted, team]);
+  const reader = await user('Module reader', await role('Portfolio and tasks members', READER_PERMISSIONS));
+  const tasksOnly = await user('Tasks reader', await role('Tasks readers', { tasks: 'reader' }));
+
+  const otherTenant = randomUUID();
+  await runner.query(
+    `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
+     VALUES ($1, $2, $3, 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
+    [otherTenant, `linked-rights-other-${tag}`, `linked-rights-other-${tag}`],
+  );
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [otherTenant]);
+  const otherRole = await insertId(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Administrator', 'Administrator')`, [otherTenant]);
+  const otherUser = await insertId(runner,
+    `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, 'Other', 'Tester', $3, 'enabled')`,
+    [otherTenant, `other-${tag}@example.test`, otherRole]);
+  const otherProject = await insertId(runner, `INSERT INTO portfolio_projects (tenant_id, name, item_number) VALUES ($1, 'Other workspace project', 1)`, [otherTenant]);
+  await runner.query(
+    `INSERT INTO tasks (tenant_id, item_number, title, description, status, related_object_type, related_object_id, labels, owner_ids, viewer_ids, creator_id)
+     VALUES ($1, 3, 'Other workspace task', '', 'open', 'project', $2, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $3)`,
+    [otherTenant, otherProject, otherUser],
+  );
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [s.tenantId]);
+  return { team, reader, tasksOnly, otherTenant, otherUser };
+}
+
+/** Refused, by an error or by the tool's answer, in a savepoint as `rejects`. */
+async function refused(runner: QueryRunner, fn: () => Promise<unknown>, pattern: RegExp, label: string) {
+  await runner.query('SAVEPOINT expected_refusal');
+  try {
+    assert.match(JSON.stringify(await fn()), pattern, label);
+  } catch (error: any) {
+    if (error?.code === 'ERR_ASSERTION') throw error;
+    assert.match(String(error?.message ?? error), pattern, label);
+  } finally {
+    await runner.query('ROLLBACK TO SAVEPOINT expected_refusal');
+  }
+}
+
+/** A request or a Kad context for a person outside the seed's profiles. */
+function personRequest(runner: QueryRunner, tenantId: string, userId: string, permissions: Record<string, string> | 'admin') {
+  const isAdmin = permissions === 'admin';
+  return { queryRunner: runner, isAdmin, permissions: isAdmin ? {} : permissions, tenant: { id: tenantId }, user: { sub: userId } };
+}
+
+/** The levels of the follow-ups' people, as the guards hand them to the routes. */
+const TEAM_PERMISSIONS = { ...PERMISSIONS.e, tasks: 'member', portfolio_requests: 'member' };
+const READER_PERMISSIONS = { portfolio_projects: 'reader', portfolio_requests: 'member', tasks: 'member' };
+function personContext(runner: QueryRunner, tenantId: string, userId: string, surface: 'chat' | 'mcp' = 'mcp') {
+  return { tenantId, userId, isPlatformHost: false, surface, authMethod: surface === 'mcp' ? 'api_key' as const : 'session' as const, manager: runner.manager };
+}
+
+/** In another workspace's context: the queries read that workspace only. */
+async function inTenant<T>(runner: QueryRunner, tenantId: string, back: string, fn: () => Promise<T>): Promise<T> {
+  await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+  try {
+    return await fn();
+  } finally {
+    await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [back]);
+  }
+}
+
+const MAIN_PHASE = 'Main phase';
+const HIDDEN_STREAM = 'Dependency stream';
+const HIDDEN_CATEGORY = 'Dependency category';
+
+/**
+ * The project of T-1 gets a phase, and both projects a stream and a category, whose names sort
+ * after those of the dependency project: a sort that read the hidden values would put T-3 first.
+ */
+async function seedProjectValues(runner: QueryRunner, s: Seed): Promise<void> {
+  const phase = await insertId(runner, `INSERT INTO portfolio_project_phases (tenant_id, project_id, name) VALUES ($1, $2, $3)`, [s.tenantId, s.project, MAIN_PHASE]);
+  await runner.query(`UPDATE tasks SET phase_id = $2 WHERE id = $1`, [s.projectTask, phase]);
+  for (const [project, category, stream] of [[s.project, 'Main category', 'Main stream'], [s.dependency, HIDDEN_CATEGORY, HIDDEN_STREAM]]) {
+    const categoryId = await insertId(runner, `INSERT INTO portfolio_categories (tenant_id, name) VALUES ($1, $2)`, [s.tenantId, category]);
+    const streamId = await insertId(runner, `INSERT INTO portfolio_streams (tenant_id, category_id, name) VALUES ($1, $2, $3)`, [s.tenantId, categoryId, stream]);
+    await runner.query(`UPDATE portfolio_projects SET category_id = $2, stream_id = $3 WHERE id = $1`, [project, categoryId, streamId]);
+  }
+}
+
+/** The position of each task in an answer, by its id or its reference. */
+function order(items: any[], ids: Record<string, string>): Record<string, number> {
+  const positions: Record<string, number> = {};
+  for (const [key, id] of Object.entries(ids)) positions[key] = items.findIndex((item) => JSON.stringify(item).includes(id));
+  return positions;
+}
+
+// 18. The task list and Kad sort a value the person does not see (the name, the phase and the
+//     project_* columns of a project outside a Business Contributor's participation, a contract
+//     without the module) as an empty value: the order tells nothing of it. The task's own
+//     classification (inherited from its project when it has none) shows, as the task's.
+async function testTaskSortsOnHiddenValues(h: Harness, runner: QueryRunner, s: Seed, people: FollowUpPeople) {
+  // The task's own classification falls back on its project's (`stream_name`, `category_name`): it
+  // is the task's and shows. The project's own columns (`project_stream_name`, ...) are hidden.
+  const hidden = [DEPENDENCY, PHASE, CONVERTED, s.dependency];
+  const eReq = rawRequest(runner, s, 'e');
+  const ids = { inside: s.projectTask, contract: s.contractTask, outside: s.outsideTask };
+  const row = (await h.tasksController.list({ limit: 50 }, eReq)).items.find((item: any) => item.id === s.outsideTask);
+  assert.deepEqual([row.project_stream_name, row.project_category_name], [null, null], 'E: no project classification');
+  assert.equal(row.category_name, HIDDEN_CATEGORY, 'E: the task shows its category, inherited from its project');
+  assert.equal(row.stream_name, HIDDEN_STREAM, 'E: the task shows its stream, inherited from its project');
+  for (const field of ['phase_name', 'related_object_name', 'project_stream_name', 'project_category_name']) {
+    const asc = await h.tasksController.list({ sort: `${field}:ASC`, limit: 50 }, eReq);
+    hasNot(asc, hidden, `E, tasks list sorted on ${field}`);
+    const ascOrder = order(asc.items, ids);
+    assert.ok(ascOrder.inside >= 0 && ascOrder.outside >= 0, `E: both tasks listed (${field})`);
+    assert.ok(ascOrder.inside < ascOrder.outside, `E: ${field} ascending puts the hidden value with the empty ones, last`);
+    const desc = order((await h.tasksController.list({ sort: `${field}:DESC`, limit: 50 }, eReq)).items, ids);
+    assert.ok(desc.outside >= 0 && desc.outside < desc.inside, `E: ${field} descending puts the hidden value with the empty ones, first`);
+    const navigation = await h.tasksController.listIds({ sort: `${field}:ASC` }, eReq);
+    assert.ok(navigation.ids.indexOf(s.projectTask) < navigation.ids.indexOf(s.outsideTask), `E: the navigation ids follow (${field})`);
+  }
+  // E does not read contracts: the contract task's name sorts as empty too.
+  const byName = order((await h.tasksController.list({ sort: 'related_object_name:ASC', limit: 50 }, eReq)).items, ids);
+  assert.ok(byName.inside < byName.contract, 'E: the contract name, a module they do not read, sorts as empty');
+
+  // The team member and the module reader read the dependency project: its phase sorts as before.
+  for (const [label, req] of [['team member', personRequest(runner, s.tenantId, people.team, TEAM_PERMISSIONS)], ['module reader', personRequest(runner, s.tenantId, people.reader, READER_PERMISSIONS)]] as const) {
+    const asc = await h.tasksController.list({ sort: 'phase_name:ASC', limit: 50 }, req);
+    const positions = order(asc.items, ids);
+    assert.ok(positions.outside >= 0 && positions.outside < positions.inside, `${label}: the phase of the dependency project sorts by its name`);
+    has(asc, [PHASE], `${label}, tasks list`);
+  }
+
+  // Kad and MCP: query_entities sorted on the phase.
+  for (const surface of ['chat', 'mcp'] as const) {
+    const sorted = await h.tools.execute(ctx(runner, s, 'e', surface), 'query_entities', { entity_type: 'tasks', sort: { field: 'phase', direction: 'asc' }, limit: 50 });
+    hasNot(sorted, hidden, `E (${surface}), query_entities sorted on phase`);
+    const positions = order(sorted.items, { inside: 'T-1', outside: 'T-3' });
+    assert.ok(positions.inside >= 0 && positions.inside < positions.outside, `E (${surface}): sorted on phase, the hidden phase sorts as empty`);
+    assert.ok((sorted.fields_partial ?? []).some((note: any) => note.field === 'phase'), `E (${surface}): the phase is said partial`);
+  }
+  const teamSorted = await h.tools.execute(personContext(runner, s.tenantId, people.team), 'query_entities', { entity_type: 'tasks', sort: { field: 'phase', direction: 'asc' }, limit: 50 });
+  const teamPositions = order(teamSorted.items, { inside: 'T-1', outside: 'T-3' });
+  assert.ok(teamPositions.outside >= 0 && teamPositions.outside < teamPositions.inside, 'team member (Kad): the phase sorts by its name');
+  const unread = await h.tools.execute(personContext(runner, s.tenantId, people.tasksOnly), 'query_entities', { entity_type: 'tasks', sort: { field: 'phase', direction: 'asc' } });
+  assert.deepEqual(unread.sort_ignored, ['phase'], 'tasks reader without projects: no sort on the phase');
+  assert.ok((unread.fields_withheld ?? []).some((note: any) => note.field === 'phase'), 'tasks reader without projects: the phase is said withheld');
+  hasNot(unread, hidden.concat([MAIN_PHASE]), 'tasks reader without projects, query_entities');
+
+  // Another workspace: its own task only, sorted, nothing of this one.
+  const other: any = await inTenant(runner, people.otherTenant, s.tenantId, () =>
+    h.tasksController.list({ sort: 'phase_name:ASC', limit: 50 }, personRequest(runner, people.otherTenant, people.otherUser, 'admin')));
+  assert.equal(other.total, 1, 'other workspace: its own task');
+  hasNot(other, hidden.concat([PROJECT, MAIN_PHASE]), 'other workspace, tasks list');
+}
+
+// 19. Kad groups tasks by phase, project stream or project category on the projects the person
+//     reads: the value of a project outside a Business Contributor's participation is no group,
+//     and the answer says the groups are partial.
+async function testTaskAggregatesOnHiddenProjects(h: Harness, runner: QueryRunner, s: Seed, people: FollowUpPeople) {
+  const hidden = [DEPENDENCY, PHASE, HIDDEN_STREAM, HIDDEN_CATEGORY, s.dependency];
+  const groups = (result: any) => result.groups.map((group: any) => group.key ?? '(none)').sort();
+  for (const [groupBy, visible, secret] of [['phase', MAIN_PHASE, PHASE], ['project_stream', 'Main stream', HIDDEN_STREAM], ['project_category', 'Main category', HIDDEN_CATEGORY]] as const) {
+    for (const surface of ['chat', 'mcp'] as const) {
+      const e = await h.tools.execute(ctx(runner, s, 'e', surface), 'aggregate_entities', { entity_type: 'tasks', group_by: groupBy, function: 'count' });
+      hasNot(e, hidden, `E (${surface}), tasks grouped by ${groupBy}`);
+      assert.ok(groups(e).includes(visible), `E (${surface}): the ${groupBy} of their project`);
+      assert.ok((e.fields_partial ?? []).some((note: any) => note.field === groupBy), `E (${surface}): the ${groupBy} groups are said partial`);
+    }
+    const team = await h.tools.execute(personContext(runner, s.tenantId, people.team), 'aggregate_entities', { entity_type: 'tasks', group_by: groupBy, function: 'count' });
+    assert.ok(groups(team).includes(secret), `team member: the ${groupBy} of the dependency project`);
+    const reader = await h.tools.execute(personContext(runner, s.tenantId, people.reader), 'aggregate_entities', { entity_type: 'tasks', group_by: groupBy, function: 'count' });
+    assert.ok(groups(reader).includes(secret), `module reader: the ${groupBy} of the dependency project`);
+    assert.equal((reader.fields_partial ?? []).some((note: any) => note.field === groupBy), false, `module reader: the ${groupBy} groups are whole`);
+    await refused(runner, () => h.tools.execute(personContext(runner, s.tenantId, people.tasksOnly), 'aggregate_entities', { entity_type: 'tasks', group_by: groupBy, function: 'count' }),
+      new RegExp(`group_by ${groupBy} is not available`), `tasks reader without projects: no ${groupBy} group, with the reason`);
+  }
+  // Kad's count of the tasks of the hidden project's phase: none, in the group or out of it.
+  const eCount = await h.tools.execute(ctx(runner, s, 'e'), 'aggregate_entities', { entity_type: 'tasks', group_by: 'phase', function: 'count' });
+  const counted = eCount.groups.find((group: any) => group.key === MAIN_PHASE);
+  assert.equal(counted?.count, 1, 'E: the phase of their project counts its task');
+
+  const other: any = await inTenant(runner, people.otherTenant, s.tenantId, () => h.tools.execute(
+    personContext(runner, people.otherTenant, people.otherUser), 'aggregate_entities', { entity_type: 'tasks', group_by: 'phase', function: 'count' }));
+  hasNot(other, hidden.concat([MAIN_PHASE]), 'other workspace, tasks grouped by phase');
+  assert.equal(other.total, 1, 'other workspace: its own task only');
+}
+
+// 20. A task converted into a request the person does not read: the task says it is converted
+//     (the screen offers no second conversion) without naming the request, and a conversion
+//     attempt is refused without its reference.
+async function testConvertedRequestOutsideParticipation(h: Harness, runner: QueryRunner, s: Seed, people: FollowUpPeople) {
+  const [{ id: converted }] = await runner.query(`SELECT id FROM portfolio_requests WHERE tenant_id = $1 AND origin_task_id = $2`, [s.tenantId, s.outsideTask]);
+  const hidden = [CONVERTED, 'REQ-2', converted];
+  const eReq = rawRequest(runner, s, 'e');
+  const page = await h.tasksController.getOne('T-3', eReq);
+  assert.equal(page.converted_request_hidden, true, 'E: the task reads as converted');
+  hasNot(page, hidden, 'E, task page');
+  const listed = (await h.tasksController.list({ limit: 50 }, eReq)).items.find((item: any) => item.id === s.outsideTask);
+  assert.equal(listed.converted_request_hidden, true, 'E: the list row reads as converted');
+  hasNot(listed, hidden, 'E, tasks list row');
+  await rejects(runner, () => h.requestsController.convertFromTask('T-3', {}, eReq), /^Task is already linked to a request$/, 'E: refused without the reference');
+
+  for (const [label, req] of [['team member', personRequest(runner, s.tenantId, people.team, TEAM_PERMISSIONS)], ['module reader', personRequest(runner, s.tenantId, people.reader, READER_PERMISSIONS)]] as const) {
+    const read = await h.tasksController.getOne('T-3', req);
+    assert.deepEqual([read.converted_request_id, read.converted_request_item_number, read.converted_request_hidden], [converted, 2, undefined], `${label}: the converted request, as before`);
+    await rejects(runner, () => h.requestsController.convertFromTask('T-3', {}, req), /already linked to request REQ-2/, `${label}: refused, naming the request`);
+  }
+  // Kad and MCP read the task without the request either.
+  for (const surface of ['chat', 'mcp'] as const) {
+    hasNot(await h.tools.execute(ctx(runner, s, 'e', surface), 'get_entity_detail', { entity_type: 'tasks', entity_id: 'T-3' }), hidden, `E (${surface}), get_entity_detail(tasks)`);
+    hasNot(await h.tools.execute(ctx(runner, s, 'e', surface), 'get_entity_context', { entity_type: 'tasks', entity_id: 'T-3' }), hidden, `E (${surface}), get_entity_context(tasks)`);
+  }
+  // Another workspace: T-3 there is its own task, not converted, and this workspace's request is unknown.
+  const other: any = await inTenant(runner, people.otherTenant, s.tenantId, () =>
+    h.tasksController.getOne('T-3', personRequest(runner, people.otherTenant, people.otherUser, 'admin')));
+  assert.equal(other.title, 'Other workspace task', 'other workspace: its own T-3');
+  assert.deepEqual([other.converted_request_id, other.converted_request_hidden], [null, undefined], 'other workspace: not converted');
+  hasNot(other, hidden, 'other workspace, task page');
+}
+
+// 21. Kad's detail of a task whose project the person does not read: the project's name and phase
+//     are null and said withheld, so it never reads "no phase"; the classification shown is the
+//     task's own (inherited from the project), and the note says so.
+async function testTaskDetailSaysProjectWithheld(h: Harness, runner: QueryRunner, s: Seed, people: FollowUpPeople) {
+  const withheld = (result: any) => (result.fields_withheld ?? []).map((note: { field: string }) => note.field);
+  for (const surface of ['chat', 'mcp'] as const) {
+    const e = await h.tools.execute(ctx(runner, s, 'e', surface), 'get_entity_detail', { entity_type: 'tasks', entity_id: 'T-3' });
+    assert.ok(withheld(e).includes('project'), `E (${surface}): the project of T-3 is said withheld`);
+    const note = e.fields_withheld.find((item: { field: string }) => item.field === 'project').reason;
+    assert.match(note, /name and phase are withheld/, `E (${surface}): the note names what is withheld`);
+    assert.match(note, /the task's own/, `E (${surface}): the note says the classification shown is the task's`);
+    hasNot(e, [DEPENDENCY, PHASE, s.dependency], `E (${surface}), get_entity_detail(T-3)`);
+    has(e, [HIDDEN_CATEGORY], `E (${surface}): the task's category, inherited from its project, shows`);
+    has(e, [HIDDEN_STREAM], `E (${surface}): the task's stream, inherited from its project, shows`);
+    const inside = await h.tools.execute(ctx(runner, s, 'e', surface), 'get_entity_detail', { entity_type: 'tasks', entity_id: 'T-1' });
+    assert.equal(withheld(inside).includes('project'), false, `E (${surface}): the project of T-1 is read`);
+  }
+  for (const [label, userId] of [['team member', people.team], ['module reader', people.reader]] as const) {
+    const read = await h.tools.execute(personContext(runner, s.tenantId, userId), 'get_entity_detail', { entity_type: 'tasks', entity_id: 'T-3' });
+    assert.equal(withheld(read).includes('project'), false, `${label}: the project of T-3 is read`);
+    has(read, [PHASE], `${label}, get_entity_detail(T-3)`);
+  }
+}
+
+// 22. The home page's tiles that name the record of a task: the stale tasks tile names it as the
+//     task does (a project outside a Business Contributor's participation, a contract of a module
+//     the person does not read: no name, no reference, no id), and the time tile's breakdown names
+//     the projects of the participation only, its hours staying in the totals.
+async function testHomeTilesFollowTaskLinks(h: Harness, runner: QueryRunner, s: Seed, people: FollowUpPeople) {
+  await runner.query(`UPDATE tasks SET updated_at = now() - interval '30 days' WHERE tenant_id = $1`, [s.tenantId]);
+  const [{ item_number: contractNumber }] = await runner.query(`SELECT item_number FROM contracts WHERE id = $1`, [s.contract]);
+  const hidden = [DEPENDENCY, CONTRACT, `CTR-${contractNumber}`, s.dependency, s.contract];
+  const home = (userId: string, permissions: Record<string, string>, tenantId = s.tenantId) => ({
+    tenantId, userId, isAdmin: false, permissions, manager: runner.manager, queryRunner: runner,
+  });
+  const log = (taskId: string, userId: string, hours: number) => runner.query(
+    `INSERT INTO task_time_entries (tenant_id, task_id, user_id, hours, logged_at, category) VALUES ($1, $2, $3, $4, now(), 'it')`,
+    [s.tenantId, taskId, userId, hours]);
+  await log(s.projectTask, s.users.e, 2);
+  await log(s.outsideTask, s.users.e, 3);
+  await log(s.outsideTask, people.team, 1);
+  await log(s.outsideTask, people.reader, 1);
+
+  const e = await h.dashboardController.getStaleTasks('all', '1', '10', home(s.users.e, PERMISSIONS.e));
+  const outside = e.find((item: any) => item.id === s.outsideTask);
+  assert.deepEqual([outside?.relatedObjectHidden, outside?.relatedObjectId, outside?.relatedObjectName], [true, null, null], 'E: the stale task of a hidden project keeps no link');
+  const contract = e.find((item: any) => item.id === s.contractTask);
+  assert.deepEqual([contract?.relatedObjectHidden, contract?.relatedObjectId, contract?.relatedObjectName], [true, null, null], 'E: the stale task of a contract keeps no link');
+  hasNot(e, hidden, 'E, stale tasks tile');
+  has(e, [PROJECT], 'E, stale tasks tile: their project');
+  const eTime = await h.dashboardController.getTimeSummary('7', home(s.users.e, PERMISSIONS.e));
+  assert.deepEqual(eTime.byProject.map((row: any) => row.projectName), [PROJECT], 'E: the time breakdown names their project only');
+  assert.equal(eTime.totalHours, 5, 'E: the hours of the hidden project stay in the total');
+  hasNot(eTime, hidden, 'E, time tile');
+
+  for (const [label, userId, permissions] of [['team member', people.team, TEAM_PERMISSIONS], ['module reader', people.reader, READER_PERMISSIONS]] as const) {
+    const stale = await h.dashboardController.getStaleTasks('all', '1', '10', home(userId, permissions));
+    const row = stale.find((item: any) => item.id === s.outsideTask);
+    assert.deepEqual([row?.relatedObjectId, row?.relatedObjectName, row?.relatedObjectHidden], [s.dependency, DEPENDENCY, undefined], `${label}: the dependency project, as before`);
+    const time = await h.dashboardController.getTimeSummary('7', home(userId, permissions));
+    has(time, [DEPENDENCY], `${label}, time tile`);
+  }
+
+  const other: any = await inTenant(runner, people.otherTenant, s.tenantId, async () => {
+    await runner.query(`UPDATE tasks SET updated_at = now() - interval '30 days' WHERE tenant_id = $1`, [people.otherTenant]);
+    return h.dashboardController.getStaleTasks('all', '1', '10', { ...home(people.otherUser, {}, people.otherTenant), isAdmin: true });
+  });
+  assert.deepEqual(other.map((item: any) => item.title), ['Other workspace task'], 'other workspace: its own task only');
+  hasNot(other, hidden.concat([PROJECT]), 'other workspace, stale tasks tile');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -885,6 +1213,13 @@ async function run() {
       await testRelationOptions(harness, runner, s);
       await testContractRelations(harness, runner, s);
       await testDocumentPageParticipation(harness, runner, s);
+      const people = await followUpPeople(runner, s);
+      await seedProjectValues(runner, s);
+      await testTaskSortsOnHiddenValues(harness, runner, s, people);
+      await testTaskAggregatesOnHiddenProjects(harness, runner, s, people);
+      await testConvertedRequestOutsideParticipation(harness, runner, s, people);
+      await testTaskDetailSaysProjectWithheld(harness, runner, s, people);
+      await testHomeTilesFollowTaskLinks(harness, runner, s, people);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

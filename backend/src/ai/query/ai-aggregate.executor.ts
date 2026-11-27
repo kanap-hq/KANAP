@@ -58,7 +58,7 @@ import {
 } from './ai-contributors.query';
 import { aiBudgetListAccess } from './ai-budget-list-access.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
-import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
+import { applicationParticipantCondition, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { bilingualDocumentTsQuerySql } from '../../common/document-search-tsquery';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
@@ -1464,18 +1464,23 @@ export class AiAggregateExecutor {
 
     let joinList = Array.from(new Set([...(groupField.joins || []), ...(metric?.def.joins || [])]));
     const queryParams: unknown[] = [context.tenantId, ids];
+    let groupExpression = groupField.expression;
     // A many-to-many group on a participation-scoped family lists only the linked records the
     // caller takes part in (a Business Contributor's applications), as the incident detail does.
+    // A value of the record's project (a task's phase) reads as empty outside their participation.
     if (groupField.participation) {
       const scope = await resolveAiParticipationAccessScope(context, groupField.participation.entityType);
       if (scope) {
         queryParams.push(scope.userId);
-        const condition = applicationParticipantCondition(
-          groupField.participation.alias,
-          `$${queryParams.length}`,
-        );
-        const target = `JOIN ${groupField.participation.table} ${groupField.participation.alias}`;
-        joinList = joinList.map((join) => (join.includes(target) ? `${join} AND ${condition}` : join));
+        const userRef = `$${queryParams.length}`;
+        const { entityType, table, alias: linkedAlias } = groupField.participation;
+        if (entityType === 'projects') {
+          groupExpression = `(CASE WHEN ${projectParticipantCondition(linkedAlias, userRef)} THEN ${groupField.expression} END)`;
+        } else {
+          const condition = applicationParticipantCondition(linkedAlias, userRef);
+          const target = `JOIN ${table} ${linkedAlias}`;
+          joinList = joinList.map((join) => (join.includes(target) ? `${join} AND ${condition}` : join));
+        }
       }
     }
     const joins = joinList.join('\n');
@@ -1492,12 +1497,12 @@ export class AiAggregateExecutor {
       const distinct = registry.aggregate.distinctRecord;
       const distinctColumn = distinct ? `, COUNT(DISTINCT ${distinct.expression})::int AS distinct_count` : '';
       const rows = await context.manager.query(
-        `SELECT ${groupField.expression} AS key, ${countExpression} AS count${distinctColumn}
+        `SELECT ${groupExpression} AS key, ${countExpression} AS count${distinctColumn}
          FROM ${registry.aggregate.baseTable} ${alias}
          ${joins}
          WHERE ${alias}.tenant_id = $1${baseWhere}
            AND ${alias}.${idColumn} = ANY($2::uuid[])
-         GROUP BY ${groupField.expression}
+         GROUP BY ${groupExpression}
          ORDER BY count DESC, key ASC NULLS LAST`,
         queryParams,
       );
@@ -1516,7 +1521,7 @@ export class AiAggregateExecutor {
     const rows = await context.manager.query(
       `SELECT d.key, ${aggregateExpression} AS value
        FROM (
-         SELECT DISTINCT ${groupField.expression} AS key, ${alias}.${idColumn} AS record_id,
+         SELECT DISTINCT ${groupExpression} AS key, ${alias}.${idColumn} AS record_id,
                 ${metric.def.expression} AS metric
            FROM ${registry.aggregate.baseTable} ${alias}
            ${joins}

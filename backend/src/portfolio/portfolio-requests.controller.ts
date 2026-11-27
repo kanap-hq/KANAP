@@ -1115,6 +1115,7 @@ export class PortfolioRequestsController {
     return this.svc.convertFromTask(taskId, body ?? {}, tenantId, req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
       viewer: incidentViewerFromRequest(req),
+      requestScope: await this.requestAccessScope(req, 'reader'),
     });
   }
 }
