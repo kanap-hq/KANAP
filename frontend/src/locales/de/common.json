@@ -1973,6 +1973,7 @@
     "doneChanged_other": "{{count}} Zeilen geändert",
     "doneChanged_applications_other": "{{count}} Anwendungen geändert",
     "applied": "{{field}}: {{value}}",
-    "toCheck": "Zu prüfen: {{count}}"
+    "toCheck": "Zu prüfen: {{count}}",
+    "willCheck": "Davon {{count}} zu prüfen"
   }
 }

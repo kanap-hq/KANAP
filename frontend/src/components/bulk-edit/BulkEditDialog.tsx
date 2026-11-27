@@ -38,8 +38,11 @@ export type BulkEditField = {
   changes: (value: string | null, first: string | null) => Record<string, unknown>;
 };
 
-/** The count of a dry run (`common/bulk-edit/bulk-edit.ts`). */
-type BulkCount = { rows: number; changes: number; unchanged: number; refused: Record<string, number>; as_of: string; fingerprint?: string };
+/**
+ * The count of a dry run (`common/bulk-edit/bulk-edit.ts`). `to_check`: the rows that will change and
+ * be to check, for a list that has the column (budget lines); absent elsewhere, or past the count's limit.
+ */
+type BulkCount = { rows: number; changes: number; unchanged: number; refused: Record<string, number>; as_of: string; fingerprint?: string; to_check?: { rows: number } };
 /**
  * The answer of the write. `to_check`: the written rows the list's "To check" column will show, for a
  * list that has one (budget lines); absent elsewhere.
@@ -399,6 +402,9 @@ export default function BulkEditDialog({ open, onClose, endpoint, selection, fie
             ) : result ? (
               <Stack spacing={0.25}>
                 <Typography sx={statusSx}>{t('bulkEdit.willChange', { count: result.changes, context: family })}</Typography>
+                {(result.to_check?.rows ?? 0) > 0 && (
+                  <Typography sx={statusSx} data-testid="bulk-edit-will-check">{t('bulkEdit.willCheck', { count: result.to_check!.rows })}</Typography>
+                )}
                 <OtherRows unchanged={result.unchanged} refused={result.refused ?? {}} />
               </Stack>
             ) : null}
