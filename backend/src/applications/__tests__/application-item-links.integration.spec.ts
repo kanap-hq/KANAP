@@ -211,12 +211,18 @@ async function testAppSideReplacesUnderTenant() {
 
     assert.deepEqual(
       audit.entries.map((e) => [e.table, e.recordId, e.before, e.after]),
+      // Each row on the application, then the row of the line or the project it reached (the other
+      // end's History, `common/relations/linked-ends.ts`); a contract has none.
       [
         ['application_capex_items', a.appId, [], [a.capexId]],
+        ['application_capex_items', a.capexId, [], [a.appId]],
         ['application_spend_items', a.appId, [], [a.spendId]],
+        ['application_spend_items', a.spendId, [], [a.appId]],
         ['application_contracts', a.appId, [], [aOther.contractId]],
         ['application_projects', a.appId, [], [aOther.projectId]],
+        ['application_projects', aOther.projectId, { ids: [] }, { ids: [a.appId] }],
         ['application_capex_items', a.appId, [a.capexId], []],
+        ['application_capex_items', a.capexId, [a.appId], []],
       ],
     );
   });
@@ -341,7 +347,8 @@ async function testConcurrentReplacements() {
       fromLine('capex', seed.capexId, [seed.appId]), fromLine('capex', seed.capexId, [seed.app2Id], lineAudit),
       [{ application_id: seed.app2Id, item_id: seed.capexId }],
     );
-    assert.deepEqual(lineAudit.entries.map((e) => [e.before, e.after]), [[[seed.appId], [seed.app2Id]]], 'line side: audit of the second');
+    // The line's own row; the applications it reached have theirs (`linked-ends.ts`).
+    assert.deepEqual(lineAudit.entries.filter((e) => e.recordId === seed.capexId).map((e) => [e.before, e.after]), [[[seed.appId], [seed.app2Id]]], 'line side: audit of the second');
 
     const appAudit = captureAudit();
     await concurrentReplace(
@@ -350,7 +357,7 @@ async function testConcurrentReplacements() {
       (manager) => instancesService(appAudit).bulkReplaceLinkedSpendItems(seed.appId, [seed.spend2Id], null, { manager }),
       [{ application_id: seed.appId, item_id: seed.spend2Id }],
     );
-    assert.deepEqual(appAudit.entries.map((e) => [e.before, e.after]), [[[seed.spendId], [seed.spend2Id]]], 'application side: audit of the second');
+    assert.deepEqual(appAudit.entries.filter((e) => e.recordId === seed.appId).map((e) => [e.before, e.after]), [[[seed.spendId], [seed.spend2Id]]], 'application side: audit of the second');
   } finally {
     await dataSource.transaction(async (manager) => {
       await setTenant(manager, seed.tenantId);

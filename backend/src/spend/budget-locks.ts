@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import type { AmountScope } from './amounts-write.util';
 import { assertScopeNatures, BUDGET_NATURES, linkedLineOf, natureAnd, naturesAnd, type BudgetNature } from './budget-nature';
 import { assertLinesEditable, assertVersionsEditable } from '../data-access/line-write-checks';
+import { withLockedAt } from '../common/relations/locked-at';
 
 /**
  * The one lock order of every budget writer, OPEX and CAPEX alike (plan
@@ -143,13 +144,28 @@ export async function lockBudgetLine(
   itemId: string,
   mode: 'no key update' | 'update' = 'no key update',
 ): Promise<boolean> {
+  return (await lockBudgetLineAt(manager, scope, tenantId, itemId, mode)) !== null;
+}
+
+/**
+ * `lockBudgetLine`, returning the instant the lock is held (`common/relations/locked-at.ts`), null
+ * when the line is gone: a gesture that may find a link the other end posted meanwhile dates the line
+ * from it (`common/relations/linked-ends.ts`).
+ */
+export async function lockBudgetLineAt(
+  manager: EntityManager,
+  scope: AmountScope,
+  tenantId: string,
+  itemId: string,
+  mode: 'no key update' | 'update' = 'no key update',
+): Promise<string | null> {
   const t = TABLES[scope];
-  const rows = await manager.query(
-    `SELECT 1 FROM ${t.items} WHERE tenant_id = $1 AND id = $2${natureAnd(null, t.nature)} FOR ${mode === 'update' ? 'UPDATE' : 'NO KEY UPDATE'}`,
+  const rows: Array<{ locked_at: string }> = await manager.query(
+    withLockedAt(`SELECT 1 FROM ${t.items} WHERE tenant_id = $1 AND id = $2${natureAnd(null, t.nature)} FOR ${mode === 'update' ? 'UPDATE' : 'NO KEY UPDATE'}`),
     [tenantId, itemId],
   );
   if (rows.length === 0) await assertLinesEditable(manager, [itemId]);
-  return rows.length > 0;
+  return rows[0]?.locked_at ?? null;
 }
 
 /** Locks the lines in id order (one statement); returns the ids of those still there. */

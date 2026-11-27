@@ -5,6 +5,9 @@ import { applicationParticipantCondition, ParticipationAccessScope, projectParti
 import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
 import { assertLinesEditable, DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE, isLimitedTransaction } from '../../data-access/line-write-checks';
 import { auditedLinkSet, hiddenLineCount, type HiddenLineOwner } from '../../data-access/hidden-links';
+import type { AuditService } from '../../audit/audit.service';
+import { dateRecordMarkedMeanwhile, linkedEndOf, markLinkedEnds } from './linked-ends';
+import { withLockedAt } from './locked-at';
 import { binder } from './related-objects';
 import { parseTargetId } from './relation-target';
 
@@ -125,13 +128,18 @@ export async function setOwnedLink(args: {
   /** A Business Contributor's applications: linked and unlinked inside their participation only. */
   applicationScope?: ParticipationAccessScope;
   audit: OwnedLinkAudit;
+  /**
+   * The audit service the other end's row is written with, for a link both of whose records read it
+   * (`linked-ends.ts`: a project with an application, an asset or a line; an application with a line).
+   */
+  otherEnd?: Pick<AuditService, 'log'>;
 }): Promise<{ ok: true; changed: boolean }> {
   if (!args.allowed) throw moduleRightRequired(OWNED_LINK_RESOURCES[args.kind], 'reader', 'You cannot read this module.');
   const id = parseTargetId(args.targetId);
   const loaded = await args.loadOwner();
   const tenantId = loaded.tenantId;
-  const locked: unknown[] = await args.manager.query(
-    `SELECT 1 FROM ${args.owner.table} WHERE tenant_id = $1 AND ${args.owner.idColumn} = $2 FOR NO KEY UPDATE`,
+  const locked: Array<{ locked_at: string }> = await args.manager.query(
+    withLockedAt(`SELECT 1 FROM ${args.owner.table} WHERE tenant_id = $1 AND ${args.owner.idColumn} = $2 FOR NO KEY UPDATE`),
     [tenantId, loaded.id],
   );
   if (locked.length === 0) {
@@ -179,7 +187,14 @@ export async function setOwnedLink(args: {
     [tenantId, loaded.id],
   );
   const before = Array.from(new Set(current.map((row) => String(row.id).toLowerCase()))).sort();
-  if (before.includes(id) === args.add) return { ok: true, changed: false };
+  // Nothing to write (the other end may have posted the same link meanwhile, its dating skipping
+  // this record, whose lock this gesture held): dated when its History says so (`linked-ends.ts`).
+  const ownEnd = linkedEndOf(args.link.table, args.link.ownerColumn)?.end ?? null;
+  const unchanged = async (): Promise<{ ok: true; changed: false }> => {
+    if (ownEnd) await dateRecordMarkedMeanwhile(args.manager, ownEnd, tenantId, loaded.id, locked[0].locked_at);
+    return { ok: true, changed: false };
+  };
+  if (before.includes(id) === args.add) return unchanged();
 
   const [{ n }]: Array<{ n: number }> = await args.manager.query(
     args.add
@@ -189,7 +204,7 @@ export async function setOwnedLink(args: {
          SELECT count(*)::int AS n FROM c`,
     [tenantId, loaded.id, id],
   );
-  if (Number(n) === 0) return { ok: true, changed: false };
+  if (Number(n) === 0) return unchanged();
   const after = (args.add ? [...before, id] : before.filter((value) => value !== id)).sort();
   const auditTable = typeof args.link.auditTable === 'function'
     ? args.link.auditTable(nature as BudgetNature)
@@ -201,5 +216,18 @@ export async function setOwnedLink(args: {
     { table: auditTable, recordId: loaded.id, action: 'update', before: auditedLinkSet(before, hidden), after: auditedLinkSet(after, hidden), userId: args.userId },
     { manager: args.manager },
   );
+  const linked = linkedEndOf(args.link.table, args.link.targetColumn);
+  if (linked) {
+    if (!args.otherEnd) throw new Error(`setOwnedLink: ${args.link.table} marks both ends, give its otherEnd.`);
+    await markLinkedEnds({
+      manager: args.manager,
+      audit: args.otherEnd,
+      ...linked,
+      from: loaded.id,
+      tenantId,
+      written: args.add ? { added: [id], removed: [] } : { added: [], removed: [id] },
+      userId: args.userId,
+    });
+  }
   return { ok: true, changed: true };
 }
