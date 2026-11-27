@@ -43,9 +43,21 @@ function context(runner: QueryRunner, tenantId: string, userId: string): AiExecu
   return { tenantId, userId, isPlatformHost: false, surface: 'chat', authMethod: 'jwt', conversationId: 'membership-spec', manager: runner.manager } as AiExecutionContextWithManager;
 }
 
+/** The read of a project or a request the preview starts from: its row, on the spec's transaction. */
+function rowReader(table: 'portfolio_projects' | 'portfolio_requests'): any {
+  return {
+    get: async (id: string, _query: unknown, opts: { manager: QueryRunner['manager'] }) => {
+      const [row] = await opts.manager.query(`SELECT * FROM ${table} WHERE id = $1`, [id]);
+      return row;
+    },
+  };
+}
+
 function support(): any {
   return new AiBusinessRecordMutationSupportService(
-    {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+    {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+    rowReader('portfolio_projects'), rowReader('portfolio_requests'),
+    {} as any, {} as any, {} as any, {} as any,
   );
 }
 
