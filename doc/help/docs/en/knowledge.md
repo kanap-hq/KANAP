@@ -173,7 +173,7 @@ New articles can start in two ways:
 
 When you create from a template, the template content is copied into the new document. From that point on, the new article is independent. Updating the template later does not rewrite existing documents.
 
-A new document opens with its title to type in the header. Press Enter to create the document, or Tab to create it and start typing its text. It opens in edit mode, with the editor, **Import**, and the sidebar available. **Create** does the same as Enter. Once the document is created, **Create** becomes **Done**: click it to save and return to where you started, or to the library. Click **Cancel** to delete the document instead. Kadratis asks first when you entered more than the title. Once another person has changed it, commented on it or asked for its review, **Cancel** is refused. On any document in edit mode, click the title in the header to change it.
+A new document opens with its title to type in the header. Press Enter to create the document, or Tab to create it and start typing its text. It opens in edit mode, with the editor, **Import**, and the sidebar available. **Create** does the same as Enter. Once the document is created, **Create** becomes **Done**: click it to save and return to where you started, or to the library. Click **Cancel** to delete the document instead. Kadratis asks first when you entered more than the title. Once another person has changed it, commented on it, asked for its review or opened it for editing, or another record or document is linked to it, **Cancel** is refused. On any document in edit mode, click the title in the header to change it.
 
 The document workspace keeps writing in the center and governance in the sidebar.
 
