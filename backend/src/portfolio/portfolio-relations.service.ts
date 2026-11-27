@@ -23,6 +23,7 @@ import {
 } from '../common/relations/related-objects';
 import { FxRateService } from '../currency/fx-rate.service';
 import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../spend/budget-nature';
+import { dateRecordMarkedMeanwhile } from '../common/relations/linked-ends';
 import { lockProject } from './project-budget-links.util';
 import { PortfolioRequestsService } from './portfolio-requests.service';
 import { PortfolioProjectsService } from './services/portfolio-projects.service';
@@ -249,17 +250,24 @@ export class PortfolioRelationsService {
     const id = parseTargetId(targetId);
     const owner = await loadOwner();
     const mg = ctx.manager;
-    if (!(await lockProject(mg, owner.tenantId, owner.id))) throw new NotFoundException('Project not found');
+    const lockedAt = await lockProject(mg, owner.tenantId, owner.id);
+    if (!lockedAt) throw new NotFoundException('Project not found');
     const opts = { manager: mg, userId: ctx.userId, audit: ctx.audit };
-    if (kind === 'budget_lines') return this.setProjectBudgetLine(mg, owner.tenantId, owner.id, id, add, opts);
-    if (kind === 'applications') {
-      await this.assertApplicationVisible(mg, owner.tenantId, id, ctx.applicationScope);
-      const current = await this.linkIds(mg, PROJECT_APPLICATIONS, owner.tenantId, owner.id);
-      return this.replaceOne(current, id, add, (next) => this.projects.bulkReplaceLinkedApplications(owner.id, next, opts));
-    }
-    await this.assertAssetExists(mg, owner.tenantId, id);
-    const current = await this.linkIds(mg, PROJECT_ASSETS, owner.tenantId, owner.id);
-    return this.replaceOne(current, id, add, (next) => this.projects.bulkReplaceLinkedAssets(owner.id, next, opts));
+    const result = await (async () => {
+      if (kind === 'budget_lines') return this.setProjectBudgetLine(mg, owner.tenantId, owner.id, id, add, opts);
+      if (kind === 'applications') {
+        await this.assertApplicationVisible(mg, owner.tenantId, id, ctx.applicationScope);
+        const current = await this.linkIds(mg, PROJECT_APPLICATIONS, owner.tenantId, owner.id);
+        return this.replaceOne(current, id, add, (next) => this.projects.bulkReplaceLinkedApplications(owner.id, next, opts));
+      }
+      await this.assertAssetExists(mg, owner.tenantId, id);
+      const current = await this.linkIds(mg, PROJECT_ASSETS, owner.tenantId, owner.id);
+      return this.replaceOne(current, id, add, (next) => this.projects.bulkReplaceLinkedAssets(owner.id, next, opts));
+    })();
+    // Nothing written: the other end may have posted the link meanwhile, its dating skipping the
+    // project this gesture held (`common/relations/linked-ends.ts`).
+    if (!result.changed) await dateRecordMarkedMeanwhile(mg, 'project', owner.tenantId, owner.id, lockedAt);
+    return result;
   }
 
   private async readProject(mg: EntityManager, tenantId: string, projectId: string): Promise<{ id: string; tenant_id: string }> {

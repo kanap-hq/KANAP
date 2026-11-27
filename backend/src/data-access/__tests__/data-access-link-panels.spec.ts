@@ -326,7 +326,7 @@ async function testReplacements(runner: QueryRunner, s: Seed, o: Objects): Promi
         loadOwner: async () => ({ id: o.application.both, tenantId: s.tenantId }),
         owner: { table: 'applications', idColumn: 'id' }, ownerNotFound: 'Application not found',
         link: { table: 'application_spend_items', ownerColumn: 'application_id', targetColumn: 'spend_item_id', notFound: 'Budget line not found.' },
-        audit,
+        audit, otherEnd: audit,
       }),
       (err: any) => err?.getStatus?.() === 400 && err.message === 'Budget line not found.',
     );
@@ -345,7 +345,7 @@ async function testReplacements(runner: QueryRunner, s: Seed, o: Objects): Promi
       loadOwner: async () => ({ id: o.application.both, tenantId: s.tenantId }),
       owner: { table: 'applications', idColumn: 'id' }, ownerNotFound: 'Application not found',
       link: { table: 'application_spend_items', ownerColumn: 'application_id', targetColumn: 'spend_item_id', notFound: 'Budget line not found.' },
-      audit,
+      audit, otherEnd: audit,
     });
     assert.deepEqual((await lastAudit(runner, o.application.both)).after_json, { ids: [L1], hidden_kept: 1 }, 'single link audit after');
   });

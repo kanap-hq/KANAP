@@ -55,6 +55,8 @@ Une colonne restaurée les liste de la même façon. Les entrées plus anciennes
 
 Sur les autres fiches, l'historique liste de la même façon les liens et les éléments qu'elles portent : lignes budgétaires, applications, actifs, contrats, membres de l'équipe, contacts, dépendances, liens web, documents intégrés, pièces jointes, tâches, déploiements et notes par critère.
 
+Un lien entre un projet ou une demande et une application, un actif ou une ligne budgétaire, ou entre une application et une ligne budgétaire, figure dans l'historique des deux fiches, quelle que soit celle à laquelle il a été ajouté ou retiré. Une modification de plusieurs liens à la fois donne à chaque fiche liée sa propre entrée.
+
 ## Fiches que vous ne pouvez pas lire
 
 Une entrée peut nommer une autre fiche, par exemple un contrat lié à la ligne. Si vous ne pouvez pas ouvrir cette fiche, l'entrée la désigne seulement par son type, par exemple « un contrat ». Une fiche supprimée depuis apparaît comme « un contrat supprimé ».

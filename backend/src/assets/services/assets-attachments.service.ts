@@ -16,10 +16,15 @@ import { assertWebLinkUrl } from '../../common/web-link-url';
 import { validateUploadedFile } from '../../common/upload-validation';
 import { fixMulterFilename } from '../../common/upload';
 import { replacedLinks } from '../../common/relations/linked-reads';
+import { dateRecordMarkedMeanwhile, markLinkedEnds } from '../../common/relations/linked-ends';
+import { withLockedAt } from '../../common/relations/locked-at';
+import { appliedLinks, writeOwnerLinks, wroteLinks } from '../../portfolio/portfolio-link-writes.util';
 
 /**
  * Service for managing asset links, attachments, and projects.
  */
+const ASSET_PROJECT_LINKS = { table: 'asset_projects', owner: 'asset_id', target: 'project_id' };
+
 @Injectable()
 export class AssetsAttachmentsService extends AssetsBaseService {
   constructor(
@@ -247,7 +252,10 @@ export class AssetsAttachmentsService extends AssetsBaseService {
   }
 
   /**
-   * Bulk replace projects linked to an asset.
+   * Bulk replace projects linked to an asset. The asset is locked first (FOR NO KEY UPDATE, as its
+   * Relations tab does), so two replacements take turns and read the set the other committed. One
+   * audit row on the asset when this call wrote a link (`asset_projects`, `{ ids }` before and
+   * after, the tab's form), then one per project it reached (`common/relations/linked-ends.ts`).
    */
   async bulkReplaceProjects(
     assetId: string,
@@ -267,26 +275,39 @@ export class AssetsAttachmentsService extends AssetsBaseService {
       });
       if (projects.length !== cleanIds.length) throw new BadRequestException('One or more projects not found');
     }
+    const locked: Array<{ locked_at: string }> = await mg.query(
+      withLockedAt(`SELECT 1 FROM assets WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`),
+      [asset.tenant_id, asset.id],
+    );
+    if (locked.length === 0) throw new NotFoundException('Asset not found');
 
     // Only the stored links the person may remove leave (`removable`); the others stay untouched.
     const existing: Array<{ id: string }> = await mg.query(
       `SELECT project_id::text AS id FROM asset_projects WHERE asset_id = $1 AND tenant_id = $2`,
-      [assetId, asset.tenant_id],
+      [asset.id, asset.tenant_id],
     );
-    const { removed, added } = replacedLinks(existing.map((row) => row.id), cleanIds, opts?.removable);
-    if (removed.length) {
-      await mg.query(
-        `DELETE FROM asset_projects WHERE asset_id = $1 AND tenant_id = $2 AND project_id = ANY($3::uuid[])`,
-        [assetId, asset.tenant_id, removed],
-      );
-    }
-    if (added.length) {
-      await mg.query(
-        `INSERT INTO asset_projects (tenant_id, asset_id, project_id)
-         SELECT $1, $2, project_id FROM unnest($3::uuid[]) AS project_id
-         ON CONFLICT DO NOTHING`,
-        [asset.tenant_id, assetId, added],
-      );
+    const beforeIds = existing.map((row) => row.id.toLowerCase()).sort();
+    const { removed, added } = replacedLinks(beforeIds, cleanIds, opts?.removable);
+    // Only what this call wrote counts: a link the project's side stored or removed meanwhile is
+    // neither audited nor marked twice.
+    const written = await writeOwnerLinks(mg, ASSET_PROJECT_LINKS, asset.tenant_id, asset.id, removed, added);
+    if (wroteLinks(written)) {
+      await this.audit.log({
+        table: 'asset_projects',
+        recordId: asset.id,
+        action: 'update',
+        before: { ids: beforeIds },
+        after: { ids: appliedLinks(beforeIds, written) },
+        userId,
+      }, { manager: mg });
+      await markLinkedEnds({
+        manager: mg, audit: this.audit, table: 'asset_projects', end: 'project', from: asset.id, tenantId: asset.tenant_id,
+        written, userId,
+      });
+    } else {
+      // Nothing written: a project may have posted a link meanwhile, its dating skipping the asset
+      // this replacement held (`common/relations/linked-ends.ts`).
+      await dateRecordMarkedMeanwhile(mg, 'asset', asset.tenant_id, asset.id, locked[0].locked_at);
     }
 
     return this.listProjects(assetId, { manager: mg, tenantId: tenant });

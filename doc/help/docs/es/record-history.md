@@ -55,6 +55,8 @@ Una columna restaurada los lista de la misma forma. Las entradas más antiguas t
 
 En los demás registros, el historial lista del mismo modo los vínculos y los elementos que contienen: líneas presupuestarias, aplicaciones, activos, contratos, miembros del equipo, contactos, dependencias, enlaces web, documentos integrados, archivos adjuntos, tareas, despliegues y puntuaciones por criterio.
 
+Un vínculo entre un proyecto o una solicitud y una aplicación, un activo o una línea presupuestaria, o entre una aplicación y una línea presupuestaria, aparece en el historial de ambos registros, sea cual sea aquel al que se añadió o del que se quitó. Un cambio de varios vínculos a la vez da a cada registro vinculado su propia entrada.
+
 ## Registros que no puede leer
 
 Una entrada puede nombrar otro registro, por ejemplo un contrato vinculado a la línea. Si no puede abrir ese registro, la entrada lo nombra solo por su tipo, por ejemplo «un contrato». Un registro eliminado desde entonces aparece como «un contrato eliminado».

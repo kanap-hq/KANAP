@@ -290,6 +290,7 @@ export class AssetRelationsTabService {
         link: OWNED_LINKS[kind],
         projectScope: kind === 'projects' ? ctx.scopes.project : undefined,
         audit: this.idsAudit(),
+        otherEnd: this.audit,
       });
     }
     if (kind === 'tasks' || kind === 'incidents') {

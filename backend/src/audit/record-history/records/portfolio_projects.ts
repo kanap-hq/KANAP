@@ -17,7 +17,9 @@ import { hidden, hiddenChanged, shown } from '../field-rules';
  * its team by role, its budget lines of both natures, applications, assets, technologies,
  * dependencies, contacts, web links, effort allocations and the edits of its integrated documents
  * (`portfolio_project_documents`, `{ slot }`). The same labels written from the other side (a
- * budget line, an application, an asset) carry that object in `record_id` and stay in its history.
+ * budget line, an application, an asset) carry that object in `record_id` and stay in its history;
+ * that writer also gives the project its own row, the project in `record_id`, in the project's form
+ * (`common/relations/linked-ends.ts`).
  *
  * The scoring (`criteria_values`, `priority_score`, the `override_*` fields) rides on the
  * project's own row: the presenter names each criterion and option by its label.

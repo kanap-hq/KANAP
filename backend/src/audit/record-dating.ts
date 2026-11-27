@@ -141,8 +141,9 @@ function shownAsEntry(row: AuditedRow, entry: RecordHistoryRecord, id: string): 
 
 /**
  * Whether the history page of the record `id` of `table` shows this stored row as an entry, the
- * filter `recordsToDate` applies: migration 1856277000000 (the dates of the records that existed
- * before the dating) judges its update rows with it. A table outside the history inventory has no
+ * filter `recordsToDate` applies: migrations 1856277000000 (the dates of the records that existed
+ * before the dating) and 1856290000000 (the same for applications and assets, lot K2f) judge their
+ * update rows with it. A table outside the history inventory has no
  * page to judge by: the row is kept, as a payload the presenter cannot read.
  */
 export function historyShowsRow(table: string, row: AuditedRow, id: string): boolean {

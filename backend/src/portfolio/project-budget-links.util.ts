@@ -1,5 +1,6 @@
 import { EntityManager } from 'typeorm';
-import { lockBudgetLine as lockLine } from '../spend/budget-locks';
+import { withLockedAt } from '../common/relations/locked-at';
+import { lockBudgetLineAt as lockLineAt } from '../spend/budget-locks';
 import { assertScopeNatures, linkedLineOf, natureAnd, type BudgetNature } from '../spend/budget-nature';
 
 /**
@@ -46,18 +47,21 @@ export async function budgetLineIdsOfKind(manager: EntityManager, kind: ProjectB
   return new Set(rows.map((row) => row.id));
 }
 
-/** Locks the line (FOR NO KEY UPDATE); false when it is gone. The budget lock order: `spend/budget-locks.ts`. */
-export function lockBudgetLine(manager: EntityManager, kind: ProjectBudgetLinkKind, tenantId: string, itemId: string): Promise<boolean> {
-  return lockLine(manager, kind, tenantId, itemId);
+/**
+ * Locks the line (FOR NO KEY UPDATE); the instant the lock is held (`common/relations/locked-at.ts`),
+ * null when it is gone. The budget lock order: `spend/budget-locks.ts`.
+ */
+export function lockBudgetLine(manager: EntityManager, kind: ProjectBudgetLinkKind, tenantId: string, itemId: string): Promise<string | null> {
+  return lockLineAt(manager, kind, tenantId, itemId);
 }
 
-/** Locks the project (FOR NO KEY UPDATE); false when it is gone. */
-export async function lockProject(manager: EntityManager, tenantId: string, projectId: string): Promise<boolean> {
-  const rows = await manager.query(
-    `SELECT 1 FROM portfolio_projects WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+/** Locks the project (FOR NO KEY UPDATE); the instant the lock is held, null when it is gone. */
+export async function lockProject(manager: EntityManager, tenantId: string, projectId: string): Promise<string | null> {
+  const rows: Array<{ locked_at: string }> = await manager.query(
+    withLockedAt(`SELECT 1 FROM portfolio_projects WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`),
     [tenantId, projectId],
   );
-  return rows.length > 0;
+  return rows[0]?.locked_at ?? null;
 }
 
 /**
