@@ -3,6 +3,7 @@ import { readTableAttachment } from '../attachments/table-attachment';
 import { buildImportMapping, type AiImportTemplateColumn } from '../import/ai-import-mapping';
 import { buildImportFile } from '../import/ai-import-file';
 import { AI_IMPORT_TARGETS, importColumnTitle, type AiImportKey } from '../import/ai-import-targets';
+import { incidentCsvConfig } from '../../incidents/incident-csv.config';
 
 // Lot I6c of 26.12.1. A technology link names its server, its application and its technology by
 // reference (`AST-n`, `APP-n`, `TEC-n`): Kad reads a reference column only with its prefix, so a
@@ -90,7 +91,40 @@ async function testZoneOfTheFile() {
   console.log('  the file keeps a header\'s zone, reads the others in the person\'s zone and names it in its header: OK');
 }
 
+/**
+ * Kad reads the forms of an incident reference the import screen reads (lot I6c of 26.12.1): the
+ * prefix in any case, then a dash, a space or nothing, then the number, zeros in front allowed. A
+ * bare number is read by the screen only (Kad's rule of the prefix); `INC-1.0` by neither.
+ */
+async function testIncidentReferenceFormsAsTheScreen() {
+  const template = await templateOf('incidents');
+  const screenRef = incidentCsvConfig.fields.find((field) => field.csvColumn === 'ref')!;
+  const screen = (value: string) => {
+    try { return screenRef.importTransformFn!(value, {}, {} as any); } catch { return 'refused'; }
+  };
+  const kad = async (value: string) => {
+    const grid = await readTableAttachment(Buffer.from(['Réf;Titre', `${value};Panne`].join('\n'), 'utf8'));
+    const { preview, file } = buildImportMapping(grid, template, {
+      importKey: 'incidents', filename: 'incidents.csv', assumptions: [], columns: [
+        { column: 'ref', source: 1, confidence: 'high' }, { column: 'title', source: 2, confidence: 'high' },
+      ],
+    }, 'fr');
+    return preview.read_errors.ref ? 'not read' : file.rows[0][0];
+  };
+  const table: Array<[string, unknown, unknown]> = [];
+  for (const value of ['INC-1', 'inc-1', ' INC-1 ', 'INC-0001', 'INC-01', 'INC 1', 'INC1', 'inc 0001', '1', 'INC-1.0']) {
+    table.push([value, screen(value), await kad(value)]);
+  }
+  assert.deepEqual(table, [
+    ['INC-1', 1, 'INC-1'], ['inc-1', 1, 'INC-1'], [' INC-1 ', 1, 'INC-1'], ['INC-0001', 1, 'INC-1'], ['INC-01', 1, 'INC-1'],
+    ['INC 1', 1, 'INC-1'], ['INC1', 1, 'INC-1'], ['inc 0001', 1, 'INC-1'],
+    ['1', 1, 'not read'], ['INC-1.0', 'refused', 'not read'],
+  ]);
+  console.log('  Kad reads the forms of an incident reference the screen reads, a bare number aside: OK');
+}
+
 async function main() {
+  await testIncidentReferenceFormsAsTheScreen();
   await testLinkReferencesNeedTheirPrefix();
   await testZoneOfTheFile();
   console.log('ai-import-link-references.spec: ok');
