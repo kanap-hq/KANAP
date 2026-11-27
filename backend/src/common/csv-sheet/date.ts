@@ -184,18 +184,25 @@ export function isoDateTimeInTimeZone(value: Date | string, timeZone: string): s
   return `${wall.slice(0, 19)}${milliseconds === '000' ? '' : `.${milliseconds}`}${sign}${hours}:${minutes}`;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /**
  * The instant a clock in `timeZone` shows as this day and time (`HH:mm` or
- * `HH:mm:ss`; no time is the zone's midnight). In the hour the clocks repeat
- * in autumn, the second pass is taken; a time the clocks skip in spring reads
- * as the instant one hour later on the clock.
+ * `HH:mm:ss`; no time is the zone's midnight). One rule on both sides of UTC:
+ * in the hour the clocks repeat, the first pass is taken; a time the clocks
+ * skip moves forward with them (02:30 on the spring change day reads as 03:30).
  */
 export function instantInTimeZone(isoDate: string, time: string | null, timeZone: string): Date {
   const [year, month, day] = isoDate.split('-').map(Number);
   const [hour, minute, second] = (time ?? '00:00').split(':').map(Number);
   const wall = Date.UTC(year, month - 1, day, hour, minute, second || 0);
-  const first = wall - zoneOffset(wall, timeZone);
-  return new Date(wall - zoneOffset(first, timeZone));
+  // The offsets in force a day before and a day after: the instant is under one of them.
+  const before = zoneOffset(wall - DAY_MS, timeZone);
+  const after = zoneOffset(wall + DAY_MS, timeZone);
+  const shown = [wall - before, wall - after].filter((instant, i) => zoneOffset(instant, timeZone) === (i === 0 ? before : after));
+  // Shown twice: the earlier pass. Never shown (skipped): the offset before the change, which lands
+  // after it, the clock moved forward.
+  return new Date(shown.length > 0 ? Math.min(...shown) : wall - before);
 }
 
 /** The zone's canonical IANA name (`europe/paris` is Europe/Paris), or null for a zone nobody knows. */

@@ -211,6 +211,11 @@ export type AiExecutionContext = {
    * the person's language when their profile sets none, as the screen then follows the browser.
    */
   screenLanguage?: string | null;
+  /**
+   * The zone the assistant reads and writes date-times in, for a turn of the chat: the browser's,
+   * else the person's own, else UTC (`timeZoneOf`). Absent on the other requests.
+   */
+  timeZone?: string | null;
 };
 
 export type AiExecutionContextWithManager = AiExecutionContext & {

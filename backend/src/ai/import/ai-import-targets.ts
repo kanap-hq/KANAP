@@ -22,7 +22,7 @@ import type { BudgetFileChoice } from '../../spend/budget-file/types';
 import { isLookalikeChoiceEntry, parseLookalikeChoices, type ImportLookalikeChoice } from '../../common/csv/csv-lookalikes';
 import { DEFAULT_ANALYTICS_AXIS_LABELS, loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import type { AiImportColumnKind } from './ai-import-convert';
-import { defaultColumnTitle, TASK_COLUMN_TITLES } from './ai-import-titles';
+import { defaultColumnTitle, REQUEST_COLUMN_TITLES, TASK_COLUMN_TITLES } from './ai-import-titles';
 import { AI_IMPORT_ACCESS, type AiImportAccess, type AiImportKey } from './ai-import-access';
 import {
   BILLING_FREQUENCY_LABELS,
@@ -62,7 +62,7 @@ export interface AiImportColumnSpec {
   multi?: boolean;
   /** A number that is a percentage, 0 to 100. */
   percent?: boolean;
-  /** A `reference` column of the family's own references: the prefix its values carry (`COMP`). */
+  /** A `reference` column read only with its prefix (`COMP-n` of the family's own references, a link's `AST-n`): the prefix. */
   prefix?: string;
   /** The name of each code in each language: read as the code, shown on the card. */
   labels?: Readonly<Record<CsvLanguage, Readonly<Record<string, string>>>>;
@@ -107,8 +107,8 @@ const country = (column: string, required = false): AiImportColumnSpec => ({ col
  * exported from Kadratis holds it, and its `COMP-n` names the record the row updates. Read only with
  * the prefix (`prefixedReferenceReader`): a column numbering the person's rows is no reference.
  */
-const ownReference = (prefix: string, family: string): AiImportColumnSpec => ({
-  column: 'reference',
+const ownReference = (prefix: string, family: string, column = 'reference'): AiImportColumnSpec => ({
+  column,
   kind: 'reference',
   prefix,
   hint: `the Kadratis reference of a ${family}, ${prefix}-n, as an export of the ${family} list writes it: `
@@ -119,11 +119,11 @@ const PERSON = 'a person of the workspace, by e-mail or by name in either order 
 
 /**
  * Identity columns of the declarative imports and the budget file that Kad leaves to the template
- * (an id, an incident's `ref`, a budget line's `item_number`). The `reference` columns of those
- * templates are export-only (`importable: false`); a family whose import reads its reference as its
- * key declares it with `ownReference`.
+ * (an id, a budget line's `item_number`). The `reference` columns of those templates are export-only
+ * (`importable: false`); a family whose import reads its reference as its key declares it with
+ * `ownReference` (an incident's `ref`, lot I6c of 26.12.1).
  */
-const IDENTITY_COLUMNS = new Set(['id', 'ref', 'item_number', 'kanap_token']);
+const IDENTITY_COLUMNS = new Set(['id', 'item_number', 'kanap_token']);
 
 function isStatusList(codes: readonly string[] | undefined): boolean {
   return codes?.length === STATUS_CODES.length && STATUS_CODES.every((code) => codes.includes(code));
@@ -249,7 +249,8 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     names: { en: 'Requests', fr: 'Demandes', de: 'Anfragen', es: 'Solicitudes' },
     ...AI_IMPORT_ACCESS.portfolio_requests,
     about: 'One row per request, matched to a stored one by its name.',
-    columns: () => fromCsvConfig(portfolioRequestCsvConfig),
+    // Its columns named as the import screen names them (`REQUEST_COLUMN_TITLES`, P11 of 26.12.1).
+    columns: () => withTitles(fromCsvConfig(portfolioRequestCsvConfig), REQUEST_COLUMN_TITLES),
   },
   tasks: {
     key: 'tasks',
@@ -269,8 +270,11 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     key: 'incidents',
     names: { en: 'Incidents', fr: 'Incidents', de: 'Vorfälle', es: 'Incidentes' },
     ...AI_IMPORT_ACCESS.incidents,
-    about: 'One row per incident; every row creates a new incident.',
+    about: 'One row per incident, matched to a stored one by its Kadratis reference (INC-n) when the file has a column of them; '
+      + 'every other row creates a new incident.',
     columns: () => fromCsvConfig(incidentCsvConfig, {
+      // The export's `Ref` column: its `INC-n` names the incident the row updates.
+      ref: ownReference('INC', 'incident', 'ref'),
       category: catalog('incidentCategories'),
       reporter: { kind: 'reference', hint: PERSON },
       owner: { kind: 'reference', hint: PERSON },
@@ -486,9 +490,9 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     ...AI_IMPORT_ACCESS.technology_asset_links,
     about: 'One row per technology installed on a server (a server by reference or name, a technology by reference or name, a version).',
     columns: () => ASSET_LINK_CSV_HEADERS.filter((column) => column !== 'source').map((column) => ({
-      asset_reference: reference('asset_reference', 'the reference of a server, AST-n'),
+      asset_reference: { ...reference('asset_reference', 'the reference of a server, AST-n'), prefix: 'AST' },
       asset_name: reference('asset_name', 'a server by name'),
-      technology_reference: reference('technology_reference', 'the reference of a technology, TEC-n'),
+      technology_reference: { ...reference('technology_reference', 'the reference of a technology, TEC-n'), prefix: 'TEC' },
       technology_name: reference('technology_name', 'a technology by name'),
       version: reference('version', 'a version of the technology, by its label'),
       operating_system: { column: 'operating_system', kind: 'boolean', hint: 'yes when the technology is the server\'s operating system' } as AiImportColumnSpec,
@@ -500,9 +504,9 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     ...AI_IMPORT_ACCESS.technology_application_links,
     about: 'One row per technology an application uses (an application by reference or name, a technology by reference or name, a version).',
     columns: () => APPLICATION_LINK_CSV_HEADERS.filter((column) => column !== 'source').map((column) => ({
-      application_reference: reference('application_reference', 'the reference of an application, APP-n'),
+      application_reference: { ...reference('application_reference', 'the reference of an application, APP-n'), prefix: 'APP' },
       application_name: reference('application_name', 'an application by name'),
-      technology_reference: reference('technology_reference', 'the reference of a technology, TEC-n'),
+      technology_reference: { ...reference('technology_reference', 'the reference of a technology, TEC-n'), prefix: 'TEC' },
       technology_name: reference('technology_name', 'a technology by name'),
       version: reference('version', 'a version of the technology, by its label'),
     } as Record<string, AiImportColumnSpec>)[column] ?? text(column)),

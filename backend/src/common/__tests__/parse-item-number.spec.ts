@@ -68,6 +68,17 @@ function testParseReferenceNumber() {
   assert.equal(parseReferenceNumber('', 'COMP'), null);
   assert.equal(parseReferenceNumber(null, 'COMP'), null);
   assert.equal(parseReferenceNumber('REQ-012', 'REQ', typed), 12, 'a family without the rule keeps its zeros');
+  // Lot I6c of 26.12.1: the prefix may be followed by a space or by the number itself, as the
+  // incident import screen reads it (`INC 1`, `INC1`).
+  assert.equal(parseReferenceNumber('COMP 3', 'COMP', typed), 3);
+  assert.equal(parseReferenceNumber('comp3', 'COMP', typed), 3);
+  assert.equal(parseReferenceNumber('DEPT 12', 'DEPT', typed), 12);
+  assert.equal(parseReferenceNumber('COMP 013', 'COMP', typed), null, 'a leading zero stays refused');
+  assert.equal(parseReferenceNumber('COMP  3', 'COMP', typed), null, 'one separator');
+  assert.equal(parseReferenceNumber('COMP-3.0', 'COMP', typed), null);
+  assert.equal(parseReferenceNumber('INC 1', 'INC', typed), 1);
+  assert.equal(parseReferenceNumber('inc1', 'INC', typed), 1);
+  assert.equal(parseReferenceNumber('INC 0001', 'INC', typed), 1);
 }
 
 /** A long typed value reads its trailing digits in linear time (CodeQL js/polynomial-redos on `/(\d+)$/`). */

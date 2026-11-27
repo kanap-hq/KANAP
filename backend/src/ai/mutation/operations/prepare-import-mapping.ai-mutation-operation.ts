@@ -106,7 +106,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
       + 'call `describe_import_template` for the import it fits, then `prepare_import_mapping` with the attachment id and the mapping. '
       + 'Map a column only when its header or its first rows say what it holds; say what you supposed in `note` or `assumptions`, '
       + 'and name the file columns you leave out. In `note` and `assumptions`, never say that a row creates or updates a record, nor what a record '
-      + 'already holds: the check tells it, and the card shows it. `assumptions` speak of the whole file, never of one row, and never say what the import creates, updates or leaves out, nor what a value becomes. When the card shows values not read, ask the user what they stand for and call again with `values`. '
+      + 'already holds: the check tells it, and the card shows it. `assumptions` speak of the whole file, never of one row, and never say what the import creates, updates or leaves out, nor what a value becomes, nor in which time zone times are read: the card says it when it matters. When the card shows values not read, ask the user what they stand for and call again with `values`. '
       + 'The import checks the references to other records (a company, a supplier, a server, a person) when it runs. '
       + 'For a column that names a record by its name, `values` proposes only the name of an existing record (read in the template, '
       + 'else found by a search), never a case or accents variant: the check matches those itself, and refuses a proposal whose record '
@@ -183,7 +183,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
     const budget = input.entity_type === 'budget_lines';
     const choices = input.choices ?? await this.lastChoices(context, input.attachment_id, input.entity_type);
-    const { target, mapping } = await this.mapping.prepareMapping(context, { ...input, choices }, language);
+    const { target, mapping, timeZone } = await this.mapping.prepareMapping(context, { ...input, choices }, language);
     // The applications (lot I3 of 26.11.9): the lookalike choices the check followed, the targets of the
     // rows it left out by default included, so that the approval leaves out what the card left out.
     const report = mapping.validation?.report;
@@ -203,6 +203,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
         assumptions: input.assumptions ?? [],
         // The file's columns the person left aside: the approval builds the same file.
         ...(input.left_aside?.length ? { left_aside: input.left_aside } : {}),
+        // The zone the card read the times in: the approval reads them in it again (lot I6c of 26.12.1).
+        ...(timeZone ? { time_zone: timeZone } : {}),
         // The choices the check followed: an undone match the file no longer makes is dropped. A check
         // that refused the file before reading its rows followed none: the choices are kept as received.
         ...(budget ? { choices: mapping.validation?.matching ? mapping.validation.matching.choices : choices ?? [] } : {}),

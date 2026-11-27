@@ -932,16 +932,150 @@
       "contracts": {
         "company_name": "Empresa",
         "supplier_name": "Proveedor",
-        "cost_center": "Centro de coste"
+        "cost_center": "Centro de coste",
+        "reference": "Referencia",
+        "name": "Nombre",
+        "start_date": "Fecha de inicio",
+        "duration_months": "Duración en meses",
+        "auto_renewal": "Renovación automática",
+        "notice_period_months": "Preaviso en meses",
+        "yearly_amount_at_signature": "Importe anual a la firma",
+        "currency": "Moneda",
+        "billing_frequency": "Frecuencia de facturación",
+        "status": "Estado",
+        "owner_email": "Correo del responsable",
+        "notes": "Notas"
       },
       "contacts": {
-        "supplier_name": "Proveedor"
+        "supplier_name": "Proveedor",
+        "reference": "Referencia",
+        "first_name": "Nombre",
+        "last_name": "Apellido",
+        "job_title": "Cargo",
+        "email": "Correo",
+        "phone": "Teléfono",
+        "mobile": "Móvil",
+        "country": "País",
+        "supplier_role": "Tipo de contacto",
+        "notes": "Notas",
+        "active": "Activo"
       },
       "cost-centers": {
-        "company_name": "Empresa"
+        "company_name": "Empresa",
+        "code": "Código",
+        "kind": "Tipo",
+        "name": "Nombre",
+        "parent_code": "Código padre",
+        "owner_email": "Correo del responsable",
+        "description": "Descripción",
+        "status": "Estado",
+        "disabled_at": "Desactivado el"
       },
       "business-processes": {
-        "parent_name": "Padre"
+        "parent_name": "Padre",
+        "name": "Nombre",
+        "process_type": "Tipo de proceso",
+        "description": "Descripción",
+        "notes": "Notas",
+        "status": "Estado"
+      },
+      "suppliers": {
+        "reference": "Referencia",
+        "name": "Nombre",
+        "erp_supplier_id": "ID de proveedor ERP",
+        "commercial_contact": "Contacto comercial",
+        "technical_contact": "Contacto técnico",
+        "support_contact": "Contacto de soporte",
+        "notes": "Notas",
+        "status": "Estado",
+        "disabled_at": "Desactivado el"
+      },
+      "companies": {
+        "reference": "Referencia",
+        "name": "Nombre",
+        "country_iso": "País",
+        "address1": "Dirección",
+        "address2": "Dirección, línea 2",
+        "postal_code": "Código postal",
+        "city": "Ciudad",
+        "state": "Estado o región",
+        "reg_number": "Número de registro",
+        "vat_number": "NIF-IVA",
+        "base_currency": "Moneda base",
+        "status": "Estado",
+        "disabled_at": "Desactivado el",
+        "notes": "Notas",
+        "headcount": "Plantilla",
+        "it_users": "Usuarios de TI",
+        "turnover": "Facturación en millones"
+      },
+      "departments": {
+        "reference": "Referencia",
+        "company_name": "Empresa",
+        "name": "Nombre",
+        "description": "Descripción",
+        "status": "Estado",
+        "disabled_at": "Desactivado el"
+      },
+      "accounts": {
+        "coa_code": "Plan de cuentas",
+        "account_number": "Número de cuenta",
+        "account_name": "Nombre de la cuenta",
+        "native_name": "Nombre original",
+        "description": "Descripción",
+        "consolidation_account_number": "Número de cuenta de consolidación",
+        "consolidation_account_name": "Nombre de la cuenta de consolidación",
+        "consolidation_account_description": "Descripción de la cuenta de consolidación",
+        "status": "Estado",
+        "nature": "Naturaleza",
+        "quantity_price_expected": "Introducción por cantidad y precio"
+      },
+      "analytics-categories": {
+        "axis_code": "Dimensión",
+        "name": "Nombre",
+        "description": "Descripción",
+        "status": "Estado",
+        "disabled_at": "Desactivado el",
+        "applies_to": "Se aplica a"
+      },
+      "working-day-profiles": {
+        "code": "Código",
+        "name": "Nombre",
+        "description": "Descripción",
+        "country": "País",
+        "region": "Región",
+        "status": "Estado",
+        "disabled_at": "Desactivado el",
+        "year": "Año",
+        "jan": "Enero",
+        "feb": "Febrero",
+        "mar": "Marzo",
+        "apr": "Abril",
+        "may": "Mayo",
+        "jun": "Junio",
+        "jul": "Julio",
+        "aug": "Agosto",
+        "sep": "Septiembre",
+        "oct": "Octubre",
+        "nov": "Noviembre",
+        "dec": "Diciembre"
+      },
+      "technologies_asset-links": {
+        "asset_reference": "Referencia del servidor",
+        "asset_name": "Servidor",
+        "technology_reference": "Referencia de la tecnología",
+        "technology_name": "Tecnología",
+        "version": "Versión",
+        "operating_system": "Sistema operativo",
+        "notes": "Notas"
+      },
+      "technologies_application-links": {
+        "application_reference": "Referencia de la aplicación",
+        "application_name": "Aplicación",
+        "technology_reference": "Referencia de la tecnología",
+        "technology_name": "Tecnología",
+        "version": "Versión",
+        "notes": "Notas"
       }
     }
   },

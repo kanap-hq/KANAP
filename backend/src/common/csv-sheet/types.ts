@@ -196,9 +196,14 @@ export interface CsvReadResult {
    * Rows are still filled so the same pass can list row errors.
    */
   headerErrors: string[];
+  /** The code of each header error the interface translates (`classifyHeaders`), null for the others. Absent: none coded. */
+  headerErrorCodes?: Array<CsvHeaderErrorCode | null>;
   /** Blocking file problems. When one of these is set before rows are read, `rows` is empty. */
   fileErrors: string[];
   rows: CsvDataRow[];
   dates: CsvDateReading | null;
   amounts: CsvAmountReading | null;
 }
+
+/** A header refusal the interface words in its language: `columns` names the column by its key. */
+export type CsvHeaderErrorCode = { code: 'CSV_HEADER_EMPTY' } | { code: 'CSV_HEADER_DUPLICATE_COLUMN'; params: { columns: string } };

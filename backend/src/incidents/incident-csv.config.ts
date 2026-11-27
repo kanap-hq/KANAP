@@ -18,7 +18,7 @@ import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { findCatalogOption, offeredCatalogList, requireImportCatalogs, type CatalogOptionLike } from '../it-ops-settings/catalog-resolve';
 import { keepStoredSlotBodies, sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, isReservedIncidentStatusMove } from './incident.entity';
-import { incidentVisibleToViewer, type IncidentViewer } from './incident-visibility';
+import { incidentVisibleToViewer, type IncidentViewer, type IncidentVisibilityRow } from './incident-visibility';
 import { numberedReference } from '../common/csv-sheet/master-data';
 
 /**
@@ -115,6 +115,13 @@ export const IMPORT_ENTRY_CONTENT = 'Imported from CSV';
 const insertedByImport = new WeakSet<object>();
 
 /**
+ * The rows whose reference names an incident the person does not read, with its number: kept out of
+ * the load's lookup by `beforeValidate`, so the load neither finds nor locks it, and given back to the
+ * row by `settleRows` (lot I6c of 26.12.1).
+ */
+const hiddenReferences = new WeakMap<object, number>();
+
+/**
  * `review` is a virtual column. It is parsed onto the entity like any other
  * field, then moved off it in `beforeCommit` into this map, so `repo.save`
  * (and the audit snapshot it feeds) never sees a column `incidents` does not
@@ -195,6 +202,23 @@ function importViewer(context: CsvImportContext): IncidentViewer {
 }
 
 const UNKNOWN_REF_HINT = 'Leave the ref column empty to create new incidents.';
+
+/**
+ * The refusal of a reference the import does not find for the person (lot I6c of 26.12.1): no
+ * incident of the workspace has it, or the person does not read that incident (a confidential one
+ * outside their participation). One answer for both, as the reference lookup of the other families
+ * (`CSV_RECORD_REFERENCE_NOT_FOUND`): nothing tells a hidden incident from a missing one.
+ */
+function unknownReferenceError(row: { rowNumber: number }, itemNumber: number): CsvImportRow['errors'][number] {
+  const reference = `INC-${itemNumber}`;
+  return {
+    row: row.rowNumber,
+    column: 'ref',
+    message: `"${reference}" is no reference in this workspace. ${UNKNOWN_REF_HINT}`,
+    code: 'CSV_RECORD_REFERENCE_NOT_FOUND',
+    params: { value: reference },
+  };
+}
 
 /**
  * Accept an incident reference (INC-12), a bare item number, or nothing.
@@ -633,63 +657,68 @@ export const incidentCsvConfig: CsvEntityConfig = {
   ],
 
   /**
-   * Identity resolution reads the raw cells, so INC-12 has to become 12 before
-   * the existing incidents are loaded. Mutating `raw` here is what the import
-   * service then matches and parses.
+   * Identity resolution reads the raw cells, so INC-12 (or INC-0012) has to become 12 before the
+   * existing incidents are loaded. Mutating `raw` here is what the import service then matches and
+   * parses. A reference that is no number (`INC-3000000000`) is left as it came: the cell's own
+   * reading refuses it, once.
+   *
+   * Then whether the person reads each incident named, on a read that locks nothing (lot I6c of
+   * 26.12.1): the reference of one they do not read is taken off the row, so the load does not find,
+   * lock or wait for it, as for a reference no incident has; `settleRows` gives it back.
    */
   beforeValidate: async (rows, context) => {
-    const itemNumbers: number[] = [];
+    const named = new Map<number, CsvImportRow[]>();
     for (const row of rows) {
       const value = row.raw.ref;
       if (typeof value !== 'string') continue;
       const match = REF_INPUT_RE.exec(value.trim());
-      if (match) {
-        const number = parseItemNumber(match[1]);
-        if (number == null) {
-          row.errors.push({
-            row: row.rowNumber,
-            column: 'ref',
-            message: invalidReferenceMessage(value),
-            code: IMPORT_REFERENCE_INVALID_CODE,
-            params: { value },
-          });
-          continue;
-        }
-        row.raw.ref = match[1];
-        itemNumbers.push(number);
+      const number = match ? parseItemNumber(match[1]) : null;
+      if (number == null) continue;
+      row.raw.ref = String(number);
+      named.set(number, [...(named.get(number) ?? []), row]);
+    }
+    if (named.size === 0) return;
+    const viewer = importViewer(context);
+    const stored: Array<{ item_number: number } & IncidentVisibilityRow> = await context.manager.query(
+      `SELECT item_number, confidential, reporter_user_id, owner_user_id FROM incidents
+       WHERE tenant_id = $1 AND item_number = ANY($2::int[])`,
+      [context.tenantId, [...named.keys()]],
+    );
+    for (const incident of stored) {
+      if (incidentVisibleToViewer(incident, viewer)) continue;
+      for (const row of named.get(Number(incident.item_number)) ?? []) {
+        hiddenReferences.set(row.raw, Number(incident.item_number));
+        row.raw.ref = '';
       }
     }
-    if (itemNumbers.length === 0 || !context.manager?.query) return;
+  },
 
-    const existing: Array<{
-      item_number: number;
-      confidential: boolean;
-      reporter_user_id: string | null;
-      owner_user_id: string | null;
-    }> = await context.manager.query(
-      `SELECT item_number, confidential, reporter_user_id, owner_user_id
-       FROM incidents WHERE tenant_id = $1 AND item_number = ANY($2::int[])`,
-      [context.tenantId, itemNumbers],
-    );
+  /**
+   * A reference that names no incident the person reads (lot I6c of 26.12.1): none of the workspace,
+   * or one they do not read (confidential, outside their participation). Both rows are read as a row
+   * that finds no incident, refused on the reference with one same error, at the check and at the
+   * load: the stored incident a hidden reference finds is never the row's, so nothing of it (its
+   * values, its title, its category, its state) reaches the report.
+   */
+  settleRows: async (rows, context) => {
     const viewer = importViewer(context);
-    const hidden = new Set(
-      existing
-        .filter((row) => !incidentVisibleToViewer(row, viewer))
-        .map((row) => row.item_number),
-    );
-    if (hidden.size === 0) return;
-    for (const row of rows) {
-      const n = Number(row.raw.ref);
-      if (!hidden.has(n)) continue;
-      const reference = `INC-${n}`;
-      row.errors.push({
-        row: row.rowNumber,
-        column: 'ref',
-        message: `Unknown incident reference(s): ${reference}. ${UNKNOWN_REF_HINT}`,
-        code: 'CSV_REFERENCE_NOT_FOUND',
-        params: { value: reference },
-      });
-    }
+    // "Update only" skips a row that finds no incident, as it always has: one the person does not
+    // read alike.
+    const updateOnly = context.params.operation === 'update_only';
+    return rows.map(({ raw, rowNumber, found }) => {
+      const hidden = hiddenReferences.get(raw);
+      if (hidden !== undefined) {
+        // Its reference back on the row, for the file's duplicates and the cell's reading.
+        raw.ref = String(hidden);
+        hiddenReferences.delete(raw);
+      }
+      const itemNumber = typeof raw.ref === 'string' && /^\d+$/.test(raw.ref) ? parseItemNumber(raw.ref) : null;
+      if (itemNumber == null) return { entity: found ?? null };
+      // At the load, `found` is the incident as locked: the rule read again on it.
+      if (found && incidentVisibleToViewer(found, viewer)) return { entity: found };
+      if (updateOnly) return { entity: null };
+      return { entity: null, errors: [unknownReferenceError({ rowNumber }, itemNumber)] };
+    });
   },
 
   /**
@@ -704,6 +733,11 @@ export const incidentCsvConfig: CsvEntityConfig = {
    * contributor gets a row error, with the INC-N reference, in both the preflight and the load.
    */
   afterValidate: async (rows, context) => {
+    // A reference `beforeValidate` took off a row comes back through `settleRows`: a row it never came
+    // back to would become a new incident. Nothing is written then.
+    if (rows.some((row) => hiddenReferences.has(row.raw))) {
+      throw new Error('Incident import: internal error, a reference taken off a row was not given back by settleRows.');
+    }
     // A review cell that repeats its document is kept as stored, whatever tags it holds.
     await keepStoredSlotBodies(rows, context, 'incidents', { [REVIEW_ENTITY_PROPERTY]: 'review' });
     // The comparison swallows an unknown category, and the commit throw does not run on the check.
@@ -740,10 +774,13 @@ export const incidentCsvConfig: CsvEntityConfig = {
   sameAsStored: async (rows, context) => {
     const categories = (await requireImportCatalogs(context)).incidentCategories;
     return sameAsStoredWithDocuments(rows, context, 'incidents', { [REVIEW_ENTITY_PROPERTY]: 'review' }, (next, stored) => {
-      // The export writes instants to the second: the stored instant at that precision is the same value.
+      // A cell is as stored when the stored instant, written as the export writes it in the zone the
+      // cell was read in, gives the same text: to the second, and either pass of the hour the clocks
+      // repeat (`25/10/2026 02:30` in Paris) is the one stored. An export imported again changes nothing.
       for (const column of DATE_TIME_COLUMNS) {
+        const zone = context.timeZones?.[column] ?? 'UTC';
         if (next[column] instanceof Date && stored[column] instanceof Date
-          && Math.floor(stored[column].getTime() / 1000) * 1000 === next[column].getTime()) next[column] = stored[column];
+          && formatCsvDateTime(stored[column], 'en', zone) === formatCsvDateTime(next[column], 'en', zone)) next[column] = stored[column];
       }
       if (!next.category) return;
       const resolved = findCatalogOption(next.category, categories)?.code;

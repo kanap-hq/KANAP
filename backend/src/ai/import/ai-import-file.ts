@@ -1,5 +1,6 @@
 import type { CsvLanguage } from '../../common/csv-sheet';
 import { AGENT_NAME } from '../../config/product';
+import { timeZoneHeader } from '../../common/csv-sheet/date';
 import { writeXlsx, XlsxCell } from '../../common/xlsx/write';
 import type { AiImportFileCell, AiImportFileContent } from './ai-import-mapping';
 
@@ -28,14 +29,15 @@ function xlsxCell(kind: string, cell: AiImportFileCell): XlsxCell {
 /**
  * The file the import reads, in the template's format: one sheet, the template's columns under their
  * technical names (`go_live_date`), which every import reads in any language, then one row per data
- * row of the person's file, in its order. All imports read a workbook (#1037, #1038).
+ * row of the person's file, in its order. A date-time column's header names the zone of its cells
+ * (`detected_at (Europe/Paris)`), as the export writes it. All imports read a workbook (#1037, #1038).
  */
 export function buildImportFile(content: AiImportFileContent, language: CsvLanguage): Buffer {
   return writeXlsx({
     language,
     sheets: [{
       name: 'Import',
-      headers: content.columns.map((column) => column.column),
+      headers: content.columns.map((column) => (column.timeZone ? timeZoneHeader(column.column, column.timeZone) : column.column)),
       rows: content.rows.map((row) => row.map((cell, index) => xlsxCell(content.columns[index].kind, cell))),
       header: 'plain',
     }],

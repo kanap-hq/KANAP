@@ -106,7 +106,7 @@
     "turnoverFxExcludedPair_other": "{{currency}} {{year}} ({{count}} companies)",
     "export": "Export companies",
     "import": "Import companies",
-    "importHint": "Metrics read: {{years}}, from the year of the list. Each year is optional. Accepted status values: enabled or disabled.",
+    "importHint": "Metrics read: {{years}}, from the year of the list. Each year is optional. Accepted values for Status: enabled or disabled.",
     "previous": "Previous company",
     "next": "Next company",
     "fields": {

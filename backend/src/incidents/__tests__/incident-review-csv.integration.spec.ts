@@ -645,7 +645,8 @@ async function testDateTimesInTheExportersZone() {
     );
     assert.deepEqual(await instants(), original, 'the export restores the same instants');
 
-    // A header without a zone (an older file, a hand-made one) is read as UTC.
+    // A header without a zone (an older file, a hand-made one) is read in the person's zone: UTC
+    // when none is known.
     const plain = file.replace(/ \(Europe\/Paris\)/g, '');
     const utc = await services.csv.import(
       csvFile(plain),
@@ -656,10 +657,54 @@ async function testDateTimesInTheExportersZone() {
     const columns = ['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at'];
     assert.deepEqual(
       utc.warnings.map((w) => [w.row, w.code, w.params]),
-      [[0, 'CSV_HEADER_ZONELESS_DATE_TIMES', { columns: columns.join(', '), example: columns[0] }]],
+      [[0, 'CSV_HEADER_ZONELESS_DATE_TIMES', { columns: columns.join(', '), example: columns[0], zone: 'UTC' }]],
       'the report names the date-times read as UTC',
     );
     assert.deepEqual(await instants(), ['2026-03-29T12:00:00.000Z', '2026-10-16T10:38:00.000Z', '2026-10-25T11:00:00.000Z']);
+
+    // Lot I6c of 26.12.1: the screen sends the browser's zone, and the import reads such a header in
+    // it, as Kad does; the report names it.
+    const paris = await services.csv.import(
+      csvFile(plain),
+      { dryRun: false, operation: 'upsert' },
+      { ...importOpts(runner, f, f.users.admin), timeZone: 'Europe/Paris' },
+    );
+    assert.deepEqual(paris.errors, []);
+    assert.deepEqual(
+      paris.warnings.map((w) => [w.code, w.params?.zone, w.message.startsWith('Times without a time zone, read in Europe/Paris:')]),
+      [['CSV_HEADER_ZONELESS_DATE_TIMES', 'Europe/Paris', true]],
+    );
+    assert.deepEqual(await instants(), original, 'read in Paris time, as the person sees them');
+
+    // A person in New York: the export writes New York times and names the zone; imported back by
+    // the screen, in New York or anywhere else, it restores the same instants and changes nothing.
+    const newYork = (await services.csv.export({
+      manager: runner.manager,
+      tenantId: f.tenantId,
+      language: 'en',
+      viewer: { userId: f.users.admin, isAdmin: true },
+      timeZone: 'America/New_York',
+    })).content.replace(/^\uFEFF/, '');
+    assert.ok(newYork.split('\n')[0].includes('Detected (America/New_York)'), newYork.split('\n')[0]);
+    assert.ok(newYork.includes('2026-10-16 04:38'), 'the local time of New York, not 08:38 UTC');
+    for (const timeZone of ['America/New_York', 'Europe/Paris', undefined]) {
+      const again = await services.csv.import(
+        csvFile(newYork),
+        { dryRun: true, operation: 'upsert' },
+        { ...importOpts(runner, f, f.users.admin), language: 'en' as const, ...(timeZone ? { timeZone } : {}) },
+      );
+      assert.deepEqual(again.errors, [], `${timeZone}`);
+      assert.deepEqual([again.updated, again.unchanged, again.warnings.length], [0, 1, 0], `${timeZone}: the New York export is unchanged`);
+    }
+    // Its times without their zone, imported by the person in New York: the same instants again.
+    const newYorkPlain = await services.csv.import(
+      csvFile(newYork.replace(/ \(America\/New_York\)/g, '')),
+      { dryRun: false, operation: 'upsert' },
+      { ...importOpts(runner, f, f.users.admin), language: 'en' as const, timeZone: 'America/New_York' },
+    );
+    assert.deepEqual(newYorkPlain.errors, []);
+    assert.deepEqual([newYorkPlain.updated, newYorkPlain.unchanged], [0, 1], 'read in New York time');
+    assert.deepEqual(await instants(), original);
 
     // A zone nobody knows is refused, with the coded error the screen translates.
     const unknown = await services.csv.import(
@@ -1099,7 +1144,7 @@ async function testInvisibleIncidentRefused() {
       importOpts(runner, f, f.users.other, false),
     );
     assert.equal(result.ok, false);
-    assert.match(result.errors[0].message, /Unknown incident reference/);
+    assert.match(result.errors[0].message, /is no reference in this workspace/);
 
     const after = await readReview(runner, f, incident.id);
     assert.equal(after.content_markdown, before.content_markdown);
