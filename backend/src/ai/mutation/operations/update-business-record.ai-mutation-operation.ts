@@ -79,7 +79,7 @@ export class UpdateBusinessRecordAiMutationOperation implements AiMutationOperat
 /**
  * A budget line moved onto an account that expects quantity and price, with amounts not built so,
  * or on such an account given an end of validity that brings back a year with them: the card warns
- * that the line will be to check (lot B12b), reading the account and the end the card writes. Other
+ * that the line will be to check, reading the account and the end the card writes. Other
  * changes and families as they are.
  */
 async function withAccountEntryCheck(context: AiExecutionContextWithManager, prepared: AiPreparedMutationPreview): Promise<AiPreparedMutationPreview> {

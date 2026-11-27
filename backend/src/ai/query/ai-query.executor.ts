@@ -1091,6 +1091,8 @@ export class AiQueryExecutor {
         nature: scalar(row.nature),
         // True when the account sets it, null otherwise (never stored false).
         quantity_price_expected: row.quantity_price_expected === true ? true : null,
+        // The units its calculation lines are expected in, by code ("people, days"; named next to it), null for none.
+        expected_units: Array.isArray(row.expected_units) && row.expected_units.length > 0 ? row.expected_units.join(', ') : null,
       },
     });
   }

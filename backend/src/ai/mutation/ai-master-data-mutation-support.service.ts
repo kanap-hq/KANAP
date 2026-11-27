@@ -30,6 +30,7 @@ import {
 } from './ai-mutation-operation.types';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
 import { ACCOUNT_NUMBER_RULE, parseAccountNumber } from '../../accounts/account-number';
+import { parseExpectedUnitsCell } from '../../accounts/account-expected-units';
 import { nameWithoutLeadingReference } from './name-without-leading-reference';
 import { familyReference, familyReferenceNumber } from '../ai-entity-reference.util';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
@@ -72,7 +73,8 @@ type FieldKind =
   | 'date'
   | 'enum'
   | 'relation'
-  | 'analytics_axis';
+  | 'analytics_axis'
+  | 'units';
 type AnalyticsAxisRow = {
   id: string;
   code: string;
@@ -271,6 +273,8 @@ const ENTITY_CONFIG: Record<AiMasterDataEntityType, EntityConfig> = {
       },
       // Yes sets it; no or empty clears it (stored null, never false: `expectedSetting`).
       quantity_price_expected: { label: 'Quantity and price entry', kind: 'boolean', nullable: true },
+      // The units of `accounts.expected_units`: codes or their words in any language; empty clears them.
+      expected_units: { label: 'Expected units', kind: 'units', nullable: true },
       status: { label: 'Status', kind: 'status' },
       disabled_at: { label: 'Disabled At', kind: 'date', nullable: true },
     },
@@ -406,6 +410,8 @@ function formatPlainValue(value: unknown, field?: FieldConfig): string | null {
   if (value == null || value === '') return null;
   if (value instanceof Date) return value.toISOString();
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  // A list of codes (an account's expected units), as the card names each one: "people, days".
+  if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : null;
   if (field?.kind === 'status') {
     return String(value) === 'disabled' ? 'Disabled' : 'Enabled';
   }
@@ -421,6 +427,7 @@ function toJsonScalar(value: unknown): unknown {
 function normalizeComparable(value: unknown): unknown {
   if (value instanceof Date) return value.toISOString();
   if (value == null) return null;
+  if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : null;
   if (typeof value === 'string') {
     const trimmed = value.trim();
     return trimmed || null;
@@ -650,6 +657,15 @@ export class AiMasterDataMutationSupportService {
       return normalized;
     }
 
+    if (field.kind === 'units') {
+      // A list, or one text of units separated by commas, each its code or its word on the budget tab.
+      const parsed = parseExpectedUnitsCell(Array.isArray(rawValue) ? rawValue.map(String).join(', ') : String(rawValue));
+      if ('unknown' in parsed) {
+        throw new BadRequestException(`${field.label}: "${parsed.unknown}" is no unit. Use people, days or pieces.`);
+      }
+      return { value: parsed.units, displayValue: formatPlainValue(parsed.units, field) };
+    }
+
     if (field.kind === 'integer') {
       const parsed = Number(rawValue);
       if (!Number.isInteger(parsed)) {
@@ -846,12 +862,41 @@ export class AiMasterDataMutationSupportService {
       }
     }
 
+    if (entityType === 'accounts') this.followExpectedSetting(fields, displayValues, fieldLabels, config, existing);
+
     if (entityType === 'contacts' && fields.supplier_role && !fields.supplier_id && mode === 'create') {
       throw new BadRequestException('Supplier Role requires Supplier.');
     }
     this.validateMetricFieldSet(entityType, fields, mode);
 
     return { fields, displayValues, fieldLabels };
+  }
+
+  /**
+   * An account's units follow its quantity and price setting, as on the screen: units for an account
+   * left without the setting are refused before the card; clearing the setting of an account that
+   * has units clears them too, and the card says so.
+   */
+  private followExpectedSetting(
+    fields: Record<string, unknown>,
+    displayValues: Record<string, string | null>,
+    fieldLabels: Record<string, string>,
+    config: EntityConfig,
+    existing?: Record<string, unknown> | null,
+  ) {
+    const setting = Object.prototype.hasOwnProperty.call(fields, 'quantity_price_expected')
+      ? fields.quantity_price_expected
+      : existing?.quantity_price_expected ?? null;
+    if (setting === true) return;
+    if (Array.isArray(fields.expected_units) && fields.expected_units.length > 0) {
+      throw new BadRequestException('Expected units need the quantity and price entry: set quantity_price_expected to yes in the same change, or leave out expected_units.');
+    }
+    const stored = existing?.expected_units;
+    if (fields.expected_units === undefined && Array.isArray(stored) && stored.length > 0) {
+      fields.expected_units = null;
+      displayValues.expected_units = null;
+      fieldLabels.expected_units = config.fields.expected_units.label;
+    }
   }
 
   private async resolveRelation(

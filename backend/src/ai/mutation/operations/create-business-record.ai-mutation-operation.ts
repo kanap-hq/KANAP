@@ -69,7 +69,7 @@ export class CreateBusinessRecordAiMutationOperation implements AiMutationOperat
     if (input.amounts == null) return prepared;
     const fields = prepared.mutationInput.fields as Record<string, unknown> | undefined;
     const lineAmounts = await this.financialPlan.prepareNewLineAmounts(context, input.amounts, fields?.currency);
-    // Kad writes totals: a new line on an account that expects quantity and price is to check (lot B12b).
+    // Kad writes totals: a new line on an account that expects quantity and price is to check.
     const warning = await amountsEntryCheckWarning(context.manager, context.tenantId, {
       nature: fields?.nature === 'capex' ? 'capex' : 'opex',
       accountId: fields?.account_id,

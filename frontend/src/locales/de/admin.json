@@ -1021,7 +1021,8 @@
       "uploaded_by_id": "Hochgeladen von",
       "viewer_ids": "Leser",
       "web_search_enabled": "Websuche aktiviert",
-      "linked_records": "Verknüpfte Datensätze"
+      "linked_records": "Verknüpfte Datensätze",
+      "expected_units": "Erwartete Einheiten"
     },
     "history": {
       "empty": "Noch kein Verlauf",

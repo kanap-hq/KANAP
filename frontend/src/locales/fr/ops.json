@@ -1795,7 +1795,11 @@
       "consolidationNamed": "Le compte de consolidation {{account}} attend une saisie en quantité et prix",
       "consolidation": "Le compte de consolidation attend une saisie en quantité et prix",
       "sentence": "{{reason}}.",
-      "withColumns": "{{reason}} : {{columns}}."
+      "withColumns": "{{reason}} : {{columns}}.",
+      "withUnits": "{{reason}}, avec des lignes de calcul en {{units}}",
+      "unitsAccount": "Le compte de la ligne attend des lignes de calcul en {{units}}",
+      "unitsConsolidation": "Le compte de consolidation attend des lignes de calcul en {{units}}",
+      "unitsConsolidationNamed": "Le compte de consolidation {{account}} attend des lignes de calcul en {{units}}"
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "Construction de la colonne",

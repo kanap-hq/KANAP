@@ -4,7 +4,7 @@ import { planBudgetFile } from '../preflight';
 import { emptyCatalog, emptyMonths, StoredLine, StoredVersion } from '../types';
 import type { AmountMeasure } from '../../amounts-write.util';
 
-// Lot B12b of 26.12.1: the budget file writes totals, never quantity × price, so its check warns of
+// The budget file writes totals, never quantity × price, so its check warns of
 // each row that writes an amount on an account expecting quantity and price entry (itself or through
 // its consolidation account: the catalog's `quantityPrice`, read by `loadCatalog` with the rule of
 // lot B12a and compared with it in `budget-line-entry-check.integration.spec.ts`). A warning among the

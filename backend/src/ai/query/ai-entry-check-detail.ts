@@ -2,13 +2,19 @@ import type { EntityManager } from 'typeorm';
 import { localizedBudgetColumnsAiContext } from '../../budget-columns/budget-column-labels';
 import { readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import type { LineEntryCheck } from '../../spend/budget-line-entry-check';
-import { readAiScreenLanguage } from '../ai-unread-families';
+import { AI_SCREEN_LANGUAGES, readAiScreenLanguage, type AiScreenLanguage } from '../ai-unread-families';
+import { expectedUnitsInWords } from '../../accounts/account-expected-units';
 
 /**
  * The "quantity and price entry" of one budget line as Kad reads it (`quantity_price_entry` of the
  * line's detail), in plain words rather than the rule's keys: who expects it, each column to check
  * by its name on screen and its year with how it is entered today, and that this is the whole cause
  * of `quantity_price` in the line's `to_check`. A conforming or unconcerned line says so too.
+ *
+ * Expected units: the units the level expects, by their names on the budget tab in the
+ * person's language (in the four languages when their profile sets none), never their codes; a
+ * column built as quantity × price with no calculation line in one of them says that this is what
+ * it lacks, as the dot of the Budget tab does.
  */
 
 /** How a column to check is entered today, after its round (`spend_round_inputs.method`). */
@@ -20,6 +26,12 @@ function enteredAs(round: { method: string } | undefined): string {
     case 'computed': return 'quantity and price, with every line removed';
     default: return 'amounts without a record of how they were entered (an import, or a line entered before it was recorded)';
   }
+}
+
+/** The expected units in words: in the person's language, or in the four languages ("en: …; fr: …"). */
+function unitsInWords(units: readonly string[], language: AiScreenLanguage | null): string {
+  if (language) return expectedUnitsInWords(units, language);
+  return AI_SCREEN_LANGUAGES.map((lang) => `${lang}: ${expectedUnitsInWords(units, lang)}`).join('; ');
 }
 
 const WITHHELD = 'The consolidation account is named with the right on accounts (Accounts, reader level), which this person does not have. '
@@ -44,20 +56,25 @@ export async function describeEntryCheckForAi(
       ? `The consolidation account ${cons.name.trim() ? `${cons.number} - ${cons.name.trim()}` : cons.number}${ctx.lineAccount ? ` (the line's account ${ctx.lineAccount} is mapped to it)` : ''}`
       : 'The consolidation account of the line\'s account';
   const withheld = check.level === 'consolidation' && !ctx.accounts ? { consolidation_account_withheld: WITHHELD } : {};
+  const language = check.units || check.to_check ? await readAiScreenLanguage(manager, ctx.tenantId, ctx.userId) : null;
+  const units = check.units ? unitsInWords(check.units, language) : null;
+  const expectedUnits = units ? { expected_units: units } : {};
+  const withLines = units ? `, with at least one calculation line in ${units} on each column that counts` : '';
   if (!check.to_check) {
     return {
       status: 'conforms',
       expected_by: expectedBy,
+      ...expectedUnits,
       ...withheld,
-      explanation: `${expectedBy} expects quantity and price entry, and every column that counts (shown in the budget settings, not frozen, `
-        + 'with a non-zero total) is built as quantity × price: the line conforms and has nothing to check.',
+      explanation: `${expectedBy} expects quantity and price entry${withLines}, and every column that counts (shown in the budget settings, not frozen, `
+        + `with a non-zero total) is built as quantity × price${units ? ' so' : ''}: the line conforms and has nothing to check.`,
     };
   }
   // The columns by the names the person sees: the workspace's name, else the product name in their
   // language, or in the four languages when their profile sets none.
   const names = new Map(localizedBudgetColumnsAiContext(
     await readBudgetColumns(manager, ctx.tenantId),
-    await readAiScreenLanguage(manager, ctx.tenantId, ctx.userId),
+    language,
   ).map((entry) => [entry.measure, entry]));
   const rounds: Array<{ year: number; measure: string; method: string }> = await manager.query(
     `SELECT v.budget_year AS year, r.measure, r.method
@@ -71,15 +88,24 @@ export async function describeEntryCheckForAi(
     const column = entry.name
       ? `${entry.name} ${year}`
       : Object.fromEntries(Object.entries(entry.names ?? {}).map(([language, name]) => [language, `${name} ${year}`]));
-    return { column, entered_as: enteredAs(rounds.find((round) => Number(round.year) === year && round.measure === measure)) };
+    const unitsOnly = units && check.unit_columns.some((c) => c.year === year && c.measure === measure);
+    return {
+      column,
+      entered_as: unitsOnly
+        ? `quantity and price, with no calculation line in ${units}`
+        : enteredAs(rounds.find((round) => Number(round.year) === year && round.measure === measure)),
+    };
   });
   return {
     status: 'to_check',
     expected_by: expectedBy,
+    ...expectedUnits,
     ...withheld,
     columns_to_check: columns,
-    explanation: `${expectedBy} expects quantity and price entry. These columns are to check because they are not built as quantity × price. `
+    explanation: `${expectedBy} expects quantity and price entry${withLines}. These columns are to check because they are not built as quantity × price`
+      + `${units ? `, or are built so with no calculation line in ${units} (a calculation line in another unit next to one of these is fine)` : ''}. `
       + 'This is the only cause of `quantity_price` in the line\'s `to_check`: nothing else on the line (supplier, contract, dimensions, amounts) causes it. '
-      + 'Nothing is refused: the amounts stay as entered. To clear the mark, rebuild each of these columns in quantity and price on the line\'s Budget tab.',
+      + 'Nothing is refused: the amounts stay as entered. To clear the mark, rebuild each of these columns in quantity and price on the line\'s Budget tab'
+      + `${units ? `, with a calculation line in ${units}` : ''}.`,
   };
 }

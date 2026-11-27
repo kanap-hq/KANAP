@@ -5,7 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 import { readEntryChecks } from '../../spend/budget-line-entry-check';
 
-// Lot B12b of 26.12.1: the paths that write budget lines without the person seeing the line's "To
+// The paths that write budget lines without the person seeing the line's "To
 // check" warning say it. The rule is the one of lot B12a (`spend/budget-line-entry-check.ts`); each
 // case below is read back with `readEntryChecks` once written, so what was said is what the line reads.
 //
@@ -288,7 +288,7 @@ async function testScreenBulk(harness: Harness) {
 /**
  * The count of a change in bulk of 500 lines, in the transaction that created them (the statistics do
  * not know them, as after a load not analysed yet): under the count's own time limit, every line is
- * counted, and the statement reads the selection's versions once (the reviewer's 102 s case, lot B12b).
+ * counted, and the statement reads the selection's versions once (the reviewer's 102 s case).
  */
 async function testCountOfFiveHundred(harness: Harness) {
   await inSeed(harness, async (runner, seed) => {
@@ -524,7 +524,7 @@ async function listSaysToCheck(harness: Harness, runner: QueryRunner, seed: Seed
 }
 
 /**
- * The rule of Kad's cards (lot B12b, adversarial review): a card warns if and only if the line is to
+ * The rule of Kad's cards (adversarial review): a card warns if and only if the line is to
  * check once it is written because of what the card writes. Each case starts from a line that is not
  * to check, approves the card, and compares the warning with the list's "To check" column.
  */
@@ -593,7 +593,7 @@ async function testKadCardsWarnIffToCheck(harness: Harness) {
 }
 
 /**
- * "Copy budget columns" (lot B12b): its answer counts the lines whose amounts it wrote that the list's
+ * "Copy budget columns": its answer counts the lines whose amounts it wrote that the list's
  * "To check" column shows, as a change in bulk counts them. A hidden column copied as amounts onto a
  * shown one, on the ticked account, leaves line 6 to check; the count is the list's.
  */

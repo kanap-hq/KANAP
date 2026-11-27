@@ -203,6 +203,8 @@ const ENUM_GROUPS: Record<string, string> = {
   scheduling_mode: 'portfolio:planning.roadmap.schedulingModes',
   it_effort_allocation_mode: 'auditLogs.values.allocationMode',
   business_effort_allocation_mode: 'auditLogs.values.allocationMode',
+  // The units an account expects its calculation lines in, named as the budget tab names them.
+  expected_units: 'ops:budgetTab.lines.unitNames',
 };
 
 /**

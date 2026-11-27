@@ -75,7 +75,7 @@ export class BudgetListConfig implements ListConfig {
   private readonly columns: Record<string, FieldSql['kind']>;
   /**
    * The lines the statement reads, when its caller names them (`budgetListLineChecksByIds`): the
-   * `quantity_price` check then builds the columns to check of these lines only (lot B12b).
+   * `quantity_price` check then builds the columns to check of these lines only.
    */
   lineIds?: readonly string[];
 
@@ -431,7 +431,7 @@ export class BudgetListConfig implements ListConfig {
     stmt.cte('ec_accounts', () => expectedAccountsSql(stmt));
     if (settings.lineByLine) {
       this.join(stmt, 'eca', 'LEFT JOIN ec_accounts eca ON eca.account_id = i.account_id');
-      return { sql: `(eca.account_id IS NOT NULL AND EXISTS (${lineColumnsToCheckSql(stmt, 'i', settings)}))`, joins: ['eca'] };
+      return { sql: `(eca.account_id IS NOT NULL AND EXISTS (${lineColumnsToCheckSql(stmt, 'i', settings, 'eca.units')}))`, joins: ['eca'] };
     }
     const s = this.scope;
     const natures = s.nature ? [s.nature] : BUDGET_NATURES;

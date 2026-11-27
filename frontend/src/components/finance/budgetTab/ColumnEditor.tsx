@@ -242,6 +242,7 @@ export default function ColumnEditor({ tab, i18nPrefix, effectiveStart, endOfVal
           payingCompanyCountry={payingCompanyCountry}
           pendingRef={tab.linesPendingRef}
           columnName={labelFor}
+          newLineUnit={tab.entryUnits?.[0]}
           onSave={(lines, startedFrom) => tab.saveLines(col, lines, startedFrom)}
         />
       </Box>

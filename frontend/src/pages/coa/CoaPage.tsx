@@ -28,6 +28,10 @@ import { ImportLabel } from '../../components/csv/importFiles';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 
+const EXPECTED_UNITS = ['people', 'days', 'pieces'] as const;
+type ExpectedUnit = typeof EXPECTED_UNITS[number];
+const sentenceCase = (text: string) => text.charAt(0).toLocaleUpperCase() + text.slice(1);
+
 type AccountRow = {
   id: string;
   account_number: number | string;
@@ -43,6 +47,8 @@ type AccountRow = {
   nature?: AccountNature | null;
   /** Its budget lines are expected as quantity and price: true, or null when not set. */
   quantity_price_expected?: true | null;
+  /** The units its calculation lines are expected in, or null for any unit. */
+  expected_units?: ExpectedUnit[] | null;
   created_at?: string;
   status?: string;
 };
@@ -73,7 +79,7 @@ function pickFallbackCoaId(coas: CoaListItem[]): string | undefined {
 
 export default function CoaPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation(['master-data', 'common']);
+  const { t } = useTranslation(['master-data', 'common', 'ops']);
   const locale = useLocale();
   const [searchParams, setSearchParams] = useSearchParams();
   const { hasLevel } = useAuth();
@@ -222,6 +228,32 @@ export default function CoaPage() {
         searchable: false,
       },
       valueFormatter: (params: any) => (params.value === true ? t('shared.labels.yes') : ''),
+      cellRenderer: (params: any) => (
+        <LinkCellRenderer {...params} linkType="internal" getHref={getAccountHref} onNavigate={(href) => navigate(href)} />
+      ),
+    },
+    {
+      field: 'expected_units',
+      headerName: t('coa.columns.expectedUnits'),
+      width: 180,
+      defaultHidden: true,
+      // The units in the words of the Budget tab; an account that sets the entry without units reads
+      // "Any unit", as its filter value; one without the setting shows nothing and matches no value.
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: [
+          ...EXPECTED_UNITS.map((unit) => ({ value: unit, label: sentenceCase(t(`ops:budgetTab.lines.unitNames.${unit}`)) })),
+          { value: null, label: t('coa.columns.expectedUnitsAny') },
+        ],
+        searchable: false,
+      },
+      valueFormatter: (params: any) => {
+        if (Array.isArray(params.value) && params.value.length > 0) {
+          return sentenceCase(params.value.map((unit: ExpectedUnit) => t(`ops:budgetTab.lines.unitNames.${unit}`)).join(', '));
+        }
+        return params.data?.quantity_price_expected === true ? t('coa.columns.expectedUnitsAny') : '';
+      },
       cellRenderer: (params: any) => (
         <LinkCellRenderer {...params} linkType="internal" getHref={getAccountHref} onNavigate={(href) => navigate(href)} />
       ),
@@ -524,7 +556,7 @@ export default function CoaPage() {
             enableColumnChooser={true}
             statusScopeConfig={{ defaultScope: consolidationFilter ? 'all' : 'enabled' }}
             requiredColumns={['account_number', 'account_name']}
-            defaultHiddenColumns={['description', 'consolidation_account_description', 'quantity_price_expected', 'created_at']}
+            defaultHiddenColumns={['description', 'consolidation_account_description', 'quantity_price_expected', 'expected_units', 'created_at']}
             enableRowSelection={canAdmin}
             onSelectionChanged={setSelectedRows}
             onGridApiReady={(apiInstance) => {

@@ -4,6 +4,7 @@ import { loadAnalyticsAxes, isAxisActive, analyticsAxisLabel, type AnalyticsAxis
 import { BULK_MAX_ROWS, type BulkChanges, type BulkEditResult } from '../../../common/bulk-edit/bulk-edit';
 import { budgetLineReferenceNumbers } from '../../../common/resolve-item-id';
 import { BUDGET_NATURES, naturesAnd } from '../../../spend/budget-nature';
+import { readAccountExpectations } from '../../../spend/budget-line-entry-check';
 import type { BudgetLineBulkRow } from '../../../spend/budget-line-bulk-edit';
 import { BudgetLinesService } from '../../../spend/budget-lines.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
@@ -148,6 +149,12 @@ type ResolvedChange = { changes: BulkChanges; dimension: string | null; valueLab
 
 function text(value: unknown): string {
   return String(value ?? '').trim();
+}
+
+/** The units the new account expects, as the count stored them; null for any unit. */
+function unitsOf(stored: Record<string, unknown>): string[] | null {
+  const units = Array.isArray(stored.entry_check_units) ? stored.entry_check_units.filter((unit): unit is string => typeof unit === 'string') : [];
+  return units.length ? units : null;
 }
 
 /** The lines to check a count or a write stored (`to_check` of the common contract); none when absent. */
@@ -343,14 +350,20 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
         [context.tenantId, dry.changed_ids ?? []],
       )).map((row: { ref: string; title: string | null }) => ({ ref: String(row.ref), title: text(row.title) }));
     }
+    // The units the new account expects, for the card's warning: read once, with the count.
+    const accountId = typeof (changes as Record<string, unknown>).account_id === 'string' ? String((changes as Record<string, unknown>).account_id) : null;
+    const units = accountId && (dry.to_check?.checks?.quantity_price ?? 0) > 0
+      ? (await readAccountExpectations(context.manager, context.tenantId, [accountId])).get(accountId)?.units ?? null
+      : null;
     return {
       dry,
       excluded: stillOut,
       currentValues: {
         values: {
           rows: dry.rows, changes: dry.changes, unchanged: dry.unchanged, refused: dry.refused, examples, ...leftOut,
-          // The lines that would change and that the list will show "To check" (lot B12b): the dry run's.
+          // The lines that would change and that the list will show "To check": the dry run's.
           ...(dry.to_check ? { to_check: dry.to_check } : {}),
+          ...(units ? { entry_check_units: units } : {}),
         },
         ...(list ? { bulk_list: list } : {}),
       },
@@ -489,14 +502,14 @@ export class BulkUpdateBudgetLinesAiMutationOperation implements AiMutationOpera
         { errorMessage: preview.error_message },
       );
     }
-    // A new account that expects quantity and price leaves lines to check: the pending card says so (lot B12b).
+    // A new account that expects quantity and price leaves lines to check: the pending card says so.
     const expected = preview.status === 'pending' && field === 'account' && (toCheckOf(values).checks.quantity_price ?? 0) > 0;
     return {
       target: { entity_type: 'budget_lines', entity_id: null, ref: null, title: bulkEditCardTitleText('budget_lines', language, preview.status === 'executed' ? done : changes, refs) },
       changes: {
         [CARD_FIELD]: { label: BULK_EDIT_CARD_LABEL[language], from: null, to: card, format: 'markdown' },
         ...(expected ? {
-          [ENTRY_CHECK_WARNING_FIELD]: { label: 'To check', from: null, to: quantityPriceExpectedWarning(language, 'account', value ?? '', true), format: 'text' as const },
+          [ENTRY_CHECK_WARNING_FIELD]: { label: 'To check', from: null, to: quantityPriceExpectedWarning(language, 'account', value ?? '', true, unitsOf(values)), format: 'text' as const },
         } : {}),
       },
       summary,

@@ -95,6 +95,7 @@ La cuadrícula muestra cuentas solo del CoA seleccionado.
 - **Descripción consol.**: Descripción de la cuenta de consolidación.
 - **Estado**: Si la cuenta está habilitada o deshabilitada.
 - **Introducción por cantidad y precio**: **Sí** cuando la cuenta espera sus líneas presupuestarias por cantidad y precio. Su filtro ofrece **Sí** y **No**. Consulte [Introducción por cantidad y precio](#quantity-and-price-entry).
+- **Unidades esperadas**: Las unidades en las que la cuenta espera sus líneas de cálculo. Una cuenta con **Introducción por cantidad y precio** y sin unidades muestra **Cualquier unidad**. Su filtro ofrece cada unidad y **Cualquier unidad**.
 - **Creado**: Marca de tiempo de la creación de la cuenta.
 
 **Filtrado**:
@@ -119,7 +120,7 @@ Haga clic en cualquier fila de la cuadrícula de cuentas para abrir el espacio d
 ### Disposición
 
 - **Encabezado**: el número de cuenta es la referencia (puede copiarlo desde ahí) y el nombre de la cuenta es el título. Haga clic en el título para renombrar la cuenta. Las flechas **Cuenta anterior** y **Cuenta siguiente** recorren las cuentas de la lista de la que viene, en el mismo orden, con la misma búsqueda y los mismos filtros. El enlace de vuelta lleva a **Planes de cuentas** y conserva su selección.
-- **Panel de propiedades** a la derecha: **Plan de cuentas**, **Número de cuenta**, **Usada para**, **Introducción por cantidad y precio** y **Ciclo de vida** (el interruptor de estado y la fecha de **Fin de validez**). El botón del panel permite contraerlo o volver a abrirlo. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida).
+- **Panel de propiedades** a la derecha: **Plan de cuentas**, **Número de cuenta**, **Usada para**, **Introducción por cantidad y precio**, **Unidades esperadas** (una vez marcada **Introducción por cantidad y precio**) y **Ciclo de vida** (el interruptor de estado y la fecha de **Fin de validez**). El botón del panel permite contraerlo o volver a abrirlo. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida).
 - **Columna principal**: **Nombre local (idioma local)**, **Descripción** y la sección **Consolidación**.
 
 **Los cambios se guardan automáticamente.** Cada campo se guarda al salir de él y no hay botón Guardar. Si se rechaza un valor, aparece un mensaje bajo el campo. El **Número de cuenta** debe ser un número entero mayor que cero, de 15 dígitos como máximo.
@@ -146,8 +147,11 @@ Al añadir este ajuste, Kadratis lo rellenó por usted. Una cuenta usada solo po
 
 Marque **Introducción por cantidad y precio** en el panel de propiedades cuando las líneas presupuestarias de la cuenta deban construirse por cantidad y precio. El ajuste no rechaza nada: marca las líneas introducidas de otro modo para que pueda verificarlas. Consulte [Cuando la cuenta espera una introducción por cantidad y precio](budget-lines.md#quantity-and-price-expected).
 
+Una vez marcada la casilla, **Unidades esperadas** aparece debajo, con **Personas**, **Días** y **Piezas**. Marque las unidades que deben usar las líneas de cálculo: cada columna necesita entonces al menos una línea de cálculo en una de ellas. Sin ninguna unidad marcada, cualquier unidad vale. Desmarcar **Introducción por cantidad y precio** borra las unidades.
+
 - Una línea sigue el ajuste de su cuenta. Cuando su cuenta no lo tiene marcado, sigue su cuenta de consolidación
 - Marcar una cuenta de consolidación se aplica a todas las cuentas vinculadas a ella. Todas la siguen: ninguna puede quedar excluida
+- Las unidades van con el ajuste. Una cuenta marcada conserva sus propias unidades, o ninguna: nunca toma las unidades de su cuenta de consolidación. Una cuenta sin marcar toma a la vez el ajuste y las unidades de su cuenta de consolidación
 - Una cuenta deshabilitada con el ajuste marcado lo sigue aplicando
 - Cada cambio aparece en el historial de la cuenta
 
@@ -482,16 +486,16 @@ Puede exportar una lista de sus CoA (con metadatos como código, nombre, país, 
 
 El archivo global `/accounts` incluye una columna `coa_code` para identificar a qué CoA pertenece cada cuenta. **Exportar** e **Importar** la usan cuando no hay ningún CoA seleccionado en la página.
 
-  - **Exportar**: las cuentas que muestra la lista (o, a petición en el diálogo, todas las cuentas) con sus códigos de CoA, números de cuenta, nombres, nombres locales, descripciones, mapeos de consolidación, estado y **Usada para**
+  - **Exportar**: las cuentas que muestra la lista (o, a petición en el diálogo, todas las cuentas) con sus códigos de CoA, números de cuenta, nombres, nombres locales, descripciones, mapeos de consolidación, estado, **Usada para**, **Introducción por cantidad y precio** y **Unidades esperadas**
   - **Importar**: **Descargar plantilla** en el diálogo da un archivo solo con los encabezados. Empiece por la **Verificación previa** para validar la estructura, la codificación, los campos obligatorios y los duplicados, y después **Cargar** para aplicar las inserciones y las actualizaciones
   - **Coincidencia**: por `(coa_code, account_number)` dentro de su espacio de trabajo
   - **Columnas obligatorias**: `coa_code` y `account_number`, más `account_name` para una cuenta nueva. Todas las filas de un archivo deben llevar el mismo `coa_code`
-  - **Columnas opcionales**: `native_name`, `description`, las columnas de consolidación, `status`, `nature`, `quantity_price_expected`. Un archivo puede omitirlas: las cuentas que actualiza conservan sus valores guardados, y las cuentas nuevas toman los valores predeterminados (vacío, enabled, **OPEX y CAPEX**). En una cuenta que el archivo actualiza, una celda vacía conserva el valor guardado, y `-` lo borra. `-` no puede borrar `coa_code`, `account_number`, `account_name` ni `status`: la fila se rechaza. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing)
+  - **Columnas opcionales**: `native_name`, `description`, las columnas de consolidación, `status`, `nature`, `quantity_price_expected`, `expected_units`. Un archivo puede omitirlas: las cuentas que actualiza conservan sus valores guardados, y las cuentas nuevas toman los valores predeterminados (vacío, enabled, **OPEX y CAPEX**). En una cuenta que el archivo actualiza, una celda vacía conserva el valor guardado, y `-` lo borra. `-` no puede borrar `coa_code`, `account_number`, `account_name` ni `status`: la fila se rechaza. Vea [Celdas vacías y `-`](csv-files.md#empty-cells-and-clearing)
   - Un archivo que nombra dos veces la misma cuenta (mismo `coa_code` y `account_number`) se rechaza entero, y no se escribe nada. El mensaje nombra las dos filas
 
 **Esquema CSV** (la exportación escribe el separador del idioma de la pantalla; aquí se muestra con puntos y coma):
 ```
-coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected
+coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected;expected_units
 ```
 
 ### Cuentas (con alcance de CoA)
@@ -504,7 +508,7 @@ Desde la página de Planes de cuentas, **Importar** y **Exportar** se limitan au
 
 **Esquema CSV** (con alcance de CoA; aquí se muestra con puntos y coma):
 ```
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected;expected_units
 ```
 
 **Notas**:
@@ -515,6 +519,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Valores de estado: `enabled` o `disabled` (predeterminado: enabled)
   - `nature` es el ajuste **Usada para**. Valores: `opex`, `capex` o vacío para **OPEX y CAPEX**. Un archivo sin esta columna deja los ajustes sin cambios. Una celda vacía conserva el ajuste de una cuenta guardada, y una cuenta nueva es para **OPEX y CAPEX**. `-` aplica **OPEX y CAPEX**. Cualquier otro valor se rechaza para esa fila
   - `quantity_price_expected` es el ajuste **Introducción por cantidad y precio**. Sí, en cualquiera de los cuatro idiomas (`yes`, `oui`, `ja`, `sí`), lo marca. No, o `-`, lo quita. Una celda vacía conserva el ajuste de una cuenta guardada, y una cuenta nueva empieza sin marcar. Un archivo sin esta columna deja los ajustes sin cambios. Cualquier otro valor se rechaza para esa fila. La exportación escribe sí en el idioma del archivo y deja la celda vacía para una cuenta sin el ajuste
+  - `expected_units` es el ajuste **Unidades esperadas**: las unidades separadas por comas, por ejemplo `personas, días`. Se leen las palabras de los cuatro idiomas (`people`, `jours`, `Tage`). `-` borra las unidades, y una celda vacía las conserva. Una unidad desconocida se rechaza para esa fila, igual que las unidades en una cuenta cuyo `quantity_price_expected` no está marcado. La exportación escribe las unidades en el idioma del archivo
   - Columnas de consolidación: cuando `consolidation_account_number` existe en su plan de consolidación, su nombre y su descripción sustituyen las celdas `consolidation_account_name` y `consolidation_account_description`. `-` en el número borra las tres, y un número vacío las conserva. Consulte [Configurar mapeos de consolidación](#configurar-mapeos-de-consolidacion)
 
 ## Consejos

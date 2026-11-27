@@ -1021,7 +1021,8 @@
       "uploaded_by_id": "Subido por",
       "viewer_ids": "Lectores",
       "web_search_enabled": "Búsqueda web activada",
-      "linked_records": "Registros vinculados"
+      "linked_records": "Registros vinculados",
+      "expected_units": "Unidades esperadas"
     },
     "history": {
       "empty": "Todavía no hay historial",

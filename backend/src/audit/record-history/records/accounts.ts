@@ -30,6 +30,7 @@ const ACCOUNT_FIELDS: HistoryFields = {
   disabled_at: shown(),
   nature: shown(),
   quantity_price_expected: shown(),
+  expected_units: shown(),
   consolidation_account_number: shown(),
   consolidation_account_name: shown(),
   consolidation_account_description: shown(),

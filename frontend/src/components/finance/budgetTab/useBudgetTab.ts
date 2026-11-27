@@ -1848,21 +1848,26 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   // last listed them, a column frozen since left out on the year shown. The dot of a column says the
   // reason; the dot of a year says it with the year's columns to check (D13). The icon beside the
   // editor's title says it for a column without a dot.
-  const entryExpected = entryCheck ? entryExpectedText(t, entryCheck) : null;
+  // A column built as quantity × price with no calculation line in an expected unit says that problem.
+  const entryExpected = entryCheck ? entryExpectedText(t, locale, entryCheck) : null;
   const entryColumns = entryCheck
     ? entryCheck.columns.filter((c) => (c.year !== year || !isFrozen(c.measure)) && shown.some((s) => s.measure === c.measure))
     : [];
+  const unitsOnly = (y: number, col: AmountCol) => !!entryCheck?.unit_columns?.some((c) => c.year === y && c.measure === col);
   const entryColumnText = (col: AmountCol): string | null => (
-    entryExpected && entryColumns.some((c) => c.year === year && c.measure === col)
-      ? entryExpected
+    entryCheck && entryExpected && entryColumns.some((c) => c.year === year && c.measure === col)
+      ? (unitsOnly(year, col) ? entryExpectedText(t, locale, entryCheck, undefined, true) : entryExpected)
       : null
   );
   const entryYearMarks: Record<number, string> = {};
   if (entryCheck && entryExpected) {
     const years = [...new Set(entryColumns.map((c) => c.year))];
     for (const y of years) {
-      const columns = ALL_COLS.filter((col) => entryColumns.some((c) => c.year === y && c.measure === col)).map(labelFor);
-      entryYearMarks[y] = entryExpectedText(t, entryCheck, namesInSentence(locale, columns));
+      // One sentence per problem: the columns not built as quantity × price, then those that lack a unit.
+      entryYearMarks[y] = [false, true].flatMap((units) => {
+        const columns = ALL_COLS.filter((col) => unitsOnly(y, col) === units && entryColumns.some((c) => c.year === y && c.measure === col));
+        return columns.length ? [entryExpectedText(t, locale, entryCheck, namesInSentence(locale, columns.map(labelFor)), units)] : [];
+      }).join(' ');
     }
   }
 
@@ -1968,6 +1973,8 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     closeRestoreNotice: () => setRestoreNotice(null),
     // The quantity and price check (null and empty when the account expects nothing).
     entryExpected,
+    /** The units the line's account expects its calculation lines in (a new line opens in the first). */
+    entryUnits: entryCheck?.units ?? null,
     entryColumnText,
     entryYearMarks,
   };

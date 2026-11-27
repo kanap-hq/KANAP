@@ -4,7 +4,7 @@ import { amountsService, assert, inRolledBackTransaction, runSpecs, seedCalendar
 import { exportBudgetFile, loadBudgetFile, preflightBudgetFile, withCell } from '../../__tests__/budget-file.fixtures';
 import { readEntryChecks } from '../../budget-line-entry-check';
 
-// Lot B12b: the budget file's warning BUDGET_FILE_QUANTITY_PRICE_EXPECTED against what the line reads
+// The budget file's warning BUDGET_FILE_QUANTITY_PRICE_EXPECTED against what the line reads
 // once the file is loaded (`readEntryChecks`, the rule of the list's "To check" column): the file
 // warns of a column if and only if the load leaves it to check. Cases of the adversarial review: an
 // end of validity moved later on an account that expects quantity and price brings back a year

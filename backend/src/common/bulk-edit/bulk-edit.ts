@@ -242,7 +242,7 @@ export type BulkEditList<Row extends { id: string }> = {
   /**
    * Optional: the rows written that the list's data checks flag, read after the last write, in the
    * same transaction (the dry run's before it is rolled back, so the count is the write's). Only the
-   * budget lines declare it (their "To check" column, lot B12b); a list without it answers no `to_check`,
+   * budget lines declare it (their "To check" column); a list without it answers no `to_check`,
    * nor does a count that fails or runs past its limit (`countToCheck`): it never fails the write.
    */
   toCheck?(changedIds: string[]): Promise<BulkToCheck>;

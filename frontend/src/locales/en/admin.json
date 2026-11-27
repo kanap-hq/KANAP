@@ -1021,7 +1021,8 @@
       "uploaded_by_id": "Uploaded by",
       "viewer_ids": "Viewers",
       "web_search_enabled": "Web search enabled",
-      "linked_records": "Linked records"
+      "linked_records": "Linked records",
+      "expected_units": "Expected units"
     },
     "history": {
       "empty": "No history yet",

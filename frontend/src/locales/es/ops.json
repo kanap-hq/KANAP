@@ -1794,7 +1794,11 @@
       "consolidationNamed": "La cuenta de consolidación {{account}} espera una introducción por cantidad y precio",
       "consolidation": "La cuenta de consolidación espera una introducción por cantidad y precio",
       "sentence": "{{reason}}.",
-      "withColumns": "{{reason}}: {{columns}}."
+      "withColumns": "{{reason}}: {{columns}}.",
+      "withUnits": "{{reason}}, con líneas de cálculo en {{units}}",
+      "unitsAccount": "La cuenta de la línea espera líneas de cálculo en {{units}}",
+      "unitsConsolidation": "La cuenta de consolidación espera líneas de cálculo en {{units}}",
+      "unitsConsolidationNamed": "La cuenta de consolidación {{account}} espera líneas de cálculo en {{units}}"
     },
     "editorTitle": "{{column}} {{year}}",
     "modes": "Construcción de la columna",

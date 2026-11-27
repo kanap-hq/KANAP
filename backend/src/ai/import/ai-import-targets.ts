@@ -1,4 +1,6 @@
 import type { EntityManager } from 'typeorm';
+import { ACCOUNT_EXPECTED_UNITS } from '../../accounts/account.entity';
+import { EXPECTED_UNIT_LABELS } from '../../accounts/account-expected-units';
 import type { CsvLanguage } from '../../common/csv-sheet';
 import { BUDGET_AMOUNT_COLUMNS } from '../../common/csv-sheet';
 import { CsvEntityConfig, CsvFieldDefinition, CsvFieldType } from '../../common/csv/csv-field.types';
@@ -442,6 +444,7 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
       text('consolidation_account_description'), status,
       { column: 'nature', kind: 'codes', codes: ['opex', 'capex'], labels: LINE_USAGE_LABELS },
       { column: 'quantity_price_expected', kind: 'boolean', hint: 'yes when the account\'s budget lines are expected as quantity and price; no clears it' },
+      { column: 'expected_units', kind: 'codes', codes: ACCOUNT_EXPECTED_UNITS, labels: EXPECTED_UNIT_LABELS, multi: true, hint: 'the units its calculation lines are expected in, one or more; only with quantity_price_expected yes' },
     ],
   },
   analytics_categories: {

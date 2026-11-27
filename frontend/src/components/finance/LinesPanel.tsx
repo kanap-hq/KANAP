@@ -314,6 +314,8 @@ export type LinesPanelProps = {
    * which have no layout.
    */
   layout?: 'wide' | 'medium' | 'narrow' | 'auto';
+  /** The unit a new line opens in: the first one the line's account expects; people otherwise. */
+  newLineUnit?: QuantityUnit | null;
 };
 
 /** The widths `auto` switches at: how often on the first row, then one row per line. */
@@ -327,7 +329,7 @@ const LAYOUT_MIN_WIDTHS = [LINES_OFTEN_FIRST_MIN_WIDTH, LINES_TABLE_MIN_WIDTH] a
  */
 export default function LinesPanel({
   year, record, period, itemStart, itemEnd, frozen, frozenHint, waiting = false, reloadSignal = 0, startLines,
-  payingCompanyCountry, pendingRef, columnName, onSave, layout = 'auto',
+  payingCompanyCountry, pendingRef, columnName, onSave, layout = 'auto', newLineUnit,
 }: LinesPanelProps) {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
@@ -502,12 +504,13 @@ export default function LinesPanel({
 
   // The most common line: one person priced per day (a project manager, 5 days a month or full
   // time), on the default calendar. With the calendars loaded and none enabled, a price per day
-  // could not be saved: the person starts priced per month.
+  // could not be saved: the person starts priced per month. On an account that expects other units,
+  // the line opens in the first of them, as if that unit were chosen.
   const addLine = () => {
     const noCalendar = calendars.ready && calendars.enabled.length === 0;
     const key = newDraftKey();
     focusTargetRef.current = key;
-    update((prev) => [...prev, {
+    const person: LineDraft = {
       key,
       label: '',
       unit: 'people',
@@ -520,7 +523,17 @@ export default function LinesPanel({
       start: linePeriod.start,
       end: linePeriod.end,
       calendarId: fallbackCalendar,
-    }]);
+    };
+    const unit = newLineUnit ?? 'people';
+    const frequency = DEFAULT_FREQUENCY[unit];
+    const line = unit === 'people' ? person : {
+      ...person,
+      unit,
+      frequency,
+      ...withCalendar(person, basisForUnit(unit, person.basis)),
+      ...withDates(person, unit, frequency, linePeriod.start),
+    };
+    update((prev) => [...prev, line]);
   };
   // Removed with the keyboard, the focus goes on to a neighbour; with the mouse, it is left alone (#181).
   const removeLine = (key: string, byKeyboard: boolean) => {

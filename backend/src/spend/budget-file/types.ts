@@ -37,6 +37,8 @@ export interface StoredRound {
   method: 'spread' | 'copied' | 'manual' | 'computed';
   /** How many calculation lines the column holds. */
   lineCount: number;
+  /** The units of those lines, each once; absent when unknown. */
+  units?: string[];
   /** What the lines compute over the year, in cents, while the column follows them; null otherwise. */
   linesTotal: bigint | null;
 }
@@ -150,10 +152,12 @@ export interface CatalogAccount {
   /** The lines that may use it: OPEX only, CAPEX only; null or absent for both. */
   nature?: 'opex' | 'capex' | null;
   /**
-   * It expects quantity and price entry, itself or through its consolidation account (lot B12b,
-   * `expectedAccountsSql`): an amount the file writes on it will be to check. Absent: not expected.
+   * It expects quantity and price entry, itself or through its consolidation account
+   * (`expectedAccountsSql`): an amount the file writes on it will be to check. Absent: not expected.
    */
   quantityPrice?: boolean;
+  /** The units that level expects of the calculation lines; absent for any unit. */
+  expectedUnits?: string[];
 }
 
 export interface CatalogUser {
@@ -209,7 +213,7 @@ export interface BudgetCatalog {
   defaultCoaId: string | null;
   /** `nature:year:column`, column being `budget`, `revision`, `forecast`, `actual` or `landing`: a freeze is per nature. */
   frozen: string[];
-  /** The columns shown in the tenant's settings, that the "To check" rule reads (lot B12b). Absent: the check does not warn. */
+  /** The columns shown in the tenant's settings, that the "To check" rule reads. Absent: the check does not warn. */
   shownMeasures?: AmountMeasure[];
 }
 
@@ -366,7 +370,7 @@ export interface BudgetFileReport {
     /**
      * The consistency checks of the lines the file creates or updates (lot I2 of 26.11.9): an amount
      * ten times away from the line it looks like or from its supplier's lines, dates outside the years
-     * of its amounts, a currency other than the paying company's; and, from lot B12b, an amount the
+     * of its amounts, a currency other than the paying company's; and an amount the
      * file writes on an account that expects quantity and price entry (`BUDGET_FILE_QUANTITY_PRICE_EXPECTED`).
      * Warnings only: the first 20.
      */

@@ -1,4 +1,4 @@
-import { keepStoredEndOfValidity, matchCode } from '../../common/csv-sheet';
+import { keepStoredEndOfValidity, matchCode, type CsvLanguage } from '../../common/csv-sheet';
 import {
   ANALYTICS_NAME_CHARACTERS_MESSAGE,
   ANALYTICS_NAME_MAX,
@@ -9,6 +9,7 @@ import {
 import { notApplicableDimensionMessage, requiredDimensionMessage } from '../item-analytics.util';
 import { AMOUNT_MEASURES, AmountMeasure, MEASURE_FREEZE_COLUMN } from '../amounts-write.util';
 import { columnsLeftToCheck, endOfValidityYear, roundConforms, type ColumnAfterWrite } from '../budget-line-entry-check';
+import { expectedUnitsInWords } from '../../accounts/account-expected-units';
 import { formatCentsFixed } from '../../common/amount';
 import { endOfValidityFromDate, isActiveAt } from '../../common/status';
 import type { BudgetNature } from '../budget-nature';
@@ -175,6 +176,8 @@ export interface PreflightInput {
   localLabels?: Record<string, string>;
   /** A limited person's access (planning/data-scoped-access spec §4.2); absent for an unscoped person. */
   access?: BudgetFileAccess;
+  /** The person's language: the words of the parameters that are no column (the expected units). Absent: English. */
+  language?: CsvLanguage;
   /**
    * Whether the person reads the suppliers' list, and the companies' (the reader level of their
    * module): the closest names of a value nothing matched name them only then. Absent: not read.
@@ -1676,7 +1679,7 @@ function checkConsistency(
 }
 
 /**
- * The "To check" rule of a line the file creates or updates (lot B12b), a warning among the
+ * The "To check" rule of a line the file creates or updates, a warning among the
  * consistency checks: the file writes totals, never quantity × price, so a changed amount on an
  * account that expects quantity and price entry (itself or through its consolidation account) will be
  * to check, unless its column is hidden, its total for the year is zero once written, or its year
@@ -1704,8 +1707,12 @@ function checkQuantityPrice(
   const accountId = Object.prototype.hasOwnProperty.call(draft.body, 'account_id') ? draft.body.account_id : live?.accountId;
   const account = accountOf(accountId);
   if (!account?.quantityPrice) return;
-  // Moved onto the account from one that expects nothing: the stored columns count too.
-  const moved = !!live && accountId !== live.accountId && !accountOf(live.accountId)?.quantityPrice;
+  const units = account.expectedUnits ?? null;
+  // The units the line's stored account expected: undefined when it expected nothing.
+  const before = live ? accountOf(live.accountId) : undefined;
+  const unitsBefore = before?.quantityPrice ? before.expectedUnits ?? null : undefined;
+  // Moved onto the account from one that expects nothing, or other units: the stored columns count too.
+  const moved = !!live && accountId !== live.accountId && (unitsBefore === undefined || String(unitsBefore) !== String(units));
   const endOfValidity = Object.prototype.hasOwnProperty.call(draft.body, 'disabled_at') ? draft.body.disabled_at : live?.endOfValidity;
   // Already on such an account, an end of validity moved later: the stored columns of the years it brings back.
   const storedEnd = endOfValidityYear(live?.endOfValidity);
@@ -1713,8 +1720,10 @@ function checkQuantityPrice(
   const extended = !!live && !moved && storedEnd !== null && (newEnd === null || newEnd > storedEnd);
   if (draft.amounts.length === 0 && !moved && !extended) return;
   const written = columnsAfterFile(draft, live);
-  const stored = moved ? storedColumnsToCheck(live!, written)
-    : extended ? storedColumnsToCheck(live!, written).filter((column) => column.year > storedEnd!) : [];
+  const stored = moved ? storedColumnsToCheck(live!, written, units, unitsBefore)
+    : extended ? storedColumnsToCheck(live!, written, units).filter((column) => column.year > storedEnd!) : [];
+  // A stored column built as quantity × price that lacks only a line in an expected unit.
+  const unitsOnly = new Set(stored.filter((column) => column.unitsOnly).map((column) => `${column.year}:${column.measure}`));
   const columns = [...stored, ...written];
   const left = columnsLeftToCheck(
     { measures, frozen: frozenMeasures(input.catalog.frozen) },
@@ -1723,28 +1732,57 @@ function checkQuantityPrice(
     typeof endOfValidity === 'string' ? endOfValidity : null,
   );
   if (left.length === 0) return;
-  const named = (label: (input: PreflightInput, column: string) => string) => left
+  const named = (list: typeof left, label: (input: PreflightInput, column: string) => string) => list
     .map((column) => `${label(input, columnOfMeasure(column.measure))} ${column.year}`)
     .join(', ');
-  bag.consistency.push({
-    line: row.line,
-    message: `Account ${account.number} expects quantity and price entry: complete ${named(columnLabel)} on the line's Budget tab.`,
-    code: 'BUDGET_FILE_QUANTITY_PRICE_EXPECTED',
-    params: { account: account.number, columns: named(localColumnLabel) },
-  });
+  // One warning per problem: the columns not built as quantity × price, then those that lack only a unit.
+  const mode = left.filter((column) => !unitsOnly.has(`${column.year}:${column.measure}`));
+  const lacking = left.filter((column) => unitsOnly.has(`${column.year}:${column.measure}`));
+  const words = units ? { en: expectedUnitsInWords(units, 'en'), local: expectedUnitsInWords(units, input.language ?? 'en') } : null;
+  if (mode.length > 0) {
+    bag.consistency.push(words ? {
+      line: row.line,
+      message: `Account ${account.number} expects quantity and price entry, with calculation lines in ${words.en}: complete ${named(mode, columnLabel)} on the line's Budget tab.`,
+      code: 'BUDGET_FILE_QUANTITY_PRICE_EXPECTED_UNITS',
+      params: { account: account.number, units: words.local, columns: named(mode, localColumnLabel) },
+    } : {
+      line: row.line,
+      message: `Account ${account.number} expects quantity and price entry: complete ${named(mode, columnLabel)} on the line's Budget tab.`,
+      code: 'BUDGET_FILE_QUANTITY_PRICE_EXPECTED',
+      params: { account: account.number, columns: named(mode, localColumnLabel) },
+    });
+  }
+  if (lacking.length > 0 && words) {
+    bag.consistency.push({
+      line: row.line,
+      message: `Account ${account.number} expects calculation lines in ${words.en}: complete ${named(lacking, columnLabel)} on the line's Budget tab.`,
+      code: 'BUDGET_FILE_QUANTITY_PRICE_UNITS',
+      params: { account: account.number, units: words.local, columns: named(lacking, localColumnLabel) },
+    });
+  }
 }
 
 /**
- * The stored columns of a line that are not built as quantity × price (`roundConforms`), with their
- * stored total for the year, the ones the file writes left to `written`.
+ * The stored columns of a line that do not conform (`roundConforms`, with the account's `units`),
+ * with their stored total for the year, the ones the file writes left to `written`. `unitsBefore`:
+ * the units of an expected account the line leaves (null for any unit): the columns that already
+ * did not conform there are left out, the line already was to check. `unitsOnly`: built as quantity
+ * × price, with no line in one of `units`.
  */
-function storedColumnsToCheck(live: StoredLine, written: readonly ColumnAfterWrite[]): ColumnAfterWrite[] {
+function storedColumnsToCheck(
+  live: StoredLine,
+  written: readonly ColumnAfterWrite[],
+  units: readonly string[] | null,
+  unitsBefore?: readonly string[] | null,
+): Array<ColumnAfterWrite & { unitsOnly: boolean }> {
   const rewritten = new Set(written.map((column) => `${column.year}:${column.measure}`));
-  const columns: ColumnAfterWrite[] = [];
+  const columns: Array<ColumnAfterWrite & { unitsOnly: boolean }> = [];
   for (const version of live.versions) {
     for (const measure of AMOUNT_MEASURES) {
-      if (rewritten.has(`${version.year}:${measure}`) || roundConforms(version.rounds?.[measure])) continue;
-      columns.push({ year: version.year, measure, total: yearSum(version, measure) });
+      const round = version.rounds?.[measure];
+      if (rewritten.has(`${version.year}:${measure}`) || roundConforms(round, units)) continue;
+      if (unitsBefore !== undefined && !roundConforms(round, unitsBefore)) continue;
+      columns.push({ year: version.year, measure, total: yearSum(version, measure), unitsOnly: roundConforms(round) });
     }
   }
   return columns;

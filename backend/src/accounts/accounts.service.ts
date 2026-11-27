@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, EntityManager, Equal, ILike, IsNull, Raw, Repository } from 'typeorm';
-import { Account, ACCOUNT_NATURES, AccountNature, expectedSetting } from './account.entity';
+import { Account, ACCOUNT_EXPECTED_UNITS, ACCOUNT_NATURES, AccountNature, expectedSetting, expectedUnitsSetting } from './account.entity';
+import { formatExpectedUnitsCell, parseExpectedUnitsCell } from './account-expected-units';
 import { Company } from '../companies/company.entity';
 import { assertEntityFilterFields, buildWhereFromAgFilters, parseExportPagination, parsePagination } from '../common/pagination';
 import { sortedFindQuery } from '../common/list-sort';
@@ -123,6 +124,9 @@ function importRowUnchanged(existing: Account, row: AccountUpsertDto): boolean {
     const value = (row as any)[field];
     if (value !== undefined && (value ?? null) !== ((existing as any)[field] ?? null)) return false;
   }
+  // The units, as stored (`expectedUnitsSetting`), and those the setting cleared with it.
+  const units = row.quantity_price_expected === null ? null : row.expected_units;
+  if (units !== undefined && String(expectedUnitsSetting(units)) !== String(expectedUnitsSetting(existing.expected_units))) return false;
   return row.consolidation_account_number === undefined
     || numberOrNull(row.consolidation_account_number) === numberOrNull(existing.consolidation_account_number);
 }
@@ -160,6 +164,35 @@ function withNatureBlanks(filters: any) {
   return mapSetValues(natures, 'quantity_price_expected', (value) => (value === true || String(value).toLowerCase() === 'true' ? true : null));
 }
 
+/**
+ * The grid's set filter on `expected_units`, taken out of `filters` into `where`. It returns what the
+ * cell shows: an account matches when it expects one of the units ticked or, for the blank value
+ * ("Any unit"), when it sets quantity and price entry without naming units; an account without the
+ * setting shows nothing and never matches. The column is an array, which the common filters would
+ * compare as a whole.
+ */
+function takeExpectedUnitsFilter(filters: any, where: any) {
+  if (!filters || !('expected_units' in filters)) return;
+  const model = filters.expected_units;
+  delete filters.expected_units;
+  if (model?.filterType !== 'set' || !Array.isArray(model.values)) {
+    throw new BadRequestException('expected_units filters on a set of units.');
+  }
+  const units = ACCOUNT_EXPECTED_UNITS.filter((unit) => model.values.includes(unit));
+  const anyUnit = model.values.some((value: unknown) => value === null || value === '');
+  where.expected_units = Raw((alias) => {
+    // The setting's column, on the same row: the alias names `expected_units`, quoted or not.
+    const setting = alias.replace(/expected_units("?)$/, 'quantity_price_expected$1');
+    if (setting === alias) throw new Error(`expected_units filter: unexpected column alias ${alias}`);
+    const parts = [
+      units.length > 0 ? `${alias} && ARRAY[:...expectedUnits]::text[]` : '',
+      anyUnit ? `(${alias} IS NULL AND ${setting} IS TRUE)` : '',
+    ];
+    const sql = parts.filter(Boolean).join(' OR ');
+    return sql ? `(${sql})` : '1 = 0';
+  }, { expectedUnits: units });
+}
+
 /** A CSV `nature` cell: '' is null (OPEX and CAPEX), undefined an invalid value. */
 /** The values `-` cannot clear (D21 of 26.11.9): the keys, the required name, the status. */
 const UNCLEARABLE_ACCOUNT_CELLS = ['coa_code', 'account_number', 'account_name', 'status'] as const;
@@ -172,6 +205,7 @@ const CLEARABLE_ACCOUNT_FIELDS = [
   'consolidation_account_description',
   'nature',
   'quantity_price_expected',
+  'expected_units',
 ] as const;
 
 function csvNature(raw: string): AccountNature | null | undefined {
@@ -182,6 +216,42 @@ function csvNature(raw: string): AccountNature | null | undefined {
 
 function numberOrNull(value: unknown): number | null {
   return value == null ? null : Number(value);
+}
+
+/**
+ * Units only on an account that expects quantity and price (`accounts_expected_units_check`): a
+ * write that sends units for an account left without the setting is refused, naming the field;
+ * one that clears the setting without sending units clears them with it, as unticking the box does.
+ */
+function assertUnitsFollowSetting(account: Pick<Account, 'quantity_price_expected' | 'expected_units'>, sent: readonly string[] | null | undefined) {
+  if (account.quantity_price_expected === true) return;
+  if (expectedUnitsSetting(sent)) throw unitsWithoutEntry();
+  account.expected_units = null;
+}
+
+/** The refusal of units on an account without the setting, coded for the screen's words (`errors:<code>`). */
+function unitsWithoutEntry() {
+  return new BadRequestException({
+    code: 'ACCOUNT_EXPECTED_UNITS_WITHOUT_ENTRY',
+    message: 'Expected units need quantity and price entry: tick Quantity and price entry to name them.',
+    field: 'expected_units',
+  });
+}
+
+/** The database's own check of the same rule (`accounts_expected_units_check`), should a write still reach it. */
+function isUnitsWithoutEntry(e: any): boolean {
+  const code = e?.code ?? e?.driverError?.code;
+  const constraint = e?.constraint ?? e?.driverError?.constraint;
+  return code === '23514' && constraint === 'accounts_expected_units_check';
+}
+
+/**
+ * Row locks on the tenant's accounts matching `where`, in id order, taken after the charts' lock
+ * (`lockConsolidationChartId`), the order of every account writer. `FOR NO KEY UPDATE`: two writes of
+ * one account wait for each other, and a budget line that references it is not held off.
+ */
+async function lockAccountRows(mg: EntityManager, where: string, params: unknown[]) {
+  await mg.query(`SELECT id FROM accounts WHERE tenant_id = ${CURRENT_TENANT} AND ${where} ORDER BY id FOR NO KEY UPDATE`, params);
 }
 
 /** What an account write needs of the consolidation chart: read once per request, or once per CSV import. */
@@ -273,6 +343,7 @@ export class AccountsService {
         }
       }
 
+      takeExpectedUnitsFilter(mappedFilters, where);
       assertEntityFilterFields(mappedFilters, repo.metadata);
       Object.assign(where, buildWhereFromAgFilters(mappedFilters));
       const accountNumberCondition = accountNumberFilter ? accountNumberWhere(accountNumberFilter) : undefined;
@@ -437,6 +508,7 @@ export class AccountsService {
         }
       }
 
+      takeExpectedUnitsFilter(mappedFilters, where);
       assertEntityFilterFields(mappedFilters, repo.metadata);
       Object.assign(where, buildWhereFromAgFilters(mappedFilters));
       const accountNumberCondition = accountNumberFilter ? accountNumberWhere(accountNumberFilter) : undefined;
@@ -538,7 +610,9 @@ export class AccountsService {
       consolidation_account_number:
         rest.consolidation_account_number != null ? rest.consolidation_account_number : null,
       quantity_price_expected: expectedSetting(rest.quantity_price_expected),
+      expected_units: expectedUnitsSetting(rest.expected_units),
     };
+    assertUnitsFollowSetting(entityLike as Account, rest.expected_units);
     const lifecycle = resolveLifecycleState({ nextStatus: statusInput, nextDisabledAt: disabled_at });
     const entity = repo.create({
       ...entityLike,
@@ -560,6 +634,7 @@ export class AccountsService {
         throw new BadRequestException('An account with this number already exists in the selected Chart of Accounts');
       }
       if (numberOutOfRange(e)) throw new BadRequestException(`account_number ${ACCOUNT_NUMBER_RULE}`);
+      if (isUnitsWithoutEntry(e)) throw unitsWithoutEntry();
       throw e;
     }
     await this.auditWrite({ recordId: saved.id, action: 'create', before: null, after: saved }, userId, mg, audit, consolidation);
@@ -572,8 +647,11 @@ export class AccountsService {
 
   async update(id: string, body: AccountUpsertDto, userId?: string, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const mg = opts?.manager ?? this.getRepo().manager;
-    // The lock first: the account is then read as any role change in progress left it.
+    // The charts' lock first: the account is then read as any role change in progress left it. Then
+    // the account's own row, so that two writes of it decide one after the other, each on the row the
+    // other committed (`assertUnitsFollowSetting` reads the setting the units depend on).
     const consolidation = { chartId: await lockConsolidationChartId(mg), propagate: true };
+    await lockAccountRows(mg, 'id = $1', [id]);
     const existing = await this.get(id, { manager: mg });
     return this.updateAccount(existing, body, userId, mg, opts?.audit, consolidation);
   }
@@ -602,6 +680,10 @@ export class AccountsService {
     if (body?.quantity_price_expected !== undefined) {
       existing.quantity_price_expected = expectedSetting(body.quantity_price_expected);
     }
+    if (body?.expected_units !== undefined) {
+      existing.expected_units = expectedUnitsSetting(body.expected_units);
+    }
+    assertUnitsFollowSetting(existing, body?.expected_units);
     const lifecycle = resolveLifecycleState({
       currentDisabledAt: before.disabled_at,
       nextStatus: statusInput,
@@ -654,6 +736,7 @@ export class AccountsService {
         throw new BadRequestException('An account with this number already exists in the target Chart of Accounts');
       }
       if (numberOutOfRange(e)) throw new BadRequestException(`account_number ${ACCOUNT_NUMBER_RULE}`);
+      if (isUnitsWithoutEntry(e)) throw unitsWithoutEntry();
       throw e;
     }
     await this.auditWrite({ recordId: saved.id, action: 'update', before, after: saved }, userId, mg, audit, consolidation);
@@ -786,6 +869,7 @@ export class AccountsService {
       'status',
       'nature',
       'quantity_price_expected',
+      'expected_units',
     ];
     return includeCoaCode ? ['coa_code', ...base] : base;
   }
@@ -830,6 +914,8 @@ export class AccountsService {
           a.nature ?? '',
           // Yes in the file's language when set, blank otherwise (the setting is never stored false).
           a.quantity_price_expected === true ? formatCsvBoolean(true, language) : '',
+          // The units in the file's language, as the budget tab names them ("personnes, jours").
+          formatExpectedUnitsCell(a.expected_units, language),
         ];
         rows.push(includeCoa ? [codeById.get(a.coa_id || '') || '', ...baseRow] : baseRow);
       }
@@ -977,6 +1063,14 @@ export class AccountsService {
         // The shared coded error (`errors:CSV_BOOLEAN_INVALID`): the dialog words it in the interface language.
         errors.push(rowError(line, 'quantity_price_expected', 'CSV_BOOLEAN_INVALID', `Invalid value '${expectedRaw}'. Use yes or no.`, { value: expectedRaw }));
       }
+      // Units by their code or their word in any language ("personnes, jours"); `-` clears them.
+      const unitsRaw = cellText(row, 'expected_units', mode);
+      const unitsCell = has('expected_units') ? parseExpectedUnitsCell(unitsRaw) : undefined;
+      if (unitsCell && 'unknown' in unitsCell) {
+        // Coded (`errors:CSV_ACCOUNT_EXPECTED_UNIT_INVALID`): the dialog names the units in the interface language.
+        errors.push(rowError(line, 'expected_units', 'CSV_ACCOUNT_EXPECTED_UNIT_INVALID',
+          `Unknown unit '${unitsCell.unknown}'. Use people, days or pieces, separated by commas.`, { value: unitsCell.unknown }));
+      }
       // An absent column stays undefined: an update keeps the stored value, a new account takes the default.
       const text = (column: string) => (has(column) ? cellText(row, column, mode) || null : undefined);
       const item = {
@@ -990,6 +1084,7 @@ export class AccountsService {
         ...(has('status') ? { status: statusRaw === 'disabled' ? StatusState.DISABLED : StatusState.ENABLED } : {}),
         ...(has('nature') ? { nature: nature ?? null } : {}),
         ...(has('quantity_price_expected') ? { quantity_price_expected: expectedSetting(expected) } : {}),
+        ...(unitsCell && 'units' in unitsCell ? { expected_units: unitsCell.units } : {}),
       };
       normalized.push(item);
       rowOf.set(item, row);
@@ -1033,6 +1128,9 @@ export class AccountsService {
     // chart's accounts, once: what each row updates (or creates when absent).
     const mg = repo.manager;
     const chartId = await lockConsolidationChartId(mg);
+    // A load writes: the target chart's accounts under their row locks, by id, before they are read
+    // (as `update` does for one account). A dry run writes nothing and takes none.
+    if (!dryRun) await lockAccountRows(mg, 'coa_id = $1', [targetCoaId]);
     const existingByNumber = new Map(
       (await repo.find({ where: { coa_id: targetCoaId } as any })).map((account) => [String(account.account_number), account]),
     );
@@ -1040,6 +1138,17 @@ export class AccountsService {
     for (const item of normalized) {
       if (item.account_name || existingByNumber.has(item.account_number)) continue;
       errors.push({ row: rowOf.get(item)!.line, message: 'account_name is required', code: 'CSV_ACCOUNT_NAME_REQUIRED' });
+    }
+    // Units only on an account that expects quantity and price, as the row leaves it (`assertUnitsFollowSetting`).
+    for (const item of normalized) {
+      const row = rowOf.get(item)!;
+      const existing = existingByNumber.get(item.account_number);
+      const written = existing ? storedRecordValues(item, row, read.present, mode) : item;
+      if (!written.expected_units) continue;
+      const setting = written.quantity_price_expected !== undefined ? written.quantity_price_expected : existing?.quantity_price_expected ?? null;
+      if (setting === true) continue;
+      errors.push(rowError(row.line, 'expected_units', 'CSV_ACCOUNT_EXPECTED_UNITS_WITHOUT_ENTRY',
+        'Expected units need quantity_price_expected set to yes.'));
     }
     if (errors.length > 0) {
       return { ok: false, dryRun, total: read.rows.length, inserted: 0, updated: 0, errors, warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };

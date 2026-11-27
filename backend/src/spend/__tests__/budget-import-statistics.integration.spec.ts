@@ -18,7 +18,7 @@ import { DemoDataService } from '../../demo-data/demo-data.service';
 // refused file leave the request's transaction to the interceptor; a large import commits it,
 // gives its connection back, and ANALYZE then runs on the tables it writes, in the background,
 // one transaction per table; a table the role does not own or that does not exist is skipped
-// and reported, never logged as analysed. Lot B12b: a sample data load ends with the same ANALYZE
+// and reported, never logged as analysed. A sample data load ends with the same ANALYZE
 // (`DemoDataService.analyzeAfterLoad`, tracked as background work, never rejecting); an ANALYZE waits
 // for an autovacuum that holds its table (PostgreSQL cancels it after `deadlock_timeout`), skips its
 // table while the data access policies are synchronised (the sync's advisory lock, which two ANALYZE
@@ -224,7 +224,7 @@ async function testTwoAnalyzeAtOnce() {
 }
 
 /**
- * The reviewer's probe of lot B12b, replayed: a transaction does what `data_access_sync_policies()`
+ * The reviewer's probe, replayed: a transaction does what `data_access_sync_policies()`
  * does to a table (a grant, which updates its `pg_class` row, then its policies, which take the
  * table's exclusive lock) while an ANALYZE of the table starts in between. Without the sync's lock
  * the two wait for each other and PostgreSQL cancels one (deadlock); with it, twenty times, none:

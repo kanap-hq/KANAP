@@ -411,10 +411,12 @@ async function loadRounds(
 ): Promise<Map<string, Partial<Record<AmountMeasure, StoredRound>>>> {
   const byVersion = new Map<string, Partial<Record<AmountMeasure, StoredRound>>>();
   if (versionIds.length === 0) return byVersion;
-  const rows: Array<{ version_id: string; measure: string; method: StoredRound['method']; line_count: number; lines_total: string | null }> = await manager.query(
+  const rows: Array<{ version_id: string; measure: string; method: StoredRound['method']; line_count: number; units: string[] | null; lines_total: string | null }> = await manager.query(
     `SELECT r.version_id::text AS version_id, r.measure, r.method,
             (SELECT count(*)::int FROM spend_round_input_lines l
               WHERE l.tenant_id = r.tenant_id AND l.round_input_id = r.id) AS line_count,
+            ARRAY(SELECT DISTINCT l.quantity_unit::text FROM spend_round_input_lines l
+              WHERE l.tenant_id = r.tenant_id AND l.round_input_id = r.id) AS units,
             CASE WHEN r.last_calculation->>'kind' = 'computed' THEN r.last_calculation->>'total' END AS lines_total
        FROM spend_round_inputs r
       WHERE r.tenant_id = $1 AND r.version_id = ANY($2::uuid[])`,
@@ -427,6 +429,7 @@ async function loadRounds(
     entry[row.measure as AmountMeasure] = {
       method: row.method,
       lineCount,
+      units: row.units ?? [],
       linesTotal: lineCount > 0 && row.lines_total != null ? toCents(row.lines_total) : null,
     };
     byVersion.set(row.version_id, entry);
@@ -467,7 +470,7 @@ export async function loadCatalog(
       WHERE tenant_id = $1 AND scope IN ('opex', 'capex') AND is_frozen = true`,
     [tenantId],
   );
-  // The accounts that expect quantity and price, and the columns the rule reads (lot B12b).
+  // The accounts that expect quantity and price, and the columns the rule reads.
   const expected = await readAccountExpectations(manager, tenantId);
   const shown = (await readBudgetColumns(manager, tenantId)).enabled;
   const iso = (value: Date | string | null) => (value ? new Date(value).toISOString() : null);
@@ -481,6 +484,7 @@ export async function loadCatalog(
     accounts: accounts.map((row) => ({
       id: row.id, number: row.account_number, coaId: row.coa_id, disabledAt: iso(row.disabled_at), nature: row.nature,
       ...(expected.has(row.id) ? { quantityPrice: true } : {}),
+      ...(expected.get(row.id)?.units ? { expectedUnits: expected.get(row.id)!.units! } : {}),
     })),
     users: users.map((row) => ({ id: row.id, email: row.email, status: row.status })),
     projects: projects.map((row) => ({ id: row.id, itemNumber: Number(row.item_number) })),

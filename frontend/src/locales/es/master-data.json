@@ -565,6 +565,8 @@
       "accountName": "Nombre",
       "nature": "Usada para",
       "quantityPriceExpected": "Introducción por cantidad y precio",
+      "expectedUnits": "Unidades esperadas",
+      "expectedUnitsAny": "Cualquier unidad",
       "nativeName": "Nombre local",
       "consolAccountNumber": "N.º cuenta consol.",
       "consolAccountName": "Nombre consol.",
@@ -712,10 +714,12 @@
       "consolidationAccountDescription": "Descripción de la cuenta de consolidación",
       "selectChart": "Elija un plan de cuentas",
       "lifecycle": "Ciclo de vida",
-      "loadCoAsError": "Error al cargar los planes de cuentas"
+      "loadCoAsError": "Error al cargar los planes de cuentas",
+      "expectedUnits": "Unidades esperadas"
     },
     "hints": {
-      "quantityPriceExpected": "Las líneas presupuestarias de esta cuenta se esperan por cantidad y precio. En una cuenta de consolidación, el ajuste se aplica a las cuentas vinculadas a ella."
+      "quantityPriceExpected": "Las líneas presupuestarias de esta cuenta se esperan por cantidad y precio. En una cuenta de consolidación, el ajuste se aplica a las cuentas vinculadas a ella.",
+      "expectedUnits": "Cada columna necesita al menos una línea de cálculo en una unidad marcada. Ninguna marcada: cualquier unidad vale."
     },
     "placeholders": {
       "chartOfAccounts": "p. ej., COA-FR",

@@ -89,13 +89,16 @@ export function useHeldChoices(lineId: string | null | undefined): HeldChoices {
   return React.useMemo(() => ({ budget, allocation, openings }), []);
 }
 
-/** Names in a sentence: « Budget », « Budget et Prévision », « Budget, Révision et Prévision ». */
-export function namesInSentence(locale: string, names: readonly string[]): string {
+/**
+ * Names in a sentence: « Budget », « Budget et Prévision », « Budget, Révision et Prévision »; with
+ * `or`, « personnes ou jours ».
+ */
+export function namesInSentence(locale: string, names: readonly string[], or = false): string {
   // Intl.ListFormat is in every supported browser; this TypeScript lib predates it.
   type ListFormat = new (locale: string, options: { style: string; type: string }) => { format: (list: readonly string[]) => string };
   const ListFormat = (Intl as unknown as { ListFormat?: ListFormat }).ListFormat;
   try {
-    return ListFormat ? new ListFormat(locale, { style: 'long', type: 'conjunction' }).format(names) : names.join(', ');
+    return ListFormat ? new ListFormat(locale, { style: 'long', type: or ? 'disjunction' : 'conjunction' }).format(names) : names.join(', ');
   } catch {
     return names.join(', ');
   }

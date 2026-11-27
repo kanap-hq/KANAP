@@ -263,6 +263,31 @@ describe('CoaPage summary and consolidation health', () => {
     expect([true, null].map((value) => column.valueFormatter({ value }))).toEqual(['Yes', '']);
   });
 
+  it('has a hidden expected units column beside it, in the words of the Budget tab, filtered on each unit and on any unit as the cell shows it', async () => {
+    renderPage();
+    await screen.findByTestId('coa-summary');
+    await waitFor(() => expect(grid.props).not.toBeNull());
+    const fields = (grid.props!.columns as any[]).map((col) => col.field);
+    expect(fields.indexOf('expected_units')).toBe(fields.indexOf('quantity_price_expected') + 1);
+    const column = (grid.props!.columns as any[]).find((col) => col.field === 'expected_units');
+    expect(column.headerName).toBe('Expected units');
+    expect(column.defaultHidden).toBe(true);
+    expect(grid.props!.defaultHiddenColumns).toContain('expected_units');
+    expect(column.filterParams).toEqual({
+      values: [
+        { value: 'people', label: 'People' },
+        { value: 'days', label: 'Days' },
+        { value: 'pieces', label: 'Pieces' },
+        { value: null, label: 'Any unit' },
+      ],
+      searchable: false,
+    });
+    // What the cell shows is what the filter returns: "Any unit" only on an account with the setting.
+    const cell = (value: unknown, expected: true | null) => column.valueFormatter({ value, data: { quantity_price_expected: expected } });
+    expect([cell(['people', 'days'], true), cell(['pieces'], true), cell(null, true), cell([], true), cell(null, null)])
+      .toEqual(['People, days', 'Pieces', 'Any unit', 'Any unit', '']);
+  });
+
   it('flags the grid rows outside the consolidation chart next to their consolidation number', async () => {
     renderPage();
     await screen.findByTestId('coa-summary');

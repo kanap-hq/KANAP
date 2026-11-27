@@ -95,6 +95,7 @@ La grille affiche uniquement les comptes du CoA sélectionné.
 - **Description de consolidation** : La description du compte de consolidation.
 - **Statut** : Indique si le compte est activé ou désactivé.
 - **Saisie en quantité et prix** : **Oui** lorsque le compte attend ses lignes budgétaires en quantité et prix. Son filtre propose **Oui** et **Non**. Voir [Saisie en quantité et prix](#quantity-and-price-entry).
+- **Unités attendues** : les unités dans lesquelles le compte attend ses lignes de calcul. Un compte en **Saisie en quantité et prix** sans unité affiche **Toute unité**. Son filtre propose chaque unité et **Toute unité**.
 - **Créé** : Date et heure de création du compte.
 
 **Filtrage** :
@@ -119,7 +120,7 @@ Cliquez sur n'importe quelle ligne de la grille des comptes pour ouvrir l'espace
 ### Disposition
 
 - **En-tête** : le numéro de compte sert de référence (vous pouvez le copier à cet endroit) et le nom du compte sert de titre. Cliquez sur le titre pour renommer le compte. Les flèches **Compte précédent** et **Compte suivant** parcourent les comptes de la liste d'où vous venez, dans le même ordre, avec la même recherche et les mêmes filtres. Le lien de retour ramène à **Plans comptables** en conservant votre sélection.
-- **Panneau Propriétés** à droite : **Plan comptable**, **Numéro de compte**, **Utilisé pour**, **Saisie en quantité et prix** et **Cycle de vie** (l'interrupteur de statut et la date de **Fin de validité**). Le bouton du panneau permet de le réduire ou de le rouvrir. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie).
+- **Panneau Propriétés** à droite : **Plan comptable**, **Numéro de compte**, **Utilisé pour**, **Saisie en quantité et prix**, **Unités attendues** (une fois **Saisie en quantité et prix** cochée) et **Cycle de vie** (l'interrupteur de statut et la date de **Fin de validité**). Le bouton du panneau permet de le réduire ou de le rouvrir. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie).
 - **Colonne principale** : **Nom local (langue locale)**, **Description** et la section **Consolidation**.
 
 **Les modifications s'enregistrent automatiquement.** Chaque champ s'enregistre lorsque vous le quittez, et il n'y a pas de bouton Enregistrer. Si une valeur est refusée, un message apparaît sous le champ. Le **Numéro de compte** doit être un nombre entier supérieur à zéro, de 15 chiffres au plus.
@@ -146,8 +147,11 @@ Lors de l'ajout de ce réglage, Kadratis l'a renseigné pour vous. Un compte uti
 
 Cochez **Saisie en quantité et prix** dans le panneau Propriétés lorsque les lignes budgétaires du compte doivent être construites en quantité et prix. Le réglage ne refuse rien : il signale les lignes saisies autrement, pour que vous puissiez les vérifier. Voir [Quand le compte attend une saisie en quantité et prix](budget-lines.md#quantity-and-price-expected).
 
+Une fois la case cochée, **Unités attendues** apparaît dessous, avec **Personnes**, **Jours** et **Pièces**. Cochez les unités que les lignes de calcul doivent utiliser : chaque colonne a alors besoin d'au moins une ligne de calcul dans l'une d'elles. Sans unité cochée, toute unité convient. Décocher **Saisie en quantité et prix** efface les unités.
+
 - Une ligne suit le réglage de son compte. Quand son compte n'est pas coché, elle suit son compte de consolidation
 - Cocher un compte de consolidation vaut pour tous les comptes qui s'y rattachent. Ils le suivent tous : aucun ne peut en être exclu
+- Les unités vont avec le réglage. Un compte coché garde ses propres unités, ou aucune : il ne prend jamais les unités de son compte de consolidation. Un compte non coché prend à la fois le réglage et les unités de son compte de consolidation
 - Un compte désactivé et coché applique toujours son réglage
 - Chaque changement apparaît dans l'historique du compte
 
@@ -482,16 +486,16 @@ Vous pouvez exporter la liste de vos CoA (avec des métadonnées comme le code, 
 
 Le fichier global `/accounts` inclut une colonne `coa_code` qui identifie le CoA de chaque compte. **Exporter** et **Importer** l'utilisent lorsqu'aucun CoA n'est sélectionné sur la page.
 
-  - **Exporter** : les comptes que la liste affiche (ou, sur demande dans la fenêtre, tous les comptes) avec leur code CoA, numéro, nom, nom local, description, correspondances de consolidation, statut et **Utilisé pour**
+  - **Exporter** : les comptes que la liste affiche (ou, sur demande dans la fenêtre, tous les comptes) avec leur code CoA, numéro, nom, nom local, description, correspondances de consolidation, statut, **Utilisé pour**, **Saisie en quantité et prix** et **Unités attendues**
   - **Importer** : **Télécharger le modèle** dans la fenêtre donne un fichier avec les seuls en-têtes. Commencez par la **Vérification préalable** pour valider la structure, l'encodage, les champs obligatoires et les doublons, puis **Charger** pour appliquer les insertions et les mises à jour
   - **Correspondance** : par `(coa_code, account_number)` dans votre espace de travail
   - **Colonnes obligatoires** : `coa_code` et `account_number`, plus `account_name` pour un nouveau compte. Toutes les lignes d'un fichier doivent porter le même `coa_code`
-  - **Colonnes facultatives** : `native_name`, `description`, les colonnes de consolidation, `status`, `nature`, `quantity_price_expected`. Un fichier peut les omettre : les comptes qu'il met à jour gardent leurs valeurs enregistrées, et les nouveaux comptes prennent les valeurs par défaut (vide, enabled, **OPEX et CAPEX**). Sur un compte que le fichier met à jour, une cellule vide garde la valeur enregistrée, et `-` l'efface. `-` ne peut pas effacer `coa_code`, `account_number`, `account_name` ni `status` : la ligne est refusée. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing)
+  - **Colonnes facultatives** : `native_name`, `description`, les colonnes de consolidation, `status`, `nature`, `quantity_price_expected`, `expected_units`. Un fichier peut les omettre : les comptes qu'il met à jour gardent leurs valeurs enregistrées, et les nouveaux comptes prennent les valeurs par défaut (vide, enabled, **OPEX et CAPEX**). Sur un compte que le fichier met à jour, une cellule vide garde la valeur enregistrée, et `-` l'efface. `-` ne peut pas effacer `coa_code`, `account_number`, `account_name` ni `status` : la ligne est refusée. Voir [Cellules vides et `-`](csv-files.md#empty-cells-and-clearing)
   - Un fichier qui nomme deux fois le même compte (même `coa_code` et `account_number`) est refusé en entier, et rien n'est écrit. Le message nomme les deux lignes
 
 **Schéma CSV** (l'export écrit le séparateur de la langue de l'écran ; montré ici avec des points-virgules) :
 ```
-coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected
+coa_code;account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected;expected_units
 ```
 
 ### Comptes (limités au CoA)
@@ -504,7 +508,7 @@ Depuis la page Plans comptables, **Importer** et **Exporter** portent automatiqu
 
 **Schéma CSV** (limité au CoA ; montré ici avec des points-virgules) :
 ```
-account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected
+account_number;account_name;native_name;description;consolidation_account_number;consolidation_account_name;consolidation_account_description;status;nature;quantity_price_expected;expected_units
 ```
 
 **Remarques** :
@@ -515,6 +519,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - Valeurs de statut : `enabled` ou `disabled` (enabled par défaut)
   - `nature` est le réglage **Utilisé pour**. Valeurs : `opex`, `capex`, ou vide pour **OPEX et CAPEX**. Un fichier sans cette colonne laisse les réglages inchangés. Une cellule vide garde le réglage d'un compte enregistré, et un nouveau compte est pour **OPEX et CAPEX**. `-` applique **OPEX et CAPEX**. Toute autre valeur est refusée pour cette ligne
   - `quantity_price_expected` est le réglage **Saisie en quantité et prix**. Oui, dans l'une des quatre langues (`yes`, `oui`, `ja`, `sí`), le coche. Non, ou `-`, l'efface. Une cellule vide garde le réglage d'un compte enregistré, et un nouveau compte part décoché. Un fichier sans cette colonne laisse les réglages inchangés. Toute autre valeur est refusée pour cette ligne. L'export écrit oui dans la langue du fichier, et laisse la cellule vide pour un compte non coché
+  - `expected_units` est le réglage **Unités attendues** : les unités séparées par des virgules, par exemple `personnes, jours`. Les mots des quatre langues sont lus (`people`, `Tage`, `piezas`). `-` efface les unités, et une cellule vide les garde. Une unité inconnue est refusée pour cette ligne, tout comme des unités sur un compte dont `quantity_price_expected` n'est pas coché. L'export écrit les unités dans la langue du fichier
   - Colonnes de consolidation : lorsque `consolidation_account_number` existe dans votre plan de consolidation, son nom et sa description remplacent les cellules `consolidation_account_name` et `consolidation_account_description`. `-` dans le numéro efface les trois, et un numéro vide les garde. Voir [Configurer les correspondances de consolidation](#configurer-les-correspondances-de-consolidation)
 
 ## Conseils
