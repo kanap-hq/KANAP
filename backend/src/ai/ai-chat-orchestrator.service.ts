@@ -1942,7 +1942,8 @@ export class AiChatOrchestratorService {
           throw new Error('Provider not configured.');
         }
         return {
-          context: params.context,
+          // The turn's zone goes with every tool call and preview of the turn (an import's times).
+          context: { ...params.context, timeZone },
           inputConversationId: params.conversationId ?? null,
           userMessage: params.userMessage,
           attachmentIds: params.attachmentIds ?? null,
@@ -1971,7 +1972,7 @@ export class AiChatOrchestratorService {
       }
 
       return {
-        context: params.context,
+        context: { ...params.context, timeZone },
         inputConversationId: params.conversationId ?? null,
         userMessage: params.userMessage,
         attachmentIds: params.attachmentIds ?? null,

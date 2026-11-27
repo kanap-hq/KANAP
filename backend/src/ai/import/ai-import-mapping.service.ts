@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type { CsvLanguage } from '../../common/csv-sheet';
+import { timeZoneOf, type CsvLanguage } from '../../common/csv-sheet';
+import { knownTimeZone } from '../../common/csv-sheet/date';
 import type { AuditSourceOptions } from '../../audit/audit.service';
 import { assertUnscopedDataAccess } from '../../data-access/reserved-operations';
 import type { CatalogOptionLike } from '../../it-ops-settings/catalog-resolve';
@@ -31,6 +32,11 @@ export type PrepareImportMappingInput = {
    * set by the server, never by the model: the tool's input schema has no such field.
    */
   choices?: ImportCardChoice[];
+  /**
+   * The zone the card read the file's times in when their header names none (lot I6c of 26.12.1),
+   * set by the server like `choices`: the approval and the person's choices read them in it again.
+   */
+  time_zone?: string;
 };
 
 /** One column of an import's template, as `describe_import_template` gives it to the model. */
@@ -182,9 +188,9 @@ export class AiImportMappingService {
     context: AiExecutionContextWithManager,
     input: PrepareImportMappingInput,
     language: CsvLanguage,
-  ): Promise<{ target: AiImportTarget; mapping: AiImportMappingPreviewDto }> {
+  ): Promise<{ target: AiImportTarget; mapping: AiImportMappingPreviewDto; timeZone: string | null }> {
     const target = aiImportTarget(input.entity_type);
-    const { converted, lines } = await this.convert(context, target, input, language);
+    const { converted, lines, timeZone } = await this.convert(context, target, input, language);
     const validation = await this.withHosting(context, target, converted, language, await this.runner.run(target.key, buildImportFile(converted.file, language), {
       dryRun: true, language, lines, matching: { choices: input.choices ?? [], proposals: converted.file.proposals },
     }, context));
@@ -197,7 +203,7 @@ export class AiImportMappingService {
     ]);
     const onApproval = budgetFacts ?? (checked.report.kind === 'rows' ? rowsApprovalFacts(checked, { titles, language }) : undefined);
     const preview = withoutUndoneNotes(target.key, converted, checked, input.choices ?? []);
-    return { target, mapping: { ...(onApproval ? { on_approval: onApproval } : {}), ...preview, validation: checked } };
+    return { target, mapping: { ...(onApproval ? { on_approval: onApproval } : {}), ...preview, validation: checked }, timeZone };
   }
 
   /**
@@ -271,20 +277,32 @@ export class AiImportMappingService {
     target: AiImportTarget,
     input: PrepareImportMappingInput,
     language: CsvLanguage,
-  ): Promise<{ converted: AiImportMappingResult; lines: number[] }> {
+  ): Promise<{ converted: AiImportMappingResult; lines: number[]; timeZone: string | null }> {
     const attachment = await this.assertTableAttachment(context, input.attachment_id);
     const { buffer } = await this.attachments.loadAttachmentBuffer(attachment.id, context.tenantId, context.manager);
     const grid = await readTableAttachment(buffer);
     const { columns } = await this.templateColumns(context, target, language);
+    const timeZone = columns.some((column) => column.kind === 'datetime') ? await this.personTimeZone(context, input) : null;
     const converted = buildImportMapping(grid, columns, {
       importKey: target.key,
       filename: attachment.original_filename,
       columns: input.columns,
       assumptions: input.assumptions ?? [],
       leftAside: input.left_aside ?? [],
+      timeZone,
     }, language);
     // No import touches a column the file leaves out.
-    return { converted, lines: grid.lines };
+    return { converted, lines: grid.lines, timeZone };
+  }
+
+  /**
+   * The zone of the person who imports (T1 n° 22 of 26.12.1): the card's own, once it has one (the
+   * approval and the person's choices come from other requests); else the zone of the conversation's
+   * turn, the browser's, else the person's own, else UTC, as the assistant reads date-times.
+   */
+  private async personTimeZone(context: AiExecutionContextWithManager, input: PrepareImportMappingInput): Promise<string> {
+    return knownTimeZone(input.time_zone)
+      ?? timeZoneOf(context.manager, context.tenantId, context.userId || null, context.timeZone);
   }
 
   /** The spreadsheet of this conversation the person attached, or a refusal. */

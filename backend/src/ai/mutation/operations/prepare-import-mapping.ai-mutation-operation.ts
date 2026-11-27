@@ -183,7 +183,7 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
     const language = await personWriteLanguage(context.manager, context.tenantId, context.userId, context.screenLanguage);
     const budget = input.entity_type === 'budget_lines';
     const choices = input.choices ?? await this.lastChoices(context, input.attachment_id, input.entity_type);
-    const { target, mapping } = await this.mapping.prepareMapping(context, { ...input, choices }, language);
+    const { target, mapping, timeZone } = await this.mapping.prepareMapping(context, { ...input, choices }, language);
     // The applications (lot I3 of 26.11.9): the lookalike choices the check followed, the targets of the
     // rows it left out by default included, so that the approval leaves out what the card left out.
     const report = mapping.validation?.report;
@@ -203,6 +203,8 @@ export class PrepareImportMappingAiMutationOperation implements AiMutationOperat
         assumptions: input.assumptions ?? [],
         // The file's columns the person left aside: the approval builds the same file.
         ...(input.left_aside?.length ? { left_aside: input.left_aside } : {}),
+        // The zone the card read the times in: the approval reads them in it again (lot I6c of 26.12.1).
+        ...(timeZone ? { time_zone: timeZone } : {}),
         // The choices the check followed: an undone match the file no longer makes is dropped. A check
         // that refused the file before reading its rows followed none: the choices are kept as received.
         ...(budget ? { choices: mapping.validation?.matching ? mapping.validation.matching.choices : choices ?? [] } : {}),

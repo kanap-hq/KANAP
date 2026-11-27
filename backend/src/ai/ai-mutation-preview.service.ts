@@ -1425,6 +1425,8 @@ export class AiMutationPreviewService {
       columns: input.columns,
       assumptions: [],
       ...(Array.isArray(input.left_aside) && input.left_aside.length > 0 ? { left_aside: input.left_aside } : {}),
+      // The zone the card read the file's times in (lot I6c of 26.12.1).
+      ...(typeof input.time_zone === 'string' ? { time_zone: input.time_zone } : {}),
       choices,
     });
     if (created.status !== 'pending' || created.preview_id === preview.id) {
