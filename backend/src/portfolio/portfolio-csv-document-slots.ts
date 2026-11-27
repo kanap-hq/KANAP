@@ -24,14 +24,21 @@ export async function settleWithSlotBodies(
 ): Promise<CsvSettledRow[]> {
   const ids = rows.flatMap((row) => (row.found ? [String(row.found.id)] : []));
   const bodies = await loadSlotBodies(context.manager, context.tenantId, sourceEntityType, ids, Object.values(slots));
-  return Promise.all(rows.map(async (row) => {
-    if (!row.found) return { entity: null };
+  // One row after the other: a column's text is read in the Markdown workers, which keep two calls of
+  // a person waiting at most (`markdown-worker.ts`); rows read at once were refused past three.
+  const settled: CsvSettledRow[] = [];
+  for (const row of rows) {
+    if (!row.found) {
+      settled.push({ entity: null });
+      continue;
+    }
     const entity = { ...row.found };
     for (const [property, slot] of Object.entries(slots)) {
       entity[property] = bodies.get(String(row.found.id))?.get(slot) ?? await prepareRecoveredContent(row.found[property]);
     }
-    return { entity };
-  }));
+    settled.push({ entity });
+  }
+  return settled;
 }
 
 /**
