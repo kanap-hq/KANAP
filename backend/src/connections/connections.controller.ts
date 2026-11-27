@@ -8,7 +8,6 @@ import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { cancelCreation, creationContextOf, readCreationChanges, withCreationToken } from '../common/creation/creation-routes';
 import { withChildCount, type CreationChanges } from '../common/creation/creation-changes';
-import { assertConnectionUnlinked } from './connection-creation';
 
 @UseGuards(JwtAuthGuard)
 @Controller('connections')
@@ -216,8 +215,7 @@ export class ConnectionsController {
   /**
    * Before "Cancel": what was written on the connection since its creation. Nothing is written.
    * Protocols have no history of their own: those given with the creation are no change, so they
-   * count once the connection was written since (an update of its own), as they stand. A linked
-   * connection is refused as its cancel is (`assertConnectionUnlinked`).
+   * count once the connection was written since (an update of its own), as they stand.
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
@@ -226,7 +224,6 @@ export class ConnectionsController {
     const ctx = creationContextOf(req);
     return readCreationChanges('connections', id, token, ctx, {
       extra: async (changes, manager) => {
-        await assertConnectionUnlinked(manager, ctx.tenantId, id);
         const [{ total, written }]: Array<{ total: number; written: boolean }> = await manager.query(
           `SELECT (SELECT count(*)::int FROM connection_protocols WHERE tenant_id = $1 AND connection_id = $2) AS total,
                   EXISTS (SELECT 1 FROM audit_log
@@ -240,18 +237,16 @@ export class ConnectionsController {
 
   /**
    * "Cancel" of a connection being created: its creator deletes it with its token while nobody else
-   * has written on it and nothing is linked to it (403 `CREATION_CANCEL_EXPIRED` otherwise, both
-   * checked under its lock: `assertConnectionUnlinked`). Same delete as `DELETE :id`.
+   * has written on it and nothing is linked to it, an interface binding or a document (403
+   * `CREATION_CANCEL_EXPIRED` otherwise, checked under its lock: `common/creation/creation-links.ts`).
+   * Same delete as `DELETE :id`.
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Delete(':id/creation')
   cancelCreation(@Param('id') id: string, @Body() body: { token?: string }, @Req() req: any): Promise<void> {
     const ctx = creationContextOf(req);
-    return cancelCreation('connections', id, body?.token, ctx, async (manager) => {
-      await assertConnectionUnlinked(manager, ctx.tenantId, id);
-      return this.svc.delete(id, ctx.userId || null, { manager });
-    });
+    return cancelCreation('connections', id, body?.token, ctx, (manager) => this.svc.delete(id, ctx.userId || null, { manager }));
   }
 
   @UseGuards(PermissionGuard)
