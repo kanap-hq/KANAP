@@ -78,6 +78,15 @@ export function columnConformsSql(round: string): string {
     WHERE ecl.tenant_id = ${round}.tenant_id AND ecl.round_input_id = ${round}.id))`;
 }
 
+/**
+ * `columnConformsSql` on a round already read (the budget file's check reads each column's method
+ * and its count of calculation lines): `computed` with lines it still has. The parity spec holds the
+ * two together.
+ */
+export function roundConforms(round: { method: string; lineCount: number } | null | undefined): boolean {
+  return !!round && round.method === 'computed' && round.lineCount > 0;
+}
+
 /** What a statement binds its values with (`SqlStatement`). */
 type Binder = Pick<SqlStatement, 'tenant' | 'bind'>;
 
@@ -241,6 +250,99 @@ export async function readEntryChecks(
       columns: toCheck,
       to_check: toCheck.length > 0,
     });
+  }
+  return result;
+}
+
+/*
+ * The same rule before a write (lot B12b): what a line will read once a write that is not yet made
+ * puts totals on it or moves it onto another account. Kad's cards and the budget file's check say
+ * it as a warning; nothing is refused. The parity spec compares each answer with `readEntryChecks`
+ * once the write is made.
+ */
+
+/**
+ * The level at which each of `accountIds` expects quantity and price (`expectedAccountsSql`): the
+ * account a write puts lines on, before they are. Every account of the tenant when `accountIds` is
+ * absent (the budget file's catalog). An account that is not expected is absent from the answer.
+ */
+export async function readAccountExpectations(
+  manager: EntityManager,
+  tenantId: string,
+  accountIds?: readonly string[],
+): Promise<Map<string, EntryCheckLevel>> {
+  const result = new Map<string, EntryCheckLevel>();
+  if (accountIds && accountIds.length === 0) return result;
+  const stmt = new SqlStatement(tenantId);
+  const only = accountIds ? ` WHERE ea.account_id = ANY(${stmt.bind(Array.from(new Set(accountIds)), 'uuid[]')})` : '';
+  const query = stmt.finalize(`WITH ea AS (${expectedAccountsSql(stmt)})
+    SELECT ea.account_id::text AS account_id, ea.level FROM ea${only}`);
+  const rows: Array<{ account_id: string; level: EntryCheckLevel }> = await manager.query(query.sql, query.params);
+  for (const row of rows) result.set(row.account_id, row.level);
+  return result;
+}
+
+/** A column of a line as a write will leave it: its year, its column, its net total for the year once written (cents or units: only zero matters). */
+export type ColumnAfterWrite = { year: number; measure: AmountMeasure; total: bigint | number };
+
+/**
+ * The columns to check, once written, of a line on an expected account (`readAccountExpectations`),
+ * among `columns`, the columns that will not be built as quantity × price: a total Kad or the budget
+ * file writes (a yearly, quarterly or monthly amount, never cost lines: `columnConformsSql`), and the
+ * columns a move onto the account leaves as they are and that do not conform. The rule of
+ * `lineColumnsParts` on values not yet stored: shown in the tenant's settings, not frozen
+ * (`nature:year:column`), not zero for the year, and not after the year of the line's end of
+ * validity. By year, then in the columns' order, without repeats.
+ */
+export function columnsLeftToCheck(
+  settings: Pick<EntryCheckSettings, 'measures' | 'frozen'>,
+  nature: BudgetNature,
+  columns: readonly ColumnAfterWrite[],
+  endOfValidity?: string | Date | null,
+): EntryCheckColumn[] {
+  const lastYear = endOfValidity ? new Date(endOfValidity).getUTCFullYear() : null;
+  const seen = new Set<string>();
+  const left: EntryCheckColumn[] = [];
+  for (const column of columns) {
+    const key = `${column.year}:${column.measure}`;
+    if (seen.has(key)) continue;
+    if (!settings.measures.includes(column.measure)) continue;
+    if (settings.frozen.includes(`${nature}:${column.year}:${column.measure}`)) continue;
+    if (Number(column.total) === 0) continue;
+    if (lastYear !== null && column.year > lastYear) continue;
+    seen.add(key);
+    left.push({ year: column.year, measure: column.measure });
+  }
+  return left.sort((a, b) => a.year - b.year || AMOUNT_MEASURES.indexOf(a.measure) - AMOUNT_MEASURES.indexOf(b.measure));
+}
+
+/**
+ * The columns to check of lines as they stand, whatever their account (`lineColumnsToCheckSql`):
+ * what a move onto an expected account leaves to check. One statement; a line without one is absent.
+ */
+export async function readColumnsToCheckOnAnyAccount(
+  manager: EntityManager,
+  tenantId: string,
+  itemIds: readonly string[],
+  settings?: EntryCheckSettings,
+): Promise<Map<string, EntryCheckColumn[]>> {
+  const result = new Map<string, EntryCheckColumn[]>();
+  const ids = Array.from(new Set(itemIds));
+  if (ids.length === 0) return result;
+  const rule = settings ?? await loadEntryCheckSettings(manager, tenantId);
+  const stmt = new SqlStatement(tenantId);
+  const query = stmt.finalize(`SELECT li.id::text AS item_id, c.year, c.measure
+    FROM spend_items li
+    CROSS JOIN LATERAL (${lineColumnsToCheckSql(stmt, 'li', rule)}) c
+    WHERE li.tenant_id = ${stmt.tenant}${naturesAnd('li', BUDGET_NATURES)} AND li.id = ANY(${stmt.bind(ids, 'uuid[]')})`);
+  const rows: Array<{ item_id: string; year: number; measure: AmountMeasure }> = await manager.query(query.sql, query.params);
+  for (const row of rows) {
+    const list = result.get(row.item_id) ?? [];
+    list.push({ year: Number(row.year), measure: row.measure });
+    result.set(row.item_id, list);
+  }
+  for (const list of result.values()) {
+    list.sort((a, b) => a.year - b.year || AMOUNT_MEASURES.indexOf(a.measure) - AMOUNT_MEASURES.indexOf(b.measure));
   }
   return result;
 }
