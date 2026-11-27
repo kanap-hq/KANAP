@@ -24,6 +24,7 @@ Tant que la connexion est en cours de création, son en-tête affiche **Créer**
 - Quand Kadratis refuse la connexion, par exemple avec le même actif des deux côtés, le message s'affiche sous le champ concerné. Le brouillon reste tel quel
 - Une fois la connexion créée, **Créer** devient **Terminé**. **Terminé** enregistre ce que vous êtes en train de saisir et vous ramène à votre point de départ
 - **Annuler** supprime la connexion. Si vous l'avez modifiée après sa création, une confirmation liste ce qui sera supprimé. Vous pouvez annuler votre propre création sans le droit de supprimer des connexions
+- Dès qu'une autre personne a modifié la connexion, ou qu'une liaison d'interface ou un document y est lié, **Annuler** est refusé : supprimez plutôt la connexion
 
 Si vous quittez la connexion autrement (le menu, la flèche de retour), elle est conservée : elle est complète.
 

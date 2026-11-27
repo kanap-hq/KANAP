@@ -24,6 +24,7 @@ While the connection is being created, its header shows **Create** and **Cancel*
 - When Kadratis refuses the connection, for example with the same asset on both sides, the message shows under the field concerned. The draft stays as it is
 - Once the connection is created, **Create** becomes **Done**. **Done** saves what you are still typing and takes you back to where you started
 - **Cancel** deletes the connection. If you changed it after it was created, a confirmation lists what will be deleted. You can cancel your own creation without the right to delete connections
+- Once another person has changed the connection, or an interface binding or a document is linked to it, **Cancel** is refused: delete the connection instead
 
 Leaving the connection another way (the menu, the back arrow) keeps it: it is complete.
 
