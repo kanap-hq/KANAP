@@ -232,8 +232,11 @@ export interface ImportRefusedProposal {
    * A family the person does not read is refused as missing: nothing of its list is named.
    */
   target: string;
-  /** `missing`: no such record the person reads; `disabled`: the record is disabled (the budget file). */
-  reason: 'missing' | 'disabled';
+  /**
+   * `missing`: no such record the person reads; `disabled`: the record is disabled (the budget file);
+   * `shared`: several records have that name (two streams of two categories), so it names none.
+   */
+  reason: 'missing' | 'disabled' | 'shared';
   lines: number[];
   count: number;
 }

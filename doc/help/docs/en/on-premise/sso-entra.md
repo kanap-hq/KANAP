@@ -145,7 +145,7 @@ You can also grant the consent from the Azure portal with **Grant admin consent 
 Once authorized, Kadratis contacts Microsoft Graph every night at 03:00 UTC (the clock of the API container) and, for every user linked to Entra:
 
 - Refreshes first name, last name, job title, business phone, mobile phone
-- Matches the directory department and company **by name** against existing Kadratis records. Nothing is created automatically, and a name with no match leaves the assignment unchanged.
+- Matches the directory department and company **by name** against existing Kadratis records. Nothing is created automatically, and a name with no match leaves the assignment unchanged. The department is looked up in the person's company; without a company, a department name that several companies share changes nothing. A new company clears a department of the old one.
 - Sets the interface language only if the person has not chosen one
 - Disables the Kadratis account if the person was removed from the directory, or if their directory account was deactivated (`accountEnabled` is false)
 

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { ClassificationGapsResponse, GapCounts } from '../dto/classification-gaps.dto';
+import { TASK_SHOWN_STREAM_SQL } from '../../tasks/task-shown-classification';
 
 /**
  * Counts the open portfolio items that still miss a classification value.
@@ -10,7 +11,8 @@ import { ClassificationGapsResponse, GapCounts } from '../dto/classification-gap
  * incident tasks, so those are out of scope and would otherwise be permanent false positives.
  *
  * A project task with no classification of its own inherits its project's, and the task list
- * shows that inherited value. The counts use the same COALESCE, so a figure never sends the
+ * shows that inherited value (its project's stream only with its project's category,
+ * `TASK_SHOWN_STREAM_SQL`). The counts use the same expressions, so a figure never sends the
  * user to a list where the column is already filled.
  *
  * A missing stream is only a gap when the item already has a category and that category
@@ -62,7 +64,7 @@ export class PortfolioClassificationGapsService {
         SELECT
           COALESCE(t.source_id, pp.source_id) AS source_id,
           COALESCE(t.category_id, pp.category_id) AS category_id,
-          COALESCE(t.stream_id, pp.stream_id) AS stream_id,
+          ${TASK_SHOWN_STREAM_SQL} AS stream_id,
           t.task_type_id
         FROM tasks t
         LEFT JOIN portfolio_projects pp

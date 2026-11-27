@@ -137,7 +137,7 @@ export interface CsvImportRefusedProposal {
   name: string | null;
   value: string;
   target: string;
-  reason: 'missing' | 'disabled';
+  reason: 'missing' | 'disabled' | 'shared';
   lines: number[];
   count: number;
 }

@@ -144,7 +144,7 @@ También puede conceder el consentimiento desde el portal de Azure con **Concede
 Una vez autorizada, Kadratis consulta Microsoft Graph cada noche a las 03:00 UTC (el reloj del contenedor de la API) y, para cada usuario vinculado a Entra:
 
 - Actualiza el nombre, los apellidos, el cargo, el teléfono profesional y el teléfono móvil
-- Compara el departamento y la empresa del directorio **por nombre** con los registros existentes en Kadratis. No se crea nada automáticamente, y un nombre sin coincidencia deja la asignación sin cambios.
+- Compara el departamento y la empresa del directorio **por nombre** con los registros existentes en Kadratis. No se crea nada automáticamente, y un nombre sin coincidencia deja la asignación sin cambios. El departamento se busca en la empresa de la persona; sin empresa, un nombre de departamento que comparten varias empresas no cambia nada. Una nueva empresa vacía un departamento de la anterior.
 - Define el idioma de la interfaz solo si la persona no ha elegido uno
 - Desactiva la cuenta de Kadratis si la persona se eliminó del directorio o si su cuenta del directorio se desactivó (`accountEnabled` es false)
 

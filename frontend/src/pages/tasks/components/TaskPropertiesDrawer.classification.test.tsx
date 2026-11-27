@@ -10,6 +10,7 @@ import TaskPropertiesDrawer from './TaskPropertiesDrawer';
 
 const CATEGORY_DIGITAL = '1f0c2a4e-0000-4000-8000-00000000c001';
 const CATEGORY_APPS = '1f0c2a4e-0000-4000-8000-00000000c002';
+const CATEGORY_INFRA = '1f0c2a4e-0000-4000-8000-00000000c003';
 const STREAM_CUSTOMER = '73e0d9d6-0000-4000-8000-00000000f001';
 const STREAM_UNKNOWN = '73e0d9d6-0000-4000-8000-00000000f002';
 const CLASSIFICATION = {
@@ -17,6 +18,7 @@ const CLASSIFICATION = {
   categories: [
     { id: CATEGORY_DIGITAL, name: 'Digital transformation', is_active: true },
     { id: CATEGORY_APPS, name: 'Business applications', is_active: true },
+    { id: CATEGORY_INFRA, name: 'Infrastructure', is_active: true },
   ],
   // The project's stream belongs to another category than the project's one.
   streams: [{ id: STREAM_CUSTOMER, name: 'Customer experience', category_id: CATEGORY_APPS, is_active: true }],
@@ -54,14 +56,14 @@ const fromProject = (streamId: string) => ({
   stream_name: null,
 });
 
-function renderDrawer(task: ReturnType<typeof fromProject>) {
+function renderDrawer(task: Record<string, unknown>, options: { isCreate?: boolean; onPatch?: (patch: Record<string, unknown>) => void } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ThemeModeProvider>
         <ThemeProvider theme={createAppTheme('light')}>
           <MemoryRouter>
-            <TaskPropertiesDrawer task={task as any} open onToggle={() => {}} onPatch={() => {}} isCreate />
+            <TaskPropertiesDrawer task={task as any} open onToggle={() => {}} onPatch={options.onPatch ?? (() => {})} isCreate={options.isCreate ?? true} />
           </MemoryRouter>
         </ThemeProvider>
       </ThemeModeProvider>
@@ -79,7 +81,7 @@ function fieldRow(label: string): HTMLElement {
 describe('TaskPropertiesDrawer classification of a new project task', () => {
   it('names a stream that lies outside the task category', async () => {
     renderDrawer(fromProject(STREAM_CUSTOMER));
-    expect(await within(fieldRow('Stream')).findByText('Customer experience')).toBeTruthy();
+    expect(await within(fieldRow('Stream')).findByText('Customer experience (Business applications)')).toBeTruthy();
     expect(within(fieldRow('Category')).getByText('Digital transformation')).toBeTruthy();
     expect(screen.queryByText(STREAM_CUSTOMER)).toBeNull();
   });
@@ -90,5 +92,35 @@ describe('TaskPropertiesDrawer classification of a new project task', () => {
     fireEvent.mouseDown(within(fieldRow('Stream')).getByRole('combobox'));
     await screen.findByRole('listbox');
     expect(screen.queryByText(STREAM_UNKNOWN)).toBeNull();
+  });
+});
+
+// A task saved before a stream had to belong to its category (lot I7a of 26.12.1): it keeps its stream,
+// shown with the stream's own category and without MUI's out-of-range warning, until its category or
+// its stream changes; another category clears the stream in the same save.
+describe('TaskPropertiesDrawer, a stored stream of another category', () => {
+  const stored = { ...fromProject(STREAM_CUSTOMER), id: 't-1', stream_name: 'Customer experience', category_name: 'Digital transformation' };
+
+  it('shows it with its own category, without a warning', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      renderDrawer(stored, { isCreate: false });
+      expect(await within(fieldRow('Stream')).findByText('Customer experience (Business applications)')).toBeTruthy();
+      const warnings = [...warn.mock.calls, ...error.mock.calls].map((call) => String(call[0]));
+      expect(warnings.filter((text) => /out-of-range|MUI/.test(text))).toEqual([]);
+    } finally {
+      warn.mockRestore();
+      error.mockRestore();
+    }
+  });
+
+  it('clears the stream when the category changes to one the stream is not in', async () => {
+    const onPatch = vi.fn();
+    renderDrawer(stored, { isCreate: false, onPatch });
+    await within(fieldRow('Stream')).findByText('Customer experience (Business applications)');
+    fireEvent.mouseDown(within(fieldRow('Category')).getByRole('combobox'));
+    fireEvent.click(within(await screen.findByRole('listbox')).getByText('Infrastructure'));
+    expect(onPatch).toHaveBeenCalledWith({ category_id: CATEGORY_INFRA, stream_id: null });
   });
 });
