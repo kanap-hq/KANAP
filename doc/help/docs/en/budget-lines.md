@@ -540,7 +540,7 @@ On such a line, the **Budget** tab:
 
 A column is to check when it is shown, is not frozen, has a total other than zero for the year, and is not built from quantity and price lines. Every year counts. A spread, a column entered by month or edited by hand, and a column that keeps its lines only as a reference are to check. A column copied from a column built from lines is built from lines too, so it is not.
 
-The [budget file](budget-file.md#consistency-warnings) and [Kad](ai-assistant.md#tool-calls) write totals only. An amount they write on such an account is to check until its column is built from quantity and price lines. Both warn before the write, and the write is allowed. A [change in bulk](#changing-lines-in-bulk) that moves lines onto such an account counts the lines to check in its outcome.
+The [budget file](budget-file.md#consistency-warnings) and [Kad](ai-assistant.md#tool-calls) write totals only. An amount they write on such an account is to check until its column is built from quantity and price lines. Both warn before the write, and the write is allowed. A [change in bulk](#changing-lines-in-bulk) that moves lines onto such an account counts the lines to check in its outcome. [Copy budget columns](budget-operations.md#copy-budget-columns) counts the copied lines to check in its outcome too.
 
 To find these lines, show the **To check** column of the list and filter it on **Quantity and price**, or click **Quantity and price to check** in the [Data hygiene](my-dashboard.md#data-hygiene) tile. That tile is off until you add it: **Customize the home page**, then **Add a tile** (+) in the **Budget management** section.
 
