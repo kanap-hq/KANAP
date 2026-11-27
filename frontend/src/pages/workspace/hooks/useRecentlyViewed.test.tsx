@@ -32,6 +32,28 @@ describe('recent budget lines', () => {
   });
 });
 
+describe('recent interfaces', () => {
+  const ID = '0b6f6a3e-4c2d-4f8e-9a1b-2c3d4e5f6a7b';
+
+  it('keeps an interface by its id with its INT reference, so a delete drops it', () => {
+    const { result } = renderHook(useRecentlyViewed);
+    act(() => result.current.addToRecent('interface', ID, 'Orders', 'INT-4'));
+    expect(result.current.items[0]).toMatchObject({ type: 'interface', id: ID, ref: 'INT-4' });
+    expect(ENTITY_TYPE_CONFIG.interface.route(result.current.items[0].id, result.current.items[0].ref)).toBe('/it/interfaces/INT-4');
+    act(() => forgetRecentlyViewed([ID]));
+    expect(JSON.parse(localStorage.getItem(KEY)!)).toEqual([]);
+  });
+
+  it('shows and opens an entry kept under its reference, and the next visit replaces it', () => {
+    localStorage.setItem(KEY, JSON.stringify([{ type: 'interface', id: 'INT-4', label: 'Orders', viewedAt: 1 }]));
+    const { result } = renderHook(useRecentlyViewed);
+    expect(result.current.items[0]).toMatchObject({ id: 'INT-4', ref: 'INT-4' });
+    expect(ENTITY_TYPE_CONFIG.interface.route(result.current.items[0].id, result.current.items[0].ref)).toBe('/it/interfaces/INT-4');
+    act(() => result.current.addToRecent('interface', ID, 'Orders', 'INT-4'));
+    expect(result.current.items.map((item) => [item.id, item.ref])).toEqual([[ID, 'INT-4']]);
+  });
+});
+
 describe('a deleted record', () => {
   it('leaves the open list at once', () => {
     const { result } = renderHook(useRecentlyViewed);

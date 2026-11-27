@@ -5,6 +5,15 @@ import { RECENT_VIEWS_CHANGED, RECENT_VIEWS_PREFIX } from '../../../lib/recentVi
 
 const MAX_ITEMS = 10;
 const isBudgetLine = (type: RecentEntityType) => type === 'spend_item' || type === 'capex_item';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Interfaces were once kept under their reference (`INT-4`) in place of their id, without `ref`.
+ * Such an entry shows and opens by that reference; the next visit replaces it (`addToRecent`).
+ */
+function withLegacyReference(item: RecentItem): RecentItem {
+  return item.type === 'interface' && !item.ref && typeof item.id === 'string' && !UUID_RE.test(item.id) ? { ...item, ref: item.id } : item;
+}
 
 export type RecentEntityType =
   | 'project'
@@ -42,7 +51,7 @@ function getStorageKey(tenantSlug: string, userId: string): string {
 function loadFromStorage(storageKey: string): RecentItem[] {
   try {
     const stored = localStorage.getItem(storageKey);
-    const parsed = stored ? (JSON.parse(stored) as RecentItem[]) : [];
+    const parsed = (stored ? (JSON.parse(stored) as RecentItem[]) : []).map(withLegacyReference);
     return parsed.filter((item, index) => !parsed.slice(0, index).some((previous) =>
       previous.id === item.id && (previous.type === item.type || (isBudgetLine(previous.type) && isBudgetLine(item.type)))
     )).slice(0, MAX_ITEMS);
@@ -86,8 +95,9 @@ export function useRecentlyViewed() {
   const addToRecent = useCallback(
     (type: RecentEntityType, id: string, label: string, ref?: string) => {
       setItems((prev) => {
-        // Remove existing entry for the same item
-        const filtered = prev.filter((r) => !(r.id === id && (r.type === type || (isBudgetLine(r.type) && isBudgetLine(type)))));
+        // Remove existing entry for the same item, and one kept under its reference (`withLegacyReference`).
+        const filtered = prev.filter((r) => !(r.id === id && (r.type === type || (isBudgetLine(r.type) && isBudgetLine(type))))
+          && !(ref && r.type === type && r.id === ref));
         // Add new entry at the beginning
         const entry: RecentItem = { type, id, label, viewedAt: Date.now(), ...(ref ? { ref } : {}) };
         const updated = [entry, ...filtered].slice(
