@@ -98,7 +98,9 @@ function testThrowawayOnly() {
       if (entry.isDirectory()) walk(full);
       else if (entry.name.endsWith('.spec.ts')) {
         const file = path.relative(backendPath(), full);
-        if (/^\s*assertThrowawayDatabase\(/m.test(fs.readFileSync(full, 'utf8'))) guarded.push(file);
+        // The guard's own spec calls it on fakes, against no database.
+        const ownSpec = file === path.join('src', 'common', '__tests__', 'throwaway-database.spec.ts');
+        if (!ownSpec && /^\s*assertThrowawayDatabase\(/m.test(fs.readFileSync(full, 'utf8'))) guarded.push(file);
         if (!runner.RACE_SPEC.test(file) && runner.throwawayOnly(file)) marked.push(file);
       }
     }

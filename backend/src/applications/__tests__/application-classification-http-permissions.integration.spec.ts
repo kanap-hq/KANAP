@@ -12,7 +12,7 @@ import dataSource from '../../data-source';
 import { ACCESS_TOKEN_PURPOSE } from '../../auth/access-token.util';
 import { applyHttpMiddleware, applyTenancyAndPipeline } from '../../http-app';
 import { catalogToMetadata, DEFAULT_CLASSIFICATION_CATALOG } from '../../it-ops-settings/classification-catalog';
-import { assertThrowawayDatabase } from '../../common/__tests__/throwaway-database';
+import { assertThrowawayConnection, assertThrowawayDatabase } from '../../common/__tests__/throwaway-database';
 import { cleanupTenants } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
 
 // The permission guards of the classification routes, over HTTP: the whole application
@@ -33,6 +33,8 @@ async function main() {
   const JWT_SECRET = process.env.JWT_SECRET as string;
 
   await dataSource.initialize();
+
+  await assertThrowawayConnection(dataSource, 'application-classification-http-permissions.integration.spec.ts');
   const manager = dataSource.manager;
   const tenantId = randomUUID();
   const slug = `classification-http-${tenantId.slice(0, 8)}`;

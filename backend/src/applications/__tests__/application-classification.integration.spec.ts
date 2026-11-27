@@ -6,7 +6,7 @@ import { CsvJsonValidators } from '../../common/csv/csv-json-validators';
 import { ApplicationsCsvService } from '../applications-csv.service';
 import { ApplicationClassificationV11853480000000 } from '../../migrations/1853480000000-application-classification-v1';
 import 'reflect-metadata';
-import { assertThrowawayDatabase } from '../../common/__tests__/throwaway-database';
+import { assertThrowawayConnection, assertThrowawayDatabase } from '../../common/__tests__/throwaway-database';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import dataSource from '../../data-source';
@@ -27,6 +27,7 @@ import { applicationsRegistry } from '../../ai/query/registries/applications.reg
 async function main() {
   assertThrowawayDatabase('application-classification.integration.spec.ts');
   await dataSource.initialize();
+  await assertThrowawayConnection(dataSource, 'application-classification.integration.spec.ts');
   const runner = dataSource.createQueryRunner(); await runner.connect(); await runner.startTransaction();
   const manager = runner.manager;
   const audit = new AuditService(manager.getRepository(AuditLog));

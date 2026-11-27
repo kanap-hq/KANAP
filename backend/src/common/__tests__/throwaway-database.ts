@@ -5,6 +5,10 @@
  * such as `appdb_ci`), and on GitHub Actions' `appdb`, a service container thrown away after the run.
  * A spec that calls this guard carries the marker `@throwaway-db-spec`: `scripts/run-ci-tests.js`
  * leaves it out of a run on a developer's `appdb`, as it does the race specs.
+ *
+ * The guard runs twice: on the URL before any connection (`assertThrowawayDatabase`), then on the
+ * database the connection really opened (`assertThrowawayConnection`), which a URL may name other
+ * than by its path (a socket URL with `?db=`, a query parameter). The race harness runs the same two.
  */
 
 /** The database name of DATABASE_URL, or null (the reading of `scripts/run-ci-tests.js`). */
@@ -24,4 +28,23 @@ export function assertThrowawayDatabase(spec: string): void {
   if (name === 'appdb' && process.env.GITHUB_ACTIONS !== 'true') {
     throw new Error(`${spec} never runs against appdb: point DATABASE_URL at a throwaway database (appdb_ci, a lane copy).`);
   }
+}
+
+/**
+ * The same refusal, on the database the connection opened (`current_database()`). A refused
+ * connection is closed (`destroy`, a TypeORM DataSource), so the spec exits instead of waiting on it.
+ */
+export async function assertThrowawayConnection(
+  source: { query: (sql: string) => Promise<Array<{ db?: string }>>; destroy?: () => Promise<void> },
+  spec: string,
+): Promise<void> {
+  const [row] = await source.query('SELECT current_database() AS db');
+  const refusal = !row?.db
+    ? `${spec}: the connection names no database.`
+    : row.db === 'appdb' && process.env.GITHUB_ACTIONS !== 'true'
+      ? `${spec} never runs against appdb: point DATABASE_URL at a throwaway database (appdb_ci, a lane copy).`
+      : null;
+  if (!refusal) return;
+  await source.destroy?.().catch(() => undefined);
+  throw new Error(refusal);
 }

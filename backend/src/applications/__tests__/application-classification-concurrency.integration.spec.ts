@@ -1,6 +1,6 @@
 // @throwaway-db-spec: commits fixtures across connections; refuses a developer's appdb
 import 'reflect-metadata';
-import { assertThrowawayDatabase } from '../../common/__tests__/throwaway-database';
+import { assertThrowawayConnection, assertThrowawayDatabase } from '../../common/__tests__/throwaway-database';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { BadRequestException } from '@nestjs/common';
@@ -29,6 +29,8 @@ async function main() {
   assertThrowawayDatabase('application-classification-concurrency.integration.spec.ts');
 
   await dataSource.initialize();
+
+  await assertThrowawayConnection(dataSource, 'application-classification-concurrency.integration.spec.ts');
   const tenantId = randomUUID();
   const applicationId = randomUUID();
   const setup = dataSource.createQueryRunner();
