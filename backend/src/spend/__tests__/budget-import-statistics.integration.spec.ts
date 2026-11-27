@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { Logger } from '@nestjs/common';
 import dataSource from '../../data-source';
 import { waitForBackgroundWork } from '../../common/background-work';
 import {
@@ -107,11 +108,24 @@ async function testAfterSampleData() {
   const warnings: string[] = [];
   const service = { dataSource, logger: { warn: (line: string) => warnings.push(line), log: () => undefined } };
   const started = Date.now();
-  // Private to the service: called as its load calls it, once the loader is done.
-  const returned = (DemoDataService.prototype as any).analyzeAfterLoad.call(service);
-  assert.equal(await waitForBackgroundWork(Date.now() + 60000), 0, 'tracked as background work, and finished');
-  await returned;
-  const elapsed = Date.now() - started;
+  // The log line names the sample data load, not an import.
+  const logged: string[] = [];
+  const log = Logger.prototype.log;
+  Logger.prototype.log = function (this: Logger, message: any, ...rest: any[]) {
+    logged.push(String(message));
+    return log.call(this, message, ...rest);
+  };
+  let elapsed: number;
+  try {
+    // Private to the service: called as its load calls it, once the loader is done.
+    const returned = (DemoDataService.prototype as any).analyzeAfterLoad.call(service);
+    assert.equal(await waitForBackgroundWork(Date.now() + 60000), 0, 'tracked as background work, and finished');
+    await returned;
+    elapsed = Date.now() - started;
+  } finally {
+    Logger.prototype.log = log;
+  }
+  assert.ok(logged.some((line) => line.startsWith('ANALYZE after a sample data load: spend_items')), `the log says what wrote the tables: ${logged.join(' | ')}`);
   const after = await analyzeCounts(tables);
   for (const table of tables) assert.ok(after[table] > before[table], `${table} analysed (${before[table]} -> ${after[table]})`);
   assert.deepEqual(warnings, [], 'no failure');

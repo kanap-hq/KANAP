@@ -96,9 +96,14 @@ const errorCode = (error: unknown) => (error as any)?.driverError?.code ?? (erro
  * ANALYZE of each of `tables` the current role may analyse, one short transaction per table (a
  * table's lock is held only while it is sampled). A table the role does not own (the same check
  * as 1853820000000: owner or member of the owner role) or that does not exist is skipped and
- * logged; PostgreSQL would only warn and skip it. Never throws.
+ * logged; PostgreSQL would only warn and skip it. Never throws. `after` names what wrote the tables
+ * in the log lines: a large import (the budget file, Kad's approval), or a sample data load.
  */
-export async function analyzeTables(dataSource: DataSource, tables: readonly string[]): Promise<AnalyzeReport> {
+export async function analyzeTables(
+  dataSource: DataSource,
+  tables: readonly string[],
+  after: 'a large import' | 'a sample data load' = 'a large import',
+): Promise<AnalyzeReport> {
   const started = Date.now();
   const report: AnalyzeReport = { analysed: [], notOwned: [], missing: [], failed: [] };
   const runner = dataSource.createQueryRunner();
@@ -131,11 +136,11 @@ export async function analyzeTables(dataSource: DataSource, tables: readonly str
   } finally {
     if (!runner.isReleased) await runner.release().catch(() => undefined);
   }
-  if (report.analysed.length) logger.log(`ANALYZE after a large import: ${report.analysed.join(', ')} (${Date.now() - started} ms)`);
+  if (report.analysed.length) logger.log(`ANALYZE after ${after}: ${report.analysed.join(', ')} (${Date.now() - started} ms)`);
   if (report.notOwned.length) {
-    logger.warn(`ANALYZE after a large import skipped ${report.notOwned.join(', ')}: the application role does not own them (as their owner: ANALYZE ${report.notOwned.join(', ')}); autovacuum will analyse them`);
+    logger.warn(`ANALYZE after ${after} skipped ${report.notOwned.join(', ')}: the application role does not own them (as their owner: ANALYZE ${report.notOwned.join(', ')}); autovacuum will analyse them`);
   }
-  if (report.missing.length) logger.warn(`ANALYZE after a large import: no table ${report.missing.join(', ')}`);
-  if (report.failed.length) logger.warn(`ANALYZE after a large import did not run for ${report.failed.join(', ')}; autovacuum will analyse them`);
+  if (report.missing.length) logger.warn(`ANALYZE after ${after}: no table ${report.missing.join(', ')}`);
+  if (report.failed.length) logger.warn(`ANALYZE after ${after} did not run for ${report.failed.join(', ')}; autovacuum will analyse them`);
   return report;
 }

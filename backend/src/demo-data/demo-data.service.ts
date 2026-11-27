@@ -1584,7 +1584,7 @@ export class DemoDataService implements OnApplicationShutdown {
    */
   @NeverRejects()
   private async analyzeAfterLoad(): Promise<void> {
-    await analyzeTables(this.dataSource, lineImportTables('opex'));
+    await analyzeTables(this.dataSource, lineImportTables('opex'), 'a sample data load');
   }
 
   private async runLoad(run: {
