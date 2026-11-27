@@ -14,3 +14,10 @@ export function documentRevisionConflict(): ConflictException {
     message: 'Document revision conflict',
   });
 }
+
+/** Whether `error` is that refusal (`documentRevisionConflict`). */
+export function isDocumentRevisionConflict(error: unknown): boolean {
+  if (!(error instanceof ConflictException)) return false;
+  const response = error.getResponse();
+  return typeof response === 'object' && response !== null && (response as { code?: unknown }).code === DOCUMENT_REVISION_CONFLICT;
+}
