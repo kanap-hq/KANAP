@@ -1,9 +1,18 @@
 import type { TFunction } from 'i18next';
 import type { CsvFieldInfo, CsvExportPreset } from './csv.types';
 
-/** The entity key of a list endpoint, for the labels of its fields: `/applications` gives `applications`. */
+const ID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The entity key of a list endpoint, for the labels of its fields: `/applications` gives
+ * `applications`. A record's own list is the list it ends with (`/chart-of-accounts/<id>/accounts`
+ * gives `accounts`); a record's path names none.
+ */
 export function csvEntityOf(endpoint: string): string {
-  return String(endpoint ?? '').split('?')[0].split('/').filter(Boolean).join('_');
+  const segments = String(endpoint ?? '').split('?')[0].split('/').filter(Boolean);
+  const lastId = segments.reduce((found, segment, index) => (ID_SEGMENT.test(segment) ? index : found), -1);
+  const list = lastId >= 0 && lastId < segments.length - 1 ? segments.slice(lastId + 1) : segments.filter((segment) => !ID_SEGMENT.test(segment));
+  return list.join('_');
 }
 
 const slug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
@@ -14,13 +23,22 @@ function translated(t: TFunction, key: string, fallback: string): string {
   return text === key ? fallback : text;
 }
 
+/** A column of one year (`headcount_2026`): its base and its year. */
+const YEARLY_COLUMN = /^(.+)_(\d{4})$/;
+
 /**
  * The label of an export field in the screen language: `csv.fields.<entity>.<column>` in the
- * common namespace, else the server's label, else the column.
+ * common namespace, else, for a column of one year (`headcount_2026`), the label of its base and the
+ * year, else the server's label, else the column.
  */
 export function csvFieldLabel(t: TFunction, entity: string, field: Pick<CsvFieldInfo, 'csvColumn' | 'label'>): string {
   const plain = String(field.label ?? '').trim() || field.csvColumn;
-  return entity ? translated(t, `csv.fields.${entity}.${field.csvColumn}`, plain) : plain;
+  if (!entity) return plain;
+  const own = translated(t, `csv.fields.${entity}.${field.csvColumn}`, '');
+  if (own) return own;
+  const yearly = YEARLY_COLUMN.exec(field.csvColumn);
+  const base = yearly ? translated(t, `csv.fields.${entity}.${yearly[1]}`, '') : '';
+  return base ? `${base} ${yearly![2]}` : plain;
 }
 
 /** The label of a field group (`Identity`, `Overview`...) in the screen language; the server's name when unknown. */

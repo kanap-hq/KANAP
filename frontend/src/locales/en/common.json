@@ -931,16 +931,150 @@
       "contracts": {
         "company_name": "Company",
         "supplier_name": "Supplier",
-        "cost_center": "Cost center"
+        "cost_center": "Cost center",
+        "reference": "Reference",
+        "name": "Name",
+        "start_date": "Start date",
+        "duration_months": "Duration in months",
+        "auto_renewal": "Auto renewal",
+        "notice_period_months": "Notice period in months",
+        "yearly_amount_at_signature": "Yearly amount at signature",
+        "currency": "Currency",
+        "billing_frequency": "Billing frequency",
+        "status": "Status",
+        "owner_email": "Owner email",
+        "notes": "Notes"
       },
       "contacts": {
-        "supplier_name": "Supplier"
+        "supplier_name": "Supplier",
+        "reference": "Reference",
+        "first_name": "First name",
+        "last_name": "Last name",
+        "job_title": "Job title",
+        "email": "E-mail",
+        "phone": "Phone",
+        "mobile": "Mobile",
+        "country": "Country",
+        "supplier_role": "Contact type",
+        "notes": "Notes",
+        "active": "Active"
       },
       "cost-centers": {
-        "company_name": "Company"
+        "company_name": "Company",
+        "code": "Code",
+        "kind": "Type",
+        "name": "Name",
+        "parent_code": "Parent code",
+        "owner_email": "Owner e-mail",
+        "description": "Description",
+        "status": "Status",
+        "disabled_at": "Disabled on"
       },
       "business-processes": {
-        "parent_name": "Parent"
+        "parent_name": "Parent",
+        "name": "Name",
+        "process_type": "Process type",
+        "description": "Description",
+        "notes": "Notes",
+        "status": "Status"
+      },
+      "suppliers": {
+        "reference": "Reference",
+        "name": "Name",
+        "erp_supplier_id": "ERP supplier ID",
+        "commercial_contact": "Commercial contact",
+        "technical_contact": "Technical contact",
+        "support_contact": "Support contact",
+        "notes": "Notes",
+        "status": "Status",
+        "disabled_at": "Disabled on"
+      },
+      "companies": {
+        "reference": "Reference",
+        "name": "Name",
+        "country_iso": "Country",
+        "address1": "Address",
+        "address2": "Address line 2",
+        "postal_code": "Postal code",
+        "city": "City",
+        "state": "State or region",
+        "reg_number": "Registration number",
+        "vat_number": "VAT number",
+        "base_currency": "Base currency",
+        "status": "Status",
+        "disabled_at": "Disabled on",
+        "notes": "Notes",
+        "headcount": "Headcount",
+        "it_users": "IT users",
+        "turnover": "Turnover in millions"
+      },
+      "departments": {
+        "reference": "Reference",
+        "company_name": "Company",
+        "name": "Name",
+        "description": "Description",
+        "status": "Status",
+        "disabled_at": "Disabled on"
+      },
+      "accounts": {
+        "coa_code": "Chart of accounts",
+        "account_number": "Account number",
+        "account_name": "Account name",
+        "native_name": "Native name",
+        "description": "Description",
+        "consolidation_account_number": "Consolidation account number",
+        "consolidation_account_name": "Consolidation account name",
+        "consolidation_account_description": "Consolidation account description",
+        "status": "Status",
+        "nature": "Nature",
+        "quantity_price_expected": "Quantity and price entry"
+      },
+      "analytics-categories": {
+        "axis_code": "Dimension",
+        "name": "Name",
+        "description": "Description",
+        "status": "Status",
+        "disabled_at": "Disabled on",
+        "applies_to": "Applies to"
+      },
+      "working-day-profiles": {
+        "code": "Code",
+        "name": "Name",
+        "description": "Description",
+        "country": "Country",
+        "region": "Region",
+        "status": "Status",
+        "disabled_at": "Disabled on",
+        "year": "Year",
+        "jan": "January",
+        "feb": "February",
+        "mar": "March",
+        "apr": "April",
+        "may": "May",
+        "jun": "June",
+        "jul": "July",
+        "aug": "August",
+        "sep": "September",
+        "oct": "October",
+        "nov": "November",
+        "dec": "December"
+      },
+      "technologies_asset-links": {
+        "asset_reference": "Server reference",
+        "asset_name": "Server",
+        "technology_reference": "Technology reference",
+        "technology_name": "Technology",
+        "version": "Version",
+        "operating_system": "Operating system",
+        "notes": "Notes"
+      },
+      "technologies_application-links": {
+        "application_reference": "Application reference",
+        "application_name": "Application",
+        "technology_reference": "Technology reference",
+        "technology_name": "Technology",
+        "version": "Version",
+        "notes": "Notes"
       }
     }
   },

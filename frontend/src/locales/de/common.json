@@ -931,16 +931,150 @@
       "contracts": {
         "company_name": "Unternehmen",
         "supplier_name": "Lieferant",
-        "cost_center": "Kostenstelle"
+        "cost_center": "Kostenstelle",
+        "reference": "Referenz",
+        "name": "Name",
+        "start_date": "Startdatum",
+        "duration_months": "Laufzeit in Monaten",
+        "auto_renewal": "Automatische Verlängerung",
+        "notice_period_months": "Kündigungsfrist in Monaten",
+        "yearly_amount_at_signature": "Jahresbetrag bei Unterzeichnung",
+        "currency": "Währung",
+        "billing_frequency": "Abrechnungsintervall",
+        "status": "Status",
+        "owner_email": "E-Mail des Verantwortlichen",
+        "notes": "Notizen"
       },
       "contacts": {
-        "supplier_name": "Lieferant"
+        "supplier_name": "Lieferant",
+        "reference": "Referenz",
+        "first_name": "Vorname",
+        "last_name": "Nachname",
+        "job_title": "Funktion",
+        "email": "E-Mail",
+        "phone": "Telefon",
+        "mobile": "Mobil",
+        "country": "Land",
+        "supplier_role": "Kontakttyp",
+        "notes": "Notizen",
+        "active": "Aktiv"
       },
       "cost-centers": {
-        "company_name": "Unternehmen"
+        "company_name": "Unternehmen",
+        "code": "Code",
+        "kind": "Typ",
+        "name": "Name",
+        "parent_code": "Übergeordneter Code",
+        "owner_email": "E-Mail des Verantwortlichen",
+        "description": "Beschreibung",
+        "status": "Status",
+        "disabled_at": "Deaktiviert am"
       },
       "business-processes": {
-        "parent_name": "Übergeordnet"
+        "parent_name": "Übergeordnet",
+        "name": "Name",
+        "process_type": "Prozesstyp",
+        "description": "Beschreibung",
+        "notes": "Notizen",
+        "status": "Status"
+      },
+      "suppliers": {
+        "reference": "Referenz",
+        "name": "Name",
+        "erp_supplier_id": "ERP-Lieferanten-ID",
+        "commercial_contact": "Kaufmännischer Kontakt",
+        "technical_contact": "Technischer Kontakt",
+        "support_contact": "Support-Kontakt",
+        "notes": "Notizen",
+        "status": "Status",
+        "disabled_at": "Deaktiviert am"
+      },
+      "companies": {
+        "reference": "Referenz",
+        "name": "Name",
+        "country_iso": "Land",
+        "address1": "Adresse",
+        "address2": "Adresszusatz",
+        "postal_code": "Postleitzahl",
+        "city": "Ort",
+        "state": "Bundesland oder Region",
+        "reg_number": "Registernummer",
+        "vat_number": "USt-IdNr.",
+        "base_currency": "Basiswährung",
+        "status": "Status",
+        "disabled_at": "Deaktiviert am",
+        "notes": "Notizen",
+        "headcount": "Mitarbeiter",
+        "it_users": "IT-Nutzer",
+        "turnover": "Umsatz in Millionen"
+      },
+      "departments": {
+        "reference": "Referenz",
+        "company_name": "Unternehmen",
+        "name": "Name",
+        "description": "Beschreibung",
+        "status": "Status",
+        "disabled_at": "Deaktiviert am"
+      },
+      "accounts": {
+        "coa_code": "Kontenplan",
+        "account_number": "Kontonummer",
+        "account_name": "Kontoname",
+        "native_name": "Originalname",
+        "description": "Beschreibung",
+        "consolidation_account_number": "Konsolidierungskontonummer",
+        "consolidation_account_name": "Name des Konsolidierungskontos",
+        "consolidation_account_description": "Beschreibung des Konsolidierungskontos",
+        "status": "Status",
+        "nature": "Art",
+        "quantity_price_expected": "Erfassung nach Menge und Preis"
+      },
+      "analytics-categories": {
+        "axis_code": "Dimension",
+        "name": "Name",
+        "description": "Beschreibung",
+        "status": "Status",
+        "disabled_at": "Deaktiviert am",
+        "applies_to": "Gilt für"
+      },
+      "working-day-profiles": {
+        "code": "Code",
+        "name": "Name",
+        "description": "Beschreibung",
+        "country": "Land",
+        "region": "Region",
+        "status": "Status",
+        "disabled_at": "Deaktiviert am",
+        "year": "Jahr",
+        "jan": "Januar",
+        "feb": "Februar",
+        "mar": "März",
+        "apr": "April",
+        "may": "Mai",
+        "jun": "Juni",
+        "jul": "Juli",
+        "aug": "August",
+        "sep": "September",
+        "oct": "Oktober",
+        "nov": "November",
+        "dec": "Dezember"
+      },
+      "technologies_asset-links": {
+        "asset_reference": "Serverreferenz",
+        "asset_name": "Server",
+        "technology_reference": "Technologiereferenz",
+        "technology_name": "Technologie",
+        "version": "Version",
+        "operating_system": "Betriebssystem",
+        "notes": "Notizen"
+      },
+      "technologies_application-links": {
+        "application_reference": "Anwendungsreferenz",
+        "application_name": "Anwendung",
+        "technology_reference": "Technologiereferenz",
+        "technology_name": "Technologie",
+        "version": "Version",
+        "notes": "Notizen"
       }
     }
   },

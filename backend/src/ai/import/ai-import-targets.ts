@@ -22,7 +22,7 @@ import type { BudgetFileChoice } from '../../spend/budget-file/types';
 import { isLookalikeChoiceEntry, parseLookalikeChoices, type ImportLookalikeChoice } from '../../common/csv/csv-lookalikes';
 import { DEFAULT_ANALYTICS_AXIS_LABELS, loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
 import type { AiImportColumnKind } from './ai-import-convert';
-import { defaultColumnTitle, TASK_COLUMN_TITLES } from './ai-import-titles';
+import { defaultColumnTitle, REQUEST_COLUMN_TITLES, TASK_COLUMN_TITLES } from './ai-import-titles';
 import { AI_IMPORT_ACCESS, type AiImportAccess, type AiImportKey } from './ai-import-access';
 import {
   BILLING_FREQUENCY_LABELS,
@@ -249,7 +249,8 @@ export const AI_IMPORT_TARGETS: Record<AiImportKey, AiImportTarget> = {
     names: { en: 'Requests', fr: 'Demandes', de: 'Anfragen', es: 'Solicitudes' },
     ...AI_IMPORT_ACCESS.portfolio_requests,
     about: 'One row per request, matched to a stored one by its name.',
-    columns: () => fromCsvConfig(portfolioRequestCsvConfig),
+    // Its columns named as the import screen names them (`REQUEST_COLUMN_TITLES`, P11 of 26.12.1).
+    columns: () => withTitles(fromCsvConfig(portfolioRequestCsvConfig), REQUEST_COLUMN_TITLES),
   },
   tasks: {
     key: 'tasks',
