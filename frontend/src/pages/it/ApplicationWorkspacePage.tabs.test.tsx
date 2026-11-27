@@ -33,10 +33,19 @@ vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () =
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/fields/SupplierSelect', () => ({ default: () => null }));
 vi.mock('../../components/fields/ContactSelect', () => ({ default: () => null }));
-vi.mock('../../components/fields/CompanySelect', () => ({ default: () => null }));
-vi.mock('../../components/fields/DepartmentMultiSelect', () => ({ default: () => null }));
+vi.mock('../../components/fields/CompanySelect', () => ({
+  default: ({ value }: { value?: string | null }) => <div data-testid="audience-company" data-company-id={value ?? ''} />,
+}));
+vi.mock('../../components/fields/DepartmentMultiSelect', () => ({
+  default: ({ value, companyId }: { value?: string[]; companyId?: string | null }) => (
+    <div data-testid="audience-departments" data-department-ids={(value || []).join(',')} data-company-id={companyId ?? ''} />
+  ),
+}));
 vi.mock('../../components/fields/TeamMemberMultiSelect', () => ({ default: () => null }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
+const auth = vi.hoisted(() => ({ hasLevel: (_resource: string, _level: string): boolean => true }));
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({ hasLevel: (resource: string, level: string) => auth.hasLevel(resource, level) }),
+}));
 vi.mock('../../components/IntegratedDocumentEditor', () => ({ default: () => <div data-testid="description-editor" /> }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => <div data-testid="knowledge-panel" /> }));
 vi.mock('../../components/history/RecordHistoryTab', () => ({
@@ -139,6 +148,7 @@ beforeEach(() => {
   mocked.post.mockReset();
   features.vulnerabilityFeed = true;
   enumOptions.byField.accessMethod = [];
+  auth.hasLevel = () => true;
 });
 
 describe('Operations tab access methods', () => {
@@ -481,5 +491,103 @@ describe('Application workspace vulnerabilities', () => {
     await screen.findByRole('textbox', { name: TITLE_FIELD });
     expect(vulnerabilityCalls()).toHaveLength(0);
     expect(screen.queryByTestId('vulnerability-severe-badge')).toBeNull();
+  });
+});
+
+describe('Application page reads only the routes the person may open', () => {
+  const RELATIONS = 4;
+  const INCIDENTS = 2;
+  const APPLICATION = {
+    id: 'app-1', sequential_id: 'APP-1', name: 'Billing', category: 'business', lifecycle: 'active', criticality: null,
+    supplier_id: null, editor: null, version: null, go_live_date: null, end_of_support_date: null, retired_date: null,
+    external_facing: false, is_suite: false, etl_enabled: false, access_methods: [], owners: [], companies: [] as Array<{ company_id: string }>,
+    departments: [] as Array<{ department_id: string }>,
+    data_residency: [], support_contacts: [], support_notes: null, deployments: [],
+  };
+  const AUDIENCE = {
+    ...APPLICATION,
+    departments: [{ department_id: 'dep-1' }, { department_id: 'dep-2' }],
+  };
+
+  function callsTo(url: string) {
+    return mocked.get.mock.calls.filter(([called]) => called === url);
+  }
+
+  function departmentRecordCalls() {
+    return mocked.get.mock.calls.filter(([called]) => /^\/departments\/(?!lookup\/)[^/]+$/.test(String(called)));
+  }
+
+  function renderApplication(application: typeof APPLICATION = APPLICATION) {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value); },
+      removeItem: (key: string) => { store.delete(key); },
+      clear: () => store.clear(),
+    });
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/applications/app-1/vulnerabilities') return { data: reach } as never;
+      if (url === '/applications/app-1/relations') return { data: relationsData() } as never;
+      if (url === '/applications/app-1/relations-count') return { data: { total: RELATIONS } } as never;
+      if (url === '/interfaces/by-application/app-1') return { data: { items: [] } } as never;
+      if (url === '/incidents') return { data: { items: [{ id: 'inc-1' }], total: INCIDENTS } } as never;
+      const lookup = /^\/departments\/lookup\/([^/]+)$/.exec(String(url));
+      if (lookup) return { data: { id: lookup[1], name: 'Finance', company_id: 'co-1' } } as never;
+      if (/^\/applications\/[^/]+$/.test(url)) return { data: application } as never;
+      throw new Error(`unexpected GET ${url}`);
+    });
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <KanapDialogProvider>
+            <MemoryRouter initialEntries={['/it/applications/app-1/overview']}>
+              <Routes>
+                <Route path="/it/applications/:id/:tab" element={<ApplicationWorkspacePage />} />
+              </Routes>
+            </MemoryRouter>
+          </KanapDialogProvider>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+  }
+
+  function relationsTab() {
+    return screen.getByRole('tab', { name: /workspace\.application\.tabs\.relations/ });
+  }
+
+  async function expectAudienceFromLookup() {
+    const departments = await screen.findByTestId('audience-departments');
+    expect(departments.getAttribute('data-department-ids')).toBe('dep-1,dep-2');
+    expect(departments.getAttribute('data-company-id')).toBe('co-1');
+    expect(screen.getByTestId('audience-company').getAttribute('data-company-id')).toBe('co-1');
+    expect(screen.queryByText('workspace.application.ownership.noAudience')).toBeNull();
+    expect(departmentRecordCalls()).toHaveLength(0);
+    expect(mocked.get.mock.calls.map(([url]) => url).filter((url) => String(url).startsWith('/departments/lookup/')).sort())
+      .toEqual(['/departments/lookup/dep-1', '/departments/lookup/dep-2']);
+  }
+
+  it('counts only the relations and does not read incidents without the incidents reader level', async () => {
+    auth.hasLevel = (resource) => resource !== 'incidents';
+    renderApplication();
+    await waitFor(() => expect(relationsTab().textContent).toBe(`workspace.application.tabs.relations${RELATIONS}`));
+    expect(callsTo('/incidents')).toHaveLength(0);
+  });
+
+  it('adds the incident count with one request when the person reads incidents', async () => {
+    renderApplication();
+    await waitFor(() => expect(relationsTab().textContent).toBe(`workspace.application.tabs.relations${RELATIONS + INCIDENTS}`));
+    expect(callsTo('/incidents')).toHaveLength(1);
+    expect(mocked.get).toHaveBeenCalledWith('/incidents', { params: { application_id: 'app-1', limit: 1 } });
+  });
+
+  it('shows the audience departments from the lookup route without the departments reader level', async () => {
+    auth.hasLevel = (resource) => resource !== 'departments';
+    renderApplication(AUDIENCE);
+    await expectAudienceFromLookup();
+  });
+
+  it('shows the same audience rows when the person reads departments', async () => {
+    renderApplication(AUDIENCE);
+    await expectAudienceFromLookup();
   });
 });
