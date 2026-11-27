@@ -70,10 +70,11 @@
  * the spec's last lines of output in the final list of failures.
  *
  * The race specs (`*-race.integration.spec.ts`) refuse a developer's `appdb`
- * (race-harness.ts). They run on the lane databases, which are throwaway
- * copies; on a single lane against `appdb` outside GitHub Actions they are
- * left out of the run, with one line saying how to run them on a dedicated
- * database.
+ * (race-harness.ts), and so do the specs marked `@throwaway-db-spec`
+ * (`src/common/__tests__/throwaway-database.ts`). They run on the lane
+ * databases, which are throwaway copies; on a single lane against `appdb`
+ * outside GitHub Actions they are left out of the run, with one line saying
+ * how to run them on a dedicated database.
  *
  * Usage: node scripts/run-ci-tests.js [--jobs N] [--db-lanes N] [--no-compile | --compile-only]
  */
@@ -87,14 +88,8 @@ require('dotenv').config({ path: path.resolve(__dirname, '..', '.env'), quiet: t
 // Database scripts that are part of the hardening checks.
 const EXTRA = ['scripts/tenant-isolation-audit.ts', 'scripts/rls-self-test.ts'];
 
-// Specs that need a dedicated, isolated database (`kanap_classification_v1_test`)
-// and refuse to run against `appdb`. Run them by hand with
-// `npm run test:application-classification:integration` / `:http`.
+// Specs left out of every run, each with its reason.
 const EXCLUDE = new Set([
-  'src/applications/__tests__/application-classification.integration.spec.ts',
-  'src/applications/__tests__/application-classification-concurrency.integration.spec.ts',
-  'src/applications/__tests__/application-classification-http-permissions.integration.spec.ts',
-  'src/it-ops-settings/__tests__/it-ops-settings.integration.spec.ts',
   // Known races, plan planning/perf-scale step 3: a spec that fails until its
   // lot lands is listed here; each fix PR removes its spec from this list (a
   // file mixing lots is split). Run them with `npm run test:races` on a
@@ -157,6 +152,13 @@ function compile() {
 }
 
 const RACE_SPEC = /-race\.integration\.spec\.ts$/;
+/** The marker of a spec that refuses a developer's appdb, as the race specs do (throwaway-database.ts). */
+const THROWAWAY_MARKER = /@throwaway-db-spec\b/;
+
+/** A spec that never runs against a developer's appdb: a race spec, or one marked `@throwaway-db-spec`. */
+function throwawayOnly(file) {
+  return RACE_SPEC.test(file) || THROWAWAY_MARKER.test(fs.readFileSync(path.join(root, file), 'utf8'));
+}
 
 /** The database name of DATABASE_URL, or null (same reading as race-harness.ts). */
 function databaseName(url = process.env.DATABASE_URL) {
@@ -168,7 +170,7 @@ function databaseName(url = process.env.DATABASE_URL) {
   }
 }
 
-/** The race specs refuse a developer's appdb; GitHub Actions' appdb is a throwaway service container. */
+/** The race and throwaway-only specs refuse a developer's appdb; GitHub Actions' appdb is a throwaway service container. */
 function racesRefused(url = process.env.DATABASE_URL) {
   return databaseName(url) === 'appdb' && process.env.GITHUB_ACTIONS !== 'true';
 }
@@ -412,12 +414,13 @@ async function main() {
 
   let leftOut = 0;
   if (urls.some((url) => racesRefused(url))) {
-    const races = specs.filter((f) => RACE_SPEC.test(f));
-    specs = specs.filter((f) => !RACE_SPEC.test(f));
+    const races = specs.filter(throwawayOnly);
+    specs = specs.filter((f) => !races.includes(f));
     leftOut = races.length;
     console.log(
-      `${races.length} race specs left out: they never run against appdb. Run them on a dedicated database: `
-        + 'DATABASE_URL=postgres://app:app@localhost:5432/appdb_races npm run test:races',
+      `${races.length} race and throwaway-only specs left out: they never run against appdb. Run them on a dedicated database: `
+        + 'DATABASE_URL=postgres://app:app@localhost:5432/appdb_races npm run test:races (the race specs), '
+        + 'or npm run test:ci -- --db-lanes N (all of them, see the header).',
     );
   }
   const db = specs.filter((f) => DB_PATTERN.test(fs.readFileSync(path.join(root, f), 'utf8')));
@@ -447,7 +450,7 @@ async function main() {
   const unitResults = results.filter((r) => r.kind === 'unit');
   console.log(`Unit: ${unitResults.length} specs, ${unitResults.reduce((t, r) => t + r.seconds, 0).toFixed(0)}s of specs`);
 
-  // Every discovered spec runs exactly once (or is a race spec left out above).
+  // Every discovered spec runs exactly once (or is a race or throwaway-only spec left out above).
   const count = (kind) => results.filter((r) => r.kind === kind).length;
   const ranOnce = new Set(results.map((r) => r.file)).size === results.length;
   const accounted = count('unit') + count('database') + count('exclusive') + leftOut;
@@ -479,6 +482,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  failure, lastLines, databaseName, racesRefused, RACE_SPEC, compiledPath, laneUrl, exclusiveReason, prepareLanes, EXCLUSIVE_PATTERNS, DB_PATTERN,
+  failure, lastLines, databaseName, racesRefused, RACE_SPEC, throwawayOnly, compiledPath, laneUrl, exclusiveReason, prepareLanes, EXCLUSIVE_PATTERNS, DB_PATTERN,
   specEnv, DEFAULT_SPEC_JWT_SECRET, runSpec,
 };

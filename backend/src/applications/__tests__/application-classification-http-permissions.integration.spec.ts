@@ -1,28 +1,54 @@
+// @throwaway-db-spec: commits a temporary workspace with its users and roles; refuses a developer's appdb
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import * as http from 'node:http';
+import { AddressInfo } from 'node:net';
+import { INestApplication } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import * as jwt from 'jsonwebtoken';
+import { DataSource } from 'typeorm';
 import dataSource from '../../data-source';
 import { ACCESS_TOKEN_PURPOSE } from '../../auth/access-token.util';
+import { applyHttpMiddleware, applyTenancyAndPipeline } from '../../http-app';
+import { catalogToMetadata, DEFAULT_CLASSIFICATION_CATALOG } from '../../it-ops-settings/classification-catalog';
+import { assertThrowawayDatabase } from '../../common/__tests__/throwaway-database';
+import { cleanupTenants } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
 
-const DATABASE_URL = process.env.DATABASE_URL ?? '';
-const API_URL = process.env.CLASSIFICATION_TEST_API_URL ?? '';
-const JWT_SECRET = process.env.JWT_SECRET ?? '';
+// The permission guards of the classification routes, over HTTP: the whole application
+// (AppModule with the HTTP wiring of main.ts) started in this process, on a temporary workspace
+// of its own, removed at the end.
+
+process.env.STRIPE_SECRET_KEY = '';
+process.env.S3_ENDPOINT ||= 'http://127.0.0.1:9';
+process.env.S3_BUCKET ||= 'classification-http-spec';
+process.env.JWT_SECRET ||= 'classification-http-spec-secret-of-32-characters';
+delete process.env.EMAIL_OVERRIDE;
 
 type Identity = { roleId: string; userId: string; email: string; borrowedRole?: boolean };
+type Answer = { status: number; text: string; body: any };
 
 async function main() {
-  if (!DATABASE_URL.endsWith('/kanap_classification_v1_test')) throw new Error('Only isolated kanap_classification_v1_test is allowed');
-  if (API_URL !== 'http://localhost:8086') throw new Error('CLASSIFICATION_TEST_API_URL must be exactly http://localhost:8086');
-  if (JWT_SECRET !== 'classification-local-test-only-secret') throw new Error('Unexpected JWT_SECRET for isolated HTTP smoke');
+  assertThrowawayDatabase('application-classification-http-permissions.integration.spec.ts');
+  const JWT_SECRET = process.env.JWT_SECRET as string;
 
   await dataSource.initialize();
   const manager = dataSource.manager;
-  const tenants = await manager.query(`SELECT id FROM tenants WHERE slug = 'classification-test' LIMIT 1`);
-  assert.equal(tenants.length, 1, 'isolated classification-test tenant must exist');
-  const tenantId: string = tenants[0].id;
+  const tenantId = randomUUID();
+  const slug = `classification-http-${tenantId.slice(0, 8)}`;
+  await manager.query(
+    `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
+     VALUES ($1, $2, 'Classification HTTP', 'active', $3::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
+    [tenantId, slug, JSON.stringify({ it_ops: catalogToMetadata(DEFAULT_CLASSIFICATION_CATALOG) })],
+  );
   const identities: Identity[] = [];
   const applicationIds: string[] = [];
+  const { AppModule } = require('../../app.module');
+  const app: INestApplication = await NestFactory.create(AppModule, { logger: ['error'] });
+  applyHttpMiddleware(app);
+  applyTenancyAndPipeline(app, app.get(DataSource));
+  await app.listen(0, '127.0.0.1');
+  const port = (app.getHttpServer().address() as AddressInfo).port;
 
   const createIdentity = async (label: string, permissions: Record<string, string>, roleName?: string): Promise<Identity> => {
     const identity: Identity = { roleId: randomUUID(), userId: randomUUID(), email: `${label}-${randomUUID()}@test.invalid` };
@@ -41,12 +67,36 @@ async function main() {
     return identity;
   };
 
-  const request = async (identity: Identity, path: string, init: RequestInit = {}) => {
+  // Node's fetch drops a custom Host header: the workspace comes from it, so http.request.
+  const request = (identity: Identity, path: string, init: { method?: string; body?: string } = {}): Promise<Answer> => {
     const token = jwt.sign({ purpose: ACCESS_TOKEN_PURPOSE, sub: identity.userId, email: identity.email, role: 'temporary', tenant_id: tenantId }, JWT_SECRET, { expiresIn: '5m' });
-    return fetch(`${API_URL}${path}`, {
-      ...init,
-      signal: AbortSignal.timeout(10_000),
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', ...(init.headers ?? {}) },
+    const payload = init.body ?? '';
+    return new Promise((resolve, reject) => {
+      const req = http.request({
+        host: '127.0.0.1',
+        port,
+        method: init.method ?? 'GET',
+        path,
+        timeout: 10_000,
+        headers: {
+          Host: `${slug}.lvh.me`,
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Content-Length': String(Buffer.byteLength(payload)),
+        },
+      }, (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk) => chunks.push(chunk));
+        res.on('end', () => {
+          const text = Buffer.concat(chunks).toString('utf8');
+          let body: any = null;
+          try { body = text ? JSON.parse(text) : null; } catch { /* text */ }
+          resolve({ status: res.statusCode ?? 0, text, body });
+        });
+      });
+      req.on('timeout', () => req.destroy(new Error(`${path}: no answer in 10 s`)));
+      req.on('error', reject);
+      req.end(payload);
     });
   };
 
@@ -57,7 +107,7 @@ async function main() {
 
     const catalogResponse = await request(reader, '/applications/classification-catalog');
     assert.equal(catalogResponse.status, 200);
-    const catalog: any = await catalogResponse.json();
+    const catalog: any = catalogResponse.body;
     assert.ok(Array.isArray(catalog.businessCriticalityLevels) && catalog.businessCriticalityLevels.length > 0);
     assert.equal(catalog.businessMtdPresets, undefined);
 
@@ -72,25 +122,25 @@ async function main() {
       ipAddressTypes: [{ code: 'host', label: 'Host' }, { label: `Storage ${stamp}` }],
       serverKinds: [{ code: 'vm', label: 'Virtual machine', is_physical: true }],
     }) });
-    if (patched.status !== 200) throw new Error(`settings PATCH returned ${patched.status}: ${await patched.text()}`);
-    const saved: any = await patched.json();
+    if (patched.status !== 200) throw new Error(`settings PATCH returned ${patched.status}: ${patched.text}`);
+    const saved: any = patched.body;
     assert.equal(saved.accessMethods.find((row: any) => row.label === `Kiosk ${stamp}`)?.code, `kiosk_${stamp}`, 'a code is generated from the name');
     assert.equal(saved.ipAddressTypes.find((row: any) => row.label === `Storage ${stamp}`)?.code, `storage_${stamp}`);
     assert.equal(saved.serverKinds.find((row: any) => row.code === 'vm')?.is_physical, true, 'is_physical reaches the server');
     const usageResponse = await request(settingsAdmin, '/it-ops/settings/usage?list=accessMethods&code=web');
     assert.equal(usageResponse.status, 200);
-    const usage: any = await usageResponse.json();
+    const usage: any = usageResponse.body;
     assert.ok(typeof usage.total === 'number' && Array.isArray(usage.usage));
     const clash = await request(settingsAdmin, '/it-ops/settings', { method: 'PATCH', body: JSON.stringify({ accessMethods: [{ code: 'web', label: 'Web' }, { label: 'web' }] }) });
     assert.equal(clash.status, 400);
-    assert.match(((await clash.json()) as any).message, /clashes with/);
+    assert.match((clash.body as any).message, /clashes with/);
     assert.equal((await request(reader, '/applications', { method: 'POST', body: JSON.stringify({ name: 'reader denied' }) })).status, 403);
     assert.equal((await request(reader, `/applications/${randomUUID()}/classification-review`, { method: 'POST', body: JSON.stringify({ expected_revision: 0 }) })).status, 403);
     assert.equal((await request(unrelated, '/applications/classification-catalog')).status, 403);
     assert.equal((await request(unrelated, '/applications/classification-summary')).status, 403);
     const summaryResponse = await request(reader, '/applications/classification-summary?include_inactive=true');
     assert.equal(summaryResponse.status, 200);
-    const summary: any = await summaryResponse.json();
+    const summary: any = summaryResponse.body;
     assert.deepEqual(Object.keys(summary).sort(), ['attention', 'incomplete', 'levels', 'reviewed', 'stale', 'total']);
     assert.equal(summary.reviewed + summary.stale + summary.incomplete, summary.total);
 
@@ -103,7 +153,7 @@ async function main() {
     if (anyApp[0]) {
       const dependenciesResponse = await request(reader, dependenciesPath);
       assert.equal(dependenciesResponse.status, 200);
-      assert.ok(Array.isArray(((await dependenciesResponse.json()) as any).items));
+      assert.ok(Array.isArray((dependenciesResponse.body as any).items));
     }
 
     const createResponse = await request(member, '/applications', {
@@ -118,34 +168,22 @@ async function main() {
         classification_justification: 'HTTP permissions regression',
       }),
     });
-    if (createResponse.status !== 201) throw new Error(`member create returned ${createResponse.status}: ${await createResponse.text()}`);
-    const application: any = await createResponse.json();
+    if (createResponse.status !== 201) throw new Error(`member create returned ${createResponse.status}: ${createResponse.text}`);
+    const application: any = createResponse.body;
     applicationIds.push(application.id);
 
     const reviewResponse = await request(member, `/applications/${application.id}/classification-review`, {
       method: 'POST',
       body: JSON.stringify({ expected_revision: application.classification_revision }),
     });
-    if (reviewResponse.status !== 201) throw new Error(`member review returned ${reviewResponse.status}: ${await reviewResponse.text()}`);
-    const reviewed: any = await reviewResponse.json();
+    if (reviewResponse.status !== 201) throw new Error(`member review returned ${reviewResponse.status}: ${reviewResponse.text}`);
+    const reviewed: any = reviewResponse.body;
     assert.equal(reviewed.classification_review_state, 'reviewed');
 
     console.log('PASS: HTTP classification permissions catalog/settings/create/review guards');
   } finally {
-    await manager.transaction(async (tx) => {
-      await tx.query(`SELECT set_config('app.current_tenant',$1,true)`, [tenantId]);
-      if (applicationIds.length) await tx.query(`DELETE FROM applications WHERE tenant_id=$1 AND id = ANY($2::uuid[])`, [tenantId, applicationIds]);
-      const userIds = identities.map((identity) => identity.userId);
-      const roleIds = identities.filter((identity) => !identity.borrowedRole).map((identity) => identity.roleId);
-      if (userIds.length) {
-        await tx.query(`DELETE FROM audit_log WHERE tenant_id=$1 AND user_id = ANY($2::uuid[])`, [tenantId, userIds]);
-        await tx.query(`DELETE FROM users WHERE tenant_id=$1 AND id = ANY($2::uuid[])`, [tenantId, userIds]);
-      }
-      if (roleIds.length) {
-        await tx.query(`DELETE FROM role_permissions WHERE tenant_id=$1 AND role_id = ANY($2::uuid[])`, [tenantId, roleIds]);
-        await tx.query(`DELETE FROM roles WHERE tenant_id=$1 AND id = ANY($2::uuid[])`, [tenantId, roleIds]);
-      }
-    });
+    await app.close();
+    await cleanupTenants([tenantId]);
     await dataSource.destroy();
   }
 }

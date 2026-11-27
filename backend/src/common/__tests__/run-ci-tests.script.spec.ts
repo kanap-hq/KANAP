@@ -6,7 +6,8 @@ import { backendPath } from './backend-root';
 
 // scripts/run-ci-tests.js (`npm run test:ci`) against a developer's `appdb`:
 // the race specs refuse that database (their harness throws), so the runner
-// leaves them out there, outside GitHub Actions, and says how to run them.
+// leaves them out there, outside GitHub Actions, and says how to run them; so
+// it does the specs marked `@throwaway-db-spec` (throwaway-database.ts).
 // GitHub Actions' `appdb` is a throwaway service container: they run there.
 // It runs each spec from the output of `tsc -p tsconfig.ci.json`: the path it
 // computes must match that config's outDir and rootDir.
@@ -18,6 +19,7 @@ const runner = require(backendPath('scripts', 'run-ci-tests.js')) as {
   databaseName: (url?: string) => string | null;
   racesRefused: (url?: string) => boolean;
   RACE_SPEC: RegExp;
+  throwawayOnly: (file: string) => boolean;
   compiledPath: (file: string) => string;
   laneUrl: (url: string, n: number) => string;
   exclusiveReason: (file: string) => string | null;
@@ -67,6 +69,36 @@ function testRaceSpecPattern() {
   assert.ok(runner.RACE_SPEC.test('src/common/__tests__/request-lock-timeout-race.integration.spec.ts'));
   assert.equal(runner.RACE_SPEC.test('src/spend/__tests__/allocations-unique-key-migration.integration.spec.ts'), false);
   assert.equal(runner.RACE_SPEC.test('src/common/__tests__/request-transaction-bounds-http.integration.spec.ts'), false);
+}
+
+// The specs that refuse a developer's appdb: the race specs by name, the others by their marker.
+function testThrowawayOnly() {
+  assert.equal(runner.throwawayOnly('src/spend/__tests__/spend-versions-race.integration.spec.ts'), true, 'a race spec');
+  for (const file of [
+    'src/applications/__tests__/application-classification.integration.spec.ts',
+    'src/applications/__tests__/application-classification-concurrency.integration.spec.ts',
+    'src/applications/__tests__/application-classification-http-permissions.integration.spec.ts',
+    'src/it-ops-settings/__tests__/it-ops-settings.integration.spec.ts',
+  ]) {
+    assert.equal(runner.throwawayOnly(file), true, `marked: ${file}`);
+    const source = fs.readFileSync(backendPath(file), 'utf8');
+    assert.match(source, /assertThrowawayDatabase\(/, `the marker goes with the guard: ${file}`);
+    assert.doesNotMatch(source, /kanap_classification_v1_test/, `no database of its own: ${file}`);
+  }
+  assert.equal(runner.throwawayOnly('src/spend/__tests__/allocations-unique-key-migration.integration.spec.ts'), false);
+  // Every spec that calls the guard carries the marker, so the runner leaves it out on appdb.
+  const guarded: string[] = [];
+  (function walk(dir: string) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith('.spec.ts') && fs.readFileSync(full, 'utf8').includes('assertThrowawayDatabase(')) {
+        guarded.push(path.relative(backendPath(), full));
+      }
+    }
+  })(backendPath('src'));
+  assert.ok(guarded.length >= 4);
+  for (const file of guarded) assert.equal(runner.throwawayOnly(file), true, `guarded and marked: ${file}`);
 }
 
 function testCompiledPath() {
@@ -185,6 +217,7 @@ testSpecJwtSecret();
 testFailureReport();
 testRacesRefused();
 testRaceSpecPattern();
+testThrowawayOnly();
 testCompiledPath();
 testLaneUrl();
 testExclusivePatterns();
