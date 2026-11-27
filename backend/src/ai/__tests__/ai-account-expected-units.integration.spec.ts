@@ -19,7 +19,8 @@ import { AiCodeNamer, withCodeNames } from '../ai-code-names';
 // - import: the accounts template has the column, its units read by their word in any language,
 //   titled in the person's language; the file Kad writes reaches the accounts import;
 // - write: Kad's account create and update take the units under approval, by code or by word; an
-//   unknown unit and units for an account left without the setting are refused before the card;
+//   unknown unit, and units sent with the setting cleared, are refused before the card; units named
+//   for an account without the setting tick it in the same card;
 //   clearing the setting of an account with units clears them too, and the card says so.
 
 const TITLE = 'Expected units';
@@ -166,10 +167,16 @@ async function testWrite() {
       (error: any) => error?.status === 400 && /"heures" is no unit/.test(error.message),
       'an unknown unit is refused before the card',
     );
+    // "Set account 6200 on pieces": the unit, and the setting ticked with it in the same card.
+    const onPieces = await support.prepareUpdatePreview(ctx, { entity_type: 'accounts', ref: '6200', fields: { expected_units: 'pièces' } });
+    assert.deepEqual([onPieces.mutationInput.fields.quantity_price_expected, onPieces.mutationInput.fields.expected_units], [true, ['pieces']],
+      'units for an account without the setting tick it in the same card');
+    assert.deepEqual(Object.keys(card(onPieces, '6200').changes).filter((key) => key !== '__summary').sort(), ['expected_units', 'quantity_price_expected'],
+      'the card shows both changes');
     await assert.rejects(
-      support.prepareUpdatePreview(ctx, { entity_type: 'accounts', ref: '6200', fields: { expected_units: 'people' } }),
+      support.prepareUpdatePreview(ctx, { entity_type: 'accounts', ref: '6200', fields: { quantity_price_expected: 'no', expected_units: 'people' } }),
       (error: any) => error?.status === 400 && /quantity and price entry/.test(error.message),
-      'units for an account without the setting are refused before the card',
+      'units sent with the setting cleared are refused before the card',
     );
     const both = await support.prepareUpdatePreview(ctx, { entity_type: 'accounts', ref: '6200', fields: { quantity_price_expected: 'yes', expected_units: 'days' } });
     assert.deepEqual([both.mutationInput.fields.quantity_price_expected, both.mutationInput.fields.expected_units], [true, ['days']], 'the setting and its units in one change');

@@ -30,7 +30,8 @@ import {
 } from './ai-mutation-operation.types';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
 import { ACCOUNT_NUMBER_RULE, parseAccountNumber } from '../../accounts/account-number';
-import { parseExpectedUnitsCell } from '../../accounts/account-expected-units';
+import { EXPECTED_UNIT_LABELS, parseExpectedUnitsCell } from '../../accounts/account-expected-units';
+import { ACCOUNT_EXPECTED_UNITS } from '../../accounts/account.entity';
 import { nameWithoutLeadingReference } from './name-without-leading-reference';
 import { familyReference, familyReferenceNumber } from '../ai-entity-reference.util';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
@@ -376,6 +377,18 @@ const ENTITY_CONFIG: Record<AiMasterDataEntityType, EntityConfig> = {
     },
   },
 };
+
+/**
+ * The accounts fields of Kad's create and update tools, as the model reads them. A unit named for an
+ * account ("set account 622200 on pieces", in any language) is `expected_units`; the yes-or-no
+ * setting is never a unit. The card ticks the setting with the units when it is off.
+ */
+export const AI_ACCOUNT_FIELDS_DECLARATION = 'accounts: coa_id, account_number, account_name, native_name, description, '
+  + 'consolidation_account_number, consolidation_account_name, consolidation_account_description, nature, '
+  + 'quantity_price_expected (the yes-or-no setting of quantity and price entry, never a unit), '
+  + `expected_units (the units the calculation lines are expected in, one or more of ${ACCOUNT_EXPECTED_UNITS.map((unit) => `${unit} (${(['fr', 'de', 'es'] as const).map((language) => EXPECTED_UNIT_LABELS[language][unit]).join(', ')})`).join(', ')}, `
+  + 'by code or by word; naming a unit for an account ("on pieces") is expected_units, and the card ticks quantity_price_expected in the same change when it is off; '
+  + 'empty clears them), status, disabled_at';
 
 export const AI_MASTER_DATA_BUSINESS_RESOURCES = Array.from(
   new Set(AI_MASTER_DATA_ENTITY_TYPES.map((entityType) => ENTITY_CONFIG[entityType].businessResource)),
@@ -873,9 +886,10 @@ export class AiMasterDataMutationSupportService {
   }
 
   /**
-   * An account's units follow its quantity and price setting, as on the screen: units for an account
-   * left without the setting are refused before the card; clearing the setting of an account that
-   * has units clears them too, and the card says so.
+   * An account's units follow its quantity and price setting, as on the screen: units named for an
+   * account without the setting tick it in the same card; units sent with the setting cleared are
+   * refused before the card; clearing the setting of an account that has units clears them too, and
+   * the card says so.
    */
   private followExpectedSetting(
     fields: Record<string, unknown>,
@@ -884,11 +898,17 @@ export class AiMasterDataMutationSupportService {
     config: EntityConfig,
     existing?: Record<string, unknown> | null,
   ) {
-    const setting = Object.prototype.hasOwnProperty.call(fields, 'quantity_price_expected')
-      ? fields.quantity_price_expected
-      : existing?.quantity_price_expected ?? null;
+    const settingSent = Object.prototype.hasOwnProperty.call(fields, 'quantity_price_expected');
+    const setting = settingSent ? fields.quantity_price_expected : existing?.quantity_price_expected ?? null;
     if (setting === true) return;
-    if (Array.isArray(fields.expected_units) && fields.expected_units.length > 0) {
+    const unitsNamed = Array.isArray(fields.expected_units) && fields.expected_units.length > 0;
+    if (unitsNamed && !settingSent) {
+      fields.quantity_price_expected = true;
+      displayValues.quantity_price_expected = 'Yes';
+      fieldLabels.quantity_price_expected = config.fields.quantity_price_expected.label;
+      return;
+    }
+    if (unitsNamed) {
       throw new BadRequestException('Expected units need the quantity and price entry: set quantity_price_expected to yes in the same change, or leave out expected_units.');
     }
     const stored = existing?.expected_units;

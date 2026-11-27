@@ -56,7 +56,8 @@ export const accountsRegistry: AiEntityFilterRegistry = {
         + 'setting a consolidation account applies to every account mapped to it. The budget lines to check against it are budget_lines whose `to_check` holds `quantity_price`; '
         + 'a line\'s get_entity_detail says why in `quantity_price_entry` (`expected_by`, `expected_units`, `columns_to_check`, `explanation`). '
         + 'An account that sets it may also name the units its calculation lines are expected in (`expected_units` of its metadata, named in `expected_units_name`): '
-        + 'a column then also needs a calculation line in one of them; without units the entry mode alone is checked. The units are read with the setting, at the same level.',
+        + 'a column then also needs a calculation line in one of them; without units the entry mode alone is checked. The units are read with the setting, at the same level. '
+        + 'This field is a yes-or-no setting, never a unit: a unit named for an account ("on pieces", in any language) is expected_units, which the account write ticks this setting with.',
       values: ['true', null],
       discoverable: true,
       sortable: true,
