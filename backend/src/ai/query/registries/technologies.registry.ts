@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from '../../../config/product';
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 import {
   SUPPORT_STATUSES,
@@ -32,7 +33,7 @@ export const technologiesRegistry: AiEntityFilterRegistry = {
       ai: 'name',
       grid: 'name',
       type: 'text',
-      description: 'Technology name (contains, without case).',
+      description: `Technology name (contains, without case). A technology adopted from the ${PRODUCT_NAME} catalog also matches by the name of its catalog entry, and carries it as catalog_entry in the list, the detail and search_all, even once renamed; a technology typed by hand has none. A technology whose catalog_entry is the entry the person asks for is that technology: name it by its reference and current name, and prepare no creation and no second adoption.`,
       sortable: true,
       groupable: false,
     },
