@@ -30,6 +30,7 @@ function assertUnitsDeclared(text: string, who: string) {
   assert.match(text, /quantity_price_expected \(the yes-or-no setting of quantity and price entry, never a unit\)/, `${who}: the setting is no unit`);
   assert.match(text, /naming a unit for an account \("on pieces"\) is expected_units/, `${who}: a unit named for an account is expected_units`);
   assert.match(text, /ticks quantity_price_expected in the same change when it is off/, `${who}: the setting ticked with the units`);
+  assert.match(text, /flagged to check, never refused/, `${who}: an expectation, no obligation`);
 }
 
 function testWriteTools() {
@@ -43,6 +44,7 @@ function testWriteTools() {
 function testReadNote() {
   const note = String((accountsRegistry as any).fields.quantity_price_expected.description);
   assert.match(note, /never a unit/, 'the read side: the setting is no unit');
+  assert.match(note, /flagged to check, never refused/, 'the read side: an expectation, no obligation');
   assert.match(note, /a unit named for an account \("on pieces"[^)]*\) is expected_units/, 'the read side: a unit named for an account is expected_units');
   console.log('ok - the read side says the setting is no unit');
 }

@@ -388,7 +388,8 @@ export const AI_ACCOUNT_FIELDS_DECLARATION = 'accounts: coa_id, account_number, 
   + 'quantity_price_expected (the yes-or-no setting of quantity and price entry, never a unit), '
   + `expected_units (the units the calculation lines are expected in, one or more of ${ACCOUNT_EXPECTED_UNITS.map((unit) => `${unit} (${(['fr', 'de', 'es'] as const).map((language) => EXPECTED_UNIT_LABELS[language][unit]).join(', ')})`).join(', ')}, `
   + 'by code or by word; naming a unit for an account ("on pieces") is expected_units, and the card ticks quantity_price_expected in the same change when it is off; '
-  + 'empty clears them), status, disabled_at';
+  + 'empty clears them; both are expectations: a budget line that does not follow them is flagged to check, never refused, '
+  + 'so say that the account expects them, never that lines must follow them), status, disabled_at';
 
 export const AI_MASTER_DATA_BUSINESS_RESOURCES = Array.from(
   new Set(AI_MASTER_DATA_ENTITY_TYPES.map((entityType) => ENTITY_CONFIG[entityType].businessResource)),
