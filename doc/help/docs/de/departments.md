@@ -69,7 +69,7 @@ Der Übersichts-Tab enthält die Beschreibung. Die übrigen Felder befinden sich
 
 **Was Sie bearbeiten können**:
 - **Name**: Abteilungsname (Pflicht), in der Kopfzeile
-- **Unternehmen**: Übergeordnetes Unternehmen, verknüpft mit den Unternehmen-Stammdaten (Pflicht). Ein Unternehmen, das bereits eine Abteilung mit gleichem Namen hat, wird abgelehnt: „A department with this name already exists in the selected company."
+- **Unternehmen**: Übergeordnetes Unternehmen, verknüpft mit den Unternehmen-Stammdaten (Pflicht). Ein Unternehmen, das bereits eine Abteilung mit gleichem Namen hat, wird abgelehnt: „A department with this name already exists in the selected company." Eine Abteilung, die von Personen, Anfragen, Projekten oder Zuordnungen von Budgetzeilen verwendet wird, bleibt in ihrem Unternehmen: Die Änderung wird abgelehnt, und die Meldung zählt auf, was sie verwendet
 - **Beschreibung**: Freitext-Beschreibung
 - **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Lassen Sie das Datum leer, damit die Abteilung unbegrenzt aktiv bleibt, oder setzen Sie ein zukünftiges Datum, um ihr Ende zu planen. Ein Wechsel auf **Deaktiviert** setzt das Ende der Gültigkeit auf jetzt: Die Deaktivierung gilt sofort. Solange ein zukünftiges Datum gesetzt ist, zeigt der Schalter **Aktiv bis** und dieses Datum
 
@@ -118,13 +118,15 @@ Die Spalten in dieser Reihenfolge:
 **Import**:
 
 - Verwenden Sie die **Vorabprüfung**, um die Datei vor dem Anwenden zu prüfen, und dann **Laden**
-- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`DEPT-12` oder `12`) bezeichnet die Abteilung, die die Zeile aktualisiert, auch wenn sich ihr Name geändert hat. Die Abteilung erhält den Namen und das Unternehmen, die die Zeile angibt: Ein anderes Unternehmen verschiebt sie dorthin. Die Vorabprüfung meldet jede Abteilung, die umbenannt wird oder das Unternehmen wechselt
+- **Zuordnung über die Referenz**: Eine ausgefüllte `reference` (`DEPT-12` oder `12`) bezeichnet die Abteilung, die die Zeile aktualisiert, auch wenn sich ihr Name geändert hat. Die Abteilung erhält den Namen und das Unternehmen, die die Zeile angibt: Ein anderes Unternehmen verschiebt sie dorthin, außer die Abteilung wird verwendet, wie auf ihrer Seite (die Zeile wird dann abgelehnt). Die Vorabprüfung meldet jede Abteilung, die umbenannt wird oder das Unternehmen wechselt
 - **Zuordnung über den Namen**: Ist `reference` leer oder fehlt die Spalte in der Datei, wird eine Zeile über Abteilungsname und Unternehmensname zugeordnet. Sie aktualisiert die Abteilung, die sie nennt, und jede andere Zeile legt eine an
 - **Unbekannte Referenz**: Eine Referenz, die Ihr Arbeitsbereich nicht kennt, lehnt die Zeile ab: „„DEPT-999“ ist keine Referenz in diesem Arbeitsbereich. Lassen Sie die Zelle leer, um die Zeile ohne sie zu importieren.“ Das betrifft etwa eine Datei, die aus einem anderen Arbeitsbereich exportiert wurde
 - **Umbenennen oder Verschieben**: Ein Name, den bereits eine andere Abteilung im Unternehmen der Zeile trägt, wird abgelehnt, und die Meldung nennt deren Referenz: „„Finance“ gehört bereits zu DEPT-7.“
 - **Eine Zeile pro Abteilung**: Zwei Zeilen, die dieselbe Abteilung aktualisieren, werden abgelehnt: „Diese Zeile aktualisiert DEPT-7, wie Zeile 3. Verwenden Sie eine Zeile pro Datensatz.“ Zwei Zeilen, die dieselbe Abteilung anlegen (gleiches Unternehmen und gleicher Name, unabhängig von der Groß- und Kleinschreibung), werden ebenfalls abgelehnt: „Gleiche Werte in company_name, name wie in Zeile 3.“
 
 **Pflichtzellen**: `name` und `company_name`, ein bestehendes Unternehmen. Eine Zeile mit einer `reference` kann sie leer lassen: Die Abteilung behält ihren Namen und ihr Unternehmen
+
+**Gleicher Name in zwei Unternehmen**: Zwei Unternehmen können jeweils eine Abteilung mit demselben Namen haben. Ein Import, der eine davon bei einer Person, einer Anfrage oder einem Projekt nennt, oder Kad bei einer Anfrage oder einem Projekt, liest sie im Unternehmen des Datensatzes. Hat der Datensatz kein Unternehmen, gibt ein Name, den nur ein Unternehmen hat, dieses Unternehmen vor, und ein Name, den mehrere Unternehmen teilen, wird mit einer Meldung abgelehnt, die sie nennt. Siehe [Namen von Datensätzen](csv-files.md#names-of-records)
 
 **Leere Zellen und `-`**: Bei einer Abteilung, die die Datei aktualisiert, behält eine leere Zelle den gespeicherten Wert, und `-` leert `description` oder `disabled_at`. `-` kann `reference`, `company_name`, `name` oder `status` nicht leeren: Die Zeile wird abgelehnt. Siehe [Leere Zellen und `-`](csv-files.md#empty-cells-and-clearing)
 

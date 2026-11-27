@@ -222,7 +222,7 @@ export default function ImportMatchesView({
         <Line
           key={`rp-${entry.column}-${entry.value}`}
           muted
-          text={t(entry.reason === 'disabled' ? `${K}matching.refusedDisabled` : `${K}matching.refusedMissing`, {
+          text={t(entry.reason === 'disabled' ? `${K}matching.refusedDisabled` : entry.reason === 'shared' ? `${K}matching.refusedShared` : `${K}matching.refusedMissing`, {
             dimension: columnName(entry.column, entry.name),
             value: entry.value,
             target: entry.target,

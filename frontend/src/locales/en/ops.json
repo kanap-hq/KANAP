@@ -1100,6 +1100,7 @@
         "redo": "Match again",
         "refusedMissing": "{{dimension}}: {{value}} → {{target}}: no such value",
         "refusedDisabled": "{{dimension}}: {{value}} → {{target}}: disabled value",
+        "refusedShared": "{{dimension}}: {{value}} → {{target}}: name shared by several records",
         "closeTo": "Close to: {{names}}",
         "lines": "Lines {{lines}}",
         "lines_one": "Line {{lines}}"

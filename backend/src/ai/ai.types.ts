@@ -561,6 +561,8 @@ export type AiImportReportMessage = {
   /** The code the interface translates, with the values its sentence names, as on the import's screen. */
   code?: string;
   params?: Record<string, string | number>;
+  /** What still uses the record, counted per kind (`{{usages}}` in the sentence of `code`), as the import's screen shows them. */
+  usages?: Array<{ type: string; total: number }>;
 };
 
 /**
@@ -649,7 +651,7 @@ export type AiImportRunDto = {
    */
   matching?: {
     matches: Array<{ column: string; dimension?: string; value: string; target: string; origin: 'server' | 'model' | 'editor'; count: number; file_lines: number[] }>;
-    refused_proposals: Array<{ column: string; dimension?: string; value: string; target: string; reason: 'missing' | 'disabled'; count: number; file_lines: number[] }>;
+    refused_proposals: Array<{ column: string; dimension?: string; value: string; target: string; reason: 'missing' | 'disabled' | 'shared'; count: number; file_lines: number[] }>;
     candidates: Array<{
       column: string; dimension?: string; value: string; outcome: 'create' | 'refused'; count: number; file_lines: number[];
       candidates: Array<{ name: string; score: number }>;

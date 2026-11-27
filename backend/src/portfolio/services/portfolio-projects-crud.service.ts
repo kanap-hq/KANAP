@@ -33,6 +33,7 @@ import { readsPartOf, withCountedLinkChanges } from '../../common/relations/link
 import { auditedLinkSet, hiddenLineCount } from '../../data-access/hidden-links';
 import { singleChangedId } from '../../audit/audit-parent-rules';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
+import { givenMembership, membershipReadLock, PORTFOLIO_PAIRS, settleRecordMembership } from '../../common/record-membership';
 import { appliedLinks, wroteLinks } from '../portfolio-link-writes.util';
 
 const ACTUAL_DATE_FIELDS = ['actual_start', 'actual_end'] as const;
@@ -363,15 +364,17 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       );
     }
     const purposeContent = await this.normalizeNullable(body.purpose);
+    // A stream in its category, a department in its company (`common/record-membership.ts`).
+    const membership = await settleRecordMembership(mg, PORTFOLIO_PAIRS, givenMembership(PORTFOLIO_PAIRS, body as Record<string, unknown>), null, tenantId);
 
     const entity = repo.create({
       tenant_id: tenantId,
       name,
       source_id: body.source_id || null,
-      category_id: body.category_id || null,
-      stream_id: body.stream_id || null,
-      company_id: body.company_id || null,
-      department_id: body.department_id || null,
+      category_id: membership.category_id ?? null,
+      stream_id: membership.stream_id ?? null,
+      company_id: membership.company_id ?? null,
+      department_id: membership.department_id ?? null,
       origin,
       status: 'waiting_list' as ProjectStatus,
       scheduling_mode: body.scheduling_mode || 'independent',
@@ -448,6 +451,18 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       );
     }
 
+    // The dialog's classification over the request's: a stream in its category, a department in its
+    // company (`common/record-membership.ts`). An empty override keeps the request's value.
+    const overridden = Object.fromEntries(Object.entries(givenMembership(PORTFOLIO_PAIRS, overrides as Record<string, unknown>))
+      .filter(([key, value]) => key !== 'company_id' && value != null));
+    const classification = {
+      category_id: request.category_id,
+      stream_id: request.stream_id,
+      company_id: request.company_id,
+      department_id: request.department_id,
+      ...(await settleRecordMembership(mg, PORTFOLIO_PAIRS, overridden, request as unknown as Record<string, unknown>, tenantId)),
+    };
+
     // Calculate effort from Time estimation criteria values
     const effortFromCriteria = await this.criteriaService.calculateEffortFromCriteria(
       request.criteria_values || {},
@@ -459,10 +474,10 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       tenant_id: tenantId,
       name: overrides.name || request.name,
       source_id: overrides.source_id ?? request.source_id,
-      category_id: overrides.category_id ?? request.category_id,
-      stream_id: overrides.stream_id ?? request.stream_id,
-      company_id: request.company_id,
-      department_id: overrides.department_id ?? request.department_id,
+      category_id: classification.category_id,
+      stream_id: classification.stream_id,
+      company_id: classification.company_id,
+      department_id: classification.department_id,
       origin: 'standard' as ProjectOrigin,
       status: 'waiting_list' as ProjectStatus,
       scheduling_mode: overrides.scheduling_mode ?? 'independent',
@@ -584,7 +599,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const mg = this.getManager(opts);
     const repo = mg.getRepository(PortfolioProject);
 
-    const existing = await repo.findOne({ where: { id } });
+    // Read under the write's lock when the body sets a pair (`membershipReadLock`).
+    const existing = await repo.findOne({ where: { id }, ...membershipReadLock(mg, PORTFOLIO_PAIRS, body as Record<string, unknown>) });
     if (!existing) throw new NotFoundException('Project not found');
     refuseActualDates(body);
 
@@ -644,15 +660,10 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       existing.origin = origin;
     }
     if (has('source_id')) existing.source_id = body.source_id || null;
-    if (has('category_id')) {
-      existing.category_id = body.category_id || null;
-      if (existing.stream_id && body.category_id !== existing.category_id) {
-        existing.stream_id = null;
-      }
-    }
-    if (has('stream_id')) existing.stream_id = body.stream_id || null;
-    if (has('company_id')) existing.company_id = body.company_id || null;
-    if (has('department_id')) existing.department_id = body.department_id || null;
+    // A stream in its category, a department in its company: a category changed alone drops a stream
+    // of another category (`common/record-membership.ts`).
+    const membership = await settleRecordMembership(mg, PORTFOLIO_PAIRS, givenMembership(PORTFOLIO_PAIRS, body as Record<string, unknown>), existing, existing.tenant_id);
+    Object.assign(existing, membership);
     if (has('scheduling_mode')) existing.scheduling_mode = body.scheduling_mode || 'independent';
     if (has('priority_score')) existing.priority_score = body.priority_score ?? null;
     if (has('execution_progress')) {
