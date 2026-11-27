@@ -769,10 +769,13 @@ export const incidentCsvConfig: CsvEntityConfig = {
   sameAsStored: async (rows, context) => {
     const categories = (await requireImportCatalogs(context)).incidentCategories;
     return sameAsStoredWithDocuments(rows, context, 'incidents', { [REVIEW_ENTITY_PROPERTY]: 'review' }, (next, stored) => {
-      // The export writes instants to the second: the stored instant at that precision is the same value.
+      // A cell is as stored when the stored instant, written as the export writes it in the zone the
+      // cell was read in, gives the same text: to the second, and either pass of the hour the clocks
+      // repeat (`25/10/2026 02:30` in Paris) is the one stored. An export imported again changes nothing.
       for (const column of DATE_TIME_COLUMNS) {
+        const zone = context.timeZones?.[column] ?? 'UTC';
         if (next[column] instanceof Date && stored[column] instanceof Date
-          && Math.floor(stored[column].getTime() / 1000) * 1000 === next[column].getTime()) next[column] = stored[column];
+          && formatCsvDateTime(stored[column], 'en', zone) === formatCsvDateTime(next[column], 'en', zone)) next[column] = stored[column];
       }
       if (!next.category) return;
       const resolved = findCatalogOption(next.category, categories)?.code;

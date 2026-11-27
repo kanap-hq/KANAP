@@ -179,6 +179,36 @@ async function testExportImportedAgain(h: Harness, runner: QueryRunner, s: Seed)
   console.log('  an export of the register imported again: INC-1 updated, nothing created, the times kept: OK');
 }
 
+// Two incidents detected in the hour the clocks repeat in October, one on each pass: the export writes
+// both as "25/10/2026 02:30" under "Détecté (Europe/Paris)". Imported again, by the screen or by Kad,
+// neither changes: a cell is as stored when the stored instant, written as the export writes it in
+// the header's zone, gives the same text.
+async function testRepeatedHourImportedAgain(h: Harness, runner: QueryRunner, s: Seed) {
+  await runner.query(`SAVEPOINT repeated_hour`);
+  for (const [number, detected] of [[8, '2026-10-25T00:30:00Z'], [9, '2026-10-25T01:30:00Z']] as const) {
+    await runner.query(`INSERT INTO incidents (tenant_id, item_number, title, severity, status, detected_at, confidential, created_at, updated_at)
+      VALUES ($1, $2, $3, 'major', 'open', $4, false, now(), now())`, [s.tenantId, number, `Heure répétée ${number}`, detected]);
+  }
+  const exported = String((await h.incidentsCsv.export({
+    manager: runner.manager, tenantId: s.tenantId, language: 'fr', timeZone: 'Europe/Paris', viewer: { userId: s.users.admin, isAdmin: true },
+    query: { q: 'Heure répétée' },
+  })).content).replace(/^\uFEFF/, '').trim();
+  const lines = exported.split(/\r?\n/);
+  assert.equal(lines.length, 3, exported);
+  assert.ok(lines.slice(1).every((line) => line.includes('25/10/2026 02:30')), exported);
+  const screen = await h.incidentsCsv.import(csvFile(exported), { dryRun: true, operation: 'upsert' }, {
+    manager: runner.manager, tenantId: s.tenantId, userId: s.users.admin, isAdmin: true, viewer: { userId: s.users.admin, isAdmin: true }, language: 'fr',
+  });
+  assert.deepEqual([screen.ok, screen.updated, screen.unchanged], [true, 0, 2], JSON.stringify(screen));
+  const admin = ctx(runner, s, 'admin', 'Europe/Paris');
+  const preview = await card(h, admin, attach(h, 'heure.csv', exported), await mapByTitle(h, admin, lines[0].split(';')));
+  const check = preview.import_mapping.validation;
+  assert.deepEqual([check.ok, check.inserted, check.updated, check.unchanged], [true, 0, 0, 2], JSON.stringify(check));
+  await enter(runner, s);
+  await runner.query(`ROLLBACK TO SAVEPOINT repeated_hour`);
+  console.log('  an export of the hour the clocks repeat imported again, by the screen and by Kad: nothing changes: OK');
+}
+
 // A column "N°" numbering the rows, mapped onto the reference: not read; both rows are new incidents.
 async function testRowNumbersAreNoReferences(h: Harness, runner: QueryRunner, s: Seed) {
   const admin = ctx(runner, s, 'admin');
@@ -508,6 +538,7 @@ async function run() {
       await testHiddenAtTheLoad(harness, runner, s);
       await testTimesWithoutZone(harness, runner, s);
       await testExportImportedAgain(harness, runner, s);
+      await testRepeatedHourImportedAgain(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
