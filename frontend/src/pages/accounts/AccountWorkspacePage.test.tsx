@@ -473,6 +473,26 @@ describe('AccountWorkspacePage', () => {
     await waitFor(() => expect(box).not.toBeChecked());
   });
 
+  it('shows a refusal of the units under the quantity and price entry while the units are hidden', async () => {
+    mocked.patch.mockRejectedValueOnce({
+      response: {
+        status: 400,
+        data: {
+          code: 'ACCOUNT_EXPECTED_UNITS_WITHOUT_ENTRY',
+          message: 'Expected units need quantity and price entry: tick Quantity and price entry to name them.',
+          field: 'expected_units',
+        },
+      },
+    });
+    renderAt('/master-data/accounts/acc-1/overview');
+    await screen.findByText('Software subscriptions');
+    const box = screen.getByRole('checkbox', { name: 'accounts.fields.quantityPriceExpected' });
+    fireEvent.click(box);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/ACCOUNT_EXPECTED_UNITS_WITHOUT_ENTRY|Expected units need quantity and price entry/);
+    expect(box).not.toBeChecked();
+    expect(screen.queryByRole('checkbox', { name: 'BudgetTab.lines.unitNames.people' })).toBeNull();
+  });
+
   it('shows the expected units only once the quantity and price entry is ticked, and saves them in the tab order', async () => {
     renderAt('/master-data/accounts/acc-1/overview');
     await screen.findByText('Software subscriptions');

@@ -424,12 +424,17 @@ export default function AccountWorkspacePage() {
             checked={data.quantity_price_expected === true}
             label={t('accounts.fields.quantityPriceExpected')}
             disabled={disabled}
-            error={errors.quantity_price_expected}
+            // A refusal of the units shows here while their field is hidden (the entry not ticked).
+            error={errors.quantity_price_expected
+              ?? (data.quantity_price_expected === true ? undefined : errors.expected_units)}
             // Ticked: true; unticked: not set (null), never false, and the units go with it.
-            onChange={(next) => void patch(
-              next ? { quantity_price_expected: true } : { quantity_price_expected: null, expected_units: null },
-              'quantity_price_expected',
-            )}
+            onChange={(next) => {
+              setErrors((prev) => ({ ...prev, expected_units: undefined }));
+              void patch(
+                next ? { quantity_price_expected: true } : { quantity_price_expected: null, expected_units: null },
+                'quantity_price_expected',
+              );
+            }}
           />
         </PropertyRow>
         {data.quantity_price_expected === true && (
