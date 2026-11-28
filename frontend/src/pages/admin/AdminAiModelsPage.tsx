@@ -45,6 +45,8 @@ import {
 import { drawerMenuItemSx, drawerSelectSx, drawerFieldValueSx } from '../../theme/formSx';
 
 export const AI_MODEL_CONFIGS_QUERY_KEY = ['ai-model-configs'];
+// The AI settings under the key every other screen reads and reloads after a save.
+const AI_SETTINGS_QUERY_KEY = ['admin-ai-settings'];
 
 type DraftState = {
   name: string;
@@ -243,7 +245,7 @@ export default function AdminAiModelsPage() {
     queryFn: () => aiModelConfigsApi.list(),
   });
   const settingsQuery = useQuery({
-    queryKey: ['ai-admin-settings'],
+    queryKey: AI_SETTINGS_QUERY_KEY,
     queryFn: () => aiAdminApi.getSettings(),
     staleTime: 60_000,
   });
@@ -265,8 +267,10 @@ export default function AdminAiModelsPage() {
   const [dialogError, setDialogError] = React.useState<string | null>(null);
   const [testResult, setTestResult] = React.useState<AiProviderTestResult | null>(null);
 
+  // The default model decides what runs on the included model: its use comes with the settings.
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: AI_MODEL_CONFIGS_QUERY_KEY });
+    queryClient.invalidateQueries({ queryKey: AI_SETTINGS_QUERY_KEY });
   };
   const readError = (err: unknown, fallback: string): string => {
     const data = (err as { response?: { data?: { message?: string; used_by?: string[] } } })?.response?.data;

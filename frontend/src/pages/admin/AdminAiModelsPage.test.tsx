@@ -79,8 +79,11 @@ function withModel(overrides: Record<string, unknown>) {
     : original(url, config)));
 }
 
-function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+function newClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
+function renderPage(client = newClient()) {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={client}>
@@ -754,6 +757,75 @@ describe('AdminAiModelsPage model dialog', () => {
     });
     renderPage();
     expect(await hoverName(builtinName)).toHaveTextContent(`Used by ${AGENT_NAME} and agents without a model of their own`);
+  });
+
+  // The server as it answers after each gesture: the default model and the included model's use move together.
+  function withServer(state: { isDefault: boolean }) {
+    const original = (api.get as any).getMockImplementation();
+    (api.get as any).mockImplementation((url: string, config?: any) => {
+      if (url === '/ai/model-configs') {
+        return Promise.resolve({
+          data: {
+            model_configs: [{ ...MODEL, is_default: state.isDefault }],
+            secret_writable: true,
+            applied_timeouts: APPLIED_TIMEOUTS,
+          },
+        });
+      }
+      if (url === '/ai/settings/builtin-usage') {
+        return Promise.resolve({ data: { count: 4, limit: 200, reset_date: '2026-12-01T00:00:00.000Z' } });
+      }
+      if (url === '/ai/settings') {
+        return original(url, config).then((response: any) => ({
+          data: {
+            ...response.data,
+            settings: {
+              chat_model_config_id: 'model-1',
+              builtin_provider: { in_use: !state.isDefault, used_by_assistant: false },
+            },
+          },
+        }));
+      }
+      return original(url, config);
+    });
+  }
+
+  it('reads the included model use again after the default star moves', async () => {
+    featuresState.builtinAiProvider = true;
+    const state = { isDefault: true };
+    withServer(state);
+    (api.post as any).mockImplementation((url: string) => {
+      state.isDefault = url.endsWith('/set-default');
+      return Promise.resolve({ data: { model_config: { ...MODEL, is_default: state.isDefault } } });
+    });
+    renderPage();
+    expect(await screen.findByText('Not used')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stop using as default model' }));
+    await waitFor(() => expect(screen.getByLabelText('Default')).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('Not used')).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use as default model' }));
+    expect(await screen.findByText('Not used')).toBeInTheDocument();
+  });
+
+  it('shows the included model use saved on the assistant settings page, without a reload', async () => {
+    featuresState.builtinAiProvider = true;
+    const state = { isDefault: true };
+    withServer(state);
+    const client = newClient();
+    const { unmount } = renderPage(client);
+    expect(await screen.findByText('Not used')).toBeInTheDocument();
+    unmount();
+
+    // The assistant settings page saves, then reloads the settings it shows (AdminAiPage).
+    state.isDefault = false;
+    await client.invalidateQueries({ queryKey: ['admin-ai-settings'] });
+    await client.invalidateQueries({ queryKey: ['ai-model-configs'] });
+
+    renderPage(client);
+    await screen.findByText('Mistral medium');
+    await waitFor(() => expect(screen.queryByText('Not used')).not.toBeInTheDocument());
   });
 
   it('shows nothing about the included model on-premise', async () => {
