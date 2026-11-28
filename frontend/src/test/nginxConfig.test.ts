@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-// The nginx configuration of the web image and its Dockerfile, as text.
-import defaultConf from '../../nginx/default.conf?raw';
+// The nginx configuration of the web image and its Dockerfile, as text. The server block is a
+// template: docker-entrypoint.sh replaces its port and API tokens when the container starts.
+import defaultConf from '../../nginx/default.conf.template?raw';
+import mainConf from '../../nginx/nginx.conf?raw';
 import headersConf from '../../nginx/security-headers.conf?raw';
 import dockerfile from '../../Dockerfile?raw';
 
@@ -62,6 +64,14 @@ function nginxSeconds(body: string, name: string): number | null {
   const unit = match[2] ?? 's';
   const factor: Record<string, number> = { ms: 0.001, s: 1, m: 60, h: 3600, d: 86400 };
   return amount * factor[unit];
+}
+
+/** Every directive of a configuration, the first one of a block included, whitespace collapsed. */
+function everyDirective(conf: string): string[] {
+  return stripComments(conf)
+    .split(/[;{}]/)
+    .map((part) => part.trim().replace(/\s+/g, ' '))
+    .filter(Boolean);
 }
 
 const includesFragment = (body: string) => directives(body, 'include').includes(`include ${FRAGMENT}`);
@@ -209,8 +219,70 @@ describe('web container nginx configuration', () => {
   });
 
   it('ships the shared headers file where the include finds it', () => {
-    expect(dockerfile).toContain('COPY nginx/default.conf /etc/nginx/conf.d/default.conf');
+    expect(dockerfile).toContain('COPY --chmod=0644 nginx/default.conf.template /etc/nginx/default.conf.template');
     expect(dockerfile).toContain(`COPY nginx/${FRAGMENT} /etc/nginx/${FRAGMENT}`);
+  });
+
+  it('takes the port and the API address from two tokens only, replaced as text at start', () => {
+    const text = stripComments(defaultConf);
+    expect(everyDirective(defaultConf).filter((part) => part.startsWith('listen '))).toEqual(['listen __KANAP_WEB_PORT__']);
+    const proxyPasses = blocks.flatMap((block) => directives(block.body, 'proxy_pass'));
+    expect(proxyPasses).toEqual([
+      // The final slash strips /api from the path sent to the API.
+      'proxy_pass http://__KANAP_API_UPSTREAM__/',
+      'proxy_pass http://__KANAP_API_UPSTREAM__',
+      'proxy_pass http://__KANAP_API_UPSTREAM__',
+    ]);
+    // No address left in the template, and no nginx variable in proxy_pass: nginx resolves the
+    // API name once, at start, and needs no resolver.
+    expect(text).not.toMatch(/api:8080/);
+    for (const line of proxyPasses) expect(line).not.toContain('$');
+    expect([...new Set(text.match(/__KANAP_[A-Z_]+__/g))].sort()).toEqual([
+      '__KANAP_API_ORIGIN__',
+      '__KANAP_API_UPSTREAM__',
+      '__KANAP_WEB_PORT__',
+    ]);
+  });
+
+  it('runs the image as a numeric non-root user, through its own start-up script', () => {
+    const runtime = dockerfile.slice(dockerfile.lastIndexOf('\nFROM '));
+    // Numeric: Kubernetes checks runAsNonRoot only on a numeric user.
+    expect(runtime.match(/^USER .*$/gm)).toEqual(['USER 101:101']);
+    expect(runtime).toContain('ENTRYPOINT ["/docker-entrypoint.sh"]');
+    expect(runtime).not.toMatch(/^CMD /m);
+    expect(runtime).toContain('COPY --chmod=0755 nginx/docker-entrypoint.sh /docker-entrypoint.sh');
+    expect(runtime).toContain('COPY --chmod=0644 nginx/nginx.conf /etc/nginx/nginx.conf');
+    // The build steps run as root, before the USER line.
+    expect(runtime.lastIndexOf('\nRUN ')).toBeLessThan(runtime.indexOf('\nUSER '));
+    expect(runtime).toContain('EXPOSE 80');
+  });
+
+  it('writes nothing outside /tmp', () => {
+    const all = everyDirective(mainConf + '\n' + defaultConf);
+    const named = (name: string) => all.filter((part) => part.startsWith(`${name} `));
+    const temps = ['client_body_temp_path', 'proxy_temp_path', 'fastcgi_temp_path', 'uwsgi_temp_path', 'scgi_temp_path'];
+    for (const name of temps) expect(named(name)).toEqual([expect.stringMatching(new RegExp(`^${name} /tmp/nginx/`))]);
+    expect(named('pid')).toEqual(['pid /tmp/nginx/nginx.pid']);
+    expect(named('error_log')).toEqual(['error_log /dev/stderr notice']);
+    for (const line of named('access_log')) expect(line).toMatch(/^access_log (off|\/dev\/stdout\b)/);
+    for (const name of ['lock_file', 'proxy_cache_path', 'fastcgi_cache_path', 'client_body_in_file_only']) {
+      expect(named(name)).toEqual([]);
+    }
+    // The user line and the server block come from the start-up script, under /tmp/nginx.
+    expect(named('user')).toEqual([]);
+    expect(named('include')).toEqual(
+      expect.arrayContaining(['include /tmp/nginx/user.conf', 'include /tmp/nginx/default.conf', 'include /etc/nginx/mime.types']),
+    );
+  });
+
+  it('keeps the values of the base image configuration', () => {
+    const text = stripComments(mainConf);
+    expect(directives(text, 'worker_processes')).toEqual(['worker_processes auto']);
+    expect(text).toMatch(/worker_connections\s+1024;/);
+    expect(directives(text, 'default_type')).toEqual(['default_type application/octet-stream']);
+    expect(directives(text, 'sendfile')).toEqual(['sendfile on']);
+    expect(directives(text, 'keepalive_timeout')).toEqual(['keepalive_timeout 65']);
+    expect(text).toMatch(/access_log\s+\/dev\/stdout\s+main;/);
   });
 
   it('marks hashed assets immutable on successful responses only', () => {

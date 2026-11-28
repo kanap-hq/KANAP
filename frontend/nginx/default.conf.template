@@ -1,3 +1,8 @@
+# Template of the server block. docker-entrypoint.sh replaces __KANAP_WEB_PORT__ and
+# __KANAP_API_UPSTREAM__ as text when the container starts (KANAP_WEB_PORT, KANAP_API_UPSTREAM)
+# and writes the result under /tmp/nginx, where nginx.conf includes it. nginx resolves the API
+# name once, at start.
+
 # Scheme of the browser's request, passed to the API: the value set by the TLS proxy in front of
 # this container when there is one, otherwise the scheme this container was reached with.
 map $http_x_forwarded_proto $forwarded_proto { default $http_x_forwarded_proto; '' $scheme; }
@@ -9,7 +14,8 @@ map $request_uri $frame_ancestors { ~^/oauth/authorize(\?|$) "'none'"; default "
 map $request_uri $x_frame_options { ~^/oauth/authorize(\?|$) "DENY"; default "SAMEORIGIN"; }
 
 server {
-  listen 80;
+  # docker-entrypoint.sh adds the same listen on [::] when the system has IPv6.
+  listen __KANAP_WEB_PORT__;
   server_name _;
   # No nginx version in the Server header and error pages.
   server_tokens off;
@@ -39,13 +45,14 @@ server {
   # text/javascript as well: the image tag floats, and nginx's mime.types may move .js to it.
   gzip_types text/plain text/css application/javascript text/javascript application/json application/manifest+json application/xml application/wasm image/svg+xml font/woff2;
 
-  # Proxy API requests to the backend service on the Docker network. The API sets its own
+  # Proxy API requests to the API container (api:8080 unless KANAP_API_UPSTREAM says otherwise;
+  # the final slash strips /api from the path). The API sets its own
   # security headers (Content-Security-Policy, X-Content-Type-Options, Referrer-Policy,
   # X-Frame-Options, ...), passed through as they are, the same as when /api/ reaches the API
   # directly. nginx adds only Permissions-Policy, which the API does not send. This add_header
   # also keeps the server-level set (the app's CSP, security-headers.conf) off these responses.
   location /api/ {
-    proxy_pass http://api:8080/;
+    proxy_pass http://__KANAP_API_UPSTREAM__/;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Proto $forwarded_proto;
@@ -64,7 +71,7 @@ server {
   location ~ ^/api/(spend|capex)-items/budget-file/(preflight|import)$ {
     client_max_body_size 80m;
     rewrite ^/api/(.*)$ /$1 break;
-    proxy_pass http://api:8080;
+    proxy_pass http://__KANAP_API_UPSTREAM__;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Proto $forwarded_proto;
@@ -78,7 +85,7 @@ server {
   # MCP OAuth discovery (RFC 9728, RFC 8414): served by the API at the tenant root, path kept
   # (no URI on proxy_pass). Only /.well-known/oauth-*: every other /.well-known URL stays here.
   location ^~ /.well-known/oauth- {
-    proxy_pass http://api:8080;
+    proxy_pass http://__KANAP_API_UPSTREAM__;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Proto $forwarded_proto;
