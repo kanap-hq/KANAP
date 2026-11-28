@@ -12,9 +12,10 @@
 # way out, removed at the end), with what a Kubernetes cluster may impose: an arbitrary user,
 # no capabilities, a read-only root file system with a tmpfs on /tmp. The migration step
 # (--migrate-only) exits 0 and migrates, then 0 with nothing to migrate; it exits 2 with
-# SKIP_MIGRATIONS on and 1 with a protected database role. An API started with SKIP_MIGRATIONS
-# stops on the empty database, after a warning; once migrated it answers /health, and
-# /health/ready 200, or 503 while a migration is pending.
+# SKIP_MIGRATIONS on, 1 with a protected database role, and 143 at once on `docker stop`. An API
+# started with SKIP_MIGRATIONS stops on the empty database with one line and exit 1, no stack;
+# once migrated it answers /health, and /health/ready 200, or 503 while a migration is pending
+# (one warning, with two workers too).
 #
 #   check-api-image.sh <image>    for example kadratis-api:ci
 #
@@ -73,23 +74,37 @@ migrate() {
   [ "$code" = "$expected" ] || { echo "$out" | tail -30 >&2; fail "--migrate-only exited $code, expected $expected"; }
 }
 
-# api <name>: starts an API with SKIP_MIGRATIONS on.
+# api <name> [docker run options...]: starts an API with SKIP_MIGRATIONS on.
 api() {
   local name="$prefix-$1"
+  shift
   started+=("$name")
-  docker run -d --name "$name" "${restricted[@]}" -e "DATABASE_URL=$app_url" -e SKIP_MIGRATIONS=true \
+  docker run -d --name "$name" "${restricted[@]}" "$@" -e "DATABASE_URL=$app_url" -e SKIP_MIGRATIONS=true \
     -e DEPLOYMENT_MODE=single-tenant -e APP_BASE_URL=http://localhost -e "JWT_SECRET=check-api-image-$$-0123456789abcdefghijklmnop" \
     -e S3_ENDPOINT=http://127.0.0.1:9 -e S3_BUCKET=check-only \
     "$image" >/dev/null
 }
 
-# The empty database: an API with SKIP_MIGRATIONS names the pending migrations and stops.
+# The empty database: an API with SKIP_MIGRATIONS says the database has no schema and stops.
 api empty
 code=$(timeout 90 docker wait "$prefix-empty") || fail 'empty database: the API did not stop' "$prefix-empty"
-[ "$code" != 0 ] || fail 'empty database: the API exited 0' "$prefix-empty"
+[ "$code" = 1 ] || fail "empty database: the API exited $code, expected 1" "$prefix-empty"
 logs=$(docker logs "$prefix-empty" 2>&1)
-grep -qE 'SKIP_MIGRATIONS is on and [0-9]+ migration\(s\) are pending' <<<"$logs" || fail 'empty database: no warning' "$prefix-empty"
-echo "Empty database, API with SKIP_MIGRATIONS: names the pending migrations and exits $code."
+grep -qF 'SKIP_MIGRATIONS is on and the database has no schema' <<<"$logs" || fail 'empty database: no line' "$prefix-empty"
+! grep -qE '^ +at |does not exist' <<<"$logs" || fail 'empty database: a stack in the log' "$prefix-empty"
+echo 'Empty database, API with SKIP_MIGRATIONS: one line, exit 1, no stack.'
+
+# The migration step stops at once on SIGTERM (node is PID 1): it waits here for a database
+# that does not exist, retrying.
+started+=("$prefix-stop")
+docker run -d --name "$prefix-stop" "${restricted[@]}" -e "DATABASE_URL=postgres://kanap:check-only@$prefix-nowhere:5432/kanap" \
+  "$image" node ./scripts/migrate-and-start.js --migrate-only >/dev/null
+sleep 2
+docker stop -t 20 "$prefix-stop" >/dev/null
+code=$(docker inspect -f '{{.State.ExitCode}}' "$prefix-stop")
+[ "$code" = 143 ] || fail "docker stop: the migration step exited $code, expected 143" "$prefix-stop"
+docker logs "$prefix-stop" 2>&1 | grep -qF 'SIGTERM received during the migration step' || fail 'docker stop: no line' "$prefix-stop"
+echo 'Migration step on docker stop: one line, exit 143.'
 
 migrate 2 -e "DATABASE_URL=$app_url" -e SKIP_MIGRATIONS=true
 grep -q -- '--migrate-only with SKIP_MIGRATIONS on: no migration ran' <<<"$out" || fail "SKIP_MIGRATIONS: $out"
@@ -103,10 +118,11 @@ migrate 0 -e "DATABASE_URL=$app_url"
 grep -q 'Migrations complete (0 executed)' <<<"$out" || fail "second run: $(tail -5 <<<"$out")"
 echo "Migration step as uid 12345 on a read-only file system: $executed migrations, then none; exit 2 with SKIP_MIGRATIONS, 1 with a protected role."
 
-# serving <name>: starts an API with SKIP_MIGRATIONS on and waits until /health answers.
+# serving <name> [docker run options...]: starts an API with SKIP_MIGRATIONS on and waits until
+# /health answers.
 serving() {
   local name="$prefix-$1"
-  api "$1"
+  api "$@"
   for _ in $(seq 1 120); do
     [ "$(get "$1" /health 2>/dev/null)" = '200 {"status":"ok","text_processing":"ready"}' ] && return 0
     [ "$(docker inspect -f '{{.State.Running}}' "$name")" = true ] || fail "$name stopped" "$name"
@@ -132,12 +148,14 @@ echo 'API with SKIP_MIGRATIONS on the migrated database: /health and /health/rea
 last=$(psql -d kanap -At -c 'SELECT name FROM migrations ORDER BY id DESC LIMIT 1')
 row=$(psql -d kanap -At -c "SELECT timestamp FROM migrations WHERE name = '$last'")
 psql -d kanap -c "DELETE FROM migrations WHERE name = '$last'"
-serving pending
+serving pending -e API_WORKERS=2
 expect pending /health/ready '503 {"status":"unavailable"}'
 logs=$(docker logs "$prefix-pending" 2>&1)
-grep -qF 'SKIP_MIGRATIONS is on and 1 migration(s) are pending' <<<"$logs" || fail 'no warning about the pending migration' "$prefix-pending"
+warnings=$(grep -cF 'SKIP_MIGRATIONS is on and 1 migration(s) are pending' <<<"$logs" || true)
+[ "$warnings" = 1 ] || fail "two workers: $warnings warnings about the pending migration, expected 1" "$prefix-pending"
 psql -d kanap -c "INSERT INTO migrations (timestamp, name) VALUES ($row, '$last')"
-expect pending /health/ready '200 {"status":"ok"}'
-echo 'A pending migration: /health/ready 503 and one warning, then 200 once recorded.'
+# Two workers answer in turn: every answer is 200 once the migration is recorded.
+for _ in 1 2 3 4; do expect pending /health/ready '200 {"status":"ok"}'; done
+echo 'A pending migration, two workers: /health/ready 503 and one warning, then 200 once recorded.'
 
 docker image ls "$image"
