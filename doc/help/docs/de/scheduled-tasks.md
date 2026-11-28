@@ -4,10 +4,10 @@ Die Seite Geplante Aufgaben listet jeden wiederkehrenden Hintergrundjob auf, den
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Administration** (Bereich Plattform)
-- Pfad: **Administration → Geplante Aufgaben**
-- Route: `/admin/scheduled-tasks`
-- Zugriff: **Plattform-Admin** oder **Globaler Admin** auf einer Single-Tenant- (On-Premise-) Bereitstellung. Andere Rollen sehen eine „Verboten"-Seite.
+- Modul: **Administration**
+- Pfad: **Administration → Installation → Geplante Aufgaben**
+- Route: `/admin/installation/scheduled-tasks` (die frühere Adresse `/admin/scheduled-tasks` führt dorthin)
+- Zugriff: auf einer On-Premise-Installation die Rolle **Administrator** mit Zugriff auf alle Daten; im gehosteten Dienst der Plattformadministrator, auf dem Plattform-Host. Alle anderen sehen die Seite Zugriff verweigert.
 
 ## Die Aufgabenliste
 

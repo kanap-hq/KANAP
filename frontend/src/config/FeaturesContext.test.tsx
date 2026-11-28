@@ -138,6 +138,213 @@ describe('FeaturesProvider: a failed read', () => {
   });
 });
 
+describe('FeaturesProvider: the deployment mode', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  function ModeProbe() {
+    const { isLoading, isSingleTenant } = useFeatures();
+    return <div data-testid="mode">{isLoading ? 'loading' : String(isSingleTenant)}</div>;
+  }
+
+  it.each([['single-tenant', 'true'], ['multi-tenant', 'false']])('reads isSingleTenant from a %s server', async (mode, expected) => {
+    vi.stubGlobal('fetch', vi.fn(() => ok({ deploymentMode: mode, features: {}, version: '1' })));
+    render(<FeaturesProvider><ModeProbe /></FeaturesProvider>);
+    await waitFor(() => expect(screen.getByTestId('mode')).toHaveTextContent(expected));
+  });
+
+  it('is false outside the provider', () => {
+    render(<ModeProbe />);
+    expect(screen.getByTestId('mode')).toHaveTextContent('loading');
+    function Outside() {
+      return <div data-testid="outside">{String(useFeatures().isSingleTenant)}</div>;
+    }
+    render(<Outside />);
+    expect(screen.getByTestId('outside')).toHaveTextContent('false');
+  });
+});
+
+describe('FeaturesProvider: refresh', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const response = (deploymentMode: string, vulnerabilityFeed: boolean) => ({
+    ok: true,
+    json: async () => ({ deploymentMode, features: { vulnerabilityFeed }, version: '1' }),
+  });
+
+  type Api = ReturnType<typeof useFeatures>;
+  function mount(fetchMock: ReturnType<typeof vi.fn>) {
+    vi.stubGlobal('fetch', fetchMock);
+    const seen: string[] = [];
+    const refreshes = new Set<Api['refresh']>();
+    const api: { current: Api | null } = { current: null };
+    function RefreshProbe() {
+      const features = useFeatures();
+      api.current = features;
+      refreshes.add(features.refresh);
+      const shown = features.isLoading ? 'loading' : `${features.config.deploymentMode}:${String(features.config.features.vulnerabilityFeed)}`;
+      seen.push(shown);
+      return <div data-testid="refresh">{shown}</div>;
+    }
+    render(<FeaturesProvider><RefreshProbe /></FeaturesProvider>);
+    return { seen, refreshes, api };
+  }
+
+  it('replaces the configuration with a new read, without loading again', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response('multi-tenant', false))
+      .mockResolvedValueOnce(response('single-tenant', true));
+    const { seen, api, refreshes } = mount(fetchMock);
+    await waitFor(() => expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:false'));
+    const loadedAt = seen.length;
+
+    let result: boolean | undefined;
+    await act(async () => { result = await api.current!.refresh(); });
+
+    expect(result).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('refresh')).toHaveTextContent('single-tenant:true');
+    expect(api.current!.isSingleTenant).toBe(true);
+    expect(seen.slice(loadedAt)).not.toContain('loading');
+    // One function for the life of the provider: an effect that depends on it does not loop.
+    expect(refreshes.size).toBe(1);
+  });
+
+  it('keeps the configuration it had when the read fails, and says so', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response('multi-tenant', true))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ ok: false, status: 502 });
+    const { api } = mount(fetchMock);
+    await waitFor(() => expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:true'));
+
+    let first: boolean | undefined;
+    let second: boolean | undefined;
+    await act(async () => { first = await api.current!.refresh(); });
+    await act(async () => { second = await api.current!.refresh(); });
+
+    expect(first).toBe(false);
+    expect(second).toBe(false);
+    expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:true');
+    expect(api.current!.isLoading).toBe(false);
+  });
+
+  it('ends the retries of a first load that has not answered yet', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const fetchMock = vi.fn()
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce(response('single-tenant', true))
+        .mockResolvedValue(response('multi-tenant', false));
+      const { api } = mount(fetchMock);
+      await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      expect(screen.getByTestId('refresh')).toHaveTextContent('loading');
+
+      let result: boolean | undefined;
+      await act(async () => { result = await api.current!.refresh(); });
+      expect(result).toBe(true);
+      expect(screen.getByTestId('refresh')).toHaveTextContent('single-tenant:true');
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(screen.getByTestId('refresh')).toHaveTextContent('single-tenant:true');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /** A fetch whose answers the test gives one by one, after the first load. */
+  function heldReads() {
+    const answers: Array<(value: unknown) => void> = [];
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response('multi-tenant', false))
+      .mockImplementation(() => new Promise((resolve) => { answers.push(resolve); }));
+    return { fetchMock, answers };
+  }
+
+  it('answers a call made during a read with the next read, which starts once that one ends', async () => {
+    const { fetchMock, answers } = heldReads();
+    const { api } = mount(fetchMock);
+    await waitFor(() => expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:false'));
+
+    const settled: string[] = [];
+    let first!: Promise<boolean>;
+    let second!: Promise<boolean>;
+    await act(async () => {
+      first = api.current!.refresh().then((ok) => { settled.push(`first:${ok}`); return ok; });
+      // A second save, whose value the read already running does not have.
+      second = api.current!.refresh().then((ok) => { settled.push(`second:${ok}`); return ok; });
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // The read that started before the second call answers with the old value.
+    await act(async () => { answers[0](response('multi-tenant', false)); await first; });
+    expect(settled).toEqual(['first:true']);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    await act(async () => { answers[1](response('multi-tenant', true)); await second; });
+    expect(settled).toEqual(['first:true', 'second:true']);
+    expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:true');
+  });
+
+  it('keeps one read running and one waiting, shared by every call made meanwhile', async () => {
+    const { fetchMock, answers } = heldReads();
+    const { api } = mount(fetchMock);
+    await waitFor(() => expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:false'));
+
+    let running!: Promise<boolean>;
+    let waiting: Promise<boolean>[] = [];
+    await act(async () => {
+      running = api.current!.refresh();
+      waiting = [api.current!.refresh(), api.current!.refresh(), api.current!.refresh()];
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(new Set(waiting).size).toBe(1);
+    expect(waiting[0]).not.toBe(running);
+
+    await act(async () => { answers[0](response('multi-tenant', false)); await running; });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // A call made during the read that was waiting waits for a read of its own.
+    let later!: Promise<boolean>;
+    await act(async () => { later = api.current!.refresh(); });
+    expect(later).not.toBe(waiting[0]);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    let results: boolean[] = [];
+    await act(async () => { answers[1](response('multi-tenant', true)); results = await Promise.all(waiting); });
+    expect(results).toEqual([true, true, true]);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    await act(async () => { answers[2](response('single-tenant', true)); await later; });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(screen.getByTestId('refresh')).toHaveTextContent('single-tenant:true');
+  });
+
+  it('starts the waiting read even when the running one fails, and answers each with its own result', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response('multi-tenant', false))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(response('multi-tenant', true));
+    const { api } = mount(fetchMock);
+    await waitFor(() => expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:false'));
+
+    let results: boolean[] = [];
+    await act(async () => { results = await Promise.all([api.current!.refresh(), api.current!.refresh()]); });
+
+    expect(results).toEqual([false, true]);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:true');
+  });
+});
+
 describe('FeaturesProvider: an effect torn down before its read answers', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

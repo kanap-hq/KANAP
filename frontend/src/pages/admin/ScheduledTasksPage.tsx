@@ -32,6 +32,9 @@ import { useTranslation } from 'react-i18next';
 import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../auth/AuthContext';
 import { useFeatures } from '../../config/FeaturesContext';
+import { useDataAccessLimited } from '../../auth/dataAccess';
+import { useTenant } from '../../tenant/TenantContext';
+import { isInstallationOperator } from './adminMenu';
 import { useLocale } from '../../i18n/useLocale';
 import ForbiddenPage from '../ForbiddenPage';
 import {
@@ -88,10 +91,11 @@ function formatDate(locale: string, iso: string | null): string {
 
 export default function ScheduledTasksPage() {
   const { claims } = useAuth();
-  const { config } = useFeatures();
-  const isSingleTenant = config.deploymentMode === 'single-tenant';
+  const { isSingleTenant } = useFeatures();
+  const { isPlatformHost } = useTenant();
+  const dataAccessLimited = useDataAccessLimited();
 
-  const canAccess = claims?.isPlatformAdmin || (isSingleTenant && claims?.isGlobalAdmin);
+  const canAccess = isInstallationOperator({ singleTenant: isSingleTenant, platformHost: isPlatformHost, claims, dataAccessLimited });
   if (!canAccess) return <ForbiddenPage />;
 
   return <ScheduledTasksContent />;

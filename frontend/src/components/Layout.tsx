@@ -76,6 +76,7 @@ import { useLocale } from '../i18n/useLocale';
 import { useBusinessContributorApplicationVisibility } from '../hooks/useBusinessContributorApplicationVisibility';
 import { useGuardedLeave, useInAppLinkGuard } from '../hooks/leaveGuard';
 import { canUseAnyOperation } from '../pages/operations/operationAccess';
+import { ADMIN_MENU_GROUPS, adminMenuEntries, firstAdminEntry, type AdminMenuContext, type AdminMenuIcon } from '../pages/admin/adminMenu';
 import { NotifyProvider } from './notify/NotifyProvider';
 
 /** The pending page bar appears only once a move to another page has lasted a moment. */
@@ -109,6 +110,26 @@ const workspaceRoutes: Record<WorkspaceKey, string> = {
   ops: '/ops',
   'master-data': '/master-data',
   admin: '/admin',
+};
+
+/** The icon of each Administration menu line (`pages/admin/adminMenu.ts`). */
+const ADMIN_MENU_ICONS: Record<AdminMenuIcon, React.ReactNode> = {
+  People: <PeopleIcon />,
+  Security: <SecurityIcon />,
+  LockOutlined: <LockOutlinedIcon />,
+  History: <HistoryIcon />,
+  CreditCard: <CreditCardIcon />,
+  AdminPanelSettings: <AdminPanelSettingsIcon />,
+  Brush: <BrushIcon />,
+  Dataset: <DatasetIcon />,
+  Storage: <StorageIcon />,
+  AutoAwesome: <AutoAwesomeIcon />,
+  MonitorHeart: <MonitorHeartIcon />,
+  Extension: <ExtensionIcon />,
+  Apartment: <ApartmentIcon />,
+  HourglassBottom: <HourglassBottomIcon />,
+  AccountBalance: <AccountBalanceIcon />,
+  Schedule: <ScheduleIcon />,
 };
 
 function isNavItem(entry: NavEntry): entry is NavItem {
@@ -160,7 +181,7 @@ export default function Layout() {
   const dataAccessLimited = useDataAccessLimited();
   const tenant = useTenant();
   const { isPlatformHost, organisationName } = tenant;
-  const { config } = useFeatures();
+  const { config, isSingleTenant } = useFeatures();
   const { mode, resolvedMode, setMode } = useThemeMode();
   const aiCapabilities = useAiCapabilities();
   const canShowAgents = config.features.aiSettings
@@ -183,7 +204,6 @@ export default function Layout() {
   const { t } = useTranslation(['nav', 'settings']);
   const pagePending = React.useContext(PagePendingContext);
   const locale = useLocale();
-  const isSingleTenant = config.deploymentMode === 'single-tenant';
   const {
     hasScopedApplicationReaderAccess,
     shouldHideApplications,
@@ -278,32 +298,25 @@ export default function Layout() {
     { to: '/agents/shared-context', label: t('nav:sidebar.agents.sharedContext'), icon: <MenuBookIcon />, resource: 'ai_agents', level: 'admin' },
   ];
 
-  const tenantAdminNav: NavEntry[] = [
-    { to: '/admin/users', label: t('nav:sidebar.admin.users'), icon: <PeopleIcon />, resource: 'users', level: 'admin' },
-    { to: '/admin/roles', label: t('nav:sidebar.admin.roles'), icon: <SecurityIcon />, resource: 'users', level: 'admin' },
-    { to: '/admin/data-access', label: t('nav:sidebar.admin.dataAccess'), icon: <LockOutlinedIcon />, resource: 'users', level: 'admin' },
-    { to: '/admin/audit-logs', label: t('nav:sidebar.admin.auditLog'), icon: <HistoryIcon />, resource: 'users', level: 'admin' },
-    { to: '/admin/billing', label: t('nav:sidebar.admin.billing'), icon: <CreditCardIcon />, resource: 'billing' },
-    { to: '/admin/auth', label: t('nav:sidebar.admin.authentication'), icon: <AdminPanelSettingsIcon />, resource: 'users', level: 'admin' },
-    { to: '/admin/branding', label: t('nav:sidebar.admin.branding'), icon: <BrushIcon />, resource: 'users', level: 'admin' },
-    { divider: t('nav:sidebar.admin.sections.ai') },
-    { to: '/admin/ai-models', label: t('nav:sidebar.admin.aiModels'), icon: <StorageIcon />, resource: 'ai_settings', level: 'admin' },
-    { to: '/admin/ai', label: t('nav:sidebar.admin.ai'), icon: <AutoAwesomeIcon />, resource: 'ai_settings', level: 'admin' },
-    { to: '/admin/ai-usage', label: t('nav:sidebar.admin.aiUsage'), icon: <MonitorHeartIcon />, resource: 'ai_settings', level: 'admin' },
-    { divider: t('nav:sidebar.admin.sections.integrations') },
-    { to: '/admin/integrations', label: t('nav:sidebar.admin.integrations'), icon: <ExtensionIcon />, resource: 'ai_settings', level: 'admin' },
-  ];
-
-  const platformAdminNav: NavEntry[] = [
-    { to: '/admin/tenants', label: t('nav:sidebar.platform.tenants'), icon: <ApartmentIcon /> },
-    { to: '/admin/trials', label: t('nav:sidebar.platform.trials'), icon: <HourglassBottomIcon /> },
-    { to: '/admin/coa-templates', label: t('nav:sidebar.platform.coaTemplates'), icon: <StorageIcon /> },
-    { to: '/admin/standard-accounts', label: t('nav:sidebar.platform.standardAccounts'), icon: <AccountBalanceIcon /> },
-    { divider: '' },
-    { to: '/admin/platform-ai', label: t('nav:sidebar.platform.platformAi'), icon: <AutoAwesomeIcon /> },
-    { to: '/admin/ops-dashboard', label: t('nav:sidebar.platform.opsDashboard'), icon: <MonitorHeartIcon /> },
-    { to: '/admin/scheduled-tasks', label: t('nav:sidebar.platform.scheduledTasks'), icon: <ScheduleIcon /> },
-  ];
+  // The Administration menu: the pages the person may open here, from the menu module.
+  const adminMenuContext = React.useMemo<AdminMenuContext>(() => ({
+    singleTenant: isSingleTenant,
+    platformHost: isPlatformHost,
+    claims,
+    hasLevel,
+    dataAccessLimited,
+    features: config.features,
+    aiSettingsAvailable,
+    canShowIntegrations,
+  }), [isSingleTenant, isPlatformHost, claims, hasLevel, dataAccessLimited, config.features, aiSettingsAvailable, canShowIntegrations]);
+  const adminNav: NavEntry[] = [];
+  let adminGroup: string | null = null;
+  for (const entry of adminMenuEntries(adminMenuContext)) {
+    const { title } = ADMIN_MENU_GROUPS[entry.group];
+    if (entry.group !== adminGroup && title !== null) adminNav.push({ divider: title ? t(title) : '' });
+    adminGroup = entry.group;
+    adminNav.push({ to: entry.to, label: t(entry.label), icon: ADMIN_MENU_ICONS[entry.icon] });
+  }
 
   const [menuAnchor, setMenuAnchor] = React.useState<null | HTMLElement>(null);
   const openMenu = (e: React.MouseEvent<HTMLElement>) => setMenuAnchor(e.currentTarget);
@@ -328,20 +341,8 @@ export default function Layout() {
     }
     if (claims?.isGlobalAdmin || claims?.isPlatformAdmin) return true;
     if (ws === 'admin' && !isPlatformHost) {
-      // The integrations page alone is enough to justify the admin workspace.
-      if (canShowIntegrations) return true;
-      const requirements = getNavRequirements(tenantAdminNav).filter((entry) => {
-        if (entry.resource === 'ai_settings') {
-          return aiCapabilities.data?.surfaces.settings.available === true;
-        }
-        return true;
-      });
-      if (!config.features.aiSettings) {
-        return requirements
-          .filter((entry) => entry.resource !== 'ai_settings')
-          .some((entry) => hasLevel(entry.resource, entry.level));
-      }
-      return requirements.some((entry) => hasLevel(entry.resource, entry.level));
+      // One page of the menu is enough to justify the admin workspace.
+      return firstAdminEntry(adminMenuContext) !== null;
     }
     const resources = getNavRequirements(
       ws === 'ops' ? operations
@@ -352,7 +353,7 @@ export default function Layout() {
                 : [],
     );
     return resources.some(r => hasLevel(r.resource, r.level));
-  }, [hasLevel, claims, config.features.aiChat, config.features.aiSettings, isPlatformHost, aiCapabilities.data, canShowAgents, canShowIntegrations, hasScopedApplicationReaderAccess, shouldHideApplications]);
+  }, [hasLevel, claims, config.features.aiChat, isPlatformHost, adminMenuContext, aiCapabilities.data, canShowAgents, hasScopedApplicationReaderAccess, shouldHideApplications]);
 
   // Determine which workspaces are visible
   const visibleWorkspaces = React.useMemo(() => {
@@ -646,28 +647,8 @@ export default function Layout() {
             // Determine which nav entries to render
             let entries: NavEntry[];
             if (workspace === 'admin') {
-              const base = isPlatformHost && !isSingleTenant ? platformAdminNav : tenantAdminNav;
-              const aiAdminRoutes = ['/admin/ai', '/admin/ai-models', '/admin/ai-usage'];
-              entries = base.filter((entry) => {
-                if (!isNavItem(entry)) return true;
-                if (entry.to === '/admin/billing' && !config.features.billing) return false;
-                if (entry.to === '/admin/auth' && !config.features.sso) return false;
-                if (entry.to === '/admin/integrations') return canShowIntegrations;
-              // Administration shows only when one of its pages can be used.
-              if (entry.to === '/ops/operations') return canUseAnyOperation(hasLevel, dataAccessLimited);
-                if (aiAdminRoutes.includes(entry.to) && !aiSettingsAvailable) return false;
-                return true;
-              });
-              // Sample data (cloud workspaces): the Administrator role, after Branding.
-              if (!isPlatformHost && !isSingleTenant && config.features.sampleData && claims?.isGlobalAdmin) {
-                const at = entries.findIndex((entry) => isNavItem(entry) && entry.to === '/admin/branding');
-                const item: NavEntry = { to: '/admin/sample-data', label: t('nav:sidebar.admin.sampleData'), icon: <DatasetIcon /> };
-                entries = at >= 0 ? [...entries.slice(0, at + 1), item, ...entries.slice(at + 1)] : [...entries, item];
-              }
-              // In single-tenant mode, append Scheduled Tasks for admin users
-              if (isSingleTenant && claims?.isGlobalAdmin) {
-                entries = [...entries, { to: '/admin/scheduled-tasks', label: t('nav:sidebar.platform.scheduledTasks'), icon: <ScheduleIcon /> }];
-              }
+              // Already filtered by the menu module.
+              entries = adminNav;
             } else if (isPlatformHost) {
               entries = [];
             } else {
@@ -685,14 +666,8 @@ export default function Layout() {
             // Filter items by permission (dividers pass through)
             const permitted = entries.filter((entry) => {
               if (!isNavItem(entry)) return true;
-              if (entry.to === '/admin/integrations') return canShowIntegrations;
               // Administration shows only when one of its pages can be used.
               if (entry.to === '/ops/operations') return canUseAnyOperation(hasLevel, dataAccessLimited);
-              if (['/admin/ai', '/admin/ai-models', '/admin/ai-usage'].includes(entry.to)) {
-                return aiCapabilities.data?.surfaces.settings.available === true;
-              }
-              // A limited person sees none of the data-access administration, even a global admin.
-              if (entry.to === '/admin/data-access' && dataAccessLimited) return false;
               const grants = itemGrants(entry);
               return grants.length === 0 || grants.some((grant) => hasLevel(grant.resource, grant.level ?? 'reader'));
             });

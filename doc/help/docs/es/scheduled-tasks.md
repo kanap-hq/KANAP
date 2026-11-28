@@ -4,10 +4,10 @@ La página Tareas programadas lista cada trabajo recurrente en segundo plano que
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Administración** (sección Plataforma)
-- Ruta: **Administración → Tareas programadas**
-- Ruta: `/admin/scheduled-tasks`
-- Acceso: **Administrador de plataforma** o **Administrador global** en un despliegue de inquilino único (local). Otros roles ven una página Prohibido.
+- Módulo: **Administración**
+- Ruta: **Administración → Instalación → Tareas programadas**
+- Ruta: `/admin/installation/scheduled-tasks` (la antigua dirección `/admin/scheduled-tasks` lleva allí)
+- Acceso: en una instalación local, el rol **Administrador** con acceso a todos los datos; en el servicio alojado, el administrador de la plataforma, en el host de la plataforma. Cualquier otra persona ve la página de acceso denegado.
 
 ## La lista de tareas
 

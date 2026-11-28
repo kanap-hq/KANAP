@@ -4,10 +4,10 @@ La page Tâches planifiées liste tous les jobs récurrents en arrière-plan que
 
 ## Où la trouver
 
-- Espace de travail : **Administration** (section Plateforme)
-- Chemin : **Administration → Tâches planifiées**
-- Route : `/admin/scheduled-tasks`
-- Accès : **Platform Admin**, ou **Global Admin** sur un déploiement single-tenant (on-premise). Les autres rôles voient une page Interdit.
+- Module : **Administration**
+- Chemin : **Administration → Installation → Tâches planifiées**
+- Route : `/admin/installation/scheduled-tasks` (l'ancienne adresse `/admin/scheduled-tasks` y mène)
+- Accès : sur une installation sur site, le rôle **Administrateur** avec accès à toutes les données ; sur le service hébergé, l'administrateur de la plateforme, sur l'hôte de la plateforme. Toute autre personne voit la page d'accès refusé.
 
 ## La liste des tâches
 

@@ -178,7 +178,7 @@ async function testWebhookBookings() {
         ['trial.discovery_call_updated', 'webhook', null],
       ]);
       assert.equal(audit[0].before_json, null);
-      assert.deepEqual(audit[2].after_json, { scheduled_at: '2030-01-12T14:00:00.000Z', status: 'cancelled', source: 'calcom', note: null });
+      assert.deepEqual(audit[2].after_json, { scheduled_at: '2030-01-12T14:00:00.000Z', status: 'cancelled', source: 'calcom' });
     });
   } finally {
     await served.close();
@@ -273,6 +273,63 @@ async function testManual() {
   }
 }
 
+/** The note's text never reaches the audit log; a change of it is `note_changed` on the after side. */
+async function testNoteStaysOutOfTheAudit() {
+  const svc = buildServices();
+  const served = await serve();
+  const service = new DiscoveryCallService(dataSource);
+  let t: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'dc-note', orgName: 'Discovery Note', signup: true });
+    const save = (body: unknown) => inTenant(t!.tenantId, (m) => service.saveManual(m, t!.tenantId, body, t!.ownerId));
+    await save({ scheduled_at: '2030-06-01T10:00:00Z', note: 'Secret note' });
+    let audit = await auditActions(t.tenantId);
+    assert.equal(JSON.stringify(audit).includes('Secret note'), false, 'the entry does not hold the note');
+    assert.equal(audit[0].before_json, null);
+    assert.deepEqual(audit[0].after_json, {
+      scheduled_at: '2030-06-01T10:00:00.000Z', status: 'booked', source: 'manual', note_changed: true,
+    });
+
+    await withSecret(SECRET, async () => {
+      const moved = await webhook(served, booking('BOOKING_RESCHEDULED', 'uid-note', t!.ownerEmail, '2030-06-02T11:00:00Z'));
+      assert.equal(moved.body.outcome, 'applied');
+    });
+    assert.equal((await readCall(t.tenantId))?.note, 'Secret note', 'a reschedule keeps the note on the call');
+    audit = await auditActions(t.tenantId);
+    assert.equal(JSON.stringify(audit[1]).includes('Secret note'), false);
+    assert.deepEqual(audit[1].before_json, {
+      scheduled_at: '2030-06-01T10:00:00.000Z', status: 'booked', source: 'manual',
+    });
+    assert.deepEqual(audit[1].after_json, {
+      scheduled_at: '2030-06-02T11:00:00.000Z', status: 'booked', source: 'calcom',
+    }, 'a reschedule that keeps the note carries no note_changed');
+
+    await save({ scheduled_at: '2030-06-02T11:00:00Z', note: 'Revised note' });
+    audit = await auditActions(t.tenantId);
+    assert.equal(JSON.stringify(audit[2]).includes('Secret note') || JSON.stringify(audit[2]).includes('Revised note'), false);
+    assert.deepEqual(audit[2].after_json, {
+      scheduled_at: '2030-06-02T11:00:00.000Z', status: 'booked', source: 'manual', note_changed: true,
+    }, 'editing the note sets note_changed');
+
+    await save({ scheduled_at: '2030-06-02T11:00:00Z', note: null });
+    audit = await auditActions(t.tenantId);
+    assert.equal(audit[3].after_json.note_changed, true, 'clearing the note sets note_changed');
+    assert.equal(Object.hasOwn(audit[3].before_json, 'note'), false);
+    assert.equal(Object.hasOwn(audit[3].after_json, 'note'), false);
+
+    await inTenant(t.tenantId, (m) => service.remove(m, t!.tenantId, t!.ownerId));
+    audit = await auditActions(t.tenantId);
+    assert.equal(audit[4].action, 'trial.discovery_call_removed');
+    assert.equal(audit[4].after_json, null);
+    assert.equal(Object.hasOwn(audit[4].before_json, 'note'), false, 'a removal carries no note key');
+    assert.equal(JSON.stringify(audit).includes('Secret note'), false);
+    assert.equal(JSON.stringify(audit).includes('Revised note'), false);
+  } finally {
+    await served.close();
+    await cleanupTenants([t?.tenantId]);
+  }
+}
+
 async function testConfig() {
   assert.deepEqual(discoveryCallConfig({}), { url: '', fallbackEmail: '', webhookSecret: '' });
   assert.deepEqual(discoveryCallConfig({
@@ -290,6 +347,7 @@ runSpecs('discovery-call.integration.spec', [
   testWebhookRefusals,
   testClicks,
   testManual,
+  testNoteStaysOutOfTheAudit,
 ]).catch((error) => {
   console.error(error);
   process.exit(1);

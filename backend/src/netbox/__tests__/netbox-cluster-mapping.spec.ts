@@ -67,6 +67,8 @@ function harness(initial: Record<string, unknown>) {
     getRepository: () => ({
       findOne: async () => config,
       save: async (entity: unknown) => entity,
+      // The audit entry of each save of the matches.
+      insert: async () => ({ identifiers: [{ id: 'audit-entry' }] }),
     }),
     // Answers the target check the way the database would, tenant predicate included.
     query: async (sql: string, params: unknown[]) => {
