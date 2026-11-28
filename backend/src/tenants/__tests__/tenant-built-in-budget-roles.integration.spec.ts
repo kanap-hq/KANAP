@@ -8,6 +8,7 @@ import { buildServices, cleanupTenants, inTenant, runSpecs } from '../../admin/t
 // changes them. A new tenant gets these rights, and seeding the defaults again (as the tenant
 // reset does) merges the shipped rights without bringing `budget_ops` back to the Budget Reader.
 // The tenant is committed (the services open their own transactions) and removed at the end.
+// @database-spec: opens the data source through runSpecs, so run-ci-tests.js runs this file on a database lane.
 
 async function rightsOf(tenantId: string, roleName: string): Promise<Record<string, string>> {
   const rows: Array<{ resource: string; level: string }> = await inTenant(tenantId, (manager) => manager.query(
