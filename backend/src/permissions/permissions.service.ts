@@ -48,7 +48,7 @@ export const RESOURCES = [
   'business_processes',
   'knowledge',
   'users',
-  // The organisation's administration pages: branding, authentication, audit log (lot A1).
+  // The organisation's administration pages: branding, authentication, audit log.
   'organization',
   'reporting',
   'settings',

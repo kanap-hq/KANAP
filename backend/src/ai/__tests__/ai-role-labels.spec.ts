@@ -42,7 +42,7 @@ function testTheRightsAreTheScreens() {
 function testTheLanguageOfThePerson() {
   assert.equal(aiResourceLabel('portfolio_projects', 'fr'), 'Projets du portefeuille');
   assert.equal(aiResourceLabel('budget', 'es'), 'Presupuesto');
-  // Lot A1: the organisation right, and the two settings rights named for their pages.
+  // The organisation right, and the two settings rights named for their pages.
   assert.equal(aiResourceLabel('organization', 'fr'), 'Organisation');
   assert.equal(aiResourceLabel('settings', 'fr'), 'Paramètres de la cartographie SI');
   assert.equal(aiResourceLabel('budget_ops', 'en'), 'Budget settings and operations');

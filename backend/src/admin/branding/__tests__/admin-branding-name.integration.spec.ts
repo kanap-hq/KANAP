@@ -37,7 +37,7 @@ import { AdminBrandingController } from '../admin-branding.controller';
 // An administrator renames the organisation from Branding. The display name
 // changes everywhere `GET /public/tenant-info` is read; the slug, the workspace
 // address, stays. An organization reader reads the settings and is refused the
-// write, as is users:admin alone (lot A1), and an empty name
+// write, as is users:admin alone, and an empty name
 // or one longer than 120 characters is refused. The platform console is refused
 // by the same host check as the other branding routes.
 

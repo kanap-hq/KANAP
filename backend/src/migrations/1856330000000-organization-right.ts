@@ -20,7 +20,7 @@ type Action = 'insert' | 'update' | 'keep';
 const tenantName = (slug: string | null, id: string) => `${slug || '(no slug)'} (${id})`;
 
 /**
- * The `organization` right (lot A1): Admin › Branding, Admin › Authentication and Admin › Audit
+ * The `organization` right: Admin › Branding, Admin › Authentication and Admin › Audit
  * log move from `users:admin` to `organization` (reader, admin). After the migration, every role
  * keeps the pages it opened.
  *

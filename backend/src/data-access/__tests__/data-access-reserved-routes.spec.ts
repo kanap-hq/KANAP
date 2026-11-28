@@ -301,7 +301,7 @@ const ALLOWED_SAMPLES: Array<[string, Method, string]> = [
   ['supplier contact link', 'POST', `suppliers/${ID}/contacts`],
   ['line update', 'PATCH', `spend-items/${ID}`],
   ['own MCP keys', 'GET', 'ai/keys'],
-  // An organisation reader in limited access reads Branding (lot A1, P19).
+  // An organisation reader in limited access reads Branding.
   ['branding settings', 'GET', 'admin/branding/settings'],
 ];
 

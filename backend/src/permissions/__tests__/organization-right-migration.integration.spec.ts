@@ -5,7 +5,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { OrganizationRight1856330000000 as Migration } from '../../migrations/1856330000000-organization-right';
 
-// Migration 1856330000000 (the `organization` right, lot A1), against a real database, each test in
+// Migration 1856330000000 (the `organization` right), against a real database, each test in
 // a transaction that is rolled back. The database is migrated already: each test seeds roles as a
 // database of before the right holds them (the rows of its own tenants are removed first), then
 // runs up(). The rule: every role that opened Branding, Authentication and the Audit log keeps them.

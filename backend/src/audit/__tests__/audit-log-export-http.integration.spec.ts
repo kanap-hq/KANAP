@@ -37,7 +37,7 @@ import {
 // the request pipeline main.ts installs: the list's rows as a CSV file with flat, stable columns
 // (the person as the page shows them: name, address only without a name, fixed codes otherwise;
 // address and user agent of sign-in events; values as compact JSON), the list's filters and sort, every cell that a spreadsheet would read as a formula
-// prefixed, the tenant's rows only, `organization:reader` and up only (lot A1), a row limit announced in a header, and the
+// prefixed, the tenant's rows only, `organization:reader` and up only, a row limit announced in a header, and the
 // export itself recorded in the audit log. The file is read in batches and written as they come:
 // batches neither repeat nor skip a row, a read error halfway closes the connection (the file is
 // incomplete for the client, the request rolls back, the server keeps answering). The list and the
