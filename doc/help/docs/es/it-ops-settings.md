@@ -17,10 +17,14 @@ Solo ve las pestañas que sus permisos permiten. Si no ve la entrada **Configura
 
 ## Cómo está organizada la página
 
-La página tiene dos pestañas:
+La página tiene dos pestañas. Cada una tiene su propia dirección, así que un enlace o un marcador abre la correcta:
 
-- **Listas** contiene los valores desplegables descritos en esta página.
-- **Netbox** contiene la sincronización con su inventario de Netbox. Consulte [Sincronización con Netbox](netbox.md).
+- **Listas** (`/it/settings/lists`) contiene los valores desplegables descritos en esta página.
+- **Netbox** (`/it/settings/netbox`) contiene la sincronización con su inventario de Netbox. Consulte [Sincronización con Netbox](netbox.md).
+
+`/it/settings` abre la primera pestaña que usted puede ver. Las direcciones anteriores `/it/settings?tab=netbox` y `/it/netbox` abren la pestaña **Netbox**.
+
+Los cambios se guardan solos. Un único indicador en el encabezado de la página dice si se están guardando, si están guardados o si no se han guardado. Cuando se rechaza una lista, el motivo aparece bajo esa lista y la lista vuelve a sus valores guardados.
 
 En la pestaña **Listas**, el editor **Clasificaciones y continuidad** está en la parte superior. Debajo, las listas se agrupan en cuatro secciones plegables:
 
@@ -35,10 +39,13 @@ Dentro de una sección, las listas se ordenan por nombre. Cada lista aparece com
 
 ### Controles del editor
 
-Cada lista tiene sus propios controles en la parte superior:
+Cada lista es una tabla: el nombre, las columnas propias de la lista, **Dejar de proponer** y, en cada fila, dos iconos, **Traducir** y **Eliminar**.
 
-- **Agregar elemento**: Inserta una nueva fila en la parte superior de la lista, enfocada y lista para escribir. Su campo de nombre muestra un ejemplo propio de esa lista.
-- Las ediciones se guardan automáticamente alrededor de un segundo y medio después de su último cambio, una vez que todas las filas son válidas. Un indicador de guardado se muestra junto a la lista.
+- **Añadir elemento**, bajo la tabla, añade una fila al final de la lista con el cursor en su nombre. Su campo de nombre muestra un ejemplo propio de esa lista. Una fila que se deja vacía nunca se guarda.
+- Los valores mantienen el orden que usted ve. Kadratis no los ordena.
+- Un nombre escrito se guarda poco después de su última pulsación, o cuando sale del campo. Una casilla marcada o una elección se guarda al instante. No se guarda nada mientras una fila de la lista incumpla una de las reglas siguientes.
+
+Las zonas de administración, los tipos de conexión, los dominios y las subredes tienen su propia disposición: su botón **Añadir elemento** está encima de la tabla y añade la fila arriba.
 
 Para listas largas (más de 25 filas), la tabla virtualiza filas, mostrando unas 20 a la vez con desplazamiento suave y encabezados fijos.
 
@@ -48,7 +55,7 @@ Usted solo ve y escribe **nombres**. Kadratis genera un código interno estable 
 
 Como los nombres identifican los valores, dentro de una lista se aplican algunas reglas:
 
-- todo valor necesita un nombre (un asterisco marca la columna **Nombre**), y dos valores no pueden tener el mismo nombre (las mayúsculas y minúsculas no importan);
+- todo valor necesita un nombre (un asterisco marca la columna **Nombre**), y dos valores no pueden tener el mismo nombre (las mayúsculas y minúsculas no importan), en la lista o tal como se muestran en su idioma;
 - un nombre no puede ser idéntico al código interno de otro valor de la misma lista;
 - los nombres de los **Métodos de acceso** no pueden contener una coma ni un punto y coma, porque la exportación los lista en una sola celda separada por comas.
 
@@ -56,15 +63,28 @@ Una lista que incumple una de estas reglas no se guarda hasta que la corrija; la
 
 ### Eliminar un valor
 
-**Eliminar** borra un valor que nada utiliza. Cuando todavía hay registros que hacen referencia al valor, Kadratis muestra cuántos (aplicaciones, activos, interfaces, conexiones, ubicaciones, incidentes, subredes…), con un enlace a la lista filtrada cuando una lista se puede filtrar por ese campo, y ofrece **Dejar de proponer** en su lugar: el valor sigue visible en los registros que ya lo usan y ya no se propone para los nuevos. Un valor en uso nunca se elimina, ni siquiera a través de la API.
+**Eliminar** (el icono de la papelera) borra sin preguntar un valor que nada utiliza. Cuando todavía hay registros que hacen referencia al valor, Kadratis muestra cuántos (aplicaciones, activos, interfaces, conexiones, ubicaciones, incidentes, subredes…), con un enlace a la lista filtrada cuando una lista se puede filtrar por ese campo, y ofrece **Dejar de proponer** en su lugar: el valor sigue visible en los registros que ya lo usan y ya no se propone para los nuevos. El botón **Dejar de proponer** del cuadro de diálogo marca la casilla por usted. Un valor en uso nunca se elimina, ni siquiera a través de la API.
 
-Los valores integrados que Kadratis gestiona por sí mismo (los cuatro estados del ciclo de vida, los dominios Workgroup y N/A) no se pueden editar ni eliminar. Las zonas de red y los tipos de activo predeterminados, y el proveedor cloud Otro, se pueden editar y retirar, pero no eliminar: el servidor los volvería a añadir.
+Los valores integrados que Kadratis gestiona por sí mismo (los cuatro estados del ciclo de vida, los dominios Workgroup y N/A) no se pueden editar ni eliminar: llevan la marca **Integrado**. Las zonas de red y los tipos de activo predeterminados, y el proveedor cloud Otro, se pueden editar y retirar, pero no eliminar: el servidor los volvería a añadir.
 
 ### Traducir sus valores
 
-Los valores que escribe se muestran tal cual en todos los idiomas. Para mostrarlos en el idioma de cada usuario, use la acción **Traducir** en una fila: el cuadro de diálogo presenta el nombre base (y la descripción en los niveles de clasificación) y un campo por idioma. Un campo dejado vacío usa la traducción automática mientras el valor siga siendo un valor predeterminado de Kadratis; de lo contrario, el texto base. Guardar las traducciones nunca cambia el texto base, y un nombre traducido se puede usar en los archivos CSV y en la API igual que el propio nombre, por lo que no debe duplicar otro valor de la lista.
+Una lista muestra cada valor con el nombre que el resto de Kadratis muestra en su idioma: la traducción que su espacio de trabajo escribió para ese idioma; si no la hay, la traducción incluida con Kadratis mientras el valor conserve su nombre incluido; si no, el propio nombre. Un usuario de habla hispana ve la zona de red incluida Guest como «Invitados», aquí y en los registros.
 
-Los editores siempre muestran y editan el texto base; cuando el nombre mostrado difiere en su idioma, la fila lo indica («Se muestra: …»).
+Escribir un nombre nuevo en la lista lo convierte en el nombre base del valor. La traducción que su espacio de trabajo escribió para su idioma desaparece, para que el campo conserve lo que usted escribió; las traducciones de los demás idiomas se mantienen.
+
+El icono **Traducir** abre los idiomas del valor: el nombre base (y la descripción en los niveles de clasificación) y un campo por idioma. Un campo vacío muestra lo que se ve en su lugar, también cuando es una traducción incluida con Kadratis. El icono destaca cuando el valor tiene una traducción escrita por su espacio de trabajo. Guardar las traducciones nunca cambia el texto base, y un nombre traducido se puede usar en los archivos CSV y en la API igual que el propio nombre, por lo que no debe duplicar otro valor de la lista.
+
+### Restablecer las listas por defecto
+
+**Restablecer las listas por defecto**, en el encabezado de la pestaña **Listas**, devuelve las listas a los valores incluidos con Kadratis, tras una confirmación. Requiere `settings:admin`. Los cambios que aún no se han guardado se guardan primero.
+
+- Cada valor incluido vuelve con su nombre y sus traducciones incluidos, propuesto de nuevo, aunque usted lo hubiera renombrado, retirado o eliminado. Las traducciones que su espacio de trabajo escribió para él desaparecen.
+- Un valor que usted añadió se conserva cuando lo usan registros, tal como está, después de los valores incluidos y en su orden anterior. Un valor que usted añadió y que nada usa desaparece. Las subredes se conservan solo cuando las usan activos, junto con las zonas de red que necesitan.
+- Una zona de administración que usted añadió y que se conserva pasa al final, como la menos sensible: muévala a su lugar. Un nivel de clasificación conservado pasa a ser el menos crítico, y una ola de recuperación conservada, la última.
+- Un nombre incluido que chocaría con un valor que usted conserva se queda como está ahora.
+
+Los registros nunca cambian: conservan sus valores.
 
 ---
 
@@ -92,7 +112,7 @@ Dónde se alojan las ubicaciones y las tecnologías. Valores por defecto: Local,
 - Espacio de trabajo de Ubicaciones → pestaña Visión general → campo **Tipo de alojamiento**
 - Espacio de trabajo de Tecnologías → panel de propiedades → **Tipo de alojamiento**, y la ventana de nueva tecnología. Consulte [Tecnologías](technologies.md#tipo-de-alojamiento).
 
-Un tipo que usa una tecnología no se puede eliminar: márquelo con **Dejar de proponer**.
+Un tipo que usa una tecnología no se puede eliminar: marque en su lugar **Dejar de proponer**.
 
 La categoría determina qué campos aparecen al editar una Ubicación:
 - **Local / colocación** muestra campos de Empresa operadora y Centro de datos
@@ -112,7 +132,7 @@ Las zonas de su modelo de administración. Kadratis incluye los tres tiers del m
 
 Cámbieles el nombre, añada los suyos o deje de proponerlos según su política de administración o su modelo de acceso privilegiado. Los tres tiers aparecen mientras la lista no se haya guardado nunca. Una vez guardada la lista, aunque esté vacía, Kadratis ya no los añade: añádalos usted mismo si los necesita.
 
-El orden de la lista importa: la primera zona es la más sensible. Arrastre una fila por su asa para moverla. Una zona nueva se añade arriba: muévala después a su lugar. La página [Zonas de administración](administration-view.md) muestra las zonas en este orden y compara los activos con la primera zona que no está marcada con **Dejar de proponer**.
+El orden de la lista importa: la primera zona es la más sensible. Arrastre una fila por su asa para moverla. Una zona nueva se añade arriba: muévala después a su lugar. La página [Zonas de administración](administration-view.md) muestra las zonas en este orden y compara los activos con la primera zona que todavía se propone.
 
 **Columnas**: Nombre, Grupo de administradores, Descripción, Dejar de proponer
 
@@ -123,7 +143,7 @@ El orden de la lista importa: la primera zona es la más sensible. Arrastre una 
 - Espacio de trabajo de Tecnologías → panel de propiedades → **Zona de administración**, para las tecnologías de la familia **Directorio e identidad**
 - **Panorama IT > Zonas de administración**, que cuenta los activos y los servicios de directorio de cada zona, ejecuta los puntos de control y asigna zonas en bloque. Consulte [Zonas de administración](administration-view.md).
 
-Una zona marcada con **Dejar de proponer** se mantiene en las tecnologías y los activos ya situados en ella.
+Una zona que ya no se propone se mantiene en las tecnologías y los activos ya situados en ella.
 
 ### Familias de tecnologías
 
@@ -379,7 +399,7 @@ Opciones de ciclo de vida compartidas por aplicaciones, instancias de aplicació
 
 **Columnas**: Nombre, Dejar de proponer
 
-**Códigos bloqueados**: Los estados integrados (Propuesto, Activo, Obsoleto, Retirado) no pueden eliminarse ni tener sus códigos modificados.
+**Estados integrados**: Propuesto, Activo, Obsoleto y Retirado son textos en su idioma, con la marca **Integrado**. No se pueden renombrar, retirar ni eliminar. Los estados que usted añade se editan como cualquier otro valor.
 
 **Dónde se usa**:
 - Aplicaciones, Instancias de app, Interfaces, Enlaces de interfaz, Activos → campos de **Estado**
@@ -402,7 +422,7 @@ Categorías utilizadas para clasificar las entradas del registro de incidentes.
 ## Cómo afectan los cambios a los datos existentes
 
 - **Los registros existentes conservan su valor**: Renombrar solo cambia lo que ven los usuarios, no los datos subyacentes.
-- **Valores marcados como Dejar de proponer**:
+- **Valores que ya no se proponen** (**Dejar de proponer** marcado):
   - Permanecen válidos para registros que ya los utilizan.
   - Se ocultan de los desplegables al crear nuevos registros.
   - Siguen apareciendo durante la edición si el registro ya usa ese valor.
@@ -444,7 +464,7 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 ## Consejos
 
 - **Alinee los nombres con su terminología**: Revise los valores predeterminados y renombre los valores para que coincidan con cómo su organización habla de estos conceptos. Los registros conservan su vínculo con el valor; solo cambia el nombre.
-- **Retire gradualmente**: Al dejar de usar un valor, márquelo como **Dejar de proponer** en lugar de eliminarlo. Esto mantiene los datos históricos intactos mientras dirige a los usuarios hacia nuevas opciones.
+- **Retire gradualmente**: Al dejar de usar un valor, marque **Dejar de proponer** en lugar de eliminarlo. Esto mantiene los datos históricos intactos mientras dirige a los usuarios hacia nuevas opciones.
 - **Coordine las Clases de datos con seguridad**: Los cambios en las Clases de datos deben alinearse con sus políticas de seguridad de la información. Consulte con conformidad antes de añadir o renombrar niveles de clasificación.
 - **Use los puertos típicos como documentación**: El campo **Puertos típicos** de los tipos de conexión es informativo. Complételo para ayudar a los usuarios a entender qué puertos usa comúnmente cada tipo de conexión.
 - **Ajuste la legibilidad del mapa con niveles**: Mantenga los niveles del grafo de las entidades y los roles de servidor alineados con sus capas de arquitectura (borde, aplicación, datos) para diseños más claros del Mapa de conexiones.

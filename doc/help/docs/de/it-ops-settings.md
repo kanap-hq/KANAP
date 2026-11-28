@@ -17,10 +17,14 @@ Sie sehen nur die Tabs, die Ihre Berechtigungen erlauben. Wenn Sie den Eintrag *
 
 ## Wie die Seite organisiert ist
 
-Die Seite hat zwei Reiter:
+Die Seite hat zwei Tabs. Jeder hat seine eigene Adresse, sodass ein Link oder ein Lesezeichen den richtigen Tab öffnet:
 
-- **Listen** enthält die Dropdown-Werte, die auf dieser Seite beschrieben sind.
-- **Netbox** enthält die Synchronisierung mit Ihrem Netbox-Inventar. Siehe [Netbox-Synchronisierung](netbox.md).
+- **Listen** (`/it/settings/lists`) enthält die Dropdown-Werte, die auf dieser Seite beschrieben sind.
+- **Netbox** (`/it/settings/netbox`) enthält die Synchronisierung mit Ihrem Netbox-Inventar. Siehe [Netbox-Synchronisierung](netbox.md).
+
+`/it/settings` öffnet den ersten Tab, den Sie sehen dürfen. Die früheren Adressen `/it/settings?tab=netbox` und `/it/netbox` öffnen den Tab **Netbox**.
+
+Änderungen werden von selbst gespeichert. Eine einzige Anzeige in der Kopfzeile der Seite zeigt, ob sie gerade gespeichert werden, gespeichert oder nicht gespeichert sind. Wird eine Liste abgelehnt, erscheint der Grund unter dieser Liste, und die Liste kehrt zu ihren gespeicherten Werten zurück.
 
 Im Tab **Listen** steht der Editor **Einstufungen und Kontinuität** oben. Darunter sind die Listen in vier zusammenklappbare Abschnitte gruppiert:
 
@@ -35,10 +39,13 @@ Innerhalb eines Abschnitts sind die Listen nach Namen sortiert. Jede Liste ersch
 
 ### Editor-Steuerungen
 
-Jede Liste hat oben eigene Steuerungen:
+Jede Liste ist eine Tabelle: der Name, die eigenen Spalten der Liste, **Nicht mehr anbieten**, dann zwei Symbole pro Zeile, **Übersetzen** und **Löschen**.
 
-- **Element hinzufügen**: Fügt oben in der Liste eine neue Zeile ein, fokussiert und bereit zur Eingabe. Ihr Namensfeld zeigt ein Beispiel für diese Liste.
-- Bearbeitungen werden etwa eineinhalb Sekunden nach Ihrer letzten Änderung automatisch gespeichert, sobald alle Zeilen gültig sind. Neben der Liste erscheint eine Speicheranzeige.
+- **Element hinzufügen** unter der Tabelle fügt am Ende der Liste eine Zeile hinzu, mit dem Cursor in ihrem Namen. Ihr Namensfeld zeigt ein Beispiel für diese Liste. Eine leer gelassene Zeile wird nie gespeichert.
+- Die Werte behalten die angezeigte Reihenfolge. Kadratis sortiert sie nicht.
+- Ein eingegebener Name wird kurz nach Ihrem letzten Tastenanschlag gespeichert, oder wenn Sie das Feld verlassen. Ein gesetztes Häkchen oder eine Auswahl wird sofort gespeichert. Nichts wird gespeichert, solange eine Zeile der Liste gegen eine der folgenden Regeln verstößt.
+
+Administrationszonen, Verbindungstypen, Domänen und Subnetze haben ein eigenes Layout: Ihre Schaltfläche **Element hinzufügen** steht über der Tabelle und fügt die Zeile oben ein.
 
 Bei langen Listen (mehr als 25 Zeilen) virtualisiert die Tabelle die Zeilen: Sie zeigt etwa 20 Zeilen gleichzeitig, mit flüssigem Scrollen und fixierten Spaltenköpfen.
 
@@ -48,7 +55,7 @@ Sie sehen und tippen ausschließlich **Namen**. Kadratis erzeugt beim ersten Spe
 
 Weil Namen die Werte identifizieren, gelten innerhalb einer Liste einige Regeln:
 
-- jeder Wert braucht einen Namen (ein Sternchen kennzeichnet die Spalte **Name**), und zwei Werte dürfen nicht denselben Namen tragen (Groß- und Kleinschreibung spielt keine Rolle);
+- jeder Wert braucht einen Namen (ein Sternchen kennzeichnet die Spalte **Name**), und zwei Werte dürfen nicht denselben Namen tragen (Groß- und Kleinschreibung spielt keine Rolle), in der Liste oder so, wie sie in Ihrer Sprache angezeigt werden;
 - ein Name darf nicht mit dem internen Code eines anderen Werts derselben Liste identisch sein;
 - Namen von **Zugriffsmethoden** dürfen weder Komma noch Semikolon enthalten, da der Export sie in einer einzigen, durch Kommas getrennten Zelle auflistet.
 
@@ -56,15 +63,28 @@ Eine Liste, die gegen eine dieser Regeln verstößt, wird erst gespeichert, wenn
 
 ### Einen Wert entfernen
 
-**Entfernen** löscht einen Wert, den nichts verwendet. Wenn noch Datensätze auf den Wert verweisen, zeigt Kadratis an, wie viele (Anwendungen, Assets, Schnittstellen, Verbindungen, Standorte, Vorfälle, Subnetze…), mit einem Link zur gefilterten Liste, sofern sich eine Liste nach diesem Feld filtern lässt, und bietet stattdessen **Nicht mehr anbieten** an: Der Wert bleibt bei den Datensätzen sichtbar, die ihn bereits verwenden, und wird für neue nicht mehr vorgeschlagen. Ein verwendeter Wert wird nie entfernt, auch nicht über die API.
+**Löschen** (das Papierkorbsymbol) löscht ohne Rückfrage einen Wert, den nichts verwendet. Wenn noch Datensätze auf den Wert verweisen, zeigt Kadratis an, wie viele (Anwendungen, Assets, Schnittstellen, Verbindungen, Standorte, Vorfälle, Subnetze…), mit einem Link zur gefilterten Liste, sofern sich eine Liste nach diesem Feld filtern lässt, und bietet stattdessen **Nicht mehr anbieten** an: Der Wert bleibt bei den Datensätzen sichtbar, die ihn bereits verwenden, und wird für neue nicht mehr vorgeschlagen. Die Schaltfläche **Nicht mehr anbieten** des Dialogs setzt das Häkchen für Sie. Ein verwendeter Wert wird nie entfernt, auch nicht über die API.
 
-Integrierte Werte, die Kadratis selbst verwaltet (die vier Lebenszyklus-Status, die Domänen Workgroup und N/A), können weder bearbeitet noch entfernt werden. Standard-Netzwerkzonen und -Asset-Typen sowie der Cloud-Anbieter Sonstiges können bearbeitet und zurückgezogen, aber nicht entfernt werden: Der Server würde sie wieder hinzufügen.
+Integrierte Werte, die Kadratis selbst verwaltet (die vier Lebenszyklus-Status, die Domänen Workgroup und N/A), können weder bearbeitet noch entfernt werden: Sie sind als **Integriert** gekennzeichnet. Standard-Netzwerkzonen und -Asset-Typen sowie der Cloud-Anbieter Sonstiges können bearbeitet und zurückgezogen, aber nicht entfernt werden: Der Server würde sie wieder hinzufügen.
 
 ### Ihre Werte übersetzen
 
-Die Werte, die Sie eingeben, werden in allen Sprachen unverändert angezeigt. Um sie in der Sprache des jeweiligen Benutzers anzuzeigen, verwenden Sie die Aktion **Übersetzen** in einer Zeile: Der Dialog zeigt den Basisnamen (und bei Klassifizierungsstufen die Beschreibung) sowie ein Feld pro Sprache. Ein leer gelassenes Feld verwendet die automatische Übersetzung, solange der Wert noch ein Kadratis-Standardwert ist, andernfalls den Basistext. Das Speichern von Übersetzungen ändert den Basistext nie, und ein übersetzter Name kann in CSV-Dateien und in der API wie der Name selbst verwendet werden; deshalb darf er keinen anderen Wert der Liste duplizieren.
+Eine Liste zeigt jeden Wert unter dem Namen, den der Rest von Kadratis in Ihrer Sprache anzeigt: die Übersetzung, die Ihr Arbeitsbereich für diese Sprache eingegeben hat, sonst die mit Kadratis gelieferte Übersetzung, solange der Wert seinen gelieferten Namen behält, sonst den Namen selbst. Ein deutschsprachiger Benutzer sieht die gelieferte Netzwerkzone Guest als „Gäste“, hier wie in den Datensätzen.
 
-Editoren zeigen und bearbeiten immer den Basistext; wenn der angezeigte Name in Ihrer Sprache abweicht, weist die Zeile darauf hin („Angezeigt: …“).
+Ein neuer Name, den Sie in der Liste eingeben, wird zum Basisnamen des Werts. Die Übersetzung, die Ihr Arbeitsbereich für Ihre Sprache eingegeben hat, entfällt, damit das Feld behält, was Sie eingegeben haben; die Übersetzungen der anderen Sprachen bleiben.
+
+Das Symbol **Übersetzen** öffnet die Sprachen des Werts: den Basisnamen (und bei Klassifizierungsstufen die Beschreibung) sowie ein Feld pro Sprache. Ein leer gelassenes Feld zeigt, was stattdessen angezeigt wird, eine gelieferte Übersetzung eingeschlossen. Das Symbol ist hervorgehoben, wenn der Wert eine Übersetzung hat, die Ihr Arbeitsbereich eingegeben hat. Das Speichern von Übersetzungen ändert den Basistext nie, und ein übersetzter Name kann in CSV-Dateien und in der API wie der Name selbst verwendet werden; deshalb darf er keinen anderen Wert der Liste duplizieren.
+
+### Standardlisten wiederherstellen
+
+**Standardlisten wiederherstellen** in der Kopfzeile des Tabs **Listen** setzt die Listen nach einer Bestätigung auf die mit Kadratis gelieferten Werte zurück. Dafür ist `settings:admin` nötig. Noch nicht gespeicherte Änderungen werden zuerst gespeichert.
+
+- Jeder gelieferte Wert kehrt mit seinem gelieferten Namen und seinen Übersetzungen zurück und wird wieder angeboten, auch wenn Sie ihn umbenannt, zurückgezogen oder gelöscht hatten. Die Übersetzungen, die Ihr Arbeitsbereich dafür eingegeben hat, entfallen.
+- Ein Wert, den Sie hinzugefügt haben, bleibt erhalten, wenn Datensätze ihn verwenden, unverändert, nach den gelieferten Werten und in seiner bisherigen Reihenfolge. Ein hinzugefügter Wert, den nichts verwendet, entfällt. Subnetze bleiben nur, wenn Assets sie verwenden, zusammen mit den Netzwerkzonen, die sie brauchen.
+- Eine hinzugefügte und erhaltene Administrationszone kommt ans Ende, als die am wenigsten sensible: Verschieben Sie sie an ihren Platz. Eine erhaltene Klassifizierungsstufe wird die am wenigsten kritische, eine erhaltene Wiederherstellungswelle die letzte.
+- Ein gelieferter Name, der mit einem erhaltenen Wert kollidieren würde, bleibt, wie er jetzt ist.
+
+Datensätze ändern sich nie: Sie behalten ihre Werte.
 
 ---
 
@@ -92,7 +112,7 @@ Wo Standorte und Technologien gehostet werden. Standardwerte: On-Premise, Coloca
 - Standorte-Arbeitsbereich → Reiter Übersicht → Feld **Hosting-Typ**
 - Technologie-Arbeitsbereich → Eigenschaftenbereich → **Hosting-Typ**, und das Fenster für neue Technologien. Siehe [Technologien](technologies.md#hosting-typ).
 
-Ein Typ, den eine Technologie nutzt, kann nicht entfernt werden: Markieren Sie ihn stattdessen als **Nicht mehr anbieten**.
+Ein Typ, den eine Technologie nutzt, kann nicht entfernt werden: Setzen Sie stattdessen das Häkchen bei **Nicht mehr anbieten**.
 
 Die Kategorie bestimmt, welche Felder beim Bearbeiten eines Standorts erscheinen:
 - **Vor Ort / Colocation** zeigt die Felder Betreiberunternehmen und Rechenzentrum
@@ -112,7 +132,7 @@ Die Zonen Ihres Administrationsmodells. Kadratis liefert die drei Tiers des Tier
 
 Benennen Sie sie um, ergänzen Sie eigene oder markieren Sie sie als **Nicht mehr anbieten**, passend zu Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff. Die drei Tiers erscheinen, solange die Liste nie gespeichert wurde. Sobald sie gespeichert wurde, auch leer, fügt Kadratis sie nicht mehr hinzu: Legen Sie sie bei Bedarf selbst an.
 
-Die Reihenfolge der Liste zählt: Die erste Zone ist die sensibelste. Ziehen Sie eine Zeile an ihrem Griff, um sie zu verschieben. Eine neue Zone wird oben eingefügt: Verschieben Sie sie danach an ihren Platz. Die Seite [Administrationszonen](administration-view.md) zeigt die Zonen in dieser Reihenfolge und prüft die Assets gegen die erste Zone, die nicht als **Nicht mehr anbieten** markiert ist.
+Die Reihenfolge der Liste zählt: Die erste Zone ist die sensibelste. Ziehen Sie eine Zeile an ihrem Griff, um sie zu verschieben. Eine neue Zone wird oben eingefügt: Verschieben Sie sie danach an ihren Platz. Die Seite [Administrationszonen](administration-view.md) zeigt die Zonen in dieser Reihenfolge und prüft die Assets gegen die erste Zone, die noch angeboten wird.
 
 **Spalten**: Name, Administratorgruppe, Beschreibung, Nicht mehr anbieten
 
@@ -123,7 +143,7 @@ Die Reihenfolge der Liste zählt: Die erste Zone ist die sensibelste. Ziehen Sie
 - Technologie-Arbeitsbereich → Eigenschaftenbereich → **Administrationszone**, für die Technologien der Familie **Verzeichnis und Identität**
 - **IT-Landschaft > Administrationszonen**, die die Assets und Verzeichnisdienste jeder Zone zählt, die Kontrollpunkte ausführt und Zonen für viele Assets in einem Schritt zuordnet. Siehe [Administrationszonen](administration-view.md).
 
-Eine als **Nicht mehr anbieten** markierte Zone bleibt bei den Technologien und Assets, die ihr bereits zugeordnet sind.
+Eine nicht mehr angebotene Zone bleibt bei den Technologien und Assets, die ihr bereits zugeordnet sind.
 
 ### Technologiefamilien
 
@@ -379,7 +399,7 @@ Gemeinsame Lebenszyklus-Optionen für Anwendungen, Anwendungsinstanzen, Schnitts
 
 **Spalten**: Name, Nicht mehr anbieten
 
-**Gesperrte Codes**: Die integrierten Status (Vorgeschlagen, Aktiv, Veraltet, Außer Betrieb) können weder gelöscht noch in ihrem Code geändert werden.
+**Integrierte Status**: Vorgeschlagen, Aktiv, Veraltet und Außer Betrieb sind Texte in Ihrer Sprache, als **Integriert** gekennzeichnet. Sie können weder umbenannt noch zurückgezogen noch gelöscht werden. Die Status, die Sie hinzufügen, werden wie jeder andere Wert bearbeitet.
 
 **Verwendung**:
 - Anwendungen, App-Instanzen, Schnittstellen, Schnittstellenbindungen, Assets → Felder **Status**
@@ -402,7 +422,7 @@ Kategorien zur Einordnung der Einträge im Vorfallsregister.
 ## Wie Änderungen bestehende Daten beeinflussen
 
 - **Bestehende Datensätze behalten ihren Wert**: Ein Umbenennen ändert nur die Anzeige, nicht die zugrunde liegenden Daten.
-- **Als „Nicht mehr anbieten“ markierte Werte**:
+- **Nicht mehr angebotene Werte** (Häkchen bei **Nicht mehr anbieten**):
   - Bleiben für Datensätze gültig, die sie bereits verwenden.
   - Werden beim Erstellen neuer Datensätze in den Dropdowns ausgeblendet.
   - Erscheinen beim Bearbeiten weiterhin, wenn der Datensatz diesen Wert bereits verwendet.
@@ -444,7 +464,7 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 ## Tipps
 
 - **Namen an Ihre Terminologie anpassen**: Prüfen Sie die Standardwerte und benennen Sie sie so um, wie Ihre Organisation über diese Begriffe spricht. Datensätze behalten ihre Verknüpfung mit dem Wert; nur der Name ändert sich.
-- **Schrittweise auslaufen lassen**: Wenn Sie sich von einem Wert verabschieden, markieren Sie ihn mit **Nicht mehr anbieten**, statt ihn zu entfernen. So bleiben historische Daten intakt, und Benutzer werden zu den neuen Optionen gelenkt.
+- **Schrittweise auslaufen lassen**: Wenn Sie sich von einem Wert verabschieden, setzen Sie das Häkchen bei **Nicht mehr anbieten**, statt ihn zu entfernen. So bleiben historische Daten intakt, und Benutzer werden zu den neuen Optionen gelenkt.
 - **Datenklassen mit der Sicherheitsabteilung abstimmen**: Änderungen an Datenklassen sollten mit Ihren Richtlinien zur Informationssicherheit übereinstimmen. Sprechen Sie mit der Compliance, bevor Sie Klassifizierungsstufen hinzufügen oder umbenennen.
 - **Typische Ports als Dokumentation nutzen**: Das Feld **Typische Ports** bei den Verbindungstypen dient der Information. Füllen Sie es aus, damit Benutzer wissen, welche Ports ein Verbindungstyp üblicherweise verwendet.
 - **Kartenlesbarkeit mit Ebenen optimieren**: Richten Sie die Graph-Ebenen von Entitäten und Serverrollen an Ihren Architekturschichten aus (Edge, Anwendung, Daten), um übersichtlichere Layouts in der Verbindungskarte zu erhalten.
