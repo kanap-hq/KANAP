@@ -58,7 +58,7 @@ export type ResolveModelOptions = {
 
 export type AiModelResolutionErrorCode = 'no_model_available' | 'builtin_not_configured' | 'builtin_not_accepted';
 
-export const BUILTIN_NOT_ACCEPTED_MESSAGE = `The ${PRODUCT_NAME} included model needs an administrator's confirmation in Admin > ${AGENT_NAME}.`;
+export const BUILTIN_NOT_ACCEPTED_MESSAGE = `The ${PRODUCT_NAME} included model needs an administrator's confirmation in Administration > ${AGENT_NAME}.`;
 
 /** What a consumer would run on, without resolving secrets. */
 export type AiModelReadiness = {

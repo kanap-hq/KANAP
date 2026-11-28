@@ -696,7 +696,7 @@ async function testPromptSaysWhatItDoesWithAccessAndHistory() {
   assert.match(writer, new RegExp(`A person's data access \\(Administration › Accès aux données\\), their roles and the rights of a role \\(Administration › Rôles\\), and creating or deactivating a person \\(Administration › Utilisateurs\\) are changed on those screens only: ${AGENT_NAME} prepares none of them, whatever the person's rights\\.`));
   // A person who only reads gets the same sentence, not a missing right.
   const reader = build({ tools: [readTool], readable: ['projects'], gap: 'right' });
-  assert.match(reader, /You can ONLY read data for this person\.[^\n]*A person's data access \(en: Admin › Data access; fr: Administration › Accès aux données;/);
+  assert.match(reader, /You can ONLY read data for this person\.[^\n]*A person's data access \(en: Administration › Data access; fr: Administration › Accès aux données;/);
 
   // The history and the person's own access.
   assert.match(reader, new RegExp(`The change history of a record is its History tab, which get_record_history reads\\. A record whose page has no History tab has no history in ${PRODUCT_NAME}: say so, and never rebuild a history from other data, the audit log included\\.`));
@@ -709,7 +709,7 @@ async function testPromptSaysWhatItDoesWithAccessAndHistory() {
   assert.match(writer, /Roles and data access: say who sees what with the words of the Data access screen in the user's language \("All data", "Limited to", "Read", "Edit"\)/);
   assert.match(writer, /counted on users with the `roles` filter \(every role\), not `primary_role`/);
   // Without the right, and in limited access: listed, with what is missing.
-  assert.match(reader, /data access \(which companies or cost centers a person is limited to\) \(en: Admin › Data access;[^)]*\): The tools read it for a person with the right to administer users, which this person's role does not give\./);
+  assert.match(reader, /data access \(which companies or cost centers a person is limited to\) \(en: Administration › Data access;[^)]*\): The tools read it for a person with the right to administer users, which this person's role does not give\./);
   assert.doesNotMatch(reader, /Roles and data access: say who sees what/);
   const limited = build({ tools: [readTool], readable: ['users'], language: 'fr', gap: 'all_data' });
   assert.match(limited, /roles and their rights \(Administration › Rôles\): The tools read it for a person with the right to administer users and access to all data; this person's access is limited to part of the data\./);
@@ -727,7 +727,7 @@ async function testPromptSaysWhatItDoesWithAccessAndHistory() {
   const referenceReader = build({ tools: [readTool], readable: ['budget_lines', 'cost_centers', 'working_day_calendars', 'analytics_axes', 'exchange_rates'], language: 'fr', gap: 'right' });
   assert.doesNotMatch(referenceReader, /(cost centers|working-day calendars|analytics dimensions|exchange rates) \(/);
   assert.match(limited, /cost centers \(Données de référence › Centres de coûts\): The tools read it \(the family cost_centers\) for a person with the Cost centers right, which this person's role does not give\./);
-  assert.match(limited, /exchange rates \(Gestion budgétaire › Administration › Devises\): The tools read it \(the family exchange_rates\) for a person with the Budget right, which this person's role does not give\./);
+  assert.match(limited, /exchange rates \(Gestion budgétaire › Paramètres › Devises\): The tools read it \(the family exchange_rates\) for a person with the Budget right, which this person's role does not give\./);
   assert.match(referenceReader, /An empty budget holder of a cost center means none is set, not an unknown person; "\(person without a name\)" is a budget holder whose profile has no name\. An exchange rate, a number of working days or a count comes from the server: quote it as given, never recompute it and never divide one figure by another \(the inverse and cross rates come with the rate\)\./);
 
   // Readable families not known (the web profile: web_search only, Plaid L9 lot F, m6): the

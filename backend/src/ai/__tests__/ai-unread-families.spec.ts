@@ -146,7 +146,7 @@ async function testScreensInThePersonsLanguage() {
   assert.equal(unreadFamiliesAskedBy('accès limité aux données', 'fr')[0].where, 'Administration › Accès aux données');
   assert.equal(unreadFamiliesAskedBy("journal d'audit", 'fr')[0].where, "Administration › Journal d'audit");
   assert.equal(unreadFamiliesAskedBy('refacturation 2026', 'fr')[0].where, 'Gestion budgétaire › Rapports › Refacturation globale');
-  assert.equal(unreadFamiliesAskedBy('taux de change', 'fr')[0].where, 'Gestion budgétaire › Administration › Devises');
+  assert.equal(unreadFamiliesAskedBy('taux de change', 'fr')[0].where, 'Gestion budgétaire › Paramètres › Devises');
   assert.equal(unreadFamiliesAskedBy('chargeback', 'en')[0].where, 'Budget management › Reporting › Global chargeback');
   assert.equal(unreadFamiliesAskedBy('Kostenstelle', 'de')[0].where, 'Stammdaten › Kostenstellen');
   assert.equal(unreadFamiliesAskedBy('agentes IA', 'es')[0].where, 'Agentes IA');
@@ -199,10 +199,10 @@ function testTheFamiliesOfTheAdministratorsOfUsers() {
 
   // Without the right: the right is what is missing.
   const reader = unreadFamiliesAskedBy('rôle Budget Member', 'en', 'right')[0];
-  assert.equal(reader.where, 'Admin › Roles');
+  assert.equal(reader.where, 'Administration › Roles');
   assert.match(reader.note, /with the right to administer users, which this person's role does not give/);
   // Not known (the tool descriptions): both conditions.
-  assert.match(unreadFamilyLines('en').join('\n'), /Admin › Data access\): The tools read it for a person with the right to administer users and access to all data only\./);
+  assert.match(unreadFamilyLines('en').join('\n'), /Administration › Data access\): The tools read it for a person with the right to administer users and access to all data only\./);
   assert.match(AI_UNREAD_FAMILIES_SENTENCE, /roles and their rights \(read for administrators of users with access to all data only\)/);
 }
 
@@ -253,7 +253,7 @@ async function testTheReferenceDataFollowTheirRights() {
   const rates = notSearchedFamiliesAskedBy('taux de change EUR', 'fr', reader);
   assert.equal(rates.length, 1);
   assert.equal(rates[0].family, 'exchange rates');
-  assert.equal(rates[0].where, 'Gestion budgétaire › Administration › Devises');
+  assert.equal(rates[0].where, 'Gestion budgétaire › Paramètres › Devises');
   assert.equal(rates[0].note, 'The exchange rates are read by query_entities on exchange_rates, not searched by search_all.');
   assert.deepEqual(notSearchedFamiliesAskedBy('centre de coûts Group IT', 'fr', reader), [], 'the cost centers are searched');
   assert.deepEqual(notSearchedFamiliesAskedBy('taux de change', 'fr', { readable: [] }), [], 'without the right: not read, said so');
@@ -264,7 +264,7 @@ async function testTheReferenceDataFollowTheirRights() {
   assert.ok(otherLines.includes('cost centers (Master data › Cost centers): The tools read it (the family cost_centers) for a person with the Cost centers right, which this person\'s role does not give.'), otherLines.join('\n'));
   assert.ok(otherLines.some((line) => line.startsWith('working-day calendars (Master data › Working-day calendars): The tools read it (the family working_day_calendars) for a person with the Working-day calendars right,')));
   assert.ok(otherLines.some((line) => line.startsWith('analytics dimensions (Master data › Analytics dimensions): The tools read it (the family analytics_axes) for a person with the Analytics right,')));
-  assert.ok(otherLines.some((line) => line.startsWith('exchange rates (Budget management › Administration › Currencies): The tools read it (the family exchange_rates) for a person with the Budget right,')));
+  assert.ok(otherLines.some((line) => line.startsWith('exchange rates (Budget management › Settings › Currencies): The tools read it (the family exchange_rates) for a person with the Budget right,')));
   const asked = unreadFamiliesAskedBy('cost center FR-TRV-600', 'en', 'right', other)[0];
   assert.match(asked.note, /^The workspace has cost centers; this server does not read them for this person\. They are on the screen Master data › Cost centers\. The tools read it \(the family cost_centers\) for a person with the Cost centers right, which this person's role does not give\./);
   // Not known: the right is named.

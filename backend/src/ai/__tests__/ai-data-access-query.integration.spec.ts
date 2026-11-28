@@ -373,7 +373,7 @@ async function testGate(h: Harness, runner: QueryRunner, s: Seed) {
   // A reader of users: the family needs users at admin level, and nothing new is shown to them.
   await assert.rejects(
     () => h.tools.execute(ctx(runner, s, 'rob'), 'query_entities', { entity_type: 'data_access' }),
-    /You need the right to administer users \(the right the Admin › Data access screen asks for\)/,
+    /You need the right to administer users \(the right the Administration › Data access screen asks for\)/,
     'users:reader is refused the family',
   );
   const asReader = await h.tools.execute(ctx(runner, s, 'rob'), 'query_entities', { entity_type: 'users', limit: 50 });

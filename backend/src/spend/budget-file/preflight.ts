@@ -81,7 +81,7 @@ const MISSING_LABELS: Record<string, { one: string; many: string; where: string 
   companies: { one: 'company', many: 'companies', where: 'Master data > Companies' },
   accounts: { one: 'account', many: 'accounts', where: 'Master data > Accounts' },
   costCenters: { one: 'cost center', many: 'cost centers', where: 'Master data > Cost centers' },
-  users: { one: 'user', many: 'users', where: 'Admin > Users' },
+  users: { one: 'user', many: 'users', where: 'Administration > Users' },
   projects: { one: 'project', many: 'projects', where: 'Portfolio > Projects' },
 };
 
