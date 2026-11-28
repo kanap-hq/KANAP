@@ -13,8 +13,8 @@
 # no capabilities, a read-only root file system with a tmpfs on /tmp. The migration step
 # (--migrate-only) exits 0 and migrates, then 0 with nothing to migrate; it exits 2 with
 # SKIP_MIGRATIONS on, 1 with a protected database role, and 143 at once on `docker stop`. An API
-# started with SKIP_MIGRATIONS stops on the empty database with one line and exit 1, no stack;
-# once migrated it answers /health, and /health/ready 200, or 503 while a migration is pending
+# started with SKIP_MIGRATIONS stops on the empty database, and on a role with BYPASSRLS, with one
+# line and exit 1, no stack; once migrated it answers /health, and /health/ready 200, or 503 while a migration is pending
 # (one warning, with two workers too).
 #
 #   check-api-image.sh <image>    for example kadratis-api:ci
@@ -117,6 +117,19 @@ grep -q 'exiting without starting the API' <<<"$out" || fail "first run: $(tail 
 migrate 0 -e "DATABASE_URL=$app_url"
 grep -q 'Migrations complete (0 executed)' <<<"$out" || fail "second run: $(tail -5 <<<"$out")"
 echo "Migration step as uid 12345 on a read-only file system: $executed migrations, then none; exit 2 with SKIP_MIGRATIONS, 1 with a protected role."
+
+# A role with BYPASSRLS: with SKIP_MIGRATIONS on nothing removes it before the API, which refuses
+# it with one line and exit 1, no stack.
+psql -c 'ALTER ROLE kanap BYPASSRLS'
+api bypass
+code=$(timeout 90 docker wait "$prefix-bypass") || fail 'BYPASSRLS role: the API did not stop' "$prefix-bypass"
+psql -c 'ALTER ROLE kanap NOBYPASSRLS'
+[ "$code" = 1 ] || fail "BYPASSRLS role: the API exited $code, expected 1" "$prefix-bypass"
+logs=$(docker logs "$prefix-bypass" 2>&1)
+refusals=$(grep -cF '[startup] DATABASE_URL resolves to PostgreSQL role "kanap" with BYPASSRLS. This bypasses tenant isolation.' <<<"$logs" || true)
+[ "$refusals" = 1 ] || fail "BYPASSRLS role: $refusals refusal lines, expected 1" "$prefix-bypass"
+! grep -qE '^ +at |^Error|^Node\.js|database-role-safety' <<<"$logs" || fail 'BYPASSRLS role: a stack in the log' "$prefix-bypass"
+echo 'BYPASSRLS role, API with SKIP_MIGRATIONS: one line, exit 1, no stack.'
 
 # serving <name> [docker run options...]: starts an API with SKIP_MIGRATIONS on and waits until
 # /health answers.

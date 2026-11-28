@@ -28,7 +28,7 @@
 #   - anything else (doc/, marketing/, scripts/, root files): no suite; the
 #     script checks of `build (onprem)` always run.
 # The images rule is the former `image files` job, plus the API sources the image check starts
-# (the readiness route, the migration start: check-api-image.sh). When the files cannot be listed
+# (the readiness route, the migration start, the role check: check-api-image.sh). When the files cannot be listed
 # (a fetch or diff error), everything runs.
 set -euo pipefail
 
@@ -89,7 +89,7 @@ while IFS= read -r f; do
       package.json | */package.json | package-lock.json | */package-lock.json | \
       backend/tsconfig*.json | backend/scripts/migrate-and-start.js | backend/scripts/lib/* | .github/* | \
       backend/src/health/* | backend/src/app.module.ts | backend/src/common/startup-migrations.ts | \
-      backend/src/common/skip-migrations.ts)
+      backend/src/common/skip-migrations.ts | backend/src/main.ts | backend/src/common/database-role-safety.ts)
       images=true ;;
   esac
 done <<<"$files"

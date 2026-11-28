@@ -5,7 +5,7 @@ import { defer, lastValueFrom, type Observable } from 'rxjs';
 import { QueryFailedError } from 'typeorm';
 import { backendPath } from './backend-root';
 import { isConnectionError } from '../database-connection-error';
-import { hardenDatabaseRoleBeforeMigrations } from '../database-role-safety';
+import { assertSafeDatabaseRoleAtStart, hardenDatabaseRoleBeforeMigrations } from '../database-role-safety';
 import { migrationsSkipped } from '../skip-migrations';
 import { NO_SCHEMA_LINE, warnPendingMigrations } from '../startup-migrations';
 
@@ -644,6 +644,46 @@ async function main(): Promise<void> {
       assert.deepEqual(unreadable.exits, []);
     }
     assert.match(NO_SCHEMA_LINE, /^\[migrations\] SKIP_MIGRATIONS is on and the database has no schema/);
+  }
+
+  // 11. The API's role check at start (main.ts, every process; assertSafeDatabaseRoleAtStart). With
+  // SKIP_MIGRATIONS on nothing hardened the role before: a role with SUPERUSER or BYPASSRLS stops
+  // each process with exit 1 and its refusal on one line, written by the lead process; any other
+  // error is thrown as it is.
+  {
+    const role = (name: string, flags: { superuser?: boolean; bypass?: boolean; bootstrap?: boolean } = {}) => ({
+      query: async () => [{ current_user: name, is_superuser: flags.superuser ?? false, can_bypass_rls: flags.bypass ?? false, is_bootstrap_role: flags.bootstrap ?? false }],
+    });
+    const start = async (executor: { query(sql: string): Promise<any> }, workers: number) => {
+      const lines: string[] = [];
+      const exits: number[] = [];
+      const outcomes: unknown[] = [];
+      const processes = workers === 1 ? [{}] : Array.from({ length: workers }, (_, i) => ({ KANAP_WORKER_ID: String(i + 1), KANAP_WORKER_COUNT: String(workers) }));
+      for (const env of processes) {
+        await assertSafeDatabaseRoleAtStart(executor, { env, error: (line) => lines.push(line), exit: (code) => { exits.push(code); } })
+          .then((state) => outcomes.push(state.currentUser), (failure) => outcomes.push(failure));
+      }
+      return { lines, exits, outcomes };
+    };
+    for (const workers of [1, 2, 4]) {
+      const bypass = await start(role('kanap', { bypass: true }), workers);
+      assert.equal(bypass.lines.length, 1, `${workers} process(es), BYPASSRLS: one line`);
+      assert.match(bypass.lines[0], /^\[startup\] DATABASE_URL resolves to PostgreSQL role "kanap" with BYPASSRLS\. This bypasses tenant isolation\. Remove these attributes as a PostgreSQL superuser \(ALTER ROLE "kanap" NOSUPERUSER NOBYPASSRLS\)/);
+      assert.ok(!bypass.lines[0].includes('\n'), 'the refusal is one line');
+      assert.deepEqual(bypass.exits, Array(workers).fill(1), `${workers} process(es), BYPASSRLS: each exits 1`);
+      const protectedRole = await start(role('postgres', { superuser: true, bypass: true, bootstrap: true }), workers);
+      assert.equal(protectedRole.lines.length, 1, `${workers} process(es), protected role: one line`);
+      assert.match(protectedRole.lines[0], /^\[startup\] DATABASE_URL resolves to protected PostgreSQL role "postgres" with SUPERUSER, BYPASSRLS\./);
+      assert.deepEqual(protectedRole.exits, Array(workers).fill(1), `${workers} process(es), protected role: each exits 1`);
+      const safe = await start(role('kanap'), workers);
+      assert.deepEqual([safe.lines, safe.exits, safe.outcomes], [[], [], Array(workers).fill('kanap')], `${workers} process(es), safe role`);
+    }
+    const refused = new Error('connect ECONNREFUSED 127.0.0.1:5432');
+    const unreadable = await start({ query: async () => { throw refused; } }, 2);
+    assert.deepEqual([unreadable.lines, unreadable.exits, unreadable.outcomes], [[], [], [refused, refused]], 'another error is thrown as it is');
+    const main = readFileSync(backendPath('src', 'main.ts'), 'utf8');
+    assert.match(main, /const roleState = await assertSafeDatabaseRoleAtStart\(ds\);/, 'main.ts checks the role through it');
+    assert.doesNotMatch(main, /assertSafeDatabaseRole\(/, 'and nowhere else');
   }
 
   console.log('startup-migrations.spec: ok');

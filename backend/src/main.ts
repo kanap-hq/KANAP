@@ -17,7 +17,7 @@ import { createSingleTenantOnFirstStart, defaultTenantLanguage } from './tenants
 import { ensureBootstrapAdministrator } from './tenants/bootstrap-admin';
 import { jwtSecretWarnings } from './common/startup-secrets';
 import { ScheduledTasksService } from './admin/scheduled-tasks/scheduled-tasks.service';
-import { assertSafeDatabaseRole } from './common/database-role-safety';
+import { assertSafeDatabaseRoleAtStart } from './common/database-role-safety';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { installGracefulShutdown } from './common/graceful-shutdown';
 import { waitForBackgroundWork } from './common/background-work';
@@ -95,7 +95,8 @@ async function bootstrap() {
 
   // Seed admin user (dev-only convenience). Enable explicitly via SEED_ADMIN=true.
   const ds = app.get(DataSource);
-  const roleState = await assertSafeDatabaseRole(ds, 'startup');
+  // A role with SUPERUSER or BYPASSRLS stops the start: one line, exit 1 (database-role-safety.ts).
+  const roleState = await assertSafeDatabaseRoleAtStart(ds);
   // eslint-disable-next-line no-console
   if (isLeadProcess()) console.log(`[DB] Connected as PostgreSQL role "${roleState.currentUser}" with native RLS enforcement`);
   // `[SECURITY]` lines (startup-secrets.ts): printed once per start, by the lead process.
