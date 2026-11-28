@@ -156,7 +156,8 @@
         "tenantDefault": "Modelo predeterminado ({{name}})",
         "noDefault": "Ningún modelo configurado",
         "hintPrefix": "Los modelos se gestionan en la página",
-        "hintLink": "Modelos IA"
+        "hintLink": "Modelos IA",
+        "notBuiltin": "{{agent}} no utiliza el modelo incluido de {{product}}."
       }
     },
     "prtg": {
@@ -2907,6 +2908,13 @@
     "visionNo": "Solo texto",
     "usedByChat": "{{agent}}",
     "usedByNone": "Sin asignar",
+    "usedBy": {
+      "title": "Utilizado por {{list}}",
+      "agents_one": "{{count}} agente",
+      "agents_other": "{{count}} agentes",
+      "fallbackAgents": "los agentes sin modelo propio",
+      "none": "Sin uso"
+    },
     "messagesThisMonth_one": "{{count}} mensaje este mes",
     "messagesThisMonth_other": "{{count}} mensajes este mes",
     "edit": "Editar",
@@ -2931,7 +2939,8 @@
       "caption": "Operado por {{product}}, incluido en su suscripción",
       "model": "Gestionado por {{product}}",
       "quota": "{{used}} / {{limit}} mensajes incluidos este mes",
-      "fallback": "Se usa cuando no hay otro modelo asignado"
+      "fallback": "Se usa cuando no hay otro modelo asignado",
+      "notUsed": "No se usa"
     },
     "errors": {
       "loadFailed": "No se pudieron cargar los modelos IA.",
@@ -2968,9 +2977,10 @@
       "priceCacheReadPlaceholder": "p. ej., 0,30",
       "cacheReadHint": "Precio por millón de tokens leídos desde la caché del proveedor (a menudo «cached input» en su página de precios). Vacío: se aplica el coste de entrada, o una décima parte de este para Anthropic.",
       "advanced": "Configuración avanzada",
-      "timeout": "Tiempo de espera",
-      "timeoutPlaceholder": "p. ej., 120",
-      "timeoutHint": "Cuántos segundos esperar a este modelo antes de desistir. Déjelo vacío para usar el límite estándar. Los modelos locales suelen necesitar más tiempo.",
+      "timeout": "Tiempo de espera (segundos)",
+      "timeoutHint": "Cuánto tiempo esperar a este modelo antes de desistir. Los modelos locales suelen necesitar más tiempo.",
+      "timeoutDefaultBoth": "{{agent}}: {{chat}}, agentes: {{agents}}",
+      "timeoutRange": "{{min}} a {{max}}",
       "reasoningEffort": "Esfuerzo de razonamiento",
       "reasoningEffortDefault": "Predeterminado del proveedor",
       "reasoningEffortHint": "Cuánto piensa el modelo antes de responder. Más esfuerzo: respuestas más cuidadas, más lentas y más caras. Los niveles ofrecidos dependen del proveedor y del modelo. «Probar conexión» muestra el esfuerzo enviado.",
@@ -3327,6 +3337,19 @@
         "booked": "Reservada",
         "cancelled": "Cancelada"
       }
+    }
+  },
+  "allSettings": {
+    "title": "Toda la configuración",
+    "search": "Buscar en la configuración",
+    "searchPlaceholder": "p. ej., moneda de reporting",
+    "noMatch": "Nada en la configuración coincide con «{{query}}».",
+    "empty": "Aquí no tiene acceso a ninguna página de configuración.",
+    "groups": {
+      "person": "Mi cuenta",
+      "organization": "Administración",
+      "installation": "Instalación",
+      "platform": "Plataforma"
     }
   }
 }

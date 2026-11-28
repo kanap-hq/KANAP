@@ -32,6 +32,7 @@ import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { secretAddressKey } from '../../utils/secretAddress';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import {
+  AiAppliedTimeouts,
   AiModelConfig,
   AiModelConfigInput,
   AiModelTestDraft,
@@ -44,6 +45,8 @@ import {
 import { drawerMenuItemSx, drawerSelectSx, drawerFieldValueSx } from '../../theme/formSx';
 
 export const AI_MODEL_CONFIGS_QUERY_KEY = ['ai-model-configs'];
+// The AI settings under the key every other screen reads and reloads after a save.
+const AI_SETTINGS_QUERY_KEY = ['admin-ai-settings'];
 
 type DraftState = {
   name: string;
@@ -147,6 +150,56 @@ function LabelWithInfo({ label, info }: { label: string; info: string }) {
   );
 }
 
+/** Names joined as a list of the screen language ("A, B and C"). */
+function formatList(items: string[], locale: string): string {
+  // Intl.ListFormat is in every supported browser; this TypeScript lib predates it.
+  type ListFormat = new (locale: string, options: { style: string; type: string }) => { format: (list: readonly string[]) => string };
+  const ListFormat = (Intl as unknown as { ListFormat?: ListFormat }).ListFormat;
+  if (!ListFormat) return items.join(', ');
+  try {
+    return new ListFormat(locale, { style: 'long', type: 'conjunction' }).format(items);
+  } catch {
+    return items.join(', ');
+  }
+}
+
+/** Who runs on a model: the assistant, the agents assigned to it, and the agents without a model of their own. */
+type ModelUse = { chat: boolean; agentNames: string[]; fallbackAgents: boolean };
+
+/** What an empty timeout falls back to for this use, in seconds: the assistant's limit, the agents', or both. */
+function appliedTimeoutPlaceholder(
+  use: ModelUse,
+  applied: AiAppliedTimeouts | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string | undefined {
+  if (!applied) return undefined;
+  const seconds = (ms: number) => String(Math.round(ms / 1000));
+  const agents = applied.agent_ms_min === applied.agent_ms_max
+    ? seconds(applied.agent_ms_min)
+    : t('aiModels.dialog.timeoutRange', { min: seconds(applied.agent_ms_min), max: seconds(applied.agent_ms_max) });
+  const byAgents = use.agentNames.length > 0 || use.fallbackAgents;
+  if (use.chat && !byAgents) return seconds(applied.chat_ms);
+  if (byAgents && !use.chat) return agents;
+  // Both, or nobody yet: either limit may apply.
+  return t('aiModels.dialog.timeoutDefaultBoth', { chat: seconds(applied.chat_ms), agents });
+}
+
+function UsedByTooltip({ title, names, children }: { title: string; names: string[]; children: React.ReactElement }) {
+  return (
+    <Tooltip
+      placement="top-start"
+      title={(
+        <>
+          <Box>{title}</Box>
+          {names.length > 0 ? <Box sx={{ mt: 0.25 }}>{names.join(', ')}</Box> : null}
+        </>
+      )}
+    >
+      {children}
+    </Tooltip>
+  );
+}
+
 function DefaultStar({
   isDefault,
   label,
@@ -192,7 +245,7 @@ export default function AdminAiModelsPage() {
     queryFn: () => aiModelConfigsApi.list(),
   });
   const settingsQuery = useQuery({
-    queryKey: ['ai-admin-settings'],
+    queryKey: AI_SETTINGS_QUERY_KEY,
     queryFn: () => aiAdminApi.getSettings(),
     staleTime: 60_000,
   });
@@ -214,8 +267,10 @@ export default function AdminAiModelsPage() {
   const [dialogError, setDialogError] = React.useState<string | null>(null);
   const [testResult, setTestResult] = React.useState<AiProviderTestResult | null>(null);
 
+  // The default model decides what runs on the included model: its use comes with the settings.
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: AI_MODEL_CONFIGS_QUERY_KEY });
+    queryClient.invalidateQueries({ queryKey: AI_SETTINGS_QUERY_KEY });
   };
   const readError = (err: unknown, fallback: string): string => {
     const data = (err as { response?: { data?: { message?: string; used_by?: string[] } } })?.response?.data;
@@ -306,6 +361,35 @@ export default function AdminAiModelsPage() {
   const builtinUsage = builtinUsageQuery.data;
   const tenantDefault = models.find((entry) => entry.is_default && entry.status === 'active') ?? null;
   const builtinIsDefault = builtinAvailable && !tenantDefault;
+  const appliedTimeouts = modelsQuery.data?.applied_timeouts;
+  const aiSettings = settingsQuery.data?.settings;
+  // The included model as the workspace runs it: shown only once the settings are read.
+  const builtinProvider = builtinAvailable ? aiSettings?.builtin_provider : undefined;
+
+  // With no model assigned to it, the assistant runs on the default model; agents without a
+  // model of their own always do.
+  const modelUse = (modelConfig: AiModelConfig): ModelUse => {
+    const isActiveDefault = modelConfig.is_default && modelConfig.status === 'active';
+    return {
+      chat: modelConfig.used_by.chat || (isActiveDefault && !!aiSettings && aiSettings.chat_model_config_id == null),
+      agentNames: modelConfig.used_by.agents.map((agent) => agent.name),
+      fallbackAgents: isActiveDefault,
+    };
+  };
+  const usedByTitle = (use: ModelUse): string => {
+    const parts = [
+      ...(use.chat ? [t('aiModels.usedByChat')] : []),
+      ...(use.agentNames.length > 0 ? [t('aiModels.usedBy.agents', { count: use.agentNames.length })] : []),
+      ...(use.fallbackAgents ? [t('aiModels.usedBy.fallbackAgents')] : []),
+    ];
+    return parts.length > 0 ? t('aiModels.usedBy.title', { list: formatList(parts, locale) }) : t('aiModels.usedBy.none');
+  };
+  const editingModel = editingId ? models.find((entry) => entry.id === editingId) ?? null : null;
+  const timeoutPlaceholder = appliedTimeoutPlaceholder(
+    editingModel ? modelUse(editingModel) : { chat: false, agentNames: [], fallbackAgents: false },
+    appliedTimeouts,
+    t,
+  );
 
   const formatPrice = (value: number | null): string => {
     if (value == null) return '—';
@@ -459,7 +543,25 @@ export default function AdminAiModelsPage() {
                         />
                       </Box>
                       <Box component="td" sx={cellSx}>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>{t('aiModels.builtin.name')}</Typography>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          {builtinProvider?.in_use ? (
+                            <UsedByTooltip
+                              title={usedByTitle({
+                                chat: builtinProvider.used_by_assistant,
+                                agentNames: [],
+                                fallbackAgents: true,
+                              })}
+                              names={[]}
+                            >
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>{t('aiModels.builtin.name')}</Typography>
+                            </UsedByTooltip>
+                          ) : (
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>{t('aiModels.builtin.name')}</Typography>
+                          )}
+                          {builtinProvider && !builtinProvider.in_use && (
+                            <Typography variant="caption" color="text.secondary">{t('aiModels.builtin.notUsed')}</Typography>
+                          )}
+                        </Stack>
                         <Typography variant="caption" color="text.secondary">{t('aiModels.builtin.caption')}</Typography>
                       </Box>
                       <Box component="td" sx={cellSx}>
@@ -490,6 +592,7 @@ export default function AdminAiModelsPage() {
                   {models.map((modelConfig) => {
                     const archived = modelConfig.status === 'archived';
                     const usedBy = usedByLabels(modelConfig);
+                    const use = modelUse(modelConfig);
                     return (
                       <Box component="tr" key={modelConfig.id} sx={{ opacity: archived ? 0.55 : 1, '&:hover': { backgroundColor: 'kanap.bg.hover' } }}>
                         <Box component="td" sx={{ ...cellSx, textAlign: 'center', px: 0.5 }}>
@@ -503,7 +606,13 @@ export default function AdminAiModelsPage() {
                         </Box>
                         <Box component="td" sx={cellSx}>
                           <Stack direction="row" spacing={1} alignItems="center">
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>{modelConfig.name}</Typography>
+                            {archived ? (
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>{modelConfig.name}</Typography>
+                            ) : (
+                              <UsedByTooltip title={usedByTitle(use)} names={use.agentNames}>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>{modelConfig.name}</Typography>
+                              </UsedByTooltip>
+                            )}
                             {archived && (
                               <Typography variant="caption" color="text.secondary">{t('aiModels.archivedChip')}</Typography>
                             )}
@@ -766,7 +875,7 @@ export default function AdminAiModelsPage() {
                   size="small"
                   variant="standard"
                   value={draft.timeout_seconds}
-                  placeholder={t('aiModels.dialog.timeoutPlaceholder')}
+                  placeholder={timeoutPlaceholder}
                   error={timeoutInvalid}
                   sx={drawerFieldValueSx}
                   onChange={(event) => setDraft((prev) => ({ ...prev, timeout_seconds: event.target.value }))}

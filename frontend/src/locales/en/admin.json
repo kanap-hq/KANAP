@@ -156,7 +156,8 @@
         "tenantDefault": "Default model ({{name}})",
         "noDefault": "No model configured",
         "hintPrefix": "Models are managed on the",
-        "hintLink": "AI models page"
+        "hintLink": "AI models page",
+        "notBuiltin": "{{agent}} does not use the {{product}} included model."
       }
     },
     "prtg": {
@@ -2907,6 +2908,13 @@
     "visionNo": "Text only",
     "usedByChat": "{{agent}}",
     "usedByNone": "Not assigned",
+    "usedBy": {
+      "title": "Used by {{list}}",
+      "agents_one": "{{count}} agent",
+      "agents_other": "{{count}} agents",
+      "fallbackAgents": "agents without a model of their own",
+      "none": "Unused"
+    },
     "messagesThisMonth_one": "{{count}} message this month",
     "messagesThisMonth_other": "{{count}} messages this month",
     "edit": "Edit",
@@ -2931,7 +2939,8 @@
       "caption": "Operated by {{product}}, included in your subscription",
       "model": "Managed by {{product}}",
       "quota": "{{used}} / {{limit}} included messages this month",
-      "fallback": "Used when no other model is assigned"
+      "fallback": "Used when no other model is assigned",
+      "notUsed": "Not used"
     },
     "errors": {
       "loadFailed": "The AI models could not be loaded.",
@@ -2968,9 +2977,10 @@
       "priceCacheReadPlaceholder": "e.g., 0.30",
       "cacheReadHint": "Price per million tokens read from the provider’s cache (often “cached input” on its pricing page). Empty: the input cost applies, or a tenth of it for Anthropic.",
       "advanced": "Advanced settings",
-      "timeout": "Timeout",
-      "timeoutPlaceholder": "e.g., 120",
-      "timeoutHint": "How long to wait for this model, in seconds, before giving up. Leave empty to use the standard limit. Local models often need more time.",
+      "timeout": "Timeout (seconds)",
+      "timeoutHint": "How long to wait for this model before giving up. Local models often need more time.",
+      "timeoutDefaultBoth": "{{agent}}: {{chat}}, agents: {{agents}}",
+      "timeoutRange": "{{min}} to {{max}}",
       "reasoningEffort": "Reasoning effort",
       "reasoningEffortDefault": "Provider default",
       "reasoningEffortHint": "How much the model thinks before it answers. More effort gives more careful answers that are slower and cost more. The levels offered depend on the provider and the model. “Test connection” shows the effort sent.",
@@ -3327,6 +3337,19 @@
         "booked": "Booked",
         "cancelled": "Cancelled"
       }
+    }
+  },
+  "allSettings": {
+    "title": "All settings",
+    "search": "Search settings",
+    "searchPlaceholder": "e.g., reporting currency",
+    "noMatch": "No settings match “{{query}}”.",
+    "empty": "No settings page is open to you here.",
+    "groups": {
+      "person": "My account",
+      "organization": "Administration",
+      "installation": "Installation",
+      "platform": "Platform"
     }
   }
 }
