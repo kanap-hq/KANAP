@@ -213,7 +213,7 @@ The Overview tab is the asset's home page.
 **Support**: the vendor support of the asset, for every asset type. It appears once the asset is created and saves on its own as you type.
 
 - **Vendor**: Select from the supplier directory
-- **Support contract**: Link to a contract record
+- **Support contract**: Link to a contract record. Each choice shows its reference, such as `CTR-2`, next to the name, and typing the reference finds that contract
 - **Support tier**: Free text (e.g., Gold, Silver, 24x7)
 - **Support expiry**: Expiration date
 - **Notes**

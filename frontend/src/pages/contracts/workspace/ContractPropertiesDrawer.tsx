@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { PropertyGroup, PropertyRow } from '../../../components/design';
 import SupplierSelect, { type SupplierOption } from '../../../components/fields/SupplierSelect';
 import { matching } from '../../../components/finance/itemReferences';
-import CompanySelect from '../../../components/fields/CompanySelect';
+import CompanySelect, { type CompanyOption } from '../../../components/fields/CompanySelect';
 import CostCenterSelect from '../../../components/fields/CostCenterSelect';
 import DateEUField from '../../../components/fields/DateEUField';
 import StatusLifecycleField from '../../../components/fields/StatusLifecycleField';
@@ -49,6 +49,8 @@ type Props = {
   names: { supplier: string | null; company: string | null; owner: string | null };
   /** The saved supplier as its picker shows it (the detail's `supplier_option`, reference included). */
   supplierOption?: SupplierOption | null;
+  /** The saved company as its picker shows it (the detail's `company_option`, reference included). */
+  companyOption?: CompanyOption | null;
   disabled: boolean;
   /** Saved at once: pickers, dates, selects. */
   onPatch: (patch: ContractPatch) => void;
@@ -69,7 +71,7 @@ const twoColumnsSx = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0
 const NONE_MISSING: ReadonlySet<string> = new Set();
 
 /** The contract's properties panel: parties, duration, amount, lifecycle. Every field saves itself. */
-export default function ContractPropertiesDrawer({ values, isCreate = false, missing = NONE_MISSING, names, supplierOption, disabled, onPatch, onTyped, onCommit }: Props) {
+export default function ContractPropertiesDrawer({ values, isCreate = false, missing = NONE_MISSING, names, supplierOption, companyOption, disabled, onPatch, onTyped, onCommit }: Props) {
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const placement = useContractPlacementFilter(values.company_id || null, values.cost_center_id || null);
@@ -110,7 +112,7 @@ export default function ContractPropertiesDrawer({ values, isCreate = false, mis
               disabled={disabled}
               required
               disableClearable
-              selectedOption={values.company_id && names.company ? { id: values.company_id, name: names.company } : null}
+              selectedOption={matching(companyOption, values.company_id) ?? (values.company_id && names.company ? { id: values.company_id, name: names.company } : null)}
             />
           </Box>
         </PropertyRow>

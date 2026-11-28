@@ -3,10 +3,18 @@ import { TextField, CircularProgress, Autocomplete, Box } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
+import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
+import { formatItemRef } from '../../utils/item-ref';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
+import OptionWithHint from './OptionWithHint';
 
-export type CompanyOption = { id: string; name: string };
+export type CompanyOption = {
+  id: string;
+  name: string;
+  /** COMP-n: the lookup carries it; a label the caller holds may not. */
+  item_number?: number | null;
+};
 type Company = CompanyOption;
 
 export default function CompanySelect({
@@ -73,6 +81,18 @@ export default function CompanySelect({
           onChange(v?.id || null, v ?? null);
         }}
         getOptionLabel={(o) => picker.label(o, (c) => c.name ?? '')}
+        renderOption={(props, option) => (
+          <OptionWithHint
+            key={option.id}
+            optionProps={props}
+            label={option.name}
+            trailing={option.item_number ? (
+              <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY, fontVariantNumeric: 'tabular-nums' }}>
+                {formatItemRef('company', option.item_number)}
+              </Box>
+            ) : null}
+          />
+        )}
         disableClearable={disableClearable}
         renderInput={(params) => (
           <TextField
