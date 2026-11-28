@@ -1136,7 +1136,7 @@
         "skipped_one": "{{count}} ligne écartée"
       }
     },
-    "budgetAdminOnly": "Vous devez disposer des droits d'administrateur budgétaire pour utiliser cette page.",
+    "budgetAdminOnly": "Il vous faut le droit « Administrateur » sur « Paramètres et opérations du budget » pour utiliser cette page.",
     "budgetColumnsSettings": {
       "title": "Colonnes budgétaires",
       "loadError": "Les paramètres des colonnes n'ont pas pu être chargés.",

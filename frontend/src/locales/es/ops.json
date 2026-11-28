@@ -1135,7 +1135,7 @@
         "skipped_one": "{{count}} fila descartada"
       }
     },
-    "budgetAdminOnly": "Necesita derechos de administrador de presupuesto para usar esta página.",
+    "budgetAdminOnly": "Necesita el permiso «Administrador» en «Configuración y operaciones del presupuesto» para usar esta página.",
     "budgetColumnsSettings": {
       "title": "Columnas presupuestarias",
       "loadError": "No se pudo cargar la configuración de las columnas.",

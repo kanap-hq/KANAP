@@ -1135,7 +1135,7 @@
         "skipped_one": "{{count}} row left out"
       }
     },
-    "budgetAdminOnly": "You need budget administrator rights to use this page.",
+    "budgetAdminOnly": "You need the “Admin” right on “Budget settings and operations” to use this page.",
     "budgetColumnsSettings": {
       "title": "Budget columns",
       "loadError": "The column settings could not be loaded.",

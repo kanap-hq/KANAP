@@ -1135,7 +1135,7 @@
         "skipped_one": "{{count}} Zeile ausgelassen"
       }
     },
-    "budgetAdminOnly": "Sie benötigen Budgetadministrator-Rechte, um diese Seite zu verwenden.",
+    "budgetAdminOnly": "Sie benötigen das Recht „Administrator“ für „Budgeteinstellungen und -operationen“, um diese Seite zu verwenden.",
     "budgetColumnsSettings": {
       "title": "Budgetspalten",
       "loadError": "Die Spalteneinstellungen konnten nicht geladen werden.",

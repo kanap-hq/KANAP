@@ -42,6 +42,28 @@ const EXPECTED: Array<{ namespace: string; key: string; words: Record<Language, 
   { namespace: 'ops', key: 'operations.cards.resetColumnTitle', words: CLEAR_COLUMN },
 ];
 
+// The right `budget_ops` is named as the role editor names it (`admin:roles.resources.budget_ops`).
+// Its former name, and the "budget administrator rights" that stood for it, must not come back.
+const FORMER_BUDGET_OPS_NAME: Record<Language, RegExp> = {
+  en: /\bbudget administration\b|\bbudget administrator rights\b/i,
+  fr: /\badministration (budgétaire|du budget)\b|\bdroits d'administrateur budgétaire\b/i,
+  de: /\bbudget-?administration\b|\bbudgetadministrator-rechte\b/i,
+  es: /\badministración (presupuestaria|del presupuesto)\b|\bderechos de administrador de presupuesto\b/i,
+};
+
+// The manual, read at run time from the repository root as `noDashes.test.ts` does. A checkout
+// without the manual skips that check.
+type NodeFs = {
+  existsSync(path: URL): boolean;
+  readdirSync(path: URL, options: { recursive: true }): string[];
+  readFileSync(path: URL, encoding: 'utf8'): string;
+};
+const fs = (globalThis as unknown as { process: { getBuiltinModule(id: 'node:fs'): NodeFs } }).process.getBuiltinModule('node:fs');
+// Through a variable: Vite rewrites `new URL('…', import.meta.url)` into an asset URL.
+const TEST_FILE = import.meta.url;
+const MANUAL = new URL('../../../doc/help/docs/', TEST_FILE);
+const manualFound = fs.existsSync(MANUAL);
+
 // Spanish "ajustes" also means adjustments: the overrides of a planning scenario keep it.
 const SPANISH_ADJUSTMENTS = /^portfolio:planning\.roadmap\./;
 
@@ -62,6 +84,31 @@ describe('settings vocabulary', () => {
 
   it('writes no "ajustes" for settings in Spanish', () => {
     expect(valuesOf('es').filter(([key, text]) => /\bajustes\b/i.test(text) && !SPANISH_ADJUSTMENTS.test(key))).toEqual([]);
+  });
+
+  it('names the right budget_ops by its role editor name in the locale texts', () => {
+    for (const language of LANGUAGES) {
+      expect(valuesOf(language).filter(([, text]) => FORMER_BUDGET_OPS_NAME[language].test(text))).toEqual([]);
+      const message = value(language, 'ops', 'operations.budgetAdminOnly') as string;
+      expect(message).toContain(value(language, 'admin', 'roles.resources.budget_ops') as string);
+      expect(message).toContain(value(language, 'admin', 'roles.levels.admin') as string);
+    }
+  });
+
+  it.skipIf(!manualFound)('names the right budget_ops by its role editor name in the user manual', () => {
+    const offenders: string[] = [];
+    let pages = 0;
+    for (const language of LANGUAGES) {
+      const root = new URL(`${language}/`, MANUAL);
+      for (const page of fs.readdirSync(root, { recursive: true }).filter((name) => name.endsWith('.md'))) {
+        pages += 1;
+        fs.readFileSync(new URL(page, root), 'utf8').split('\n').forEach((line, index) => {
+          if (FORMER_BUDGET_OPS_NAME[language].test(line)) offenders.push(`${language}/${page}:${index + 1}`);
+        });
+      }
+    }
+    expect(pages).toBeGreaterThan(0);
+    expect(offenders).toEqual([]);
   });
 
   it('keeps the words that name something else', () => {
