@@ -211,7 +211,7 @@ Um einen Verantwortlichen zu entfernen, fahren Sie mit der Maus über den Namen 
 Wenn Sie einen Verantwortlichen, einen Geschäftsprozess, eine Suite oder einen Supportkontakt entfernen, erscheint eine Meldung mit **Rückgängig**, die ihn wiederherstellt.
 
 **Zielgruppe**:
-- Fügen Sie Zeilen für **Unternehmen / Abteilungen** hinzu, um aufzuzeichnen, wer diese Anwendung nutzt. Wählen Sie ein Unternehmen aus und schränken Sie optional auf bestimmte Abteilungen ein.
+- Fügen Sie Zeilen für **Unternehmen / Abteilungen** hinzu, um aufzuzeichnen, wer diese Anwendung nutzt. Wählen Sie ein Unternehmen aus und schränken Sie optional auf bestimmte Abteilungen ein. Jedes Unternehmen und jede Abteilung zeigt die Referenz, etwa `COMP-3` oder `DEPT-4`, neben dem Namen, und die Eingabe der Referenz findet den Datensatz.
 - Ohne ausgewählte Abteilung ist die Zielgruppe das ganze Unternehmen (das Feld zeigt **Alle Abteilungen**). Mit ausgewählten Abteilungen sind es nur diese Abteilungen: Entfernen Sie sie, um wieder das ganze Unternehmen einzubeziehen.
 - Eine Live-Zählung der **Benutzer** wird angezeigt.
 - **Berechnungsmethode**: **Abgeleitet** (aus der Zielgruppe basierend auf Stammdaten-Metriken IT-Benutzer / Mitarbeiterzahl berechnet) oder **Manuell** (eine einzelne Überschreibungszahl, die Sie eingeben).
