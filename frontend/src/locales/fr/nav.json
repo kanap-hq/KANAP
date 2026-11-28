@@ -111,7 +111,8 @@
       "aiUsage": "Utilisation & coûts",
       "sections": {
         "ai": "Intelligence artificielle",
-        "integrations": "Intégrations"
+        "integrations": "Intégrations",
+        "installation": "Installation"
       },
       "dataAccess": "Accès aux données"
     },
@@ -126,7 +127,6 @@
     }
   },
   "breadcrumbs": {
-    "admin": "Administration",
     "contributors": "Contributeurs",
     "settings": "Paramètres"
   }

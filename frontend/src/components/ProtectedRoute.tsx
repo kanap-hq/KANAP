@@ -11,6 +11,7 @@ import { chatAwaitsIncludedModelConfirmation, chatTurnedOffByAdmin } from '../ai
 import PendingAccessPage from '../pages/PendingAccessPage';
 import { canUseAnyOperation, canUseOperation } from '../pages/operations/operationAccess';
 import { createRouteRequirement } from './createRouteRequirements';
+import { isInstallationOperator, isInstallationPath } from '../pages/admin/adminMenu';
 
 /** Router state of a /403 redirect: where the refusal comes from, and the missing module right when known. */
 export type ForbiddenState = {
@@ -28,6 +29,31 @@ const aiChatRightRefusal = <Navigate to="/403" replace state={{ reason: FORBIDDE
 type RouteRequirement = {
   resource: string;
   level: 'reader' | 'contributor' | 'member' | 'manager' | 'admin';
+  /** Also refused to a person whose data access is limited. */
+  allData?: true;
+};
+
+/**
+ * What opens each page under `/admin/`, by its first segment. A page of the Administration menu
+ * names the same here as on its line of `ADMIN_MENU` (`pages/admin/adminMenu.ts`):
+ * `adminMenu.test.ts` compares them. The Installation section has its own guard and no line here.
+ */
+export const ADMIN_ROUTE_REQUIREMENTS: Record<string, RouteRequirement> = {
+  users: { resource: 'users', level: 'admin' },
+  roles: { resource: 'users', level: 'admin' },
+  'data-access': { resource: 'users', level: 'admin', allData: true },
+  auth: { resource: 'users', level: 'admin' },
+  branding: { resource: 'users', level: 'admin' },
+  // The page itself requires the Administrator role.
+  'sample-data': { resource: 'users', level: 'admin' },
+  integrations: { resource: 'ai_settings', level: 'admin' },
+  'audit-logs': { resource: 'users', level: 'admin' },
+  billing: { resource: 'billing', level: 'reader' },
+  'choose-plan': { resource: 'billing', level: 'reader' },
+  ai: { resource: 'ai_settings', level: 'admin' },
+  'ai-models': { resource: 'ai_settings', level: 'admin' },
+  'ai-usage': { resource: 'ai_settings', level: 'admin' },
+  'agent-control': { resource: 'ai_agents', level: 'reader' },
 };
 
 export default function ProtectedRoute() {
@@ -48,7 +74,7 @@ export default function ProtectedRoute() {
   const dataAccessLimited = useDataAccessLimited();
   const location = useLocation();
   const { isPlatformHost } = useTenant();
-  const { config } = useFeatures();
+  const { config, isSingleTenant } = useFeatures();
   const aiCapabilities = useAiCapabilities();
 
   // Show loading spinner while authenticating; one line while the server cannot be reached.
@@ -233,23 +259,6 @@ export default function ProtectedRoute() {
     }
 
     let requirement: RouteRequirement | null = null;
-    const adminAliases: Record<string, RouteRequirement> = {
-      users: { resource: 'users', level: 'admin' },
-      roles: { resource: 'users', level: 'admin' },
-      auth: { resource: 'users', level: 'admin' },
-      branding: { resource: 'users', level: 'admin' },
-      // The page itself requires the Administrator role.
-      'sample-data': { resource: 'users', level: 'admin' },
-      integrations: { resource: 'ai_settings', level: 'admin' },
-      'audit-logs': { resource: 'users', level: 'admin' },
-      billing: { resource: 'billing', level: 'reader' },
-      'choose-plan': { resource: 'billing', level: 'reader' },
-      ai: { resource: 'ai_settings', level: 'admin' },
-      'ai-models': { resource: 'ai_settings', level: 'admin' },
-      'ai-usage': { resource: 'ai_settings', level: 'admin' },
-      'agent-control': { resource: 'ai_agents', level: 'reader' },
-      'scheduled-tasks': { resource: 'users', level: 'admin' },
-    };
     // One right for the OPEX and CAPEX lists (lot R).
     const opsAliases: Record<string, string> = { opex: 'budget', capex: 'budget', reports: 'reporting', servers: 'infrastructure' };
     const itAliases: Record<string, string> = {
@@ -309,9 +318,16 @@ export default function ProtectedRoute() {
         return refuse();
       }
       requirement = null;
+    } else if (isInstallationPath(path)) {
+      // The Installation section, and the former addresses of its pages: the person who runs the
+      // installation only, as the server sees them. No module right would help.
+      if (!isInstallationOperator({ singleTenant: !!isSingleTenant, platformHost: isPlatformHost, claims, dataAccessLimited })) {
+        return refuse();
+      }
+      requirement = null;
     } else if (path.startsWith('/admin/')) {
       const seg = path.split('/')[2] || null;
-      requirement = seg ? (adminAliases[seg] || { resource: seg, level: 'reader' }) : null;
+      requirement = seg ? (ADMIN_ROUTE_REQUIREMENTS[seg] || { resource: seg, level: 'reader' }) : null;
     } else if (path === '/ai' || path.startsWith('/ai/')) {
       requirement = { resource: 'ai_chat', level: 'reader' };
     } else if (path === '/agents' || path.startsWith('/agents/')) {
@@ -367,6 +383,9 @@ export default function ProtectedRoute() {
       if (!hasLevel('ai_settings', 'admin') && !hasLevel('infrastructure', 'admin')) {
         return refuse();
       }
+    } else if (requirement?.allData && dataAccessLimited) {
+      // Reserved to people with access to all data: no module right would help.
+      return refuse();
     } else if (requirement && !hasLevel(requirement.resource, requirement.level)) {
       if (requirement.resource === 'ai_chat') {
         return aiChatRightRefusal;

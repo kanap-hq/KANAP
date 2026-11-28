@@ -132,6 +132,8 @@ const AdminIntegrationsPage = React.lazy(() => import('./pages/admin/AdminIntegr
 const AdminPlatformAiPage = React.lazy(() => import('./pages/admin/AdminPlatformAiPage'));
 const ScheduledTasksPage = React.lazy(() => import('./pages/admin/ScheduledTasksPage'));
 import { useAiCapabilities } from './ai/useAiCapabilities';
+import { useDataAccessLimited } from './auth/dataAccess';
+import { firstAdminEntry, type AdminGroup } from './pages/admin/adminMenu';
 import { useBusinessContributorApplicationVisibility } from './hooks/useBusinessContributorApplicationVisibility';
 import ItNetboxRedirect from './pages/it/ItNetboxRedirect';
 import { itDefaultTarget } from './pages/it/itDefaultTarget';
@@ -142,14 +144,14 @@ function HomeRoute() {
   return <WorkspaceDashboardPage />;
 }
 
-function AdminDefaultRedirect() {
-  const { hasLevel } = useAuth();
-  const { config } = useFeatures();
+/** `/admin` (or a section of it) opens the first page of the menu the person may open, in menu order. */
+export function AdminDefaultRedirect({ group }: { group?: AdminGroup }) {
+  const { hasLevel, claims } = useAuth();
+  const dataAccessLimited = useDataAccessLimited();
+  const { config, isSingleTenant } = useFeatures();
   const { isPlatformHost } = useTenant();
   const aiCapabilities = useAiCapabilities();
 
-  if (isPlatformHost) return <Navigate to="/admin/tenants" replace />;
-  if (hasLevel('users', 'admin')) return <Navigate to="/admin/users" replace />;
   if (config.features.aiSettings && hasLevel('ai_settings', 'admin') && !aiCapabilities.data && aiCapabilities.isLoading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
@@ -157,11 +159,18 @@ function AdminDefaultRedirect() {
       </Box>
     );
   }
-  if (config.features.aiSettings && aiCapabilities.data?.surfaces.settings.available === true) {
-    return <Navigate to="/admin/ai" replace />;
-  }
-  if (config.features.billing && hasLevel('billing', 'reader')) return <Navigate to="/admin/billing" replace />;
-  return <Navigate to="/403" replace />;
+  const aiSettingsAvailable = config.features.aiSettings && aiCapabilities.data?.surfaces.settings.available === true;
+  const entry = firstAdminEntry({
+    singleTenant: !!isSingleTenant,
+    platformHost: isPlatformHost,
+    claims,
+    hasLevel,
+    dataAccessLimited,
+    features: config.features,
+    aiSettingsAvailable,
+    canShowIntegrations: aiSettingsAvailable || hasLevel('infrastructure', 'admin'),
+  }, group);
+  return <Navigate to={entry?.to ?? '/403'} replace />;
 }
 
 function PortfolioDefaultRedirect() {
@@ -226,8 +235,7 @@ function RouteLoadingFallback() {
 }
 
 function AppRoutes() {
-  const { config, isLoading: featuresLoading } = useFeatures();
-  const isSingleTenant = config.deploymentMode === 'single-tenant';
+  const { config, isLoading: featuresLoading, isSingleTenant } = useFeatures();
   const routeChildren = React.useMemo(() => (
       <>
         <Route path="/login" element={<LoginPage />} />
@@ -345,7 +353,10 @@ function AppRoutes() {
           <Route path="/admin/branding" element={<AdminBrandingPage />} />
           {/* Always registered: the page refuses itself where sample data is off (on-premise, flag off). */}
           <Route path="/admin/sample-data" element={<SampleDataPage />} />
-          <Route path="/admin/scheduled-tasks" element={<ScheduledTasksPage />} />
+          {/* Installation: every address under /admin/installation/ is behind one guard (ProtectedRoute). */}
+          <Route path="/admin/installation" element={<AdminDefaultRedirect group="installation" />} />
+          <Route path="/admin/installation/scheduled-tasks" element={<ScheduledTasksPage />} />
+          <Route path="/admin/scheduled-tasks" element={<Navigate to="/admin/installation/scheduled-tasks" replace />} />
           {!isSingleTenant && <Route path="/admin/ops-dashboard" element={<OpsDashboardPage />} />}
           {!isSingleTenant && <Route path="/admin/tenants" element={<AdminTenantsPage />} />}
           {!isSingleTenant && <Route path="/admin/trials" element={<AdminTrialsPage />} />}
