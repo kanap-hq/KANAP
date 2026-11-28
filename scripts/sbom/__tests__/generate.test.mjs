@@ -49,6 +49,7 @@ describe('generate.mjs on the lockfiles of the repository', () => {
       assert.equal(bom.specVersion, '1.5');
       assert.match(bom.serialNumber, /^urn:uuid:[0-9a-f-]{36}$/);
       assert.deepEqual(bom.metadata.component.licenses, [{ license: { id: 'AGPL-3.0-only' } }]);
+      assert.equal(bom.metadata.component['bom-ref'], `kanap-${folder.replace(/\//g, '-')}`);
 
       const expected = productionIds(folder);
       assert.ok(expected.size > 0);
@@ -73,6 +74,8 @@ describe('generate.mjs on the lockfiles of the repository', () => {
 
   it('writes the third-party notices of the three folders, licenses from exceptions included', () => {
     const text = readFileSync(path.join(out, 'THIRD-PARTY-NOTICES.txt'), 'utf8');
+    assert.equal(text.split('\n')[0], 'Kadratis third-party notices');
+    assert.match(text, /KANAP is licensed under the GNU Affero General Public License, version 3/);
     for (const folder of Object.keys(FOLDERS)) {
       assert.match(text, new RegExp(`== ${folder.replace('/', '\\/')} \\(${productionIds(folder).size} packages\\) ==`));
     }

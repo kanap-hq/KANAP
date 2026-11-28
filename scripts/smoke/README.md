@@ -1,6 +1,6 @@
 # Smoke test
 
-`recette.mjs` checks in a few seconds that a KANAP instance works after an update. It calls the
+`recette.mjs` checks in a few seconds that a Kadratis instance works after an update. It calls the
 public API the way the web app does, prints one line per check and exits with a non-zero code when a
 check fails. It needs Node 20 or later and no npm package.
 
