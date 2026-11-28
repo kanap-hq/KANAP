@@ -33,13 +33,15 @@ Vaya a **Administración > Integraciones** y abra la tarjeta **Inventario de Net
 |-------|----------------|
 | **Activar la sincronización con Netbox** | El conmutador maestro. Cuando está desactivado, Kadratis no llama nunca a Netbox, ni a mano ni de forma programada. |
 | **Dirección de Netbox** | La dirección que usa para abrir Netbox en el navegador, por ejemplo `https://netbox.example.com`. Vacíela y guarde para quitar la conexión. |
-| **Token de API** | El token que creó en Netbox. Se guarda cifrado y no se vuelve a mostrar. Deje el campo vacío al guardar para conservar el token ya almacenado, mientras la dirección no cambie. Una dirección nueva vacía el token almacenado: vuelva a introducirlo. |
+| **Token de API** | El token que creó en Netbox: abra el menú de usuario arriba a la derecha, luego **API tokens**. Basta con un token de solo lectura. Un token guardado no se vuelve a mostrar: el campo muestra puntos, con **Reemplazar** al lado para introducir uno nuevo. Una dirección nueva vacía el token guardado: el campo lo vuelve a pedir. |
 | **Tiempo de espera (segundos)** | Cuánto esperar a Netbox antes de abandonar, entre 5 y 120. Déjelo vacío para usar 30. |
+| **Entorno de los nuevos activos** | Se aplica a los activos que crea esta integración. Después no se cambia nunca. |
 | **Ignorar los errores de certificado** | Desactivado de forma predeterminada. Véase más arriba. |
 | **Sincronización automática** | Se ejecuta cada hora y aplica los cambios por su cuenta. Déjela desactivada hasta que la primera ejecución le parezca correcta. |
-| **Entorno de los nuevos activos** | Se aplica a los activos que crea esta integración. Después no se cambia nunca. |
 
-**Probar conexión** hace una llamada de solo lectura e indica la versión de Netbox encontrada, o el motivo del fallo. Ejecútela después de cada cambio de dirección o de token. La tarjeta muestra **Configurado** una vez guardada y activada la conexión. Al lado, indica el resultado y la fecha de la última prueba: «Última prueba correcta el …» o «Última prueba fallida el …». Una vez guardada la configuración, la tarjeta ofrece un enlace **Configurar la sincronización**, que lleva a la pestaña **Netbox** de **Panorama IT > Configuración**.
+El icono de información junto a un campo indica dónde encontrar su valor.
+
+**Probar** hace una llamada de solo lectura con los valores de la tarjeta, guardados o no, y la línea de estado arriba a la derecha de la tarjeta indica el resultado: «Última prueba correcta el …» con la versión de Netbox encontrada, o el motivo del fallo. Ejecútela después de cada cambio de dirección o de token. La prueba de los valores guardados se conserva y vuelve a mostrarse cuando regresa a la página; la prueba de valores sin guardar se muestra hasta que sale de la página. Sin prueba, la línea de estado indica **Guardado, aún sin probar** o **Nunca probado**, y **Cambios sin guardar** mientras la tarjeta tenga cambios. **Guardar** está disponible en cuanto algo cambia. Una vez guardada la configuración, la tarjeta ofrece un enlace **Configurar la sincronización**, que lleva a la pestaña **Netbox** de **Panorama IT > Configuración**.
 
 **Quitar la conexión.** Vacíe la dirección, guarde y confirme. Kadratis elimina la dirección y el token, desactiva la conexión y la sincronización automática, y escribe una entrada en el registro de auditoría. Los activos importados se conservan, con su vínculo a Netbox, y también sus correspondencias. Una nueva conexión vuelve a empezar con una sincronización que usted aplica antes de que se reanude la ejecución horaria.
 
@@ -53,6 +55,8 @@ En la pestaña **Netbox**, abra **Correspondencias**. Ahí hay cuatro tablas. La
 - **Sitio de Netbox > Ubicación**. Cada sitio de Netbox recibe una de sus ubicaciones, o **No importar**.
 
 Todo lo que quede en **No importar** se omite: sus objetos no se crean nunca, no se actualizan nunca y no se señalan nunca como ausentes. Así deja fuera las regletas, los paneles de parcheo o un sitio de laboratorio, mientras importa los servidores que están al lado.
+
+Un tipo de activo elegido para un rol está en uso mientras la correspondencia esté guardada. La lista **Tipos de activo** de **Panorama IT > Configuración** menciona las correspondencias de roles de Netbox entre sus usos y no lo elimina, y restaurar las listas predeterminadas lo conserva. Cambie primero la correspondencia.
 
 Una fila adicional acompaña a los roles: **Máquinas virtuales**. Todas las máquinas virtuales que contiene Netbox pasan por esa única fila, sea cual sea el rol que Netbox les dé, así que una sola decisión cubre el conjunto. Una máquina virtual toma el sitio de su clúster cuando no lleva uno propio.
 

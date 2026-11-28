@@ -33,13 +33,15 @@ Ouvrez **Administration > Intégrations**, puis la carte **Inventaire Netbox**.
 |-------|----------------------|
 | **Activer la synchronisation Netbox** | L'interrupteur principal. Désactivé, Kadratis n'appelle jamais Netbox, ni à la main ni automatiquement. |
 | **Adresse Netbox** | L'adresse que vous utilisez pour ouvrir Netbox dans un navigateur, par exemple `https://netbox.example.com`. Videz-la et enregistrez pour retirer la connexion. |
-| **Jeton d'API** | Le jeton créé dans Netbox. Il est stocké chiffré et n'est jamais réaffiché. Laissez le champ vide à l'enregistrement pour conserver le jeton déjà en place, tant que l'adresse ne change pas. Une nouvelle adresse vide le jeton enregistré : saisissez-le de nouveau. |
+| **Jeton d'API** | Le jeton créé dans Netbox : ouvrez le menu utilisateur en haut à droite, puis **API tokens**. Un jeton en lecture seule suffit. Un jeton enregistré n'est jamais réaffiché : le champ affiche des points, avec **Remplacer** à côté pour en saisir un nouveau. Une nouvelle adresse vide le jeton enregistré : le champ le redemande. |
 | **Délai d'attente (secondes)** | Temps d'attente avant d'abandonner, entre 5 et 120. Laissez vide pour utiliser 30. |
+| **Environnement des nouveaux actifs** | Appliqué aux actifs créés par cette intégration. Il n'est jamais modifié ensuite. |
 | **Ignorer les erreurs de certificat** | Désactivé par défaut. Voir ci-dessus. |
 | **Synchronisation automatique** | S'exécute toutes les heures et applique les changements automatiquement. Laissez-la désactivée tant que votre première exécution ne vous convient pas. |
-| **Environnement des nouveaux actifs** | Appliqué aux actifs créés par cette intégration. Il n'est jamais modifié ensuite. |
 
-**Tester la connexion** effectue un appel en lecture seule et indique la version de Netbox trouvée, ou la raison de l'échec. Lancez-le après chaque changement d'adresse ou de jeton. La carte affiche **Configuré** une fois la connexion enregistrée et activée. À côté, elle donne le résultat et la date du dernier test : « Dernier test réussi le … » ou « Dernier test échoué le … ». Une fois les paramètres enregistrés, la carte propose un lien **Configurer la synchronisation**, qui mène à l'onglet **Netbox** de **Cartographie SI > Paramètres**.
+L'icône d'information à côté d'un champ indique où trouver sa valeur.
+
+**Tester** effectue un appel en lecture seule avec les valeurs de la carte, enregistrées ou non, et la ligne d'état en haut à droite de la carte donne le résultat : « Dernier test réussi le … » avec la version de Netbox trouvée, ou la raison de l'échec. Lancez-le après chaque changement d'adresse ou de jeton. Le test des valeurs enregistrées est conservé et s'affiche de nouveau quand vous revenez sur la page ; le test de valeurs non enregistrées reste affiché jusqu'à ce que vous quittiez la page. Sans test, la ligne d'état indique **Enregistré, pas encore testé** ou **Jamais testé**, et **Modifications non enregistrées** tant que la carte contient des changements. **Enregistrer** est disponible dès que quelque chose a changé. Une fois les paramètres enregistrés, la carte propose un lien **Configurer la synchronisation**, qui mène à l'onglet **Netbox** de **Cartographie SI > Paramètres**.
 
 **Retirer la connexion.** Videz l'adresse, enregistrez, puis confirmez. Kadratis supprime l'adresse et le jeton, coupe la connexion et la synchronisation automatique, et écrit une entrée au journal d'audit. Les actifs importés restent, avec leur lien vers Netbox, ainsi que vos correspondances. Une nouvelle connexion repart d'une synchronisation que vous appliquez vous-même avant que l'exécution horaire ne reprenne.
 
@@ -53,6 +55,8 @@ Dans l'onglet **Netbox**, ouvrez **Correspondances**. Quatre tableaux s'y trouve
 - **Sites Netbox > Site**. Chaque site Netbox reçoit l'un de vos sites, ou **Ne pas importer**.
 
 Tout ce qui reste sur **Ne pas importer** est laissé de côté : ces objets ne sont jamais créés, jamais mis à jour, jamais signalés comme absents. C'est ainsi que vous écartez les bandeaux de prises, les panneaux de brassage ou un site de laboratoire tout en important les serveurs qui les entourent.
+
+Un type d'actif choisi pour un rôle est utilisé tant que la correspondance est enregistrée. La liste **Types d'actif** de **Cartographie SI > Paramètres** cite les correspondances de rôles Netbox parmi ses usages et ne le supprime pas, et la restauration des listes par défaut le conserve. Modifiez d'abord la correspondance.
 
 Une ligne supplémentaire figure parmi les rôles : **Machines virtuelles**. Toutes les machines virtuelles de Netbox passent par cette seule ligne, quel que soit le rôle que Netbox leur donne : une décision couvre l'ensemble. Une machine virtuelle prend le site de son cluster lorsqu'elle n'en porte pas elle-même.
 

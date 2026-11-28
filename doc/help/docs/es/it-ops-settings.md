@@ -261,6 +261,7 @@ Tipos lógicos de servidores y activos de infraestructura (p. ej., Servidor fís
 
 **Dónde se usa**:
 - Espacio de trabajo de Activos → panel de propiedades → campo **Tipo de activo**
+- Sincronización con Netbox → **Correspondencias** → **Rol de Netbox > Tipo de activo** (consulte [Sincronización con Netbox](netbox.md))
 
 ---
 
@@ -436,7 +437,7 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 | **Zonas de red** | Subredes (Zona de red), Activos (auto-rellenado desde subred) |
 | **Subredes** | Activos (pestaña Red → Direcciones IP → Selector de subred) |
 | **Roles de servidor** | Aplicaciones → pestaña Servidores (rol al vincular activo a app), Mapa de conexiones (ubicación por nivel del grafo) |
-| **Tipos de activo** | Activos (panel de propiedades → Tipo de activo) |
+| **Tipos de activo** | Activos (panel de propiedades → Tipo de activo), correspondencias de roles de Netbox |
 | **Familias de tecnologías** | Tecnologías (Familia), página Zonas de administración (servicios de directorio) |
 
 ---
