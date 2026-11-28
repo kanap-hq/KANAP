@@ -21,4 +21,13 @@ describe('SettingsSection', () => {
     const { container } = render(<SettingsGroup title="Locations"><div /></SettingsGroup>);
     expect(container.textContent).toBe('Locations');
   });
+
+  it('draws a flat section as its title and its fields, with the hint beside the title and nothing under it', () => {
+    render(<SettingsSection variant="flat" title="Computed split" hint="Percentages of the year." description="Not shown"><p>rows</p></SettingsSection>);
+    const section = screen.getByRole('region', { name: 'Computed split' });
+    expect(screen.getByRole('heading', { level: 2, name: 'Computed split' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Percentages of the year.' })).toBeTruthy();
+    expect(section.textContent).toBe('Computed splitrows');
+    expect(screen.queryByRole('button')).toBeNull();
+  });
 });

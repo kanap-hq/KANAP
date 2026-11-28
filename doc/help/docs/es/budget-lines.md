@@ -256,7 +256,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dir
 - Cambiar de pestaña, pasar a la línea anterior o siguiente, o cerrar el espacio de trabajo guarda primero los cambios pendientes. Si un guardado falla, usted se queda donde está y un mensaje explica el motivo, de modo que ningún cambio se pierde sin que lo sepa
 - **Ctrl+S** (**Cmd+S** en Mac) guarda de inmediato
 - Si un guardado no puede completarse de inmediato porque hay otro guardado en curso sobre los mismos datos, Kadratis lo reintenta automáticamente
-- Si hay una operación de presupuesto masiva en curso (por ejemplo, una copia o un restablecimiento de columna en la Administración presupuestaria), las ediciones aquí se detienen con el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» Vuelva a intentarlo cuando haya terminado
+- Si hay una operación de presupuesto masiva en curso (por ejemplo, copiar o vaciar una columna en la Administración presupuestaria), las ediciones aquí se detienen con el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» Vuelva a intentarlo cuando haya terminado
 
 **Edición simultánea**:
 
@@ -403,7 +403,7 @@ En una columna vacía, un clic en una pestaña cambia de inmediato. En una colum
 **Borrar columna**:
 
 - **Borrar columna**, a la derecha bajo el editor, pone a cero todos los meses de la columna activa, por ejemplo antes de introducir todo el importe en un solo mes. Cuando la columna tiene importes, primero confirma: «¿Borrar todos los meses de la columna Presupuesto en 2026? Las demás columnas no cambian.» Cuenta como una edición a mano
-- Para eliminar a la vez los importes y el periodo de una columna en todas las líneas, use **Restablecer columna presupuestaria** en la Administración presupuestaria
+- Para eliminar a la vez los importes y el periodo de una columna en todas las líneas, use **Vaciar una columna presupuestaria** en la Administración presupuestaria
 
 **Resultado por mes**:
 
@@ -523,7 +523,7 @@ Haga clic en **Añadir una línea** bajo la tabla para añadir una línea, y en 
 - Pasar la columna a **Importe** o **Por mes**, introducir un mes en la tabla, o **Borrar columna**
 - **Copiar columnas presupuestarias** en la Administración presupuestaria, o **Partir de**: cuando los importes de origen no se calcularon a partir de líneas, la copia lleva las líneas de la columna de origen como referencia. Una columna calculada a partir de sus líneas sigue calculada, con sus precios aumentados por el porcentaje. Consulte [Copiar una columna construida a partir de líneas](budget-operations.md#copiar-una-columna-construida-a-partir-de-lineas)
 - Los días laborables de un calendario cambiaron: la pestaña **Cantidad y precio** indica, por ejemplo, «Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19.», seguido de **Usar de nuevo las líneas**. Nada cambia en la columna hasta que haga clic en **Usar de nuevo las líneas**. Las líneas siguen siendo editables mientras tanto
-- **Restablecer columna presupuestaria** en la Administración presupuestaria quita las líneas junto con los importes. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria)
+- **Vaciar una columna presupuestaria** en la Administración presupuestaria quita las líneas junto con los importes. Consulte [Vaciar una columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria)
 - Un archivo de presupuesto cambia los meses de una columna y deja sus líneas. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md)
 
 #### Cuando la cuenta espera una introducción por cantidad y precio { #quantity-and-price-expected }
@@ -780,7 +780,7 @@ El acceso a las líneas presupuestarias se controla con el recurso Presupuesto, 
 
 - `budget:reader`: Ver la lista, abrir líneas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
 - `budget:member`: Crear y editar líneas, cambiar su tipo, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos, modificar líneas en bloque
-- `budget:admin`: Todos los derechos de miembro más importación y exportación, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y restablecer columna presupuestaria) y la eliminación de líneas desde la lista o desde la línea
+- `budget:admin`: Todos los derechos de miembro más importación y exportación, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y vaciar una columna presupuestaria) y la eliminación de líneas desde la lista o desde la línea
 
 Congelar columnas presupuestarias requiere la administración presupuestaria (`budget_ops:admin`).
 
