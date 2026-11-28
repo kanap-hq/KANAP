@@ -8,7 +8,7 @@ Para información sobre conceptos de moneda y mecánicas de conversión, consult
 
 Las monedas son un parámetro del presupuesto. La página está junto a los demás parámetros del presupuesto, en la [Configuración del presupuesto](budget-operations.md).
 
-- **Abrir la página, cambiar los ajustes, lanzar la sincronización de tipos de cambio e introducir tipos manuales**: administración presupuestaria con nivel de administrador. La tarjeta se oculta a los demás usuarios.
+- **Abrir la página, cambiar los ajustes, lanzar la sincronización de tipos de cambio e introducir tipos manuales**: nivel Administrador en Configuración y operaciones del presupuesto. La tarjeta se oculta a los demás usuarios.
 - **Usar monedas en las líneas**: los usuarios de OPEX y CAPEX eligen entre las monedas permitidas en los formularios de sus líneas, sin abrir esta página.
 
 El permiso **Configuración** del panorama IT no da acceso a las monedas. Solo cubre la configuración del panorama IT.
@@ -158,7 +158,7 @@ Un tipo manual sustituye al tipo automático de ese año hasta que lo retire. La
 Cuando el año tiene versiones presupuestarias congeladas, un tipo manual introducido o retirado no les llega, y la página lo indica, por ejemplo **Las 2 versiones congeladas de 2026 conservan el tipo de su congelación.**
 
 A tener en cuenta:
-  - Solo los usuarios de la administración presupuestaria con nivel de administrador pueden introducir, cambiar o retirar un tipo manual.
+  - Solo las personas con el nivel Administrador en Configuración y operaciones del presupuesto pueden introducir, cambiar o retirar un tipo manual.
   - Cada introducción, cambio y retirada queda registrada en el registro de auditoría.
   - Un año congelado conserva los tipos capturados al congelarlo, manuales y estimados incluidos (consulte [Años congelados](#anos-congelados)).
   - Un tipo manual se introduce respecto a la moneda de reporte actual. Tras un cambio de moneda de reporte, los tipos manuales introducidos para la anterior dejan de aplicarse. Vuelven a aplicarse si vuelve a esa moneda de reporte.
@@ -216,7 +216,7 @@ Congelar la columna presupuestaria por defecto de un año fija los tipos de ese 
 
 **Tipo faltante**: Cuando un año no tiene tipo para una moneda en uso, los importes de las líneas presupuestarias en esa moneda quedan excluidos de todos los totales en la moneda de reporte de ese año. Esto afecta a la lista de líneas presupuestarias, a la sección Gestión presupuestaria de la página de inicio, a los informes presupuestarios y de contracargo, a los contratos y a las pestañas Relaciones de las aplicaciones y las tecnologías. La pantalla lo indica donde importa:
 
-- Un aviso de una línea indica lo que se excluye, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Aparece bajo los totales de la lista de líneas presupuestarias, en los mosaicos de la vista general, en la parte superior de cada informe presupuestario y de contracargo, y bajo las cifras presupuestarias de contratos, aplicaciones y tecnologías. Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre esta página en el tipo faltante.
+- Un aviso de una línea indica lo que se excluye, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Aparece bajo los totales de la lista de líneas presupuestarias, en los mosaicos de la vista general, en la parte superior de cada informe presupuestario y de contracargo, y bajo las cifras presupuestarias de contratos, aplicaciones y tecnologías. Las personas con el nivel Administrador en Configuración y operaciones del presupuesto ven además **Introducir un tipo**, que abre esta página en el tipo faltante.
 - En la propia línea, el importe aparece en su propia moneda con una pequeña marca naranja. Pase el cursor sobre la marca para leer, por ejemplo, «Sin tipo de cambio de USD para 2026: excluido de los totales.»
 
 Kadratis obtiene los tipos de ese año en segundo plano (como máximo una vez cada seis horas por año), de modo que la siguiente visualización usa el nuevo tipo en cuanto la fuente lo publica. Para detectar los tipos faltantes, consulte el bloque de tipos faltantes encima de la tabla de tipos de cambio y ejecute **Forzar sincronización de tipos de cambio** para obtenerlos de inmediato. Introducir un [tipo manual](#tipos-manuales) lo corrige al momento.

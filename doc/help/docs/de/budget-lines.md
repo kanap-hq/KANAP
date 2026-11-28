@@ -173,7 +173,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 **Beträge ohne Wechselkurs**:
 
 - Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, erscheint ihr Betrag für dieses Jahr in seiner eigenen Währung mit einer kleinen orangefarbenen Markierung. Fahren Sie mit der Maus über die Markierung, um zum Beispiel „Kein Wechselkurs für USD im Jahr 2026: nicht in den Summen enthalten.“ zu lesen.
-- Die Summen lassen diese Beträge aus, und ein einzeiliger Hinweis unter der Liste nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen beim fehlenden Kurs öffnet. Nennt der Hinweis nur eine Währung und ein Jahr, öffnet sich direkt der Dialog für den manuellen Kurs.
+- Die Summen lassen diese Beträge aus, und ein einzeiliger Hinweis unter der Liste nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Personen mit der Stufe Administrator für Budgeteinstellungen und -operationen sehen außerdem **Kurs eingeben**, das die Währungseinstellungen beim fehlenden Kurs öffnet. Nennt der Hinweis nur eine Währung und ein Jahr, öffnet sich direkt der Dialog für den manuellen Kurs.
 - In einer sortierten Spalte stehen diese Zeilen am Ende. Ein Betragsfilter behält sie nie.
 - Unter [Manuelle Kurse](currencies.md#manuelle-kurse) können Sie den fehlenden Kurs selbst eingeben.
 
@@ -782,7 +782,7 @@ Der Zugriff auf Budgetzeilen wird durch die Ressource Budget gesteuert, die für
 - `budget:member`: Zeilen erstellen und bearbeiten, ihren Typ ändern, Budgets und Zuordnungen aktualisieren, Anhänge hochladen und löschen, Beziehungen, Verknüpfungen und Kontakte verwalten, Zeilen in großer Zahl ändern
 - `budget:admin`: Alle Mitglied-Rechte plus Import und Export, Budget-Operationen (Budgetspalten kopieren, mit Beträgen und Zuordnungen, und Budgetspalte leeren) und das Löschen von Zeilen aus der Liste oder von der Zeile
 
-Das Einfrieren von Budgetspalten erfordert die Budgetadministration (`budget_ops:admin`).
+Das Einfrieren von Budgetspalten erfordert die Stufe Administrator für Budgeteinstellungen und -operationen (`budget_ops:admin`).
 
 Der Datenzugriff kann eine Person auf die Zeilen bestimmter Unternehmen oder Kostenstellen begrenzen. Sie sieht dann diese Zeilen und die, auf denen sie benannt ist, eine mit Lesen sichtbare Zeile zeigt „Schreibgeschützt in Ihrem Zugriff“, und das Löschen von Zeilen sowie die Budget-Operationen sind Personen mit Zugriff auf alle Daten vorbehalten. Zeilen in großer Zahl ändern kann sie auf den Zeilen ihres Zugriffs. Siehe [Datenzugriff](data-access.md).
 

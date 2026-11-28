@@ -1,6 +1,6 @@
 # Congelar datos maestros y copiar indicadores anuales
 
-Dos herramientas de la [administración presupuestaria](budget-operations.md) gestionan los indicadores de empresas y departamentos a lo largo de los ejercicios fiscales: **Congelar datos maestros** y **Copiar indicadores anuales**. Úselas para bloquear cifras finalizadas, para trasladar una línea base a la planificación del próximo año o para comprobar qué está congelado y qué no.
+Dos herramientas de la [Configuración del presupuesto](budget-operations.md) gestionan los indicadores de empresas y departamentos a lo largo de los ejercicios fiscales: **Congelar datos maestros** y **Copiar indicadores anuales**. Úselas para bloquear cifras finalizadas, para trasladar una línea base a la planificación del próximo año o para comprobar qué está congelado y qué no.
 
 Los indicadores anuales son la plantilla, los usuarios IT y la facturación de las empresas, y la plantilla de los departamentos. Son datos maestros, y el ciclo presupuestario los congela y los traslada de un año a otro. Por eso las dos herramientas están junto a las demás operaciones presupuestarias.
 
@@ -9,7 +9,7 @@ Los indicadores anuales son la plantilla, los usuarios IT y la facturación de l
 - Módulo: **Gestión presupuestaria**
 - Ruta: **Gestión presupuestaria > Configuración**, sección **Operaciones**, tarjetas **Congelar datos maestros** y **Copiar indicadores anuales**
 - Permisos:
-  - Acceso al presupuesto (acceso de lector a Presupuesto o a la administración presupuestaria), más uno de los permisos `companies:admin`, `departments:admin` o `budget_ops:admin`
+  - Acceso al presupuesto (nivel Lector en Presupuesto o en Configuración y operaciones del presupuesto), más uno de los permisos `companies:admin`, `departments:admin` o `budget_ops:admin`
   - Las tarjetas se ocultan a los demás usuarios
 
 Los datos maestros no tienen una entrada de Administración propia.
@@ -177,7 +177,7 @@ No. La herramienta copia todas las entidades para los alcances y métricas selec
 No. Solo escribe métricas para entidades que ya existen en ambos años. Si una empresa existe en el año de origen pero no en el de destino, esa fila se omite.
 
 **¿Quién puede ver el estado de congelación?**
-Cualquier persona que pueda abrir esta página, es decir, los administradores de empresas, de departamentos o de la administración presupuestaria. Cada administrador congela o descongela su propio alcance.
+Cualquier persona que pueda abrir esta página, es decir, los administradores de empresas, de departamentos o de Configuración y operaciones del presupuesto. Cada administrador congela o descongela su propio alcance.
 
 **¿Puedo congelar años futuros?**
 Sí. El selector de año cubre un rango desde el año pasado hasta cinco años adelante. Congelar un año futuro es útil para bloquear presupuestos aprobados antes de que comience el ejercicio fiscal.

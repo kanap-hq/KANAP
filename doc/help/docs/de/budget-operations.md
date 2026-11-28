@@ -29,10 +29,10 @@ Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug.
 
 | Karten | Wer sie sieht |
 |---|---|
-| Währungen, Daten einfrieren / auftauen | Budgetadministration auf Administratorebene (`budget_ops:admin`) |
-| Budgetspalten, Standard-Zuordnungsmethode | Budgetadministration auf Leserebene (`budget_ops:reader`), schreibgeschützt. Zum Ändern ist die Administratorebene nötig (`budget_ops:admin`) |
+| Währungen, Daten einfrieren / auftauen | Budgeteinstellungen und -operationen auf Stufe Administrator (`budget_ops:admin`) |
+| Budgetspalten, Standard-Zuordnungsmethode | Budgeteinstellungen und -operationen auf Stufe Leser (`budget_ops:reader`), schreibgeschützt. Zum Ändern ist die Administratorebene nötig (`budget_ops:admin`) |
 | Budgetspalten kopieren, Budgetspalte leeren | Budget auf Administratorebene (`budget:admin`). Jeder **Zeilentyp** (**Alle**, **OPEX**, **CAPEX**) öffnet sich mit dieser Stufe |
-| Stammdaten einfrieren, Jahreskennzahlen kopieren | Benutzer mit Zugriff auf das Budget, die Administratoren der Budgetadministration, von Unternehmen oder Abteilungen sind. Administratoren von Unternehmen und Abteilungen handeln für ihren eigenen Bereich |
+| Stammdaten einfrieren, Jahreskennzahlen kopieren | Benutzer mit Zugriff auf das Budget, die Administratoren von Budgeteinstellungen und -operationen, von Unternehmen oder Abteilungen sind. Administratoren von Unternehmen und Abteilungen handeln für ihren eigenen Bereich |
 
 Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied und Budget-Leser sehen die Karten **Budgetspalten** und **Standard-Zuordnungsmethode**, die sich für sie schreibgeschützt öffnen, und keine Operation. Eine Person mit eingeschränktem Datenzugriff sieht keine dieser Karten.
 
@@ -62,7 +62,7 @@ Unter den Tabs hat eine Tabelle eine Zeile pro Budgetspalte und eine Spalte pro 
 - Die Aktion am Ende einer Zeile wirkt auf beide Typen zugleich. Sie lautet **Beide einfrieren**, solange eine der beiden Zellen offen ist, und friert die offene ein. Sind beide eingefroren, lautet sie **Beide auftauen**
 - Eine Zelle bleibt deaktiviert, solange ihre Änderung gespeichert wird. Die Jahres-Tabs warten, bis jede Änderung abgeschlossen ist
 
-Ohne die Administratorstufe für die Budget-Administration zeigt die Seite die Zustände schreibgeschützt an, mit der Meldung „Sie benötigen Budgetadministrator-Rechte, um diese Seite zu verwenden.“
+Ohne die Stufe Administrator für Budgeteinstellungen und -operationen zeigt die Seite die Zustände schreibgeschützt an, mit der Meldung „Sie benötigen das Recht ‚Administrator‘ für ‚Budgeteinstellungen und -operationen‘, um diese Seite zu verwenden.“
 
 ### Was das Einfrieren bewirkt
 
@@ -329,7 +329,7 @@ Der Standard wird bei jeder Anzeige der Zuordnungen neu aufgelöst: Eine Änderu
 
 ### Berechtigungen
 
-Das Ändern der Standardmethode erfordert `budget_ops:admin`. Budget-Leser und Budget-Mitglied, die die Budgetadministration lesen (`budget_ops:reader`), öffnen die Seite schreibgeschützt: dieselben Felder, die sie nicht ändern können, und keine Schaltfläche **Standardzuordnung wiederherstellen**. Sie können weiterhin das Geschäftsjahr wählen, das sie lesen möchten. Eine Person mit eingeschränktem Datenzugriff kann die Seite nicht öffnen.
+Das Ändern der Standardmethode erfordert `budget_ops:admin`. Budget-Leser und Budget-Mitglied, die Budgeteinstellungen und -operationen lesen (`budget_ops:reader`), öffnen die Seite schreibgeschützt: dieselben Felder, die sie nicht ändern können, und keine Schaltfläche **Standardzuordnung wiederherstellen**. Sie können weiterhin das Geschäftsjahr wählen, das sie lesen möchten. Eine Person mit eingeschränktem Datenzugriff kann die Seite nicht öffnen.
 
 Jede Änderung schreibt einen eigenen Eintrag in das Audit-Protokoll.
 
@@ -378,7 +378,7 @@ Eine Änderung, die der Server ablehnt, wird sofort rückgängig gemacht: Der Na
 
 ### Berechtigungen
 
-Zum Ändern der Einstellungen sind Administrationsrechte für die Budget-Administration erforderlich (`budget_ops:admin`). Budget-Leser und Budget-Mitglied, die die Budget-Administration lesen (`budget_ops:reader`), öffnen die Seite schreibgeschützt: dieselbe Tabelle, die sie nicht ändern können. Eine Person mit eingeschränktem Datenzugriff kann die Seite nicht öffnen.
+Zum Ändern der Einstellungen ist die Stufe Administrator für Budgeteinstellungen und -operationen erforderlich (`budget_ops:admin`). Budget-Leser und Budget-Mitglied, die Budgeteinstellungen und -operationen lesen (`budget_ops:reader`), öffnen die Seite schreibgeschützt: dieselbe Tabelle, die sie nicht ändern können. Eine Person mit eingeschränktem Datenzugriff kann die Seite nicht öffnen.
 
 Wenn die Einstellungen nicht geladen werden können, zeigt die Seite eine einzige Zeile, „Die Spalteneinstellungen konnten nicht geladen werden.“, und keine Steuerelemente.
 

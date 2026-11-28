@@ -8,7 +8,7 @@ Für Hintergrundinformationen zu Währungskonzepten und Umrechnungsmechanismen s
 
 Währungen sind eine Budgeteinstellung. Die Seite steht bei den anderen Budgeteinstellungen in den [Budget-Einstellungen](budget-operations.md).
 
-- **Die Seite öffnen, Einstellungen ändern, die Wechselkurssynchronisierung starten und manuelle Kurse eingeben**: Budgetadministration auf Administratorebene. Die Karte ist für andere Benutzer ausgeblendet.
+- **Die Seite öffnen, Einstellungen ändern, die Wechselkurssynchronisierung starten und manuelle Kurse eingeben**: Stufe Administrator für Budgeteinstellungen und -operationen. Die Karte ist für andere Benutzer ausgeblendet.
 - **Währungen bei Zeilen verwenden**: OPEX- und CAPEX-Benutzer wählen in ihren Zeilenformularen aus den erlaubten Währungen, ohne diese Seite zu öffnen.
 
 Das Recht **Einstellungen** der IT-Landschaft gibt keinen Zugriff auf Währungen. Es umfasst nur die Einstellungen der IT-Landschaft.
@@ -158,7 +158,7 @@ Ein manueller Kurs ersetzt den automatischen Kurs für dieses Jahr, bis Sie ihn 
 Hat das Jahr eingefrorene Budgetversionen, erreicht ein neuer oder entfernter manueller Kurs sie nicht, und die Seite weist darauf hin, zum Beispiel **Die 2 eingefrorenen Versionen von 2026 behalten den Kurs ihres Einfrierens.**
 
 Gut zu wissen:
-  - Nur Benutzer der Budgetadministration auf Administratorebene können einen manuellen Kurs eingeben, ändern oder entfernen.
+  - Nur Personen mit der Stufe Administrator für Budgeteinstellungen und -operationen können einen manuellen Kurs eingeben, ändern oder entfernen.
   - Jede Eingabe, Änderung und Entfernung wird im Audit-Protokoll festgehalten.
   - Ein eingefrorenes Jahr behält die beim Einfrieren erfassten Kurse, manuelle und geschätzte eingeschlossen (siehe [Eingefrorene Jahre](#eingefrorene-jahre)).
   - Ein manueller Kurs wird gegenüber der aktuellen Berichtswährung erfasst. Nach einem Wechsel der Berichtswährung gelten die für die frühere erfassten manuellen Kurse nicht mehr. Sie gelten wieder, wenn Sie zu dieser Berichtswährung zurückkehren.
@@ -216,7 +216,7 @@ Das Einfrieren der Standard-Budgetspalte eines Jahres schreibt die Kurse dieses 
 
 **Fehlender Kurs**: Hat ein Jahr keinen Kurs für eine verwendete Währung, sind die Beträge der Budgetzeilen in dieser Währung für dieses Jahr in keiner Summe in der Berichtswährung enthalten. Das betrifft die Liste der Budgetzeilen, den Bereich Budgetverwaltung der Startseite, die Budget- und Leistungsverrechnungsberichte, die Verträge und die Reiter Beziehungen der Anwendungen und Technologien. Der Bildschirm weist dort darauf hin, wo es zählt:
 
-- Ein einzeiliger Hinweis nennt, was ausgeschlossen ist, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Er erscheint unter den Summen der Liste der Budgetzeilen, auf den Kacheln der Übersicht, oben in jedem Budget- und Leistungsverrechnungsbericht und unter den Budgetzahlen von Verträgen, Anwendungen und Technologien. Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das diese Seite beim fehlenden Kurs öffnet.
+- Ein einzeiliger Hinweis nennt, was ausgeschlossen ist, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Er erscheint unter den Summen der Liste der Budgetzeilen, auf den Kacheln der Übersicht, oben in jedem Budget- und Leistungsverrechnungsbericht und unter den Budgetzahlen von Verträgen, Anwendungen und Technologien. Personen mit der Stufe Administrator für Budgeteinstellungen und -operationen sehen außerdem **Kurs eingeben**, das diese Seite beim fehlenden Kurs öffnet.
 - In der Zeile selbst erscheint der Betrag in seiner eigenen Währung mit einer kleinen orangefarbenen Markierung. Fahren Sie mit der Maus über die Markierung, um zum Beispiel „Kein Wechselkurs für USD im Jahr 2026: nicht in den Summen enthalten.“ zu lesen.
 
 Kadratis ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle sechs Stunden je Jahr), sodass die nächste Anzeige den neuen Kurs verwendet, sobald die Quelle ihn veröffentlicht. Um fehlende Kurse zu erkennen, prüfen Sie den Block der fehlenden Kurse über der FX-Kurs-Snapshot-Tabelle und führen Sie **Wechselkurssynchronisierung erzwingen** aus, um die Kurse sofort abzurufen. Ein [manueller Kurs](#manuelle-kurse) behebt das Problem umgehend.

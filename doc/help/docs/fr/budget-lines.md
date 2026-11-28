@@ -173,7 +173,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 **Montants sans taux de change** :
 
 - Quand la devise d'une ligne n'a pas de taux de change pour une année, son montant de cette année s'affiche dans sa propre devise avec une petite marque orange. Survolez la marque pour lire, par exemple, « Pas de taux de change USD pour 2026 : exclu des totaux. »
-- Les totaux excluent ces montants, et un avertissement d'une ligne sous la liste les indique, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre les paramètres des devises sur le taux manquant. Quand l'avertissement ne cite qu'une devise et une année, la fenêtre de saisie du taux s'ouvre directement.
+- Les totaux excluent ces montants, et un avertissement d'une ligne sous la liste les indique, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les personnes qui ont le niveau Administrateur sur Paramètres et opérations du budget voient aussi **Saisir un taux**, qui ouvre les paramètres des devises sur le taux manquant. Quand l'avertissement ne cite qu'une devise et une année, la fenêtre de saisie du taux s'ouvre directement.
 - Dans une colonne triée, ces lignes viennent en dernier. Un filtre de montant ne les conserve jamais.
 - Voir [Taux manuels](currencies.md#taux-manuels) pour saisir vous-même le taux manquant.
 
@@ -782,7 +782,7 @@ L'accès aux lignes budgétaires est contrôlé par la ressource Budget, qui cou
 - `budget:member` : Créer et modifier les lignes, changer leur type, mettre à jour les budgets et ventilations, téléverser et supprimer les pièces jointes, gérer les relations, liens et contacts, modifier des lignes en masse
 - `budget:admin` : Tous les droits membre plus import et export, opérations budgétaires (copier les colonnes budgétaires, avec leurs montants et leurs ventilations, et vider une colonne budgétaire) et la suppression des lignes depuis la liste ou depuis la ligne
 
-Le gel des colonnes budgétaires relève de l'administration budgétaire (`budget_ops:admin`).
+Le gel des colonnes budgétaires demande le niveau Administrateur sur Paramètres et opérations du budget (`budget_ops:admin`).
 
 L'accès aux données peut limiter une personne aux lignes de certaines sociétés ou de certains centres de coûts. Elle voit alors ces lignes et celles sur lesquelles elle est nommée, une ligne qu'elle voit en Lecture affiche « Lecture seule dans votre accès », et la suppression de lignes et les opérations budgétaires sont réservées aux personnes qui ont accès à toutes les données. Elle peut modifier des lignes en masse, sur les lignes de son accès. Voir [Accès aux données](data-access.md).
 

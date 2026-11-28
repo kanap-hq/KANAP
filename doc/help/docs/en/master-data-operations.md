@@ -9,7 +9,7 @@ The yearly metrics are the headcount, IT users and turnover of companies and the
 - Module: **Budget management**
 - Path: **Budget management > Settings**, section **Operations**, tiles **Freeze master data** and **Copy yearly metrics**
 - Permissions:
-  - Access to the budget (reader access to Budget or Budget administration), plus one of `companies:admin`, `departments:admin` or `budget_ops:admin`
+  - Access to the budget (the Reader level on Budget or on Budget settings and operations), plus one of `companies:admin`, `departments:admin` or `budget_ops:admin`
   - The tiles are hidden from other users
 
 Master data has no Administration entry of its own.
@@ -177,7 +177,7 @@ No. The tool copies all entities for the selected scopes and metrics. For select
 No. It only writes metrics for entities that already exist in both years. If a company exists in the source year but not the destination, that row is skipped.
 
 **Who can see freeze status?**
-Anyone who can open this page, that is admins of companies, departments or Budget administration. Each admin freezes or unfreezes their own scope.
+Anyone who can open this page, that is admins of companies, departments or Budget settings and operations. Each admin freezes or unfreezes their own scope.
 
 **Can I freeze future years?**
 Yes. The year picker covers a range from last year through five years ahead. Freezing a future year is useful for locking approved budgets before the fiscal year starts.

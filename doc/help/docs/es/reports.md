@@ -90,7 +90,7 @@ Cómo funcionan:
 
 ### Importes sin tipo de cambio
 
-Cuando la moneda de una línea no tiene tipo de cambio para un año, los informes presupuestarios, **Plantilla por mes** y **Coste por ETC** excluyen de sus cifras los importes de esa línea para el año. Un aviso de una línea en la parte superior del informe los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre la configuración de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente. El aviso no se imprime. Vea [Tipos manuales](currencies.md#tipos-manuales).
+Cuando la moneda de una línea no tiene tipo de cambio para un año, los informes presupuestarios, **Plantilla por mes** y **Coste por ETC** excluyen de sus cifras los importes de esa línea para el año. Un aviso de una línea en la parte superior del informe los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Las personas con el nivel Administrador en Configuración y operaciones del presupuesto ven además **Introducir un tipo**, que abre la configuración de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente. El aviso no se imprime. Vea [Tipos manuales](currencies.md#tipos-manuales).
 
 Los dos informes de contracargo excluyen estos importes de todas sus cifras: pagado, consumido, departamentos y flujos intercompañía. Cada informe queda equilibrado sobre lo que cuenta. El mismo aviso aparece encima del informe.
 

@@ -29,10 +29,10 @@ The landing page has two sections. Each card links to a dedicated tool. An empty
 
 | Cards | Who sees them |
 |---|---|
-| Currencies, Freeze / unfreeze data | Budget administration at admin level (`budget_ops:admin`) |
-| Budget columns, Default allocation method | Budget administration at reader level (`budget_ops:reader`), read-only. Changing them needs the admin level (`budget_ops:admin`) |
+| Currencies, Freeze / unfreeze data | Budget settings and operations at Admin level (`budget_ops:admin`) |
+| Budget columns, Default allocation method | Budget settings and operations at Reader level (`budget_ops:reader`), read-only. Changing them needs the admin level (`budget_ops:admin`) |
 | Copy budget columns, Clear a budget column | Budget at admin level (`budget:admin`). Every **Line type** (**All**, **OPEX**, **CAPEX**) opens with it |
-| Freeze master data, Copy yearly metrics | Users with access to the budget who are admins of Budget administration, companies or departments. Company and department admins act on their own scope |
+| Freeze master data, Copy yearly metrics | Users with access to the budget who are admins of Budget settings and operations, companies or departments. Company and department admins act on their own scope |
 
 The built-in Budget Administrator role sees every card. Budget Member and Budget Reader see the **Budget columns** and **Default allocation method** cards, which open read-only for them, and no operation. A person whose data access is limited sees none of these cards.
 
@@ -62,7 +62,7 @@ Below the tabs, a table has one row per budget column and one column per type, *
 - The action at the end of a row acts on both types at once. It reads **Freeze both** while one of the two cells is open, and freezes the open one. Once both are frozen, it reads **Unfreeze both**
 - A cell stays disabled while its change is saving. The year tabs wait for every change to finish
 
-Without the Admin level on Budget administration, the page shows the states read only, with the message "You need budget administrator rights to use this page."
+Without the Admin level on Budget settings and operations, the page shows the states read only, with the message "You need the “Admin” right on “Budget settings and operations” to use this page."
 
 ### What freezing does
 
@@ -329,7 +329,7 @@ The default is resolved every time allocations are displayed, so editing it re-d
 
 ### Permissions
 
-Changing the default needs `budget_ops:admin`. Budget Reader and Budget Member, who read Budget administration (`budget_ops:reader`), open the page read-only: the same fields, which they cannot change, and no **Restore the default allocation** button. They can still choose the fiscal year to read. A person whose data access is limited cannot open the page.
+Changing the default needs `budget_ops:admin`. Budget Reader and Budget Member, who read Budget settings and operations (`budget_ops:reader`), open the page read-only: the same fields, which they cannot change, and no **Restore the default allocation** button. They can still choose the fiscal year to read. A person whose data access is limited cannot open the page.
 
 Each change writes its own entry in the audit log.
 
@@ -378,7 +378,7 @@ A change the server refuses is undone at once: the name or the switch shows its 
 
 ### Permissions
 
-Changing the settings needs Budget administration admin rights (`budget_ops:admin`). Budget Reader and Budget Member, who read Budget administration (`budget_ops:reader`), open the page read-only: the same table, which they cannot change. A person whose data access is limited cannot open the page.
+Changing the settings needs the Admin level on Budget settings and operations (`budget_ops:admin`). Budget Reader and Budget Member, who read Budget settings and operations (`budget_ops:reader`), open the page read-only: the same table, which they cannot change. A person whose data access is limited cannot open the page.
 
 If the settings cannot be loaded, the page shows one line, "The column settings could not be loaded.", and no controls.
 

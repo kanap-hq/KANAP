@@ -173,7 +173,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 **Amounts without an exchange rate**:
 
 - When a line's currency has no exchange rate for a year, its amount for that year shows in its own currency with a small orange mark. Hover the mark to read, for example, "No USD exchange rate for 2026: left out of totals."
-- The totals leave these amounts out, and a one-line warning under the list names them, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings on the missing rate. When the warning names a single currency and year, the manual rate dialog opens directly.
+- The totals leave these amounts out, and a one-line warning under the list names them, for example "Excluding 3 lines with no exchange rate: USD 2026." People with the Admin level on Budget settings and operations also see **Enter a rate**, which opens the currency settings on the missing rate. When the warning names a single currency and year, the manual rate dialog opens directly.
 - In a sorted column, these lines come last. An amount filter never keeps them.
 - See [Manual rates](currencies.md#manual-rates) to enter the missing rate yourself.
 
@@ -783,7 +783,7 @@ Access to budget lines is controlled by the Budget resource, which covers OPEX a
 - `budget:member`: Create and edit lines, change their type, update budgets and allocations, upload and delete attachments, manage relations, links and contacts, change lines in bulk
 - `budget:admin`: All member rights plus import and export, budget operations (copy budget columns, with their amounts and allocations, and clear a budget column), and deleting lines from the list or from the line
 
-Freezing budget columns needs Budget administration (`budget_ops:admin`).
+Freezing budget columns needs the Admin level on Budget settings and operations (`budget_ops:admin`).
 
 Data access can limit a person to the lines of some companies or cost centers. They then see those lines and the lines they are named on, a line they see in Read shows "Read only in your access", and deleting lines and the budget operations are reserved to people with access to all data. They can change lines in bulk, on the lines of their access. See [Data access](data-access.md).
 

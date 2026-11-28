@@ -235,7 +235,7 @@ Even when their roles allow it, a limited person cannot:
 - use the AI agents screens;
 - change the contract settings, the branding and the scheduled tasks.
 
-The checks that come with these operations (the impact previews, the check before a delete) are reserved too. Those commands are hidden. A request that reaches the server anyway is refused with "This action is reserved to people with access to all data." A person with a budget administration role keeps the budget file within their access.
+The checks that come with these operations (the impact previews, the check before a delete) are reserved too. Those commands are hidden. A request that reaches the server anyway is refused with "This action is reserved to people with access to all data." A person with the Admin level on Budget (`budget:admin`) keeps the budget file within their access.
 
 ## When data access is unavailable
 

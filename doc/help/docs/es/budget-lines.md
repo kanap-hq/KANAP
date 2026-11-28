@@ -173,7 +173,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 **Importes sin tipo de cambio**:
 
 - Cuando la moneda de una línea no tiene tipo de cambio para un año, su importe de ese año aparece en su propia moneda con una pequeña marca naranja. Pase el cursor sobre la marca para leer, por ejemplo, «Sin tipo de cambio de USD para 2026: excluido de los totales.»
-- Los totales excluyen estos importes, y un aviso de una línea bajo la lista los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre la configuración de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente.
+- Los totales excluyen estos importes, y un aviso de una línea bajo la lista los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Las personas con el nivel Administrador en Configuración y operaciones del presupuesto ven además **Introducir un tipo**, que abre la configuración de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente.
 - En una columna ordenada, estas líneas van al final. Un filtro de importe nunca las conserva.
 - Vea [Tipos manuales](currencies.md#tipos-manuales) para introducir usted mismo el tipo que falta.
 
@@ -782,7 +782,7 @@ El acceso a las líneas presupuestarias se controla con el recurso Presupuesto, 
 - `budget:member`: Crear y editar líneas, cambiar su tipo, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos, modificar líneas en bloque
 - `budget:admin`: Todos los derechos de miembro más importación y exportación, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y vaciar una columna presupuestaria) y la eliminación de líneas desde la lista o desde la línea
 
-Congelar columnas presupuestarias requiere la administración presupuestaria (`budget_ops:admin`).
+Congelar columnas presupuestarias requiere el nivel Administrador en Configuración y operaciones del presupuesto (`budget_ops:admin`).
 
 El acceso a los datos puede limitar a una persona a las líneas de ciertas empresas o centros de coste. Entonces ve esas líneas y aquellas en las que está nombrada, una línea que ve en Lectura muestra «Solo lectura en su acceso», y la eliminación de líneas y las operaciones presupuestarias quedan reservadas a las personas con acceso a todos los datos. Puede modificar líneas en bloque, en las líneas de su acceso. Vea [Acceso a los datos](data-access.md).
 

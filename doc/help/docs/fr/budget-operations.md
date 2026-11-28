@@ -29,10 +29,10 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 
 | Cartes | Qui les voit |
 |---|---|
-| Devises, Geler / dégeler les données | Administration budgétaire au niveau administrateur (`budget_ops:admin`) |
-| Colonnes budgétaires, Méthode de ventilation par défaut | Administration budgétaire au niveau lecteur (`budget_ops:reader`), en lecture seule. Les modifier nécessite le niveau administrateur (`budget_ops:admin`) |
+| Devises, Geler / dégeler les données | Paramètres et opérations du budget au niveau Administrateur (`budget_ops:admin`) |
+| Colonnes budgétaires, Méthode de ventilation par défaut | Paramètres et opérations du budget au niveau Lecteur (`budget_ops:reader`), en lecture seule. Les modifier nécessite le niveau administrateur (`budget_ops:admin`) |
 | Copier les colonnes budgétaires, Vider une colonne budgétaire | Budget au niveau administrateur (`budget:admin`). Chaque **Type de ligne** (**Tout**, **OPEX**, **CAPEX**) s'ouvre avec ce niveau |
-| Geler les données de référence, Copier les indicateurs annuels | Utilisateurs ayant accès au budget qui sont administrateurs de l'administration budgétaire, des sociétés ou des départements. Les administrateurs des sociétés et des départements agissent sur leur propre périmètre |
+| Geler les données de référence, Copier les indicateurs annuels | Utilisateurs ayant accès au budget qui sont administrateurs de Paramètres et opérations du budget, des sociétés ou des départements. Les administrateurs des sociétés et des départements agissent sur leur propre périmètre |
 
 Le rôle intégré Administrateur budget voit toutes les cartes. Membre budget et Lecteur budget voient les cartes **Colonnes budgétaires** et **Méthode de ventilation par défaut**, qui s'ouvrent pour eux en lecture seule, et aucune opération. Une personne dont l'accès aux données est limité ne voit aucune de ces cartes.
 
@@ -62,7 +62,7 @@ Sous les onglets, un tableau a une ligne par colonne budgétaire et une colonne 
 - L'action en bout de ligne agit sur les deux types à la fois. Elle affiche **Geler les deux** tant que l'une des deux cellules est ouverte, et gèle celle qui est ouverte. Une fois les deux gelées, elle affiche **Dégeler les deux**
 - Une cellule reste désactivée pendant l'enregistrement de son changement. Les onglets d'année attendent la fin de chaque changement
 
-Sans le niveau Admin sur l'administration budgétaire, la page affiche les états en lecture seule, avec le message « Vous devez disposer des droits d'administrateur budgétaire pour utiliser cette page. »
+Sans le niveau Administrateur sur Paramètres et opérations du budget, la page affiche les états en lecture seule, avec le message « Il vous faut le droit “Administrateur” sur “Paramètres et opérations du budget” pour utiliser cette page. »
 
 ### Ce que fait le gel
 
@@ -329,7 +329,7 @@ La valeur par défaut est résolue à chaque affichage des ventilations : la mod
 
 ### Autorisations
 
-Modifier la méthode par défaut nécessite `budget_ops:admin`. Lecteur budget et Membre budget, qui lisent l'administration budgétaire (`budget_ops:reader`), ouvrent la page en lecture seule : les mêmes champs, qu'ils ne peuvent pas modifier, et pas de bouton **Rétablir la ventilation par défaut**. Ils peuvent toujours choisir l'exercice à consulter. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
+Modifier la méthode par défaut nécessite `budget_ops:admin`. Lecteur budget et Membre budget, qui lisent Paramètres et opérations du budget (`budget_ops:reader`), ouvrent la page en lecture seule : les mêmes champs, qu'ils ne peuvent pas modifier, et pas de bouton **Rétablir la ventilation par défaut**. Ils peuvent toujours choisir l'exercice à consulter. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
 
 Chaque modification inscrit sa propre entrée au journal d'audit.
 
@@ -378,7 +378,7 @@ Une modification que le serveur refuse est annulée aussitôt : le nom ou l'inte
 
 ### Autorisations
 
-Modifier les paramètres nécessite les droits admin sur l'administration budgétaire (`budget_ops:admin`). Lecteur budget et Membre budget, qui lisent l'administration budgétaire (`budget_ops:reader`), ouvrent la page en lecture seule : le même tableau, qu'ils ne peuvent pas modifier. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
+Modifier les paramètres nécessite le niveau Administrateur sur Paramètres et opérations du budget (`budget_ops:admin`). Lecteur budget et Membre budget, qui lisent Paramètres et opérations du budget (`budget_ops:reader`), ouvrent la page en lecture seule : le même tableau, qu'ils ne peuvent pas modifier. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
 
 Si les paramètres ne peuvent pas être chargés, la page affiche une seule ligne, « Les paramètres des colonnes n'ont pas pu être chargés. », et aucun contrôle.
 

@@ -235,7 +235,7 @@ Même si ses rôles le permettent, une personne limitée ne peut pas :
 - utiliser les écrans des agents IA ;
 - modifier les paramètres des contrats, la personnalisation et les tâches planifiées.
 
-Les contrôles qui accompagnent ces opérations (les aperçus d'impact, le contrôle avant suppression) sont réservés eux aussi. Ces commandes sont masquées. Une demande qui atteint quand même le serveur est refusée avec « Cette action est réservée aux personnes qui ont accès à toutes les données. » Une personne qui a un rôle d'administration du budget garde le fichier budget dans son accès.
+Les contrôles qui accompagnent ces opérations (les aperçus d'impact, le contrôle avant suppression) sont réservés eux aussi. Ces commandes sont masquées. Une demande qui atteint quand même le serveur est refusée avec « Cette action est réservée aux personnes qui ont accès à toutes les données. » Une personne qui a le niveau Administrateur sur Budget (`budget:admin`) garde le fichier budget dans son accès.
 
 ## Quand l'accès aux données est indisponible
 
