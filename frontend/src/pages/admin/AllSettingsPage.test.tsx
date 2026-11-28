@@ -129,9 +129,16 @@ describe('AllSettingsPage', () => {
     expect(groupNames()).toEqual(['My account', 'Budget management']);
     expect(linksOf('Budget management')).toEqual([
       'Administration', 'Currencies', 'Budget columns', 'Default allocation method', 'Freeze / unfreeze data',
-      'Copy budget columns', 'Reset budget column', 'Freeze master data', 'Copy yearly metrics',
+      'Copy budget columns', 'Clear a budget column', 'Freeze master data', 'Copy yearly metrics',
     ]);
     expect(linksOf('My account')).not.toContain('Connected apps');
+  });
+
+  it('shows a reader of budget administration the two budget settings pages, and no operation', () => {
+    as({ perms: { budget: 'reader', budget_ops: 'reader' } });
+    renderPage();
+    expect(groupNames()).toEqual(['My account', 'Budget management']);
+    expect(linksOf('Budget management')).toEqual(['Administration', 'Budget columns', 'Default allocation method']);
   });
 
   it('shows an IT landscape reader the lists, which open read only, and not Netbox', () => {

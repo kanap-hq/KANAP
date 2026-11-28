@@ -88,6 +88,14 @@ Read [references/help-text.md](references/help-text.md) before adding or reviewi
 - List, report and administration pages have no breadcrumb: the left navigation leads back to the section. `PageHeader` and `ReportLayout` show the title only.
 - Full rules: "List pages" in the charter.
 
+## Settings Pages
+
+Every settings screen (Administration, a module's Settings, My account) follows [references/settings-pages.md](references/settings-pages.md); read it before building or changing one. In short:
+
+- Build on `frontend/src/components/settings/`: `SettingsPage` (880 px, title alone, save state then pills then History on its right), `SettingsSection variant="flat"`, `SettingField`, `OperationPanel`, `useSettingsAutosave`. Never write a section title, a width or a save timer by hand, and never a second component for the same use.
+- Fields save themselves (a choice at once, a text on leaving the field or after 700 ms); no Save or Cancel button on the page. A value the checks refuse is never sent: it stays with its error under it. A connection to an external system has Save and Test; an operation has its confirmation.
+- A reader sees the same fields read-only and no pill. Words: "Restore … default", "Clear", "Stop offering", "Replace", "Test", "History".
+
 ## Workspace Pages
 
 Workspace/detail pages should follow the reference implementation in `frontend/src/pages/tasks/TaskWorkspacePage.tsx` unless the existing shared workspace components have superseded it.

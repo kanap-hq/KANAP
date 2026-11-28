@@ -168,3 +168,4 @@ Cross-reference the `workspaces`, `sidebar`, and `breadcrumbs` sections of each 
 - Markdown syntax markers
 - HTML tags and attributes
 - Anchor IDs in links
+- The generated block of `on-premise/configuration.md`, between `<!-- env-example:start ... -->` and `<!-- env-example:end -->`: `npm run env:generate` in `backend/` produces it from `backend/src/config/env-registry.labels.json`. Never translate it by hand: fill the labels file (`translate` skill), then run the command
