@@ -1205,6 +1205,14 @@
         "count_one": "{{count}} confianza",
         "count_other": "{{count}} confianzas",
         "none": "Ninguna"
+      },
+      "restore": {
+        "action": "Restablecer las listas por defecto",
+        "title": "¿Restablecer las listas por defecto?",
+        "message": "Las listas vuelven a los valores incluidos con Kadratis, con sus nombres y traducciones. Los valores que todavía usan los registros se conservan. Una zona de administración añadida y conservada pasa al final, como la menos sensible.",
+        "confirm": "Restablecer",
+        "done": "Listas por defecto restablecidas.",
+        "failed": "No se pudieron restablecer las listas por defecto."
       }
     },
     "netbox": {

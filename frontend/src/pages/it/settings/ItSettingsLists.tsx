@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Stack, Typography } from '@mui/material';
+import { Box, Button, Stack, Typography } from '@mui/material';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -16,12 +16,14 @@ import {
 } from '../../../components/settings';
 import type { AssetKindItem, EntityItem, HostingTypeItem, ServerRoleItem } from '../../../components/settings';
 import { catalogListIssues } from '../../../components/settings/catalogValidation';
+import { useKanapDialogs } from '../../../components/design';
+import { useNotify } from '../../../components/notify/NotifyProvider';
 import { useAuth } from '../../../auth/AuthContext';
 import useItOpsSettings from '../../../hooks/useItOpsSettings';
 import { useLocationOptions } from '../../../hooks/useLocationOptions';
 import { autosaveErrorMessage, isTransientSaveFailure } from '../../../hooks/useAutosave';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { updateItOpsSettings, type AdminZoneOption, type ItOpsEnumOption, type ItOpsSettings } from '../../../services/itOpsSettings';
+import { resetItOpsSettingsToDefaults, updateItOpsSettings, type AdminZoneOption, type ItOpsEnumOption, type ItOpsSettings } from '../../../services/itOpsSettings';
 import ClassificationCatalogSettings from '../components/ClassificationCatalogSettings';
 import { AdminZonesEditor } from './AdminZonesEditor';
 import { ConnectionTypesEditor } from './ConnectionTypesEditor';
@@ -203,6 +205,33 @@ export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItS
     return { code: '', label: '', deprecated: false };
   };
 
+  // Restore the default lists: what waits is sent first, then every list takes the server's answer.
+  const dialogs = useKanapDialogs();
+  const notify = useNotify();
+  const [restoring, setRestoring] = React.useState(false);
+  const restore = async () => {
+    const confirmed = await dialogs.confirm({
+      title: t('pages.settings.restore.title'),
+      message: t('pages.settings.restore.message'),
+      confirmLabel: t('pages.settings.restore.confirm'),
+    });
+    if (!confirmed) return;
+    setRestoring(true);
+    try {
+      await autosave.flush();
+      const next = await resetItOpsSettingsToDefaults();
+      queryClient.setQueryData(['it-ops-settings'], next);
+      dispatch({ type: 'hydrate', payload: next });
+      void queryClient.invalidateQueries({ queryKey: ['it-ops-catalog-labels'] });
+      void queryClient.invalidateQueries({ queryKey: ['application-classification-catalog'] });
+      notify({ message: t('pages.settings.restore.done'), tone: 'success' });
+    } catch (error) {
+      notify({ message: getApiErrorMessage(error, t, t('pages.settings.restore.failed')), tone: 'info' });
+    } finally {
+      setRestoring(false);
+    }
+  };
+
   /** A new row on top of a list whose editor has its add button above it. */
   const addOnTop = (id: ListId, row: Record<string, unknown>) => changeList(id, [{ ...row, localId: makeLocalId(id) }, ...listRows(latestStateRef.current, id)]);
 
@@ -211,6 +240,7 @@ export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItS
       title={title}
       tabs={tabs}
       status={autosave.status}
+      actions={listsShown && data ? <Button variant="action" onClick={() => void restore()} disabled={restoring}>{t('pages.settings.restore.action')}</Button> : undefined}
       readOnly={readOnly}
       loading={listsShown && !data && !isError}
       error={listsShown && isError ? t('pages.settings.loadFailed') : undefined}

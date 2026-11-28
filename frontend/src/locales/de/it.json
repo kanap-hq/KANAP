@@ -1205,6 +1205,14 @@
         "count_one": "{{count}} Vertrauensstellung",
         "count_other": "{{count}} Vertrauensstellungen",
         "none": "Keine"
+      },
+      "restore": {
+        "action": "Standardlisten wiederherstellen",
+        "title": "Standardlisten wiederherstellen?",
+        "message": "Die Listen kehren zu den mit Kadratis gelieferten Werten zurück, mit ihren Namen und Übersetzungen. Werte, die noch von Datensätzen verwendet werden, bleiben erhalten. Eine hinzugefügte und erhaltene Administrationszone kommt ans Ende, als die am wenigsten sensible.",
+        "confirm": "Wiederherstellen",
+        "done": "Standardlisten wiederhergestellt.",
+        "failed": "Die Standardlisten konnten nicht wiederhergestellt werden."
       }
     },
     "netbox": {

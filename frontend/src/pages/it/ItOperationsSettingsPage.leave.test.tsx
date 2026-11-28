@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -13,6 +13,7 @@ import type { ItOpsSettings } from '../../services/itOpsSettings';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 const patch = (api as unknown as { patch: ReturnType<typeof vi.fn> }).patch;
+const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
 const stableT = (key: string, options?: Record<string, unknown>) => (options?.name ? `${key}:${options.name}` : key);
 vi.mock('react-i18next', () => ({
@@ -96,6 +97,7 @@ describe('Saving the IT landscape lists', () => {
   afterEach(() => {
     get.mockReset();
     patch.mockReset();
+    post.mockReset();
     vi.restoreAllMocks();
   });
 
@@ -214,6 +216,56 @@ describe('Saving the IT landscape lists', () => {
     expect(screen.getByRole('status')).toHaveTextContent('common:status.notSaved');
     fireEvent.change(within(section).getByRole('textbox', { name: 'enumEditor.name' }), { target: { value: 'Web app' } });
     expect(within(section).queryByRole('alert')).not.toBeInTheDocument();
+  }, 20000);
+
+  it('restores the default lists: sends what waits, then shows every list as the server answers', async () => {
+    const stored = { ...pageSettings, accessMethods: [{ code: 'web', label: 'Web', deprecated: false }, { code: 'kiosk', label: 'Kiosk', deprecated: false }] };
+    const restored = { ...pageSettings, accessMethods: [{ code: 'web', label: 'Web', deprecated: false }, { code: 'api', label: 'API', deprecated: false }] };
+    get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: stored };
+      if (String(url).startsWith('/locations')) return { data: { items: [] } };
+      return { data: { total: 0, usage: [] } };
+    });
+    const order: string[] = [];
+    patch.mockImplementation(async (_url: string, body: Partial<ItOpsSettings>) => { order.push('patch'); return { data: { ...stored, ...body } }; });
+    post.mockImplementation(async (url: string) => { order.push(url); return { data: restored }; });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <QueryClientProvider client={client}>
+          <MemoryRouter>
+            <KanapDialogProvider>
+              <ItOperationsSettingsPage />
+            </KanapDialogProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+    const title = await screen.findByRole('button', { name: /pages.settings.lists.accessMethods.title/ });
+    await wait(50);
+    fireEvent.click(title);
+    const section = title.closest('.MuiAccordion-root') as HTMLElement;
+    fireEvent.change((await within(section).findAllByRole('textbox', { name: 'enumEditor.name' }))[1], { target: { value: 'Kiosk terminal' } });
+    fireEvent.click(screen.getByRole('button', { name: 'pages.settings.restore.action' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('pages.settings.restore.message');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'pages.settings.restore.confirm' }));
+    await waitFor(() => expect(order).toEqual(['patch', '/it-ops/settings/reset']));
+    await waitFor(() => expect(within(section).getAllByRole('textbox', { name: 'enumEditor.name' }).map((node) => (node as HTMLInputElement).value)).toEqual(['Web', 'API']));
+    expect(client.getQueryData(['it-ops-settings'])).toEqual(restored);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['it-ops-catalog-labels'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['application-classification-catalog'] });
+  }, 20000);
+
+  it('restores nothing when the confirmation is cancelled', async () => {
+    renderPage();
+    await screen.findByRole('button', { name: /pages.settings.lists.accessMethods.title/ });
+    await wait(50);
+    fireEvent.click(screen.getByRole('button', { name: 'pages.settings.restore.action' }));
+    fireEvent.keyDown(await screen.findByRole('dialog'), { key: 'Escape' });
+    await wait(50);
+    expect(post).not.toHaveBeenCalled();
   }, 20000);
 
   it('sends nothing when nothing was changed', async () => {

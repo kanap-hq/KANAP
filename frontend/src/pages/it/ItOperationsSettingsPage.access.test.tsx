@@ -115,6 +115,7 @@ describe('IT settings write access', () => {
     expect(screen.getByText('Critical, High')).toBeInTheDocument();
     expandEveryList();
 
+    expect(screen.queryByRole('button', { name: 'Restore the default lists' })).not.toBeInTheDocument();
     WRITE_BUTTONS.forEach((name) => {
       expect(screen.queryAllByRole('button', { name })).toHaveLength(0);
     });
@@ -133,6 +134,7 @@ describe('IT settings write access', () => {
     harness.level = 'admin';
     renderPage();
     expect(screen.getByRole('button', { name: 'Edit catalog' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Restore the default lists' })).toBeInTheDocument();
     expect(screen.queryByText('Critical, High')).not.toBeInTheDocument();
     expandEveryList();
 
