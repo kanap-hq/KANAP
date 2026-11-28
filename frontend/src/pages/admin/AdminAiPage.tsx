@@ -7,10 +7,6 @@ import {
   Card,
   CardContent,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   FormControlLabel,
   IconButton,
@@ -31,12 +27,12 @@ import {
 } from '@mui/material';
 import KeyOffOutlinedIcon from '@mui/icons-material/KeyOffOutlined';
 import LinkOffOutlinedIcon from '@mui/icons-material/LinkOffOutlined';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import { useFeatures } from '../../config/FeaturesContext';
+import { useAuth } from '../../auth/AuthContext';
 import { useLocale } from '../../i18n/useLocale';
 import {
   aiAdminApi,
@@ -64,6 +60,7 @@ import {
 import { IncludedModelDialog, IncludedModelStatus, WithdrawIncludedModelDialog } from './IncludedModelConfirmation';
 import { useKanapDialogs } from '../../components/design/KanapDialogProvider';
 import McpJournalSection from './McpJournalSection';
+import { CopyValue, McpKeyDialog, mcpEndpointUrl } from '../../ai/components/McpKeyDialog';
 
 type AiSettingsForm = {
   chat_enabled: boolean;
@@ -192,53 +189,12 @@ function ValidationErrorList({ errors }: { errors: string[] }) {
   );
 }
 
-const MONO_FONT = "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace";
-
-function mcpEndpointUrl(origin: string): string {
-  return `${origin}/api/ai/mcp`;
-}
-
-function claudeCodeCommand(endpoint: string, key: string): string {
-  return `claude mcp add --transport http kanap ${endpoint} --header "Authorization: Bearer ${key}"`;
-}
-
-function CopyValue({ value, copyLabel, copiedLabel, multiline = false }: {
-  value: string;
-  copyLabel: string;
-  copiedLabel: string;
-  multiline?: boolean;
-}) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <Stack direction="row" spacing={1} alignItems="flex-start">
-      <TextField
-        variant="standard"
-        fullWidth
-        value={value}
-        multiline={multiline}
-        InputProps={{ readOnly: true, sx: { fontFamily: MONO_FONT, fontSize: '0.8125rem' } }}
-      />
-      <Tooltip title={copied ? copiedLabel : copyLabel}>
-        <IconButton
-          size="small"
-          aria-label={copyLabel}
-          onClick={() => {
-            void navigator.clipboard?.writeText(value).then(() => setCopied(true), () => undefined);
-          }}
-          onMouseLeave={() => setCopied(false)}
-        >
-          <ContentCopyIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
-    </Stack>
-  );
-}
-
 /** A long key label stops at the column width; the full label shows on hover. */
 const KEY_LABEL_CELL_SX = { maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' } as const;
 
 export default function AdminAiPage() {
   const { config } = useFeatures();
+  const { hasLevel } = useAuth();
   const queryClient = useQueryClient();
   const { t } = useTranslation(['admin', 'common']);
   const locale = useLocale();
@@ -250,8 +206,6 @@ export default function AdminAiPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [webSearchTestResult, setWebSearchTestResult] = useState<AiWebSearchTestResult | null>(null);
   const [createKeyDialog, setCreateKeyDialog] = useState(false);
-  const [newKeyLabel, setNewKeyLabel] = useState('');
-  const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [keyActionError, setKeyActionError] = useState<string | null>(null);
   // Confirmation of the KANAP included model: alone, or with the settings save that turns the assistant on.
   const [includedDialog, setIncludedDialog] = useState<{
@@ -392,21 +346,6 @@ export default function AdminAiPage() {
     },
   });
 
-  const createKeyMutation = useMutation({
-    mutationFn: (label: string) => aiKeysApi.create({ label }),
-    onMutate: () => {
-      setKeyActionError(null);
-    },
-    onSuccess: async (data) => {
-      setCreatedKey(data.key);
-      setNewKeyLabel('');
-      await queryClient.invalidateQueries({ queryKey: ['admin-ai-keys'] });
-    },
-    onError: (error: any) => {
-      setKeyActionError(getApiErrorMessage(error, t, t('aiAdmin.messages.createMcpKeyFailed')));
-    },
-  });
-
   const revokeKeyMutation = useMutation({
     mutationFn: (id: string) => aiKeysApi.adminRevoke(id),
     onMutate: () => {
@@ -443,6 +382,8 @@ export default function AdminAiPage() {
   // With no explicit assignment, chat falls back to the tenant default model,
   // then to the KANAP included model — the quota card only matters on that path.
   const chatUsesBuiltin = config.features.builtinAiProvider && form.chat_model_config_id === '' && !defaultModelName;
+  // A key is created with the MCP right (POST /ai/keys), not with the AI settings one.
+  const canCreateKey = config.features.aiMcp && hasLevel('ai_mcp', 'reader');
   const includedModel = currentSettings?.builtin_provider?.in_use ? currentSettings.builtin_provider : null;
   // The assistant waits for the included model's confirmation: the status line says so,
   // with no validation list and no "provider incomplete" chip on top.
@@ -504,6 +445,12 @@ export default function AdminAiPage() {
                       label={t('aiAdmin.provider.modelSelector.label')}
                       helperText={(
                         <>
+                          {/* A model chosen for the assistant, or the default model, hides the included one. */}
+                          {config.features.builtinAiProvider && !chatUsesBuiltin ? (
+                            <Box component="span" sx={{ display: 'block' }}>
+                              {t('aiAdmin.provider.modelSelector.notBuiltin')}
+                            </Box>
+                          ) : null}
                           {t('aiAdmin.provider.modelSelector.hintPrefix')}{' '}
                           <Link component={RouterLink} to="/admin/ai-models">{t('aiAdmin.provider.modelSelector.hintLink')}</Link>
                         </>
@@ -692,17 +639,18 @@ export default function AdminAiPage() {
                 <Stack spacing={2}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography variant="h6">{t('aiAdmin.keys.title')}</Typography>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => {
-                        setCreateKeyDialog(true);
-                        setCreatedKey(null);
-                        setKeyActionError(null);
-                      }}
-                    >
-                      {t('aiAdmin.actions.createKey')}
-                    </Button>
+                    {canCreateKey ? (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => {
+                          setCreateKeyDialog(true);
+                          setKeyActionError(null);
+                        }}
+                      >
+                        {t('aiAdmin.actions.createKey')}
+                      </Button>
+                    ) : null}
                   </Stack>
 
                   <PropertyRow
@@ -862,71 +810,11 @@ export default function AdminAiPage() {
         onConfirm={() => includedMutation.mutate({ accept_builtin_provider_key: null })}
       />
 
-      <Dialog
+      <McpKeyDialog
         open={createKeyDialog}
-        onClose={() => {
-          setCreateKeyDialog(false);
-          setCreatedKey(null);
-        }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>{createdKey ? t('aiAdmin.dialogs.keyCreatedTitle') : t('aiAdmin.dialogs.createKeyTitle')}</DialogTitle>
-        <DialogContent>
-          {createdKey ? (
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              <Alert severity="warning">{t('aiAdmin.dialogs.copyKeyWarning')}</Alert>
-              <PropertyRow label={t('aiAdmin.dialogs.keyLabel')}>
-                <CopyValue
-                  value={createdKey}
-                  copyLabel={t('aiAdmin.dialogs.copyKey')}
-                  copiedLabel={t('aiAdmin.keys.copied')}
-                />
-              </PropertyRow>
-              <PropertyRow
-                label={t('aiAdmin.dialogs.claudeCodeLabel')}
-                helperText={t('aiAdmin.dialogs.claudeCodeHelper')}
-              >
-                <CopyValue
-                  value={claudeCodeCommand(mcpEndpoint, createdKey)}
-                  copyLabel={t('aiAdmin.dialogs.copyCommand')}
-                  copiedLabel={t('aiAdmin.keys.copied')}
-                  multiline
-                />
-              </PropertyRow>
-            </Stack>
-          ) : (
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              {keyActionError ? <Alert severity="error">{keyActionError}</Alert> : null}
-              <TextField
-                autoFocus
-                fullWidth
-                size="small"
-                label={t('aiAdmin.fields.label')}
-                value={newKeyLabel}
-                onChange={(event) => setNewKeyLabel(event.target.value)}
-                placeholder={t('aiAdmin.fields.labelPlaceholder')}
-              />
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          {createdKey ? (
-            <Button variant="action" onClick={() => { setCreateKeyDialog(false); setCreatedKey(null); }}>{t('aiAdmin.actions.done')}</Button>
-          ) : (
-            <>
-              <Button variant="action" onClick={() => setCreateKeyDialog(false)}>{t('common:buttons.cancel')}</Button>
-              <Button
-                variant="action-primary"
-                onClick={() => createKeyMutation.mutate(newKeyLabel)}
-                disabled={!newKeyLabel.trim() || createKeyMutation.isPending}
-              >
-                {createKeyMutation.isPending ? t('aiAdmin.actions.creating') : t('common:buttons.create')}
-              </Button>
-            </>
-          )}
-        </DialogActions>
-      </Dialog>
+        onClose={() => setCreateKeyDialog(false)}
+        onCreated={() => void queryClient.invalidateQueries({ queryKey: ['admin-ai-keys'] })}
+      />
     </>
   );
 }
