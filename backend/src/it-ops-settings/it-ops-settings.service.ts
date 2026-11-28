@@ -1480,21 +1480,37 @@ export class ItOpsSettingsService {
    * The alias rule of `prepareCatalogPatch` again, on each list of the save as it will be stored:
    * the protected values the normalizers add back and the locked rows they put first count. A list
    * that would hold two values answering to one name is refused, nothing stored. The restore does
-   * not come here: it copies stored data as it is.
+   * not come here: it copies stored data as it is. The refusal says when the other value of the
+   * pair is one the list always keeps, which the person may not have sent.
    */
   private assertStoredAliases(next: ItOpsSettings, lists: string[]): void {
     for (const key of lists) {
       const meta = ItOpsSettingsService.LIST_META[key];
       if (!meta || meta.subnets) continue;
+      const kept = this.alwaysKeptCodes(key);
       const owners = new Map<string, { code: string; label: string }>();
       for (const row of ((next as any)[key] ?? []) as Array<{ code: string; label: string; translations?: CatalogTranslations }>) {
         for (const alias of catalogAliases(row)) {
           const owner = owners.get(alias);
-          if (owner && owner.code !== row.code) throw new BadRequestException(`${meta.name}: "${row.label}" clashes with "${owner.label}" (names, translations and codes must be unique)`);
+          if (owner && owner.code !== row.code) {
+            const [value, other] = kept.has(row.code) && !kept.has(owner.code) ? [owner, row] : [row, owner];
+            const keeps = kept.has(other.code) ? ', a value Kadratis always keeps' : '';
+            throw new BadRequestException(`${meta.name}: "${value.label}" clashes with "${other.label}"${keeps} (names, translations and codes must be unique)`);
+          }
           owners.set(alias, row);
         }
       }
     }
+  }
+
+  /** The codes of a list that a save always keeps: the locked rows put back, the protected defaults added back. */
+  private alwaysKeptCodes(key: string): ReadonlySet<string> {
+    if (key === 'lifecycleStates') return this.lockedLifecycleCodes;
+    if (key === 'domains') return this.lockedDomainCodes;
+    if (key === 'networkSegments') return new Set(this.defaultNetworkSegments.map((item) => item.code));
+    if (key === 'serverKinds') return new Set(this.defaultServerKinds.map((item) => item.code));
+    if (key === 'serverProviders') return new Set(this.protectedServerProviderCodes);
+    return new Set();
   }
 
   /** Usage of one catalog value on business records, shared by the usage endpoint and the PATCH guard. */

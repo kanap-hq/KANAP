@@ -35,13 +35,13 @@ async function main() {
     const start = await read();
 
     // A protected value left out of the save comes back: a new value with its name clashes with it.
-    await refused({ serverKinds: [...without(start.serverKinds, 'virtual_machine'), { code: 'vm', label: 'Virtual Machine' }] as any }, /Virtual Machine/, 'asset type named as the protected virtual machine');
-    await refused({ networkSegments: [...without(start.networkSegments, 'lan'), { code: 'office', label: 'LAN' }] }, /LAN/, 'network zone named as the protected LAN');
-    await refused({ serverProviders: [...without(start.serverProviders, 'other'), { code: 'misc', label: 'Other' }] }, /Other/, 'cloud provider named as the protected Other');
+    await refused({ serverKinds: [...without(start.serverKinds, 'virtual_machine'), { code: 'vm', label: 'Virtual Machine' }] as any }, /"Virtual Machine" clashes with "Virtual Machine", a value Kadratis always keeps/, 'asset type named as the protected virtual machine');
+    await refused({ networkSegments: [...without(start.networkSegments, 'lan'), { code: 'office', label: 'LAN' }] }, /"LAN" clashes with "LAN", a value Kadratis always keeps/, 'network zone named as the protected LAN');
+    await refused({ serverProviders: [...without(start.serverProviders, 'other'), { code: 'misc', label: 'Other' }] }, /"Other" clashes with "Other", a value Kadratis always keeps/, 'cloud provider named as the protected Other');
     // The locked statuses and system domains are put back by the server, whatever the save sends for them.
-    await refused({ lifecycleStates: [...start.lifecycleStates, { code: 'live', label: 'Active' }] }, /Active/, 'status named as the locked Active');
-    await refused({ lifecycleStates: [...start.lifecycleStates, { code: 'running', label: 'Running', translations: { fr: { label: 'active' } } }] }, /Running/, 'status translated as the locked Active');
-    await refused({ domains: [...start.domains, { code: 'wg', label: 'Workgroup', dns_suffix: 'wg.example' }] as any }, /Workgroup/, 'domain named as the system Workgroup');
+    await refused({ lifecycleStates: [...start.lifecycleStates, { code: 'live', label: 'Active' }] }, /"Active" clashes with "Active", a value Kadratis always keeps/, 'status named as the locked Active');
+    await refused({ lifecycleStates: [...start.lifecycleStates, { code: 'running', label: 'Running', translations: { fr: { label: 'active' } } }] }, /"Running" clashes with "Active", a value Kadratis always keeps/, 'status translated as the locked Active');
+    await refused({ domains: [...start.domains, { code: 'wg', label: 'Workgroup', dns_suffix: 'wg.example' }] as any }, /"Workgroup" clashes with "Workgroup", a value Kadratis always keeps/, 'domain named as the system Workgroup');
 
     // Every list read saves as it is.
     for (const key of Object.keys(ItOpsSettingsService.LIST_META)) await save({ [key]: (start as any)[key] } as Partial<ItOpsSettings>);
@@ -51,7 +51,9 @@ async function main() {
     await runner.query(`UPDATE tenants SET metadata = $2::jsonb WHERE id = $1`, [tenantId, JSON.stringify(meta)]);
     const stored = await read();
     assert.equal(stored.serverKinds.filter((row) => row.label === 'Virtual Machine').length, 2, 'the pair is read as stored');
-    await refused({ serverKinds: stored.serverKinds }, /Virtual Machine/, 'the stored pair saved as read');
+    await refused({ serverKinds: stored.serverKinds }, /"Virtual Machine" clashes with "Virtual Machine" \(/, 'the stored pair saved as read');
+    // Two values of the person's own: the message names them only.
+    await refused({ accessMethods: [...start.accessMethods, { code: 'kiosk_a', label: 'Booth' }, { code: 'kiosk_b', label: 'Booth' }] }, /"Booth" clashes with "Booth" \(/, 'two added values with one name');
     const renamed = await save({ serverKinds: stored.serverKinds.map((row) => (row.code === 'vm' ? { ...row, label: 'Virtual machine (legacy)' } : row)) });
     assert.deepEqual(renamed.serverKinds.filter((row) => /^Virtual/.test(row.label)).map((row) => row.label), ['Virtual Machine', 'Virtual machine (legacy)'], 'renaming one of the pair saves');
 
