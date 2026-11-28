@@ -6,6 +6,9 @@ import { OpsMetricsStore } from './ops-metrics.store';
  * Must be registered BEFORE tenancy middleware in main.ts so it wraps the entire
  * NestJS pipeline — including guards (where 429/401/403 are thrown).
  */
+/** The routes left out of the request metrics: orchestrator and monitoring probes. */
+export const METRICS_SKIPPED_ROUTES = new Set(['/health', '/api/health', '/health/ready', '/api/health/ready', '/ops/metrics']);
+
 export function createRequestMetricsMiddleware(store: OpsMetricsStore) {
   return (req: Request, res: Response, next: NextFunction) => {
     const start = Date.now();
@@ -19,8 +22,8 @@ export function createRequestMetricsMiddleware(store: OpsMetricsStore) {
         ? `${req.baseUrl || ''}${(req as any).route.path}`
         : req.originalUrl?.split('?')[0] || req.path;
 
-      // Skip static/health noise, and the monitoring probe of the ops metrics
-      if (route === '/health' || route === '/api/health' || route === '/ops/metrics') return;
+      // Skip static/health noise (liveness and readiness probes), and the monitoring probe of the ops metrics
+      if (METRICS_SKIPPED_ROUTES.has(route)) return;
 
       // Capture error info from NestJS-attached error (if any)
       let errorType: string | undefined;

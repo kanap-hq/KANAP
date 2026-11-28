@@ -154,11 +154,13 @@ sudo -u postgres psql -d kanap <<'SQL'
 CREATE EXTENSION IF NOT EXISTS citext;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS unaccent;
 GRANT ALL ON SCHEMA public TO kanap;
 SQL
 ```
 
-The commands print `CREATE DATABASE`, `CREATE ROLE` and `GRANT`, then `CREATE EXTENSION` three times and `GRANT`.
+The commands print `CREATE DATABASE`, `CREATE ROLE` and `GRANT`, then `CREATE EXTENSION` five times and `GRANT`.
 
 ### Allow connections from Docker containers
 

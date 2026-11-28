@@ -8,4 +8,6 @@ export default new DataSource({
   entities: [__dirname + '/**/*.entity.{ts,js}'],
   migrations: [__dirname + '/migrations/*.{ts,js}'],
   ssl: false,
+  // The image entrypoint migrates through this source: pg_stat_activity shows who holds the migration lock.
+  applicationName: 'kadratis-migrate',
 });
