@@ -54,10 +54,15 @@ function dirtyItOps(siteA: string, siteB: string) {
       { code: 'web', label: 'Frontal', graph_tier: 'center', deprecated: true },
       { code: 'free_role', label: 'Free role', graph_tier: 'center' },
     ],
+    // Renames in a chain: "External Users" became "Partner staff", then "Internal Users" took the name
+    // "External Users", then a value named "Internal Users" was added and is used.
     entities: [
+      { code: 'internal_users', label: 'External Users', graph_tier: 'top' },
+      { code: 'external_users', label: 'Partner staff', graph_tier: 'top' },
       { code: 'internet', label: 'Web', graph_tier: 'bottom' },
       { code: 'supplier_net', label: 'Supplier network', graph_tier: 'upper' },
       { code: 'free_entity', label: 'Free entity', graph_tier: 'top' },
+      { code: 'staff', label: 'Internal Users', graph_tier: 'top' },
     ],
     connection_types: [
       { code: 'https', label: 'HTTPS secure', category: 'Web', typicalPorts: '8443' },
@@ -157,7 +162,7 @@ async function main() {
     await runner.query(`INSERT INTO assets(tenant_id, name, kind, environment, location_id, domain) VALUES ($1, 'vm-1', 'virtual_machine', 'prod', $2, 'dmz-ad')`, [tenantId, siteB]);
     const [instance] = await runner.query(`INSERT INTO app_instances(tenant_id, application_id, environment) VALUES ($1, $2, 'prod') RETURNING id`, [tenantId, app.id]);
     await runner.query(`INSERT INTO app_asset_assignments(tenant_id, app_instance_id, asset_id, role) VALUES ($1, $2, $3, 'erp_role')`, [tenantId, instance.id, asset.id]);
-    const [connection] = await runner.query(`INSERT INTO connections(tenant_id, name, topology, connection_reference, source_entity_code) VALUES ($1, 'Flow', 'point_to_point', 'CONN-1', 'supplier_net') RETURNING id`, [tenantId]);
+    const [connection] = await runner.query(`INSERT INTO connections(tenant_id, name, topology, connection_reference, source_entity_code, destination_entity_code) VALUES ($1, 'Flow', 'point_to_point', 'CONN-1', 'supplier_net', 'staff') RETURNING id`, [tenantId]);
     await runner.query(`INSERT INTO connection_protocols(tenant_id, connection_id, connection_type_code) VALUES ($1, $2, 'opcua')`, [tenantId, connection.id]);
     await runner.query(`INSERT INTO connection_legs(tenant_id, connection_id, order_index, function_code, protocol_codes) VALUES ($1, $2, 1, 'nat2', ARRAY['https'])`, [tenantId, connection.id]);
     // The sources the rows above leave empty: interface legs and bindings, incidents, instances, access methods.
@@ -262,8 +267,10 @@ async function main() {
     assert.equal(result.serverRoles.length, 15);
     assert.deepEqual(pick(result.serverRoles, 'web'), { code: 'web', label: 'Web server', deprecated: false, graph_tier: 'top' });
     assert.deepEqual(result.serverRoles[14], { code: 'erp_role', label: 'ERP server', deprecated: false, graph_tier: 'bottom' });
-    assert.deepEqual(codes(result.entities), ['internal_users', 'external_users', 'internet', 'customers', 'partner_networks', 'supplier_net']);
+    assert.deepEqual(codes(result.entities), ['internal_users', 'external_users', 'internet', 'customers', 'partner_networks', 'supplier_net', 'staff']);
     assert.deepEqual(pick(result.entities, 'internet'), { code: 'internet', label: 'Internet', deprecated: false, graph_tier: 'top' });
+    // Renames in a chain: each shipped name is taken by another value, so both keep their current names.
+    assert.deepEqual(['internal_users', 'external_users', 'staff'].map((code) => pick(result.entities, code).label), ['External Users', 'Partner staff', 'Internal Users']);
     // Connection types: shipped ports and category back.
     assert.equal(result.connectionTypes.length, 66);
     assert.deepEqual(pick(result.connectionTypes, 'https'), { code: 'https', label: 'HTTPS', deprecated: false, category: 'Application', typicalPorts: '443' });

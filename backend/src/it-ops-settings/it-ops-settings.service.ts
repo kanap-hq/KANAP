@@ -1,6 +1,6 @@
 import { AuditService } from '../audit/audit.service';
 import { ClassificationCatalog, ClassificationLevel, CLASSIFICATION_CATALOG_KEYS, OBSOLETE_CATALOG_METADATA_KEYS, catalogFromMetadata, catalogToMetadata, validateClassificationCatalog } from './classification-catalog';
-import { CatalogTranslations, catalogAliases, normalizeAlias, normalizeTranslations, prepareCatalogListForWrite } from './catalog-codes';
+import { CatalogTranslations, catalogAliases, normalizeTranslations, prepareCatalogListForWrite } from './catalog-codes';
 import { catalogValueRefusal, findCatalogOption, offeredCatalogList, offeredCatalogOptions, resolveOfferedCatalogCode } from './catalog-resolve';
 import { CATALOG_USAGE, CatalogUsageItem, UsageKey, countCatalogUsage, subnetUsageKey, usedCatalogCodes } from './catalog-usage';
 import { BadRequestException, Injectable } from '@nestjs/common';
@@ -1590,22 +1590,41 @@ export class ItOpsSettingsService {
 
 /**
  * One list of the restore: the shipped rows in their order, as shipped, then the added rows found in
- * `used`, as stored. A stored shipped value whose shipped name a kept row already answers to (its
- * code, its name or a translated name) keeps its current name. A deleted shipped value comes back
- * only when none of its shipped aliases (code, name) is taken by a value the list keeps: otherwise it
- * stays deleted, so the list read back saves as it is. No name is invented.
+ * `used`, as stored. A stored shipped value keeps its current name when its shipped name is already
+ * the name of another value of the restored list (an alias of a kept row, or of another shipped row
+ * as restored: its code, its name or a translated name). That decision runs until nothing changes,
+ * so renames in a chain keep their stored names; the set of values keeping their name only grows.
+ * A deleted shipped value comes back only when none of its shipped aliases (code, name) is taken by a
+ * value the list keeps: otherwise it stays deleted, so the list read back saves as it is. No name is
+ * invented, and a list stored with a clash is copied as it is.
  */
 function restoredList<T extends { code: string; label: string }>(shipped: T[], current: T[], used: Set<string>): T[] {
   const shippedCodes = new Set(shipped.map((row) => row.code));
   const kept = current.filter((row) => !shippedCodes.has(row.code) && used.has(row.code));
-  const keptAliases = new Set(kept.flatMap((row) => catalogAliases(row)));
   const stored = new Map(current.map((row) => [row.code, row]));
-  const restored = shipped.map((row) => {
-    const now = stored.get(row.code);
-    if (!now) return null;
-    return keptAliases.has(normalizeAlias(row.label)) ? { ...row, label: now.label } : { ...row };
-  });
-  const taken = new Set([...keptAliases, ...restored.flatMap((row) => (row ? catalogAliases(row) : []))]);
+  const keepsName = new Set<string>();
+  let restored: Array<T | null> = [];
+  for (let changed = true; changed; ) {
+    restored = shipped.map((row) => {
+      const now = stored.get(row.code);
+      if (!now) return null;
+      return keepsName.has(row.code) ? { ...row, label: now.label } : { ...row };
+    });
+    // How many rows of the list answer to each alias: more than one means another row has it.
+    const holders = new Map<string, number>();
+    for (const row of [...restored, ...kept]) {
+      for (const alias of row ? catalogAliases(row) : []) holders.set(alias, (holders.get(alias) ?? 0) + 1);
+    }
+    changed = false;
+    for (const row of restored) {
+      if (!row || keepsName.has(row.code) || stored.get(row.code)!.label === row.label) continue;
+      if (catalogAliases(row).some((alias) => holders.get(alias)! > 1)) {
+        keepsName.add(row.code);
+        changed = true;
+      }
+    }
+  }
+  const taken = new Set([...kept, ...restored].flatMap((row) => (row ? catalogAliases(row) : [])));
   const back = shipped.map((row, index) => {
     if (restored[index]) return restored[index];
     const aliases = catalogAliases(row);
