@@ -1514,7 +1514,7 @@ export class ItOpsSettingsService {
   }
 
   /**
-   * Restores the default lists (decision P6), in one transaction on the locked tenant row, list by
+   * Restores the default lists, in one transaction on the locked tenant row, list by
    * list, a value known by its code (a subnet by its site and CIDR): a shipped value comes back as
    * shipped, offered, without the translations the workspace typed, deleted or not; a value the
    * workspace added and records use stays as stored, after the shipped values, in its former order;
