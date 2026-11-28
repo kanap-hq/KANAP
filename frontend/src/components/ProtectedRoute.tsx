@@ -53,6 +53,8 @@ export const ADMIN_ROUTE_REQUIREMENTS: Record<string, RouteRequirement | 'signed
   billing: { resource: 'billing', level: 'reader' },
   'choose-plan': { resource: 'billing', level: 'reader' },
   'agent-control': { resource: 'ai_agents', level: 'reader' },
+  // The list of the settings pages the person may open.
+  'all-settings': 'signedIn',
 };
 
 export default function ProtectedRoute() {

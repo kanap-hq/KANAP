@@ -23,6 +23,8 @@ A single selector decides which model answers chat questions:
 - **No model configured**: shown when there is no default *and* no included model, which is the on-premise case. Note that this option keeps saying *No model configured* until some model is starred as the organization default, even if you have already registered several. It describes the fallback, not your registry.
 - **Any active model by name**: pin Kad to one specific model, independent of the default. Archived models are not offered.
 
+On the hosted service, a line under the selector says *Kad does not use the Kadratis included model.* when the option shown runs Kad on a model of your own: the default model, or a model chosen by name. It follows the selector before you save. On the [AI models](ai-models.md) page, the included model then reads **Not used** when no agent runs on it either.
+
 So there are two ways to get chat working: star a default on the [AI models](ai-models.md) page and leave this selector on the first option, or pick a model here by name. Pinning one here works whether or not a default exists.
 
 The hint underneath links straight to the **AI models page**, which is where every option in the list comes from. There is no provider, endpoint, or API key to fill in here any more, and no separate multimodal switch: whether the model can read images is a property of the model, set once in its editor.
@@ -112,19 +114,20 @@ Both ways share the rest:
 - A limit of 60 MCP requests a minute for each key and each connection. Past it, requests are refused with a `Retry-After` header that gives the number of seconds to wait.
 - The same [MCP journal](#mcp-journal).
 
-The **MCP keys and connections** card shows a **Create key** button, the **Server address** that clients connect to (with a copy button), the **Key max lifetime (days)** cap, and a table with **Label**, **Type**, **Person**, **Created**, **Expires**, **Last used** and **Status** (**Active** or **Revoked**).
+The **MCP keys and connections** card shows a **Create key** button (for people with MCP access, see below), the **Server address** that clients connect to (with a copy button), the **Key max lifetime (days)** cap, and a table with **Label**, **Type**, **Person**, **Created**, **Expires**, **Last used** and **Status** (**Active** or **Revoked**).
 
 The **Type** column says **API key** or **Connection**. A connection row shows the name of the application and the host it returns to, for example *Claude · claude.ai*. An API key shows its prefix next to its label, for example *Laptop · abcd1234*. **Person** names who created the key or approved the connection.
 
 ### Creating a key
 
-Keys are created on this page only, so only people who can open it create them (`ai_settings:admin`, with MCP access). A key reads with the access of the person who created it: a key created by an administrator reads everything an administrator sees. Treat it like that person's password, and prefer a connection when each user can sign in.
+Keys are created on this page by people who can open it and also have MCP access (`ai_mcp:reader`, or Administrator): **Create key** appears for them only. A key reads with the access of the person who created it: a key created by an administrator reads everything an administrator sees. Treat it like that person's password, and prefer a connection when each user can sign in.
 
 1. Click **Create key**.
-2. Enter a descriptive **Label** (for example, "Cursor on my laptop").
-3. Click **Create**. Kadratis generates a one-time secret that starts with `kanap_mcp_`.
+2. Enter a descriptive **Label** (for example, "Cursor on my laptop"). **Create** stays disabled until a label is entered.
+3. Click **Create**. Kadratis generates a one-time secret that starts with `kanap_mcp_`. A refusal shows in the dialog.
 4. Copy the secret immediately. It is shown once and cannot be retrieved later.
 5. Copy the **Claude Code command** shown under the key if you use Claude Code with a key. It already contains the server address and the key.
+6. Click **Done**. Closing the dialog, with **Done** or Escape, drops the secret from the screen: the next **Create key** starts a new key.
 
 The **Key max lifetime (days)** field caps how long any newly issued key can live, regardless of what the request asks for. It also caps how long a connection lasts. Leave it empty for no expiration limit. This field belongs to the settings above rather than to this card: it is written by the **Save settings** button, not by creating a key.
 

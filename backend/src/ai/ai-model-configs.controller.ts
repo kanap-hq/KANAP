@@ -3,6 +3,7 @@ import { validate as isUuid } from 'uuid';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
 import { AiModelConfigService } from './ai-model-config.service';
+import { appliedModelTimeouts } from './ai-model-timeouts';
 import { AiPolicyService } from './ai-policy.service';
 import { AiProviderTestService } from './ai-provider-test.service';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
@@ -73,6 +74,8 @@ export class AiModelConfigsController {
         return {
           model_configs: configs,
           secret_writable: this.cipher.canEncrypt(),
+          // What an empty model timeout falls back to (the model dialog shows it).
+          applied_timeouts: appliedModelTimeouts(),
         };
       },
     );
