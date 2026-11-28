@@ -14,6 +14,22 @@ export type {
   OperationPreviewRow,
   OperationStat,
 } from './OperationPanel';
+export {
+  ConnectionCard,
+  ConnectionNotice,
+  ConnectionSecretField,
+  ConnectionSwitchField,
+  connectionStatusLine,
+  connectionTestCause,
+} from './ConnectionCard';
+export type {
+  ConnectionCardProps,
+  ConnectionCardFields,
+  ConnectionSecretFieldProps,
+  ConnectionSwitchFieldProps,
+  ConnectionStatus,
+  ConnectionTest,
+} from './ConnectionCard';
 export { useSettingsAutosave, SETTINGS_TEXT_DELAY_MS } from './useSettingsAutosave';
 export type { SettingsAutosave, SettingSave } from './useSettingsAutosave';
 

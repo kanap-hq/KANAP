@@ -149,7 +149,7 @@ export async function fetchApplicationClassificationCatalog(): Promise<Applicati
   return res.data as ApplicationClassificationCatalog;
 }
 
-export type CatalogUsageRecord = 'applications' | 'assets' | 'interfaces' | 'connections' | 'app_instances' | 'interface_bindings' | 'locations' | 'incidents' | 'server_assignments' | 'subnets' | 'technologies';
+export type CatalogUsageRecord = 'applications' | 'assets' | 'interfaces' | 'connections' | 'app_instances' | 'interface_bindings' | 'locations' | 'incidents' | 'server_assignments' | 'subnets' | 'technologies' | 'netbox_role_matches';
 export type CatalogUsage = { total: number; usage: Array<{ record: CatalogUsageRecord; count: number; listPath?: string }> };
 export type CatalogUsageKey = { code: string } | { location_id: string; cidr: string };
 

@@ -1,23 +1,7 @@
 import React from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  FormControlLabel,
-  Link,
-  MenuItem,
-  Stack,
-  Switch,
-  TextField,
-  Typography,
-  useTheme,
-} from '@mui/material';
+import { Link, MenuItem, Select, TextField } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import type { TFunction } from 'i18next';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   netboxApi,
@@ -25,13 +9,18 @@ import {
   type NetboxIntegrationView,
   type NetboxTestResult,
 } from '../../api/endpoints/netbox';
-import { StatusDot, useKanapDialogs } from '../design';
+import { useKanapDialogs } from '../design';
+import {
+  ConnectionCard,
+  ConnectionNotice,
+  ConnectionSecretField,
+  ConnectionSwitchField,
+  SettingField,
+  connectionTestCause,
+  type ConnectionTest,
+} from '../settings';
 import { drawerMenuItemSx } from '../../theme/formSx';
-import { formatShortDateTime } from '../../lib/dateFormat';
-import { useLocale } from '../../i18n/useLocale';
-import InfoHint from '../workspace/InfoHint';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { getDotColor } from '../../utils/statusColors';
 import { isNewSecretAddress } from '../../utils/secretAddress';
 
 type NetboxForm = {
@@ -44,22 +33,7 @@ type NetboxForm = {
   default_environment: string;
 };
 
-type NetboxCardStatus = 'connected' | 'disabled' | 'notConfigured';
-
-type CardNotice = {
-  severity: 'success' | 'error' | 'info';
-  text: string;
-  linkTo?: string;
-  linkLabel?: string;
-};
-
-type ShownTest = { ok: boolean; tested_at: string; persisted: boolean };
-
-function preferTest(session: ShownTest | null, stored: ShownTest | null): ShownTest | null {
-  if (!session) return stored;
-  if (!stored) return session;
-  return Date.parse(session.tested_at) >= Date.parse(stored.tested_at) ? session : stored;
-}
+type CardNotice = { tone: 'success' | 'error'; text: string; next?: boolean };
 
 /** Environment codes offered for newly created assets, in the order the rest of the app uses. */
 const ENVIRONMENT_CODES: Array<{ value: string; labelKey: string }> = [
@@ -70,11 +44,6 @@ const ENVIRONMENT_CODES: Array<{ value: string; labelKey: string }> = [
   { value: 'dev', labelKey: 'it:enums.environment.dev' },
   { value: 'sandbox', labelKey: 'it:enums.environment.sandbox' },
 ];
-
-function deriveStatus(integration: NetboxIntegrationView | undefined): NetboxCardStatus {
-  if (!integration || !integration.configured) return 'notConfigured';
-  return integration.enabled ? 'connected' : 'disabled';
-}
 
 function buildForm(integration: NetboxIntegrationView | undefined): NetboxForm {
   return {
@@ -121,28 +90,19 @@ function buildSavePayload(
  * Connection card for the Netbox inventory. Saving and testing live here;
  * the day-to-day synchronisation work happens on the Netbox tab of IT settings.
  */
-function codedMessage(t: TFunction, code: string | undefined, message: string | undefined, fallback: string): string {
-  if (code) {
-    const translated = t(`errors:${code}`, { defaultValue: message || fallback });
-    if (typeof translated === 'string' && translated.trim()) return translated;
-  }
-  return message || fallback;
-}
-
 export default function NetboxIntegrationCard() {
   const { t } = useTranslation(['admin', 'it', 'common', 'errors']);
-  const theme = useTheme();
-  const locale = useLocale();
   const queryClient = useQueryClient();
   const dialogs = useKanapDialogs();
 
   const [form, setForm] = React.useState<NetboxForm>(() => buildForm(undefined));
-  // One banner: a new save or test replaces whatever was showing.
   const [notice, setNotice] = React.useState<CardNotice | null>(null);
-  const [sessionTest, setSessionTest] = React.useState<ShownTest | null>(null);
+  const [sessionTest, setSessionTest] = React.useState<ConnectionTest | null>(null);
+  const [saveCount, setSaveCount] = React.useState(0);
 
   const editForm = (patch: Partial<NetboxForm>) => {
     setNotice(null);
+    setSessionTest(null);
     setForm((prev) => ({ ...prev, ...patch }));
   };
 
@@ -160,25 +120,18 @@ export default function NetboxIntegrationCard() {
     mutationFn: async (data: NetboxForm) => netboxApi.saveIntegration(buildSavePayload(data, integration)),
     onMutate: () => setNotice(null),
     onSuccess: async (_saved, data) => {
-      const showNext = data.enabled && !!data.base_url.trim()
-        && ((integration?.credential?.present ?? false) || data.api_token.trim().length > 0);
       setNotice({
-        severity: 'success',
-        text: showNext
-          ? `${t('integrations.netbox.messages.saved')} ${t('integrations.netbox.messages.nextStep')}`
-          : t('integrations.netbox.messages.saved'),
-        ...(showNext
-          ? { linkTo: '/it/settings?tab=netbox', linkLabel: t('integrations.netbox.actions.goToSync') }
-          : {}),
+        tone: 'success',
+        text: t('integrations.netbox.messages.saved'),
+        next: data.enabled && !!data.base_url.trim()
+          && ((integration?.credential?.present ?? false) || data.api_token.trim().length > 0),
       });
       setForm((prev) => ({ ...prev, api_token: '' }));
+      setSaveCount((count) => count + 1);
       await queryClient.invalidateQueries({ queryKey: ['netbox-integration'] });
     },
     onError: (error: unknown) => {
-      setNotice({
-        severity: 'error',
-        text: getApiErrorMessage(error, t, t('integrations.netbox.messages.saveFailed')),
-      });
+      setNotice({ tone: 'error', text: getApiErrorMessage(error, t, t('integrations.netbox.messages.saveFailed')) });
     },
   });
 
@@ -192,50 +145,39 @@ export default function NetboxIntegrationCard() {
           ? { request_timeout_seconds: Number(data.request_timeout_seconds.trim()) }
           : {}),
       }),
-    onMutate: () => setNotice(null),
-    onSuccess: async (result: NetboxTestResult) => {
-      const text = result.ok && result.netbox_version
-        ? t('integrations.netbox.messages.testSuccess', { version: result.netbox_version })
-        : result.ok
-          ? t('integrations.netbox.messages.testSuccessPlain')
-          : codedMessage(t, result.code, result.message, t('integrations.netbox.messages.testFailed'));
-      setNotice({ severity: result.ok ? 'success' : 'error', text });
+    onMutate: () => {
+      setNotice(null);
+      setSessionTest(null);
+    },
+    onSuccess: (result: NetboxTestResult) => {
       setSessionTest({
         ok: result.ok,
         tested_at: result.tested_at || new Date().toISOString(),
-        persisted: result.persisted === true,
+        ...(result.ok
+          ? (result.netbox_version ? { detail: t('integrations.netbox.messages.testDetail', { version: result.netbox_version }) } : {})
+          : { cause: connectionTestCause(t, result.code, result.message, t('integrations.netbox.messages.testFailed')) }),
       });
-      await queryClient.invalidateQueries({ queryKey: ['netbox-integration'] });
     },
     onError: (error: unknown) => {
-      setNotice({
-        severity: 'error',
-        text: getApiErrorMessage(error, t, t('integrations.netbox.messages.testFailed')),
+      setSessionTest({
+        ok: false,
+        tested_at: new Date().toISOString(),
+        cause: getApiErrorMessage(error, t, t('integrations.netbox.messages.testFailed')),
       });
     },
   });
 
-  const status = deriveStatus(integration);
-  const statusColor = getDotColor(status === 'connected' ? 'success' : 'default', theme.palette.mode);
-  const storedTest: ShownTest | null = integration?.last_test?.tested_at
-    ? { ok: integration.last_test.ok, tested_at: integration.last_test.tested_at, persisted: true }
-    : null;
-  const lastTest = preferTest(sessionTest, storedTest);
-  const lastTestText = lastTest
-    ? t(lastTest.ok ? 'integrations.netbox.messages.lastTestOk' : 'integrations.netbox.messages.lastTestFailed', {
-      date: formatShortDateTime(lastTest.tested_at, locale),
-    })
-    : null;
-  const sessionOnly = !!lastTest && !!sessionTest && lastTest.tested_at === sessionTest.tested_at && !sessionTest.persisted;
+  const savedToken = integration?.credential?.present ?? false;
   // An emptied address removes the saved connection (address and token) on save.
   const removing = !!integration?.base_url && !form.base_url.trim();
   // The saved token only goes to the saved address: a new one empties it on save.
-  const tokenEmptiedByAddress = (integration?.credential?.present ?? false)
-    && !removing
-    && isNewSecretAddress(form.base_url, integration?.base_url);
-  const hasStoredToken = (integration?.credential?.present ?? false) && !tokenEmptiedByAddress && !removing;
+  const tokenEmptiedByAddress = savedToken && !removing && isNewSecretAddress(form.base_url, integration?.base_url);
   const tokenMissingForAddress = tokenEmptiedByAddress && !form.api_token.trim();
   const secretWritable = integration?.secret_writable !== false;
+  const dirty = !!integration && Object.keys(buildSavePayload(form, integration)).length > 0;
+  const storedTest = integration?.last_test?.tested_at
+    ? { ok: integration.last_test.ok, tested_at: integration.last_test.tested_at }
+    : null;
 
   const handleSave = async () => {
     if (removing) {
@@ -250,177 +192,126 @@ export default function NetboxIntegrationCard() {
     saveMutation.mutate(form);
   };
 
-  const tokenHelperText = tokenEmptiedByAddress
-    ? t('integrations.secretAddressChanged')
-    : [
-      t('integrations.netbox.hints.apiToken'),
-      hasStoredToken ? t('integrations.netbox.hints.apiTokenExisting') : '',
-      secretWritable ? '' : t('aiAdmin.provider.apiKey.storageUnavailable'),
-    ].filter(Boolean).join(' ');
-
   return (
-    <Card>
-      <CardContent>
-        {integrationQuery.isLoading ? (
-          <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress size={28} />
-          </Box>
-        ) : integrationQuery.isError ? (
-          <Alert severity="error">
-            {getApiErrorMessage(integrationQuery.error, t, t('integrations.netbox.messages.loadFailed'))}
-          </Alert>
-        ) : (
-          <Stack spacing={2.5}>
-            <Stack spacing={0.75}>
-              <Stack direction="row" spacing={0.75} alignItems="center">
-                <Typography variant="h6">{t('integrations.netbox.title')}</Typography>
-                <InfoHint text={t('integrations.netbox.description')} />
-              </Stack>
-              <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
-                <StatusDot color={statusColor} />
-                <Typography sx={{ fontSize: 12, fontWeight: 500, color: statusColor }}>
-                  {t(`integrations.netbox.status.${status}`)}
-                </Typography>
-                {lastTestText ? (
-                  <Typography sx={{ fontSize: 12, fontWeight: 400, color: 'text.secondary' }}>
-                    {lastTestText}
-                  </Typography>
-                ) : null}
-              </Stack>
-              {sessionOnly ? (
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                  {t('integrations.netbox.messages.lastTestSession')}
-                </Typography>
+    <ConnectionCard
+      title={t('integrations.netbox.title')}
+      hint={t('integrations.netbox.description')}
+      configured={!!integration?.configured}
+      dirty={dirty}
+      storedTest={storedTest}
+      sessionTest={sessionTest}
+      testing={testMutation.isPending}
+      saving={saveMutation.isPending}
+      onTest={() => testMutation.mutate(form)}
+      testDisabled={tokenMissingForAddress || removing}
+      onSave={() => { void handleSave(); }}
+      saveDisabled={tokenMissingForAddress && form.enabled}
+      loading={integrationQuery.isLoading}
+      error={integrationQuery.isError
+        ? getApiErrorMessage(integrationQuery.error, t, t('integrations.netbox.messages.loadFailed'))
+        : undefined}
+      notice={notice || !secretWritable ? (
+        <>
+          {notice ? (
+            <ConnectionNotice tone={notice.tone}>
+              {notice.text}
+              {notice.next ? (
+                <>
+                  {' '}
+                  {t('integrations.netbox.messages.nextStep')}{' '}
+                  <Link component={RouterLink} to="/it/settings?tab=netbox">{t('integrations.netbox.actions.goToSync')}</Link>
+                </>
               ) : null}
-            </Stack>
-
-            <FormControlLabel
-              control={(
-                <Switch
-                  checked={form.enabled}
-                  onChange={(event) => editForm({ enabled: event.target.checked })}
-                />
-              )}
-              label={t('integrations.netbox.fields.enabled')}
-            />
-
-            <TextField
-              size="small"
-              label={t('integrations.netbox.fields.baseUrl')}
-              value={form.base_url}
-              onChange={(event) => editForm({ base_url: event.target.value })}
-              placeholder={t('integrations.netbox.placeholders.baseUrl')}
-            />
-
-            <TextField
-              size="small"
-              label={t('integrations.netbox.fields.apiToken')}
-              type="password"
-              autoComplete="new-password"
-              required={tokenEmptiedByAddress}
-              value={form.api_token}
-              onChange={(event) => editForm({ api_token: event.target.value })}
-              placeholder={
-                hasStoredToken
-                  ? t('integrations.netbox.placeholders.apiTokenConfigured')
-                  : t('integrations.netbox.placeholders.enterApiToken')
-              }
-              helperText={tokenHelperText}
-            />
-
-            <TextField
-              size="small"
-              label={t('integrations.netbox.fields.requestTimeout')}
-              value={form.request_timeout_seconds}
-              onChange={(event) => editForm({
-                request_timeout_seconds: event.target.value.replace(/[^0-9]/g, ''),
-              })}
-              placeholder={t('integrations.netbox.placeholders.requestTimeout')}
-              helperText={t('integrations.netbox.hints.requestTimeout')}
-            />
-
-            <Box>
-              <FormControlLabel
-                control={(
-                  <Switch
-                    checked={form.insecure_tls}
-                    onChange={(event) => editForm({ insecure_tls: event.target.checked })}
-                  />
-                )}
-                label={t('integrations.netbox.fields.insecureTls')}
+            </ConnectionNotice>
+          ) : null}
+          {!secretWritable ? (
+            <ConnectionNotice tone="error">{t('aiAdmin.provider.apiKey.storageUnavailable')}</ConnectionNotice>
+          ) : null}
+        </>
+      ) : undefined}
+    >
+      {({ locked }) => (
+        <>
+          <ConnectionSwitchField
+            label={t('integrations.netbox.fields.enabled')}
+            checked={form.enabled}
+            onChange={(checked) => editForm({ enabled: checked })}
+            locked={locked}
+          />
+          <SettingField label={t('integrations.netbox.fields.baseUrl')} hint={t('integrations.netbox.hints.baseUrl')}>
+            {({ aria }) => (
+              <TextField
+                variant="standard"
+                value={form.base_url}
+                onChange={(event) => editForm({ base_url: event.target.value })}
+                placeholder={t('integrations.netbox.placeholders.baseUrl')}
+                fullWidth
+                InputProps={{ readOnly: locked }}
+                inputProps={{ 'aria-label': t('integrations.netbox.fields.baseUrl'), ...aria }}
+                sx={{ maxWidth: 480 }}
               />
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                {t('integrations.netbox.hints.insecureTls')}
-              </Typography>
-            </Box>
-
-            <Box>
-              <FormControlLabel
-                control={(
-                  <Switch
-                    checked={form.auto_sync}
-                    onChange={(event) => editForm({ auto_sync: event.target.checked })}
-                  />
-                )}
-                label={t('integrations.netbox.fields.autoSync')}
+            )}
+          </SettingField>
+          <ConnectionSecretField
+            key={`token-${saveCount}`}
+            label={t('integrations.netbox.fields.apiToken')}
+            hint={t('integrations.netbox.hints.apiToken')}
+            stored={savedToken && !removing}
+            value={form.api_token}
+            onChange={(value) => editForm({ api_token: value })}
+            addressChanged={tokenEmptiedByAddress}
+            locked={locked}
+            placeholder={t('integrations.netbox.placeholders.enterApiToken')}
+          />
+          <SettingField label={t('integrations.netbox.fields.requestTimeout')} hint={t('integrations.netbox.hints.requestTimeout')}>
+            {({ aria }) => (
+              <TextField
+                variant="standard"
+                value={form.request_timeout_seconds}
+                onChange={(event) => editForm({ request_timeout_seconds: event.target.value.replace(/[^0-9]/g, '') })}
+                placeholder={t('integrations.netbox.placeholders.requestTimeout')}
+                fullWidth
+                InputProps={{ readOnly: locked }}
+                inputProps={{ 'aria-label': t('integrations.netbox.fields.requestTimeout'), inputMode: 'numeric', ...aria }}
+                sx={{ maxWidth: 480 }}
               />
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                {t('integrations.netbox.hints.autoSync')}
-              </Typography>
-            </Box>
-
-            <TextField
-              select
-              size="small"
-              label={t('integrations.netbox.fields.defaultEnvironment')}
-              value={form.default_environment}
-              onChange={(event) => editForm({ default_environment: event.target.value })}
-              helperText={t('integrations.netbox.hints.defaultEnvironment')}
-              // Narrow the field box only: the helper text keeps the card width so it does not wrap.
-              sx={{ '& .MuiInputBase-root': { maxWidth: 260 } }}
-            >
-              {ENVIRONMENT_CODES.map((option) => (
-                <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>
-                  {t(option.labelKey)}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            {notice ? (
-              <Alert severity={notice.severity} onClose={() => setNotice(null)}>
-                {notice.text}
-                {notice.linkTo ? (
-                  <>
-                    {' '}
-                    <Link component={RouterLink} to={notice.linkTo}>
-                      {notice.linkLabel}
-                    </Link>
-                  </>
-                ) : null}
-              </Alert>
-            ) : null}
-
-            <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-              <Button
-                variant="contained"
-                onClick={() => { void handleSave(); }}
-                disabled={saveMutation.isPending || (tokenMissingForAddress && form.enabled)}
+            )}
+          </SettingField>
+          <SettingField label={t('integrations.netbox.fields.defaultEnvironment')} hint={t('integrations.netbox.hints.defaultEnvironment')}>
+            {({ aria }) => (
+              <Select
+                variant="standard"
+                value={form.default_environment}
+                onChange={(event) => editForm({ default_environment: String(event.target.value) })}
+                readOnly={locked}
+                fullWidth
+                SelectDisplayProps={{ 'aria-label': t('integrations.netbox.fields.defaultEnvironment'), ...aria } as React.HTMLAttributes<HTMLDivElement>}
+                sx={{ maxWidth: 480 }}
               >
-                {saveMutation.isPending ? t('common:status.saving') : t('integrations.netbox.actions.save')}
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => testMutation.mutate(form)}
-                disabled={testMutation.isPending || tokenMissingForAddress || removing}
-              >
-                {testMutation.isPending
-                  ? t('integrations.netbox.actions.testing')
-                  : t('integrations.netbox.actions.test')}
-              </Button>
-            </Stack>
-          </Stack>
-        )}
-      </CardContent>
-    </Card>
+                {ENVIRONMENT_CODES.map((option) => (
+                  <MenuItem key={option.value} value={option.value} sx={drawerMenuItemSx}>
+                    {t(option.labelKey)}
+                  </MenuItem>
+                ))}
+              </Select>
+            )}
+          </SettingField>
+          <ConnectionSwitchField
+            label={t('integrations.netbox.fields.insecureTls')}
+            hint={t('integrations.netbox.hints.insecureTls')}
+            checked={form.insecure_tls}
+            onChange={(checked) => editForm({ insecure_tls: checked })}
+            locked={locked}
+          />
+          <ConnectionSwitchField
+            label={t('integrations.netbox.fields.autoSync')}
+            hint={t('integrations.netbox.hints.autoSync')}
+            checked={form.auto_sync}
+            onChange={(checked) => editForm({ auto_sync: checked })}
+            locked={locked}
+          />
+        </>
+      )}
+    </ConnectionCard>
   );
 }

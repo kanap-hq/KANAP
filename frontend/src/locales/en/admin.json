@@ -42,19 +42,18 @@
         "testFailed": "GLPI connection test failed."
       },
       "placeholders": {
-        "appTokenConfigured": "App token configured (leave blank to keep)",
         "enterAppToken": "Enter optional app token",
         "enterUserToken": "Enter user token",
-        "url": "https://glpi.example.com",
-        "userTokenConfigured": "User token configured (leave blank to keep)"
+        "url": "https://glpi.example.com"
       },
       "title": "GLPI integration",
       "tooltips": {
         "plaidRequired": "{{agent}} must be enabled for users to import GLPI tickets from chat."
       },
-      "tokenHint": {
-        "appTokenExisting": "Leave blank to keep the stored app token for save and test actions.",
-        "userTokenExisting": "Leave blank to keep the stored user token for save and test actions."
+      "hints": {
+        "url": "The address you open GLPI with, for example https://glpi.example.com. Its API must be on: in GLPI, Setup > General > API, Enable Rest API.",
+        "userToken": "In GLPI, open your preferences (your name at the top right), then Remote access keys, and copy the API token. If it is empty, tick Regenerate and save.",
+        "appToken": "Optional. In GLPI, Setup > General > API, open the API client Kadratis connects through and copy its application token. Leave empty if the client has none."
       }
     },
     "keys": {
@@ -174,25 +173,21 @@
       },
       "hints": {
         "apiKey": "Create one in PRTG under Setup → API keys. Read-only access is enough.",
-        "requestTimeout": "5 to 120 seconds. Default: 30."
+        "requestTimeout": "5 to 120 seconds. Default: 30.",
+        "baseUrl": "The address you open PRTG with in your browser, for example https://prtg.example.com.",
+        "timezone": "The time zone of the PRTG core server, as set in its operating system. Alert times are read in this zone."
       },
       "messages": {
         "loadFailed": "Could not load the monitoring integration.",
         "nextStep": "An SRE monitoring agent can now be created from the agents page.",
         "testFailed": "PRTG connection test failed.",
-        "testSuccess_one": "Connected: PRTG {{version}}, {{count}} sensor visible",
-        "testSuccess_other": "Connected: PRTG {{version}}, {{count}} sensors visible"
+        "testDetail_one": "PRTG {{version}}, {{count}} sensor visible",
+        "testDetail_other": "PRTG {{version}}, {{count}} sensors visible"
       },
       "placeholders": {
-        "apiKeySaved": "API key saved (leave blank to keep)",
         "enterApiKey": "Enter API key",
         "url": "https://prtg.example.com",
-        "requestTimeout": "e.g., 60"
-      },
-      "status": {
-        "connected": "Connected",
-        "disabled": "Disabled",
-        "notConfigured": "Not configured"
+        "requestTimeout": "30"
       },
       "title": "Monitoring: PRTG"
     },
@@ -1022,7 +1017,8 @@
       "viewer_ids": "Viewers",
       "web_search_enabled": "Web search enabled",
       "linked_records": "Linked records",
-      "expected_units": "Expected units"
+      "expected_units": "Expected units",
+      "secret_replaced": "Secret replaced"
     },
     "history": {
       "empty": "No history yet",
@@ -3020,11 +3016,6 @@
     "netbox": {
       "title": "Netbox inventory",
       "description": "Import your Netbox inventory as assets. Netbox stays the reference for the equipment it describes.",
-      "status": {
-        "connected": "Configured",
-        "disabled": "Disabled",
-        "notConfigured": "Not configured"
-      },
       "fields": {
         "enabled": "Enable Netbox synchronisation",
         "baseUrl": "Netbox address",
@@ -3036,37 +3027,30 @@
       },
       "placeholders": {
         "baseUrl": "https://netbox.example.com",
-        "apiTokenConfigured": "Configured",
         "enterApiToken": "Paste the token",
         "requestTimeout": "30"
       },
       "hints": {
         "apiToken": "In Netbox, open the user menu at the top right, then API tokens. A read-only token is enough.",
-        "apiTokenExisting": "A token is already saved. Leave this field empty to keep it.",
         "requestTimeout": "5 to 120 seconds. Default: 30.",
         "insecureTls": "Use this only for a self-signed or internal certificate you trust. The connection stays encrypted, but the certificate is no longer checked.",
         "autoSync": "Runs every hour and applies the changes on its own. It starts after the first synchronisation you apply yourself.",
-        "defaultEnvironment": "Applied to the assets created by the import. It is never changed afterwards."
+        "defaultEnvironment": "Applied to the assets created by the import. It is never changed afterwards.",
+        "baseUrl": "The address you open Netbox with in your browser, for example https://netbox.example.com."
       },
       "messages": {
         "saved": "Settings saved.",
         "saveFailed": "The settings could not be saved.",
         "loadFailed": "The Netbox settings could not be loaded.",
-        "testSuccess": "Connected to Netbox {{version}}.",
-        "testSuccessPlain": "Connected to Netbox.",
         "testFailed": "The connection to Netbox failed.",
         "nextStep": "Netbox is configured.",
-        "lastTestOk": "Last test succeeded on {{date}}",
-        "lastTestFailed": "Last test failed on {{date}}",
-        "lastTestSession": "This result is kept for this session only."
+        "testDetail": "Netbox {{version}}"
       },
       "actions": {
-        "save": "Save settings",
-        "test": "Test connection",
-        "testing": "Testing…",
         "goToSync": "Set up the synchronisation"
       }
-    }
+    },
+    "latency": "answered in {{ms}} ms"
   },
   "sampleData": {
     "title": "Sample data",

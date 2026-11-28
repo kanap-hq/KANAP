@@ -42,19 +42,18 @@
         "testFailed": "La prueba de conexión GLPI falló."
       },
       "placeholders": {
-        "appTokenConfigured": "Token de aplicación configurado (deje vacío para mantener)",
         "enterAppToken": "Introduzca un token de aplicación opcional",
         "enterUserToken": "Introduzca el token de usuario",
-        "url": "https://glpi.example.com",
-        "userTokenConfigured": "Token de usuario configurado (deje vacío para mantener)"
+        "url": "https://glpi.example.com"
       },
       "title": "Integración GLPI",
       "tooltips": {
         "plaidRequired": "{{agent}} debe estar habilitado para que los usuarios puedan importar tickets GLPI desde el chat."
       },
-      "tokenHint": {
-        "appTokenExisting": "Deje vacío para mantener el token de aplicación almacenado para las acciones de guardado y prueba.",
-        "userTokenExisting": "Deje vacío para mantener el token de usuario almacenado para las acciones de guardado y prueba."
+      "hints": {
+        "url": "La dirección con la que abre GLPI, por ejemplo https://glpi.example.com. Su API debe estar activa: en GLPI, Configuración > General > API, Habilitar API Rest.",
+        "userToken": "En GLPI, abra sus preferencias (su nombre arriba a la derecha), luego Claves de acceso remoto, y copie el token de API. Si está vacío, marque Regenerar y guarde.",
+        "appToken": "Opcional. En GLPI, Configuración > General > API, abra el cliente de API por el que se conecta Kadratis y copie su token de aplicación. Déjelo vacío si el cliente no tiene."
       }
     },
     "keys": {
@@ -174,25 +173,21 @@
       },
       "hints": {
         "apiKey": "Cree una en PRTG en Configuración → Claves API. Basta con acceso de solo lectura.",
-        "requestTimeout": "De 5 a 120 segundos. Predeterminado: 30."
+        "requestTimeout": "De 5 a 120 segundos. Predeterminado: 30.",
+        "baseUrl": "La dirección con la que abre PRTG en su navegador, por ejemplo https://prtg.example.com.",
+        "timezone": "La zona horaria del servidor central de PRTG, tal como está configurada en su sistema operativo. Las horas de las alertas se leen en esta zona."
       },
       "messages": {
         "loadFailed": "No se pudo cargar la integración de monitorización.",
         "nextStep": "Ahora se puede crear un agente de monitorización SRE desde la página de agentes.",
         "testFailed": "La prueba de conexión con PRTG ha fallado.",
-        "testSuccess_one": "Conectado: PRTG {{version}}, {{count}} sensor visible",
-        "testSuccess_other": "Conectado: PRTG {{version}}, {{count}} sensores visibles"
+        "testDetail_one": "PRTG {{version}}, {{count}} sensor visible",
+        "testDetail_other": "PRTG {{version}}, {{count}} sensores visibles"
       },
       "placeholders": {
-        "apiKeySaved": "Clave API guardada (déjelo en blanco para conservarla)",
         "enterApiKey": "Introduzca la clave API",
         "url": "https://prtg.example.com",
-        "requestTimeout": "p. ej., 60"
-      },
-      "status": {
-        "connected": "Conectado",
-        "disabled": "Desactivado",
-        "notConfigured": "Sin configurar"
+        "requestTimeout": "30"
       },
       "title": "Monitorización: PRTG"
     },
@@ -1022,7 +1017,8 @@
       "viewer_ids": "Lectores",
       "web_search_enabled": "Búsqueda web activada",
       "linked_records": "Registros vinculados",
-      "expected_units": "Unidades esperadas"
+      "expected_units": "Unidades esperadas",
+      "secret_replaced": "Secreto reemplazado"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -3020,11 +3016,6 @@
     "netbox": {
       "title": "Inventario de Netbox",
       "description": "Incorpora tu inventario de Netbox como activos. Netbox sigue siendo la referencia para los equipos que describe.",
-      "status": {
-        "connected": "Configurado",
-        "disabled": "Desactivado",
-        "notConfigured": "Sin configurar"
-      },
       "fields": {
         "enabled": "Activar la sincronización con Netbox",
         "baseUrl": "Dirección de Netbox",
@@ -3036,37 +3027,30 @@
       },
       "placeholders": {
         "baseUrl": "https://netbox.example.com",
-        "apiTokenConfigured": "Configurado",
         "enterApiToken": "Pega el token",
         "requestTimeout": "30"
       },
       "hints": {
         "apiToken": "En Netbox, abre el menú de usuario arriba a la derecha y luego API tokens. Basta con un token de solo lectura.",
-        "apiTokenExisting": "Ya hay un token guardado. Deja el campo vacío para conservarlo.",
         "requestTimeout": "De 5 a 120 segundos. Predeterminado: 30.",
         "insecureTls": "Úsalo solo con un certificado autofirmado o interno en el que confíes. La conexión sigue cifrada, pero el certificado deja de comprobarse.",
         "autoSync": "Se ejecuta cada hora y aplica los cambios por su cuenta. Empieza después de la primera sincronización que usted aplique.",
-        "defaultEnvironment": "Se aplica a los activos creados por la importación. Después no se cambia nunca."
+        "defaultEnvironment": "Se aplica a los activos creados por la importación. Después no se cambia nunca.",
+        "baseUrl": "La dirección con la que abre Netbox en su navegador, por ejemplo https://netbox.example.com."
       },
       "messages": {
         "saved": "Configuración guardada.",
         "saveFailed": "No se ha podido guardar la configuración.",
         "loadFailed": "No se ha podido cargar la configuración de Netbox.",
-        "testSuccess": "Conexión establecida con Netbox {{version}}.",
-        "testSuccessPlain": "Conexión establecida con Netbox.",
         "testFailed": "La conexión con Netbox ha fallado.",
         "nextStep": "Netbox está configurado.",
-        "lastTestOk": "Última prueba correcta el {{date}}",
-        "lastTestFailed": "Última prueba fallida el {{date}}",
-        "lastTestSession": "Este resultado vale solo para esta sesión."
+        "testDetail": "Netbox {{version}}"
       },
       "actions": {
-        "save": "Guardar configuración",
-        "test": "Probar conexión",
-        "testing": "Probando…",
         "goToSync": "Configurar la sincronización"
       }
-    }
+    },
+    "latency": "respuesta en {{ms}} ms"
   },
   "sampleData": {
     "title": "Datos de ejemplo",

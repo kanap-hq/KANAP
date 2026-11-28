@@ -1,6 +1,6 @@
 import React from 'react';
 import '../../i18n';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -57,25 +57,31 @@ describe('NetboxIntegrationCard', () => {
     (apiClient.put as any).mockResolvedValue(INTEGRATION);
   });
 
-  it('renders the connection fields and never prefills the token', async () => {
+  it('renders the connection fields and never reads the token back', async () => {
     renderCard();
 
-    expect(await screen.findByText('Netbox inventory')).toBeInTheDocument();
-    expect(screen.getByText('Configured')).toBeInTheDocument();
+    expect(await screen.findByText('Saved, not tested yet')).toBeInTheDocument();
+    expect(screen.getByText('Netbox inventory')).toBeInTheDocument();
     expect(screen.getByLabelText('Netbox address')).toHaveValue('https://netbox.internal/');
-    expect(screen.getByLabelText('API token')).toHaveValue('');
-    expect(screen.getByPlaceholderText('Configured')).toBeInTheDocument();
+    // The saved token shows as dots, greyed, with Replace beside it.
+    expect(screen.getByLabelText('API token')).toBeDisabled();
+    expect(screen.getByLabelText('API token')).not.toHaveValue('nbt');
+    expect(screen.getByRole('button', { name: 'Replace API token' })).toBeInTheDocument();
     expect(screen.getByLabelText('Ignore certificate errors')).toBeInTheDocument();
     expect(screen.getByLabelText('Automatic synchronisation')).toBeInTheDocument();
+    // Nothing changed: Save is off, Test is on.
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Test' })).toBeEnabled();
   });
 
   it('sends only the fields that changed, plus the token when it was typed', async () => {
     renderCard();
-    await screen.findByText('Netbox inventory');
+    await screen.findByLabelText('Netbox address');
 
     fireEvent.click(screen.getByLabelText('Automatic synchronisation'));
+    fireEvent.click(screen.getByRole('button', { name: 'Replace API token' }));
     fireEvent.change(screen.getByLabelText('API token'), { target: { value: ' nbt_secret ' } });
-    fireEvent.click(screen.getByText('Save settings'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(apiClient.put).toHaveBeenCalledTimes(1));
     // A typed token goes with the address on screen.
@@ -89,10 +95,11 @@ describe('NetboxIntegrationCard', () => {
 
   it('sends the token with the address on screen when only the token was typed', async () => {
     renderCard();
-    await screen.findByText('Netbox inventory');
+    await screen.findByLabelText('Netbox address');
 
+    fireEvent.click(screen.getByRole('button', { name: 'Replace API token' }));
     fireEvent.change(screen.getByLabelText('API token'), { target: { value: 'abc' } });
-    fireEvent.click(screen.getByText('Save settings'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(apiClient.put).toHaveBeenCalledTimes(1));
     expect(apiClient.put).toHaveBeenCalledWith('/netbox/integration', {
@@ -101,22 +108,24 @@ describe('NetboxIntegrationCard', () => {
     });
   });
 
-  it('replaces the previous banner and translates the connection code', async () => {
+  it('says the cause of a failed test in the status line, then a refused save under the fields', async () => {
     (apiClient.post as any).mockResolvedValueOnce({
       ok: false,
       code: 'netbox_unreachable',
       message: 'connect ECONNREFUSED 172.18.0.9:8999',
     });
     renderCard();
-    await screen.findByText('Netbox inventory');
+    await screen.findByLabelText('Netbox address');
 
-    fireEvent.click(screen.getByText('Test connection'));
+    fireEvent.click(screen.getByRole('button', { name: 'Test' }));
     expect(await screen.findByText('The Netbox server could not be reached.')).toBeInTheDocument();
     expect(screen.queryByText(/ECONNREFUSED/)).not.toBeInTheDocument();
     expect(screen.queryByText(/172\.18/)).not.toBeInTheDocument();
 
+    // A change makes the result stale: the status line says so.
     fireEvent.change(screen.getByLabelText('Request timeout (seconds)'), { target: { value: '1' } });
     expect(screen.queryByText('The Netbox server could not be reached.')).not.toBeInTheDocument();
+    expect(screen.getByText('Changes not saved')).toBeInTheDocument();
 
     (apiClient.put as any).mockRejectedValueOnce({
       response: {
@@ -124,7 +133,7 @@ describe('NetboxIntegrationCard', () => {
         data: { code: 'netbox_timeout_invalid', message: 'raw timeout' },
       },
     });
-    fireEvent.click(screen.getByText('Save settings'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(await screen.findByText('The request timeout must be a whole number of seconds between 5 and 120, or empty to use the default.')).toBeInTheDocument();
     expect(screen.queryByText('raw timeout')).not.toBeInTheDocument();
@@ -132,50 +141,54 @@ describe('NetboxIntegrationCard', () => {
     expect(screen.getAllByRole('alert')).toHaveLength(1);
   });
 
-  it('shows the stored last test beside the configured state', async () => {
+  it('shows the stored last test after a reload', async () => {
     (apiClient.get as any).mockResolvedValue({
       ...INTEGRATION,
       last_test: { ok: false, tested_at: '2026-10-24T08:30:00.000Z' },
     });
     renderCard();
 
-    expect(await screen.findByText('Configured')).toBeInTheDocument();
-    expect(screen.getByText(/Last test failed on /)).toBeInTheDocument();
-    expect(screen.queryByText('This result is kept for this session only.')).not.toBeInTheDocument();
+    expect(await screen.findByText(/^Last test failed on 24 Oct( 2026)? at /)).toBeInTheDocument();
   });
 
-  it('keeps an unsaved test result for this session only', async () => {
-    (apiClient.get as any).mockResolvedValue({ ...INTEGRATION, configured: false, credential: { present: false }, last_test: null });
+  it('shows a test of unsaved values with what Netbox answered, without reloading the form', async () => {
+    (apiClient.get as any).mockResolvedValue({ ...INTEGRATION, configured: false, base_url: null, credential: { present: false }, last_test: null });
     (apiClient.post as any).mockResolvedValue({
       ok: true,
+      netbox_version: '4.1.2',
       message: 'Connected to Netbox.',
       tested_at: '2026-10-24T08:30:00.000Z',
       persisted: false,
     });
     renderCard();
-    await screen.findByText('Netbox inventory');
+    expect(await screen.findByText('Never tested')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('Test connection'));
+    fireEvent.change(screen.getByLabelText('Netbox address'), { target: { value: 'https://netbox.example.com' } });
+    fireEvent.change(screen.getByLabelText('API token'), { target: { value: 'nbt_typed' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Test' }));
 
-    expect(await screen.findByText(/Last test succeeded on /)).toBeInTheDocument();
-    expect(screen.getByText('This result is kept for this session only.')).toBeInTheDocument();
+    const status = await screen.findByText(/^Last test passed on /);
+    expect(within(status).getByText(/Netbox 4\.1\.2/)).toBeInTheDocument();
+    expect(apiClient.get).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('Netbox address')).toHaveValue('https://netbox.example.com');
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
   });
 
   it('empties the saved token when the address changes and asks for it again', async () => {
     renderCard();
-    await screen.findByText('Netbox inventory');
-    const save = screen.getByText('Save settings').closest('button')!;
-    const test = screen.getByText('Test connection').closest('button')!;
+    await screen.findByLabelText('Netbox address');
+    const save = screen.getByRole('button', { name: 'Save' });
+    const test = screen.getByRole('button', { name: 'Test' });
 
     // Another spelling of the saved address keeps the token.
     fireEvent.change(screen.getByLabelText('Netbox address'), { target: { value: 'https://NETBOX.internal' } });
-    expect(screen.getByLabelText(/^API token/)).not.toBeRequired();
+    expect(screen.getByLabelText(/^API token/)).toBeDisabled();
     expect(screen.queryByText('The address changed: enter it again.')).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Netbox address'), { target: { value: 'https://netbox2.internal' } });
     expect(screen.getByLabelText(/^API token/)).toBeRequired();
     expect(screen.getByText('The address changed: enter it again.')).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText('Configured')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Replace API token' })).not.toBeInTheDocument();
     expect(save).toBeDisabled();
     expect(test).toBeDisabled();
 
@@ -192,9 +205,9 @@ describe('NetboxIntegrationCard', () => {
 
   it('removes the connection when the address is emptied, after a confirmation', async () => {
     renderCard();
-    await screen.findByText('Netbox inventory');
-    const save = screen.getByText('Save settings').closest('button')!;
-    const test = screen.getByText('Test connection').closest('button')!;
+    await screen.findByLabelText('Netbox address');
+    const save = screen.getByRole('button', { name: 'Save' });
+    const test = screen.getByRole('button', { name: 'Test' });
 
     fireEvent.change(screen.getByLabelText('Netbox address'), { target: { value: '  ' } });
     expect(screen.getByLabelText(/^API token/)).not.toBeRequired();

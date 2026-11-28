@@ -263,7 +263,9 @@
       "subnets_one": "{{count}} subnet",
       "subnets_other": "{{count}} subnets",
       "others_one": "{{count}} other",
-      "others_other": "{{count}} others"
+      "others_other": "{{count}} others",
+      "netbox_role_matches_one": "the Netbox role matches",
+      "netbox_role_matches_other": "the Netbox role matches"
     },
     "anyway": "Delete anyway",
     "assetWarning": {
@@ -1244,7 +1246,9 @@
       "subnets_one": "{{count}} subnet",
       "subnets_other": "{{count}} subnets",
       "technologies_one": "{{count}} technology",
-      "technologies_other": "{{count}} technologies"
+      "technologies_other": "{{count}} technologies",
+      "netbox_role_matches_one": "Netbox role matches",
+      "netbox_role_matches_other": "Netbox role matches"
     },
     "retiredSuffix": "no longer offered",
     "translate": "Translate",
@@ -1980,5 +1984,19 @@
   "operationPanel": {
     "moreLines_one": "and {{count}} more line",
     "moreLines_other": "and {{count}} more lines"
+  },
+  "connectionCard": {
+    "test": "Test",
+    "replace": "Replace",
+    "replaceLabel": "Replace {{name}}",
+    "setInFile": "Set in the configuration file",
+    "status": {
+      "testing": "Testing…",
+      "passed": "Last test passed on {{date}} at {{time}}",
+      "failed": "Last test failed on {{date}} at {{time}}",
+      "notSaved": "Changes not saved",
+      "savedNotTested": "Saved, not tested yet",
+      "neverTested": "Never tested"
+    }
   }
 }
