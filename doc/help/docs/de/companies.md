@@ -17,6 +17,8 @@ Navigieren Sie zu **Stammdaten > Unternehmen**, um die Liste zu öffnen.
 
 **Eindeutige Namen**: Jedes Unternehmen hat seinen eigenen Namen, unabhängig von Groß- und Kleinschreibung (`Acme` und `acme` sind derselbe Name). Ein Name, den bereits ein anderes Unternehmen trägt, wird abgelehnt, mit einer Meldung unter dem Namen.
 
+**Tipp**: In einem Unternehmensfeld findet die Eingabe einer Referenz wie `COMP-3` dieses Unternehmen, und jede Auswahl zeigt die Referenz neben dem Namen.
+
 ## Mit der Liste arbeiten
 
 Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wichtige Informationen auf einen Blick zu überprüfen, Unternehmen schnell zu finden und Arbeitsbereiche zum Bearbeiten zu öffnen.

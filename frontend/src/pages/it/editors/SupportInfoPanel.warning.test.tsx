@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -97,5 +97,37 @@ describe('SupportInfoPanel vendor list', () => {
     expect(get).toHaveBeenCalledWith('/contracts/lookup', expect.objectContaining({
       params: expect.objectContaining({ supplier_id: 'v-2' }),
     }));
+  });
+
+  it('shows the contract reference beside the name and keeps the name once chosen', async () => {
+    get.mockImplementation(async (url: string, config?: { params?: { q?: string } }) => {
+      if (url === '/contracts/lookup') {
+        const q = config?.params?.q ?? '';
+        const items = !q || q.toLowerCase() === 'ctr-2' ? [{ id: 'c-2', item_number: 2, name: 'Cisco Care' }] : [];
+        return { data: { items, has_more: false } };
+      }
+      if (url === '/suppliers/lookup') return { data: { items: [], has_more: false } };
+      if (String(url).endsWith('/support-info')) return { data: {} };
+      if (String(url).endsWith('/support-contacts')) return { data: [] };
+      return { data: null };
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <SupportInfoPanel assetId="asset-1" />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    const contract = await screen.findByPlaceholderText('workspace.asset.support.searchSupportContracts');
+    fireEvent.mouseDown(contract);
+    fireEvent.change(contract, { target: { value: 'ctr-2' } });
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/contracts/lookup', expect.objectContaining({
+      params: expect.objectContaining({ q: 'ctr-2' }),
+    })));
+    const option = await screen.findByRole('option', { name: /Cisco Care/ });
+    expect(within(option).getByText('CTR-2')).toBeTruthy();
+    fireEvent.click(option);
+    expect((await screen.findByDisplayValue('Cisco Care') as HTMLInputElement).value).toBe('Cisco Care');
   });
 });

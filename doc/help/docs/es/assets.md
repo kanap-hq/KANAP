@@ -213,7 +213,7 @@ La pestaña Vista general es la página de inicio del activo.
 **Soporte**: el soporte del proveedor del activo, para cualquier tipo de activo. Aparece una vez creado el activo y se guarda solo mientras escribe.
 
 - **Proveedor**: Seleccionar del directorio de proveedores
-- **Contrato de soporte**: Vincular a un registro de contrato
+- **Contrato de soporte**: Vincular a un registro de contrato. Cada opción muestra su referencia, por ejemplo `CTR-2`, junto al nombre, y escribir la referencia encuentra ese contrato
 - **Nivel de soporte**: Texto libre (p. ej., Oro, Plata, 24x7)
 - **Vencimiento del soporte**: Fecha de expiración
 - **Notas**

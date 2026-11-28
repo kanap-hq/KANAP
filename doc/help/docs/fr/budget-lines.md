@@ -256,7 +256,7 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. 
 - Changer d'onglet, passer à la ligne précédente ou suivante, ou fermer l'espace de travail enregistre d'abord les modifications en attente. Si un enregistrement échoue, vous restez sur place et un message en donne la raison : aucune modification n'est perdue sans que vous le sachiez
 - **Ctrl+S** (**Cmd+S** sur Mac) enregistre immédiatement
 - Si un enregistrement ne peut pas passer tout de suite parce qu'un autre enregistrement est en cours sur la même donnée, Kadratis le relance automatiquement
-- Si une opération budgétaire groupée est en cours (par exemple une copie ou une réinitialisation de colonne dans l'Administration budgétaire), les modifications sont mises en attente avec le message « Une autre opération sur le budget est en cours. Réessayez quand elle sera terminée. » Réessayez une fois l'opération terminée
+- Si une opération budgétaire groupée est en cours (par exemple la copie ou le vidage d'une colonne dans l'Administration budgétaire), les modifications sont mises en attente avec le message « Une autre opération sur le budget est en cours. Réessayez quand elle sera terminée. » Réessayez une fois l'opération terminée
 
 **Modifications simultanées** :
 
@@ -292,7 +292,7 @@ Lorsque la ligne en remplace une autre, ou a été remplacée à partir d'une an
 - **Fournisseur**, **Centre de coûts**, **Société payeuse**, **Compte** (filtré par le plan comptable de la société payeuse et le type de la ligne), **Devise** (seulement les devises autorisées dans votre espace de travail), un champ par dimension analytique utilisée pour le type de la ligne, **Run ou build** et **Début d'effet**
 - **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
 - Dates **Créé** et **Mis à jour** (lecture seule)
-- Saisissez du texte dans **Fournisseur**, **Société payeuse**, **Compte**, **Responsable IT**, **Responsable métier** ou un champ de dimension analytique pour rechercher par nom. Les résultats apparaissent au fur et à mesure que vous tapez, afin de trouver n'importe quelle valeur même dans une très longue liste ; une ligne sous la liste indique « Tapez pour affiner : d'autres résultats existent » lorsqu'il y a plus de résultats qu'affichés
+- Saisissez du texte dans **Fournisseur**, **Société payeuse**, **Compte**, **Responsable IT**, **Responsable métier** ou un champ de dimension analytique pour rechercher par nom. Pour **Fournisseur** et **Société payeuse**, une référence saisie telle que `SUP-12` ou `COMP-3` trouve cet enregistrement en premier, et chaque choix montre la référence à côté du nom. Les résultats apparaissent au fur et à mesure que vous tapez, afin de trouver n'importe quelle valeur même dans une très longue liste ; une ligne sous la liste indique « Tapez pour affiner : d'autres résultats existent » lorsqu'il y a plus de résultats qu'affichés
 
 **Centre de coûts** :
 
@@ -403,7 +403,7 @@ Sur une colonne vide, un clic sur un onglet bascule aussitôt. Sur une colonne q
 **Effacer la colonne** :
 
 - **Effacer la colonne**, à droite sous l'éditeur, remet à zéro tous les mois de la colonne active, par exemple avant de saisir tout le montant sur un seul mois. Lorsque la colonne contient des montants, vous confirmez d'abord : « Effacer tous les mois de la colonne Budget pour 2026 ? Les autres colonnes ne changent pas. » Cela compte comme une modification à la main
-- Pour retirer à la fois les montants et la période d'une colonne pour toutes les lignes, utilisez **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire
+- Pour retirer à la fois les montants et la période d'une colonne pour toutes les lignes, utilisez **Vider une colonne budgétaire** dans l'Administration budgétaire
 
 **Résultat par mois** :
 
@@ -523,7 +523,7 @@ Cliquez sur **Ajouter une ligne** sous le tableau pour ajouter une ligne, et sur
 - Passer la colonne en **Montant** ou en **Par mois**, saisir un mois dans le tableau, ou **Effacer la colonne**
 - **Copier les colonnes budgétaires** dans l'Administration budgétaire, ou **Partir de** : lorsque les montants source n'étaient pas calculés à partir de lignes, la copie reporte les lignes de la colonne source comme référence. Une colonne calculée à partir de ses lignes le reste, avec ses prix augmentés du pourcentage. Voir [Copier une colonne construite à partir de lignes](budget-operations.md#copier-une-colonne-construite-a-partir-de-lignes)
 - Les jours ouvrés d'un calendrier ont changé : l'onglet **Quantité et prix** indique, par exemple, « Jours ouvrés modifiés depuis le dernier calcul : mars : 20 jours, maintenant 19. », suivi de **Utiliser à nouveau les lignes**. Rien ne change sur la colonne tant que vous ne cliquez pas sur **Utiliser à nouveau les lignes**. Les lignes restent modifiables entre-temps
-- **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire retire les lignes avec les montants. Voir [Réinitialiser une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire)
+- **Vider une colonne budgétaire** dans l'Administration budgétaire retire les lignes avec les montants. Voir [Vider une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire)
 - Un fichier budgétaire change les mois d'une colonne et laisse ses lignes. Voir [Charger un budget depuis un tableur](budget-file.md)
 
 #### Quand le compte attend une saisie en quantité et prix { #quantity-and-price-expected }
@@ -780,7 +780,7 @@ L'accès aux lignes budgétaires est contrôlé par la ressource Budget, qui cou
 
 - `budget:reader` : Consulter la liste, ouvrir les lignes, voir les budgets et ventilations (lecture seule), télécharger les pièces jointes
 - `budget:member` : Créer et modifier les lignes, changer leur type, mettre à jour les budgets et ventilations, téléverser et supprimer les pièces jointes, gérer les relations, liens et contacts, modifier des lignes en masse
-- `budget:admin` : Tous les droits membre plus import et export, opérations budgétaires (copier les colonnes budgétaires, avec leurs montants et leurs ventilations, et réinitialiser une colonne budgétaire) et la suppression des lignes depuis la liste ou depuis la ligne
+- `budget:admin` : Tous les droits membre plus import et export, opérations budgétaires (copier les colonnes budgétaires, avec leurs montants et leurs ventilations, et vider une colonne budgétaire) et la suppression des lignes depuis la liste ou depuis la ligne
 
 Le gel des colonnes budgétaires relève de l'administration budgétaire (`budget_ops:admin`).
 

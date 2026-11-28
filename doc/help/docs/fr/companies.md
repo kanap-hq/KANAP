@@ -17,6 +17,8 @@ Rendez-vous dans **Données de référence > Sociétés** pour ouvrir la liste.
 
 **Noms uniques** : chaque société a son propre nom, quelle que soit la casse (`Acme` et `acme` sont le même nom). Un nom déjà porté par une autre société est refusé, avec un message sous le nom.
 
+**Conseil** : Dans un champ société, saisir une référence telle que `COMP-3` trouve cette société, et chaque choix montre la référence à côté du nom.
+
 ## Travailler avec la liste
 
 La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la pour revoir les informations clés en un coup d'oeil, trouver rapidement des sociétés et ouvrir les espaces de travail pour les modifier.

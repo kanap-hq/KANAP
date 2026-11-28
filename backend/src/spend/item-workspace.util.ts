@@ -63,7 +63,8 @@ export type CostCenterReference = {
 export type ItemReferences = {
   /** With its reference (`SUP-n`), as the supplier lookup gives every option. */
   supplier: { id: string; item_number: number; name: string; erp_supplier_id: string | null; status: string } | null;
-  paying_company: { id: string; name: string } | null;
+  /** With its reference (`COMP-n`), as the company lookup gives every option. */
+  paying_company: { id: string; item_number: number; name: string } | null;
   account: { id: string; account_number: number; account_name: string; description: string | null; coa_id: string | null } | null;
   owner_it: UserLabel | null;
   owner_business: UserLabel | null;
@@ -80,7 +81,7 @@ export async function loadItemReferences(manager: EntityManager, item: ItemRefer
     `SELECT
        (SELECT json_build_object('id', s.id, 'item_number', s.item_number, 'name', s.name, 'erp_supplier_id', s.erp_supplier_id, 'status', s.status)
           FROM suppliers s WHERE s.tenant_id = $1 AND s.id = $2) AS supplier,
-       (SELECT json_build_object('id', c.id, 'name', c.name)
+       (SELECT json_build_object('id', c.id, 'item_number', c.item_number, 'name', c.name)
           FROM companies c WHERE c.tenant_id = $1 AND c.id = $3) AS paying_company,
        (SELECT json_build_object('id', a.id, 'account_number', a.account_number, 'account_name', a.account_name,
                                  'description', a.description, 'coa_id', a.coa_id)

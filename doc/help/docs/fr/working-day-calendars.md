@@ -165,7 +165,7 @@ Le bouton **Supprimer** (icône corbeille) de l'en-tête supprime le calendrier 
 
 La même règle s'applique à **Supprimer la sélection** dans la liste : un calendrier utilisé par des lignes budgétaires est conservé, avec une raison comme « Ce calendrier est utilisé par 3 lignes OPEX et 1 ligne CAPEX. Désactivez-le plutôt que de le supprimer. »
 
-Une ligne budgétaire utilise un calendrier lorsque l'une de ses colonnes, pour n'importe quelle année, contient une ligne au prix par jour sur ce calendrier. Supprimer cette ligne dans l'onglet Budget, ou **Réinitialiser une colonne budgétaire** dans l'Administration budgétaire, retire le lien. Voir [Réinitialiser une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire).
+Une ligne budgétaire utilise un calendrier lorsque l'une de ses colonnes, pour n'importe quelle année, contient une ligne au prix par jour sur ce calendrier. Supprimer cette ligne dans l'onglet Budget, ou **Vider une colonne budgétaire** dans l'Administration budgétaire, retire le lien. Voir [Vider une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire).
 
 ---
 

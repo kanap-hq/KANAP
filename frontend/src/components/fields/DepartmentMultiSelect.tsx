@@ -2,10 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { Autocomplete, Box, Chip, CircularProgress, TextField } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { FieldLabel } from '../design';
+import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
+import { formatItemRef } from '../../utils/item-ref';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
+import OptionWithHint from './OptionWithHint';
 
-type Department = { id: string; name: string; company_id?: string | null };
+type Department = { id: string; name: string; company_id?: string | null; item_number?: number | null };
 
 type DepartmentMultiSelectProps = {
   label?: string;
@@ -66,6 +69,18 @@ export default function DepartmentMultiSelect({
           onChange(next.map((department) => department.id));
         }}
         getOptionLabel={(option) => picker.label(option, (o) => o.name ?? '')}
+        renderOption={(props, option) => (
+          <OptionWithHint
+            key={option.id}
+            optionProps={props}
+            label={option.name}
+            trailing={option.item_number ? (
+              <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY, fontVariantNumeric: 'tabular-nums' }}>
+                {formatItemRef('department', option.item_number)}
+              </Box>
+            ) : null}
+          />
+        )}
         filterSelectedOptions
         renderTags={(tagValue, getTagProps) => tagValue.map((option, index) => (
           <Chip

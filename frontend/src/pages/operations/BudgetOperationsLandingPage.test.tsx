@@ -37,6 +37,7 @@ const hrefs = (region: HTMLElement) => within(region).getAllByRole('link').map((
 
 const BUDGET_ADMIN = { budget: 'admin', budget_ops: 'admin' };
 const BUDGET_MEMBER = { budget: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
+const BUDGET_READER = { budget: 'reader', budget_ops: 'reader', companies: 'reader', departments: 'reader' };
 
 describe('BudgetOperationsLandingPage', () => {
   beforeEach(() => {
@@ -75,11 +76,15 @@ describe('BudgetOperationsLandingPage', () => {
     expect(screen.getByRole('link', { name: /operations\.cards\.currencyTitle/ })).toHaveAttribute('href', '/ops/operations/currency');
   });
 
-  it('shows no tile to a budget member', () => {
-    auth.grants = BUDGET_MEMBER;
+  it.each([['reader', BUDGET_READER], ['member', BUDGET_MEMBER]])('shows a budget %s the two settings tiles it reads, and no operation', (_name, grants) => {
+    auth.grants = grants;
     renderPage();
 
-    expect(screen.queryAllByRole('region')).toHaveLength(0);
+    expect(hrefs(section('operations.sections.settings'))).toEqual([
+      '/ops/operations/columns',
+      '/ops/operations/allocation-default',
+    ]);
+    expect(screen.queryByRole('region', { name: 'operations.sections.operations' })).not.toBeInTheDocument();
   });
 
   it('shows the item operations only to a budget lines administrator, and hides the empty settings section', () => {

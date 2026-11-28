@@ -213,7 +213,7 @@ Der Reiter Übersicht ist die Startseite des Assets.
 **Support**: der Lieferantensupport des Assets, für jeden Asset-Typ. Er erscheint, sobald das Asset erstellt ist, und speichert sich beim Tippen von selbst.
 
 - **Lieferant**: Aus dem Lieferantenverzeichnis auswählen
-- **Support-Vertrag**: Verknüpfung zu einem Vertragsdatensatz
+- **Support-Vertrag**: Verknüpfung zu einem Vertragsdatensatz. Jede Auswahl zeigt ihre Referenz, etwa `CTR-2`, neben dem Namen, und die Eingabe der Referenz findet diesen Vertrag
 - **Support-Stufe**: Freitext (z. B. Gold, Silber, 24x7)
 - **Ablauf des Supports**: Ablaufdatum
 - **Notizen**

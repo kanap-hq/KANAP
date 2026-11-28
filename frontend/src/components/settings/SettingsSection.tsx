@@ -22,13 +22,39 @@ export interface SettingsSectionProps {
   actions?: React.ReactNode;
   /** Controls section (add button + autosave status) shown above the content */
   controls?: React.ReactNode;
+  /**
+   * `collapsible` (default): the folding section of the lists of values. `flat`: a section of a
+   * settings page (design-ecrans.md §3): the title (13 px, 500) with 24 px above it, the hint beside
+   * it, nothing under it; `description`, `defaultExpanded`, `actions` and `controls` do not apply.
+   */
+  variant?: 'collapsible' | 'flat';
+}
+
+/** A flat section of a settings page: its title, then its fields. */
+function FlatSettingsSection({ title, hint, children }: Pick<SettingsSectionProps, 'title' | 'hint' | 'children'>) {
+  const titleId = React.useId();
+  return (
+    <Box component="section" aria-labelledby={titleId} sx={{ mt: 3 }}>
+      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1 }}>
+        <Typography id={titleId} component="h2" sx={{ fontSize: 13, fontWeight: 500, color: 'kanap.text.primary' }}>
+          {title}
+        </Typography>
+        {hint && <InfoHint text={hint} />}
+      </Stack>
+      {children}
+    </Box>
+  );
 }
 
 /**
- * A collapsible section wrapper for settings pages.
- * Uses MUI Accordion with deferred rendering for performance.
+ * A section of a settings page: collapsible (MUI Accordion with deferred rendering), or flat.
  */
-export function SettingsSection({
+export function SettingsSection(props: SettingsSectionProps) {
+  if (props.variant === 'flat') return <FlatSettingsSection title={props.title} hint={props.hint}>{props.children}</FlatSettingsSection>;
+  return <CollapsibleSettingsSection {...props} />;
+}
+
+function CollapsibleSettingsSection({
   title,
   description,
   hint,

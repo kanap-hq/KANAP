@@ -300,7 +300,6 @@
     },
     "values": {
       "default": "Par défaut",
-      "documentVersion": "DOC-{{itemNumber}} | Version {{version}}",
       "inactive": "Inactif"
     },
     "versions": {

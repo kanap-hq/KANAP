@@ -16,7 +16,7 @@ Naviguez vers **Données de référence > Départements** pour voir votre liste 
 - **Description** : Description libre de l'objet ou du périmètre du département
 - **Effectif** : Nombre d'employés, suivi par année (défini dans l'onglet Détails après création)
 
-**Conseil** : Importez les départements depuis votre système RH pour maintenir votre structure organisationnelle alignée.
+**Conseil** : Importez les départements depuis votre système RH pour maintenir votre structure organisationnelle alignée. Dans un champ département, saisir une référence telle que `DEPT-4` trouve ce département dans sa société, et chaque choix montre la référence à côté du nom.
 
 ---
 
