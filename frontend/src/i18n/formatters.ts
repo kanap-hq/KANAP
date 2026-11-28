@@ -156,6 +156,15 @@ export function decimalMark(locale: string): '.' | ',' {
   return numberSeparators(locale).decimal === ',' ? ',' : '.';
 }
 
+/**
+ * The period that closes a sentence on a name. A name that already ends with one keeps it
+ * ("Fromage & Co Inc."), and any other name takes the sentence's period ("Fromage & Co SA.").
+ */
+export function sentencePeriod(value: unknown): string {
+  const text = String(value ?? '').trimEnd();
+  return text.endsWith('.') ? text : `${text}.`;
+}
+
 const NO_BREAK_SPACE = '\u00a0';
 const NARROW_NO_BREAK_SPACE = '\u202f';
 
