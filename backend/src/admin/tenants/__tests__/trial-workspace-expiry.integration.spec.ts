@@ -13,8 +13,9 @@ import { buildServices, cleanupTenants, inTenant, runSpecs, Services } from './t
 
 // The daily deletion of expired trials (TrialWorkspaceExpiryService) against a real database:
 // which workspaces go, the cap per run, the resumption after an interruption, a subscription that
-// arrives between the selection and the purge. The tenants are committed (the services open
-// their own connections), the runs are limited to them, and they are removed at the end.
+// arrives between the selection and the purge, and the discovery call retention, including the
+// copies the audit log kept. The tenants are committed (the services open their own connections),
+// the runs are limited to them, and they are removed at the end.
 
 const DAY_MS = 86400000;
 const NOW = new Date();
@@ -383,9 +384,47 @@ async function discoveryCallOf(tenantId: string) {
   return row;
 }
 
+async function trialAuditCount(tenantIds: string[]): Promise<number> {
+  let total = 0;
+  for (const id of tenantIds) {
+    const [row] = await inTenant(id, (manager) => manager.query(
+      `SELECT count(*)::int AS n FROM audit_log WHERE tenant_id = $1 AND table_name = 'trial'`,
+      [id],
+    ));
+    total += Number(row.n);
+  }
+  return total;
+}
+
+/** An audit row in the shape written before the note left the log. `createdAt` fixes the read order. */
+async function seedTrialAudit(
+  tenantId: string,
+  action: string,
+  before: Record<string, unknown> | null,
+  after: Record<string, unknown> | null,
+  createdAt: Date,
+  table = 'trial',
+) {
+  await inTenant(tenantId, (manager) => manager.query(
+    `INSERT INTO audit_log (tenant_id, table_name, record_id, action, before_json, after_json, source, created_at)
+     VALUES ($1, $2, $1, $3, $4::jsonb, $5::jsonb, 'user', $6)`,
+    [tenantId, table, action, before ? JSON.stringify(before) : null, after ? JSON.stringify(after) : null, createdAt],
+  ));
+}
+
+async function trialAuditRows(tenantId: string) {
+  return inTenant(tenantId, (manager) => manager.query(
+    `SELECT table_name, action, before_json, after_json, ctid::text AS ctid
+       FROM audit_log WHERE tenant_id = $1
+      ORDER BY created_at, id`,
+    [tenantId],
+  ));
+}
+
 // Spec 7: the note and the date of a discovery call are erased sixty days after the call, in any
 // live workspace, subscribed or not, billing configured or not (privacy policy, section 6); the
-// rest of the row stays, a call to come or younger is untouched, a second run does nothing.
+// rest of the row stays, a call to come or younger is untouched, a second run does nothing, and
+// the erasure adds no audit entry.
 async function testDiscoveryCallRetention() {
   const svc = buildServices();
   const clock = new Date('2026-09-01T04:15:00.000Z');
@@ -406,10 +445,12 @@ async function testDiscoveryCallRetention() {
     await seedDiscoveryCall(ids.internal, before(61), 'Note internal');
     const scope = Object.values(ids);
     const erased = { scheduled_at: null, status: 'booked', source: 'calcom', note: null, external_id: 'cal_uid_spec' };
+    const auditBefore = await trialAuditCount(scope);
 
     // Billing not configured: the trials are not enforced, the erasure still runs.
     const first = await expiryService(svc, { billingConfigured: false }).run({ now: clock, tenantIds: scope });
     assert.deepEqual([first.errors, first.deleted, first.discoveryCallsErased], [[], [], 3]);
+    assert.equal(await trialAuditCount(scope), auditBefore, 'the erasure writes no audit entry');
 
     const kept59 = await discoveryCallOf(ids.day59);
     assert.equal(kept59.note, 'Note 59', 'a call 59 days old keeps its note');
@@ -424,11 +465,149 @@ async function testDiscoveryCallRetention() {
 
     const again = await expiryService(svc).run({ now: clock, tenantIds: scope });
     assert.deepEqual([again.errors, again.deleted, again.discoveryCallsErased], [[], [], 0]);
+    assert.equal(await trialAuditCount(scope), auditBefore, 'the second run writes no audit entry either');
     assert.equal((await discoveryCallOf(ids.day59)).note, 'Note 59');
     assert.equal((await discoveryCallOf(ids.upcoming)).note, 'Note upcoming');
     assert.deepEqual(await discoveryCallOf(ids.day60), erased);
   } finally {
     await cleanupTenants(Object.values(ids));
+  }
+}
+
+// Spec 8: the same run blanks the date and the note in the audit entries written in the old
+// shape, per side and from the entry's own date. A younger side, a side with no date, a click
+// and another workspace stay. A removed call still has its entries blanked. A second run
+// changes no row, and the count stays the number of call rows.
+async function testDiscoveryCallAuditRetention() {
+  const svc = buildServices();
+  const clock = new Date('2026-09-01T04:15:00.000Z');
+  const at = (days: number) => new Date(clock.getTime() - days * DAY_MS);
+  const iso = (days: number) => at(days).toISOString();
+  const subscribed = [{ status: 'active', stripeSubscriptionId: 'sub_spec_audit', planName: 'Hosted KANAP' }];
+  const old = (when: string, note: string, extra: Record<string, unknown> = {}) =>
+    ({ scheduled_at: when, status: 'booked', source: 'calcom', note, ...extra });
+  const blank = (extra: Record<string, unknown> = {}) =>
+    ({ scheduled_at: null, status: 'booked', source: 'calcom', ...extra });
+  const ids: string[] = [];
+  let stamp = 0;
+  const nextStamp = () => new Date(Date.UTC(2026, 0, 1, 0, 0, ++stamp));
+  try {
+    const day60 = await seedTenant({ tag: 'aud60', subscriptions: subscribed });
+    const day59 = await seedTenant({ tag: 'aud59', subscriptions: subscribed });
+    const upcoming = await seedTenant({ tag: 'audnext', subscriptions: subscribed });
+    const mixed = await seedTenant({ tag: 'audmix', subscriptions: subscribed });
+    const removed = await seedTenant({ tag: 'audgone', subscriptions: subscribed });
+    const witness = await seedTenant({ tag: 'audwit', subscriptions: subscribed });
+    ids.push(day60, day59, upcoming, mixed, removed, witness);
+
+    await seedDiscoveryCall(day60, at(60), 'Note 60');
+    await seedDiscoveryCall(day59, at(59), 'Note 59');
+    await seedDiscoveryCall(upcoming, at(-3), 'Note upcoming');
+    await seedDiscoveryCall(mixed, at(-3), 'Note mixed');
+    await seedDiscoveryCall(witness, at(60), 'Witness note');
+
+    await seedTrialAudit(day60, 'trial.discovery_call_updated',
+      old(iso(60), 'Note 60', { placement: 'mail_j0' }),
+      old(iso(60), 'Note 60', { placement: 'mail_j0' }), nextStamp());
+    await seedTrialAudit(day60, 'trial.discovery_call_clicked', null,
+      { placement: 'about', scheduled_at: iso(60), note: 'Click note', status: 'booked', source: 'calcom' },
+      nextStamp());
+    await seedTrialAudit(day60, 'update', null,
+      { scheduled_at: iso(90), note: 'Tenant note', status: 'active' }, nextStamp(), 'tenants');
+    await seedTrialAudit(day59, 'trial.discovery_call_updated',
+      old(iso(59), 'Note 59'), old(iso(59), 'Note 59'), nextStamp());
+    await seedTrialAudit(upcoming, 'trial.discovery_call_updated',
+      old(iso(-3), 'Note upcoming'), old(iso(-3), 'Note upcoming'), nextStamp());
+    await seedTrialAudit(mixed, 'trial.discovery_call_updated',
+      old(iso(90), 'Old secret', { source: 'manual', placement: 'last_step' }),
+      old(iso(-10), 'Future secret'), nextStamp());
+    await seedTrialAudit(mixed, 'trial.discovery_call_updated',
+      { status: 'cancelled', source: 'manual', note: 'Undated note' },
+      { status: 'cancelled', source: 'manual', note: 'Undated note' }, nextStamp());
+    await seedTrialAudit(mixed, 'trial.discovery_call_updated',
+      { scheduled_at: null, status: 'booked', source: 'manual', note: 'Null date note' },
+      old(iso(90), 'Old after', { source: 'manual' }), nextStamp());
+    await seedTrialAudit(removed, 'trial.discovery_call_updated',
+      old(iso(61), 'Removed note'), old(iso(61), 'Removed note'), nextStamp());
+    await seedTrialAudit(removed, 'trial.discovery_call_removed',
+      old(iso(61), 'Removed note'), null, nextStamp());
+    await seedTrialAudit(removed, 'trial.discovery_call_updated',
+      old(iso(59), 'Young removed'), old(iso(59), 'Young removed'), nextStamp());
+    await seedTrialAudit(witness, 'trial.discovery_call_updated',
+      old(iso(60), 'Witness note'), old(iso(60), 'Witness note'), nextStamp());
+
+    const scope = [day60, day59, upcoming, mixed, removed];
+    const auditBefore = await trialAuditCount([...scope, witness]);
+    const witnessBefore = await trialAuditRows(witness);
+    const first = await expiryService(svc, { billingConfigured: false }).run({ now: clock, tenantIds: scope });
+    assert.deepEqual([first.errors, first.deleted, first.discoveryCallsErased], [[], [], 1],
+      'the count is the call rows, not the audit rows');
+    assert.equal(await trialAuditCount([...scope, witness]), auditBefore, 'the erasure writes no audit entry');
+
+    const kept60 = blank({ placement: 'mail_j0' });
+    const day60Rows = await trialAuditRows(day60);
+    assert.deepEqual(
+      day60Rows.filter((row: { action: string }) => row.action === 'trial.discovery_call_updated')
+        .map((row: { before_json: unknown; after_json: unknown }) => [row.before_json, row.after_json]),
+      [[kept60, kept60]],
+      'a call 60 days old loses the date and the note on both sides and keeps status, source and placement',
+    );
+    assert.deepEqual(
+      day60Rows.find((row: { action: string }) => row.action === 'trial.discovery_call_clicked')?.after_json,
+      { placement: 'about', scheduled_at: iso(60), note: 'Click note', status: 'booked', source: 'calcom' },
+      'a click stays as it was',
+    );
+    assert.deepEqual(
+      day60Rows.find((row: { table_name: string }) => row.table_name === 'tenants')?.after_json,
+      { scheduled_at: iso(90), note: 'Tenant note', status: 'active' },
+      'another table stays as it was',
+    );
+
+    const day59Rows = await trialAuditRows(day59);
+    assert.deepEqual([day59Rows[0].before_json, day59Rows[0].after_json],
+      [old(iso(59), 'Note 59'), old(iso(59), 'Note 59')], 'a call 59 days old stays');
+    const upcomingRows = await trialAuditRows(upcoming);
+    assert.deepEqual([upcomingRows[0].before_json, upcomingRows[0].after_json],
+      [old(iso(-3), 'Note upcoming'), old(iso(-3), 'Note upcoming')], 'a call to come stays');
+
+    const mixedRows = (await trialAuditRows(mixed)).filter((row: { table_name: string }) => row.table_name === 'trial');
+    assert.deepEqual([mixedRows[0].before_json, mixedRows[0].after_json], [
+      blank({ source: 'manual', placement: 'last_step' }),
+      old(iso(-10), 'Future secret'),
+    ], 'only the side whose date is old is blanked');
+    assert.deepEqual([mixedRows[1].before_json, mixedRows[1].after_json], [
+      { status: 'cancelled', source: 'manual', note: 'Undated note' },
+      { status: 'cancelled', source: 'manual', note: 'Undated note' },
+    ], 'an entry with no date stays');
+    assert.deepEqual([mixedRows[2].before_json, mixedRows[2].after_json], [
+      { scheduled_at: null, status: 'booked', source: 'manual', note: 'Null date note' },
+      blank({ source: 'manual' }),
+    ], 'a side whose date is null stays, the old side is blanked');
+
+    const removedRows = await trialAuditRows(removed);
+    assert.deepEqual([removedRows[0].before_json, removedRows[0].after_json], [blank(), blank()]);
+    assert.deepEqual([removedRows[1].before_json, removedRows[1].after_json], [blank(), null],
+      'a removed call keeps no row, and its old entry is blanked');
+    assert.deepEqual([removedRows[2].before_json, removedRows[2].after_json],
+      [old(iso(59), 'Young removed'), old(iso(59), 'Young removed')],
+      'a younger entry of that workspace stays');
+
+    assert.deepEqual(await trialAuditRows(witness), witnessBefore, 'another workspace is untouched');
+    assert.equal((await discoveryCallOf(witness)).note, 'Witness note');
+    const erasedCall = { scheduled_at: null, status: 'booked', source: 'calcom', note: null, external_id: 'cal_uid_spec' };
+    assert.deepEqual(await discoveryCallOf(day60), erasedCall);
+    assert.equal((await discoveryCallOf(day59)).note, 'Note 59');
+    assert.equal((await discoveryCallOf(upcoming)).note, 'Note upcoming');
+    assert.equal((await discoveryCallOf(mixed)).note, 'Note mixed');
+    assert.equal(await discoveryCallOf(removed), undefined);
+
+    const frozen = await Promise.all(scope.map((id) => trialAuditRows(id)));
+    const again = await expiryService(svc).run({ now: clock, tenantIds: scope });
+    assert.deepEqual([again.errors, again.deleted, again.discoveryCallsErased], [[], [], 0]);
+    assert.deepEqual(await Promise.all(scope.map((id) => trialAuditRows(id))), frozen, 'a second run changes no row');
+    assert.deepEqual(await trialAuditRows(witness), witnessBefore);
+  } finally {
+    await cleanupTenants(ids);
   }
 }
 
@@ -440,4 +619,5 @@ void runSpecs('trial-workspace-expiry.integration.spec', [
   testStripeUnreachable,
   testRecheckLocksTheRow,
   testDiscoveryCallRetention,
+  testDiscoveryCallAuditRetention,
 ]);
