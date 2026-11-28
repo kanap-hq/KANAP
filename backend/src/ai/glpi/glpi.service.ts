@@ -6,8 +6,10 @@ import { isRedirectStatus, sameOriginRedirectFetch } from '../../common/outbound
 import { openValidatedFetch } from '../../common/pinned-fetch';
 import { sameSecretDestination } from '../../common/secret-destination';
 import { AiSecretCipherService } from '../ai-secret-cipher.service';
+import { AiSettings } from '../ai-settings.entity';
 import { AiSettingsService } from '../ai-settings.service';
 import { normalizeGlpiPathname } from './glpi-url';
+import { glpiApiErrorCode, glpiBadRequest, glpiTestFailureCode } from './glpi-errors';
 import {
   GlpiConnectionOverrides,
   GlpiDocument,
@@ -81,14 +83,14 @@ function normalizeBaseUrl(value: string | null | undefined): string | null {
   try {
     parsed = new URL(normalized);
   } catch {
-    throw new BadRequestException('GLPI URL must be a valid HTTP(S) URL.');
+    throw glpiBadRequest('glpi_url_invalid', 'GLPI URL must be a valid HTTP(S) URL.');
   }
 
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new BadRequestException('GLPI URL must use http:// or https://.');
+    throw glpiBadRequest('glpi_url_invalid', 'GLPI URL must use http:// or https://.');
   }
   if (parsed.username || parsed.password) {
-    throw new BadRequestException('GLPI URL must not include embedded credentials.');
+    throw glpiBadRequest('glpi_url_invalid', 'GLPI URL must not include embedded credentials.');
   }
 
   parsed.search = '';
@@ -357,7 +359,7 @@ export class GlpiService {
     );
     const sessionToken = textOrNull((payload as Record<string, unknown>)?.session_token);
     if (!sessionToken) {
-      throw new BadRequestException('GLPI did not return a session token.');
+      throw glpiBadRequest('glpi_invalid_response', 'GLPI did not return a session token.');
     }
 
     const baseSession: GlpiSession = {
@@ -1503,6 +1505,12 @@ export class GlpiService {
     }
   }
 
+  /**
+   * Admin "Test". Values typed on the card win over the stored ones, so an address can be checked
+   * before it is saved. Never throws for a connection problem: `code` names the cause, which the
+   * card translates. The outcome is kept on the settings only when the test used the saved address
+   * and tokens, and only if they are still saved when it ends.
+   */
   async testConnection(
     tenantId: string,
     overrides?: GlpiConnectionOverrides,
@@ -1510,20 +1518,24 @@ export class GlpiService {
   ): Promise<GlpiTestResult> {
     const startedAt = Date.now();
     let session: GlpiSession | null = null;
+    let stored: AiSettings | null = null;
+    let result: Omit<GlpiTestResult, 'tested_at' | 'persisted'>;
 
     try {
       if (!manager) {
         throw new BadRequestException('Tenant manager is required for GLPI connection testing.');
       }
+      stored = await this.storedSettingsTested(tenantId, manager, overrides);
       session = await this.initSession(tenantId, manager, overrides);
-      return {
+      result = {
         ok: true,
         message: 'GLPI connection succeeded.',
         latency_ms: Date.now() - startedAt,
       };
     } catch (error: any) {
-      return {
+      result = {
         ok: false,
+        code: glpiTestFailureCode(error),
         message: this.getErrorMessage(error),
         latency_ms: Date.now() - startedAt,
       };
@@ -1532,6 +1544,47 @@ export class GlpiService {
         await this.killSession(session);
       }
     }
+
+    const testedAt = new Date().toISOString();
+    let persisted = false;
+    if (stored && manager) {
+      try {
+        persisted = await this.settingsService.recordGlpiTest(manager, stored, {
+          ok: result.ok,
+          tested_at: testedAt,
+          ...(result.code ? { code: result.code } : {}),
+          ...(result.latency_ms != null ? { latency_ms: result.latency_ms } : {}),
+        });
+      } catch (error: any) {
+        this.logger.warn(`GLPI last test could not be saved: ${String(error?.message || error || 'unknown error')}`);
+      }
+    }
+    return { ...result, tested_at: testedAt, persisted };
+  }
+
+  /**
+   * The saved settings when the test runs on them: no token typed, and no address typed or the
+   * saved one again. Null otherwise: a test of typed values is shown for the session only.
+   */
+  private async storedSettingsTested(
+    tenantId: string,
+    manager: EntityManager,
+    overrides?: GlpiConnectionOverrides,
+  ): Promise<AiSettings | null> {
+    if (textOrNull(overrides?.glpi_user_token) || textOrNull(overrides?.glpi_app_token)) return null;
+    const settings = await this.settingsService.find(tenantId, { manager });
+    if (!settings?.glpi_url) return null;
+    const typedUrl = textOrNull(overrides?.glpi_url);
+    if (!typedUrl) return settings;
+    let typed: string | null;
+    let saved: string | null;
+    try {
+      typed = normalizeBaseUrl(typedUrl);
+      saved = normalizeBaseUrl(settings.glpi_url);
+    } catch {
+      return null;
+    }
+    return typed === saved ? settings : null;
   }
 
   private async resolveSettings(
@@ -1550,7 +1603,8 @@ export class GlpiService {
       try {
         userToken = this.cipher.decrypt(settings.glpi_user_token_encrypted);
       } catch (error: any) {
-        throw new BadRequestException(
+        throw glpiBadRequest(
+          'glpi_token_unreadable',
           `Stored GLPI user token cannot be decrypted: ${String(error?.message || error || 'unknown error')}`,
         );
       }
@@ -1561,19 +1615,20 @@ export class GlpiService {
       try {
         appToken = this.cipher.decrypt(settings.glpi_app_token_encrypted);
       } catch (error: any) {
-        throw new BadRequestException(
+        throw glpiBadRequest(
+          'glpi_token_unreadable',
           `Stored GLPI app token cannot be decrypted: ${String(error?.message || error || 'unknown error')}`,
         );
       }
     }
 
     if (!baseUrl) {
-      throw new BadRequestException('GLPI URL is required.');
+      throw glpiBadRequest('glpi_url_missing', 'GLPI URL is required.');
     }
     if (!userToken) {
-      throw new BadRequestException(!storedTokensApply && settings?.glpi_user_token_encrypted
-        ? 'Enter the GLPI user token to connect to an address other than the saved one.'
-        : 'GLPI user token is required.');
+      throw !storedTokensApply && settings?.glpi_user_token_encrypted
+        ? glpiBadRequest('glpi_token_needed_for_address', 'Enter the GLPI user token to connect to an address other than the saved one.')
+        : glpiBadRequest('glpi_user_token_missing', 'GLPI user token is required.');
     }
 
     return { baseUrl, userToken, appToken };
@@ -1787,11 +1842,13 @@ export class GlpiService {
     });
 
     const mappedError = this.extractGlpiError(payload);
+    const code = glpiApiErrorCode(this.extractGlpiErrorKey(payload), response.ok ? undefined : response.status);
     if (!response.ok) {
-      throw this.createHttpError(response.status, mappedError, opts?.notFoundMessage);
+      const error = this.createHttpError(response.status, mappedError, opts?.notFoundMessage);
+      throw code && !(error instanceof NotFoundException) ? glpiBadRequest(code, error.message) : error;
     }
     if (mappedError) {
-      throw new BadRequestException(mappedError);
+      throw code ? glpiBadRequest(code, mappedError) : new BadRequestException(mappedError);
     }
 
     return payload;
@@ -1829,13 +1886,16 @@ export class GlpiService {
           signal: AbortSignal.timeout(GLPI_TIMEOUT_MS),
         });
       } catch (error: any) {
-        throw new BadRequestException(
+        const name = String(error?.name || '');
+        throw glpiBadRequest(
+          name === 'TimeoutError' ? 'glpi_timeout' : 'glpi_unreachable',
           `GLPI request failed: ${String(error?.message || error || 'request failed')}`,
         );
       }
       if (isRedirectStatus(response.status)) {
         await response.body?.cancel().catch(() => undefined);
-        throw new BadRequestException(
+        throw glpiBadRequest(
+          'glpi_redirect',
           `GLPI answered with a redirect (HTTP ${response.status}), which is not followed.`
           + ' Enter the address GLPI is actually served on.',
         );
@@ -1875,19 +1935,35 @@ export class GlpiService {
       );
 
       if (contentType?.toLowerCase().includes('text/html') || text.startsWith('<!DOCTYPE html') || text.startsWith('<html')) {
-        throw new BadRequestException(
+        throw glpiBadRequest(
+          'glpi_invalid_response',
           `GLPI returned HTML instead of JSON.${status}`
           + ` Check that the GLPI URL is the base GLPI URL and that the REST API is enabled.`
           + redirected,
         );
       }
 
-      throw new BadRequestException(
+      throw glpiBadRequest(
+        'glpi_invalid_response',
         `GLPI returned a non-JSON response.${status}`
         + `${contentType ? ` Content-Type: ${contentType}.` : ''}`
         + redirected,
       );
     }
+  }
+
+  /** The raw `ERROR_…` code of a GLPI refusal, as `extractGlpiError` reads it. */
+  private extractGlpiErrorKey(payload: unknown): string | null {
+    if (Array.isArray(payload) && payload.length > 0) {
+      const code = textOrNull(payload[0]);
+      return code?.startsWith('ERROR_') ? code : null;
+    }
+    if (payload && typeof payload === 'object') {
+      const record = payload as Record<string, unknown>;
+      const code = textOrNull(record.code ?? record.error ?? null);
+      return code?.startsWith('ERROR_') ? code : null;
+    }
+    return null;
   }
 
   private extractGlpiError(payload: unknown): string | null {

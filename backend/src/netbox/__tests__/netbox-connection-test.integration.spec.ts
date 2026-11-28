@@ -35,10 +35,10 @@ async function seed(runner: QueryRunner): Promise<{ tenantId: string; configId: 
   return { tenantId, configId: rows[0].id };
 }
 
-function services(onCall: () => Promise<void>) {
+function services(onCall: () => Promise<void>, version: () => string = () => '4.1.0') {
   const config = new NetboxConfigService({ canEncrypt: () => true } as any);
   (config as any).buildConnection = () => ({});
-  const client = { getVersion: async () => { await onCall(); return '4.1.0'; } };
+  const client = { getVersion: async () => { await onCall(); return version(); } };
   const sync = new NetboxSyncService({} as any, config, client as any, {} as any, {} as any, {} as any);
   return { config, sync };
 }
@@ -83,6 +83,27 @@ async function main() {
       assert.equal(row.metadata_json.last_connection_test.ok, true);
       assert.equal(row.metadata_json.last_connection_test.tested_at, result.tested_at);
       assert.equal(new Date(row.updated_at).toISOString(), '2026-01-01T00:00:00.000Z');
+    });
+
+    await inTransaction('the kept test says what the card said: the version, or the cause as a code', async (runner) => {
+      const { tenantId, configId } = await seed(runner);
+      const { config, sync } = services(async () => undefined);
+      const passed: any = await sync.testConnection(runner.manager, tenantId, {});
+      assert.equal(passed.netbox_version, '4.1.0');
+      const stored = (await readRow(runner, configId)).metadata_json.last_connection_test;
+      assert.deepEqual(stored, { ok: true, tested_at: passed.tested_at, version: '4.1.0' });
+      const view = config.toView(await config.getConfig(runner.manager, tenantId));
+      assert.deepEqual(view.last_test, { ok: true, tested_at: passed.tested_at, version: '4.1.0' }, 'read back after a reload');
+
+      const failing = services(async () => undefined, () => {
+        throw Object.assign(new Error('Netbox said: token 0123abcd is not valid'), { status: 403 });
+      });
+      const failed: any = await failing.sync.testConnection(runner.manager, tenantId, {});
+      assert.equal(failed.ok, false);
+      assert.ok(failed.code, failed.message);
+      const kept = (await readRow(runner, configId)).metadata_json.last_connection_test;
+      assert.deepEqual(kept, { ok: false, tested_at: failed.tested_at, code: failed.code });
+      assert.doesNotMatch(JSON.stringify(kept), /0123abcd|Netbox said/, 'the message of the remote server is never kept');
     });
 
     await inTransaction('a token saved during the test survives, the stale outcome is dropped', async (runner) => {

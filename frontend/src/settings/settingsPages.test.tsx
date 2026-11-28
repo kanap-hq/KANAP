@@ -13,7 +13,7 @@ import { SETTINGS_PAGES, settingsPageHref, settingsPageScope, type SettingsHost,
 
 const APP_SOURCE = Object.values(import.meta.glob<string>('../App.tsx', { query: '?raw', import: 'default', eager: true }))[0];
 const SOURCES = import.meta.glob<string>(
-  ['../pages/**/*.tsx', '../components/about/*.tsx', '!../**/*.test.tsx'],
+  ['../pages/**/*.tsx', '../components/about/*.tsx', '../components/admin/*.tsx', '!../**/*.test.tsx'],
   { query: '?raw', import: 'default', eager: true },
 );
 const LOCALES = import.meta.glob<Record<string, unknown>>('../locales/{en,fr,de,es}/*.json', { import: 'default', eager: true });
@@ -115,8 +115,10 @@ function keyUsedIn(source: string, fullKey: string): boolean {
   return key.split('.').every((segment) => new RegExp(`\\b${segment}\\b`).test(source));
 }
 
-function sourceFile(entry: SettingsPageEntry): string | undefined {
-  return entry.source ?? COMPONENT_FILES[entry.component];
+/** The files that hold a line's settings: its `source` (one file or several), else its component's file. */
+function sourceFiles(entry: SettingsPageEntry): string[] {
+  const files = entry.source ?? COMPONENT_FILES[entry.component];
+  return files === undefined ? [] : [files].flat();
 }
 
 function headings(markdown: string): string[] {
@@ -371,10 +373,14 @@ describe('settings page registry', () => {
       for (const language of LANGUAGES) {
         for (const key of keys) if (!keyExists(language, key)) missing.push(`${entry.id} ${language} ${key}`);
       }
-      const file = sourceFile(entry);
-      const source = file ? SOURCES[`../${file}`] : undefined;
-      expect(source, `${entry.id}: no source file (${file})`).toBeTruthy();
-      for (const key of entry.settingKeys) if (source && !keyUsedIn(source, key)) unused.push(`${entry.id} ${key} in ${file}`);
+      const files = sourceFiles(entry);
+      expect(files.length, `${entry.id}: no source file`).toBeGreaterThan(0);
+      const sources = files.map((file) => SOURCES[`../${file}`]);
+      files.forEach((file, index) => expect(sources[index], `${entry.id}: no source file (${file})`).toBeTruthy());
+      // A key counts as used when one of the line's files uses it.
+      for (const key of entry.settingKeys) {
+        if (!sources.some((source) => source && keyUsedIn(source, key))) unused.push(`${entry.id} ${key} in ${files.join(', ')}`);
+      }
     }
     expect(missing).toEqual([]);
     expect(unused).toEqual([]);

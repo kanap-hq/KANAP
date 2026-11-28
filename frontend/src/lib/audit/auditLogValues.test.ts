@@ -789,6 +789,41 @@ describe('audit field labels', () => {
   });
 });
 
+/**
+ * The fields of the integration connection entries (`ai_adapter_configs` for PRTG and Netbox,
+ * `ai_settings` for GLPI), as the services write them: each has a label in the four languages.
+ */
+const CONNECTION_AUDIT_FIELD_KEYS = [
+  'provider_key', 'implementation', 'enabled', 'environment', 'base_url', 'server_timezone',
+  'request_timeout_seconds', 'credential', 'insecure_tls', 'auto_sync', 'default_environment',
+  'secret_replaced', 'glpi_enabled', 'glpi_url', 'has_glpi_user_token', 'has_glpi_app_token',
+  'glpi_user_token_replaced', 'glpi_app_token_replaced',
+];
+
+describe('integration connection entries', () => {
+  it('labels every field in the four languages', () => {
+    for (const [language, admin] of Object.entries(ADMIN)) {
+      const missing = CONNECTION_AUDIT_FIELD_KEYS
+        .filter((key) => typeof admin.auditLogs.fields[key] !== 'string' || !admin.auditLogs.fields[key].trim());
+      expect(missing, language).toEqual([]);
+    }
+  });
+
+  it('says whether a secret is set, never how it is stored', () => {
+    const fields = auditFields({
+      action: 'update',
+      table_name: 'ai_adapter_configs',
+      before_json: { base_url: 'https://prtg.example.com', credential: { present: true, shape: 'api_token' } },
+      after_json: { base_url: null, credential: { present: false, shape: 'none' } },
+    });
+    const row = fields.rows.find((entry) => entry.key === 'credential')!;
+    expect(formatAuditValue(row.before, 'credential', context()).text).toBe('Yes');
+    expect(formatAuditValue(row.after, 'credential', context()).text).toBe('No');
+    expect(auditFieldLabel('credential', t)).toBe('Secret set');
+    expect(auditFieldLabel('glpi_app_token_replaced', t)).toBe('GLPI application token replaced');
+  });
+});
+
 describe('sortAuditFields', () => {
   const rows = ['status', 'name', 'description', 'end_date', 'cost_center_id', 'zzz_unknown'].map((key) => ({ key, before: 1, after: 2 }));
 

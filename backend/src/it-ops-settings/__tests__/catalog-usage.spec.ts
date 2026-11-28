@@ -26,6 +26,12 @@ assert.equal(CATALOG_USAGE.interfaceProtocols.length, 0);
 assert.equal(usageSql(CATALOG_USAGE.adminZones[0]), 'SELECT COUNT(DISTINCT t.id)::int AS count FROM technologies t WHERE t.tenant_id = $1 AND ((t.admin_zone = $2))');
 assert.equal(usageSql(CATALOG_USAGE.adminZones[1]), 'SELECT COUNT(DISTINCT t.id)::int AS count FROM assets t WHERE t.tenant_id = $1 AND ((t.admin_zone = $2))');
 assert.match(usageListPath(CATALOG_USAGE.adminZones[1], 'tier_0')!, /^\/it\/assets\?filters=/);
+// The Netbox role matches: the workspace's Netbox connection, its matches read as an object whatever is stored.
+const netboxRoles = CATALOG_USAGE.serverKinds.find((source) => source.record === 'netbox_role_matches')!;
+assert.match(usageSql(netboxRoles), /FROM ai_adapter_configs t WHERE t\.tenant_id = \$1 AND \(\(t\.provider_kind = 'inventory' AND t\.provider_key = 'netbox' AND EXISTS \(SELECT 1 FROM jsonb_each_text\(CASE WHEN jsonb_typeof\(t\.metadata_json->'role_map'\) = 'object'/);
+assert.match(usageSql(netboxRoles), /m WHERE m\.value = \$2\)\)\)$/);
+assert.match(usedCodesSql(netboxRoles), /SELECT m\.value AS code FROM ai_adapter_configs t CROSS JOIN LATERAL jsonb_each_text\(.*\) m WHERE t\.tenant_id = \$1 AND t\.provider_kind = 'inventory' AND t\.provider_key = 'netbox'/);
+assert.equal(usageListPath(netboxRoles, 'switch'), undefined);
 
 // The grouped read of the restore: one statement per source, every table read filtered by tenant,
 // a joined row read only with its head record of the same tenant.

@@ -263,7 +263,9 @@
       "subnets_one": "{{count}} Subnetz",
       "subnets_other": "{{count}} Subnetze",
       "others_one": "{{count}} weiteres",
-      "others_other": "{{count}} weitere"
+      "others_other": "{{count}} weitere",
+      "netbox_role_matches_one": "die Netbox-Rollenzuordnungen",
+      "netbox_role_matches_other": "die Netbox-Rollenzuordnungen"
     },
     "anyway": "Trotzdem löschen",
     "assetWarning": {
@@ -1243,7 +1245,9 @@
       "subnets_one": "{{count}} Subnetz",
       "subnets_other": "{{count}} Subnetze",
       "technologies_one": "{{count}} Technologie",
-      "technologies_other": "{{count}} Technologien"
+      "technologies_other": "{{count}} Technologien",
+      "netbox_role_matches_one": "Netbox-Rollenzuordnungen",
+      "netbox_role_matches_other": "Netbox-Rollenzuordnungen"
     },
     "retiredSuffix": "nicht mehr angeboten",
     "translate": "Übersetzen",
@@ -1963,5 +1967,19 @@
   "operationPanel": {
     "moreLines_one": "und {{count}} weitere Zeile",
     "moreLines_other": "und {{count}} weitere Zeilen"
+  },
+  "connectionCard": {
+    "test": "Testen",
+    "replace": "Ersetzen",
+    "replaceLabel": "{{name}} ersetzen",
+    "setInFile": "In der Konfigurationsdatei festgelegt",
+    "status": {
+      "testing": "Test läuft…",
+      "passed": "Letzter Test erfolgreich am {{date}} um {{time}}",
+      "failed": "Letzter Test fehlgeschlagen am {{date}} um {{time}}",
+      "notSaved": "Änderungen nicht gespeichert",
+      "savedNotTested": "Gespeichert, noch nicht getestet",
+      "neverTested": "Nie getestet"
+    }
   }
 }

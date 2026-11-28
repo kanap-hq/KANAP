@@ -6,18 +6,25 @@ const grants = (granted: Record<string, string>) => (resource: string, level: 'r
   (RANK[granted[resource]] ?? 0) >= RANK[level];
 
 // The shipped roles (backend/src/tenants/tenants.service.ts).
-const BUDGET_READER = grants({ budget: 'reader', budget_ops: 'reader', companies: 'reader', departments: 'reader' });
+const BUDGET_READER = grants({ budget: 'reader', companies: 'reader', departments: 'reader' });
 const BUDGET_MEMBER = grants({ budget: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' });
 const BUDGET_ADMIN = grants({ budget: 'admin', budget_ops: 'admin' });
 
 describe('who opens the budget administration pages', () => {
-  it.each([['reader', BUDGET_READER], ['member', BUDGET_MEMBER]])('opens the budget columns and the default allocation to a budget %s, read-only, and no operation', (_name, hasLevel) => {
-    expect(canUseOperation('columns', hasLevel)).toBe(true);
-    expect(canUseOperation('allocation-default', hasLevel)).toBe(true);
+  it('opens the budget columns and the default allocation to a budget member, read-only, and no operation', () => {
+    expect(canUseOperation('columns', BUDGET_MEMBER)).toBe(true);
+    expect(canUseOperation('allocation-default', BUDGET_MEMBER)).toBe(true);
     for (const page of ['column-reset', 'copy-budget', 'currency', 'freeze', 'master-data-freeze', 'metrics-copy']) {
-      expect(canUseOperation(page, hasLevel), page).toBe(false);
+      expect(canUseOperation(page, BUDGET_MEMBER), page).toBe(false);
     }
-    expect(canUseAnyOperation(hasLevel)).toBe(true);
+    expect(canUseAnyOperation(BUDGET_MEMBER)).toBe(true);
+  });
+
+  it('opens no administration page to a budget reader, who reads the budget lines and not their settings', () => {
+    for (const page of ['currency', 'columns', 'allocation-default', 'freeze', 'copy-budget', 'column-reset', 'master-data-freeze', 'metrics-copy']) {
+      expect(canUseOperation(page, BUDGET_READER), page).toBe(false);
+    }
+    expect(canUseAnyOperation(BUDGET_READER)).toBe(false);
   });
 
   it('opens every page to a budget administrator', () => {

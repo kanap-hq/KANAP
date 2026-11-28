@@ -42,19 +42,18 @@
         "testFailed": "GLPI-Verbindungstest fehlgeschlagen."
       },
       "placeholders": {
-        "appTokenConfigured": "App-Token konfiguriert (leer lassen zum Beibehalten)",
         "enterAppToken": "Optionales App-Token eingeben",
         "enterUserToken": "Benutzer-Token eingeben",
-        "url": "https://glpi.example.com",
-        "userTokenConfigured": "Benutzer-Token konfiguriert (leer lassen zum Beibehalten)"
+        "url": "https://glpi.example.com"
       },
       "title": "GLPI-Integration",
       "tooltips": {
         "plaidRequired": "{{agent}} muss aktiviert sein, damit Benutzer GLPI-Tickets aus dem Chat importieren können."
       },
-      "tokenHint": {
-        "appTokenExisting": "Leer lassen, um das gespeicherte App-Token für Speicher- und Testaktionen beizubehalten.",
-        "userTokenExisting": "Leer lassen, um das gespeicherte Benutzer-Token für Speicher- und Testaktionen beizubehalten."
+      "hints": {
+        "url": "Die Adresse, unter der Sie GLPI öffnen, zum Beispiel https://glpi.example.com. Die API muss aktiv sein: in GLPI unter Konfiguration > Allgemein > API, Rest API aktivieren.",
+        "userToken": "Öffnen Sie in GLPI Ihre Einstellungen (Ihr Name oben rechts), dann Schlüssel für Fernzugriff, und kopieren Sie das API-Token. Ist es leer, aktivieren Sie Neu erzeugen und speichern Sie.",
+        "appToken": "Optional. Öffnen Sie in GLPI unter Konfiguration > Allgemein > API den API-Client, über den sich Kadratis verbindet, und kopieren Sie sein Anwendungstoken. Leer lassen, wenn der Client keines hat."
       }
     },
     "keys": {
@@ -174,26 +173,22 @@
         "requestTimeout": "Anfrage-Timeout (Sekunden)"
       },
       "hints": {
-        "apiKey": "Erstellen Sie einen in PRTG unter Setup → API-Schlüssel. Lesezugriff genügt.",
-        "requestTimeout": "5 bis 120 Sekunden. Standard: 30."
+        "apiKey": "Erstellen Sie einen in PRTG unter „Setup | Account Settings | API Keys“. Lesezugriff genügt.",
+        "requestTimeout": "5 bis 120 Sekunden. Standard: 30.",
+        "baseUrl": "Die Adresse, unter der Sie PRTG im Browser öffnen, zum Beispiel https://prtg.example.com.",
+        "timezone": "Die Zeitzone des PRTG-Core-Servers, wie in seinem Betriebssystem eingestellt. Die Zeiten der Alarme werden in dieser Zone gelesen."
       },
       "messages": {
         "loadFailed": "Die Monitoring-Integration konnte nicht geladen werden.",
         "nextStep": "Ein SRE-Monitoring-Agent kann jetzt auf der Agents-Seite erstellt werden.",
         "testFailed": "Der PRTG-Verbindungstest ist fehlgeschlagen.",
-        "testSuccess_one": "Verbunden: PRTG {{version}}, {{count}} Sensor sichtbar",
-        "testSuccess_other": "Verbunden: PRTG {{version}}, {{count}} Sensoren sichtbar"
+        "testDetail_one": "PRTG {{version}}, {{count}} Sensor sichtbar",
+        "testDetail_other": "PRTG {{version}}, {{count}} Sensoren sichtbar"
       },
       "placeholders": {
-        "apiKeySaved": "API-Schlüssel gespeichert (leer lassen zum Beibehalten)",
         "enterApiKey": "API-Schlüssel eingeben",
         "url": "https://prtg.example.com",
-        "requestTimeout": "z. B. 60"
-      },
-      "status": {
-        "connected": "Verbunden",
-        "disabled": "Deaktiviert",
-        "notConfigured": "Nicht konfiguriert"
+        "requestTimeout": "30"
       },
       "title": "Monitoring (PRTG)"
     },
@@ -1027,7 +1022,19 @@
       "viewer_ids": "Leser",
       "web_search_enabled": "Websuche aktiviert",
       "linked_records": "Verknüpfte Datensätze",
-      "expected_units": "Erwartete Einheiten"
+      "expected_units": "Erwartete Einheiten",
+      "secret_replaced": "Geheimnis ersetzt",
+      "credential": "Geheimnis hinterlegt",
+      "glpi_user_token_replaced": "GLPI-Benutzer-Token ersetzt",
+      "glpi_app_token_replaced": "GLPI-Anwendungstoken ersetzt",
+      "implementation": "Konnektor",
+      "provider_key": "Verbundenes System",
+      "auto_sync": "Automatische Synchronisierung",
+      "default_environment": "Umgebung für neue Assets",
+      "insecure_tls": "Zertifikatsfehler ignorieren",
+      "request_timeout_seconds": "Anfrage-Timeout (Sekunden)",
+      "server_timezone": "Zeitzone des Servers",
+      "enabled": "Aktiviert"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -3033,58 +3040,49 @@
     "secretAddressChanged": "Die Adresse hat sich geändert: Geben Sie den Wert erneut ein.",
     "removeConnection": {
       "title": "Verbindung {{name}} entfernen?",
-      "message": "Ihre Adresse und das gespeicherte Geheimnis werden gelöscht. Bereits importierte Daten bleiben erhalten."
+      "glpi": "Die Adresse und die gespeicherten Tokens werden gelöscht, und Tickets können nicht mehr importiert werden. Bereits importierte Tickets bleiben erhalten.",
+      "prtg": "Die Adresse und der gespeicherte Schlüssel werden gelöscht. Monitoring-Agenten können PRTG nicht mehr auslesen.",
+      "netbox": "Die Adresse und das gespeicherte Token werden gelöscht, und die automatische Synchronisierung endet. Bereits Synchronisiertes bleibt erhalten."
     },
     "netbox": {
       "title": "Netbox-Inventar",
       "description": "Übernehmen Sie Ihr Netbox-Inventar als Assets. Netbox bleibt die Referenz für die dort beschriebenen Geräte.",
-      "status": {
-        "connected": "Konfiguriert",
-        "disabled": "Deaktiviert",
-        "notConfigured": "Nicht konfiguriert"
-      },
       "fields": {
         "enabled": "Netbox-Synchronisierung aktivieren",
         "baseUrl": "Netbox-Adresse",
         "apiToken": "API-Token",
-        "requestTimeout": "Zeitlimit für Anfragen (Sekunden)",
+        "requestTimeout": "Anfrage-Timeout (Sekunden)",
         "insecureTls": "Zertifikatsfehler ignorieren",
         "autoSync": "Automatische Synchronisierung",
         "defaultEnvironment": "Umgebung für neue Assets"
       },
       "placeholders": {
         "baseUrl": "https://netbox.example.com",
-        "apiTokenConfigured": "Konfiguriert",
         "enterApiToken": "Token einfügen",
         "requestTimeout": "30"
       },
       "hints": {
         "apiToken": "Öffnen Sie in Netbox oben rechts das Benutzermenü und dann API tokens. Ein Token mit Leserechten genügt.",
-        "apiTokenExisting": "Ein Token ist bereits gespeichert. Lassen Sie das Feld leer, um es zu behalten.",
         "requestTimeout": "5 bis 120 Sekunden. Standard: 30.",
         "insecureTls": "Nur bei einem selbst signierten oder internen Zertifikat verwenden, dem Sie vertrauen. Die Verbindung bleibt verschlüsselt, das Zertifikat wird aber nicht mehr geprüft.",
         "autoSync": "Läuft stündlich und wendet die Änderungen selbstständig an. Sie startet nach der ersten Synchronisierung, die Sie selbst anwenden.",
-        "defaultEnvironment": "Gilt für die beim Import angelegten Assets. Danach wird sie nie geändert."
+        "defaultEnvironment": "Gilt für die beim Import angelegten Assets. Danach wird sie nie geändert.",
+        "baseUrl": "Die Adresse, unter der Sie Netbox im Browser öffnen, zum Beispiel https://netbox.example.com."
       },
       "messages": {
         "saved": "Einstellungen gespeichert.",
         "saveFailed": "Die Einstellungen konnten nicht gespeichert werden.",
         "loadFailed": "Die Netbox-Einstellungen konnten nicht geladen werden.",
-        "testSuccess": "Verbindung zu Netbox {{version}} hergestellt.",
-        "testSuccessPlain": "Verbindung zu Netbox hergestellt.",
         "testFailed": "Die Verbindung zu Netbox ist fehlgeschlagen.",
         "nextStep": "Netbox ist konfiguriert.",
-        "lastTestOk": "Letzter Test erfolgreich am {{date}}",
-        "lastTestFailed": "Letzter Test fehlgeschlagen am {{date}}",
-        "lastTestSession": "Dieses Ergebnis gilt nur für diese Sitzung."
+        "testDetail": "Netbox {{version}}"
       },
       "actions": {
-        "save": "Einstellungen speichern",
-        "test": "Verbindung testen",
-        "testing": "Wird getestet…",
         "goToSync": "Synchronisierung einrichten"
       }
-    }
+    },
+    "latency": "Antwort in {{ms}} ms",
+    "optionalSecretAddressChanged": "Der gespeicherte Wert wird nicht an die neue Adresse gesendet. Geben Sie ihn erneut ein, um ihn zu behalten."
   },
   "sampleData": {
     "title": "Beispieldaten",

@@ -47,10 +47,6 @@ vi.mock('../../ai/useAiCapabilities', () => ({
   useAiCapabilities: () => aiCapabilitiesState,
 }));
 
-vi.mock('../../components/PageHeader', () => ({
-  default: ({ title }: { title: string }) => <div>{title}</div>,
-}));
-
 function renderPage() {
   const client = new QueryClient({
     defaultOptions: {
@@ -142,7 +138,7 @@ describe('AdminIntegrationsPage', () => {
     expect(await screen.findByText('Enable GLPI ticket import')).toBeInTheDocument();
     expect(await screen.findByText('Netbox inventory')).toBeInTheDocument();
     // GLPI and Netbox; the PRTG card fails to load in this test and shows an error instead.
-    expect(await screen.findAllByText('Test connection')).toHaveLength(2);
+    expect(await screen.findAllByRole('button', { name: 'Test' })).toHaveLength(2);
   });
 
   it('shows only the Netbox card to an infrastructure admin without AI settings', async () => {
@@ -154,15 +150,16 @@ describe('AdminIntegrationsPage', () => {
 
     expect(await screen.findByText('Netbox inventory')).toBeInTheDocument();
     expect(screen.queryByText('GLPI integration')).not.toBeInTheDocument();
-    expect(await screen.findAllByText('Test connection')).toHaveLength(1);
+    expect(await screen.findAllByRole('button', { name: 'Test' })).toHaveLength(1);
   });
 
   it('empties the saved GLPI tokens when the address changes and asks for the user token again', async () => {
     renderPage();
-    const card = (await screen.findByText('GLPI integration')).closest('.MuiCard-root') as HTMLElement;
+    const card = (await screen.findByText('GLPI integration')).closest('section') as HTMLElement;
+    await within(card).findByLabelText('GLPI URL');
     const address = within(card).getByLabelText('GLPI URL');
-    const save = within(card).getByText('Save settings').closest('button')!;
-    const test = within(card).getByText('Test connection').closest('button')!;
+    const save = within(card).getByRole('button', { name: 'Save' });
+    const test = within(card).getByRole('button', { name: 'Test' });
 
     // Another spelling of the saved address, or its API route, keeps the tokens.
     for (const same of ['https://GLPI.internal', 'https://glpi.internal/apirest.php']) {
@@ -173,7 +170,9 @@ describe('AdminIntegrationsPage', () => {
 
     fireEvent.change(address, { target: { value: 'https://glpi2.internal' } });
     expect(within(card).getByLabelText(/^User token/)).toBeRequired();
-    expect(within(card).getAllByText('The address changed: enter it again.')).toHaveLength(2);
+    // The user token is required; the optional app token says it will not follow, without an error.
+    expect(within(card).getAllByText('The address changed: enter it again.')).toHaveLength(1);
+    expect(within(card).getByText('The saved value is not sent to the new address. Enter it again to keep it.')).toBeInTheDocument();
     expect(save).toBeDisabled();
     expect(test).toBeDisabled();
 
@@ -206,9 +205,10 @@ describe('AdminIntegrationsPage', () => {
     });
     (api.put as any).mockResolvedValue({ data: { ok: true } });
     renderPage();
-    const card = (await screen.findByText('Monitoring: PRTG')).closest('.MuiCard-root') as HTMLElement;
-    const save = within(card).getByText('Save settings').closest('button')!;
-    const test = within(card).getByText('Test connection').closest('button')!;
+    const card = (await screen.findByText('Monitoring: PRTG')).closest('section') as HTMLElement;
+    await within(card).findByLabelText('Server address');
+    const save = within(card).getByRole('button', { name: 'Save' });
+    const test = within(card).getByRole('button', { name: 'Test' });
 
     fireEvent.change(within(card).getByLabelText('Server address'), { target: { value: '' } });
     expect(within(card).getByLabelText(/^API key/)).not.toBeRequired();
@@ -252,9 +252,10 @@ describe('AdminIntegrationsPage', () => {
       response: { status: 400, data: { statusCode: 400, error: 'Bad Request', code: 'prtg_base_url_invalid', message } },
     });
     renderPage();
-    const card = (await screen.findByText('Monitoring: PRTG')).closest('.MuiCard-root') as HTMLElement;
+    const card = (await screen.findByText('Monitoring: PRTG')).closest('section') as HTMLElement;
+    await within(card).findByLabelText('Server address');
     fireEvent.change(within(card).getByLabelText(/^API key/), { target: { value: 'typed-key' } });
-    const save = within(card).getByText('Save settings').closest('button')!;
+    const save = within(card).getByRole('button', { name: 'Save' });
     try {
       await act(async () => { await i18n.changeLanguage('fr'); });
       fireEvent.click(save);
@@ -289,9 +290,10 @@ describe('AdminIntegrationsPage', () => {
       return settingsGet(url);
     });
     renderPage();
-    const card = (await screen.findByText('Monitoring: PRTG')).closest('.MuiCard-root') as HTMLElement;
-    const save = within(card).getByText('Save settings').closest('button')!;
-    const test = within(card).getByText('Test connection').closest('button')!;
+    const card = (await screen.findByText('Monitoring: PRTG')).closest('section') as HTMLElement;
+    await within(card).findByLabelText('Server address');
+    const save = within(card).getByRole('button', { name: 'Save' });
+    const test = within(card).getByRole('button', { name: 'Test' });
 
     fireEvent.change(within(card).getByLabelText('Server address'), { target: { value: 'https://prtg.internal/' } });
     expect(within(card).queryByText('The address changed: enter it again.')).not.toBeInTheDocument();
@@ -310,13 +312,50 @@ describe('AdminIntegrationsPage', () => {
   it('sends the address on screen with a typed GLPI token', async () => {
     (api.patch as any).mockResolvedValue({ data: { settings: {} } });
     renderPage();
-    const card = (await screen.findByText('GLPI integration')).closest('.MuiCard-root') as HTMLElement;
+    const card = (await screen.findByText('GLPI integration')).closest('section') as HTMLElement;
+    await within(card).findByLabelText('GLPI URL');
+    fireEvent.click(within(card).getByRole('button', { name: 'Replace User token' }));
     fireEvent.change(within(card).getByLabelText(/^User token/), { target: { value: 'rotated-token' } });
-    fireEvent.click(within(card).getByText('Save settings'));
+    fireEvent.click(within(card).getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(api.patch).toHaveBeenCalledTimes(1));
     expect((api.patch as any).mock.calls[0][1]).toEqual({
       glpi_url: 'https://glpi.internal/',
       glpi_user_token: 'rotated-token',
     });
+  });
+  it('sets every connection on the screen: none comes from the configuration file', async () => {
+    const settingsGet = (api.get as any).getMockImplementation();
+    (api.get as any).mockImplementation((url: string) => {
+      if (url === '/ai/admin/integrations/monitoring') {
+        return Promise.resolve({
+          data: {
+            integrations: [{
+              provider_key: 'prtg',
+              implementation: 'prtg',
+              enabled: true,
+              environment: 'production',
+              base_url: 'https://prtg.internal',
+              server_timezone: 'UTC',
+              request_timeout_seconds: null,
+              credential: { present: true, shape: 'api_token' },
+              updated_at: '2026-09-18T10:00:00.000Z',
+            }],
+          },
+        });
+      }
+      return settingsGet(url);
+    });
+    renderPage();
+    await screen.findByLabelText('Server address');
+    await screen.findByLabelText('Netbox address');
+    await screen.findByLabelText('GLPI URL');
+    expect(await screen.findAllByRole('button', { name: 'Test' })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Save' })).toHaveLength(3);
+    expect(screen.queryByText('Set in the configuration file')).not.toBeInTheDocument();
+    for (const label of ['GLPI URL', 'Server address', 'Netbox address']) {
+      expect(screen.getByLabelText(label)).not.toHaveAttribute('readonly');
+    }
+    // The secrets of the three connections can be replaced on the screen.
+    expect(screen.getAllByRole('button', { name: /^Replace / })).toHaveLength(4);
   });
 });

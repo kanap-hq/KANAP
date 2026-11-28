@@ -263,7 +263,9 @@
       "subnets_one": "{{count}} subred",
       "subnets_other": "{{count}} subredes",
       "others_one": "{{count}} más",
-      "others_other": "{{count}} más"
+      "others_other": "{{count}} más",
+      "netbox_role_matches_one": "las correspondencias de roles de Netbox",
+      "netbox_role_matches_other": "las correspondencias de roles de Netbox"
     },
     "anyway": "Eliminar de todos modos",
     "assetWarning": {
@@ -1243,7 +1245,9 @@
       "subnets_one": "{{count}} subred",
       "subnets_other": "{{count}} subredes",
       "technologies_one": "{{count}} tecnología",
-      "technologies_other": "{{count}} tecnologías"
+      "technologies_other": "{{count}} tecnologías",
+      "netbox_role_matches_one": "Correspondencias de roles de Netbox",
+      "netbox_role_matches_other": "Correspondencias de roles de Netbox"
     },
     "retiredSuffix": "ya no se propone",
     "translate": "Traducir",
@@ -1963,5 +1967,19 @@
   "operationPanel": {
     "moreLines_one": "y {{count}} línea más",
     "moreLines_other": "y {{count}} líneas más"
+  },
+  "connectionCard": {
+    "test": "Probar",
+    "replace": "Reemplazar",
+    "replaceLabel": "Reemplazar {{name}}",
+    "setInFile": "Definido en el archivo de configuración",
+    "status": {
+      "testing": "Probando…",
+      "passed": "Última prueba correcta el {{date}} a las {{time}}",
+      "failed": "Última prueba fallida el {{date}} a las {{time}}",
+      "notSaved": "Cambios sin guardar",
+      "savedNotTested": "Guardado, aún sin probar",
+      "neverTested": "Nunca probado"
+    }
   }
 }

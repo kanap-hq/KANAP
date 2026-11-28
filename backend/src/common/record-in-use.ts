@@ -32,7 +32,8 @@ export type RefusalKind =
   | 'app_instances'
   | 'incidents'
   | 'subnets'
-  | 'technologies';
+  | 'technologies'
+  | 'netbox_role_matches';
 export type UsageCount = { type: RefusalKind; total: number };
 /** Values a refusal's sentence names besides the counts (`errors:<code>` interpolates them): a column, a year. */
 export type RefusalParams = Record<string, string | number>;
@@ -76,6 +77,7 @@ const ENGLISH: Record<RefusalKind, [string, string]> = {
   app_instances: ['deployment', 'deployments'],
   incidents: ['incident', 'incidents'],
   subnets: ['subnet', 'subnets'],
+  netbox_role_matches: ['Netbox role match set', 'Netbox role match sets'],
 };
 
 /** The OPEX and CAPEX line counts of a refusal, each kind only when not zero. */
@@ -89,7 +91,9 @@ export function lineUsages(usage: { opex: number; capex: number } | undefined): 
 export function englishList(usages: readonly UsageCount[]): string {
   const parts = usages.map(({ type, total }) => type === 'data_access'
     ? `the data access of ${total} ${total === 1 ? 'person' : 'people'}`
-    : `${total} ${ENGLISH[type][total === 1 ? 0 : 1]}`);
+    // One Netbox connection per workspace: its matches, not a count.
+    : type === 'netbox_role_matches' ? 'the Netbox role matches'
+      : `${total} ${ENGLISH[type][total === 1 ? 0 : 1]}`);
   return parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 

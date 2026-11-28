@@ -1,32 +1,21 @@
 import React from 'react';
-import {
-  Alert,
-  Autocomplete,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  FormControlLabel,
-  Link,
-  Stack,
-  Switch,
-  TextField,
-  Typography,
-  useTheme,
-} from '@mui/material';
+import { Autocomplete, Link, TextField } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
-import {
-  aiAdminApi,
-  type AiMonitoringIntegration,
-  type AiPrtgTestResult,
-} from '../../ai/aiApi';
-import InfoHint from '../workspace/InfoHint';
+import { aiAdminApi, type AiMonitoringIntegration } from '../../ai/aiApi';
 import { useKanapDialogs } from '../design';
+import {
+  ConnectionCard,
+  ConnectionNotice,
+  ConnectionSecretField,
+  ConnectionSwitchField,
+  SettingField,
+  connectionTestCause,
+  connectionValueMissing,
+  type ConnectionTest,
+} from '../settings';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { getDotColor } from '../../utils/statusColors';
 import { isNewSecretAddress } from '../../utils/secretAddress';
 
 type PrtgForm = {
@@ -36,8 +25,6 @@ type PrtgForm = {
   server_timezone: string;
   request_timeout_seconds: string;
 };
-
-type PrtgStatus = 'connected' | 'disabled' | 'notConfigured';
 
 function getBrowserTimeZone(): string {
   try {
@@ -53,16 +40,9 @@ function listTimeZones(): string[] {
     const zones = intl.supportedValuesOf?.('timeZone');
     if (zones && zones.length > 0) return zones;
   } catch {
-    // Older runtimes without Intl.supportedValuesOf — fall through to the browser zone.
+    // Older runtimes without Intl.supportedValuesOf: fall through to the browser zone.
   }
   return [getBrowserTimeZone()];
-}
-
-function derivePrtgStatus(integration: AiMonitoringIntegration | null): PrtgStatus {
-  if (!integration || !integration.credential.present || !integration.base_url) {
-    return 'notConfigured';
-  }
-  return integration.enabled ? 'connected' : 'disabled';
 }
 
 function buildForm(integration: AiMonitoringIntegration | null): PrtgForm {
@@ -75,16 +55,24 @@ function buildForm(integration: AiMonitoringIntegration | null): PrtgForm {
   };
 }
 
+function sameForm(a: PrtgForm, b: PrtgForm): boolean {
+  return a.enabled === b.enabled
+    && a.base_url.trim() === b.base_url.trim()
+    && !a.api_token.trim()
+    && a.server_timezone === b.server_timezone
+    && a.request_timeout_seconds.trim() === b.request_timeout_seconds.trim();
+}
+
+/** The PRTG connection, read by the monitoring agents. */
 export default function MonitoringIntegrationCard() {
-  const { t } = useTranslation(['admin', 'common']);
-  const theme = useTheme();
+  const { t } = useTranslation(['admin', 'common', 'errors']);
   const queryClient = useQueryClient();
   const dialogs = useKanapDialogs();
 
   const [form, setForm] = React.useState<PrtgForm>(() => buildForm(null));
-  const [saveSuccess, setSaveSuccess] = React.useState(false);
-  const [saveError, setSaveError] = React.useState<string | null>(null);
-  const [testResult, setTestResult] = React.useState<AiPrtgTestResult | null>(null);
+  const [notice, setNotice] = React.useState<{ tone: 'success' | 'error'; text: string; next?: boolean } | null>(null);
+  const [sessionTest, setSessionTest] = React.useState<ConnectionTest | null>(null);
+  const [saveCount, setSaveCount] = React.useState(0);
 
   const integrationsQuery = useQuery({
     queryKey: ['admin-monitoring-integrations'],
@@ -97,10 +85,14 @@ export default function MonitoringIntegrationCard() {
   );
 
   React.useEffect(() => {
-    if (integrationsQuery.data) {
-      setForm(buildForm(prtg));
-    }
+    if (integrationsQuery.data) setForm(buildForm(prtg));
   }, [integrationsQuery.data, prtg]);
+
+  const editForm = (patch: Partial<PrtgForm>) => {
+    setNotice(null);
+    setSessionTest(null);
+    setForm((prev) => ({ ...prev, ...patch }));
+  };
 
   const timeZoneOptions = React.useMemo(() => {
     const zones = listTimeZones();
@@ -109,6 +101,16 @@ export default function MonitoringIntegrationCard() {
     }
     return zones;
   }, [form.server_timezone]);
+
+  const savedKey = prtg?.credential.present ?? false;
+  // An emptied address removes the saved connection (address and key) on save.
+  const removing = !!prtg?.base_url && !form.base_url.trim();
+  // The saved key only goes to the saved address: a new one empties it on save.
+  const addressChanged = !!prtg && !removing && isNewSecretAddress(form.base_url, prtg.base_url);
+  const keyEmptiedByAddress = addressChanged && savedKey;
+  const keyMissingForAddress = keyEmptiedByAddress && !form.api_token.trim();
+  const testValueMissing = connectionValueMissing(form.base_url, { stored: savedKey, typed: form.api_token, addressChanged });
+  const dirty = !integrationsQuery.isLoading && !sameForm(form, buildForm(prtg));
 
   const saveMutation = useMutation({
     mutationFn: async (data: PrtgForm) =>
@@ -120,18 +122,33 @@ export default function MonitoringIntegrationCard() {
         request_timeout_seconds: data.request_timeout_seconds.trim() ? Number(data.request_timeout_seconds.trim()) : null,
         ...(data.api_token.trim() ? { api_token: data.api_token.trim() } : {}),
       }),
-    onMutate: () => {
-      setSaveSuccess(false);
-      setSaveError(null);
-    },
-    onSuccess: async () => {
-      setSaveSuccess(true);
+    onMutate: () => setNotice(null),
+    onSuccess: async (_saved, data) => {
+      const keyKept = data.api_token.trim().length > 0 || (savedKey && !keyEmptiedByAddress);
+      setNotice({
+        tone: 'success',
+        text: t('aiAdmin.messages.settingsSaved'),
+        next: data.enabled && !!data.base_url.trim() && keyKept,
+      });
       setForm((prev) => ({ ...prev, api_token: '' }));
+      setSaveCount((count) => count + 1);
       await queryClient.invalidateQueries({ queryKey: ['admin-monitoring-integrations'] });
     },
-    onError: (error: any) => {
-      setSaveError(getApiErrorMessage(error, t, t('aiAdmin.messages.saveFailed')));
+    onError: (error: unknown) => {
+      setNotice({ tone: 'error', text: getApiErrorMessage(error, t, t('aiAdmin.messages.saveFailed')) });
     },
+  });
+
+  // A test as the status line says it, run now or kept on the saved values: the version and the
+  // sensors seen, or the cause from its code (a kept test has no message).
+  const describeTest = (result: { ok: boolean; tested_at?: string; code?: string; message?: string; version?: string; sensor_count?: number }): ConnectionTest => ({
+    ok: result.ok,
+    tested_at: result.tested_at || new Date().toISOString(),
+    ...(result.ok
+      ? (result.version && result.sensor_count != null
+        ? { detail: t('aiAdmin.prtg.messages.testDetail', { version: result.version, count: result.sensor_count }) }
+        : {})
+      : { cause: connectionTestCause(t, result.code, result.message, t('aiAdmin.prtg.messages.testFailed')) }),
   });
 
   const testMutation = useMutation({
@@ -141,35 +158,26 @@ export default function MonitoringIntegrationCard() {
         ...(data.api_token.trim() ? { api_token: data.api_token.trim() } : {}),
       }),
     onMutate: () => {
-      setTestResult(null);
+      setNotice(null);
+      setSessionTest(null);
     },
     onSuccess: (result) => {
-      setTestResult(result);
+      setSessionTest(describeTest({ ...result, version: result.prtg_version }));
     },
-    onError: (error: any) => {
-      setTestResult({
+    onError: (error: unknown) => {
+      setSessionTest({
         ok: false,
-        message: getApiErrorMessage(error, t, t('aiAdmin.prtg.messages.testFailed')),
+        tested_at: new Date().toISOString(),
+        cause: getApiErrorMessage(error, t, t('aiAdmin.prtg.messages.testFailed')),
       });
     },
   });
-
-  const status = derivePrtgStatus(prtg);
-  const statusColor = getDotColor(status === 'connected' ? 'success' : 'default', theme.palette.mode);
-  const savedKey = prtg?.credential.present ?? false;
-  // An emptied address removes the saved connection (address and key) on save.
-  const removing = !!prtg?.base_url && !form.base_url.trim();
-  // The saved key only goes to the saved address: a new one empties it on save.
-  const addressChanged = !!prtg && !removing && isNewSecretAddress(form.base_url, prtg.base_url);
-  const keyEmptiedByAddress = addressChanged && savedKey;
-  const hasStoredKey = savedKey && !keyEmptiedByAddress && !removing;
-  const keyMissingForAddress = addressChanged && savedKey && !form.api_token.trim();
 
   const handleSave = async () => {
     if (removing) {
       const confirmed = await dialogs.confirm({
         title: t('integrations.removeConnection.title', { name: 'PRTG' }),
-        message: t('integrations.removeConnection.message'),
+        message: t('integrations.removeConnection.prtg'),
         confirmLabel: t('common:buttons.remove'),
         intent: 'danger',
       });
@@ -179,145 +187,107 @@ export default function MonitoringIntegrationCard() {
   };
 
   return (
-    <Card>
-      <CardContent>
-        {integrationsQuery.isLoading ? (
-          <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress size={28} />
-          </Box>
-        ) : integrationsQuery.isError ? (
-          <Alert severity="error">
-            {getApiErrorMessage(integrationsQuery.error, t, t('aiAdmin.prtg.messages.loadFailed'))}
-          </Alert>
-        ) : (
-          <Stack spacing={2.5}>
-            <Stack spacing={0.75}>
-              <Stack direction="row" spacing={0.75} alignItems="center">
-                <Typography variant="h6">{t('aiAdmin.prtg.title')}</Typography>
-                <InfoHint text={t('aiAdmin.prtg.description')} />
-              </Stack>
-              <Stack direction="row" spacing={0.75} alignItems="center">
-                <Box
-                  sx={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    backgroundColor: statusColor,
-                    flexShrink: 0,
-                  }}
-                />
-                <Typography sx={{ fontSize: 12, fontWeight: 500, color: statusColor }}>
-                  {t(`aiAdmin.prtg.status.${status}`)}
-                </Typography>
-              </Stack>
-            </Stack>
-
-            <FormControlLabel
-              control={(
-                <Switch
-                  checked={form.enabled}
-                  onChange={(event) => setForm((prev) => ({ ...prev, enabled: event.target.checked }))}
-                />
-              )}
-              label={t('aiAdmin.prtg.fields.enabled')}
-            />
-
-            <TextField
-              size="small"
-              label={t('aiAdmin.prtg.fields.baseUrl')}
-              value={form.base_url}
-              onChange={(event) => setForm((prev) => ({ ...prev, base_url: event.target.value }))}
-              placeholder={t('aiAdmin.prtg.placeholders.url')}
-            />
-
-            <TextField
-              size="small"
-              label={t('aiAdmin.prtg.fields.apiKey')}
-              type="password"
-              autoComplete="new-password"
-              required={keyEmptiedByAddress}
-              value={form.api_token}
-              onChange={(event) => setForm((prev) => ({ ...prev, api_token: event.target.value }))}
-              placeholder={
-                hasStoredKey
-                  ? t('aiAdmin.prtg.placeholders.apiKeySaved')
-                  : t('aiAdmin.prtg.placeholders.enterApiKey')
-              }
-              helperText={keyEmptiedByAddress ? t('integrations.secretAddressChanged') : t('aiAdmin.prtg.hints.apiKey')}
-            />
-
-            <Autocomplete<string, false, true, false>
-              size="small"
-              options={timeZoneOptions}
-              value={form.server_timezone}
-              onChange={(_event, value) => {
-                if (value) setForm((prev) => ({ ...prev, server_timezone: value }));
-              }}
-              disableClearable
-              autoHighlight
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  size="small"
-                  label={t('aiAdmin.prtg.fields.timezone')}
-                />
-              )}
-            />
-
-            <TextField
-              size="small"
-              label={t('aiAdmin.prtg.fields.requestTimeout')}
-              value={form.request_timeout_seconds}
-              onChange={(event) => setForm((prev) => ({ ...prev, request_timeout_seconds: event.target.value.replace(/[^0-9]/g, '') }))}
-              placeholder={t('aiAdmin.prtg.placeholders.requestTimeout')}
-              helperText={t('aiAdmin.prtg.hints.requestTimeout')}
-            />
-
-            {testResult ? (
-              <Alert
-                severity={testResult.ok ? 'success' : 'error'}
-                onClose={() => setTestResult(null)}
-              >
-                {testResult.ok && testResult.prtg_version && testResult.sensor_count != null
-                  ? t('aiAdmin.prtg.messages.testSuccess', {
-                    version: testResult.prtg_version,
-                    count: testResult.sensor_count,
-                  })
-                  : testResult.message}
-              </Alert>
-            ) : null}
-
-            {saveSuccess ? <Alert severity="success">{t('aiAdmin.messages.settingsSaved')}</Alert> : null}
-            {saveError ? <Alert severity="error">{saveError}</Alert> : null}
-
-            {saveSuccess && form.enabled && hasStoredKey ? (
-              <Alert severity="info">
-                {t('aiAdmin.prtg.messages.nextStep')}{' '}
-                <Link component={RouterLink} to="/agents">
-                  {t('aiAdmin.prtg.actions.goToAgents')}
-                </Link>
-              </Alert>
-            ) : null}
-
-            <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-              <Button
-                variant="contained"
-                onClick={() => { void handleSave(); }}
-                disabled={saveMutation.isPending || (keyEmptiedByAddress && !form.api_token.trim() && form.enabled)}
-              >
-                {saveMutation.isPending ? t('common:status.saving') : t('aiAdmin.actions.saveSettings')}
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => testMutation.mutate(form)}
-                disabled={testMutation.isPending || keyMissingForAddress || removing}
-              >
-                {testMutation.isPending ? t('aiAdmin.actions.testing') : t('aiAdmin.actions.testConnection')}
-              </Button>
-            </Stack>
-          </Stack>
-        )}
-      </CardContent>
-    </Card>
+    <ConnectionCard
+      title={t('aiAdmin.prtg.title')}
+      hint={t('aiAdmin.prtg.description')}
+      configured={!!prtg?.base_url}
+      dirty={dirty}
+      storedTest={prtg?.last_test ? describeTest(prtg.last_test) : null}
+      sessionTest={sessionTest}
+      testing={testMutation.isPending}
+      saving={saveMutation.isPending}
+      onTest={() => testMutation.mutate(form)}
+      testDisabled={removing || testValueMissing}
+      onSave={() => { void handleSave(); }}
+      saveDisabled={keyMissingForAddress && form.enabled}
+      loading={integrationsQuery.isLoading}
+      error={integrationsQuery.isError
+        ? getApiErrorMessage(integrationsQuery.error, t, t('aiAdmin.prtg.messages.loadFailed'))
+        : undefined}
+      notice={notice ? (
+        <ConnectionNotice tone={notice.tone}>
+          {notice.text}
+          {notice.next ? (
+            <>
+              {' '}
+              {t('aiAdmin.prtg.messages.nextStep')}{' '}
+              <Link component={RouterLink} to="/agents">{t('aiAdmin.prtg.actions.goToAgents')}</Link>
+            </>
+          ) : null}
+        </ConnectionNotice>
+      ) : undefined}
+    >
+      {({ locked }) => (
+        <>
+          <ConnectionSwitchField
+            label={t('aiAdmin.prtg.fields.enabled')}
+            checked={form.enabled}
+            onChange={(checked) => editForm({ enabled: checked })}
+            locked={locked}
+          />
+          <SettingField label={t('aiAdmin.prtg.fields.baseUrl')} hint={t('aiAdmin.prtg.hints.baseUrl')}>
+            {({ aria }) => (
+              <TextField
+                variant="standard"
+                value={form.base_url}
+                onChange={(event) => editForm({ base_url: event.target.value })}
+                placeholder={t('aiAdmin.prtg.placeholders.url')}
+                fullWidth
+                InputProps={{ readOnly: locked }}
+                inputProps={{ 'aria-label': t('aiAdmin.prtg.fields.baseUrl'), ...aria }}
+                sx={{ maxWidth: 480 }}
+              />
+            )}
+          </SettingField>
+          <ConnectionSecretField
+            key={`key-${saveCount}`}
+            label={t('aiAdmin.prtg.fields.apiKey')}
+            hint={t('aiAdmin.prtg.hints.apiKey')}
+            stored={savedKey && !removing}
+            value={form.api_token}
+            onChange={(value) => editForm({ api_token: value })}
+            addressChanged={keyEmptiedByAddress}
+            locked={locked}
+            placeholder={t('aiAdmin.prtg.placeholders.enterApiKey')}
+          />
+          <SettingField label={t('aiAdmin.prtg.fields.timezone')} hint={t('aiAdmin.prtg.hints.timezone')}>
+            {({ aria }) => (
+              <Autocomplete<string, false, true, false>
+                options={timeZoneOptions}
+                value={form.server_timezone}
+                onChange={(_event, value) => {
+                  if (value) editForm({ server_timezone: value });
+                }}
+                disableClearable
+                autoHighlight
+                readOnly={locked}
+                sx={{ maxWidth: 480 }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="standard"
+                    inputProps={{ ...params.inputProps, 'aria-label': t('aiAdmin.prtg.fields.timezone'), ...aria }}
+                  />
+                )}
+              />
+            )}
+          </SettingField>
+          <SettingField label={t('aiAdmin.prtg.fields.requestTimeout')} hint={t('aiAdmin.prtg.hints.requestTimeout')}>
+            {({ aria }) => (
+              <TextField
+                variant="standard"
+                value={form.request_timeout_seconds}
+                onChange={(event) => editForm({ request_timeout_seconds: event.target.value.replace(/[^0-9]/g, '') })}
+                placeholder={t('aiAdmin.prtg.placeholders.requestTimeout')}
+                fullWidth
+                InputProps={{ readOnly: locked }}
+                inputProps={{ 'aria-label': t('aiAdmin.prtg.fields.requestTimeout'), inputMode: 'numeric', ...aria }}
+                sx={{ maxWidth: 480 }}
+              />
+            )}
+          </SettingField>
+        </>
+      )}
+    </ConnectionCard>
   );
 }

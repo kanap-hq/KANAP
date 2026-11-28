@@ -173,6 +173,8 @@ connected-apps.md	frontend/src/pages/settings/ConnectedAppsTab.tsx
 ai-models.md	frontend/src/pages/admin/AdminAiModelsPage.tsx
 ai-usage.md	frontend/src/pages/admin/AdminAiUsagePage.tsx
 integrations.md	frontend/src/pages/admin/AdminIntegrationsPage.tsx
+integrations.md	frontend/src/components/admin/MonitoringIntegrationCard.tsx
+integrations.md	frontend/src/components/admin/GlpiIntegrationCard.tsx
 scheduled-tasks.md	frontend/src/pages/admin/ScheduledTasksPage.tsx
 netbox.md	frontend/src/pages/it/NetboxSyncPage.tsx
 netbox.md	frontend/src/components/admin/NetboxIntegrationCard.tsx

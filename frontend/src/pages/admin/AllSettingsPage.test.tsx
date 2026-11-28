@@ -219,6 +219,18 @@ describe('AllSettingsPage', () => {
     expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(['Currencies']);
   });
 
+  it('finds the integrations page by the name of each connection card', () => {
+    as({ perms: {}, administrator: true });
+    renderPage();
+    const search = screen.getByRole('textbox', { name: 'Search settings' });
+    for (const value of ['PRTG', 'GLPI']) {
+      fireEvent.change(search, { target: { value } });
+      expect(screen.getAllByRole('link').map((link) => link.textContent), value).toEqual(['Integrations']);
+    }
+    fireEvent.change(search, { target: { value: 'Netbox inventory' } });
+    expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(['Integrations']);
+  });
+
   it('searches in the language of the person, without accents', async () => {
     await act(async () => { await i18n.changeLanguage('fr'); });
     as({ perms: {}, administrator: true });

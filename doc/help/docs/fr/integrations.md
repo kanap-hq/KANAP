@@ -43,21 +43,41 @@ L'intégration se configure tenant par tenant ; les identifiants ci-dessous sont
 
 ### Champs
 
-Le formulaire de configuration contient :
-
 - **Activer l'import de tickets GLPI** : interrupteur principal de la connexion. Lorsqu'il est désactivé, Kadratis n'essaiera pas d'interroger GLPI même si des identifiants sont renseignés : ni les imports Kad ni les contrôles d'agent n'atteindront votre centre de services.
-- **URL GLPI** : l'URL de base de votre instance GLPI, par exemple `https://glpi.example.com`.
-- **Jeton utilisateur** : le jeton d'API personnel du compte GLPI que Kadratis utilisera. Les jetons existants sont masqués ; laissez le champ vide lors d'un enregistrement ou d'un test pour conserver la valeur stockée, tant que l'URL ne change pas. Une nouvelle URL vide les jetons enregistrés : saisissez-les de nouveau.
-- **Jeton d'application** : le jeton d'application GLPI facultatif. Même comportement « laisser vide pour conserver » que pour le jeton utilisateur.
+- **URL GLPI** : l'adresse avec laquelle vous ouvrez GLPI, par exemple `https://glpi.example.com`. L'API de GLPI doit être active : dans GLPI, **Configuration > Générale > API**, **Activer l'API Rest**.
+- **Jeton utilisateur** : le jeton d'API personnel du compte GLPI que Kadratis utilisera. Dans GLPI, ouvrez vos préférences (votre nom en haut à droite), puis **Clefs d'accès distant**, et copiez le **Jeton d'API**. S'il est vide, cochez **Regénérer** et enregistrez.
+- **Jeton d'application** : facultatif. Dans GLPI, **Configuration > Générale > API**, ouvrez le **Client de l'API** par lequel Kadratis se connecte et copiez son jeton d'application. Laissez le champ vide si le client n'en a pas.
+
+L'icône d'information à côté de chaque champ indique où trouver sa valeur. Un jeton enregistré n'est jamais réaffiché : le champ affiche des points, avec **Remplacer** à côté pour en saisir un nouveau. Une nouvelle URL vide les jetons enregistrés : le champ du jeton utilisateur le redemande, et le champ du jeton d'application indique que le jeton enregistré n'est pas envoyé à la nouvelle adresse. Saisissez de nouveau le jeton d'application pour le conserver.
 
 ### Actions
 
-- **Enregistrer les paramètres** : enregistre le formulaire. Les jetons saisis dans le formulaire remplacent ceux qui sont stockés ; les champs de jeton laissés vides conservent la valeur déjà enregistrée, sauf si l'URL a changé.
-- **Tester la connexion** : effectue un aller-retour authentifié vers l'URL GLPI à l'aide des valeurs du formulaire (ou, lorsqu'elles sont vides, des valeurs stockées). La bannière de résultat indique la réussite ou l'erreur sous-jacente, ainsi que la latence.
+- **Tester** : effectue un aller-retour authentifié vers GLPI avec les valeurs de la carte, enregistrées ou non. Disponible dès que l'URL et le jeton utilisateur sont renseignés. La ligne d'état en haut à droite de la carte donne le résultat : « Dernier test réussi le … » avec le temps de réponse, ou la raison de l'échec.
+- **Enregistrer** : disponible dès que quelque chose a changé. Les jetons saisis remplacent ceux qui sont enregistrés ; un jeton laissé en points est conservé.
+
+La ligne d'état garde le dernier test des valeurs enregistrées : il s'affiche de nouveau quand vous revenez sur la page, avec le temps de réponse ou la raison de l'échec. Le test de valeurs non enregistrées reste affiché jusqu'à ce que vous quittiez la page. Sans test, la ligne d'état indique **Enregistré, pas encore testé** ou **Jamais testé**, et **Modifications non enregistrées** tant que la carte contient des changements. Quitter la page avec des changements sur une carte demande d'abord une confirmation.
 
 ### Stockage des secrets
 
-Si votre instance Kadratis ne dispose pas d'un coffre à secrets configuré, un texte d'aide apparaît sous chaque champ de jeton pour vous avertir que les valeurs ne peuvent pas être conservées. Configurez le stockage des secrets au niveau de l'instance avant de vous appuyer sur cette intégration en production.
+Si votre instance Kadratis ne dispose pas d'un coffre à secrets configuré, une ligne sous les champs indique que les jetons ne peuvent pas être enregistrés. Configurez le stockage des secrets au niveau de l'instance avant de vous appuyer sur cette intégration en production.
+
+---
+
+## Supervision : PRTG
+
+[PRTG](https://www.paessler.com/prtg) est un outil de supervision du réseau et de l'infrastructure. La carte **Supervision : PRTG** stocke l'adresse et la clé API que les agents de supervision utilisent pour lire les alertes et l'état des capteurs. Comme la carte GLPI, elle demande `ai_settings:admin` et la surface `ai_settings`.
+
+### Champs
+
+- **Activer la supervision PRTG** : interrupteur principal de la connexion. Lorsqu'il est désactivé, les agents n'atteignent pas PRTG.
+- **Adresse du serveur** : l'adresse avec laquelle vous ouvrez PRTG dans votre navigateur, par exemple `https://prtg.example.com`.
+- **Clé API** : créez-en une dans PRTG sous **Setup | Account Settings | API Keys**. Un accès en lecture seule suffit. Une clé enregistrée s'affiche en points, avec **Remplacer** à côté. Une nouvelle adresse vide la clé enregistrée : le champ la redemande.
+- **Fuseau horaire du serveur** : le fuseau horaire du serveur central PRTG, tel que défini dans son système d'exploitation. Kadratis lit l'heure des alertes dans ce fuseau.
+- **Délai d'attente des requêtes (secondes)** : le temps d'attente de PRTG, entre 5 et 120. Laissez vide pour utiliser 30.
+
+### Actions
+
+**Tester** et **Enregistrer** fonctionnent comme sur la carte GLPI : **Tester** est disponible dès que l'adresse et la clé sont renseignées. Un test réussi indique la version de PRTG et le nombre de capteurs visibles avec la clé. Une fois une connexion fonctionnelle enregistrée et activée, la carte propose un lien vers la page Agents, où vous pouvez créer un agent de supervision.
 
 ---
 
@@ -73,13 +93,19 @@ Configurez la connexion ici, puis ouvrez l'onglet **Netbox** de **Cartographie S
 
 ## Retirer une connexion
 
-Pour retirer la connexion PRTG ou Netbox, videz son adresse, enregistrez, puis confirmez. Kadratis supprime l'adresse et le secret enregistré, coupe la connexion et écrit une entrée au journal d'audit. Rien de ce qui a déjà été importé n'est supprimé. Les agents qui lisent PRTG le signalent comme indisponible à leur exécution suivante. Pour retirer la connexion GLPI, coupez-la, videz l'URL et enregistrez.
+Les trois cartes retirent une connexion de la même façon : videz son adresse, enregistrez, puis confirmez. Kadratis supprime l'adresse et les secrets enregistrés, coupe la connexion et écrit une entrée au journal d'audit. La confirmation indique ce qui change pour chaque système :
+
+- **GLPI** : les tickets ne peuvent plus être importés. Les tickets déjà importés restent.
+- **PRTG** : les agents de supervision ne peuvent plus lire PRTG et le signalent comme indisponible à leur exécution suivante.
+- **Netbox** : la synchronisation automatique s'arrête. Ce qui a déjà été synchronisé reste.
+
+Le journal d'audit indique si un secret est défini, et signale un secret remplacé : l'entrée d'un enregistrement qui change une clé ou un jeton à la même adresse affiche **Secret remplacé**, et pour GLPI **Jeton utilisateur GLPI remplacé** ou **Jeton d'application GLPI remplacé**. Le secret lui-même n'est jamais écrit dans le journal.
 
 ---
 
 ## Conseils
 
 - **Utilisez un compte GLPI dédié** : créez un compte de service dans GLPI avec juste assez d'autorisations pour lire les catégories de tickets que vous souhaitez exposer. Cela garde le journal d'audit propre et vous permet de révoquer l'accès sans affecter un utilisateur réel. Si les agents doivent envoyer des réponses et des changements de statut, accordez à ce même compte l'accès en écriture requis par ces actions.
-- **Testez avant d'annoncer** : lancez **Tester la connexion** après chaque modification de l'URL ou des jetons. Le message d'erreur est bien plus exploitable qu'un échec qui apparaît au sein de la conversation de chat d'un utilisateur ou dans un contrôle d'agent bloqué.
+- **Testez avant d'annoncer** : lancez **Tester** après chaque modification de l'URL ou des jetons. Le message d'erreur est bien plus exploitable qu'un échec qui apparaît au sein de la conversation de chat d'un utilisateur ou dans un contrôle d'agent bloqué.
 - **Associez les bonnes autorisations** : seuls les utilisateurs disposant de `ai_chat:reader` peuvent demander à Kad d'importer des tickets. Raccorder un agent à cette connexion nécessite le rôle Agents IA (`ai_agents:reader` pour consulter un agent, `ai_agents:admin` pour en configurer un), avec les Agents IA activés sur l'instance. Combinez cela avec un accès basé sur les rôles aux tâches si vous souhaitez limiter qui crée réellement des enregistrements de tâches à partir des imports.
 - **Prévoyez la rotation des jetons** : les jetons personnels GLPI peuvent être régénérés. Lorsque vous le faites, enregistrez la nouvelle valeur ici et lancez le test de connexion avant que les utilisateurs (ou les agents) ne sollicitent à nouveau l'intégration.

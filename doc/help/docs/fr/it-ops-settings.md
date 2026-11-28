@@ -281,6 +281,7 @@ Types logiques des serveurs et des actifs d'infrastructure (ex. : Serveur physiq
 
 **Où c'est utilisé** :
 - Espace de travail Actifs > panneau Propriétés > Champ **Type d'actif**
+- Synchronisation Netbox > **Correspondances** > **Rôles Netbox > Type d'actif** (voir [Synchronisation Netbox](netbox.md))
 
 ---
 
@@ -456,7 +457,7 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 | **Zones réseau** | Sous-réseaux (Zone réseau), Actifs (auto-rempli depuis le sous-réseau) |
 | **Sous-réseaux** | Actifs (Onglet Réseau > Adresses IP > Sélecteur de sous-réseau) |
 | **Rôles de serveur** | Applications > Onglet Serveurs (rôle lors de la liaison actif-app), Carte des connexions (placement par niveau du graphe) |
-| **Types d'actif** | Actifs (panneau Propriétés > Type d'actif) |
+| **Types d'actif** | Actifs (panneau Propriétés > Type d'actif), correspondances de rôles Netbox |
 | **Familles de technologies** | Technologies (Famille), page Zones d'administration (services d'annuaire) |
 
 ---

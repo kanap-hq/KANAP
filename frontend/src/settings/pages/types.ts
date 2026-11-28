@@ -48,9 +48,10 @@ export type SettingsPageEntry = {
   component: string;
   /**
    * The file that holds the page's settings (relative to `frontend/src`), when it is not the file
-   * of `component`: a tab, a panel or a dialog of the page.
+   * of `component`: a tab, a panel or a dialog of the page. A list when the settings sit in several
+   * files (the cards of a page): each key is used in one of them.
    */
-  source?: string;
+  source?: string | string[];
   /** i18n key of the page's name (`namespace:key`). */
   labelKey: string;
   /** i18n keys of the menu path before the name, shown in grey. */

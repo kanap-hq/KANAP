@@ -30,11 +30,11 @@ Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug.
 | Karten | Wer sie sieht |
 |---|---|
 | Währungen, Daten einfrieren / auftauen | Budgeteinstellungen und -operationen auf Stufe Administrator (`budget_ops:admin`) |
-| Budgetspalten, Standard-Zuordnungsmethode | Budgeteinstellungen und -operationen auf Stufe Leser (`budget_ops:reader`), schreibgeschützt. Zum Ändern ist die Administratorebene nötig (`budget_ops:admin`) |
+| Budgetspalten, Standard-Zuordnungsmethode | Budgeteinstellungen und -operationen auf Stufe Leser (`budget_ops:reader`, wie die integrierte Rolle Budget-Mitglied), schreibgeschützt. Zum Ändern ist die Administratorebene nötig (`budget_ops:admin`) |
 | Budgetspalten kopieren, Budgetspalte leeren | Budget auf Administratorebene (`budget:admin`). Jeder **Zeilentyp** (**Alle**, **OPEX**, **CAPEX**) öffnet sich mit dieser Stufe |
 | Stammdaten einfrieren, Jahreskennzahlen kopieren | Benutzer mit Zugriff auf das Budget, die Administratoren von Budgeteinstellungen und -operationen, von Unternehmen oder Abteilungen sind. Administratoren von Unternehmen und Abteilungen handeln für ihren eigenen Bereich |
 
-Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied und Budget-Leser sehen die Karten **Budgetspalten** und **Standard-Zuordnungsmethode**, die sich für sie schreibgeschützt öffnen, und keine Operation. Eine Person mit eingeschränktem Datenzugriff sieht keine dieser Karten.
+Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied sieht die Karten **Budgetspalten** und **Standard-Zuordnungsmethode**, die sich schreibgeschützt öffnen, und keine Operation. Budget-Leser liest die Budgetzeilen und nicht ihre Einstellungen: Der Eintrag **Einstellungen** im Menü Budgetverwaltung wird für diese Rolle nicht angezeigt. Eine Person mit eingeschränktem Datenzugriff sieht keine dieser Karten.
 
 Die Budgetspalten sind Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert. Das sind die Standardnamen. Ihre Organisation kann sie umbenennen, einige ausblenden und unter [Budgetspalten](#budgetspalten) eine Standardspalte wählen. Jede der folgenden Seiten zeigt die Namen, die Ihre Organisation gewählt hat.
 
@@ -329,7 +329,7 @@ Der Standard wird bei jeder Anzeige der Zuordnungen neu aufgelöst: Eine Änderu
 
 ### Berechtigungen
 
-Das Ändern der Standardmethode erfordert `budget_ops:admin`. Budget-Leser und Budget-Mitglied, die Budgeteinstellungen und -operationen lesen (`budget_ops:reader`), öffnen die Seite schreibgeschützt: dieselben Felder, die sie nicht ändern können, und keine Schaltfläche **Standardzuordnung wiederherstellen**. Sie können weiterhin das Geschäftsjahr wählen, das sie lesen möchten. Eine Person mit eingeschränktem Datenzugriff kann die Seite nicht öffnen.
+Das Ändern der Standardmethode erfordert `budget_ops:admin`. Budget-Mitglied, das Budgeteinstellungen und -operationen liest (`budget_ops:reader`), öffnet die Seite schreibgeschützt: dieselben Felder, die es nicht ändern kann, und keine Schaltfläche **Standardzuordnung wiederherstellen**. Es kann weiterhin das Geschäftsjahr wählen, das es lesen möchte. Budget-Leser und eine Person mit eingeschränktem Datenzugriff können die Seite nicht öffnen.
 
 Jede Änderung schreibt einen eigenen Eintrag in das Audit-Protokoll.
 
@@ -378,7 +378,7 @@ Eine Änderung, die der Server ablehnt, wird sofort rückgängig gemacht: Der Na
 
 ### Berechtigungen
 
-Zum Ändern der Einstellungen ist die Stufe Administrator für Budgeteinstellungen und -operationen erforderlich (`budget_ops:admin`). Budget-Leser und Budget-Mitglied, die Budgeteinstellungen und -operationen lesen (`budget_ops:reader`), öffnen die Seite schreibgeschützt: dieselbe Tabelle, die sie nicht ändern können. Eine Person mit eingeschränktem Datenzugriff kann die Seite nicht öffnen.
+Zum Ändern der Einstellungen ist die Stufe Administrator für Budgeteinstellungen und -operationen erforderlich (`budget_ops:admin`). Budget-Mitglied, das Budgeteinstellungen und -operationen liest (`budget_ops:reader`), öffnet die Seite schreibgeschützt: dieselbe Tabelle, die es nicht ändern kann. Budget-Leser und eine Person mit eingeschränktem Datenzugriff können die Seite nicht öffnen.
 
 Wenn die Einstellungen nicht geladen werden können, zeigt die Seite eine einzige Zeile, „Die Spalteneinstellungen konnten nicht geladen werden.“, und keine Steuerelemente.
 
