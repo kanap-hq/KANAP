@@ -33,13 +33,15 @@ Go to **Administration > Integrations** and open the **Netbox inventory** card.
 |-------|---------------|
 | **Enable Netbox synchronisation** | The master switch. When it is off, Kadratis never calls Netbox, by hand or on a schedule. |
 | **Netbox address** | The address you use to open Netbox in a browser, for example `https://netbox.example.com`. Empty it and save to remove the connection. |
-| **API token** | The token you created in Netbox. It is stored encrypted and never shown again. Leave the field empty when saving to keep the token already stored, as long as the address stays the same. A new address empties the stored token: enter it again. |
+| **API token** | The token you created in Netbox: open the user menu at the top right, then **API tokens**. A read-only token is enough. A saved token is never shown again: the field shows dots, with **Replace** beside it to enter a new one. A new address empties the saved token: the field asks for it again. |
 | **Request timeout (seconds)** | How long to wait for Netbox before giving up, between 5 and 120. Leave it empty to use 30. |
+| **Environment for new assets** | Applied to the assets this integration creates. It is never changed afterwards. |
 | **Ignore certificate errors** | Off by default. See above. |
 | **Automatic synchronisation** | Runs every hour and applies the changes on its own. Leave it off until your first run looks right. |
-| **Environment for new assets** | Applied to the assets this integration creates. It is never changed afterwards. |
 
-**Test connection** makes a read-only call and reports the Netbox version it found, or the reason it failed. Run it after every change to the address or the token. The card shows **Configured** once the connection is saved and switched on. Next to it, the card shows the result and the date of the last test: "Last test succeeded on …" or "Last test failed on …". Once the settings are saved, the card offers a link to **Set up the synchronisation**, which takes you to the **Netbox** tab of **IT Landscape > Settings**.
+The information icon beside a field says where to find its value.
+
+**Test** makes a read-only call with the values on the card, saved or not, and the status line at the top right of the card says how it went: "Last test passed on …" with the Netbox version it found, or the reason it failed. Run it after every change to the address or the token. A test of the saved values is kept and shows again when you come back to the page; a test of values you have not saved shows until you leave the page. Without a test, the status line says **Saved, not tested yet** or **Never tested**, and **Changes not saved** while the card holds changes. **Save** is available once something changed. Once the settings are saved, the card offers a link to **Set up the synchronisation**, which takes you to the **Netbox** tab of **IT Landscape > Settings**.
 
 **Removing the connection.** Empty the address, save, and confirm. Kadratis deletes the address and the token, turns the connection and the automatic synchronisation off, and writes an entry to the audit log. Imported assets stay, with their link to Netbox, and so do your matches. A new connection starts again with a synchronisation you apply yourself before the hourly run resumes.
 
@@ -53,6 +55,8 @@ On the **Netbox** tab, open **Mappings**. Four tables sit there. The first two d
 - **Netbox sites > Location**. Each Netbox site gets one of your locations, or **Do not import**.
 
 Anything left on **Do not import** is skipped: its objects are never created, never updated, and never reported as missing. That is how you leave out power strips, patch panels or a lab site while still importing the servers next to them.
+
+An asset type chosen for a role is in use while the match is saved. The **Asset types** list of **IT Landscape > Settings** names the Netbox role matches among its uses and does not remove it, and restoring the default lists keeps it. Change the match first.
 
 One extra row sits with the roles: **Virtual machines**. Every virtual machine Netbox holds goes through that single row, whatever role Netbox gives it, so one decision covers the lot. A virtual machine takes its site from its cluster when it does not carry one itself.
 

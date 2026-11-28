@@ -43,21 +43,41 @@ The integration is configured tenant-by-tenant; the credentials below are scoped
 
 ### Fields
 
-The configuration form contains:
-
 - **Enable GLPI ticket import**: master switch for the connection. When off, Kadratis will not attempt to query GLPI even if credentials are set: neither Kad imports nor agent checks will reach your service desk.
-- **GLPI URL**: the base URL of your GLPI instance, for example `https://glpi.example.com`.
-- **User Token**: the personal API token of the GLPI account Kadratis will use. Existing tokens are masked; leave the field blank during a save or test to keep the stored value, as long as the URL stays the same. A new URL empties the stored tokens: enter them again.
-- **App Token**: the optional GLPI application token. Same blank-to-keep behaviour as the user token.
+- **GLPI URL**: the address you open GLPI with, for example `https://glpi.example.com`. The GLPI API must be on: in GLPI, **Setup > General > API**, **Enable Rest API**.
+- **User token**: the personal API token of the GLPI account Kadratis will use. In GLPI, open your preferences (your name at the top right), then **Remote access keys**, and copy the **API token**. If it is empty, tick **Regenerate** and save.
+- **App token**: optional. In GLPI, **Setup > General > API**, open the API client Kadratis connects through and copy its application token. Leave it empty if the client has none.
+
+The information icon beside each field says where to find its value. A saved token is never shown again: the field shows dots, with **Replace** beside it to enter a new one. A new URL empties the saved tokens: the fields ask for them again.
 
 ### Actions
 
-- **Save settings**: persists the form. Tokens entered in the form replace the stored ones; blank token fields keep what is already stored, unless the URL changed.
-- **Test connection**: runs an authenticated round-trip against the GLPI URL using the values in the form (or, where blank, the stored values). The result banner shows success or the underlying error along with the latency.
+- **Test**: runs an authenticated round-trip against GLPI with the values on the card, saved or not. The status line at the top right of the card says how it went: "Last test passed on …" with the response time, or the reason it failed.
+- **Save**: available once something changed. Typed tokens replace the saved ones; a token left as dots stays.
+
+The status line keeps the last test of the saved values: it shows again when you come back to the page. A test of values you have not saved shows until you leave the page. Without a test, the status line says **Saved, not tested yet** or **Never tested**, and **Changes not saved** while the card holds changes. Leaving the page with changes on a card asks for confirmation first.
 
 ### Secret storage
 
-If your Kadratis instance does not have a configured secret store, a helper text appears under each token field warning you that the values cannot be persisted. Configure secret storage at the instance level before relying on this integration in production.
+If your Kadratis instance does not have a configured secret store, a line under the fields says that the tokens cannot be saved. Configure secret storage at the instance level before relying on this integration in production.
+
+---
+
+## Monitoring: PRTG
+
+[PRTG](https://www.paessler.com/prtg) is a network and infrastructure monitoring tool. The **Monitoring: PRTG** card stores the address and the API key that the monitoring agents use to read alerts and sensor health. Like the GLPI card, it needs `ai_settings:admin` and the `ai_settings` surface.
+
+### Fields
+
+- **Enable PRTG monitoring**: master switch for the connection. When off, agents do not reach PRTG.
+- **Server address**: the address you open PRTG with in your browser, for example `https://prtg.example.com`.
+- **API key**: create one in PRTG under **Setup → API keys**. Read-only access is enough. A saved key shows as dots, with **Replace** beside it. A new address empties the saved key: the field asks for it again.
+- **Server time zone**: the time zone of the PRTG core server, as set in its operating system. Kadratis reads the times of alerts in this zone.
+- **Request timeout (seconds)**: how long to wait for PRTG, between 5 and 120. Leave it empty to use 30.
+
+### Actions
+
+**Test** and **Save** work as on the GLPI card. A passed test shows the PRTG version and the number of sensors the key can see. Once a working connection is saved and switched on, the card offers a link to the agents page, where a monitoring agent can be created.
 
 ---
 
@@ -73,13 +93,15 @@ Configure the connection here, then open the **Netbox** tab of **IT Landscape > 
 
 ## Removing a connection
 
-To remove the PRTG or the Netbox connection, empty its address, save, and confirm. Kadratis deletes the address and the stored secret, turns the connection off and writes an entry to the audit log. Nothing already imported is deleted. Agents that read PRTG report it as unavailable at their next run. To remove the GLPI connection, turn it off, empty the URL and save.
+The three cards remove a connection the same way: empty its address, save, and confirm. Kadratis deletes the address and the saved secrets, turns the connection off and writes an entry to the audit log. Nothing already imported is deleted. Agents that read PRTG report it as unavailable at their next run.
+
+The audit log also marks a replaced secret: the entry of a save that changes a token or a key at the same address shows **Secret replaced**. The secret itself is never written to the log.
 
 ---
 
 ## Tips
 
 - **Use a dedicated GLPI account**: create a service account in GLPI with just enough permissions to read the ticket categories you want exposed. That keeps the audit trail clean and lets you revoke access without affecting a real user. If agents will send replies and status changes, give the same account the write access those actions need.
-- **Test before announcing**: run **Test connection** after every change to URL or tokens. The error message is far more actionable than a failure that surfaces inside someone's chat conversation or a stalled agent check.
+- **Test before announcing**: run **Test** after every change to URL or tokens. The error message is far more actionable than a failure that surfaces inside someone's chat conversation or a stalled agent check.
 - **Pair with the right permissions**: only users with `ai_chat:reader` can ask Kad to import tickets. Pointing an agent at this connection needs the AI Agents role (`ai_agents:reader` to watch an agent, `ai_agents:admin` to configure one), with AI Agents enabled on the instance. Combine those with role-based access to tasks if you want to limit who actually creates task records from imports.
 - **Plan for token rotation**: GLPI personal tokens can be regenerated. When you do, save the new value here and run the connection test before users (or agents) hit the integration again.
