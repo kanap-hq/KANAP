@@ -284,6 +284,10 @@ export const ENV_REGISTRY: readonly EnvVariable[] = [
 
   // Processes, logs, maintenance at start.
   entry('PORT', { domain: 'process', modes: BOTH, kind: 'operator', reason: 'before-database', default: '8080', example: { state: 'absent', why: 'compose.onprem.yml publishes and probes port 8080 of the API container.' } }),
+  // Read by the start-up script of the web image, from the environment of the web container: the
+  // .env file of the example does not reach that container, and the compose files keep the defaults.
+  entry('KANAP_WEB_PORT', { domain: 'process', modes: BOTH, kind: 'build', readBy: 'frontend/nginx/docker-entrypoint.sh', reason: 'outside-node', takesEffect: 'restart', default: '80' }),
+  entry('KANAP_API_UPSTREAM', { domain: 'process', modes: BOTH, kind: 'build', readBy: 'frontend/nginx/docker-entrypoint.sh', reason: 'outside-node', takesEffect: 'restart', default: 'api:8080' }),
   entry('NODE_EXTRA_CA_CERTS', {
     domain: 'process', modes: BOTH, kind: 'build', readBy: 'Node.js', reason: 'outside-node', takesEffect: 'restart',
     example: commented('certificates', '/etc/kanap/certs/company-ca.pem'),
