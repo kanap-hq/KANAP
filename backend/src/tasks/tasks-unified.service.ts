@@ -673,7 +673,10 @@ export class TasksUnifiedService {
     tenantId: string | undefined,
     manager: EntityManager,
   ): Promise<void> {
-    if (!tenantId || !saved.assignee_user_id || previousAssigneeId === saved.assignee_user_id) {
+    // The person who assigns a task to themselves already has it, so they get no e-mail.
+    // A write with no signed-in person still tells the assignee: a contract renewal passes
+    // undefined, and a route with no user passes null.
+    if (!tenantId || !saved.assignee_user_id || previousAssigneeId === saved.assignee_user_id || userId === saved.assignee_user_id) {
       return;
     }
 
