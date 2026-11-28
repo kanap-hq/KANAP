@@ -391,12 +391,13 @@ All AI features are off by default on an on-premise installation. Three switches
 | `AI_CHAT_ENABLED` | Turns on the [Kad chat assistant](../ai-assistant.md) for the installation. | `false` |
 | `AI_MCP_ENABLED` | Turns on the MCP server: API keys and connections without a key. See [Connecting AI assistants over MCP](#connecting-ai-assistants-over-mcp). | `false` |
 | `AI_SETTINGS_ENABLED` | Opens **Admin → Artificial intelligence** (AI models, Kad settings) and the [agents](../agents-overview.md) to administrators. Without it nobody can set up a provider. | `false` |
-| `AI_SETTINGS_ENCRYPTION_SECRET` | Secret that encrypts the provider keys you enter in Kadratis. Generate it with `openssl rand -hex 32`. | *unset* |
+| `SETTINGS_ENCRYPTION_SECRET` | Secret that encrypts the provider keys and connection tokens you enter in Kadratis. Generate it with `openssl rand -hex 32`. Its former name, `AI_SETTINGS_ENCRYPTION_SECRET`, still works. | *unset* |
 
 Notes:
 
-- Without `AI_SETTINGS_ENCRYPTION_SECRET`, Kadratis refuses to store a provider key ("AI secret storage is not configured on this instance").
-- Changing `AI_SETTINGS_ENCRYPTION_SECRET` later makes the stored keys unreadable. Back it up with `.env`, and enter the keys again if you lose it.
+- Without `SETTINGS_ENCRYPTION_SECRET`, Kadratis refuses to store a provider key ("AI secret storage is not configured on this instance"). When keys are already stored, the API says so in its start-up log.
+- Changing `SETTINGS_ENCRYPTION_SECRET` later makes the stored keys unreadable. Back it up with `.env`, and enter the keys again if you lose it.
+- If your `.env` still uses `AI_SETTINGS_ENCRYPTION_SECRET`, keep it, or rename it with the same value. The API refuses to start when both names are set to different values.
 - An on-premise installation has no model included: you add your own provider or model server under **Admin → Artificial intelligence → AI models**. See [AI models](../ai-models.md) and [Kad settings](../ai-settings.md). Each tenant also has its own switches there.
 - The API needs outbound access to the provider you choose (see [Firewall rules](#firewall-rules)).
 
@@ -619,7 +620,7 @@ S3_FORCE_PATH_STYLE=false
 # AI_CHAT_ENABLED=false
 # AI_MCP_ENABLED=false
 # AI_SETTINGS_ENABLED=false
-# AI_SETTINGS_ENCRYPTION_SECRET=
+# SETTINGS_ENCRYPTION_SECRET=
 
 # VULNERABILITIES (optional - off by default)
 # VULNERABILITY_FEED_ENABLED=false
