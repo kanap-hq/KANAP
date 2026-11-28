@@ -25,7 +25,7 @@ export type SettingsAvailability = {
 /**
  * The page of the user manual the Help button opens on the page (`getDocSlug`), with the heading
  * of its section when the page covers several screens; or no page, with the reason.
- * Interface with the manual lot (D1b): do not rename without saying so.
+ * The user manual reads these names: a rename there goes with its pages.
  */
 export type SettingsDoc = { page: string; section?: string } | { page: null; reason: string };
 
