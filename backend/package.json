@@ -10,6 +10,7 @@
     "postbuild": "mkdir -p dist/email/assets && cp -R src/email/assets/. dist/email/assets/",
     "start": "node dist/main.js",
     "start:migrate": "node ./scripts/migrate-and-start.js",
+    "migrate": "node ./scripts/migrate-and-start.js --migrate-only",
     "migrate:content:dryrun": "ts-node ./scripts/migrate-content-dryrun.ts",
     "migrate:content:execute": "ts-node ./scripts/migrate-content-execute.ts",
     "migrate:content:verify": "ts-node ./scripts/verify-rich-text-markdown.ts",

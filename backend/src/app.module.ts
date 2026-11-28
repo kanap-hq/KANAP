@@ -76,7 +76,8 @@ import { apiProcessCount, clusterWorkerId } from './common/cluster/process-role'
 import { DatabaseThrottlerStorage } from './common/rate-limit-store';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { isConnectionError } from './common/database-connection-error';
-import { runStartupMigrations } from './common/startup-migrations';
+import { runStartupMigrations, warnPendingMigrations } from './common/startup-migrations';
+import { migrationsSkipped } from './common/skip-migrations';
 import { readPoolMax } from './common/db-pool-budget';
 
 @Module({
@@ -102,8 +103,9 @@ import { readPoolMax } from './common/db-pool-budget';
           synchronize: false,
           ssl: false,
           // A cluster worker never runs the migrations: the primary ran them once before forking
-          // (scripts/migrate-and-start.js); TypeORM takes no lock, two runs at once would collide.
-          migrationsRun: clusterWorkerId() === null,
+          // (scripts/migrate-and-start.js). SKIP_MIGRATIONS leaves them to a separate step (a
+          // migration Job, `npm run migrate`; common/skip-migrations.ts).
+          migrationsRun: clusterWorkerId() === null && !migrationsSkipped(),
           migrations: [__dirname + '/migrations/*.{ts,js}'],
           logging: ['error', 'warn'],
           applicationName: process.env.DB_APP_NAME || 'cio-api',
@@ -128,7 +130,11 @@ import { readPoolMax } from './common/db-pool-budget';
         const runMigrations = Boolean(options?.migrationsRun);
         const dataSource = new DataSource({ ...options, migrationsRun: false } as DataSourceOptions);
         await dataSource.initialize();
-        if (!runMigrations) return dataSource;
+        if (!runMigrations) {
+          // Every process: an empty database stops each one; the lead process writes the line.
+          if (migrationsSkipped()) await warnPendingMigrations(dataSource);
+          return dataSource;
+        }
         try {
           await runStartupMigrations(dataSource);
         } catch (error) {
