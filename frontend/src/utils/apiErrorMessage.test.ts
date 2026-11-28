@@ -686,17 +686,75 @@ describe('getApiErrorMessage', () => {
     }
   });
 
-  it('keeps a server message, and uses the screen fallback when the server sends none', () => {
-    const fallback = 'The import failed. Try again.';
-    expect(getApiErrorMessage({ response: { status: 500, data: { message: 'Server said' } } }, t, fallback)).toBe('Server said');
-    // A 500 that also carries the HTTP client's own sentence still keeps the server's message.
+  it('uses the screen fallback for a 5xx that carries no application code', () => {
+    const fallback = 'Le budget n\'a pas pu être enregistré';
+    const fr = i18n.getFixedT('fr');
+    // Nest's plain 500, and the same answer with axios's own code on the error.
+    const plain = { response: { status: 500, data: { statusCode: 500, message: 'Internal server error' } } };
+    expect(getApiErrorMessage(plain, fr, fallback)).toBe(fallback);
     expect(getApiErrorMessage(
-      { message: 'Request failed with status code 500', code: 'ERR_BAD_RESPONSE', response: { status: 500, data: { message: 'Server said' } } },
-      t,
+      { code: 'ERR_BAD_RESPONSE', response: { status: 500, data: { statusCode: 500, message: 'Internal server error' } } },
+      fr,
       fallback,
-    )).toBe('Server said');
+    )).toBe(fallback);
+    // What Nest sends for an InternalServerErrorException: `error` names the HTTP reason.
+    expect(getApiErrorMessage(
+      { code: 'ERR_BAD_RESPONSE', response: { status: 500, data: { message: 'Internal server error', error: 'Internal Server Error' } } },
+      fr,
+      fallback,
+    )).toBe(fallback);
+    // A 502 and a 503 without a code, including a message that is not one.
+    expect(getApiErrorMessage({ response: { status: 502, data: { message: 'upstream' } } }, fr, fallback)).toBe(fallback);
+    expect(getApiErrorMessage(
+      { response: { status: 502, data: { message: 'Bad Gateway', error: 'Bad Gateway' } } },
+      fr,
+      fallback,
+    )).toBe(fallback);
+    expect(getApiErrorMessage({ response: { status: 503, data: { message: 'down' } } }, fr, fallback)).toBe(fallback);
+    expect(getApiErrorMessage(
+      { response: { status: 503, data: { message: 'Service Unavailable', error: 'Service Unavailable' } } },
+      fr,
+      fallback,
+    )).toBe(fallback);
+    // A coded 5xx keeps its translated sentence. Nest's reason and axios's code stay beside it.
+    expect(getApiErrorMessage(
+      {
+        code: 'ERR_BAD_RESPONSE',
+        response: { status: 500, data: { code: 'MARKDOWN_UNAVAILABLE', error: 'Internal Server Error', message: 'raw' } },
+      },
+      fr,
+      fallback,
+    )).toBe('Les textes mis en forme ne peuvent pas être enregistrés pour le moment. Réessayez dans quelques minutes.');
+    expect(getApiErrorMessage(
+      {
+        code: 'ERR_BAD_RESPONSE',
+        response: {
+          status: 502,
+          data: {
+            statusCode: 502,
+            error: 'Bad Gateway',
+            code: 'INVITATION_EMAIL_NOT_SENT',
+            message: 'The invitation is saved, but its e-mail could not be sent. Send the invitation again.',
+          },
+        },
+      },
+      fr,
+      fallback,
+    )).toBe("L'invitation est enregistrée, mais son e-mail n'a pas pu être envoyé. Envoyez l'invitation de nouveau.");
+    // A 400 keeps its business sentence, with or without Nest's reason.
+    expect(getApiErrorMessage(
+      { code: 'ERR_BAD_REQUEST', response: { status: 400, data: { message: 'Set up the connection first.', error: 'Bad Request' } } },
+      fr,
+      fallback,
+    )).toBe('Set up the connection first.');
+    expect(getApiErrorMessage({ response: { status: 400, data: { message: 'Server said' } } }, t, 'The import failed. Try again.')).toBe('Server said');
     // No response: the API is unreachable.
-    expect(getApiErrorMessage({ message: 'Network Error', code: 'ERR_NETWORK' }, t, fallback)).toBe(fallback);
+    expect(getApiErrorMessage({ message: 'Network Error', code: 'ERR_NETWORK' }, fr, fallback)).toBe(fallback);
+    expect(getApiErrorMessage({}, t, 'fallback')).toBe('fallback');
+  });
+
+  it('uses the screen fallback when a 5xx sends no message', () => {
+    const fallback = 'The import failed. Try again.';
     // A 502 with no body, and a gateway page that is not a message.
     expect(getApiErrorMessage(
       { message: 'Request failed with status code 502', code: 'ERR_BAD_RESPONSE', response: { status: 502, data: '' } },
@@ -708,7 +766,6 @@ describe('getApiErrorMessage', () => {
       t,
       fallback,
     )).toBe(fallback);
-    expect(getApiErrorMessage({}, t, 'fallback')).toBe('fallback');
   });
 });
 
