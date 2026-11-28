@@ -598,7 +598,7 @@ export const ENV_EXAMPLE_SECTIONS: readonly EnvExampleSection[] = [
   section('ai-tuning', [], true),
   section('security-boundaries', [], true),
   section('advanced', [
-    'Token lifetimes: a number followed by s, m, h or d (another format becomes 15 minutes).',
+    'Token lifetimes: a number followed by s, m, h or d (another format keeps the default).',
   ]),
   section('start-up', [], true),
   section('email-tuning', [], true),
