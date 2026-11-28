@@ -9,6 +9,12 @@ export type SettingFieldControl = {
   error: boolean;
   /** The id of the error line, for `aria-describedby`; undefined without an error. */
   errorId?: string;
+  /**
+   * The two attributes that tie the error to the control, empty without an error: spread them on the
+   * focusable element (`inputProps` of a `TextField` or a `Switch`, `SelectDisplayProps` of a
+   * `Select`, the `RadioGroup` itself).
+   */
+  aria: { 'aria-describedby'?: string; 'aria-invalid'?: true };
 };
 
 export interface SettingFieldProps {
@@ -37,7 +43,12 @@ export function SettingField({ label, hint, error, children }: SettingFieldProps
   const errorId = React.useId();
   let control: React.ReactNode;
   if (typeof children === 'function') {
-    control = children({ readOnly, error: !!error, errorId: error ? errorId : undefined });
+    control = children({
+      readOnly,
+      error: !!error,
+      errorId: error ? errorId : undefined,
+      aria: error ? { 'aria-describedby': errorId, 'aria-invalid': true } : {},
+    });
   } else if (error && React.isValidElement<React.HTMLAttributes<HTMLElement>>(children) && typeof children.type === 'string') {
     // A plain element (`input`, `select`) takes the attributes itself. A component (MUI `TextField`,
     // `Select`) would put them on its wrapper, away from the focusable control: it uses the render

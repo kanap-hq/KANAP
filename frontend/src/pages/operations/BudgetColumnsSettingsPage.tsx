@@ -158,10 +158,12 @@ type ColumnRowProps = {
   serverErrorOf: (field: string) => string | null;
   choose: (field: ChoiceField, value: boolean | AmountMeasure) => void;
   send: (patch: BudgetColumnsPatch) => Promise<void>;
+  /** The id of the refusal of the default column: the radios of every row point to it. */
+  defaultErrorId: string;
 };
 
 /** One column of the table: its name, saved as it is typed, and its three choices, saved when chosen. */
-function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError, serverErrorOf, choose, send }: ColumnRowProps) {
+function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError, serverErrorOf, choose, send, defaultErrorId }: ColumnRowProps) {
   const { t } = useTranslation(['ops', 'common']);
   const { measure } = column;
   const savedLabel = column.customLabel ?? '';
@@ -176,10 +178,16 @@ function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError
   draftRef.current = name.draft;
   const savedLabelRef = React.useRef(savedLabel);
   savedLabelRef.current = savedLabel;
+  const rowId = React.useId();
+  const errorIdOf = (field: ChoiceField) => (field === 'default_column' ? defaultErrorId : `${rowId}-${field}`);
   const errorOf = (field: ChoiceField) => {
     const error = choiceError(field);
-    return error ? <Typography role="alert" sx={errorLineSx}>{error}</Typography> : null;
+    return error ? <Typography id={errorIdOf(field)} role="alert" sx={errorLineSx}>{error}</Typography> : null;
   };
+  // A choice's refusal is tied to its control, marked invalid while the refusal shows.
+  const ariaOf = (field: ChoiceField) => (choiceError(field)
+    ? { 'aria-describedby': errorIdOf(field), 'aria-invalid': true as const }
+    : {});
 
   const onName = (value: string) => {
     name.setDraft(value);
@@ -239,7 +247,7 @@ function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError
           checked={draft.enabled[measure]}
           onChange={(e) => choose(`enabled.${measure}`, e.target.checked)}
           disabled={readOnly}
-          inputProps={{ 'aria-label': t(`${P}.shownOf`, { column: shownName }) }}
+          inputProps={{ 'aria-label': t(`${P}.shownOf`, { column: shownName }), ...ariaOf(`enabled.${measure}`) }}
         />
         {errorOf(`enabled.${measure}`)}
       </Box>
@@ -249,7 +257,7 @@ function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError
           checked={draft.group_spread[measure]}
           onChange={(e) => choose(`group_spread.${measure}`, e.target.checked)}
           disabled={readOnly}
-          inputProps={{ 'aria-label': t(`${P}.followsOf`, { column: shownName }) }}
+          inputProps={{ 'aria-label': t(`${P}.followsOf`, { column: shownName }), ...ariaOf(`group_spread.${measure}`) }}
         />
         {errorOf(`group_spread.${measure}`)}
       </Box>
@@ -261,7 +269,8 @@ function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError
           checked={draft.default_column === measure}
           onChange={() => choose('default_column', measure)}
           disabled={readOnly}
-          inputProps={{ 'aria-label': t(`${P}.defaultOf`, { column: shownName }) }}
+          // The radios spread over the rows have no group element: each one carries the set's refusal.
+          inputProps={{ 'aria-label': t(`${P}.defaultOf`, { column: shownName }), ...ariaOf('default_column') }}
         />
         {draft.default_column === measure && errorOf('default_column')}
       </Box>
@@ -368,6 +377,7 @@ export default function BudgetColumnsSettingsPage() {
   // A save the busy server put off, kept once its retries are spent: it goes with the next change.
   const serverError = canEdit && autosave.error ? autosaveErrorMessage(autosave.error, t, t(`${P}.errors.saveFailed`)) : null;
   const { errorOf: refusalOf } = autosave;
+  const defaultErrorId = React.useId();
   const serverErrorOf = React.useCallback((field: string) => {
     const refusal = refusalOf(field);
     return refusal ? getApiErrorMessage(refusal, t, t(`${P}.errors.saveFailed`)) : null;
@@ -405,6 +415,7 @@ export default function BudgetColumnsSettingsPage() {
                 serverErrorOf={serverErrorOf}
                 choose={choose}
                 send={send}
+                defaultErrorId={defaultErrorId}
               />
             ))}
           </Box>

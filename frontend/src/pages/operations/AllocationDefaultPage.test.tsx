@@ -157,6 +157,18 @@ describe('AllocationDefaultPage settings', () => {
     expect(combobox('Default method')).toHaveTextContent('Turnover');
   });
 
+  it('marks a refused list invalid while its refusal shows', async () => {
+    mocked.patch.mockRejectedValue(Object.assign(new Error('Bad Request'), { response: { status: 400, data: { message: 'Refused by the server.' } } }));
+    await renderPage();
+    await screen.findByText('35 M USD');
+    expect(combobox('Default method')).not.toHaveAttribute('aria-invalid');
+    fireEvent.mouseDown(combobox('Default method'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Headcount' }));
+    await waitFor(() => expect(combobox('Default method')).toHaveAttribute('aria-invalid', 'true'), { timeout: 2000 });
+    expect(combobox('Default method')).toHaveAccessibleDescription('Refused by the server.');
+    expect(combobox('Company scope')).not.toHaveAttribute('aria-invalid');
+  });
+
   it('keeps the year list off while a save is on its way', async () => {
     let release: (value: unknown) => void = () => undefined;
     mocked.patch.mockImplementation((_url: string, body: unknown) => new Promise((resolve) => { release = () => resolve(answer(body)); }));

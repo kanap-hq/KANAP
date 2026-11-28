@@ -268,7 +268,7 @@ export default function AllocationDefaultPage() {
       </SettingField>
 
       <SettingField label={t(`${A}.mode`)} error={refusalOf('mode')}>
-        {({ readOnly: fieldReadOnly, error: fieldError, errorId }) => (
+        {({ readOnly: fieldReadOnly, error: fieldError, aria }) => (
           <Select
             variant="standard"
             value={mode}
@@ -279,7 +279,7 @@ export default function AllocationDefaultPage() {
             disabled={isLoading}
             error={fieldError}
             inputProps={{ 'aria-label': t(`${A}.mode`) }}
-            SelectDisplayProps={{ 'aria-describedby': errorId }}
+            SelectDisplayProps={aria}
           >
             {MODES.map((value) => (
               <MenuItem key={value} value={value} sx={drawerMenuItemSx}>
@@ -292,7 +292,7 @@ export default function AllocationDefaultPage() {
 
       {mode === 'manual_company' && (
         <SettingField label={t(`${A}.companies`)} error={refusalOf('companies')}>
-          {({ readOnly: fieldReadOnly, error: fieldError, errorId }) => (
+          {({ readOnly: fieldReadOnly, error: fieldError, aria }) => (
             <Select
               multiple
               variant="standard"
@@ -306,7 +306,7 @@ export default function AllocationDefaultPage() {
               displayEmpty
               error={fieldError}
               inputProps={{ 'aria-label': t(`${A}.companies`) }}
-              SelectDisplayProps={{ 'aria-describedby': errorId }}
+              SelectDisplayProps={aria}
               renderValue={(selected) => {
                 const ids = selected as string[];
                 const single = ids.length === 1 ? companyLabel(ids[0]) : null;
@@ -327,7 +327,7 @@ export default function AllocationDefaultPage() {
       )}
 
       <SettingField label={t(`${A}.method`)} hint={t(`${A}.methodHelp`)} error={refusalOf('method')}>
-        {({ readOnly: fieldReadOnly, error: fieldError, errorId }) => (
+        {({ readOnly: fieldReadOnly, error: fieldError, aria }) => (
           <Select
             variant="standard"
             value={method}
@@ -338,7 +338,7 @@ export default function AllocationDefaultPage() {
             disabled={isLoading}
             error={fieldError}
             inputProps={{ 'aria-label': t(`${A}.method`) }}
-            SelectDisplayProps={{ 'aria-describedby': errorId }}
+            SelectDisplayProps={aria}
           >
             {METHODS.map((value) => (
               <MenuItem key={value} value={value} sx={drawerMenuItemSx}>

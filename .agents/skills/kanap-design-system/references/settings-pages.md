@@ -72,16 +72,23 @@ as it is: extend the one in the repository, never write a second one for the sam
   that says why.
 - **A secret** is never read back: the field shows dots, greyed, with the link "Replace" on its
   right. "Replace" empties the field and makes it editable.
-- The refusal of a value (`error`) shows under the field, in `kanap.danger`, tied to the control
-  (`aria-describedby`, `aria-invalid`). A plain element given as is (`<input>`, `<select>`) gets
-  both attributes from `SettingField`. A component (`TextField`, `Select`) uses the render function
-  and wires `errorId` itself: given as is, it would carry the attributes on its wrapper, away from
-  the focusable control (`inputProps` for a `TextField`, `SelectDisplayProps` for a `Select`).
+- The refusal of a value (`error`) shows under the field, in `kanap.danger`. It is tied to the
+  control by `aria-describedby`, and the control carries `aria-invalid` while the refusal shows,
+  whatever the kind of field:
+  - a text field: on its `input` (`inputProps`; a `TextField` with `error` sets `aria-invalid`);
+  - a switch or a checkbox: on its `input` (`inputProps`);
+  - radio buttons: on the `RadioGroup`; radios spread over the rows of a table have no group
+    element, so each radio of the set carries both;
+  - a list (`Select`): on the combobox, through `SelectDisplayProps` (`inputProps` would reach the
+    hidden native input).
+  A plain element given as is (`<input>`, `<select>`) gets both attributes from `SettingField`. A
+  component uses the render function and spreads `aria` (both attributes, empty without an error)
+  where its focusable control reads them: given as is, it would carry them on its wrapper.
 
 ```tsx
 <SettingField label={t('…method')} hint={t('…methodHelp')} error={error}>
-  {({ readOnly, error, errorId }) => (
-    <Select variant="standard" readOnly={readOnly} error={error} SelectDisplayProps={{ 'aria-describedby': errorId }} …>…</Select>
+  {({ readOnly, error, aria }) => (
+    <Select variant="standard" readOnly={readOnly} error={error} SelectDisplayProps={aria} …>…</Select>
   )}
 </SettingField>
 ```

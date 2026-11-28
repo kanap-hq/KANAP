@@ -425,6 +425,36 @@ describe('BudgetColumnsSettingsPage', () => {
     expect(row(2).queryByText('Refused by the server.')).not.toBeInTheDocument();
   });
 
+  it('ties the refusal of a switch to it, marked invalid while the refusal shows', async () => {
+    renderPage();
+    await waitForSetting();
+    const shown = row(1).getByRole('checkbox', { name: 'Show Budget' });
+    expect(shown).not.toHaveAttribute('aria-invalid');
+    fireEvent.click(shown);
+    expect(shown).toHaveAttribute('aria-invalid', 'true');
+    expect(shown).toHaveAccessibleDescription('The default column must be shown: choose another default column first.');
+
+    // Another default chosen: the refusal goes, and the mark with it.
+    fireEvent.click(row(2).getByRole('radio'));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    expect(shown).not.toHaveAttribute('aria-invalid');
+    expect(shown).not.toHaveAccessibleDescription();
+  });
+
+  it('ties the refusal of the default column to every radio of the set', async () => {
+    mocked.patch.mockRejectedValue(refusedBy('Refused by the server.'));
+    renderPage();
+    await waitForSetting();
+    expect(row(1).getByRole('radio')).not.toHaveAttribute('aria-invalid');
+
+    fireEvent.click(row(2).getByRole('radio'));
+    await waitFor(() => expect(row(1).getByRole('radio')).toHaveAttribute('aria-invalid', 'true'), { timeout: 2000 });
+    for (const position of [1, 2, 3, 4, 5]) {
+      expect(row(position).getByRole('radio')).toHaveAttribute('aria-invalid', 'true');
+      expect(row(position).getByRole('radio')).toHaveAccessibleDescription('Refused by the server.');
+    }
+  });
+
   it('ties the name a check refuses to its field', async () => {
     renderPage();
     await waitForSetting();

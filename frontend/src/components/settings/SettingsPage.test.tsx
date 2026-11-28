@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
-import { Button, TextField } from '@mui/material';
+import { Button, FormControlLabel, MenuItem, Radio, RadioGroup, Select, Switch, TextField } from '@mui/material';
 import { describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 
@@ -94,6 +94,46 @@ describe('SettingField', () => {
     expect(field.getAttribute('aria-describedby')?.split(' ')).toContain('size-unit');
     expect(field).toHaveAccessibleDescription('At most 20.');
     expect(field).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('ties the refusal to a switch, a radio group and a list, marked invalid only while it shows', () => {
+    const fields = (error?: string) => (
+      <ThemeProvider theme={createAppTheme('light')}>
+        <SettingField label="Web search" error={error}>
+          {({ aria }) => <Switch checked inputProps={{ 'aria-label': 'Web search', ...aria }} />}
+        </SettingField>
+        <SettingField label="Grain" error={error}>
+          {({ aria }) => (
+            <RadioGroup aria-label="Grain" value="month" {...aria}>
+              <FormControlLabel value="month" control={<Radio />} label="Month" />
+              <FormControlLabel value="year" control={<Radio />} label="Year" />
+            </RadioGroup>
+          )}
+        </SettingField>
+        <SettingField label="Method" error={error}>
+          {({ error: invalid, aria }) => (
+            <Select variant="standard" value="a" error={invalid} inputProps={{ 'aria-label': 'Method' }} SelectDisplayProps={aria}>
+              <MenuItem value="a">A</MenuItem>
+            </Select>
+          )}
+        </SettingField>
+      </ThemeProvider>
+    );
+    const controls = () => [
+      screen.getByRole('checkbox', { name: 'Web search' }),
+      screen.getByRole('radiogroup', { name: 'Grain' }),
+      screen.getByRole('combobox', { name: 'Method' }),
+    ];
+    const { rerender } = render(fields('Not allowed.'));
+    for (const control of controls()) {
+      expect(control).toHaveAttribute('aria-invalid', 'true');
+      expect(control).toHaveAccessibleDescription('Not allowed.');
+    }
+    rerender(fields(undefined));
+    for (const control of controls()) {
+      expect(control).not.toHaveAttribute('aria-invalid');
+      expect(control).not.toHaveAccessibleDescription();
+    }
   });
 
   it('is editable outside a read-only page', () => {
