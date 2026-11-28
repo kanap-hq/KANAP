@@ -43,6 +43,10 @@ function getLevelOptions(resource: string): Array<{ value: ConcretePermissionLev
   if (resource === 'knowledge') {
     return ALL_LEVEL_OPTIONS.filter((option) => option.value !== 'contributor');
   }
+  // Two levels: the pages of these rights are read or administered (a member level reads as reader).
+  if (resource === 'organization' || resource === 'settings') {
+    return ALL_LEVEL_OPTIONS.filter((option) => option.value === 'reader' || option.value === 'admin');
+  }
   if (resource === 'ai_settings') {
     return ALL_LEVEL_OPTIONS.filter((option) => option.value === 'admin');
   }

@@ -187,6 +187,7 @@ export default function AdminBrandingPage() {
   const [selectedFileUrls, setSelectedFileUrls] = React.useState<Record<LogoVariant, string | null>>({ light: null, dark: null });
   const lightColorInputRef = React.useRef<HTMLInputElement | null>(null);
   const darkColorInputRef = React.useRef<HTMLInputElement | null>(null);
+  const canRead = !isPlatformHost && hasLevel('organization', 'reader');
 
   const loadSettings = React.useCallback(async ({ silent }: { silent?: boolean } = {}) => {
     if (!silent) setLoading(true);
@@ -205,8 +206,8 @@ export default function AdminBrandingPage() {
   }, [t]);
 
   React.useEffect(() => {
-    void loadSettings();
-  }, [loadSettings]);
+    if (canRead) void loadSettings();
+  }, [canRead, loadSettings]);
 
   React.useEffect(() => {
     const next: Record<LogoVariant, string | null> = {
@@ -220,9 +221,12 @@ export default function AdminBrandingPage() {
     };
   }, [selectedFiles]);
 
-  if (isPlatformHost || !hasLevel('users', 'admin')) {
+  if (!canRead) {
     return <ForbiddenPage />;
   }
+  // An organisation reader sees the same fields, read-only, and no action.
+  const canEdit = hasLevel('organization', 'admin');
+  const locked = !canEdit || saving || !!deletingLogo || resetting;
 
   const lightValidation = validateHexField(form.primaryColorLight, t);
   const darkValidation = validateHexField(form.primaryColorDark, t);
@@ -244,7 +248,7 @@ export default function AdminBrandingPage() {
   );
 
   const isInputInvalid = !!nameValidation.error || !!lightValidation.error || !!darkValidation.error;
-  const canSubmit = !!settings && isDirty && !isInputInvalid && !saving && !deletingLogo && !resetting;
+  const canSubmit = canEdit && !!settings && isDirty && !isInputInvalid && !saving && !deletingLogo && !resetting;
   const previewLogoUrl = selectedFileUrls.light || logoUrl;
   const previewDarkOwnUrl = selectedFileUrls.dark || darkLogoUrl;
   // Dark mode takes its own logo, else the light one when the switch allows it.
@@ -387,6 +391,7 @@ export default function AdminBrandingPage() {
   };
 
   const renderLogoActions = (variant: LogoVariant) => {
+    if (!canEdit) return null;
     const selected = selectedFiles[variant];
     const stored = variant === 'dark' ? settings?.has_dark_logo : settings?.has_logo;
     return (
@@ -395,7 +400,7 @@ export default function AdminBrandingPage() {
           <Button
             variant="contained"
             component="label"
-            disabled={saving || !!deletingLogo || resetting}
+            disabled={locked}
           >
             {selected ? t('branding.actions.replaceSelectedFile') : t('branding.actions.uploadLogo')}
             <input
@@ -462,7 +467,7 @@ export default function AdminBrandingPage() {
                   placeholder={t('branding.fields.organizationNamePlaceholder')}
                   error={!!nameValidation.error}
                   helperText={nameValidation.error || undefined}
-                  disabled={saving || !!deletingLogo || resetting}
+                  disabled={locked}
                   inputProps={{
                     'aria-label': t('branding.fields.organizationName'),
                     'aria-required': true,
@@ -507,7 +512,7 @@ export default function AdminBrandingPage() {
                           <Switch
                             checked={form.useLogoInDark}
                             onChange={(event) => setForm((prev) => ({ ...prev, useLogoInDark: event.target.checked }))}
-                            disabled={saving || !!deletingLogo || resetting}
+                            disabled={locked}
                           />
                         )}
                         label={t('branding.fields.useLightLogoInDark')}
@@ -537,7 +542,7 @@ export default function AdminBrandingPage() {
                       onChange={(event) => setForm((prev) => ({ ...prev, primaryColorLight: event.target.value }))}
                       error={!!lightValidation.error}
                       helperText={lightValidation.error || t('branding.colors.lightHelper')}
-                      disabled={saving || !!deletingLogo || resetting}
+                      disabled={locked}
                     />
                     <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, position: 'relative' }}>
                       <Typography variant="caption" color="text.secondary">{t('branding.colors.swatch')}</Typography>
@@ -558,18 +563,21 @@ export default function AdminBrandingPage() {
                         style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
                         onChange={(event) => setForm((prev) => ({ ...prev, primaryColorLight: event.target.value.toUpperCase() }))}
                       />
+                      {canEdit && (
                       <Tooltip title={t('branding.colors.openColorPicker')}>
                         <span>
                           <IconButton
                             size="small"
                             onClick={() => lightColorInputRef.current?.click()}
-                            disabled={saving || !!deletingLogo || resetting}
+                            disabled={locked}
                           >
                             <ColorLensIcon fontSize="small" />
                           </IconButton>
                         </span>
                       </Tooltip>
+                      )}
                     </Stack>
+                    {canEdit && (
                     <Stack direction="row" spacing={0.75} sx={{ mt: 1, flexWrap: 'wrap', rowGap: 0.75 }}>
                       {LIGHT_COLOR_PRESETS.map((color) => (
                         <Tooltip key={color} title={color}>
@@ -577,7 +585,7 @@ export default function AdminBrandingPage() {
                             component="button"
                             type="button"
                             onClick={() => setForm((prev) => ({ ...prev, primaryColorLight: color }))}
-                            disabled={saving || !!deletingLogo || resetting}
+                            disabled={locked}
                             sx={{
                               width: 20,
                               height: 20,
@@ -595,11 +603,12 @@ export default function AdminBrandingPage() {
                         size="small"
                         variant="text"
                         onClick={() => setForm((prev) => ({ ...prev, primaryColorLight: '' }))}
-                        disabled={saving || !!deletingLogo || resetting}
+                        disabled={locked}
                       >
                         {t('branding.actions.clear')}
                       </Button>
                     </Stack>
+                    )}
                   </Box>
 
                   <Box sx={{ flex: 1 }}>
@@ -611,7 +620,7 @@ export default function AdminBrandingPage() {
                       onChange={(event) => setForm((prev) => ({ ...prev, primaryColorDark: event.target.value }))}
                       error={!!darkValidation.error}
                       helperText={darkValidation.error || t('branding.colors.darkHelper')}
-                      disabled={saving || !!deletingLogo || resetting}
+                      disabled={locked}
                     />
                     <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1, position: 'relative' }}>
                       <Typography variant="caption" color="text.secondary">{t('branding.colors.swatch')}</Typography>
@@ -632,18 +641,21 @@ export default function AdminBrandingPage() {
                         style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
                         onChange={(event) => setForm((prev) => ({ ...prev, primaryColorDark: event.target.value.toUpperCase() }))}
                       />
+                      {canEdit && (
                       <Tooltip title={t('branding.colors.openColorPicker')}>
                         <span>
                           <IconButton
                             size="small"
                             onClick={() => darkColorInputRef.current?.click()}
-                            disabled={saving || !!deletingLogo || resetting}
+                            disabled={locked}
                           >
                             <ColorLensIcon fontSize="small" />
                           </IconButton>
                         </span>
                       </Tooltip>
+                      )}
                     </Stack>
+                    {canEdit && (
                     <Stack direction="row" spacing={0.75} sx={{ mt: 1, flexWrap: 'wrap', rowGap: 0.75 }}>
                       {DARK_COLOR_PRESETS.map((color) => (
                         <Tooltip key={color} title={color}>
@@ -651,7 +663,7 @@ export default function AdminBrandingPage() {
                             component="button"
                             type="button"
                             onClick={() => setForm((prev) => ({ ...prev, primaryColorDark: color }))}
-                            disabled={saving || !!deletingLogo || resetting}
+                            disabled={locked}
                             sx={{
                               width: 20,
                               height: 20,
@@ -669,11 +681,12 @@ export default function AdminBrandingPage() {
                         size="small"
                         variant="text"
                         onClick={() => setForm((prev) => ({ ...prev, primaryColorDark: '' }))}
-                        disabled={saving || !!deletingLogo || resetting}
+                        disabled={locked}
                       >
                         {t('branding.actions.clear')}
                       </Button>
                     </Stack>
+                    )}
                   </Box>
                 </Stack>
 
@@ -697,18 +710,20 @@ export default function AdminBrandingPage() {
           </Card>
 
           <Paper variant="outlined" sx={{ p: 2 }}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+            {canEdit && (
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 1 }}>
               <Button variant="contained" onClick={handleSave} disabled={!canSubmit}>
                 {saving ? t('common:status.saving') : t('common:buttons.saveChanges')}
               </Button>
-              <Button variant="outlined" onClick={handleDiscard} disabled={!isDirty || saving || !!deletingLogo || resetting}>
+              <Button variant="outlined" onClick={handleDiscard} disabled={!isDirty || locked}>
                 {t('branding.actions.discard')}
               </Button>
-              <Button variant="text" color="warning" onClick={handleReset} disabled={saving || !!deletingLogo || resetting}>
+              <Button variant="text" color="warning" onClick={handleReset} disabled={locked}>
                 {resetting ? t('branding.actions.resetting') : t('branding.actions.resetToDefault')}
               </Button>
             </Stack>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+            )}
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
               {t('branding.logo.version', { count: settings?.logo_version ?? 0 })}
             </Typography>
           </Paper>

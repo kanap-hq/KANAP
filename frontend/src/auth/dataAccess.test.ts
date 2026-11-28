@@ -11,7 +11,7 @@ describe('data access of the signed-in person', () => {
   });
 
   it('keeps the reads of the reserved modules and takes their writes (spec §2.7)', () => {
-    for (const resource of ['companies', 'departments', 'cost_centers', 'accounts', 'business_processes', 'analytics', 'budget_ops', 'users', 'ai_settings']) {
+    for (const resource of ['companies', 'departments', 'cost_centers', 'accounts', 'business_processes', 'analytics', 'budget_ops', 'users', 'organization', 'ai_settings']) {
       expect(isReservedInLimitedAccess(resource, 'reader'), resource).toBe(false);
       expect(isReservedInLimitedAccess(resource, 'member'), resource).toBe(true);
       expect(isReservedInLimitedAccess(resource, 'admin'), resource).toBe(true);

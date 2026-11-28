@@ -18,6 +18,7 @@ import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
 import ForbiddenPage from '../ForbiddenPage';
 import { useAuth } from '../../auth/AuthContext';
+import { useAuditLogReadable } from '../../auth/dataAccess';
 import api from '../../api';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
@@ -140,6 +141,7 @@ function RawJsonBlocks({ before, after, t }: { before: unknown; after: unknown; 
 
 export default function AuditLogsPage() {
   const { hasLevel } = useAuth();
+  const auditLogReadable = useAuditLogReadable();
   const { t } = useTranslation(['admin']);
   const locale = useLocale();
   const [open, setOpen] = React.useState(false);
@@ -357,8 +359,12 @@ export default function AuditLogsPage() {
     ];
   }, [getFilterValues, locale, t]);
 
-  if (!hasLevel('users', 'admin')) {
-      return <ForbiddenPage resource="users" level="admin" />;
+  if (!hasLevel('organization', 'reader')) {
+    return <ForbiddenPage resource="organization" level="reader" />;
+  }
+  // The server reserves the audit log to people with access to all data, reads included.
+  if (!auditLogReadable) {
+    return <ForbiddenPage />;
   }
 
   return (

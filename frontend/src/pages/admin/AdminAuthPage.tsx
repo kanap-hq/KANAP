@@ -55,10 +55,14 @@ type SyncRunResult = { status: string; message?: string | null; synced: number; 
 export default function AdminAuthPage() {
   const { t } = useTranslation(['admin', 'common', 'validation']);
   const { hasLevel } = useAuth();
-  // Disconnect and Sync now write the persons of the whole workspace: reserved to people with
-  // access to all data, as the other person administration.
-  const unscopedAdmin = useDataAccessAdmin();
   const { isPlatformHost } = useTenant();
+  const canRead = !isPlatformHost && hasLevel('organization', 'reader');
+  // Connect, Test sign-in and the consent: the organisation's administration. A reader sees the state only.
+  const canAdminister = hasLevel('organization', 'admin');
+  // Disconnect and Sync now write the persons of the whole workspace: they also need users:admin and
+  // access to all data, as the other person administration (the server asks for both rights).
+  const unscopedUsersAdmin = useDataAccessAdmin();
+  const canWritePersons = canAdminister && unscopedUsersAdmin;
   const { config } = useFeatures();
 
   const [actionError, setActionError] = React.useState<string | null>(null);
@@ -86,17 +90,19 @@ export default function AdminAuthPage() {
     }
   }, [searchParams, setSearchParams]);
 
-  if (isPlatformHost || !hasLevel('users', 'admin')) {
-    return <ForbiddenPage />;
-  }
-
+  // Every hook runs before the refusal below: the rights may change between two renders.
   const { data, isLoading, isError, error, refetch } = useQuery<AuthSettings, any>({
     queryKey: ['admin-auth-settings'],
     queryFn: async () => {
       const res = await api.get('/admin/auth/settings');
       return res.data;
     },
+    enabled: canRead,
   });
+
+  if (!canRead) {
+    return <ForbiddenPage />;
+  }
 
   const handleConnect = async () => {
     setActionError(null);
@@ -230,37 +236,39 @@ export default function AdminAuthPage() {
                     </Typography>
                   </Stack>
                 )}
-                <Stack direction="row" spacing={2} mt={1}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleConnect}
-                    disabled={connecting || disconnecting}
-                  >
-                    {connecting
-                      ? t('auth.actions.connecting')
-                      : connected
-                      ? t('auth.actions.reconnect')
-                      : t('auth.actions.connect')}
-                  </Button>
-                  {connected && (
-                    <>
-                      <Button variant="outlined" onClick={handleTestSignIn} disabled={disconnecting}>
-                        {t('auth.actions.testSignIn')}
-                      </Button>
-                      {unscopedAdmin && (
-                        <Button
-                          variant="text"
-                          color="error"
-                          onClick={openDisconnect}
-                          disabled={disconnecting || connecting}
-                        >
-                          {t('auth.actions.disconnect')}
+                {canAdminister && (
+                  <Stack direction="row" spacing={2} mt={1}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={handleConnect}
+                      disabled={connecting || disconnecting}
+                    >
+                      {connecting
+                        ? t('auth.actions.connecting')
+                        : connected
+                        ? t('auth.actions.reconnect')
+                        : t('auth.actions.connect')}
+                    </Button>
+                    {connected && (
+                      <>
+                        <Button variant="outlined" onClick={handleTestSignIn} disabled={disconnecting}>
+                          {t('auth.actions.testSignIn')}
                         </Button>
-                      )}
-                    </>
-                  )}
-                </Stack>
+                        {canWritePersons && (
+                          <Button
+                            variant="text"
+                            color="error"
+                            onClick={openDisconnect}
+                            disabled={disconnecting || connecting}
+                          >
+                            {t('auth.actions.disconnect')}
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </Stack>
+                )}
                 {connected && sync && (
                   <Stack spacing={1} mt={2}>
                     <Typography variant="subtitle2" fontWeight={500}>{t('auth.sync.title')}</Typography>
@@ -297,12 +305,12 @@ export default function AdminAuthPage() {
                       </Alert>
                     )}
                     <Stack direction="row" spacing={2}>
-                      {sync.status !== 'ok' && sync.consent_url && (
+                      {canAdminister && sync.status !== 'ok' && sync.consent_url && (
                         <Button variant="contained" href={sync.consent_url} disabled={syncing}>
                           {t('auth.sync.grantAccess')}
                         </Button>
                       )}
-                      {unscopedAdmin && (
+                      {canWritePersons && (
                         <Button variant="outlined" onClick={handleSyncNow} disabled={syncing || disconnecting}>
                           {syncing ? t('auth.sync.syncing') : t('auth.sync.syncNow')}
                         </Button>
