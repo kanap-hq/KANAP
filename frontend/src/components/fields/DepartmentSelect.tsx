@@ -3,10 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { TextField, CircularProgress, Autocomplete, Box } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
+import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
+import { formatItemRef } from '../../utils/item-ref';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
+import OptionWithHint from './OptionWithHint';
 
-type Department = { id: string; name: string; company_id?: string | null };
+type Department = { id: string; name: string; company_id?: string | null; item_number?: number | null };
 
 type DepartmentSelectProps = {
   label?: string;
@@ -75,6 +78,18 @@ const DepartmentSelect = React.forwardRef<HTMLInputElement, DepartmentSelectProp
           onChange(v?.id || null);
         }}
         getOptionLabel={(o) => picker.label(o, (d) => d.name ?? '')}
+        renderOption={(props, option) => (
+          <OptionWithHint
+            key={option.id}
+            optionProps={props}
+            label={option.name}
+            trailing={option.item_number ? (
+              <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY, fontVariantNumeric: 'tabular-nums' }}>
+                {formatItemRef('department', option.item_number)}
+              </Box>
+            ) : null}
+          />
+        )}
         renderInput={(params) => (
           <TextField
             {...params}

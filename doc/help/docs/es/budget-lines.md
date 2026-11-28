@@ -292,7 +292,7 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 - **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora y el tipo de la línea), **Moneda** (solo las monedas permitidas en su espacio de trabajo), un campo por dimensión analítica usada para el tipo de la línea, **Run o build** e **Inicio de vigencia**
 - **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
 - Fechas **Creado** y **Actualizado** (solo lectura)
-- Escriba en **Proveedor**, **Empresa pagadora**, **Cuenta**, **Responsable de TI**, **Responsable de negocio** o un campo de dimensión analítica para buscar por nombre. Las coincidencias aparecen mientras escribe, de modo que puede encontrar cualquier valor incluso en una lista muy larga; una línea bajo la lista muestra «Escriba para acotar: hay más resultados» cuando hay más coincidencias de las que se muestran
+- Escriba en **Proveedor**, **Empresa pagadora**, **Cuenta**, **Responsable de TI**, **Responsable de negocio** o un campo de dimensión analítica para buscar por nombre. En **Proveedor** y **Empresa pagadora**, una referencia escrita como `SUP-12` o `COMP-3` encuentra ese registro primero, y cada opción muestra la referencia junto al nombre. Las coincidencias aparecen mientras escribe, de modo que puede encontrar cualquier valor incluso en una lista muy larga; una línea bajo la lista muestra «Escriba para acotar: hay más resultados» cuando hay más coincidencias de las que se muestran
 
 **Centro de coste**:
 

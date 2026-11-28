@@ -211,7 +211,7 @@ Pour retirer un responsable, survolez son nom et cliquez sur la croix en fin de 
 Le retrait d'un responsable, d'un processus métier, d'une suite ou d'un contact de support affiche un message avec **Annuler**, qui le rétablit.
 
 **Audience** :
-- Ajoutez des lignes **Société / Départements** pour enregistrer qui utilise cette application. Choisissez une société et limitez optionnellement à des départements spécifiques.
+- Ajoutez des lignes **Société / Départements** pour enregistrer qui utilise cette application. Choisissez une société et limitez optionnellement à des départements spécifiques. Chaque société et chaque département montre sa référence, par exemple `COMP-3` ou `DEPT-4`, à côté de son nom, et saisir la référence le trouve.
 - Sans département choisi, l'audience est toute la société (le champ affiche **Tous les départements**). Avec des départements choisis, elle se limite à ces départements : retirez-les pour inclure de nouveau toute la société.
 - Un nombre d'**Utilisateurs** en direct est affiché.
 - **Méthode de calcul** : **Dérivé** (calculé à partir de l'audience basé sur les métriques Utilisateurs IT / Effectif des données de référence) ou **Manuel** (un seul nombre de remplacement que vous saisissez).

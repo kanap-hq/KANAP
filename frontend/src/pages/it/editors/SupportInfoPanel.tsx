@@ -23,13 +23,16 @@ import { useAuth } from '../../../auth/AuthContext';
 import { PropertyRow } from '../../../components/design';
 import DateEUField from '../../../components/fields/DateEUField';
 import ContactSelect from '../../../components/fields/ContactSelect';
+import OptionWithHint from '../../../components/fields/OptionWithHint';
+import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
+import { formatItemRef } from '../../../utils/item-ref';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, longFormSurfaceFieldSx } from '../../../theme/formSx';
 
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 type VendorOption = { id: string; name: string };
-type ContractOption = { id: string; name: string };
+type ContractOption = { id: string; name: string; item_number?: number | null };
 
 type SupportInfo = {
   vendor_id?: string | null;
@@ -366,10 +369,18 @@ export default function SupportInfoPanel({ assetId, onDirtyChange, onSaveError }
               }}
               getOptionLabel={(o) => contractPicker.label(o, (contract) => contract.name ?? '')}
               disabled={readOnly || saving}
-              renderOption={(props, option) => {
-                const { key, ...optionProps } = props;
-                return <li key={key} {...optionProps}>{option.name}</li>;
-              }}
+              renderOption={(props, option) => (
+                <OptionWithHint
+                  key={option.id}
+                  optionProps={props}
+                  label={option.name}
+                  trailing={option.item_number ? (
+                    <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY, fontVariantNumeric: 'tabular-nums' }}>
+                      {formatItemRef('contract', option.item_number)}
+                    </Box>
+                  ) : null}
+                />
+              )}
               renderInput={(params) => (
                 <TextField
                   {...params}
