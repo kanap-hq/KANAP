@@ -3349,6 +3349,7 @@
     "search": "Search settings",
     "searchPlaceholder": "e.g., reporting currency",
     "noMatch": "No settings match “{{query}}”.",
+    "empty": "No settings page is open to you here.",
     "groups": {
       "person": "My account",
       "organization": "Administration",

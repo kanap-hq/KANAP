@@ -2,7 +2,8 @@ import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, matchPath } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import ProtectedRoute from '../components/ProtectedRoute';
+import ProtectedRoute, { ADMIN_ROUTE_REQUIREMENTS } from '../components/ProtectedRoute';
+import { ADMIN_MENU, adminMenuEntries, isInstallationPath, type AdminMenuContext } from '../pages/admin/adminMenu';
 import { isReservedInLimitedAccess } from '../auth/dataAccess';
 import { getDocSlug } from '../utils/docUrls';
 import { customRuleNames, evaluateAccess, type AccessLevel, type AccessRule, type DeploymentMode } from './accessRule';
@@ -11,7 +12,6 @@ import { SETTINGS_PAGES, settingsPageHref, settingsPageScope, type SettingsHost,
 // --- Sources read as text -------------------------------------------------------------------
 
 const APP_SOURCE = Object.values(import.meta.glob<string>('../App.tsx', { query: '?raw', import: 'default', eager: true }))[0];
-const LAYOUT_SOURCE = Object.values(import.meta.glob<string>('../components/Layout.tsx', { query: '?raw', import: 'default', eager: true }))[0];
 const SOURCES = import.meta.glob<string>(
   ['../pages/**/*.tsx', '../components/about/*.tsx', '!../**/*.test.tsx'],
   { query: '?raw', import: 'default', eager: true },
@@ -38,6 +38,9 @@ const COMPONENT_FILES: Record<string, string> = Object.fromEntries(
 /** Settings-like routes of `App.tsx` that have no line: redirects and record pages. */
 const ROUTE_EXCLUSIONS: Record<string, string> = {
   '/admin': 'Redirects to the first administration page the person may open.',
+  '/admin/all-settings': 'The list of the settings pages itself.',
+  '/admin/installation': 'Redirects to the first page of the Installation section.',
+  '/admin/scheduled-tasks': 'Former address of scheduled tasks, redirects to the Installation section.',
   '/admin/choose-plan': 'Redirects to billing.',
   '/admin/agent-control': 'Redirects to the agents.',
   '/admin/agent-control/*': 'Redirects to the agents.',
@@ -53,27 +56,22 @@ const ROUTE_EXCLUSIONS: Record<string, string> = {
  */
 const ROUTE_WIDER_THAN_OPEN: Record<string, string> = {
   'account.connected-apps': 'The route opens the account page to everyone; without the right the page shows its first tab.',
-  'org.data-access': 'The route does not refuse a limited Administrator; the menu entry and the page do.',
   'org.sample-data': 'The route asks the users Admin level; the menu entry and the page ask the Administrator role.',
-  'ops.scheduled-tasks': 'The route asks the users Admin level; the page asks the platform administrator (cloud) or the Administrator role (on site).',
   'platform.tenants': 'The route lets any Administrator in; the page asks the platform administrator.',
   'platform.trials': 'The route lets any Administrator in; the page asks the platform administrator.',
   'platform.coa-templates': 'The route lets any Administrator in; the page asks the platform administrator.',
   'platform.standard-accounts': 'The route lets any Administrator in; the page asks the platform administrator.',
   'platform.platform-ai': 'The route lets any Administrator in; the page asks the platform administrator.',
   'platform.ops-dashboard': 'The route lets any Administrator in; the page asks the platform administrator.',
-  'agents.shared-context': 'The route opens to an agents reader; the menu entry asks the Admin level.',
   'agents.agent-settings': 'The link opens the agents overview; the Settings tab of an agent carries the right.',
   'contracts.decision-window': 'The link opens the contracts list; its Settings button carries the right.',
   'knowledge.types': 'The link opens the knowledge page; its Manage types button carries the right.',
 };
 
-/** Where the menu entry or the page differs from the line, beyond the route. */
+/** Where a module menu entry or the page differs from the line, beyond the route. */
 const MENU_OR_PAGE_GAPS: Record<string, string> = {
-  'org.data-access': 'The menu entry shows to users administrators; the route opens to the Administrator role only.',
   'org.users': 'The page reads for a users reader; the route and the menu entry ask the Admin level.',
   'it.settings-lists': 'The menu entry and the route also open to an infrastructure administrator, on the Netbox tab.',
-  'agents.shared-context': 'The page lets an AI settings administrator change the profiles; the menu entry asks the agents Admin level.',
 };
 
 /** Conditions kept in code, named in the lines. */
@@ -222,6 +220,22 @@ function contextFor(grant: Grant, mode: DeploymentMode) {
   };
 }
 
+/** The Administration menu's context for a grant, as `Layout` builds it. */
+function menuContextFor(grant: Grant, mode: DeploymentMode, host: SettingsHost): AdminMenuContext {
+  const hasLevel = hasLevelFor(grant);
+  const aiSettingsAvailable = !!grant.custom.aiSettingsSurface;
+  return {
+    singleTenant: mode === 'onprem',
+    platformHost: host === 'platform',
+    claims: { isGlobalAdmin: grant.administrator, isPlatformAdmin: grant.platformAdmin },
+    hasLevel,
+    dataAccessLimited: grant.limited,
+    features: { billing: true, sso: true, sampleData: true },
+    aiSettingsAvailable,
+    canShowIntegrations: aiSettingsAvailable || hasLevel('infrastructure', 'admin'),
+  };
+}
+
 // --- ProtectedRoute under a test identity ----------------------------------------------------
 
 const identity = vi.hoisted(() => ({
@@ -264,6 +278,7 @@ vi.mock('../config/FeaturesContext', () => ({
       deploymentMode: identity.mode === 'onprem' ? 'single-tenant' : 'multi-tenant',
       features: { billing: true, sso: true, aiChat: true, aiSettings: true, aiMcp: true, sampleData: true },
     },
+    isSingleTenant: identity.mode === 'onprem',
   }),
 }));
 vi.mock('../ai/useAiCapabilities', () => ({
@@ -414,11 +429,29 @@ describe('settings page registry', () => {
     expect([...wider].sort()).toEqual(Object.keys(ROUTE_WIDER_THAN_OPEN).sort());
   });
 
-  it('(f) has an Administration menu entry for every organisation line', () => {
-    const missing = SETTINGS_PAGES
-      .filter((entry) => settingsPageScope(entry, 'cloud') === 'organization')
-      .filter((entry) => !LAYOUT_SOURCE.includes(`to: '${entry.path}'`))
-      .map((entry) => entry.id);
-    expect(missing).toEqual([]);
+  it('(f) gives every Administration line its entry of the Administration menu, shown as the line says', () => {
+    const problems: string[] = [];
+    const lines = SETTINGS_PAGES.filter((entry) => MODES.some((mode) => ['organization', 'installation'].includes(settingsPageScope(entry, mode))));
+    expect(lines.length).toBeGreaterThan(0);
+    for (const entry of lines) {
+      const item = ADMIN_MENU.find((candidate) => candidate.to === entry.path);
+      expect(item, `${entry.id}: no entry ${entry.path} in pages/admin/adminMenu.ts`).toBeTruthy();
+      if (!item) continue;
+      // The route names the same requirement in ADMIN_ROUTE_REQUIREMENTS, except the pages guarded
+      // by their own branch of ProtectedRoute: the AI settings, the integrations, the Installation section.
+      const declared = ADMIN_ROUTE_REQUIREMENTS[entry.path.split('/')[2]];
+      if (item.requires === 'aiSettings' || item.requires === 'integrations') expect(declared, entry.id).toBeUndefined();
+      else if (item.requires === 'operator') expect(isInstallationPath(entry.path), entry.id).toBe(true);
+      else expect(declared, `${entry.id}: no line in ADMIN_ROUTE_REQUIREMENTS`).toBeDefined();
+      // The menu shows the entry to exactly the people the line lets open the page.
+      for (const { mode, host } of environments(entry)) {
+        for (const grant of [...satisfying(entry.open, mode), ...falling(entry.open, mode)]) {
+          const expected = evaluateAccess(entry.open, contextFor(grant, mode));
+          const shown = adminMenuEntries(menuContextFor(grant, mode, host)).some((candidate) => candidate.to === entry.path);
+          if (shown !== expected) problems.push(`${entry.id} (${mode}): menu ${shown ? 'shows' : 'hides'} it with ${JSON.stringify(grant)}`);
+        }
+      }
+    }
+    expect(problems).toEqual([]);
   });
 });

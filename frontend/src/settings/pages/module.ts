@@ -281,9 +281,9 @@ export const MODULE_SETTINGS_PAGES: SettingsPageEntry[] = [
       'agents:settings.sharedContextDialog.name',
       'agents:settings.sharedContextDialog.lines',
     ],
-    // The menu entry asks for the Admin level on the agents, wider than the route and the page.
-    open: allOf(agentsAvailable, level('ai_agents', 'admin')),
-    change: allOf(agentsAvailable, level('ai_agents', 'admin')),
+    // An agents reader opens the profiles read only; an agents or AI settings administrator changes them.
+    open: allOf(agentsAvailable, level('ai_agents', 'reader')),
+    change: allOf(agentsAvailable, level('ai_agents', 'reader'), anyOf(level('ai_agents', 'admin'), level('ai_settings', 'admin'))),
     availability: { features: ['aiSettings'] },
     doc: { page: 'agents-shared-context' },
   },

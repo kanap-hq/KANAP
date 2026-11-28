@@ -3349,6 +3349,7 @@
     "search": "Buscar en la configuración",
     "searchPlaceholder": "p. ej., moneda de reporting",
     "noMatch": "Nada en la configuración coincide con «{{query}}».",
+    "empty": "Aquí no tiene acceso a ninguna página de configuración.",
     "groups": {
       "person": "Mi cuenta",
       "organization": "Administración",

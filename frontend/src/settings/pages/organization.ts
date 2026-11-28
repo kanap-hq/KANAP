@@ -46,7 +46,6 @@ export const ORGANIZATION_SETTINGS_PAGES: SettingsPageEntry[] = [
     doc: { page: 'admin', section: 'Roles' },
   },
   {
-    // The route asks for a `data-access` right no role grants: only the Administrator role opens it.
     id: 'org.data-access',
     scope: 'organization',
     path: '/admin/data-access',
@@ -59,8 +58,8 @@ export const ORGANIZATION_SETTINGS_PAGES: SettingsPageEntry[] = [
       'admin:dataAccess.columns.roles',
       'admin:dataAccess.importCsv',
     ],
-    open: allOf(administrator, fullDataAccess),
-    change: allOf(administrator, fullDataAccess),
+    open: allOf(usersAdmin, fullDataAccess),
+    change: allOf(usersAdmin, fullDataAccess),
     availability: {},
     doc: { page: 'data-access' },
   },

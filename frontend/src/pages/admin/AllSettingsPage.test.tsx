@@ -51,6 +51,7 @@ vi.mock('../../config/FeaturesContext', () => ({
         ? { billing: false, sso: false, aiSettings: true, aiChat: true, aiMcp: true, sampleData: false }
         : { billing: true, sso: true, aiSettings: true, aiChat: true, aiMcp: true, sampleData: true },
     },
+    isSingleTenant: state.mode === 'single-tenant',
   }),
 }));
 vi.mock('../../ai/useAiCapabilities', () => ({
@@ -94,7 +95,8 @@ describe('AllSettingsPage', () => {
   it('lists everything an Administrator opens in the cloud, without installation or platform pages', () => {
     as({ perms: {}, administrator: true });
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: 'All settings' })).toBeInTheDocument();
+    // The title of an Administration page, without the grey mention beside it.
+    expect(screen.getByRole('heading', { name: 'All settings' }).parentElement).toHaveTextContent(/^All settings$/);
     expect(groupNames()).toEqual(['My account', 'AI agents', 'Portfolio', 'IT landscape', 'Knowledge', 'Budget management', 'Administration']);
     expect(linksOf('My account')).toEqual(['Profile', 'Notifications', 'Appearance', 'Connected apps', 'About', 'Customize the home page']);
     expect(linksOf('Administration')).toEqual([
@@ -152,19 +154,35 @@ describe('AllSettingsPage', () => {
     expect(linksOf('Knowledge')).toEqual(['Manage library']);
   });
 
-  it('shows the platform administrator the platform pages, scheduled tasks included', () => {
+  it('shows the platform administrator the platform pages, and scheduled tasks under Installation as the menu does', () => {
     as({ perms: {}, platformAdmin: true }, { platformHost: true });
     renderPage();
-    expect(groupNames()).toEqual(['Platform']);
-    expect(linksOf('Platform')).toEqual([
-      'Scheduled tasks', 'Tenants', 'Trials', 'CoA templates', 'Standard accounts', 'Platform AI', 'Ops dashboard',
-    ]);
+    expect(groupNames()).toEqual(['Installation', 'Platform']);
+    expect(linksOf('Installation')).toEqual(['Scheduled tasks']);
+    expect(hrefOf('Scheduled tasks')).toBe('/admin/installation/scheduled-tasks');
+    expect(linksOf('Platform')).toEqual(['Tenants', 'Trials', 'CoA templates', 'Standard accounts', 'Platform AI', 'Ops dashboard']);
   });
 
-  it('shows an agents reader no agent settings page while the menu entry asks for the Admin level', () => {
+  it('shows an Administrator of the platform workspace no installation page on the platform host', () => {
+    as({ perms: {}, administrator: true }, { platformHost: true });
+    renderPage();
+    expect(groupNames()).toEqual([]);
+    expect(screen.getByText('No settings page is open to you here.')).toBeInTheDocument();
+  });
+
+  it('shows a limited Administrator on site no Installation group', () => {
+    as({ perms: {}, administrator: true, limited: true }, { mode: 'single-tenant' });
+    renderPage();
+    expect(groupNames()).not.toContain('Installation');
+    expect(linksOf('Administration')).not.toContain('Data access');
+  });
+
+  it('shows an agents reader the shared context profiles, which open read only', () => {
     as({ perms: { ai_agents: 'reader' } });
     renderPage();
-    expect(groupNames()).toEqual(['My account']);
+    expect(groupNames()).toEqual(['My account', 'AI agents']);
+    expect(linksOf('AI agents')).toEqual(['Shared context']);
+    expect(hrefOf('Shared context')).toBe('/agents/shared-context');
   });
 
   it('finds a page by the name of one of its settings', () => {

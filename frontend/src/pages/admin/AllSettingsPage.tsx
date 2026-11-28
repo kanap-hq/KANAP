@@ -8,6 +8,7 @@ import { useDataAccessLimited } from '../../auth/dataAccess';
 import { useFeatures } from '../../config/FeaturesContext';
 import { useTenant } from '../../tenant/TenantContext';
 import { useAiCapabilities } from '../../ai/useAiCapabilities';
+import PageHeader from '../../components/PageHeader';
 import { neutralLinkSx } from '../../theme/formSx';
 import { evaluateAccess, type AccessContext, type DeploymentMode } from '../../settings/accessRule';
 import {
@@ -42,10 +43,10 @@ export function normalizeSearchText(text: string): string {
 function useOpenableSettingsPages(): { pages: SettingsPageEntry[]; mode: DeploymentMode } {
   const { hasLevel, claims } = useAuth();
   const dataAccessLimited = useDataAccessLimited();
-  const { config } = useFeatures();
+  const { config, isSingleTenant } = useFeatures();
   const { isPlatformHost } = useTenant();
   const aiCapabilities = useAiCapabilities();
-  const mode: DeploymentMode = config.deploymentMode === 'single-tenant' ? 'onprem' : 'cloud';
+  const mode: DeploymentMode = isSingleTenant ? 'onprem' : 'cloud';
   return React.useMemo(() => {
     const features = config.features;
     const context: AccessContext = {
@@ -108,7 +109,7 @@ export default function AllSettingsPage() {
 
   return (
     <Box sx={{ maxWidth: 880 }}>
-      <Typography variant="h5" component="h1" sx={{ mb: 2 }}>{t('admin:allSettings.title')}</Typography>
+      <PageHeader title={t('admin:allSettings.title')} />
       <TextField
         variant="standard"
         value={query}
@@ -126,7 +127,7 @@ export default function AllSettingsPage() {
       />
       {groups.length === 0 ? (
         <Typography sx={{ mt: 3, fontSize: 13, color: 'kanap.text.tertiary' }}>
-          {t('admin:allSettings.noMatch', { query: query.trim() })}
+          {rows.length === 0 ? t('admin:allSettings.empty') : t('admin:allSettings.noMatch', { query: query.trim() })}
         </Typography>
       ) : groups.map(({ group, rows: groupRows }) => (
         <Box component="section" key={group} aria-labelledby={`all-settings-${group}`} sx={{ mt: 3 }}>

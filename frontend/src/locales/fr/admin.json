@@ -3349,6 +3349,7 @@
     "search": "Rechercher un paramètre",
     "searchPlaceholder": "Ex. : devise de reporting",
     "noMatch": "Aucun paramètre ne correspond à « {{query}} ».",
+    "empty": "Aucune page de paramètres ne vous est ouverte ici.",
     "groups": {
       "person": "Mon compte",
       "organization": "Administration",
