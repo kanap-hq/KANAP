@@ -14,9 +14,11 @@ vi.mock('react-i18next', () => {
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
-// The grid draws the line cell through the page's renderer, and the type column's text.
+// The grid draws the line cell through the page's renderer, and the type column's text; its
+// sizing options are kept for the test that reads them.
+const grid = vi.hoisted(() => ({ props: undefined as any }));
 vi.mock('ag-grid-react', () => ({
-  AgGridReact: ({ rowData, columnDefs }: { rowData: any[]; columnDefs: any[] }) => (
+  AgGridReact: (props: { rowData: any[]; columnDefs: any[] }) => { grid.props = props; const { rowData, columnDefs } = props; return (
     <ul>
       {rowData.map((row) => (
         <li key={row.id} data-testid={`row-${row.id}`}>
@@ -30,7 +32,7 @@ vi.mock('ag-grid-react', () => ({
         </li>
       ))}
     </ul>
-  ),
+  ); },
 }));
 vi.mock('../../components/AgGridBox', () => ({ default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div> }));
 // The server export the page offers, as the export button receives it.
@@ -158,6 +160,20 @@ describe('BudgetColumnResetPage', () => {
     const result = await screen.findByText('operations.columnReset.clearDone:1 operations.results.skipped:2');
     expect(result).toHaveAttribute('role', 'status');
     expect(result.parentElement).toContainElement(screen.getByRole('button', { name: 'operations.columnReset.clearColumn' }));
+  });
+
+  it('gives the line name the free width of the full grid, the type and the amount keeping theirs', async () => {
+    renderPage();
+    await chooseColumn('ops:operations.budgetColumns.budget');
+    fireEvent.click(await screen.findByRole('button', { name: 'operations.columnReset.showAllLines:2' }));
+    await screen.findByTestId('row-o-1');
+    const defs = Object.fromEntries(grid.props.columnDefs.map((col: any) => [col.field, col]));
+    // The grid sizes its columns to its own width once it is drawn, the name taking what the others leave.
+    expect(grid.props.autoSizeStrategy).toEqual({ type: 'fitGridWidth' });
+    expect(defs.product_name).toMatchObject({ flex: 1 });
+    expect(defs.product_name.suppressSizeToFit).toBeFalsy();
+    expect(defs.nature).toMatchObject({ width: 110, suppressSizeToFit: true });
+    expect(defs.currentValue).toMatchObject({ width: 200, suppressSizeToFit: true });
   });
 
   it('reads another operation running as a refusal beside the pill', async () => {
