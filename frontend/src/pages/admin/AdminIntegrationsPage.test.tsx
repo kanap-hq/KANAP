@@ -170,7 +170,9 @@ describe('AdminIntegrationsPage', () => {
 
     fireEvent.change(address, { target: { value: 'https://glpi2.internal' } });
     expect(within(card).getByLabelText(/^User token/)).toBeRequired();
-    expect(within(card).getAllByText('The address changed: enter it again.')).toHaveLength(2);
+    // The user token is required; the optional app token says it will not follow, without an error.
+    expect(within(card).getAllByText('The address changed: enter it again.')).toHaveLength(1);
+    expect(within(card).getByText('The saved value is not sent to the new address. Enter it again to keep it.')).toBeInTheDocument();
     expect(save).toBeDisabled();
     expect(test).toBeDisabled();
 

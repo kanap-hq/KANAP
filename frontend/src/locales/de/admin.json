@@ -173,7 +173,7 @@
         "requestTimeout": "Anfrage-Timeout (Sekunden)"
       },
       "hints": {
-        "apiKey": "Erstellen Sie einen in PRTG unter Setup → API-Schlüssel. Lesezugriff genügt.",
+        "apiKey": "Erstellen Sie einen in PRTG unter „Setup | Account Settings | API Keys“. Lesezugriff genügt.",
         "requestTimeout": "5 bis 120 Sekunden. Standard: 30.",
         "baseUrl": "Die Adresse, unter der Sie PRTG im Browser öffnen, zum Beispiel https://prtg.example.com.",
         "timezone": "Die Zeitzone des PRTG-Core-Servers, wie in seinem Betriebssystem eingestellt. Die Zeiten der Alarme werden in dieser Zone gelesen."
@@ -3020,8 +3020,7 @@
   "integrations": {
     "secretAddressChanged": "Die Adresse hat sich geändert: Geben Sie den Wert erneut ein.",
     "removeConnection": {
-      "title": "Verbindung {{name}} entfernen?",
-      "message": "Ihre Adresse und das gespeicherte Geheimnis werden gelöscht. Bereits importierte Daten bleiben erhalten."
+      "title": "Verbindung {{name}} entfernen?"
     },
     "netbox": {
       "title": "Netbox-Inventar",

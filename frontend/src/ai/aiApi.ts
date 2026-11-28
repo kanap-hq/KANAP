@@ -33,7 +33,17 @@ export type AiWebSearchTestResult = {
 };
 
 /** A connection test kept on the saved values. */
-export type AiConnectionLastTest = { ok: boolean; tested_at: string };
+/** The last test kept on the saved values, with what the card said right after it. */
+export type AiConnectionLastTest = {
+  ok: boolean;
+  tested_at: string;
+  /** A failure: its cause as a code (`errors:<code>`). */
+  code?: string;
+  /** A success: what the system answered. */
+  latency_ms?: number;
+  version?: string;
+  sensor_count?: number;
+};
 
 export type AiGlpiTestResult = {
   ok: boolean;

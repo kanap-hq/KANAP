@@ -23,7 +23,7 @@ const PRTG = {
   server_timezone: 'Europe/Paris',
   request_timeout_seconds: null,
   credential: { present: true, shape: 'api_token' },
-  last_test: null as null | { ok: boolean; tested_at: string },
+  last_test: null as null | { ok: boolean; tested_at: string; code?: string; version?: string; sensor_count?: number },
   updated_at: '2026-09-18T10:00:00.000Z',
 };
 
@@ -53,26 +53,53 @@ describe('MonitoringIntegrationCard', () => {
   });
 
   it('shows the stored last test after a reload, and its own fields', async () => {
-    mockPrtg({ last_test: { ok: false, tested_at: '2026-10-16T09:00:00.000Z' } });
+    mockPrtg({ last_test: { ok: false, tested_at: '2026-10-16T09:00:00.000Z', code: 'prtg_auth' } });
     renderCard();
 
-    expect(await screen.findByText(/^Last test failed on 16 Oct( 2026)? at /)).toBeInTheDocument();
+    // The cause stays after a reload, from its code.
+    const failed = await screen.findByText(/^Last test failed on 16 Oct( 2026)? at /);
+    expect(within(failed).getByText(/PRTG rejected the API key\./)).toBeInTheDocument();
     expect(screen.getByLabelText('Server address')).toHaveValue('https://prtg.example.com');
     expect(screen.getByLabelText('API key')).toBeDisabled();
     expect(screen.getByLabelText('Server time zone')).toHaveValue('Europe/Paris');
     // The default applies when the timeout is empty, and shows as its placeholder.
     expect(screen.getByLabelText('Request timeout (seconds)')).toHaveAttribute('placeholder', '30');
-    for (const name of [/browser, for example https:\/\/prtg/, /Setup → API keys/, /PRTG core server/, /^5 to 120 seconds/]) {
+    for (const name of [/browser, for example https:\/\/prtg/, /under “Setup \| Account Settings \| API Keys”\./, /PRTG core server/, /^5 to 120 seconds/]) {
       expect(screen.getByRole('img', { name })).toBeInTheDocument();
     }
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   });
 
-  it('starts a new connection as never tested', async () => {
+  it('says after a reload what PRTG answered at the last test', async () => {
+    mockPrtg({ last_test: { ok: true, tested_at: '2026-10-16T09:00:00.000Z', version: '24.1', sensor_count: 321 } });
+    renderCard();
+    const passed = await screen.findByText(/^Last test passed on 16 Oct/);
+    expect(within(passed).getByText(/PRTG 24\.1, 321 sensors visible/)).toBeInTheDocument();
+  });
+
+  it('starts a new connection as never tested, Test off until the address and the key are there', async () => {
     mockPrtg(null);
     renderCard();
     expect(await screen.findByText('Never tested')).toBeInTheDocument();
     expect(screen.getByLabelText('API key')).toBeEnabled();
+    const test = screen.getByRole('button', { name: 'Test' });
+    expect(test).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Server address'), { target: { value: 'https://prtg.example.com' } });
+    expect(test).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('API key'), { target: { value: 'typed-key' } });
+    expect(test).toBeEnabled();
+  });
+
+  it('says what removing the connection stops', async () => {
+    renderCard();
+    await screen.findByLabelText('Server address');
+    fireEvent.change(screen.getByLabelText('Server address'), { target: { value: ' ' } });
+    expect(screen.getByRole('button', { name: 'Test' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('Remove the PRTG connection?')).toBeInTheDocument();
+    expect(screen.getByText('Its address and saved key are deleted. Monitoring agents can no longer read PRTG.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(api.put).not.toHaveBeenCalled();
   });
 
   it('shows what PRTG answered, then the cause of a failure in words, without its raw text', async () => {

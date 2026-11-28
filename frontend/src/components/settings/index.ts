@@ -21,6 +21,7 @@ export {
   ConnectionSwitchField,
   connectionStatusLine,
   connectionTestCause,
+  connectionValueMissing,
 } from './ConnectionCard';
 export type {
   ConnectionCardProps,

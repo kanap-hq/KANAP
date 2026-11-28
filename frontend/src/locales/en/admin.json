@@ -173,7 +173,7 @@
         "requestTimeout": "Request timeout (seconds)"
       },
       "hints": {
-        "apiKey": "Create one in PRTG under Setup → API keys. Read-only access is enough.",
+        "apiKey": "Create one in PRTG under “Setup | Account Settings | API Keys”. Read-only access is enough.",
         "requestTimeout": "5 to 120 seconds. Default: 30.",
         "baseUrl": "The address you open PRTG with in your browser, for example https://prtg.example.com.",
         "timezone": "The time zone of the PRTG core server, as set in its operating system. Alert times are read in this zone."
@@ -1019,7 +1019,18 @@
       "web_search_enabled": "Web search enabled",
       "linked_records": "Linked records",
       "expected_units": "Expected units",
-      "secret_replaced": "Secret replaced"
+      "secret_replaced": "Secret replaced",
+      "credential": "Secret set",
+      "glpi_user_token_replaced": "GLPI user token replaced",
+      "glpi_app_token_replaced": "GLPI application token replaced",
+      "implementation": "Connector",
+      "provider_key": "Connected system",
+      "auto_sync": "Automatic synchronisation",
+      "default_environment": "Environment for new assets",
+      "insecure_tls": "Ignore certificate errors",
+      "request_timeout_seconds": "Request timeout (seconds)",
+      "server_timezone": "Server time zone",
+      "enabled": "Enabled"
     },
     "history": {
       "empty": "No history yet",
@@ -3021,7 +3032,9 @@
     "secretAddressChanged": "The address changed: enter it again.",
     "removeConnection": {
       "title": "Remove the {{name}} connection?",
-      "message": "Its address and saved secret are deleted. Data already imported stays."
+      "glpi": "Its address and saved tokens are deleted, and tickets can no longer be imported. Tickets already imported stay.",
+      "prtg": "Its address and saved key are deleted. Monitoring agents can no longer read PRTG.",
+      "netbox": "Its address and saved token are deleted, and the automatic synchronisation stops. What was already synchronised stays."
     },
     "netbox": {
       "title": "Netbox inventory",
@@ -3060,7 +3073,8 @@
         "goToSync": "Set up the synchronisation"
       }
     },
-    "latency": "answered in {{ms}} ms"
+    "latency": "answered in {{ms}} ms",
+    "optionalSecretAddressChanged": "The saved value is not sent to the new address. Enter it again to keep it."
   },
   "sampleData": {
     "title": "Sample data",

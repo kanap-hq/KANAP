@@ -172,20 +172,23 @@ theme draws it on `kanap.bg.drawer`.
 - **Status line**: a dot and a sentence. Green "Last test passed on 15 Nov 2026 at 10:42" or "Test
   message sent to your address"; grey "Changes not saved", "Saved, not tested yet", "Never
   tested"; orange "Testing…". A failure says the cause in one sentence, red dot.
-- **Test** (neutral pill) tries the values on screen, saved or not. **Save** (primary pill) is off
-  while nothing changed.
+- **Test** (neutral pill) tries the values on screen, saved or not; it is off while a required value
+  is missing (`connectionValueMissing`: the address, or a required secret neither typed nor saved
+  for this address). **Save** (primary pill) is off while nothing changed.
 - Several providers for one service: a choice above the card ("Send through: SMTP server /
   Resend"), one card visible.
 - Leaving the page with a changed card asks for confirmation (`useLeaveGuard`).
 
 `ConnectionCard` is a frame: the card's owner holds the form, says what changed (`dirty`), saves
 and tests. It gives the card the saved test (`storedTest`, shown after a reload) and the test run
-on the screen (`sessionTest`, with its `cause` or its `detail`), cleared at each change; the card
-writes the status line from them. Keep a test only when it ran on the saved values, and never
+on the screen (`sessionTest`), cleared at each change, both with their `cause` or their `detail`:
+after a reload the line says what it said right after the test. Keep a test only when it ran on
+the saved values, with its code and what the system answered (never its message), and never
 audit it.
 
 - `ConnectionSecretField`: dots and Replace for a saved secret; `addressChanged` opens it and asks
-  for it again. Give it a `key` that changes after a save.
+  for it again. An `optional` secret is not asked for: a neutral line says the saved value does not
+  follow the new address. Give it a `key` that changes after a save.
 - `ConnectionSwitchField`: a switch across both columns, its hint beside the label.
 - `source="file"`: values set in the configuration file. A lock line with `fileHint` at the top,
   every field read-only (`locked`), no Save and no Replace; Test stays.

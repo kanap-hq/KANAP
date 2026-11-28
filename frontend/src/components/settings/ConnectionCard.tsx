@@ -15,9 +15,9 @@ export type ConnectionTest = {
   ok: boolean;
   /** ISO instant of the test. */
   tested_at: string;
-  /** A failure run in this session: its cause, in one translated sentence. */
+  /** A failure: its cause, in one translated sentence. */
   cause?: string;
-  /** A success run in this session: what the system answered ("PRTG 24.1, 321 sensors visible"). */
+  /** A success: what the system answered ("PRTG 24.1, 321 sensors visible"). */
   detail?: string;
 };
 
@@ -88,7 +88,9 @@ function newer(a: ConnectionTest | null | undefined, b: ConnectionTest | null | 
 
 /**
  * The status line's state, in this order: a status given; a test running; the test run in this
- * session (on the values on screen); unsaved changes; the stored test; saved; never tested.
+ * session (on the values on screen); unsaved changes; the stored test; saved; never tested. A
+ * stored test says what the session test said: what the system answered, or the cause, after
+ * its date.
  */
 export function connectionStatusLine(
   props: Pick<ConnectionCardProps, 'status' | 'testing' | 'sessionTest' | 'storedTest' | 'dirty' | 'configured'>,
@@ -104,9 +106,10 @@ export function connectionStatusLine(
       time: new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(at),
     };
     if (test.ok) {
-      return { tone: 'success', text: t('common:connectionCard.status.passed', when), ...(fresh && test.detail ? { detail: test.detail } : {}) };
+      return { tone: 'success', text: t('common:connectionCard.status.passed', when), ...(test.detail ? { detail: test.detail } : {}) };
     }
-    return { tone: 'danger', text: fresh && test.cause ? test.cause : t('common:connectionCard.status.failed', when) };
+    if (fresh && test.cause) return { tone: 'danger', text: test.cause };
+    return { tone: 'danger', text: t('common:connectionCard.status.failed', when), ...(test.cause ? { detail: test.cause } : {}) };
   };
   if (props.sessionTest && newer(props.sessionTest, props.storedTest)) return describe(props.sessionTest, true);
   if (props.dirty) return { tone: 'neutral', text: t('common:connectionCard.status.notSaved') };
@@ -232,6 +235,19 @@ export function ConnectionCard(props: ConnectionCardProps) {
   );
 }
 
+/**
+ * A value the connection cannot be tested without is missing: the address, or a required secret
+ * that is neither typed nor saved for the address on screen. Test stays off meanwhile.
+ */
+export function connectionValueMissing(
+  address: string,
+  secret?: { stored: boolean; typed: string; addressChanged: boolean },
+): boolean {
+  if (!address.trim()) return true;
+  if (!secret) return false;
+  return !secret.typed.trim() && !(secret.stored && !secret.addressChanged);
+}
+
 export interface ConnectionSecretFieldProps {
   label: string;
   /** Where to find the value in the external system. */
@@ -243,6 +259,11 @@ export interface ConnectionSecretFieldProps {
   onChange: (value: string) => void;
   /** The address changed: the saved secret will be emptied, the field asks for it again. */
   addressChanged?: boolean;
+  /**
+   * The connection works without this secret: a changed address does not mark the field in error,
+   * a neutral line says the saved value will not follow and how to keep it.
+   */
+  optional?: boolean;
   /** The card's `locked`: the saved secret only says it is set. */
   locked?: boolean;
   /** An example of the shape, for an empty field. */
@@ -265,15 +286,19 @@ export function ConnectionSecretField({
   value,
   onChange,
   addressChanged = false,
+  optional = false,
   locked = false,
   placeholder,
   error,
 }: ConnectionSecretFieldProps) {
   const { t } = useTranslation(['common', 'admin']);
   const [replacing, setReplacing] = React.useState(false);
+  const noteId = React.useId();
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const showDots = stored && !addressChanged && (locked || !replacing);
-  const shownError = error ?? (addressChanged && !value.trim() ? t('admin:integrations.secretAddressChanged') : null);
+  const emptiedByAddress = addressChanged && !value.trim();
+  const shownError = error ?? (emptiedByAddress && !optional ? t('admin:integrations.secretAddressChanged') : null);
+  const note = emptiedByAddress && optional && !error ? t('admin:integrations.optionalSecretAddressChanged') : null;
 
   React.useEffect(() => {
     if (replacing) inputRef.current?.focus();
@@ -304,21 +329,26 @@ export function ConnectionSecretField({
           )}
         </Stack>
       ) : (
-        <TextField
-          variant="standard"
-          type="password"
-          autoComplete="new-password"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-          required={addressChanged}
-          error={invalid}
-          fullWidth
-          inputRef={inputRef}
-          InputProps={{ readOnly: locked }}
-          inputProps={{ 'aria-label': label, ...aria }}
-          sx={{ maxWidth: 480 }}
-        />
+        <>
+          <TextField
+            variant="standard"
+            type="password"
+            autoComplete="new-password"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={placeholder}
+            required={addressChanged && !optional}
+            error={invalid}
+            fullWidth
+            inputRef={inputRef}
+            InputProps={{ readOnly: locked }}
+            inputProps={{ 'aria-label': label, ...(note ? { 'aria-describedby': noteId } : {}), ...aria }}
+            sx={{ maxWidth: 480 }}
+          />
+          {note && (
+            <Typography id={noteId} sx={{ fontSize: 12, color: 'kanap.text.secondary', mt: 0.5 }}>{note}</Typography>
+          )}
+        </>
       ))}
     </SettingField>
   );

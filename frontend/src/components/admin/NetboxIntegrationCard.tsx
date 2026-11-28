@@ -17,6 +17,7 @@ import {
   ConnectionSwitchField,
   SettingField,
   connectionTestCause,
+  connectionValueMissing,
   type ConnectionTest,
 } from '../settings';
 import { drawerMenuItemSx } from '../../theme/formSx';
@@ -135,6 +136,16 @@ export default function NetboxIntegrationCard() {
     },
   });
 
+  // A test as the status line says it, run now or kept on the saved values: the version, or the
+  // cause from its code (a kept test has no message).
+  const describeTest = (result: { ok: boolean; tested_at?: string; code?: string; message?: string; version?: string }): ConnectionTest => ({
+    ok: result.ok,
+    tested_at: result.tested_at || new Date().toISOString(),
+    ...(result.ok
+      ? (result.version ? { detail: t('integrations.netbox.messages.testDetail', { version: result.version }) } : {})
+      : { cause: connectionTestCause(t, result.code, result.message, t('integrations.netbox.messages.testFailed')) }),
+  });
+
   const testMutation = useMutation({
     mutationFn: async (data: NetboxForm) =>
       netboxApi.testIntegration({
@@ -150,13 +161,7 @@ export default function NetboxIntegrationCard() {
       setSessionTest(null);
     },
     onSuccess: (result: NetboxTestResult) => {
-      setSessionTest({
-        ok: result.ok,
-        tested_at: result.tested_at || new Date().toISOString(),
-        ...(result.ok
-          ? (result.netbox_version ? { detail: t('integrations.netbox.messages.testDetail', { version: result.netbox_version }) } : {})
-          : { cause: connectionTestCause(t, result.code, result.message, t('integrations.netbox.messages.testFailed')) }),
-      });
+      setSessionTest(describeTest({ ...result, version: result.netbox_version }));
     },
     onError: (error: unknown) => {
       setSessionTest({
@@ -173,17 +178,20 @@ export default function NetboxIntegrationCard() {
   // The saved token only goes to the saved address: a new one empties it on save.
   const tokenEmptiedByAddress = savedToken && !removing && isNewSecretAddress(form.base_url, integration?.base_url);
   const tokenMissingForAddress = tokenEmptiedByAddress && !form.api_token.trim();
+  const testValueMissing = connectionValueMissing(form.base_url, {
+    stored: savedToken,
+    typed: form.api_token,
+    addressChanged: tokenEmptiedByAddress,
+  });
   const secretWritable = integration?.secret_writable !== false;
   const dirty = !!integration && Object.keys(buildSavePayload(form, integration)).length > 0;
-  const storedTest = integration?.last_test?.tested_at
-    ? { ok: integration.last_test.ok, tested_at: integration.last_test.tested_at }
-    : null;
+  const storedTest = integration?.last_test?.tested_at ? describeTest(integration.last_test) : null;
 
   const handleSave = async () => {
     if (removing) {
       const confirmed = await dialogs.confirm({
         title: t('integrations.removeConnection.title', { name: 'Netbox' }),
-        message: t('integrations.removeConnection.message'),
+        message: t('integrations.removeConnection.netbox'),
         confirmLabel: t('common:buttons.remove'),
         intent: 'danger',
       });
@@ -203,7 +211,7 @@ export default function NetboxIntegrationCard() {
       testing={testMutation.isPending}
       saving={saveMutation.isPending}
       onTest={() => testMutation.mutate(form)}
-      testDisabled={tokenMissingForAddress || removing}
+      testDisabled={removing || testValueMissing}
       onSave={() => { void handleSave(); }}
       saveDisabled={tokenMissingForAddress && form.enabled}
       loading={integrationQuery.isLoading}

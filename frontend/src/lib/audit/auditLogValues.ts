@@ -947,6 +947,11 @@ export function formatAuditValue(value: unknown, field: string, context: AuditVa
   if (field === 'nodes' && Array.isArray(value) && isDataAccessSnapshot(context.snapshot)) {
     return dataAccessNodesText(value, context);
   }
+  // The secret of a connection is kept as its presence (`{ present, shape }`): the row says
+  // whether one is set, never how it is built.
+  if (field === 'credential' && isPlainObject(value) && typeof value.present === 'boolean') {
+    return { text: context.t(value.present ? 'auditLogs.values.yes' : 'auditLogs.values.no') };
+  }
   if (typeof value === 'boolean') return { text: context.t(value ? 'auditLogs.values.yes' : 'auditLogs.values.no') };
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) return { text: String(value) };

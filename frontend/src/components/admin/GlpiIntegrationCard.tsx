@@ -11,6 +11,7 @@ import {
   ConnectionSwitchField,
   SettingField,
   connectionTestCause,
+  connectionValueMissing,
   type ConnectionTest,
 } from '../settings';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -101,6 +102,16 @@ export default function GlpiIntegrationCard() {
     },
   });
 
+  // A test as the status line says it, run now or kept on the saved values: the response time,
+  // or the cause from its code (a kept test has no message).
+  const describeTest = (result: { ok: boolean; tested_at?: string; code?: string; message?: string; latency_ms?: number | null }): ConnectionTest => ({
+    ok: result.ok,
+    tested_at: result.tested_at || new Date().toISOString(),
+    ...(result.ok
+      ? (result.latency_ms != null ? { detail: t('integrations.latency', { ms: result.latency_ms }) } : {})
+      : { cause: connectionTestCause(t, result.code, result.message, t('aiAdmin.glpi.messages.testFailed')) }),
+  });
+
   const testMutation = useMutation({
     mutationFn: async (data: GlpiForm) => aiAdminApi.testGlpi(buildTestPayload(data)),
     onMutate: () => {
@@ -108,13 +119,7 @@ export default function GlpiIntegrationCard() {
       setSessionTest(null);
     },
     onSuccess: (result) => {
-      setSessionTest({
-        ok: result.ok,
-        tested_at: result.tested_at || new Date().toISOString(),
-        ...(result.ok
-          ? (result.latency_ms != null ? { detail: t('integrations.latency', { ms: result.latency_ms }) } : {})
-          : { cause: connectionTestCause(t, result.code, result.message, t('aiAdmin.glpi.messages.testFailed')) }),
-      });
+      setSessionTest(describeTest(result));
     },
     onError: (error: unknown) => {
       setSessionTest({
@@ -132,12 +137,18 @@ export default function GlpiIntegrationCard() {
   const addressChanged = !!settings && !removing
     && isNewSecretAddress(glpiAddressRoot(form.glpi_url), glpiAddressRoot(settings.glpi_url));
   const userTokenMissing = addressChanged && !!settings?.has_glpi_user_token && !form.glpi_user_token.trim();
+  // The user token is required; the application token is not.
+  const testValueMissing = connectionValueMissing(form.glpi_url, {
+    stored: !!settings?.has_glpi_user_token,
+    typed: form.glpi_user_token,
+    addressChanged,
+  });
 
   const handleSave = async () => {
     if (removing) {
       const confirmed = await dialogs.confirm({
         title: t('integrations.removeConnection.title', { name: 'GLPI' }),
-        message: t('integrations.removeConnection.message'),
+        message: t('integrations.removeConnection.glpi'),
         confirmLabel: t('common:buttons.remove'),
         intent: 'danger',
       });
@@ -152,12 +163,12 @@ export default function GlpiIntegrationCard() {
       hint={`${t('aiAdmin.glpi.description')} ${t('aiAdmin.glpi.tooltips.plaidRequired')}`}
       configured={!!settings?.glpi_url}
       dirty={dirty}
-      storedTest={settings?.glpi_last_test ?? null}
+      storedTest={settings?.glpi_last_test ? describeTest(settings.glpi_last_test) : null}
       sessionTest={sessionTest}
       testing={testMutation.isPending}
       saving={saveMutation.isPending}
       onTest={() => testMutation.mutate(form)}
-      testDisabled={userTokenMissing || removing || !form.glpi_url.trim()}
+      testDisabled={removing || testValueMissing}
       onSave={() => { void handleSave(); }}
       saveDisabled={userTokenMissing && form.glpi_enabled}
       loading={settingsQuery.isLoading}
@@ -216,6 +227,7 @@ export default function GlpiIntegrationCard() {
             value={form.glpi_app_token}
             onChange={(value) => editForm({ glpi_app_token: value })}
             addressChanged={addressChanged && !!settings?.has_glpi_app_token}
+            optional
             locked={locked}
             placeholder={t('aiAdmin.glpi.placeholders.enterAppToken')}
           />

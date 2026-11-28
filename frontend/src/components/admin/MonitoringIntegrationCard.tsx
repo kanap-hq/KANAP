@@ -12,6 +12,7 @@ import {
   ConnectionSwitchField,
   SettingField,
   connectionTestCause,
+  connectionValueMissing,
   type ConnectionTest,
 } from '../settings';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -108,6 +109,7 @@ export default function MonitoringIntegrationCard() {
   const addressChanged = !!prtg && !removing && isNewSecretAddress(form.base_url, prtg.base_url);
   const keyEmptiedByAddress = addressChanged && savedKey;
   const keyMissingForAddress = keyEmptiedByAddress && !form.api_token.trim();
+  const testValueMissing = connectionValueMissing(form.base_url, { stored: savedKey, typed: form.api_token, addressChanged });
   const dirty = !integrationsQuery.isLoading && !sameForm(form, buildForm(prtg));
 
   const saveMutation = useMutation({
@@ -137,6 +139,18 @@ export default function MonitoringIntegrationCard() {
     },
   });
 
+  // A test as the status line says it, run now or kept on the saved values: the version and the
+  // sensors seen, or the cause from its code (a kept test has no message).
+  const describeTest = (result: { ok: boolean; tested_at?: string; code?: string; message?: string; version?: string; sensor_count?: number }): ConnectionTest => ({
+    ok: result.ok,
+    tested_at: result.tested_at || new Date().toISOString(),
+    ...(result.ok
+      ? (result.version && result.sensor_count != null
+        ? { detail: t('aiAdmin.prtg.messages.testDetail', { version: result.version, count: result.sensor_count }) }
+        : {})
+      : { cause: connectionTestCause(t, result.code, result.message, t('aiAdmin.prtg.messages.testFailed')) }),
+  });
+
   const testMutation = useMutation({
     mutationFn: async (data: PrtgForm) =>
       aiAdminApi.testPrtgIntegration({
@@ -148,15 +162,7 @@ export default function MonitoringIntegrationCard() {
       setSessionTest(null);
     },
     onSuccess: (result) => {
-      setSessionTest({
-        ok: result.ok,
-        tested_at: result.tested_at || new Date().toISOString(),
-        ...(result.ok
-          ? (result.prtg_version && result.sensor_count != null
-            ? { detail: t('aiAdmin.prtg.messages.testDetail', { version: result.prtg_version, count: result.sensor_count }) }
-            : {})
-          : { cause: connectionTestCause(t, result.code, result.message, t('aiAdmin.prtg.messages.testFailed')) }),
-      });
+      setSessionTest(describeTest({ ...result, version: result.prtg_version }));
     },
     onError: (error: unknown) => {
       setSessionTest({
@@ -171,7 +177,7 @@ export default function MonitoringIntegrationCard() {
     if (removing) {
       const confirmed = await dialogs.confirm({
         title: t('integrations.removeConnection.title', { name: 'PRTG' }),
-        message: t('integrations.removeConnection.message'),
+        message: t('integrations.removeConnection.prtg'),
         confirmLabel: t('common:buttons.remove'),
         intent: 'danger',
       });
@@ -186,12 +192,12 @@ export default function MonitoringIntegrationCard() {
       hint={t('aiAdmin.prtg.description')}
       configured={!!prtg?.base_url}
       dirty={dirty}
-      storedTest={prtg?.last_test ?? null}
+      storedTest={prtg?.last_test ? describeTest(prtg.last_test) : null}
       sessionTest={sessionTest}
       testing={testMutation.isPending}
       saving={saveMutation.isPending}
       onTest={() => testMutation.mutate(form)}
-      testDisabled={keyMissingForAddress || removing}
+      testDisabled={removing || testValueMissing}
       onSave={() => { void handleSave(); }}
       saveDisabled={keyMissingForAddress && form.enabled}
       loading={integrationsQuery.isLoading}

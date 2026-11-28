@@ -144,11 +144,35 @@ describe('NetboxIntegrationCard', () => {
   it('shows the stored last test after a reload', async () => {
     (apiClient.get as any).mockResolvedValue({
       ...INTEGRATION,
-      last_test: { ok: false, tested_at: '2026-10-24T08:30:00.000Z' },
+      last_test: { ok: false, tested_at: '2026-10-24T08:30:00.000Z', code: 'netbox_unreachable' },
     });
     renderCard();
 
-    expect(await screen.findByText(/^Last test failed on 24 Oct( 2026)? at /)).toBeInTheDocument();
+    // The cause stays after a reload, from its code.
+    const failed = await screen.findByText(/^Last test failed on 24 Oct( 2026)? at /);
+    expect(within(failed).getByText(/The Netbox server could not be reached\./)).toBeInTheDocument();
+  });
+
+  it('says after a reload the Netbox version of the last test', async () => {
+    (apiClient.get as any).mockResolvedValue({
+      ...INTEGRATION,
+      last_test: { ok: true, tested_at: '2026-10-24T08:30:00.000Z', version: '4.7.1' },
+    });
+    renderCard();
+    const passed = await screen.findByText(/^Last test passed on 24 Oct/);
+    expect(within(passed).getByText(/Netbox 4\.7\.1/)).toBeInTheDocument();
+  });
+
+  it('keeps Test off until the address and the token are there', async () => {
+    (apiClient.get as any).mockResolvedValue({ ...INTEGRATION, configured: false, base_url: null, credential: { present: false }, last_test: null });
+    renderCard();
+    expect(await screen.findByText('Never tested')).toBeInTheDocument();
+    const test = screen.getByRole('button', { name: 'Test' });
+    expect(test).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Netbox address'), { target: { value: 'https://netbox.example.com' } });
+    expect(test).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('API token'), { target: { value: 'nbt_typed' } });
+    expect(test).toBeEnabled();
   });
 
   it('shows a test of unsaved values with what Netbox answered, without reloading the form', async () => {
@@ -218,7 +242,7 @@ describe('NetboxIntegrationCard', () => {
     // Cancelling keeps everything as it is.
     fireEvent.click(save);
     expect(await screen.findByText('Remove the Netbox connection?')).toBeInTheDocument();
-    expect(screen.getByText('Its address and saved secret are deleted. Data already imported stays.')).toBeInTheDocument();
+    expect(screen.getByText('Its address and saved token are deleted, and the automatic synchronisation stops. What was already synchronised stays.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByText('Remove the Netbox connection?')).not.toBeInTheDocument());
     expect(apiClient.put).not.toHaveBeenCalled();

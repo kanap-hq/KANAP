@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../design';
 import { confirmLeave, isLeaveGuarded } from '../../hooks/leaveGuard';
-import { ConnectionCard, ConnectionSecretField, type ConnectionCardProps } from './ConnectionCard';
+import { ConnectionCard, ConnectionSecretField, connectionValueMissing, type ConnectionCardProps } from './ConnectionCard';
 import { SettingField } from './SettingField';
 
 const PASSED = { ok: true, tested_at: '2026-10-15T10:42:00.000Z' };
@@ -60,6 +60,12 @@ describe('ConnectionCard', () => {
     expect(screen.getByRole('status')).toHaveTextContent('The server could not be reached.');
     rerender({ configured: true, storedTest: PASSED, dirty: true, sessionTest: { ...FAILED, ok: true, detail: 'Version 4.1' } });
     expect(screen.getByRole('status')).toHaveTextContent(/^Last test passed on 16 Oct.* · Version 4\.1$/);
+
+    // After a reload, the stored test says what the session test said, after its date.
+    rerender({ configured: true, storedTest: { ...PASSED, detail: 'Version 4.1' } });
+    expect(screen.getByRole('status')).toHaveTextContent(/^Last test passed on 15 Oct.* · Version 4\.1$/);
+    rerender({ configured: true, storedTest: { ...FAILED, cause: 'The server could not be reached.' } });
+    expect(screen.getByRole('status')).toHaveTextContent(/^Last test failed on 16 Oct.* · The server could not be reached\.$/);
 
     // A session test older than the stored one gives way to it.
     rerender({ configured: true, storedTest: FAILED, sessionTest: { ...PASSED, detail: 'Old' } });
@@ -178,6 +184,28 @@ describe('ConnectionSecretField', () => {
     expect(screen.getByText('The address changed: enter it again.')).toBeInTheDocument();
     fireEvent.change(input, { target: { value: 'typed' } });
     expect(screen.queryByText('The address changed: enter it again.')).not.toBeInTheDocument();
+  });
+
+  it('lets an optional secret go at a new address, saying so without an error', () => {
+    renderSecret({ addressChanged: true, optional: true });
+    const input = screen.getByLabelText('API key');
+    expect(input).not.toBeRequired();
+    expect(input).not.toHaveAttribute('aria-invalid', 'true');
+    expect(screen.queryByText('The address changed: enter it again.')).not.toBeInTheDocument();
+    const note = screen.getByText('The saved value is not sent to the new address. Enter it again to keep it.');
+    expect(input).toHaveAttribute('aria-describedby', note.id);
+    fireEvent.change(input, { target: { value: 'typed' } });
+    expect(screen.queryByText(/not sent to the new address/)).not.toBeInTheDocument();
+  });
+
+  it('keeps Test off while the address or a required secret is missing', () => {
+    expect(connectionValueMissing(' ')).toBe(true);
+    expect(connectionValueMissing('https://example.com')).toBe(false);
+    const secret = { stored: false, typed: '', addressChanged: false };
+    expect(connectionValueMissing('https://example.com', secret)).toBe(true);
+    expect(connectionValueMissing('https://example.com', { ...secret, typed: 'key' })).toBe(false);
+    expect(connectionValueMissing('https://example.com', { ...secret, stored: true })).toBe(false);
+    expect(connectionValueMissing('https://example.com', { ...secret, stored: true, addressChanged: true })).toBe(true);
   });
 
   it('offers no Replace on a file card, and an open field when nothing is saved', () => {
