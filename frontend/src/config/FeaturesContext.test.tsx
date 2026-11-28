@@ -260,23 +260,87 @@ describe('FeaturesProvider: refresh', () => {
     }
   });
 
-  it('makes one read for two calls at the same time', async () => {
-    let answer: (value: unknown) => void = () => undefined;
+  /** A fetch whose answers the test gives one by one, after the first load. */
+  function heldReads() {
+    const answers: Array<(value: unknown) => void> = [];
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(response('multi-tenant', false))
-      .mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }));
+      .mockImplementation(() => new Promise((resolve) => { answers.push(resolve); }));
+    return { fetchMock, answers };
+  }
+
+  it('answers a call made during a read with the next read, which starts once that one ends', async () => {
+    const { fetchMock, answers } = heldReads();
+    const { api } = mount(fetchMock);
+    await waitFor(() => expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:false'));
+
+    const settled: string[] = [];
+    let first!: Promise<boolean>;
+    let second!: Promise<boolean>;
+    await act(async () => {
+      first = api.current!.refresh().then((ok) => { settled.push(`first:${ok}`); return ok; });
+      // A second save, whose value the read already running does not have.
+      second = api.current!.refresh().then((ok) => { settled.push(`second:${ok}`); return ok; });
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // The read that started before the second call answers with the old value.
+    await act(async () => { answers[0](response('multi-tenant', false)); await first; });
+    expect(settled).toEqual(['first:true']);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    await act(async () => { answers[1](response('multi-tenant', true)); await second; });
+    expect(settled).toEqual(['first:true', 'second:true']);
+    expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:true');
+  });
+
+  it('keeps one read running and one waiting, shared by every call made meanwhile', async () => {
+    const { fetchMock, answers } = heldReads();
+    const { api } = mount(fetchMock);
+    await waitFor(() => expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:false'));
+
+    let running!: Promise<boolean>;
+    let waiting: Promise<boolean>[] = [];
+    await act(async () => {
+      running = api.current!.refresh();
+      waiting = [api.current!.refresh(), api.current!.refresh(), api.current!.refresh()];
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(new Set(waiting).size).toBe(1);
+    expect(waiting[0]).not.toBe(running);
+
+    await act(async () => { answers[0](response('multi-tenant', false)); await running; });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // A call made during the read that was waiting waits for a read of its own.
+    let later!: Promise<boolean>;
+    await act(async () => { later = api.current!.refresh(); });
+    expect(later).not.toBe(waiting[0]);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    let results: boolean[] = [];
+    await act(async () => { answers[1](response('multi-tenant', true)); results = await Promise.all(waiting); });
+    expect(results).toEqual([true, true, true]);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+
+    await act(async () => { answers[2](response('single-tenant', true)); await later; });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(screen.getByTestId('refresh')).toHaveTextContent('single-tenant:true');
+  });
+
+  it('starts the waiting read even when the running one fails, and answers each with its own result', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response('multi-tenant', false))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(response('multi-tenant', true));
     const { api } = mount(fetchMock);
     await waitFor(() => expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:false'));
 
     let results: boolean[] = [];
-    await act(async () => {
-      const both = Promise.all([api.current!.refresh(), api.current!.refresh()]);
-      answer(response('multi-tenant', true));
-      results = await both;
-    });
+    await act(async () => { results = await Promise.all([api.current!.refresh(), api.current!.refresh()]); });
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(results).toEqual([true, true]);
+    expect(results).toEqual([false, true]);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:true');
   });
 });

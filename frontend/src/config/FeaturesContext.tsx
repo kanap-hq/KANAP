@@ -74,9 +74,11 @@ export type FeaturesContextValue = {
   isLoading: boolean;
   isSingleTenant: boolean;
   /**
-   * Reads `/config/public` again and replaces the configuration. Resolves to true once replaced,
-   * to false when the read failed: the configuration stays as it was. Calls made while a read
-   * runs share it. The same function for the life of the provider.
+   * Reads `/config/public` again and replaces the configuration. Resolves to true once replaced by
+   * a read that started after the call (a call made after a save sees that save), to false when
+   * that read failed: the configuration stays as it was. A call made while a read runs waits for
+   * the next one, which starts when that read ends and answers every call made meanwhile: one
+   * read running at most, one waiting at most. The same function for the life of the provider.
    */
   refresh: () => Promise<boolean>;
 };
@@ -176,26 +178,42 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // The read a refresh is waiting for: a second call made meanwhile waits for the same one.
-  const refreshing = useRef<Promise<boolean> | null>(null);
+  // At most one refresh read running, and one waiting for it to end. A call made while a read runs
+  // gets the waiting one: the running read may have left before the caller's own save.
+  const running = useRef<Promise<boolean> | null>(null);
+  const waiting = useRef<{ promise: Promise<boolean>; start: () => void } | null>(null);
   const refresh = useCallback((): Promise<boolean> => {
-    if (refreshing.current) return refreshing.current;
-    const read = readPublicConfig(new AbortController())
-      .then((next) => {
-        refreshed.current = true;
-        setConfig(next);
-        setIsLoading(false);
-        return true;
-      })
-      .catch((err) => {
-        console.warn('[Features] Failed to refresh config:', (err as Error)?.message);
-        return false;
-      })
-      .finally(() => {
-        refreshing.current = null;
+    const startRead = (): Promise<boolean> => {
+      const read = readPublicConfig(new AbortController())
+        .then((next) => {
+          refreshed.current = true;
+          setConfig(next);
+          setIsLoading(false);
+          return true;
+        }, (err) => {
+          console.warn('[Features] Failed to refresh config:', (err as Error)?.message);
+          return false;
+        })
+        .then((ok) => {
+          // Hand over in the same step, so that no call slips a third read in between.
+          running.current = null;
+          const next = waiting.current;
+          waiting.current = null;
+          next?.start();
+          return ok;
+        });
+      running.current = read;
+      return read;
+    };
+    if (!running.current) return startRead();
+    if (!waiting.current) {
+      let start = () => undefined as void;
+      const promise = new Promise<boolean>((resolve) => {
+        start = () => resolve(startRead());
       });
-    refreshing.current = read;
-    return read;
+      waiting.current = { promise, start };
+    }
+    return waiting.current.promise;
   }, []);
 
   const value = useMemo<FeaturesContextValue>(() => ({
