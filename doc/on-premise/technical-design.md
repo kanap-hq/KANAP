@@ -552,7 +552,7 @@ All gates read from `useFeatures()` hook (provided by `FeaturesContext.tsx`).
 | `ProtectedRoute.tsx` | `config.features.billing` | Skips billing/subscription redirect when billing is off |
 | `pages/admin/SampleDataPage.tsx`, `pages/admin/sample-data/SampleDataBanner.tsx` | `useSampleDataAvailable()` | Not single-tenant, sample data flag on, not the platform host, Administrator role. The page shows `ForbiddenPage`; the home banner (rendered first in `WorkspaceDashboardPage.tsx`) renders nothing. No polling or retry after a 403 or 404 |
 | `ProtectedRoute.tsx` | `/admin/sample-data` | Exempt from the billing redirect of a frozen workspace, so an Administrator can erase that workspace |
-| `ProtectedRoute.tsx`, `ScheduledTasksPage.tsx` | `isInstallationOperator` (`pages/admin/adminMenu.ts`) | Every address under `/admin/installation/`, and the former `/admin/scheduled-tasks`, opens to the person `SystemAdminGuard` admits: on site the Administrator role with access to all data, in the cloud a platform administrator on the platform host. Anyone else gets the refusal page |
+| `ProtectedRoute.tsx`, `ScheduledTasksPage.tsx` | `isInstallationOperator` (`pages/admin/adminMenu.ts`) | Every address under `/admin/installation/`, and the former `/admin/scheduled-tasks`, opens to the person the server admits: on site the Administrator role (`SystemAdminGuard`) with access to all data (`@ReservedToUnscopedDataAccess()`), in the cloud a platform administrator on the platform host (`SystemAdminGuard`). Anyone else gets the refusal page |
 
 ### CI
 
