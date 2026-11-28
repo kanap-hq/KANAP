@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { NETBOX_PROVIDER_KEY, NETBOX_PROVIDER_KIND, NetboxConfigService } from '../netbox-config.service';
+import { NetboxController } from '../netbox.controller';
 
 // Saving a new address or a new token drops the stored connection test, and
 // that write touches only the test key. An empty token keeps the stored secret
@@ -58,7 +59,7 @@ async function seed(runner: QueryRunner): Promise<{ tenantId: string; configId: 
 
 async function auditRows(runner: QueryRunner, configId: string) {
   return runner.query(
-    `SELECT action, before_json, after_json FROM audit_log WHERE table_name = 'ai_adapter_configs' AND record_id = $1`,
+    `SELECT action, before_json, after_json, user_id, source_ref FROM audit_log WHERE table_name = 'ai_adapter_configs' AND record_id = $1 ORDER BY created_at`,
     [configId],
   );
 }
@@ -270,6 +271,29 @@ async function main() {
       const row = await readRow(runner, configId);
       assert.equal(row.credential_ref_json, null);
       assert.equal((await auditRows(runner, configId)).length, 1, 'no entry without a change');
+    });
+
+    await inTransaction('each save of the matches writes one audit entry with the person, the matches only', async (runner) => {
+      const { tenantId, configId } = await seed(runner);
+      const userId = randomUUID();
+      await service().saveMapping(runner.manager, tenantId, { role_map: { server: 'virtual_machine' }, site_map: { paris: '11111111-1111-4111-8111-111111111111' }, os_map: { 'windows-2022': 'windows_server' } }, { userId, sourceRef: 'req-1' });
+      await service().saveMapping(runner.manager, tenantId, { role_map: {}, site_map: {} }, { userId });
+      const audits = await auditRows(runner, configId);
+      assert.equal(audits.length, 2, 'one entry per save');
+      assert.deepEqual(audits.map((row: any) => [row.action, row.user_id, row.source_ref]), [['update', userId, 'req-1'], ['update', userId, null]]);
+      assert.deepEqual(audits[0].before_json, { role_map: { server: 'physical_server' }, site_map: {}, os_map: {}, cluster_map: {}, cluster_names: {} });
+      assert.deepEqual(audits[0].after_json, { role_map: { server: 'virtual_machine' }, site_map: { paris: '11111111-1111-4111-8111-111111111111' }, os_map: { 'windows-2022': 'windows_server' }, cluster_map: {}, cluster_names: {} });
+      assert.deepEqual(audits[1].after_json, { role_map: {}, site_map: {}, os_map: { 'windows-2022': 'windows_server' }, cluster_map: {}, cluster_names: {} }, 'the operating system matches left out are kept');
+      assert.doesNotMatch(JSON.stringify(audits), /stored-token|ciphertext|last_connection_test|tested_at|base_url/);
+    });
+
+    await inTransaction('the matches route passes the person and the request to the save', async () => {
+      let received: unknown[] = [];
+      const config = { saveMapping: async (...args: unknown[]) => { received = args; return {}; } };
+      const controller = new NetboxController(config as any, {} as any);
+      const body = { role_map: {}, site_map: {} };
+      await controller.saveMapping(body, { tenant: { id: 'tenant-1' }, user: { sub: 'user-1' }, id: 'req-9', queryRunner: { manager: 'manager' } });
+      assert.deepEqual(received, ['manager', 'tenant-1', body, { userId: 'user-1', sourceRef: 'req-9' }]);
     });
 
     await inTransaction('an empty address with nothing saved is refused', async (runner) => {
