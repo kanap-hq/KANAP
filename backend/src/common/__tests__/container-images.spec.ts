@@ -85,7 +85,7 @@ for (const line of runtimeCopies) {
   assert.ok(!/\/src\b|tsconfig|__tests__|\.spec\./.test(line), `runtime takes no sources: ${line}`);
 }
 assert.ok(runtimeCopies.some((line) => /\/app\/dist\b/.test(line)), 'runtime takes the compiled dist/');
-assert.ok(runtime.body.some((line) => /^USER node\s*$/.test(line)), 'runtime runs as node');
+assert.ok(runtime.body.some((line) => /^USER 1000:1000\s*$/.test(line)), 'runtime runs as the node user, by number (1000:1000)');
 assert.ok(
   runtime.body.some((line) => line.trim() === 'CMD ["node", "./scripts/migrate-and-start.js"]'),
   'runtime starts the entrypoint in exec form',
