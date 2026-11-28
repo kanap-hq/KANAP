@@ -78,9 +78,10 @@ services:
     security_opt:
       - no-new-privileges:true
     pids_limit: 1024
-    # nginx starts as root, then runs its workers as the "nginx" user: it needs to hand its
-    # cache directories over (CHOWN) and to switch user (SETUID, SETGID). NET_BIND_SERVICE
-    # covers engines that keep port 80 reserved to privileged processes.
+    # The image runs nginx as user 101 and uses none of these capabilities. They serve only an
+    # image started as root (an older image, or a "user" set to root here): nginx then hands its
+    # temporary directories over (CHOWN) and runs its workers as the "nginx" user (SETUID,
+    # SETGID); NET_BIND_SERVICE covers engines that keep port 80 reserved to privileged processes.
     cap_drop:
       - ALL
     cap_add:
