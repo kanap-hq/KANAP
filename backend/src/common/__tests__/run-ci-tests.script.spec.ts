@@ -79,6 +79,7 @@ function testThrowawayOnly() {
     'src/applications/__tests__/application-classification-concurrency.integration.spec.ts',
     'src/applications/__tests__/application-classification-http-permissions.integration.spec.ts',
     'src/it-ops-settings/__tests__/it-ops-settings.integration.spec.ts',
+    'src/installation/__tests__/installation-settings.integration.spec.ts',
   ]) {
     assert.equal(runner.throwawayOnly(file), true, `marked: ${file}`);
     const source = fs.readFileSync(backendPath(file), 'utf8');
@@ -89,7 +90,7 @@ function testThrowawayOnly() {
   // This spec names the marker in its comments: it is not marked, so it runs on appdb.
   assert.equal(runner.throwawayOnly('src/common/__tests__/run-ci-tests.script.spec.ts'), false, 'naming the marker is not carrying it');
   // Every spec that calls the guard (a statement of its own) carries the marker, so the runner leaves it out on appdb, and
-  // the four specs above are the only ones marked.
+  // the five specs above are the only ones marked.
   const guarded: string[] = [];
   const marked: string[] = [];
   (function walk(dir: string) {
@@ -105,7 +106,7 @@ function testThrowawayOnly() {
       }
     }
   })(backendPath('src'));
-  assert.equal(guarded.length, 4, guarded.join(', '));
+  assert.equal(guarded.length, 5, guarded.join(', '));
   for (const file of guarded) assert.equal(runner.throwawayOnly(file), true, `guarded and marked: ${file}`);
   assert.deepEqual(marked.sort(), [...guarded].sort(), 'the marked specs are the guarded ones');
 }

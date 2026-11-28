@@ -1,13 +1,16 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import { settingsEncryptionSecret } from '../installation/settings-encryption-secret';
 
 const ENCRYPTION_VERSION = 'v1';
 const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 
+// The key is SETTINGS_ENCRYPTION_SECRET, or its former name AI_SETTINGS_ENCRYPTION_SECRET
+// (installation/settings-encryption-secret.ts).
 @Injectable()
 export class AiSecretCipherService {
   canEncrypt(): boolean {
-    return !!process.env.AI_SETTINGS_ENCRYPTION_SECRET?.trim();
+    return settingsEncryptionSecret() !== null;
   }
 
   encrypt(plaintext: string): string {
@@ -58,8 +61,8 @@ export class AiSecretCipherService {
   }
 
   private getKey(): Buffer {
-    const raw = process.env.AI_SETTINGS_ENCRYPTION_SECRET;
-    if (!raw || raw.trim() === '') {
+    const raw = settingsEncryptionSecret();
+    if (raw === null) {
       throw new BadRequestException('AI secret storage is not configured on this instance.');
     }
     return createHash('sha256').update(raw, 'utf8').digest();

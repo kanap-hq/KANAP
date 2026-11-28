@@ -485,7 +485,8 @@ WHERE tenant_id = '$SOURCE_TENANT_ID';
 "
 
 # Clear the values encrypted with the source installation's secret
-# (AI_SETTINGS_ENCRYPTION_SECRET is not transferred): an administrator enters
+# (SETTINGS_ENCRYPTION_SECRET, formerly AI_SETTINGS_ENCRYPTION_SECRET, is not
+# transferred): an administrator enters
 # them again after the first login. These are every value AiSecretCipherService
 # writes to a tenant table (platform_ai_config is a platform table, not exported).
 # ai_external_mcp_servers takes the same credential references; its check
@@ -650,7 +651,7 @@ echo "       administrator. An existing ADMIN_EMAIL account is then restored"
 echo "       and keeps its password. This value is stored only for a local"
 echo "       account that has none. While an active administrator exists, the"
 echo "       imported password stays."
-echo "     - AI_SETTINGS_ENCRYPTION_SECRET: set a new value (AI API keys, model"
+echo "     - SETTINGS_ENCRYPTION_SECRET: set a new value (AI API keys, model"
 echo "       keys, GLPI tokens and PRTG/Netbox credentials were cleared: enter"
 echo "       them again in the admin UI after first login)"
 echo ""

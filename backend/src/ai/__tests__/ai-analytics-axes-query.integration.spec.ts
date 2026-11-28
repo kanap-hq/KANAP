@@ -11,7 +11,7 @@ import { PgClient, roleExists, seedNodes, seedPerson, seedRole } from '../../dat
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
-process.env.AI_SETTINGS_ENCRYPTION_SECRET ||= 'test-ai-secret';
+process.env.SETTINGS_ENCRYPTION_SECRET ||= process.env.AI_SETTINGS_ENCRYPTION_SECRET || 'test-ai-secret';
 process.env.S3_ENDPOINT ||= 'http://127.0.0.1:9';
 process.env.S3_BUCKET ||= 'ai-analytics-axes-spec';
 process.env.AWS_ACCESS_KEY_ID ||= 'test';

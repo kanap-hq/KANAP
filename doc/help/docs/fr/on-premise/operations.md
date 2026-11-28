@@ -203,7 +203,7 @@ sudo --preserve-env="$KEEP" bash -c '
 
 `rclone check` se termine par `0 differences found`. rclone peut aussi afficher `Config file "/root/.config/rclone/rclone.conf" not found - using defaults` : les variables remplacent ce fichier. Utilisez `RCLONE_S3_PROVIDER=AWS` pour AWS S3. Pour RustFS sur le serveur, le point d'accès est `http://172.17.0.1:9000` : `host.docker.internal` n'existe qu'à l'intérieur des conteneurs.
 
-**Configuration.** Gardez une copie de `/opt/kanap/.env` et de `/etc/default/rustfs`. Le premier contient tous les secrets de l'installation, y compris `AI_SETTINGS_ENCRYPTION_SECRET` si vous l'utilisez. Le second contient la clé de chiffrement de RustFS : les fichiers chiffrés avec elle sont illisibles sans elle. Gardez aussi le fichier du site nginx (`/etc/nginx/sites-available/kanap`) et les fichiers du certificat.
+**Configuration.** Gardez une copie de `/opt/kanap/.env` et de `/etc/default/rustfs`. Le premier contient tous les secrets de l'installation, y compris `SETTINGS_ENCRYPTION_SECRET` (ou son ancien nom `AI_SETTINGS_ENCRYPTION_SECRET`) si vous l'utilisez. Le second contient la clé de chiffrement de RustFS : les fichiers chiffrés avec elle sont illisibles sans elle. Gardez aussi le fichier du site nginx (`/etc/nginx/sites-available/kanap`) et les fichiers du certificat.
 
 ```bash
 sudo cp -p /opt/kanap/.env /etc/default/rustfs /var/backups/kanap/config/

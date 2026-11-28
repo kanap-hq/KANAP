@@ -35,7 +35,7 @@ async function testSearchThrowsWithoutApiKey() {
   delete process.env.BRAVE_SEARCH_API_KEY;
   await assert.rejects(
     () => service.search('test'),
-    (error: Error) => error.message.includes('BRAVE_SEARCH_API_KEY'),
+    (error: Error) => error.message === 'Web search is not available on this installation.',
   );
 }
 
@@ -117,7 +117,7 @@ async function testTestConnectivityWithoutApiKey() {
   const result = await service.testConnectivity();
 
   assert.equal(result.ok, false);
-  assert.ok(result.message.includes('BRAVE_SEARCH_API_KEY'));
+  assert.equal(result.message, 'Web search is not available on this installation.');
   assert.equal(result.latency_ms, null);
 }
 
