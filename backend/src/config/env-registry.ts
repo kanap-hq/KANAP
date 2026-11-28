@@ -241,7 +241,10 @@ export const ENV_REGISTRY: readonly EnvVariable[] = [
   // Addresses and browser origins.
   entry('APP_BASE_URL', { domain: 'addresses', modes: BOTH, kind: 'operator', reason: 'root-of-trust', required: true, aliases: ['PUBLIC_APP_URL'], example: active('app-url', 'https://kadratis.your-domain.com') }),
   entry('PUBLIC_APP_URL', { domain: 'addresses', modes: BOTH, kind: 'deprecated', reason: 'tooling' }),
-  entry('APP_URL', { domain: 'addresses', modes: CLOUD, kind: 'operator', reason: 'root-of-trust' }),
+  entry('APP_URL', {
+    domain: 'addresses', modes: BOTH, kind: 'operator', reason: 'root-of-trust',
+    example: { state: 'absent', why: 'APP_BASE_URL gives the address of an installation; EXPORT_MEDIA_BASE_URL sets the base of the exported images.' },
+  }),
   entry('TENANT_BASE_DOMAINS', { domain: 'addresses', modes: CLOUD, kind: 'operator', reason: 'root-of-trust', default: 'the domains of the Kadratis cloud' }),
   entry('MARKETING_BASE_URL', { domain: 'addresses', modes: CLOUD, kind: 'operator', reason: 'root-of-trust', default: 'the public Kadratis website' }),
   entry('CORS_ORIGINS', { domain: 'addresses', modes: BOTH, kind: 'operator', reason: 'root-of-trust', required: true, example: active('cors', 'https://kadratis.your-domain.com') }),
@@ -253,13 +256,13 @@ export const ENV_REGISTRY: readonly EnvVariable[] = [
     example: active('client-address', 'true'),
   }),
   entry('RATE_LIMIT_ENABLED', { domain: 'security', modes: BOTH, kind: 'operator', reason: 'security-boundary', default: 'true', example: commented('advanced', 'true') }),
-  entry('CAPTCHA_MODE', { domain: 'security', modes: CLOUD, kind: 'operator', default: 'enforce in production mode, off otherwise' }),
+  entry('CAPTCHA_MODE', { domain: 'security', modes: CLOUD, kind: 'operator', default: 'off on single-tenant; on multi-tenant, enforce in production mode, off otherwise' }),
   entry('TURNSTILE_SITE_KEY', { domain: 'security', modes: CLOUD, kind: 'operator' }),
   entry('TURNSTILE_SECRET_KEY', { domain: 'security', modes: CLOUD, kind: 'operator', secret: true }),
   entry('SSRF_ALLOWED_HOSTS', { domain: 'security', modes: BOTH, kind: 'operator', reason: 'security-boundary', example: commented('security-boundaries', '') }),
   entry('EXPORT_ALLOWED_IMAGE_HOSTS', { domain: 'security', modes: BOTH, kind: 'operator', reason: 'security-boundary', example: commented('security-boundaries', '') }),
   entry('EXPORT_ALLOW_LOOPBACK_IMAGE_HOSTS', { domain: 'security', modes: BOTH, kind: 'operator', reason: 'security-boundary', default: 'true in development mode, false otherwise', example: commented('security-boundaries', 'false') }),
-  entry('EXPORT_MEDIA_BASE_URL', { domain: 'security', modes: BOTH, kind: 'operator', reason: 'security-boundary', default: 'the address of APP_BASE_URL', example: commented('security-boundaries', '') }),
+  entry('EXPORT_MEDIA_BASE_URL', { domain: 'security', modes: BOTH, kind: 'operator', reason: 'security-boundary', default: 'the address of APP_URL, else APP_BASE_URL, else PUBLIC_APP_URL', example: commented('security-boundaries', '') }),
 
   // Database.
   entry('DATABASE_URL', { domain: 'database', modes: BOTH, kind: 'operator', reason: 'before-database', required: true, credentialsInValue: true, example: active('database', 'postgres://kanap:password@your-postgres:5432/kanap?sslmode=require') }),
@@ -309,7 +312,7 @@ export const ENV_REGISTRY: readonly EnvVariable[] = [
   }),
   entry('NO_COLOR', {
     domain: 'process', modes: BOTH, kind: 'operator', reason: 'tuning',
-    example: commented('advanced', '', ['NO_COLOR: any value turns off the colours of the log on a terminal.']),
+    example: commented('advanced', '', ['NO_COLOR: any non-empty value turns off the colours of the log on a terminal.']),
   }),
   entry('INTEGRATED_DOCS_AUTO_ROLLOUT', { domain: 'process', modes: BOTH, kind: 'operator', reason: 'tuning', default: 'off', example: commented('start-up', 'off') }),
   entry('INTEGRATED_DOCS_AUTO_ROLLOUT_STRICT', { domain: 'process', modes: BOTH, kind: 'operator', reason: 'tuning', default: 'false', example: commented('start-up', 'false') }),
