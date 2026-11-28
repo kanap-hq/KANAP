@@ -105,6 +105,7 @@
       "branding": "Personalización",
       "sampleData": "Datos de ejemplo",
       "integrations": "Integraciones",
+      "allSettings": "Toda la configuración",
       "ai": "{{agent}}",
       "agentControl": "Control de agentes",
       "aiModels": "Modelos IA",

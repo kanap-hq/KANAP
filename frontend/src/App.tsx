@@ -131,6 +131,7 @@ const AdminAiUsagePage = React.lazy(() => import('./pages/admin/AdminAiUsagePage
 const AdminIntegrationsPage = React.lazy(() => import('./pages/admin/AdminIntegrationsPage'));
 const AdminPlatformAiPage = React.lazy(() => import('./pages/admin/AdminPlatformAiPage'));
 const ScheduledTasksPage = React.lazy(() => import('./pages/admin/ScheduledTasksPage'));
+const AllSettingsPage = React.lazy(() => import('./pages/admin/AllSettingsPage'));
 import { useAiCapabilities } from './ai/useAiCapabilities';
 import { useDataAccessLimited } from './auth/dataAccess';
 import { firstAdminEntry, type AdminGroup } from './pages/admin/adminMenu';
@@ -353,6 +354,8 @@ function AppRoutes() {
           <Route path="/admin/branding" element={<AdminBrandingPage />} />
           {/* Always registered: the page refuses itself where sample data is off (on-premise, flag off). */}
           <Route path="/admin/sample-data" element={<SampleDataPage />} />
+          {/* Every signed-in person, on every host: the settings pages they may open. */}
+          <Route path="/admin/all-settings" element={<AllSettingsPage />} />
           {/* Installation: every address under /admin/installation/ is behind one guard (ProtectedRoute). */}
           <Route path="/admin/installation" element={<AdminDefaultRedirect group="installation" />} />
           <Route path="/admin/installation/scheduled-tasks" element={<ScheduledTasksPage />} />

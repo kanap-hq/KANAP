@@ -130,6 +130,7 @@ const ADMIN_MENU_ICONS: Record<AdminMenuIcon, React.ReactNode> = {
   HourglassBottom: <HourglassBottomIcon />,
   AccountBalance: <AccountBalanceIcon />,
   Schedule: <ScheduleIcon />,
+  Settings: <SettingsIcon />,
 };
 
 function isNavItem(entry: NavEntry): entry is NavItem {
@@ -295,7 +296,8 @@ export default function Layout() {
       level: 'reader',
     },
     { to: '/agents/activity', label: t('nav:sidebar.agents.activity'), icon: <HistoryIcon />, resource: 'ai_agents' },
-    { to: '/agents/shared-context', label: t('nav:sidebar.agents.sharedContext'), icon: <MenuBookIcon />, resource: 'ai_agents', level: 'admin' },
+    // An agents reader sees the profiles, read only; the page offers the changes to their administrators.
+    { to: '/agents/shared-context', label: t('nav:sidebar.agents.sharedContext'), icon: <MenuBookIcon />, resource: 'ai_agents' },
   ];
 
   // The Administration menu: the pages the person may open here, from the menu module.
@@ -370,10 +372,13 @@ export default function Layout() {
     : location.pathname;
 
   // Derive active workspace from the current route to keep the top bar highlight in sync
-  const workspace: WorkspaceKey | 'home' = React.useMemo(
-    () => (isPlatformHost ? 'admin' : workspaceOfPath(shownPath)),
-    [shownPath, isPlatformHost],
-  );
+  // An Administration address belongs to that section only for whom its tab shows (All settings
+  // opens to everyone): for the others it highlights no section and has no side menu.
+  const workspace: WorkspaceKey | 'home' = React.useMemo(() => {
+    if (isPlatformHost) return 'admin';
+    const ws = workspaceOfPath(shownPath);
+    return ws === 'admin' && !visibleWorkspaces.includes('admin') ? 'home' : ws;
+  }, [shownPath, isPlatformHost, visibleWorkspaces]);
   // Spare room at the bottom of the side menu while a first-steps hint covers that corner.
   // Zero when no hint is shown, so the menu ends where it does today.
   const [hintReserve, setHintReserve] = React.useState(0);
@@ -600,6 +605,7 @@ export default function Layout() {
                   <TrialMenuLine onNavigate={closeMenu} />
                 </Box>
                 <Divider sx={{ my: 0.5 }} />
+                <MenuItem onClick={() => { closeMenu(); void guardedLeave(() => navigate('/admin/all-settings')); }}>{t('nav:sidebar.admin.allSettings')}</MenuItem>
                 <MenuItem onClick={() => { closeMenu(); void guardedLeave(() => navigate('/settings')); }}>{t('nav:userMenu.myProfile')}</MenuItem>
                 <MenuItem onClick={() => { closeMenu(); void guardedLeave(logout); }}>{t('nav:userMenu.logout')}</MenuItem>
                 <Divider sx={{ my: 0.5 }} />
