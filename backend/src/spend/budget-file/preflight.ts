@@ -893,6 +893,15 @@ function resolveCostCenter(
   return { id: node.center.id, companyId: node.center.companyId };
 }
 
+/**
+ * The period that closes a sentence on a name. A name that already ends with one keeps it
+ * ("Fromage & Co Inc."), and any other name takes the sentence's period ("Fromage & Co SA.").
+ */
+function sentencePeriod(name: string): string {
+  const text = name.trimEnd();
+  return text.endsWith('.') ? text : `${text}.`;
+}
+
 function resolveCompany(
   input: PreflightInput,
   row: InterpretedRow,
@@ -947,7 +956,7 @@ function resolveCompany(
           code: 'BUDGET_FILE_COST_CENTER_OTHER_COMPANY_UNREAD',
           costCenter: center.code,
           company: named,
-          message: `Cost center ${center.code} belongs to another company. The line is paid by ${named}.`,
+          message: `Cost center ${center.code} belongs to another company. The line is paid by ${sentencePeriod(named)}`,
         });
       } else if (center && owner) {
         bag.costCenterCompanies.push({
@@ -956,7 +965,7 @@ function resolveCompany(
           costCenter: center.code,
           company: found.row.name,
           costCenterCompany: owner.name,
-          message: `Cost center ${center.code} belongs to ${owner.name}. The line is paid by ${found.row.name}.`,
+          message: `Cost center ${center.code} belongs to ${sentencePeriod(owner.name)} The line is paid by ${sentencePeriod(found.row.name)}`,
         });
       }
     }
@@ -1639,7 +1648,7 @@ function checkConsistency(
     }
     const supplier = input.catalog.suppliers.find((item) => item.id === supplierId)?.name ?? '';
     warn({
-      message: `${label} ${year} at ${amount}, against a median of ${wholeUnits(median.cents)} on ${median.count} lines of ${supplier}.`,
+      message: `${label} ${year} at ${amount}, against a median of ${wholeUnits(median.cents)} on ${median.count} lines of ${sentencePeriod(supplier)}`,
       code: 'BUDGET_FILE_AMOUNT_FAR_FROM_SUPPLIER',
       params: { label: local, year: Number(year), amount, median: wholeUnits(median.cents), count: median.count, supplier },
     });
