@@ -211,6 +211,7 @@ export const MODULE_SETTINGS_PAGES: SettingsPageEntry[] = [
     path: '/it/settings',
     tab: { value: 'lists', in: 'path' },
     component: 'ItOperationsSettingsPage',
+    source: 'pages/it/settings/ItSettingsLists.tsx',
     labelKey: 'it:pages.settings.title',
     menuKeys: ['nav:workspaces.itOperations', 'nav:sidebar.it.settings'],
     settingKeys: [

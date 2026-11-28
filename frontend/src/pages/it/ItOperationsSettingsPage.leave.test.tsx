@@ -8,6 +8,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 import ItOperationsSettingsPage from './ItOperationsSettingsPage';
 import api from '../../api';
+import { confirmLeave, isLeaveGuarded } from '../../hooks/leaveGuard';
 import type { ItOpsSettings } from '../../services/itOpsSettings';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
@@ -82,7 +83,7 @@ async function typeOutsideAct(field: HTMLElement, value: string) {
 
 const sentLists = (id: string) => patch.mock.calls.map((call) => call[1]).filter((body) => Array.isArray(body?.[id]));
 
-describe('Leaving the IT landscape settings page right after typing', () => {
+describe('Saving the IT landscape lists', () => {
   beforeEach(() => {
     get.mockImplementation(async (url: string) => {
       if (url === '/it-ops/settings') return { data: pageSettings };
@@ -115,7 +116,7 @@ describe('Leaving the IT landscape settings page right after typing', () => {
     const sent = sentLists(listId);
     expect(sent).toHaveLength(1);
     expect(sent[0][listId][0][key]).toBe(value);
-    await wait(1600);
+    await wait(900);
     expect(sentLists(listId)).toHaveLength(1);
   }, 20000);
 
@@ -130,7 +131,7 @@ describe('Leaving the IT landscape settings page right after typing', () => {
   }, 20000);
 
   it.each([
-    ['sends the value typed during a save in flight once that save returns', 'HTTPS', 2],
+    ['sends the value typed during a save in flight once that save returns, with the code it brought', 'HTTPS', 2],
     ['sends nothing more when nothing was typed during the save in flight', null, 1],
   ])('%s', async (_name, further, expectedCalls) => {
     let release: (() => void) | undefined;
@@ -143,7 +144,7 @@ describe('Leaving the IT landscape settings page right after typing', () => {
     const section = await addRow('connectionTypes');
     const input = await within(section).findByRole('textbox', { name: 'common:enumEditor.name' });
     fireEvent.change(input, { target: { value: 'HTTP' } });
-    await wait(1600);
+    await wait(900);
     expect(sentLists('connectionTypes')).toHaveLength(1);
     expect(sentLists('connectionTypes')[0].connectionTypes[0].label).toBe('HTTP');
     if (further) await typeOutsideAct(input, further);
@@ -155,15 +156,71 @@ describe('Leaving the IT landscape settings page right after typing', () => {
     const sent = sentLists('connectionTypes');
     expect(sent).toHaveLength(expectedCalls);
     if (further) expect(sent[1].connectionTypes[0]).toMatchObject({ code: 'http', label: further });
-    await wait(1600);
+    await wait(900);
     expect(sentLists('connectionTypes')).toHaveLength(expectedCalls);
+  }, 20000);
+
+  it('holds an in-app move while a typed value waits, and sends it first', async () => {
+    renderPage();
+    const section = await addRow('accessMethods');
+    fireEvent.change(await within(section).findByRole('textbox', { name: 'enumEditor.name' }), { target: { value: 'Kiosk' } });
+    expect(isLeaveGuarded()).toBe(true);
+    let allowed = false;
+    await act(async () => { allowed = await confirmLeave(); });
+    expect(allowed).toBe(true);
+    expect(sentLists('accessMethods')).toHaveLength(1);
+    expect(sentLists('accessMethods')[0].accessMethods.map((row: { label: string }) => row.label)).toEqual(['Kiosk']);
+  }, 20000);
+
+  it('sends a list in its stored order, unsorted', async () => {
+    const stored = { ...pageSettings, connectionTypes: [{ code: 'ssh', label: 'SSH', category: 'Remote', deprecated: false }, { code: 'http', label: 'HTTP', category: 'Application', deprecated: false }] };
+    get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: stored };
+      if (String(url).startsWith('/locations')) return { data: { items: [] } };
+      return { data: { total: 0, usage: [] } };
+    });
+    patch.mockImplementation(async (_url: string, body: Partial<ItOpsSettings>) => ({ data: { ...stored, ...body } }));
+    renderPage();
+    const title = await screen.findByRole('button', { name: /pages.settings.lists.connectionTypes.title/ });
+    await wait(50);
+    fireEvent.click(title);
+    const section = title.closest('.MuiAccordion-root') as HTMLElement;
+    const names = await within(section).findAllByRole('textbox', { name: 'common:enumEditor.name' });
+    expect(names.map((node) => (node as HTMLInputElement).value)).toEqual(['SSH', 'HTTP']);
+    fireEvent.change(names[1], { target: { value: 'HTTP/2' } });
+    fireEvent.blur(names[1]);
+    await wait(50);
+    expect(sentLists('connectionTypes')[0].connectionTypes.map((row: { code: string }) => row.code)).toEqual(['ssh', 'http']);
+  }, 20000);
+
+  it('shows the stored rows again and the refusal under the list when the server refuses a save', async () => {
+    const stored = { ...pageSettings, accessMethods: [{ code: 'web', label: 'Web', deprecated: false }] };
+    get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: stored };
+      if (String(url).startsWith('/locations')) return { data: { items: [] } };
+      return { data: { total: 0, usage: [] } };
+    });
+    patch.mockRejectedValue({ response: { status: 400, data: { message: 'Access methods: "Browser" clashes with "Web"' } } });
+    renderPage();
+    const title = await screen.findByRole('button', { name: /pages.settings.lists.accessMethods.title/ });
+    await wait(50);
+    fireEvent.click(title);
+    const section = title.closest('.MuiAccordion-root') as HTMLElement;
+    const name = await within(section).findByRole('textbox', { name: 'enumEditor.name' });
+    fireEvent.change(name, { target: { value: 'Browser' } });
+    fireEvent.blur(name);
+    expect(await within(section).findByRole('alert')).toHaveTextContent('clashes with');
+    expect((within(section).getByRole('textbox', { name: 'enumEditor.name' }) as HTMLInputElement).value).toBe('Web');
+    expect(screen.getByRole('status')).toHaveTextContent('common:status.notSaved');
+    fireEvent.change(within(section).getByRole('textbox', { name: 'enumEditor.name' }), { target: { value: 'Web app' } });
+    expect(within(section).queryByRole('alert')).not.toBeInTheDocument();
   }, 20000);
 
   it('sends nothing when nothing was changed', async () => {
     const view = renderPage();
     await screen.findByRole('button', { name: /pages.settings.lists.connectionTypes.title/ });
     view.unmount();
-    await wait(1600);
+    await wait(900);
     expect(patch).not.toHaveBeenCalled();
   });
 
@@ -194,7 +251,7 @@ describe('Leaving the IT landscape settings page right after typing', () => {
     fireEvent.change(await within(section).findByPlaceholderText('pages.settings.placeholders.typicalPorts'), { target: { value: '443' } });
     await wait(50);
     view.unmount();
-    await wait(1600);
+    await wait(900);
     expect(patch).not.toHaveBeenCalled();
   }, 20000);
 });

@@ -20,8 +20,20 @@ vi.mock('../../auth/AuthContext', () => ({
   }),
 }));
 
+const loaded = vi.hoisted(() => ({
+  settings: {
+    adminZones: [], applicationCategories: [], dataClasses: [], networkSegments: [], entities: [], serverKinds: [],
+    serverProviders: [], serverRoles: [], hostingTypes: [], lifecycleStates: [], interfaceProtocols: [],
+    interfaceDataCategories: [], interfaceTriggerTypes: [], interfacePatterns: [], interfaceFormats: [],
+    interfaceAuthModes: [], connectionTypes: [], subnets: [], domains: [], ipAddressTypes: [],
+    accessMethods: [], incidentCategories: [], technologyFamilies: [],
+    businessCriticalityLevels: [], cyberCriticalityLevels: [], recoveryWaves: [],
+    lockedCodes: {}, protectedCodes: {},
+  },
+}));
+
 vi.mock('../../hooks/useItOpsSettings', () => ({
-  default: () => ({ data: undefined, isError: false }),
+  default: () => ({ data: loaded.settings, isError: false }),
 }));
 
 vi.mock('../../hooks/useLocationOptions', () => ({

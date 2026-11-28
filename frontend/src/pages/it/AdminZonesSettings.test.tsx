@@ -6,7 +6,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
-import ItOperationsSettingsPage, { AdminZonesEditor, autosaveBlocked, initialState, reducer, reorderById } from './ItOperationsSettingsPage';
+import ItOperationsSettingsPage from './ItOperationsSettingsPage';
+import { AdminZonesEditor, reorderById } from './settings/AdminZonesEditor';
+import { initialState, reducer } from './settings/listsState';
 import DomainTrustsDialog from './components/DomainTrustsDialog';
 import api from '../../api';
 import type { DomainOption, ItOpsSettings } from '../../services/itOpsSettings';
@@ -43,24 +45,20 @@ describe('Administration zones settings', () => {
   it('hydrates the zones and marks an attribute change as a modification', () => {
     let state = reducer(initialState, { type: 'hydrate', payload: settings });
     expect(state.enums.adminZones.map((row: any) => [row.code, row.admin_group])).toEqual([['tier_0', 'Domain admins']]);
-    state = reducer(state, { type: 'setEnum', id: 'adminZones', items: state.enums.adminZones.map((row) => ({ ...row, description: 'Identity core' })) });
+    state = reducer(state, { type: 'setList', id: 'adminZones', items: state.enums.adminZones.map((row) => ({ ...row, description: 'Identity core' })) });
     expect(state.dirty.adminZones).toBe(true);
-    state = reducer(state, { type: 'setEnum', id: 'adminZones', items: state.enums.adminZones.map(({ description: _d, ...row }: any) => row) });
+    state = reducer(state, { type: 'setList', id: 'adminZones', items: state.enums.adminZones.map(({ description: _d, ...row }: any) => row) });
     expect(state.dirty.adminZones).toBe(false);
   });
 
-  it('does not resend rows the server refused until they are edited again', () => {
+  it('shows the stored zones again when the server refuses a save', () => {
     let state = reducer(initialState, { type: 'hydrate', payload: settings });
     const tooLong = state.enums.adminZones.map((row) => ({ ...row, description: 'x'.repeat(2001) }));
-    state = reducer(state, { type: 'setEnum', id: 'adminZones', items: tooLong });
-    expect(autosaveBlocked(state, 'adminZones')).toBe(false);
-    state = reducer(state, { type: 'rejected', id: 'adminZones', sent: tooLong.map(({ localId: _l, ...row }) => row) });
+    state = reducer(state, { type: 'setList', id: 'adminZones', items: tooLong });
     expect(state.dirty.adminZones).toBe(true);
-    expect(autosaveBlocked(state, 'adminZones')).toBe(true);
-    expect(autosaveBlocked(state, 'domains')).toBe(false);
-    const fixed = state.enums.adminZones.map((row) => ({ ...row, description: 'Identity core' }));
-    state = reducer(state, { type: 'setEnum', id: 'adminZones', items: fixed });
-    expect(autosaveBlocked(state, 'adminZones')).toBe(false);
+    state = reducer(state, { type: 'revertList', id: 'adminZones' });
+    expect(state.dirty.adminZones).toBe(false);
+    expect(state.enums.adminZones.map((row: any) => [row.code, row.description ?? null])).toEqual([['tier_0', null]]);
   });
 
   it('says the first zone is the most sensitive and offers a grip on each row', () => {
@@ -97,7 +95,7 @@ describe('Administration zones settings', () => {
     expect(screen.getByRole('textbox', { name: 'common:enumEditor.name' })).toBeRequired();
   });
 
-  it('keeps a non-alphabetical zone order on load and on reset', () => {
+  it('keeps a non-alphabetical order on load and when the stored rows come back', () => {
     const zones = [
       { code: 'zone_b', label: 'Zone B', deprecated: false },
       { code: 'zone_a', label: 'Zone A', deprecated: false },
@@ -113,10 +111,10 @@ describe('Administration zones settings', () => {
     let state = reducer(initialState, { type: 'hydrate', payload });
     expect(state.enums.adminZones.map((row) => row.label)).toEqual(['Zone B', 'Zone A']);
     const reordered = [state.enums.adminZones[1], state.enums.adminZones[0]];
-    state = reducer(state, { type: 'setEnum', id: 'adminZones', items: reordered });
-    state = reducer(state, { type: 'resetEnum', id: 'adminZones' });
+    state = reducer(state, { type: 'setList', id: 'adminZones', items: reordered });
+    state = reducer(state, { type: 'revertList', id: 'adminZones' });
     expect(state.enums.adminZones.map((row) => row.label)).toEqual(['Zone B', 'Zone A']);
-    expect(state.enums.technologyFamilies.map((row) => row.code)).toEqual(['database', 'directory']);
+    expect(state.enums.technologyFamilies.map((row) => row.code)).toEqual(['directory', 'database']);
   });
 
   it('edits a zone in place and says when the list is empty', async () => {
@@ -259,9 +257,7 @@ describe('Administration zone order on the settings page', () => {
       ['zone_a', null],
     ]);
     expect(zoneLabels()).toEqual(['Zone B', 'Zone C', 'Zone A']);
-    // The saved list comes back without row ids, and the page mints new ones. Wait until that
-    // refresh has landed: dragging across it leaves the sensor holding an id the rows no longer use.
-    await screen.findByText('pages.settings.updateSuccess');
+    // The saved list comes back without row ids: the page keeps the ones on screen.
     await act(async () => { await tick(); });
     expect(zoneLabels()).toEqual(['Zone B', 'Zone C', 'Zone A']);
 
