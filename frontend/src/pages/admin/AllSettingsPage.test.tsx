@@ -109,7 +109,7 @@ describe('AllSettingsPage', () => {
     expect(hrefOf('Notifications')).toBe('/settings/notifications');
     expect(hrefOf('Currencies')).toBe('/ops/operations/currency');
     // A grey menu path beside the name.
-    expect(screen.getByRole('link', { name: 'Currencies' }).parentElement).toHaveTextContent('Budget management › Administration');
+    expect(screen.getByRole('link', { name: 'Currencies' }).parentElement).toHaveTextContent('Budget management › Settings');
   });
 
   it('shows the installation pages to the Administrator on site, and neither billing nor sample data', () => {
@@ -128,7 +128,7 @@ describe('AllSettingsPage', () => {
     renderPage();
     expect(groupNames()).toEqual(['My account', 'Budget management']);
     expect(linksOf('Budget management')).toEqual([
-      'Administration', 'Currencies', 'Budget columns', 'Default allocation method', 'Freeze / unfreeze data',
+      'Settings', 'Currencies', 'Budget columns', 'Default allocation method', 'Freeze / unfreeze data',
       'Copy budget columns', 'Clear a budget column', 'Freeze master data', 'Copy yearly metrics',
     ]);
     expect(linksOf('My account')).not.toContain('Connected apps');
@@ -138,7 +138,7 @@ describe('AllSettingsPage', () => {
     as({ perms: { budget: 'reader', budget_ops: 'reader' } });
     renderPage();
     expect(groupNames()).toEqual(['My account', 'Budget management']);
-    expect(linksOf('Budget management')).toEqual(['Administration', 'Budget columns', 'Default allocation method']);
+    expect(linksOf('Budget management')).toEqual(['Settings', 'Budget columns', 'Default allocation method']);
   });
 
   it('shows an IT landscape reader the lists, which open read only, and not Netbox', () => {

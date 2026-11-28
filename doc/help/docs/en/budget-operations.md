@@ -352,7 +352,7 @@ One row per column, always in the same order, from column 1 to column 5. The sta
 | Field | Description |
 |-------|-------------|
 | **Column** | The position, 1 to 5. Columns cannot be reordered |
-| **Name** | The name everyone sees in lists, the Budget tab, reports, the overview and Budget administration. Leave it empty to use the standard name, shown as a placeholder. At most 40 characters, with no control or invisible characters. Each name must differ from the other columns' names, including the standard name of a column you have not renamed, whatever the capitals |
+| **Name** | The name everyone sees in lists, the Budget tab, reports, the overview and Budget settings. Leave it empty to use the standard name, shown as a placeholder. At most 40 characters, with no control or invisible characters. Each name must differ from the other columns' names, including the standard name of a column you have not renamed, whatever the capitals |
 | **In files** | The line under each name. It gives the technical name of the column in the budget file and its imports, for example `budget` for column 1. It never changes when you rename a column. See [Load a budget from a spreadsheet](budget-file.md) |
 | **Shown** | Whether the column appears on screen. At least one column must stay shown |
 | **Follows the spread and the lines** | Whether the column starts ticked in **Use for other columns too…** on the Budget tab, which gives other columns the period and distribution of an amount, or the quantity and price lines. You can still tick or untick each column there |

@@ -352,7 +352,7 @@ Une ligne par colonne, toujours dans le même ordre, de la colonne 1 à la colon
 | Champ | Description |
 |-------|-------------|
 | **Colonne** | La position, de 1 à 5. Les colonnes ne peuvent pas être réordonnées |
-| **Nom** | Le nom que tout le monde voit dans les listes, l'onglet Budget, les rapports, la vue d'ensemble et l'administration budgétaire. Laissez-le vide pour utiliser le nom standard, affiché en indication. 40 caractères au plus, sans caractère de contrôle ni caractère invisible. Chaque nom doit différer de ceux des autres colonnes, y compris du nom standard d'une colonne que vous n'avez pas renommée, majuscules comprises |
+| **Nom** | Le nom que tout le monde voit dans les listes, l'onglet Budget, les rapports, la vue d'ensemble et les paramètres du budget. Laissez-le vide pour utiliser le nom standard, affiché en indication. 40 caractères au plus, sans caractère de contrôle ni caractère invisible. Chaque nom doit différer de ceux des autres colonnes, y compris du nom standard d'une colonne que vous n'avez pas renommée, majuscules comprises |
 | **Dans les fichiers** | La ligne sous chaque nom. Elle donne le nom technique de la colonne dans le fichier budgétaire et ses imports, par exemple `budget` pour la colonne 1. Il ne change jamais quand vous renommez une colonne. Voir [Charger un budget depuis un tableur](budget-file.md) |
 | **Affichée** | Indique si la colonne apparaît à l'écran. Au moins une colonne doit rester affichée |
 | **Suit la répartition et les lignes** | Indique si la colonne est cochée au départ dans **Utiliser aussi pour d'autres colonnes…** de l'onglet Budget, qui donne à d'autres colonnes la période et la répartition d'un montant, ou les lignes de quantité et prix. Vous pouvez toujours cocher ou décocher chaque colonne à cet endroit |
@@ -378,9 +378,9 @@ Une modification que le serveur refuse est annulée aussitôt : le nom ou l'inte
 
 ### Autorisations
 
-Modifier les réglages nécessite les droits admin sur l'administration budgétaire (`budget_ops:admin`). Lecteur budget et Membre budget, qui lisent l'administration budgétaire (`budget_ops:reader`), ouvrent la page en lecture seule : le même tableau, qu'ils ne peuvent pas modifier. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
+Modifier les paramètres nécessite les droits admin sur l'administration budgétaire (`budget_ops:admin`). Lecteur budget et Membre budget, qui lisent l'administration budgétaire (`budget_ops:reader`), ouvrent la page en lecture seule : le même tableau, qu'ils ne peuvent pas modifier. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
 
-Si les réglages ne peuvent pas être chargés, la page affiche une seule ligne, « Les réglages des colonnes n'ont pas pu être chargés. », et aucun contrôle.
+Si les paramètres ne peuvent pas être chargés, la page affiche une seule ligne, « Les paramètres des colonnes n'ont pas pu être chargés. », et aucun contrôle.
 
 ---
 
