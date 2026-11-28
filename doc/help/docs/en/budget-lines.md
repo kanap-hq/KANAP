@@ -256,7 +256,7 @@ Click any row in the list to open the workspace. Its address names the line by i
 - Switching tabs, moving to the previous or next line, or closing the workspace saves pending edits first. If a save fails, you stay where you are and an error explains why, so no edit is lost silently
 - **Ctrl+S** (**Cmd+S** on Mac) saves immediately
 - If a save cannot go through right away because another save is in progress on the same data, Kadratis retries it for you
-- If a bulk budget operation is running (for example a column copy or reset in Budget Administration), edits here are paused with the message "Another budget operation is running. Try again when it has finished." Try again once it is done
+- If a bulk budget operation is running (for example copying or clearing a column in Budget Administration), edits here are paused with the message "Another budget operation is running. Try again when it has finished." Try again once it is done
 
 **Editing at the same time**:
 
@@ -403,7 +403,7 @@ On an empty column, a click on a tab switches at once. On a column with amounts,
 **Clear column**:
 
 - **Clear column**, on the right under the editor, sets every month of the active column to zero, for example before entering the whole amount in a single month. When the column holds amounts, you confirm first: "Clear every month of Budget for 2026? The other columns stay as they are." It counts as an edit by hand
-- To remove both the amounts and the period of a column for every line, use **Reset budget column** in Budget Administration
+- To remove both the amounts and the period of a column for every line, use **Clear a budget column** in Budget Administration
 
 **Monthly result**:
 
@@ -523,7 +523,7 @@ Click **Add a line** under the table to add a line, and the cross at the end of 
 - Switching the column to **Amount** or **By month**, typing a month in the table, or **Clear column**
 - **Copy budget columns** in Budget Administration, or **Start from**: when the source amounts were not calculated from lines, the copy brings the source column's lines as a reference. A column calculated from its lines stays calculated, with its prices raised by the percentage. See [Copying a column built from lines](budget-operations.md#copying-a-column-built-from-lines)
 - A calendar's working days changed: the **Quantity and price** tab reads, for example, "Working days changed since the last computation: March: 20 days, now 19.", followed by **Use the lines again**. Nothing changes on the column until you click it. The lines stay editable meanwhile
-- **Reset budget column** in Budget Administration removes the lines with the amounts. See [Reset budget column](budget-operations.md#reset-budget-column)
+- **Clear a budget column** in Budget Administration removes the lines with the amounts. See [Clear a budget column](budget-operations.md#reset-budget-column)
 
 - A budget file changes the months of a column and leaves its lines. See [Load a budget from a spreadsheet](budget-file.md)
 
@@ -781,7 +781,7 @@ Access to budget lines is controlled by the Budget resource, which covers OPEX a
 
 - `budget:reader`: View the list, open lines, see budgets and allocations (read-only), download attachments
 - `budget:member`: Create and edit lines, change their type, update budgets and allocations, upload and delete attachments, manage relations, links and contacts, change lines in bulk
-- `budget:admin`: All member rights plus import and export, budget operations (copy budget columns, with their amounts and allocations, and reset budget column), and deleting lines from the list or from the line
+- `budget:admin`: All member rights plus import and export, budget operations (copy budget columns, with their amounts and allocations, and clear a budget column), and deleting lines from the list or from the line
 
 Freezing budget columns needs Budget administration (`budget_ops:admin`).
 
