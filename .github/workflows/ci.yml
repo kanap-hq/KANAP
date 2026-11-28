@@ -171,7 +171,7 @@ jobs:
       - name: Run the specs that read the user manual
         if: ${{ needs.changes.outputs.backend == 'docs' }}
         run: |
-          for spec in common/__tests__/markdown-size common/__tests__/markdown-worker common/__tests__/admin-password-policy ai/__tests__/ai-help-manual; do
+          for spec in common/__tests__/markdown-size common/__tests__/markdown-worker common/__tests__/admin-password-policy ai/__tests__/ai-help-manual config/__tests__/env-registry; do
             echo "── src/$spec.spec.ts"
             node --enable-source-maps "ci-dist/backend/src/$spec.spec.js"
           done
