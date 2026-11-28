@@ -1366,6 +1366,7 @@ export class ItOpsSettingsService {
       // Saving the catalog never moves an application: levels are referenced by stable code.
       Object.assign(next, this.prepareClassificationCatalog(current, patch));
     }
+    this.assertStoredAliases(next, Object.keys(patch));
     await this.assertCatalogUsage(tenantId, current, next, Object.keys(patch), opts!.manager!);
     return this.persistSettings(tenant, current, next, opts);
   }
@@ -1473,6 +1474,27 @@ export class ItOpsSettingsService {
       prepared[key] = prepareCatalogListForWrite(rows, { listName: meta.name, commaSeparatedInCsv: meta.commaSeparatedInCsv, skipCodes });
     }
     return prepared as Partial<ItOpsSettings>;
+  }
+
+  /**
+   * The alias rule of `prepareCatalogPatch` again, on each list of the save as it will be stored:
+   * the protected values the normalizers add back and the locked rows they put first count. A list
+   * that would hold two values answering to one name is refused, nothing stored. The restore does
+   * not come here: it copies stored data as it is.
+   */
+  private assertStoredAliases(next: ItOpsSettings, lists: string[]): void {
+    for (const key of lists) {
+      const meta = ItOpsSettingsService.LIST_META[key];
+      if (!meta || meta.subnets) continue;
+      const owners = new Map<string, { code: string; label: string }>();
+      for (const row of ((next as any)[key] ?? []) as Array<{ code: string; label: string; translations?: CatalogTranslations }>) {
+        for (const alias of catalogAliases(row)) {
+          const owner = owners.get(alias);
+          if (owner && owner.code !== row.code) throw new BadRequestException(`${meta.name}: "${row.label}" clashes with "${owner.label}" (names, translations and codes must be unique)`);
+          owners.set(alias, row);
+        }
+      }
+    }
   }
 
   /** Usage of one catalog value on business records, shared by the usage endpoint and the PATCH guard. */
