@@ -226,7 +226,7 @@ These counts appear to people who read the budget but not those lines. A person 
 Even when their roles allow it, a limited person cannot:
 
 - change the workspace settings: freeze and unfreeze, the default allocation rule, budget columns, currencies, the yearly copy of master data, the headcount and metrics of companies and departments;
-- run operations on many lines: copy and reset budget columns, copy allocations, bulk delete;
+- run operations on many lines: copy and clear budget columns, copy allocations, bulk delete;
 - delete a line or a contract;
 - manage people: users, roles, data access, the audit log;
 - edit organisation data: companies, departments, cost centers, accounts and charts of accounts, business processes, the dimensions themselves and the values of dimensions without open values;

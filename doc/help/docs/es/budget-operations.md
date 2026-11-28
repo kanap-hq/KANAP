@@ -23,17 +23,18 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 |-------------|-----------|
 | **Congelar / descongelar datos** | Bloquear columnas presupuestarias para prevenir cambios |
 | **Copiar columnas presupuestarias** | Copiar importes entre años y columnas, con un porcentaje opcional, y asignaciones a otro año |
-| **Restablecer columna presupuestaria** | Borrar todos los datos de una columna específica |
+| **Vaciar una columna presupuestaria** | Borrar todos los datos de una columna específica |
 | **Congelar datos maestros** | Bloquear los indicadores de empresas y departamentos para un año. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
 | **Copiar indicadores anuales** | Copiar los indicadores de empresas y departamentos de un año a otro. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
 
 | Tarjetas | Quién las ve |
 |---|---|
-| Monedas, Columnas presupuestarias, Método de asignación por defecto, Congelar / descongelar datos | Administración presupuestaria con nivel de administrador (`budget_ops:admin`) |
-| Copiar columnas presupuestarias, Restablecer columna presupuestaria | Presupuesto con nivel de administrador (`budget:admin`). Las pestañas **Todo**, **OPEX** y **CAPEX** se abren todas con este nivel |
+| Monedas, Congelar / descongelar datos | Administración presupuestaria con nivel de administrador (`budget_ops:admin`) |
+| Columnas presupuestarias, Método de asignación por defecto | Administración presupuestaria con nivel de lector (`budget_ops:reader`), en solo lectura. Para cambiarlos se necesita el nivel de administrador (`budget_ops:admin`) |
+| Copiar columnas presupuestarias, Vaciar una columna presupuestaria | Presupuesto con nivel de administrador (`budget:admin`). Cada **Tipo de línea** (**Todo**, **OPEX**, **CAPEX**) se abre con este nivel |
 | Congelar datos maestros, Copiar indicadores anuales | Usuarios con acceso al presupuesto que son administradores de la administración presupuestaria, de empresas o de departamentos. Los administradores de empresas y departamentos actúan sobre su propio alcance |
 
-El rol integrado Administrador de presupuesto ve todas las tarjetas. Miembro de presupuesto y Lector de presupuesto no ven ninguna, así que **Administración** no aparece en su menú.
+El rol integrado Administrador de presupuesto ve todas las tarjetas. Miembro de presupuesto y Lector de presupuesto ven las tarjetas **Columnas presupuestarias** y **Método de asignación por defecto**, que se abren para ellos en solo lectura, y ninguna operación. Una persona con acceso a los datos limitado no ve ninguna de estas tarjetas.
 
 Las columnas presupuestarias son Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto. Son los nombres estándar. Su organización puede renombrarlas, ocultar algunas y elegir una columna por defecto en [Columnas presupuestarias](#columnas-presupuestarias). Cada página a continuación muestra los nombres que eligió su organización.
 
@@ -67,7 +68,7 @@ Sin el nivel Administrador en la administración presupuestaria, la página mues
 
 - Previene ediciones en columnas congeladas en el espacio de trabajo de las líneas de ese tipo. Los campos muestran un candado
 - Bloquea importaciones a columnas congeladas
-- Bloquea operaciones de copia y restablecimiento dirigidas a columnas congeladas
+- Bloquea operaciones de copia y vaciado dirigidas a columnas congeladas
 - Rechaza eliminar una línea, o cambiar su tipo, mientras tenga importes en una columna congelada de los años afectados
 - **No** afecta el acceso de lectura: los datos siguen siendo visibles
 - También se aplica a las columnas ocultas. Una columna congelada sigue congelada cuando se oculta, y las importaciones en ella se siguen rechazando
@@ -216,15 +217,15 @@ Cuando la copia incluye los importes y la columna de destino está congelada, **
 
 ---
 
-## Restablecer columna presupuestaria
+## Vaciar una columna presupuestaria { #restablecer-columna-presupuestaria }
 
-Borre todos los datos de una columna presupuestaria específica para un año determinado. Esta es una operación destructiva: utilícela cuando necesite comenzar de cero.
+Borre todos los datos de una columna presupuestaria para un año determinado. Esta es una operación destructiva: utilícela cuando necesite comenzar de cero.
 
-Las pestañas **Todo** / **OPEX** / **CAPEX** de la parte superior eligen las líneas que se borran. **Todo**, la pestaña por defecto, borra juntas las líneas OPEX y CAPEX. El restablecimiento pone a cero los doce meses de la columna y quita su periodo, así como sus líneas cuando la columna se construyó a partir de cantidad y precio. En la pestaña Presupuesto, la columna recibe entonces una nueva sugerencia a partir de las fechas de la línea. El restablecimiento abarca todas las líneas, incluidas aquellas cuyo fin de validez ya ha pasado. Es de todo o nada: si una línea falla, no se borra nada.
+**Tipo de línea** (**Todo** / **OPEX** / **CAPEX**) elige las líneas que se vacían. **Todo**, la opción por defecto, vacía juntas las líneas OPEX y CAPEX. Vaciar la columna pone a cero los doce meses de la columna y quita su periodo, así como sus líneas cuando la columna se construyó a partir de cantidad y precio. En la pestaña Presupuesto, la columna recibe entonces una nueva sugerencia a partir de las fechas de la línea. La operación abarca todas las líneas, incluidas aquellas cuyo fin de validez ya ha pasado. Es de todo o nada: si una línea falla, no se vacía nada.
 
-Requiere el nivel Administrador en Presupuesto (`budget:admin`).
+Requiere el nivel Administrador en Presupuesto (`budget:admin`). Los demás usuarios no pueden abrir la página.
 
-Una columna cuyas líneas no tienen ningún importe también puede restablecerse: en ese caso solo se quitan los periodos de reparto, y la confirmación lo indica.
+Una columna cuyas líneas no tienen ningún importe también puede vaciarse: en ese caso solo se quitan los periodos de reparto, y la página y la confirmación lo indican.
 
 ### Cuándo usarla
 
@@ -236,35 +237,42 @@ Una columna cuyas líneas no tienen ningún importe también puede restablecerse
 
 | Campo | Descripción |
 |-------|-------------|
+| **Tipo de línea** | **Todo**, **OPEX** o **CAPEX** |
 | **Año** | El ejercicio fiscal a borrar (rango: año actual menos uno hasta año actual más cinco) |
-| **Columna presupuestaria** | Cualquier columna visible, incluida Previsión cuando se muestra. No hay ninguna columna preseleccionada: el campo indica **Elegir una columna** y **Borrar columna** sigue deshabilitado hasta que elija una |
+| **Columna presupuestaria** | Cualquier columna visible, incluida Previsión cuando se muestra. No hay ninguna columna preseleccionada: el campo indica **Elegir una columna** y **Vaciar la columna** sigue deshabilitado hasta que elija una |
 
 ### Vista previa
 
-Antes de elegir una columna, una línea sustituye a la cuadrícula: «Elija una columna para ver los importes que contiene.» Una vez elegida la columna, una cuadrícula muestra cada línea del tipo elegido y su valor actual en esa columna. El nombre de la línea la abre en una pestaña nueva, y en la pestaña **Todo** una columna **Tipo de línea** indica **OPEX** o **CAPEX**. Los importes que se borrarán aparecen en peso medio; los valores vacíos aparecen atenuados. Debajo de la cuadrícula aparecen tres estadísticas:
+Antes de elegir una columna, una línea indica: «Elija una columna para ver los importes que contiene.» Una vez elegida la columna, la página muestra tres cifras:
 
-- **Total de elementos**
-- **Líneas con un total distinto de cero**
-- **Valor total actual**
+- **Líneas**: las líneas del tipo elegido aún vigentes el 1 de enero del año
+- **Líneas con un importe**
+- **Valor total**
 
-**Exportar la tabla** (icono de descarga) descarga la cuadrícula como archivo CSV o Excel: las líneas del tipo elegido y su valor actual en la columna elegida.
+Debajo aparecen las cinco líneas con los importes más altos de la columna, con un importe negativo clasificado por su tamaño, y luego «y N líneas más». Con **Tipo de línea** en **Todo**, una columna **Tipo de línea** indica **OPEX** o **CAPEX**. Una frase dice a continuación qué se elimina al vaciar, para cuántas líneas, y que no se puede deshacer.
+
+**Ver las N líneas** abre bajo el panel una cuadrícula con todas las líneas del tipo elegido y su valor actual en la columna. La cuadrícula se ordena por cualquier columna, y el nombre de la línea la abre en una pestaña nueva. Los importes que se borrarán aparecen en peso medio; los valores vacíos aparecen atenuados. **Ocultar las líneas** la cierra.
+
+**Exportar la tabla** (icono de descarga, junto a las opciones) descarga todas las líneas y su valor actual en la columna elegida como archivo CSV o Excel. La exportación se anota en el registro de auditoría.
+
+Cuando la columna no tiene ningún importe, una frase lo dice en lugar de las cifras, y **Ver las N líneas** sigue abriendo la cuadrícula.
 
 ### Confirmación
 
-Al hacer clic en **Borrar columna** se abre un diálogo de confirmación que muestra:
+Al hacer clic en **Vaciar la columna** se abre una confirmación que pregunta «¿Vaciar la columna Presupuesto de 2026?» y muestra:
 
-- La columna y año que se restablecerán
-- El número de elementos afectados
-- El valor total que se eliminará
-- Una advertencia clara de que esta acción no se puede deshacer
+- El número de líneas afectadas y el valor total que se eliminará
+- Que las líneas y sus demás columnas se conservan
+- Que esta acción no se puede deshacer
 
-Debe hacer clic en **Borrar columna** en el diálogo para proceder, o **Cancelar** para abortar.
+Haga clic en **Vaciar la columna** en el diálogo para continuar, o en **Cancelar** para abandonar. El resultado aparece junto al botón, por ejemplo «Columna vaciada en 45 líneas.» Cuenta las líneas cuyos importes se han quitado, como **Líneas con un importe**. Si ninguna línea tenía importe, lo indica: «Columna vaciada: ninguna línea tenía importe.»
 
 ### Medidas de seguridad
 
-- El botón **Borrar columna** sigue disponible cuando ninguna línea tiene importe, para poder quitar igualmente los periodos de reparto
-- No hay ninguna columna preseleccionada, así que siempre elige usted la columna que se borra
-- Las columnas congeladas no pueden restablecerse. Descongélelas primero. En la pestaña **Todo**, cuando la columna solo está congelada para un tipo, el mensaje lo nombra, por ejemplo «La columna Presupuesto de 2026 está congelada en CAPEX. Descongélela antes de borrar los datos, o borre solo el otro tipo.»
+- El botón **Vaciar la columna** sigue disponible cuando ninguna línea tiene importe, para poder quitar igualmente los periodos de reparto
+- No hay ninguna columna preseleccionada, así que siempre elige usted la columna que se vacía
+- Las columnas congeladas no pueden vaciarse. Descongélelas primero. Con **Tipo de línea** en **Todo**, cuando la columna solo está congelada para un tipo, el mensaje lo nombra, por ejemplo «La columna Presupuesto de 2026 está congelada en CAPEX. Descongélela antes de vaciarla, o vacíe solo el otro tipo.»
+- Mientras se ejecuta otra operación presupuestaria, el vaciado se rechaza y el mensaje junto al botón lo indica
 - El diálogo de confirmación requiere reconocimiento explícito
 
 ---
@@ -285,7 +293,7 @@ Defina el método que siguen las líneas de OPEX y las inversiones de CAPEX cuan
 | Campo | Descripción |
 |-------|-------------|
 | **Ejercicio** | El año al que se aplica la configuración (rango: año actual menos uno hasta año actual más cinco) |
-| **Sociedades** | **Todas las sociedades activas** (por defecto): el coste se reparte entre todas las sociedades activas del año. **Sociedades seleccionadas**: el reparto se restringe a las sociedades que elija |
+| **Ámbito de las sociedades** | **Todas las sociedades activas** (por defecto): el coste se reparte entre todas las sociedades activas del año. **Sociedades seleccionadas**: el reparto se restringe a las sociedades que elija en **Sociedades** |
 | **Método por defecto** | El generador que pondera las sociedades: Plantilla, Usuarios IT o Facturación |
 
 ### Cómo funciona
@@ -293,8 +301,9 @@ Defina el método que siguen las líneas de OPEX y las inversiones de CAPEX cuan
 1. **Seleccione un año**
 2. **Elija el ámbito de sociedades**: *Todas las sociedades activas*, o *Sociedades seleccionadas* y después las sociedades concretas
 3. **Elija el generador** que pondera las sociedades (Plantilla, Usuarios IT o Facturación)
-4. Cada cambio se guarda inmediatamente, no hay botón Guardar
-5. Para volver al método estándar, haga clic en **Volver al método estándar** (solo se muestra mientras haya un valor por defecto personalizado configurado)
+4. Cada cambio se guarda solo: una elección en cuanto la hace, las sociedades cuando se cierra su lista. Junto al título aparece **Guardando…** y luego **Guardado**. No hay botón Guardar. El ejercicio no se puede cambiar mientras se guarda un cambio
+5. Un cambio que el servidor rechaza se deshace en el acto: el campo vuelve a mostrar el valor guardado, con el motivo debajo hasta su próximo cambio, y junto al título aparece **No guardado**. Cuando el servidor está ocupado, su elección se queda en pantalla y aparece **Guardando…** mientras se vuelve a enviar. Si sigue sin poder guardarse, aparece **No guardado** con un mensaje, y el cambio se vuelve a enviar con su siguiente cambio
+6. Para volver al método estándar, haga clic en **Restablecer la asignación por defecto** junto al título (solo se muestra mientras haya un valor por defecto personalizado configurado)
 
 ### Sociedades seleccionadas
 
@@ -320,7 +329,9 @@ El valor por defecto se resuelve cada vez que se muestran las asignaciones, por 
 
 ### Permisos
 
-Cambiar el método por defecto requiere `budget_ops:admin`. La tarjeta se oculta a los demás usuarios.
+Cambiar el método por defecto requiere `budget_ops:admin`. Lector de presupuesto y Miembro de presupuesto, que leen la Administración presupuestaria (`budget_ops:reader`), abren la página en solo lectura: los mismos campos, que no pueden cambiar, y sin el botón **Restablecer la asignación por defecto**. Pueden seguir eligiendo el ejercicio que quieren consultar. Una persona con acceso a los datos limitado no puede abrir la página.
+
+Cada cambio escribe su propia entrada en el registro de auditoría.
 
 ---
 
@@ -353,17 +364,21 @@ Por defecto, Presupuesto, Revisión, Realizado y Aterrizaje previsto están visi
 
 ### Qué cambia la configuración
 
-- **Las columnas ocultas** desaparecen de las listas, del selector de columnas, de la pestaña Presupuesto, de los selectores de los informes, de las páginas de copia y de restablecimiento y del panel. Conservan sus importes: ocultar una columna nunca borra datos, y volver a mostrarla recupera los importes. Las columnas ocultas siguen aceptando importaciones mediante el archivo de presupuesto, y las congelaciones se les siguen aplicando. La página de congelación también muestra las columnas ocultas, con la marca **Oculta**, para que pueda congelarlas como las demás
+- **Las columnas ocultas** desaparecen de las listas, del selector de columnas, de la pestaña Presupuesto, de los selectores de los informes, de las páginas de copia y de vaciado y del panel. Conservan sus importes: ocultar una columna nunca borra datos, y volver a mostrarla recupera los importes. Las columnas ocultas siguen aceptando importaciones mediante el archivo de presupuesto, y las congelaciones se les siguen aplicando. La página de congelación también muestra las columnas ocultas, con la marca **Oculta**, para que pueda congelarlas como las demás
 - **La columna por defecto** está preseleccionada en todos los informes. Ordena la lista de líneas presupuestarias y su navegación anterior y siguiente. El mosaico **Top líneas**, clasificado por **Importe** o por **Aumento**, y los mosaicos **Mi presupuesto** y **Por centro de coste** del panel la usan. La lista la muestra para el año actual, junto a la última columna visible. Una lista cuyas columnas de importes eligió una persona las conserva y recibe la nueva columna por defecto. También es el importe de referencia de la pestaña Asignaciones y la columna de partida de la fila **Diferencia con** de la pestaña Presupuesto. La pestaña Presupuesto de una línea se abre en ella mientras no está congelada. Congelarla para un año fija los tipos de cambio de ese año (consulte [Congelar la columna por defecto fija los tipos de cambio](#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio))
 - **Sigue el reparto y las líneas** decide qué columnas aparecen marcadas al principio cuando usa **Usar también para otras columnas…** en la pestaña Presupuesto. Las columnas congeladas nunca se ofrecen, diga lo que diga esta configuración
 
 ### Guardar
 
-Haga clic en **Guardar** para aplicar sus cambios. El botón sigue deshabilitado hasta que algo cambie y todos los nombres sean válidos. **Restablecer** descarta los cambios que aún no ha guardado. Los errores se explican bajo el campo o bajo la tabla, por ejemplo «Al menos una columna debe seguir visible.» o «La columna por defecto debe estar visible: elija antes otra columna por defecto.» Para ocultar la columna por defecto actual, elija antes otra columna por defecto. Ambos cambios se pueden guardar a la vez.
+Cada cambio se guarda solo, sin botón Guardar: un nombre cuando sale de su campo o tras una breve pausa al escribir, un interruptor o la columna por defecto en cuanto lo cambia. Junto al título aparece **Guardando…** y luego **Guardado**. Cada cambio escribe su propia entrada en el registro de auditoría.
+
+Un valor que se rechazaría no se guarda. Se queda en pantalla con el motivo debajo, y el valor guardado antes sigue vigente: por ejemplo «Dos columnas no pueden llamarse ambas «Presupuesto».» bajo un nombre, o «Al menos una columna debe seguir visible.» bajo un interruptor. Para ocultar la columna por defecto actual, elija antes otra columna por defecto y después ocúltela: ocultar la columna por defecto se rechaza con «La columna por defecto debe estar visible: elija antes otra columna por defecto.», y el interruptor vuelve a su posición guardada en su siguiente cambio.
+
+Un cambio que el servidor rechaza se deshace en el acto: el nombre o el interruptor vuelve a mostrar su valor guardado, con el motivo del servidor debajo hasta que vuelva a cambiar ese campo, y junto al título aparece **No guardado**. Sus demás cambios siguen guardados. Cuando el servidor está ocupado, el cambio se queda en pantalla y aparece **Guardando…** mientras se vuelve a enviar. Si sigue sin poder guardarse, aparece **No guardado** con un mensaje bajo la tabla, y el cambio se vuelve a enviar con su siguiente cambio. Salir de la página justo después de un cambio rechazado le mantiene en la página, para que pueda leer el motivo. Salir mientras un cambio sigue esperando a un servidor ocupado le pide confirmación antes.
 
 ### Permisos
 
-Cambiar la configuración requiere derechos de administración de la Administración presupuestaria (`budget_ops:admin`). La tarjeta se oculta a los demás usuarios.
+Cambiar la configuración requiere derechos de administración de la Administración presupuestaria (`budget_ops:admin`). Lector de presupuesto y Miembro de presupuesto, que leen la Administración presupuestaria (`budget_ops:reader`), abren la página en solo lectura: la misma tabla, que no pueden cambiar. Una persona con acceso a los datos limitado no puede abrir la página.
 
 Si la configuración no se puede cargar, la página muestra una sola línea, «No se pudo cargar la configuración de las columnas.», y ningún control.
 
@@ -400,6 +415,6 @@ A continuación se muestra una secuencia típica usando estas herramientas, con 
 - **Siempre revise la vista previa primero**: **Copiar columnas presupuestarias** muestra lo que hace en cada línea antes de copiar. Revísela cada vez antes de confirmar.
 - **Congele después de la aprobación**: Bloquear columnas después de la aprobación mantiene su registro de auditoría y previene ediciones accidentales.
 - **Use ajustes porcentuales**: Al copiar entre años, aplique un factor de inflación o crecimiento para no tener que ajustar cada línea manualmente.
-- **Verifique el estado de congelación antes de operaciones masivas**: Las columnas congeladas bloquean las operaciones de copia y restablecimiento. Si un botón está en gris, verifique primero la página de congelación.
+- **Verifique el estado de congelación antes de operaciones masivas**: Las columnas congeladas bloquean las operaciones de copia y vaciado. Si un botón está en gris, verifique primero la página de congelación.
 - **Defina el valor por defecto del año antes de introducir presupuestos**: Si su base de asignación no es la plantilla, configúrela primero en Método de asignación por defecto, para que las líneas se creen sobre la base correcta en lugar de recalcularse después.
-- **Restablezca con precaución**: El restablecimiento de columna es irreversible. Compruebe el año y la columna antes de confirmar.
+- **Vacíe con precaución**: Vaciar una columna es irreversible. Compruebe el año y la columna antes de confirmar.

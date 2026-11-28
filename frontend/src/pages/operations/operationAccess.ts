@@ -4,20 +4,27 @@ type HasLevel = (resource: string, level: Level) => boolean;
 /** Budget administration belongs to the budget module: budget line or budget administration readers. */
 const hasBudgetAccess = (hasLevel: HasLevel) => ['budget', 'budget_ops'].some((resource) => hasLevel(resource, 'reader'));
 const budgetAdmin = (hasLevel: HasLevel) => hasLevel('budget_ops', 'admin');
-/** Copy budget columns and reset a column: the Admin level on the budget lines, both types alike. */
+/**
+ * A settings page of the budget: it opens to every reader of budget
+ * administration (Budget Reader, Budget Member), read-only. Changing it stays `budget_ops:admin`,
+ * read in the page itself.
+ */
+const budgetSettingsReader = (hasLevel: HasLevel) => hasLevel('budget_ops', 'reader');
+/** Copy budget columns and clear a column: the Admin level on the budget lines, both types alike. */
 const itemsAdmin = (hasLevel: HasLevel) => hasLevel('budget', 'admin');
 const masterDataAdmin = (hasLevel: HasLevel) =>
   hasBudgetAccess(hasLevel)
   && (hasLevel('budget_ops', 'admin') || hasLevel('companies', 'admin') || hasLevel('departments', 'admin'));
 
 /**
- * Who can use each `/ops/operations/*` page, mirroring the rights its API needs to act.
- * A page the user cannot use is hidden from the landing and closed by the route guard.
+ * Who can open each `/ops/operations/*` page. A settings page opens to its readers, read-only
+ * (`budgetSettingsReader`); an operation opens only to the users whose rights its API needs to act.
+ * A page the user cannot open is hidden from the landing and closed by the route guard.
  */
 const OPERATION_ACCESS: Record<string, (hasLevel: HasLevel) => boolean> = {
   currency: budgetAdmin,
-  columns: budgetAdmin,
-  'allocation-default': budgetAdmin,
+  columns: budgetSettingsReader,
+  'allocation-default': budgetSettingsReader,
   freeze: budgetAdmin,
   'copy-budget': itemsAdmin,
   'column-reset': itemsAdmin,
@@ -26,7 +33,7 @@ const OPERATION_ACCESS: Record<string, (hasLevel: HasLevel) => boolean> = {
 };
 
 /**
- * Whether the user can use the administration page at `/ops/operations/<page>`. Every one of them
+ * Whether the user can open the administration page at `/ops/operations/<page>`. Every one of them
  * is reserved to people with access to all data (spec §2.7): none for a limited person.
  */
 export function canUseOperation(page: string, hasLevel: HasLevel, dataAccessLimited = false): boolean {
