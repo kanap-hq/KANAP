@@ -74,21 +74,9 @@ function buildTarget(preview: AiMutationPreview): AiMutationPreviewPresentation[
   };
 }
 
-function toDisplayPriority(value: unknown): string | null {
-  switch (String(value || '')) {
-    case 'blocker':
-      return 'Blocker';
-    case 'high':
-      return 'High';
-    case 'normal':
-      return 'Normal';
-    case 'low':
-      return 'Low';
-    case 'optional':
-      return 'Optional';
-    default:
-      return null;
-  }
+/** The task screens' label. An empty value is the stored default `normal`, shown as Medium. */
+function toDisplayPriority(value: unknown): string {
+  return taskPriorityText('en', textOrNull(value) ?? 'normal')!;
 }
 
 function toDisplayRelation(mutation: Record<string, unknown>): string {
@@ -304,7 +292,7 @@ export class CreateTaskAiMutationOperation implements AiMutationOperation<Create
     const ref = textOrNull(current.target_ref);
     const title = textOrNull(current.target_title) ?? textOrNull(mutation.title) ?? 'Untitled task';
     const assigneeLabel = textOrNull(mutation.assignee_label);
-    const priorityLabel = toDisplayPriority(mutation.priority_level) ?? 'Normal';
+    const priorityLabel = toDisplayPriority(mutation.priority_level);
     const applicationLabels = Array.isArray(mutation.application_labels) ? mutation.application_labels.join(', ') : null;
     const assetLabels = Array.isArray(mutation.asset_labels) ? mutation.asset_labels.join(', ') : null;
 
