@@ -73,6 +73,8 @@ function openAt(path: string): string {
 }
 
 const installationPaths = ['/admin/installation', '/admin/installation/scheduled-tasks', '/admin/scheduled-tasks'];
+// The router matches these to the same pages: the guard holds on them too.
+const spelledPaths = ['/admin/Installation/scheduled-tasks', '/admin/%69nstallation/scheduled-tasks', '/Admin/Scheduled-Tasks'];
 
 afterEach(() => {
   Object.assign(state, {
@@ -131,6 +133,11 @@ describe('ProtectedRoute: Installation section, in the cloud', () => {
   it.each(installationPaths)('refuses %s to the Administrator of a workspace', (path) => {
     state.isGlobalAdmin = true;
     expect(openAt(path)).toBe('refused');
+  });
+
+  it.each(spelledPaths)('refuses %s to the Administrator of a workspace', (path) => {
+    state.isGlobalAdmin = true;
+    expect(openAt(path)).not.toBe('opens');
   });
 
   it.each(installationPaths)('opens %s to the platform administrator on the platform host', (path) => {

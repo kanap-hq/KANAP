@@ -121,6 +121,10 @@ describe('adminMenu: the person who runs the installation', () => {
     ['/admin/installation', true],
     ['/admin/installation/scheduled-tasks', true],
     ['/admin/scheduled-tasks', true],
+    ['/admin/Installation/scheduled-tasks', true],
+    ['/admin/%69nstallation/scheduled-tasks', true],
+    ['/ADMIN/SCHEDULED-TASKS', true],
+    ['/admin/%E0%A4%A', false],
     ['/admin/installations', false],
     ['/admin/users', false],
   ])('treats %s as an installation address: %s', (path, expected) => {
@@ -180,7 +184,7 @@ describe('adminMenu: the menu and the route guard name the same requirement', ()
         expect(route).toEqual({ resource: 'ai_settings', level: 'admin' });
         break;
       case 'none':
-        // Pages of the platform host, without a right of their own yet.
+        // Pages of the platform host, without a line of their own: the route asks for the segment as a resource.
         expect(ADMIN_MENU_GROUPS[entry.group].places).toEqual(['platform']);
         expect(route).toBeUndefined();
         break;

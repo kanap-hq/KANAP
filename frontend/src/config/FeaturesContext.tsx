@@ -118,6 +118,8 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
   // the defaults would hide the menus and routes of every feature they switch off (a deep link
   // to one would fall to the catch-all), so nothing renders on them.
   const [isLoading, setIsLoading] = useState(true);
+  // Set once a refresh has answered: the first load, if still trying, stops and never overwrites it.
+  const refreshed = useRef(false);
 
   useEffect(() => {
     // An effect torn down before its read answers (unmount, or the development double run) leaves
@@ -134,20 +136,20 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
     };
 
     const load = async () => {
-      if (cancelled || loaded || inFlight) return;
+      if (cancelled || loaded || inFlight || refreshed.current) return;
       clearTimeout(retryTimer);
       retryTimer = undefined;
       const controller = new AbortController();
       inFlight = controller;
       try {
         const next = await readPublicConfig(controller);
-        if (cancelled) return;
+        if (cancelled || refreshed.current) return;
         loaded = true;
         stopListening();
         setConfig(next);
         setIsLoading(false);
       } catch (err) {
-        if (cancelled) return;
+        if (cancelled || refreshed.current) return;
         const delay = Math.min(RETRY_BASE_MS * 2 ** failures, RETRY_MAX_MS);
         failures += 1;
         console.warn(`[Features] Failed to fetch config, retrying in ${delay / 1000} s:`, (err as Error)?.message);
@@ -180,6 +182,7 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
     if (refreshing.current) return refreshing.current;
     const read = readPublicConfig(new AbortController())
       .then((next) => {
+        refreshed.current = true;
         setConfig(next);
         setIsLoading(false);
         return true;

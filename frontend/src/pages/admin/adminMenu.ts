@@ -21,7 +21,10 @@ export type AdminRequirement =
   | 'operator'
   /** The integrations page: the `canShowIntegrations` of the context. */
   | 'integrations'
-  /** No right checked: the pages of the platform host. */
+  /**
+   * No right of its own: the pages of the platform host. Their route asks `hasLevel(<segment>,
+   * 'reader')`, which only an Administrator or a platform administrator passes.
+   */
   | 'none';
 
 /** Where the menu shows: a workspace host of the cloud, the platform host of the cloud, on site. */
@@ -121,9 +124,20 @@ export function isInstallationOperator(ctx: InstallationOperatorContext): boolea
   return ctx.platformHost && !!ctx.claims?.isPlatformAdmin;
 }
 
-/** An address of the Installation section, or a former address of one of its pages. */
+/**
+ * An address of the Installation section, or a former address of one of its pages. The router
+ * matches an address whatever its case and after decoding it (`/admin/%69nstallation`,
+ * `/admin/Installation`), so the guard reads it the same way.
+ */
 export function isInstallationPath(path: string): boolean {
-  return [INSTALLATION_ROOT, ...LEGACY_INSTALLATION_PATHS].some((root) => path === root || path.startsWith(`${root}/`));
+  let read = path;
+  try {
+    read = decodeURIComponent(path);
+  } catch {
+    // A malformed escape matches no route either: read the address as it is.
+  }
+  read = read.toLowerCase();
+  return [INSTALLATION_ROOT, ...LEGACY_INSTALLATION_PATHS].some((root) => read === root || read.startsWith(`${root}/`));
 }
 
 export function meetsAdminRequirement(requirement: AdminRequirement, ctx: AdminMenuContext): boolean {

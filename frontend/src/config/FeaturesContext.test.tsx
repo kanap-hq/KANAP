@@ -235,6 +235,31 @@ describe('FeaturesProvider: refresh', () => {
     expect(api.current!.isLoading).toBe(false);
   });
 
+  it('ends the retries of a first load that has not answered yet', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const fetchMock = vi.fn()
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockResolvedValueOnce(response('single-tenant', true))
+        .mockResolvedValue(response('multi-tenant', false));
+      const { api } = mount(fetchMock);
+      await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+      expect(screen.getByTestId('refresh')).toHaveTextContent('loading');
+
+      let result: boolean | undefined;
+      await act(async () => { result = await api.current!.refresh(); });
+      expect(result).toBe(true);
+      expect(screen.getByTestId('refresh')).toHaveTextContent('single-tenant:true');
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(screen.getByTestId('refresh')).toHaveTextContent('single-tenant:true');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('makes one read for two calls at the same time', async () => {
     let answer: (value: unknown) => void = () => undefined;
     const fetchMock = vi.fn()
