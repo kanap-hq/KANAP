@@ -152,6 +152,7 @@ portfolio-reporting.md	frontend/src/pages/portfolio/ByAssigneeReport.tsx
 portfolio-reporting.md	frontend/src/pages/portfolio/CapacityHeatmapReport.tsx
 portfolio-reporting.md	frontend/src/pages/portfolio/WeeklyReport.tsx
 portfolio-settings.md	frontend/src/pages/portfolio/SettingsPage.tsx
+portfolio-settings.md	frontend/src/pages/portfolio/settings/**/*.tsx
 portfolio-team-members.md	frontend/src/pages/portfolio/ContributorsPage.tsx
 portfolio-team-members.md	frontend/src/pages/portfolio/ContributorWorkspacePage.tsx
 portfolio-team-members.md	frontend/src/pages/portfolio/ContributorTimeLog.tsx

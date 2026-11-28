@@ -9,13 +9,15 @@ Navegue a **Administración** desde el menú principal para acceder al centro de
 **Permisos**: Las distintas páginas de administración requieren permisos diferentes:
 - Empresas, Departamentos, Proveedores, Cuentas: `{recurso}:reader` para ver
 - Usuarios y acceso: `users:reader` para ver, `users:admin` para gestionar
-- Roles: `users:reader` para ver, `users:admin` para editar
-- Registro de auditoría: Requiere `users:admin`
+- Roles: `users:admin` para ver y editar
+- Registro de auditoría: Requiere `organization:reader` y acceso a todos los datos
 - Acceso a los datos: Requiere `users:admin` y acceso a todos los datos (vea [Acceso a los datos](data-access.md))
 - Facturación: Requiere el rol de administrador de facturación
-- Autenticación: Requiere `users:admin` (con flag de funcionalidad; requiere SSO habilitado)
-- Personalización: Requiere `users:admin` (solo host del espacio de trabajo; accesible desde la barra lateral)
+- Autenticación: `organization:reader` para ver; cada acción requiere `organization:admin`, `users:admin` y acceso a todos los datos (con flag de funcionalidad; requiere SSO habilitado). Vea [Autenticación](#autenticacion)
+- Personalización: `organization:reader` para ver, `organization:admin` para modificar (solo host del espacio de trabajo; accesible desde la barra lateral)
 - Datos de ejemplo: Requiere el rol de administrador (solo espacios de trabajo en la nube; accesible desde la barra lateral)
+
+El permiso Usuarios abarca las personas y los roles. Autenticación, Personalización y el Registro de auditoría siguen el permiso Organización: un rol con `users:admin` y sin el permiso Organización no los ve en el menú Administración ni puede abrirlos. Organización en el nivel Lector basta por sí sola para mostrar el menú Administración con estas páginas.
 
 ---
 
@@ -30,8 +32,8 @@ La página principal de Administración proporciona acceso rápido a las funcion
 | **Proveedores** | Gestionar proveedores y contactos | `suppliers:reader` |
 | **Cuentas** | Gestionar códigos contables | `accounts:reader` |
 | **Usuarios y acceso** | Gestionar usuarios y roles | `users:reader` |
-| **Roles** | Definir permisos de roles | `users:reader` |
-| **Registro de auditoría** | Consultar el historial de cambios, los accesos y las exportaciones | `users:admin` |
+| **Roles** | Definir permisos de roles | `users:admin` |
+| **Registro de auditoría** | Consultar el historial de cambios, los accesos y las exportaciones | `organization:reader` |
 | **Facturación** | Plan y facturas | Administrador de facturación |
 
 Autenticación, Personalización y Datos de ejemplo están disponibles desde la navegación lateral pero no aparecen en la página principal del centro de Administración.
@@ -45,7 +47,7 @@ La página de Registro de auditoría conserva el historial de los cambios de dat
 ### Acceso
 
 - Ruta: `/admin/audit-logs`
-- Permiso requerido: `users:admin`
+- Permiso requerido: `organization:reader` y acceso a todos los datos. Una persona con acceso a los datos limitado no ve el Registro de auditoría, sean cuales sean sus roles.
 - El registro es de solo lectura. Puede consultarlo, filtrarlo y exportarlo, pero no editar ni eliminar entradas.
 
 ### Qué se registra
@@ -139,7 +141,7 @@ El archivo Excel contiene las mismas columnas y los mismos valores en una hoja, 
 
 ### Quién puede ver qué
 
-Los valores **Antes** y **Después** contienen el registro completo tal como se guardó, incluidos datos personales como nombres, correos y números de teléfono. La pantalla de detalle y el archivo exportado muestran los mismos valores, y ambos requieren `users:admin`. Los hashes de contraseña y los secretos de la autenticación multifactor nunca se escriben en el registro. Trate un archivo exportado como el propio registro: guárdelo con el mismo cuidado.
+Los valores **Antes** y **Después** contienen el registro completo tal como se guardó, incluidos datos personales como nombres, correos y números de teléfono. La pantalla de detalle y el archivo exportado muestran los mismos valores, y ambos requieren `organization:reader`: el nivel Lector de Organización muestra todo el registro, datos personales incluidos. Los hashes de contraseña y los secretos de la autenticación multifactor nunca se escriben en el registro. Trate un archivo exportado como el propio registro: guárdelo con el mismo cuidado.
 
 ### Comprender el origen y el actor
 
@@ -326,7 +328,7 @@ Defina qué puede hacer cada rol en todo Kadratis.
 Cada rol tiene niveles de permiso para diferentes recursos:
 - **Ninguno**: Sin acceso a este recurso
 - **Lector**: Solo lectura
-- **Colaborador**: Ver y editar elementos existentes, añadir comentarios y adjuntos, pero no puede crear nuevos elementos de nivel superior. El editor de roles ofrece este nivel en la mayoría de los recursos (no en Base de conocimiento, configuración de IA, chat de Kad ni acceso MCP). Los proyectos del portafolio, los incidentes y los agentes IA lo usan hoy. En todos los demás recursos, los cambios exigen el nivel Miembro, así que un Colaborador tiene allí acceso de Lector.
+- **Colaborador**: Ver y editar elementos existentes, añadir comentarios y adjuntos, pero no puede crear nuevos elementos de nivel superior. El editor de roles ofrece este nivel en la mayoría de los recursos (no en Base de conocimiento, configuración de IA, chat de Kad, acceso MCP, Organización ni configuración del panorama IT). Los proyectos del portafolio, los incidentes y los agentes IA lo usan hoy. En todos los demás recursos, los cambios exigen el nivel Miembro, así que un Colaborador tiene allí acceso de Lector.
 - **Miembro**: Ver, crear y editar
 - **Administrador**: Acceso completo incluyendo eliminación
 
@@ -338,7 +340,7 @@ Los recursos están organizados en grupos para facilitar la gestión:
 | Recurso | Qué controla |
 |---------|--------------|
 | `budget` | Líneas presupuestarias, OPEX y CAPEX |
-| `budget_ops` | Herramientas de administración presupuestaria, incluida la configuración de monedas |
+| `budget_ops` | **Configuración y operaciones del presupuesto**, incluida la configuración de monedas |
 | `contracts` | Contratos con proveedores |
 | `analytics` | Dimensiones analíticas |
 | `reporting` | Acceso a informes |
@@ -362,7 +364,7 @@ Los nombres del proveedor, de las empresas y de los departamentos que lleva una 
 | `applications` | Aplicaciones |
 | `infrastructure` | Servidores e infraestructura |
 | `locations` | Datos maestros de ubicaciones |
-| `settings` | Solo la configuración del panorama IT |
+| `settings` | Solo la **configuración del panorama IT**. Lector o Administrador |
 
 **Datos maestros**
 | Recurso | Qué controla |
@@ -392,7 +394,10 @@ El recurso de Base de conocimiento admite los niveles Lector, Miembro y Administ
 | Recurso | Qué controla |
 |---------|--------------|
 | `users` | Gestión de usuarios y roles |
+| `organization` | **Organización**: Autenticación, Personalización y el Registro de auditoría. Lector o Administrador |
 | `billing` | Facturación y suscripción |
+
+Organización y Configuración del panorama IT tienen dos niveles, Lector y Administrador. Un rol que tenía Miembro en la configuración del panorama IT muestra Lector, con el mismo acceso que antes.
 
 ### Tipos de roles
 
@@ -583,6 +588,8 @@ Cada factura se envía también por correo electrónico a la dirección de corre
 
 Configure el inicio de sesión único (SSO) para su organización. Esta página solo está disponible cuando la funcionalidad SSO está habilitada y no es accesible desde el host de administración de la plataforma.
 
+Organización en el nivel Lector o Administrador muestra la conexión y los resultados de la sincronización, sin ninguna acción. Las acciones cambian las cuentas de todo el espacio de trabajo, o llevan a una sincronización que lo hace: una conexión a otro directorio, seguida de la sincronización, desactiva las cuentas vinculadas que ese directorio no conoce. **Conectar**, **Reconectar**, **Probar inicio de sesión**, **Conceder acceso en Microsoft Entra**, **Sincronizar ahora** y **Desconectar** requieren Organización en el nivel Administrador, `users:admin` y acceso a todos los datos.
+
 ### Microsoft Entra ID
 
 Conecte Kadratis a su inquilino de Microsoft Entra ID para SSO:
@@ -652,7 +659,7 @@ Los inicios de sesión y los inicios de sesión fallidos aparecen en el [Registr
 Utilice **Administración > Personalización** para aplicar la identidad de su empresa en Kadratis.
 
 - Ruta: `/admin/branding`
-- Permiso: `users:admin`
+- Permiso: `organization:reader` para ver, `organization:admin` para modificar. Un lector ve los mismos campos, en gris, sin ningún botón
 - Alcance: solo hosts de espacio de trabajo (no disponible en el host de administración de la plataforma)
 
 La Personalización le permite:

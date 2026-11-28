@@ -1,7 +1,7 @@
 import { BadRequestException, Body, ConflictException, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { PermissionGuard } from './permission.guard';
-import { RequireLevel } from './require-level.decorator';
+import { RequireAnyLevel, RequireLevel } from './require-level.decorator';
 import { TenantsService } from '../tenants/tenants.service';
 import { EntraAuthService } from './entra-auth.service';
 import { EntraDirectorySyncService } from './entra-directory-sync.service';
@@ -11,6 +11,19 @@ import { EntraDisconnectService } from './entra-disconnect.service';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
+/**
+ * The person may write the persons of the workspace from this page, as the sync and the disconnect
+ * ask: access to all data (the mode the tenant interceptor left on the request), and the
+ * Administrator role or both `organization:admin` and `users:admin` (the rights PermissionGuard
+ * read for the route).
+ */
+function mayWritePersons(req: any): boolean {
+  if (req?.dataAccessMode !== 'all') return false;
+  if (req?.isAdmin === true) return true;
+  const rights = (req?.permissions ?? {}) as Record<string, string>;
+  return rights.organization === 'admin' && rights.users === 'admin';
+}
+
 class DisconnectDto {
   /** The administrator's new password, when they have none (see EntraDisconnectService). */
   @IsOptional()
@@ -19,6 +32,12 @@ class DisconnectDto {
   password?: string;
 }
 
+/**
+ * Admin › Authentication. Reading needs `organization:reader` (the page opens read-only). The sync
+ * and the disconnect write the persons of the whole workspace: they need `organization:admin` and
+ * `users:admin` both, and access to all data. So do the connection (`auth/entra/setup/start`) and
+ * the consent address, which lead to a sync.
+ */
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('admin/auth')
 export class AdminAuthController {
@@ -30,7 +49,7 @@ export class AdminAuthController {
   ) {}
 
   @Get('settings')
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'reader')
   async getSettings(@Req() req: any) {
     if (req?.isPlatformHost) {
       throw new BadRequestException('SSO is not available on the platform admin host');
@@ -61,7 +80,11 @@ export class AdminAuthController {
             disabled: directorySync?.disabled ?? null,
             removed: directorySync?.removed ?? null,
             kept_administrator: directorySync?.kept_administrator ?? null,
-            consent_url: this.entra.buildAdminConsentUrl(tenant.entra_tenant_id as string, tenant.id, req?.user?.sub),
+            // Signed in the person's name, and its return starts a sync that disables the linked
+            // accounts the directory does not know: for who may run the sync only.
+            consent_url: mayWritePersons(req)
+              ? this.entra.buildAdminConsentUrl(tenant.entra_tenant_id as string, tenant.id, req?.user?.sub)
+              : null,
           }
         : null,
       // What a disconnect would do to the accounts, for its confirmation.
@@ -76,7 +99,10 @@ export class AdminAuthController {
   @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @ReservedToUnscopedDataAccess()
   @Post('directory-sync')
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'admin')
+  // A list of one entry next to `@RequireLevel`: PermissionGuard asks for both (the level and one
+  // entry of the list), so this route needs organization:admin AND users:admin.
+  @RequireAnyLevel([{ resource: 'users', level: 'admin' }])
   async runDirectorySync(@Req() req: any) {
     if (req?.isPlatformHost) {
       throw new BadRequestException('SSO is not available on the platform admin host');
@@ -109,7 +135,10 @@ export class AdminAuthController {
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @ReservedToUnscopedDataAccess()
   @Post('disconnect')
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'admin')
+  // A list of one entry next to `@RequireLevel`: PermissionGuard asks for both (the level and one
+  // entry of the list), so this route needs organization:admin AND users:admin.
+  @RequireAnyLevel([{ resource: 'users', level: 'admin' }])
   async disconnect(@Req() req: any, @Body() body: DisconnectDto) {
     if (req?.isPlatformHost) {
       throw new BadRequestException('SSO is not available on the platform admin host');

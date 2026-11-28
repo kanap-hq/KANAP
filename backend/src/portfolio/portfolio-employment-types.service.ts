@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { PortfolioEmploymentType, DEFAULT_EMPLOYMENT_TYPES } from './portfolio-employment-type.entity';
 import { checkIds, RecordInUseException, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
+import { writeAuditLog, writeAuditLogs } from '../audit/audit.service';
+import { assignFields } from './settings-fields';
 
 interface CreateEmploymentTypeDto {
   name: string;
@@ -56,7 +58,7 @@ export class PortfolioEmploymentTypesService {
   async create(
     tenantId: string,
     data: CreateEmploymentTypeDto,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; userId?: string | null },
   ): Promise<PortfolioEmploymentType> {
     const mg = opts?.manager ?? this.typeRepo.manager;
     const repo = mg.getRepository(PortfolioEmploymentType);
@@ -84,14 +86,16 @@ export class PortfolioEmploymentTypesService {
       is_system: false,
     });
 
-    return repo.save(type);
+    const saved = await repo.save(type);
+    await writeAuditLog(mg, { table: 'portfolio_employment_types', recordId: saved.id, action: 'create', before: null, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 
   async update(
     id: string,
     tenantId: string,
     data: UpdateEmploymentTypeDto,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; userId?: string | null },
   ): Promise<PortfolioEmploymentType> {
     const mg = opts?.manager ?? this.typeRepo.manager;
     const repo = mg.getRepository(PortfolioEmploymentType);
@@ -108,15 +112,16 @@ export class PortfolioEmploymentTypesService {
       }
     }
 
-    Object.assign(type, {
-      ...data,
-      updated_at: new Date(),
-    });
+    const before = { ...type };
+    assignFields(type, data, ['name', 'is_active', 'display_order']);
+    type.updated_at = new Date();
 
-    return repo.save(type);
+    const saved = await repo.save(type);
+    await writeAuditLog(mg, { table: 'portfolio_employment_types', recordId: id, action: 'update', before, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 
-  async delete(id: string, tenantId: string, opts?: { manager?: EntityManager }): Promise<void> {
+  async delete(id: string, tenantId: string, opts?: { manager?: EntityManager; userId?: string | null }): Promise<void> {
     const mg = opts?.manager ?? this.typeRepo.manager;
     const repo = mg.getRepository(PortfolioEmploymentType);
 
@@ -129,6 +134,7 @@ export class PortfolioEmploymentTypesService {
     if (refusal) throw refusal;
 
     await repo.delete(id);
+    await writeAuditLog(mg, { table: 'portfolio_employment_types', recordId: id, action: 'delete', before: type, after: null, userId: opts?.userId ?? null });
   }
 
   /**
@@ -161,18 +167,22 @@ export class PortfolioEmploymentTypesService {
     return refusalsFrom(wanted, rows, (row) => row.name, (row) => this.refusalOf(row, tenantId, mg));
   }
 
-  async seedDefaults(tenantId: string, manager?: EntityManager): Promise<{ created: number }> {
-    const repo = manager ? manager.getRepository(PortfolioEmploymentType) : this.typeRepo;
-    let created = 0;
+  /** Creates the default contract types a workspace lacks; each one gets its audit row, in the name of `userId`. */
+  async seedDefaults(tenantId: string, manager?: EntityManager, userId: string | null = null): Promise<{ created: number }> {
+    const mg = manager ?? this.typeRepo.manager;
+    const repo = mg.getRepository(PortfolioEmploymentType);
+    const created: PortfolioEmploymentType[] = [];
 
     for (const def of DEFAULT_EMPLOYMENT_TYPES) {
       const existing = await repo.findOne({ where: { tenant_id: tenantId, name: def.name } });
       if (!existing) {
-        await repo.save(repo.create({ tenant_id: tenantId, ...def }));
-        created++;
+        created.push(await repo.save(repo.create({ tenant_id: tenantId, ...def })));
       }
     }
 
-    return { created };
+    if (created.length > 0) {
+      await writeAuditLogs(mg, created.map((type) => ({ table: 'portfolio_employment_types', recordId: type.id, action: 'create', before: null, after: type, userId })));
+    }
+    return { created: created.length };
   }
 }

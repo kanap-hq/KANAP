@@ -28,6 +28,7 @@ const access = vi.hoisted(() => ({
   limited: false,
   deploymentMode: 'multi-tenant' as 'multi-tenant' | 'single-tenant',
   sampleData: false,
+  sso: false,
   version: 'unknown',
   aiChat: false,
   aiSettings: false,
@@ -95,7 +96,7 @@ vi.mock('../config/FeaturesContext', () => ({
   useFeatures: () => ({
     config: {
       deploymentMode: access.deploymentMode,
-      features: { billing: true, aiChat: access.aiChat, aiSettings: access.aiSettings, sso: false, email: false, sampleData: access.sampleData, vulnerabilityFeed: access.vulnerabilityFeed },
+      features: { billing: true, aiChat: access.aiChat, aiSettings: access.aiSettings, sso: access.sso, email: false, sampleData: access.sampleData, vulnerabilityFeed: access.vulnerabilityFeed },
       version: access.version,
     },
     isSingleTenant: access.deploymentMode === 'single-tenant',
@@ -383,6 +384,25 @@ describe('Layout master data sidebar', () => {
   it('ignores a return address outside the app', () => {
     renderAt('/master-data/contacts/new/overview?returnTo=%2F%2Fexample.com%2Fmaster-data%2Fsuppliers');
     expect(screen.getByRole('link', { name: 'nav:sidebar.masterData.contacts' })).toHaveClass('Mui-selected');
+  });
+});
+
+describe('Layout portfolio settings', () => {
+  it('selects Settings on the address of a tab', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/portfolio/settings/teams']}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/portfolio/settings/:tab" element={<div>settings</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole('link', { name: 'nav:sidebar.portfolio.settings' })).toHaveClass('Mui-selected');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.portfolio.contributors' })).not.toHaveClass('Mui-selected');
   });
 });
 
@@ -691,6 +711,61 @@ describe('Layout agents menu: shared context', () => {
       </QueryClientProvider>,
     );
     expect(screen.getByRole('link', { name: 'nav:sidebar.agents.sharedContext' })).toHaveAttribute('href', '/agents/shared-context');
+  });
+});
+
+describe('Layout administration sidebar: the Organization right', () => {
+  afterEach(() => {
+    access.grants = null;
+    access.limited = false;
+    access.sso = false;
+    access.deploymentMode = 'multi-tenant';
+  });
+
+  function renderAdmin() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/admin/branding']}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/admin/branding" element={<div>branding</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+  const menuLinks = () => within(screen.getByRole('list')).getAllByRole('link').map((link) => link.getAttribute('href'));
+  const adminTab = () => within(screen.getByRole('tablist', { name: 'nav:topBar.sectionNav' }))
+    .queryByRole('tab', { name: 'nav:workspaces.admin' });
+
+  it.each([['in the cloud', 'multi-tenant'], ['on site', 'single-tenant']] as const)(
+    'gives an organization reader alone the Administration tab and the three pages, %s',
+    (_place, mode) => {
+      access.grants = { organization: 'reader' };
+      access.sso = true;
+      access.deploymentMode = mode;
+      renderAdmin();
+      expect(adminTab()).toBeInTheDocument();
+      expect(menuLinks()).toEqual(['/admin/audit-logs', '/admin/auth', '/admin/branding', '/admin/all-settings']);
+    },
+  );
+
+  it('shows Branding and Authentication, not the Audit log, to an organization reader limited to one company', () => {
+    access.grants = { organization: 'reader' };
+    access.limited = true;
+    access.sso = true;
+    renderAdmin();
+    expect(adminTab()).toBeInTheDocument();
+    expect(menuLinks()).toEqual(['/admin/auth', '/admin/branding', '/admin/all-settings']);
+  });
+
+  it('shows none of the three pages to a users administrator alone', () => {
+    access.grants = { users: 'admin' };
+    access.sso = true;
+    renderAdmin();
+    expect(menuLinks()).toEqual(['/admin/users', '/admin/roles', '/admin/data-access', '/admin/all-settings']);
   });
 });
 

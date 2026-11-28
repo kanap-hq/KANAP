@@ -9,7 +9,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   ai_agents: 'AI Agents',
   ai_settings: 'AI Settings',
   budget: 'Budget',
-  budget_ops: 'Budget Administration',
+  budget_ops: 'Budget settings and operations',
   contracts: 'Contracts',
   analytics: 'Analytics Dimensions',
   billing: 'Billing',
@@ -20,7 +20,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   portfolio_settings: 'Settings',
   applications: 'Applications',
   infrastructure: 'Infrastructure',
-  settings: 'Settings',
+  settings: 'IT landscape settings',
   companies: 'Companies',
   departments: 'Departments',
   cost_centers: 'Cost Centers',
@@ -35,6 +35,7 @@ export const RESOURCE_LABELS: Record<string, string> = {
   knowledge: 'Knowledge',
   reporting: 'Reporting',
   users: 'Users',
+  organization: 'Organization',
 };
 
 /** The name of a module right as the roles screen shows it (`admin:roles.resources.*`). */
