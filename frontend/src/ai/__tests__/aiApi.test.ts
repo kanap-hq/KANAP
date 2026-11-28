@@ -59,7 +59,7 @@ describe('streamChat', () => {
     const iterator = streamChat({ message: 'hello' });
     const refusal = await iterator.next().then(() => null, (error: Error & { code?: string | null }) => error);
     expect(refusal?.code).toBe('AI_CHAT_DISABLED');
-    expect(refusal?.message).toBe(`${AGENT_NAME} is turned off for this workspace. An administrator can turn it on in Admin > ${AGENT_NAME}.`);
+    expect(refusal?.message).toBe(`${AGENT_NAME} is turned off for this workspace. An administrator can turn it on in Administration > ${AGENT_NAME}.`);
   });
 
   it('keeps the message of an answer with no code of its own', async () => {

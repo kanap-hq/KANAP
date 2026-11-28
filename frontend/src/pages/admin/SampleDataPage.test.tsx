@@ -107,7 +107,7 @@ describe('SampleDataPage', () => {
     expect(within(dialog).getByText(/instances, interfaces and connections/)).toBeInTheDocument();
     expect(within(dialog).getByText(/budget of the current year/)).toBeInTheDocument();
     expect(await within(dialog).findByText('The starting company "Northwind Trading" is replaced by the sample companies.')).toBeInTheDocument();
-    expect(within(dialog).getByText(/about two minutes\. You can erase everything later from Admin › Sample data\./)).toBeInTheDocument();
+    expect(within(dialog).getByText(/about two minutes\. You can erase everything later from Administration › Sample data\./)).toBeInTheDocument();
     expect(apiClient.get).toHaveBeenCalledWith('/companies', { params: { page: 1, limit: 2 } });
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Load sample data' }));

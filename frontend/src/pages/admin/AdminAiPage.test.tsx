@@ -571,7 +571,7 @@ describe('AdminAiPage included model', () => {
   it('asks for a confirmation and sends the key shown', async () => {
     settings = baseSettings({
       chat_ready: false,
-      provider_validation_errors: [`The ${PRODUCT_NAME} included model needs an administrator's confirmation in Admin > ${AGENT_NAME}.`],
+      provider_validation_errors: [`The ${PRODUCT_NAME} included model needs an administrator's confirmation in Administration > ${AGENT_NAME}.`],
       builtin_provider: provider({}),
     });
     renderPage();

@@ -702,7 +702,7 @@
     }
   },
   "operations": {
-    "title": "Administration",
+    "title": "Settings",
     "sections": {
       "settings": "Settings",
       "operations": "Operations"
@@ -712,7 +712,7 @@
       "freezeDesc": "Lock budget columns or headcount metrics for a specific year",
       "copyBudgetTitle": "Copy budget columns",
       "copyBudgetDesc": "Copy amounts between years and columns, with an optional percentage, and allocations to another year",
-      "resetColumnTitle": "Reset budget column",
+      "resetColumnTitle": "Clear a budget column",
       "resetColumnDesc": "Clear all data from a budget column for a specific year",
       "allocationDefaultTitle": "Default allocation method",
       "allocationDefaultDesc": "Choose the method applied to OPEX and CAPEX lines left on the default allocation",
@@ -865,7 +865,7 @@
       "methodsReplaced_other": "{{count}} lines change their allocation method in {{year}}. Without \"Overwrite existing data\", the copy keeps only the allocations entered by hand.",
       "defaultManualLabel": "selected companies ({{count}})",
       "defaultManualLabel_one": "selected company ({{count}})",
-      "defaultBasisWarning": "{{count}} lines are left on the default allocation: {{destinationYear}} uses {{destinationLabel}} while {{sourceYear}} uses {{sourceLabel}}. Copied lines keep following the default of their own year. Configure {{destinationYear}} in Budget administration if the basis should stay the same.",
+      "defaultBasisWarning": "{{count}} lines are left on the default allocation: {{destinationYear}} uses {{destinationLabel}} while {{sourceYear}} uses {{sourceLabel}}. Copied lines keep following the default of their own year. Configure {{destinationYear}} in Budget settings if the basis should stay the same.",
       "summary": {
         "preview_one": "{{count}} line in the preview.",
         "preview_other": "{{count}} lines in the preview.",
@@ -1044,8 +1044,8 @@
         "accounts_one": "Missing: {{count}} account ({{examples}}). Add it in Master data > Accounts.",
         "costCenters": "Missing: {{count}} cost centers ({{examples}}). Add them in Master data > Cost centers.",
         "costCenters_one": "Missing: {{count}} cost center ({{examples}}). Add it in Master data > Cost centers.",
-        "users": "Missing: {{count}} users ({{examples}}). Add or enable them in Admin > Users.",
-        "users_one": "Missing: {{count}} user ({{examples}}). Add or enable it in Admin > Users.",
+        "users": "Missing: {{count}} users ({{examples}}). Add or enable them in Administration > Users.",
+        "users_one": "Missing: {{count}} user ({{examples}}). Add or enable it in Administration > Users.",
         "projects": "Missing: {{count}} projects ({{examples}}). Check the numbers in Portfolio > Projects.",
         "projects_one": "Missing: {{count}} project ({{examples}}). Check the number in Portfolio > Projects."
       },
@@ -1851,7 +1851,7 @@
     },
     "frozen": {
       "title": "The {{column}} {{year}} column is frozen",
-      "hint": "Read only. An administrator can unfreeze it in Administration › Freeze / unfreeze data."
+      "hint": "Read only. An administrator can unfreeze it in Settings › Freeze / unfreeze data."
     },
     "readOnlyHint": "Read only. Your role gives read access to the budget.",
     "atADate": "At a date",

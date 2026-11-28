@@ -1752,8 +1752,8 @@
         },
         "budget_line": {
           "title": "Eine Budgetzeile",
-          "hint": "Öffnen Sie eine Zeile und erkunden Sie ihre Reiter. Budget, der Hauptreiter, zeigt 4 von 5 möglichen Spalten, alle unter „Administration“ einstellbar. Der Reiter Beziehungen verknüpft das Budget mit den Elementen, die es trägt.",
-          "hintRecord": "Sie sind im Datensatz {{record}}. Erkunden Sie die Reiter. Budget, der Hauptreiter, zeigt 4 von 5 möglichen Spalten, alle unter „Administration“ einstellbar. Der Reiter Beziehungen verknüpft das Budget mit den Elementen, die es trägt."
+          "hint": "Öffnen Sie eine Zeile und erkunden Sie ihre Reiter. Budget, der Hauptreiter, zeigt 4 von 5 möglichen Spalten, alle unter „Einstellungen“ einstellbar. Der Reiter Beziehungen verknüpft das Budget mit den Elementen, die es trägt.",
+          "hintRecord": "Sie sind im Datensatz {{record}}. Erkunden Sie die Reiter. Budget, der Hauptreiter, zeigt 4 von 5 möglichen Spalten, alle unter „Einstellungen“ einstellbar. Der Reiter Beziehungen verknüpft das Budget mit den Elementen, die es trägt."
         },
         "budget_report": {
           "title": "Ein Bericht",

@@ -702,7 +702,7 @@
     }
   },
   "operations": {
-    "title": "Administration",
+    "title": "Einstellungen",
     "sections": {
       "settings": "Einstellungen",
       "operations": "Vorgänge"
@@ -712,8 +712,8 @@
       "freezeDesc": "Sperren Sie Budgetspalten oder Mitarbeiterzahl-Metriken für ein bestimmtes Jahr",
       "copyBudgetTitle": "Budgetspalten kopieren",
       "copyBudgetDesc": "Kopieren Sie Beträge zwischen Jahren und Spalten, mit optionalem Prozentsatz, und Zuordnungen in ein anderes Jahr",
-      "resetColumnTitle": "Budgetspalte zurücksetzen",
-      "resetColumnDesc": "Löschen Sie alle Daten einer Budgetspalte für ein bestimmtes Jahr",
+      "resetColumnTitle": "Budgetspalte leeren",
+      "resetColumnDesc": "Leeren Sie eine Budgetspalte für ein bestimmtes Jahr",
       "allocationDefaultTitle": "Standard-Zuordnungsmethode",
       "allocationDefaultDesc": "Wählen Sie die Methode, die für OPEX- und CAPEX-Zeilen mit Standard-Zuordnung gilt",
       "budgetColumnsTitle": "Budgetspalten",
@@ -1851,7 +1851,7 @@
     },
     "frozen": {
       "title": "Die Spalte {{column}} {{year}} ist eingefroren",
-      "hint": "Schreibgeschützt. Ein Administrator hebt das Einfrieren unter Administration › Daten einfrieren / auftauen auf."
+      "hint": "Schreibgeschützt. Ein Administrator hebt das Einfrieren unter Einstellungen › Daten einfrieren / auftauen auf."
     },
     "readOnlyHint": "Schreibgeschützt. Ihre Rolle gewährt Lesezugriff auf das Budget.",
     "atADate": "An einem Datum",

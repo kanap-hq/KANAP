@@ -7,7 +7,7 @@
     "knowledge": "Knowledge",
     "budgetManagement": "Budget management",
     "masterData": "Master data",
-    "admin": "Admin"
+    "admin": "Administration"
   },
   "topBar": {
     "collapseNav": "Collapse navigation",
@@ -31,14 +31,14 @@
     "conflict": "In conflict, left out of dev"
   },
   "userMenu": {
-    "myProfile": "My profile",
+    "myProfile": "My account",
     "logout": "Logout"
   },
   "sidebar": {
     "ops": {
       "contracts": "Contracts",
       "reporting": "Reporting",
-      "administration": "Administration",
+      "administration": "Settings",
       "budgetLines": "Budget lines"
     },
     "masterData": {
@@ -128,6 +128,6 @@
   "breadcrumbs": {
     "admin": "Admin",
     "contributors": "Contributors",
-    "settings": "Settings"
+    "settings": "My account"
   }
 }
