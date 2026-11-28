@@ -71,7 +71,7 @@ Built-in values that Kadratis manages itself (the four lifecycle statuses, the W
 
 A list shows each value under the name the rest of Kadratis shows in your language: the translation your workspace typed for that language, else the translation shipped with Kadratis while the value keeps its shipped name, else the name itself. A French-speaking user sees the shipped Guest network zone as "Invités", here as on the records.
 
-Typing a new name in the list makes it the base name of the value. The translation your workspace typed for your language goes, so that the field keeps what you typed; the translations of the other languages stay.
+Typing a new name in the list makes it the base name of the value. The translation your workspace typed for your language goes, so that the field keeps what you typed; the translations of the other languages stay. Typing the name Kadratis ships for a shipped value in your language gives the value back its shipped name and its shipped translations.
 
 The **Translate** icon opens the languages of the value: the base name (and description for classification levels) and one field per language. A field left empty shows what is displayed instead, a shipped translation included. The icon stands out when the value has a translation your workspace typed. Saving translations never changes the base text, and a translated name can be used in CSV files and the API like the name itself, which is why it must not duplicate another value of the list.
 
@@ -79,7 +79,7 @@ The **Translate** icon opens the languages of the value: the base name (and desc
 
 **Restore the default lists**, in the header of the **Lists** tab, puts the lists back to the values shipped with Kadratis, after a confirmation. It needs `settings:admin`. Edits not yet saved are saved first.
 
-- Each shipped value comes back with its shipped name and translations, offered again, even if you renamed, retired or deleted it. The translations your workspace typed for it go.
+- Each shipped value comes back with its shipped name and translations, offered again, even if you renamed or retired it; a shipped value you deleted comes back too, unless a value you keep now has its name. The translations your workspace typed for it go.
 - A value you added stays when records use it, as it is, after the shipped values and in its former order. A value you added that nothing uses goes. Subnets stay only when assets use them, with the network zones they need.
 - An administration zone you added and kept comes last, as the least sensitive: move it to its place. A kept classification level becomes the least critical, a kept recovery wave the last one.
 - A shipped name that would clash with a value you keep stays as it is now.
