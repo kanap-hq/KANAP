@@ -1204,11 +1204,10 @@
   },
   "enumEditor": {
     "name": "Name",
-    "noLongerOffered": "No longer offered",
+    "noLongerOffered": "Stop offering",
     "remove": "Remove",
     "locked": "Built-in",
     "protectedHint": "Built-in value: it can be retired but not removed.",
-    "addValue": "Add value",
     "noValues": "No values configured yet.",
     "physical": "Physical",
     "category": "Category",
@@ -1220,7 +1219,7 @@
     "nameMatchesCode": "This name matches another value",
     "noComma": "Commas and semicolons are not allowed",
     "usageTitle": "Value still in use",
-    "usageIntro": "\"{{name}}\" cannot be removed while records use it. Mark it as no longer offered instead: it stays on existing records and is no longer proposed.",
+    "usageIntro": "\"{{name}}\" cannot be deleted while records use it. Choose \"Stop offering\" instead: it stays on existing records and is no longer offered.",
     "usageView": "View",
     "usageChecking": "Checking usage…",
     "usageFailed": "Usage could not be checked",
@@ -1258,22 +1257,6 @@
     "description": "Description",
     "translationsHelp": "Leave a field empty to use the automatic translation when one exists, otherwise the base text.",
     "shownAs": "Shown: {{value}}",
-    "hostingTypes": {
-      "add": "Add hosting type",
-      "empty": "No hosting types defined."
-    },
-    "assetTypes": {
-      "add": "Add asset type",
-      "empty": "No asset types defined."
-    },
-    "serverRoles": {
-      "add": "Add server role",
-      "empty": "No server roles defined."
-    },
-    "entities": {
-      "add": "Add entity",
-      "empty": "No entities defined."
-    },
     "graphTiers": {
       "top": "Top",
       "upper": "Upper",
@@ -1283,7 +1266,7 @@
     }
   },
   "settingsSection": {
-    "addItem": "Add item",
+    "addItem": "Add an item",
     "saveChanges": "Save changes"
   },
   "contacts": {

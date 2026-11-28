@@ -8,7 +8,7 @@ The split of responsibility is deliberate. Netbox stays the reference for the eq
 
 - Module: **IT Landscape**
 - Path: **IT Landscape > Settings**, **Netbox** tab
-- Route: `/it/settings?tab=netbox`. The former address `/it/netbox` opens the same tab.
+- Route: `/it/settings/netbox`. The former addresses `/it/settings?tab=netbox` and `/it/netbox` open the same tab.
 - Connection settings: **Administration > Integrations**
 - Permission: `infrastructure:admin`, for both the connection card and the **Netbox** tab. With this permission, the **Settings** entry of the IT Landscape menu appears even if you cannot see the lists of the **Lists** tab.
 - Available in the cloud and in the on-premise edition. There is no feature flag to turn on.

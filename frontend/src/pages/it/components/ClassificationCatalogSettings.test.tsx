@@ -121,7 +121,7 @@ describe('ClassificationCatalogSettings', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0]);
     expect(await screen.findByText('Value still in use')).toBeInTheDocument();
     expect(serviceMocks.fetchCatalogUsage).toHaveBeenCalledWith('businessCriticalityLevels', { code: 'critical' });
-    fireEvent.click(screen.getByRole('button', { name: 'No longer offered' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Stop offering' }));
     await waitFor(() => expect(screen.getAllByRole('checkbox', { name: 'No longer offered Critical' })[0]).toBeChecked());
   });
 

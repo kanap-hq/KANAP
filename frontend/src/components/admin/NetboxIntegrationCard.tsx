@@ -227,7 +227,7 @@ export default function NetboxIntegrationCard() {
                 <>
                   {' '}
                   {t('integrations.netbox.messages.nextStep')}{' '}
-                  <Link component={RouterLink} to="/it/settings?tab=netbox">{t('integrations.netbox.actions.goToSync')}</Link>
+                  <Link component={RouterLink} to="/it/settings/netbox">{t('integrations.netbox.actions.goToSync')}</Link>
                 </>
               ) : null}
             </ConnectionNotice>

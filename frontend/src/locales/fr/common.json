@@ -1208,7 +1208,6 @@
     "remove": "Supprimer",
     "locked": "Intégré",
     "protectedHint": "Valeur intégrée : elle peut être retirée de la liste proposée mais pas supprimée.",
-    "addValue": "Ajouter une valeur",
     "noValues": "Aucune valeur configurée pour l'instant.",
     "physical": "Physique",
     "category": "Catégorie",
@@ -1220,7 +1219,7 @@
     "nameMatchesCode": "Ce nom correspond à une autre valeur",
     "noComma": "Virgule et point-virgule non autorisés",
     "usageTitle": "Valeur encore utilisée",
-    "usageIntro": "« {{name}} » ne peut pas être supprimée tant que des enregistrements l'utilisent. Cochez « Ne plus proposer » : elle reste sur les enregistrements existants et n'est plus proposée.",
+    "usageIntro": "« {{name}} » ne peut pas être supprimée tant que des enregistrements l'utilisent. Choisissez « Ne plus proposer » : elle reste sur les enregistrements existants et n'est plus proposée.",
     "usageView": "Voir",
     "usageChecking": "Vérification de l'utilisation…",
     "usageFailed": "L'utilisation n'a pas pu être vérifiée",
@@ -1258,22 +1257,6 @@
     "description": "Description",
     "translationsHelp": "Laissez un champ vide pour utiliser la traduction automatique quand elle existe, sinon le texte de base.",
     "shownAs": "Affiché : {{value}}",
-    "hostingTypes": {
-      "add": "Ajouter un type d'hébergement",
-      "empty": "Aucun type d'hébergement défini."
-    },
-    "assetTypes": {
-      "add": "Ajouter un type d'actif",
-      "empty": "Aucun type d'actif défini."
-    },
-    "serverRoles": {
-      "add": "Ajouter un rôle de serveur",
-      "empty": "Aucun rôle de serveur défini."
-    },
-    "entities": {
-      "add": "Ajouter une entité",
-      "empty": "Aucune entité définie."
-    },
     "graphTiers": {
       "top": "Haut",
       "upper": "Intermédiaire haut",

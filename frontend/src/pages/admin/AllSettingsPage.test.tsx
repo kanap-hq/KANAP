@@ -105,7 +105,8 @@ describe('AllSettingsPage', () => {
     ]);
     expect(linksOf('IT landscape')).toEqual(['IT landscape settings', 'Netbox']);
     // The link opens the page, and the tab when it is in the address.
-    expect(hrefOf('Netbox')).toBe('/it/settings?tab=netbox');
+    expect(hrefOf('Netbox')).toBe('/it/settings/netbox');
+    expect(hrefOf('IT landscape settings')).toBe('/it/settings/lists');
     expect(hrefOf('Notifications')).toBe('/settings/notifications');
     expect(hrefOf('Currencies')).toBe('/ops/operations/currency');
     // A grey menu path beside the name.

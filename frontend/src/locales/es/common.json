@@ -1208,7 +1208,6 @@
     "remove": "Eliminar",
     "locked": "Integrado",
     "protectedHint": "Valor integrado: se puede retirar de la lista propuesta, pero no eliminar.",
-    "addValue": "Añadir valor",
     "noValues": "Aún no hay valores configurados.",
     "physical": "Físico",
     "category": "Categoría",
@@ -1258,22 +1257,6 @@
     "description": "Descripción",
     "translationsHelp": "Deje un campo vacío para usar la traducción automática cuando exista; de lo contrario, el texto base.",
     "shownAs": "Se muestra: {{value}}",
-    "hostingTypes": {
-      "add": "Añadir tipo de alojamiento",
-      "empty": "No hay tipos de alojamiento definidos."
-    },
-    "assetTypes": {
-      "add": "Añadir tipo de activo",
-      "empty": "No hay tipos de activo definidos."
-    },
-    "serverRoles": {
-      "add": "Añadir rol de servidor",
-      "empty": "No hay roles de servidor definidos."
-    },
-    "entities": {
-      "add": "Añadir entidad",
-      "empty": "No hay entidades definidas."
-    },
     "graphTiers": {
       "top": "Superior",
       "upper": "Medio superior",

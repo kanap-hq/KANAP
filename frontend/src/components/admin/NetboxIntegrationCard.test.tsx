@@ -90,7 +90,7 @@ describe('NetboxIntegrationCard', () => {
       auto_sync: true,
       api_token: 'nbt_secret',
     });
-    expect(await screen.findByRole('link', { name: 'Set up the synchronisation' })).toHaveAttribute('href', '/it/settings?tab=netbox');
+    expect(await screen.findByRole('link', { name: 'Set up the synchronisation' })).toHaveAttribute('href', '/it/settings/netbox');
   });
 
   it('sends the token with the address on screen when only the token was typed', async () => {

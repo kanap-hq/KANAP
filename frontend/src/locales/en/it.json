@@ -1015,7 +1015,6 @@
         "netbox": "Netbox"
       },
       "loadFailed": "Failed to load IT landscape settings.",
-      "updateSuccess": "IT landscape settings updated successfully",
       "updateFailed": "Failed to update settings",
       "groups": {
         "locations": {
@@ -1205,6 +1204,14 @@
         "count_one": "{{count}} trust",
         "count_other": "{{count}} trusts",
         "none": "None"
+      },
+      "restore": {
+        "action": "Restore the default lists",
+        "title": "Restore the default lists?",
+        "message": "The lists go back to the values shipped with Kadratis, with their names and translations. Values still used by records are kept. An administration zone you added and kept comes last, as the least sensitive.",
+        "confirm": "Restore",
+        "done": "Default lists restored.",
+        "failed": "The default lists could not be restored."
       }
     },
     "netbox": {

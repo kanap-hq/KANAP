@@ -1015,7 +1015,6 @@
         "netbox": "Netbox"
       },
       "loadFailed": "Échec du chargement des paramètres de la cartographie SI.",
-      "updateSuccess": "Paramètres de la cartographie SI mis à jour avec succès",
       "updateFailed": "Échec de la mise à jour des paramètres",
       "groups": {
         "locations": {
@@ -1205,6 +1204,14 @@
         "count_one": "{{count}} approbation",
         "count_other": "{{count}} approbations",
         "none": "Aucune"
+      },
+      "restore": {
+        "action": "Rétablir les listes par défaut",
+        "title": "Rétablir les listes par défaut ?",
+        "message": "Les listes reviennent aux valeurs livrées avec Kadratis, avec leurs noms et leurs traductions. Les valeurs encore utilisées par des enregistrements sont conservées. Une zone d'administration ajoutée et conservée passe en dernier, comme la moins sensible.",
+        "confirm": "Rétablir",
+        "done": "Listes par défaut rétablies.",
+        "failed": "Les listes par défaut n'ont pas pu être rétablies."
       }
     },
     "netbox": {

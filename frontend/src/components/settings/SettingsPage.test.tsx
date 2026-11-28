@@ -30,6 +30,22 @@ describe('SettingsPage', () => {
     expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument();
   });
 
+  it('draws the module tabs under the title, and nothing in their place without tabs', () => {
+    const { rerender } = renderIn(
+      <SettingsPage title="IT landscape settings" status="idle" tabs={<nav aria-label="tabs">Lists</nav>}>
+        <p>fields</p>
+      </SettingsPage>,
+    );
+    const title = screen.getByRole('heading', { level: 1, name: 'IT landscape settings' });
+    const tabs = screen.getByRole('navigation', { name: 'tabs' });
+    expect(title.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(tabs.compareDocumentPosition(screen.getByText('fields')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(title.closest('div')?.contains(tabs)).toBe(false);
+    rerender(<ThemeProvider theme={createAppTheme('light')}><SettingsPage title="Budget columns" status="idle"><p>fields</p></SettingsPage></ThemeProvider>);
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 }).parentElement?.nextElementSibling).toHaveTextContent('fields');
+  });
+
   it('says Saved, then nothing at rest', () => {
     const { rerender } = renderIn(<SettingsPage title="T" status="saved" />);
     expect(screen.getByRole('status')).toHaveTextContent('common:status.saved');

@@ -8,11 +8,11 @@ import { useLocale } from '../../../i18n/useLocale';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
 import { useRelativeTime } from './useRelativeTime';
 
-const NETBOX_PAGE = '/it/settings?tab=netbox';
+const NETBOX_PAGE = '/it/settings/netbox';
 
 /** Deep link into the Netbox tab with the records filter already applied. */
 function recordsPath(state: NetboxRecordState): string {
-  return `${NETBOX_PAGE}&state=${state}`;
+  return `${NETBOX_PAGE}?state=${state}`;
 }
 
 /**

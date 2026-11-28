@@ -96,6 +96,9 @@ locations.md	frontend/src/pages/it/LocationsPage.tsx
 locations.md	frontend/src/pages/it/LocationWorkspacePage.tsx
 it-ops-settings.md	frontend/src/pages/it/ItOperationsSettingsPage.tsx
 it-ops-settings.md	frontend/src/pages/it/components/DomainTrustsDialog.tsx
+it-ops-settings.md	frontend/src/pages/it/settings/**/*.tsx
+it-ops-settings.md	frontend/src/pages/it/settings/**/*.ts
+it-ops-settings.md	frontend/src/components/settings/EnumEditor.tsx
 admin.md	frontend/src/pages/UsersPage.tsx
 admin.md	frontend/src/pages/admin/RolesPage.tsx
 admin.md	frontend/src/pages/admin/AuditLogsPage.tsx

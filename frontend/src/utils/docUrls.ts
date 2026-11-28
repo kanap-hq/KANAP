@@ -57,7 +57,8 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/it\/incidents/, 'incidents'],
   [/^\/it\/technologies\/[^/]+/, 'technologies'],
   [/^\/it\/technologies/, 'technologies'],
-  // IT settings is chosen below: the Netbox tab opens the Netbox manual, the lists tab this one.
+  // IT settings: the Netbox tab opens the Netbox manual, the lists tab this one.
+  [/^\/it\/settings\/netbox(?:\/|$)/, 'netbox'],
   [/^\/it\/settings/, 'it-ops-settings'],
   [/^\/it\/netbox/, 'netbox'],
 
@@ -168,9 +169,9 @@ function getLocalePrefix(locale?: string): string {
 }
 
 /**
- * Slug for a route. A screen opened by a trial step opens that step's guide. IT settings uses the
- * query: `tab=netbox` opens the Netbox manual, any other tab (including the lists) opens the IT
- * settings manual.
+ * Slug for a route. A screen opened by a trial step opens that step's guide. IT settings: the
+ * Netbox tab (`/it/settings/netbox`, or the former `?tab=netbox` before the page replaces it) opens
+ * the Netbox manual, the lists tab the IT settings manual.
  */
 export function getDocSlug(pathname: string, search?: string): string | null {
   const guide = stepGuideSlug(pathname, search);

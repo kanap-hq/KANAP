@@ -8,7 +8,7 @@ El reparto de responsabilidades es deliberado. Netbox sigue siendo la referencia
 
 - Módulo: **Panorama IT**
 - Ruta: **Panorama IT > Configuración**, pestaña **Netbox**
-- Ruta: `/it/settings?tab=netbox`. La dirección anterior `/it/netbox` abre la misma pestaña.
+- Ruta: `/it/settings/netbox`. Las direcciones anteriores `/it/settings?tab=netbox` y `/it/netbox` abren la misma pestaña.
 - Configuración de la conexión: **Administración > Integraciones**
 - Permiso: `infrastructure:admin`, tanto para la tarjeta de conexión como para la pestaña **Netbox**. Con este permiso, la entrada **Configuración** del menú del Panorama IT aparece aunque usted no vea las listas de la pestaña **Listas**.
 - Disponible en la nube y en la edición on-premise. No hay ningún indicador de funcionalidad que activar.

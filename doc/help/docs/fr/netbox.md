@@ -8,7 +8,7 @@ Le partage des rôles est volontaire. Netbox reste la référence pour les équi
 
 - Module : **Cartographie SI**
 - Chemin : **Cartographie SI > Paramètres**, onglet **Netbox**
-- Route : `/it/settings?tab=netbox`. L'ancienne adresse `/it/netbox` ouvre le même onglet.
+- Route : `/it/settings/netbox`. Les anciennes adresses `/it/settings?tab=netbox` et `/it/netbox` ouvrent le même onglet.
 - Paramètres de connexion : **Administration > Intégrations**
 - Permission : `infrastructure:admin`, pour la carte de connexion comme pour l'onglet **Netbox**. Avec cette permission, l'entrée **Paramètres** du menu de la Cartographie SI apparaît même si vous ne voyez pas les listes de l'onglet **Listes**.
 - Disponible dans l'édition cloud et dans l'édition on-premise. Aucun indicateur de fonctionnalité à activer.

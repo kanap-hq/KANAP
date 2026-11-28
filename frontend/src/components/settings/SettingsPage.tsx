@@ -35,8 +35,13 @@ export interface SettingsPageProps {
   status?: AutosaveStatus;
   /** The page's pills (`variant="action"`, `"action-danger"`), after the save state. Not drawn for a reader. */
   actions?: React.ReactNode;
-  /** The place of the History button, always last (lot HP). */
+  /** The place of the History button, always last. */
   history?: React.ReactNode;
+  /**
+   * The module's tabs, drawn under the title (13 px, the current one in the interaction colour).
+   * The tab is in the address; a tab the person cannot open is not given.
+   */
+  tabs?: React.ReactNode;
   /** The setting is not loaded yet: nothing below the title. */
   loading?: boolean;
   /** The setting could not be loaded: one line in place of the page, no field offered. */
@@ -48,14 +53,15 @@ export interface SettingsPageProps {
 
 /**
  * A settings page (design-ecrans.md §2): 880 px at most, aligned left, the title alone; on its
- * right the save state, the page's pills, then History. No Save or Cancel button: the fields save
- * themselves (`useSettingsAutosave`).
+ * right the save state, the page's pills, then History; the module's tabs under it. No Save or
+ * Cancel button: the fields save themselves (`useSettingsAutosave`).
  */
 export function SettingsPage({
   title,
   status,
   actions,
   history,
+  tabs,
   loading = false,
   error,
   readOnly = false,
@@ -81,6 +87,11 @@ export function SettingsPage({
             {history}
           </Stack>
         </Stack>
+        {tabs && (
+          <Box sx={{ mb: 2, borderBottom: '1px solid', borderColor: 'kanap.border.default', '& .MuiTab-root': { fontSize: 13 } }}>
+            {tabs}
+          </Box>
+        )}
         {body}
       </Box>
     </ReadOnlyContext.Provider>

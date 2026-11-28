@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -8,10 +8,12 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 import ItOperationsSettingsPage from './ItOperationsSettingsPage';
 import api from '../../api';
+import { confirmLeave, isLeaveGuarded } from '../../hooks/leaveGuard';
 import type { ItOpsSettings } from '../../services/itOpsSettings';
 
 const get = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 const patch = (api as unknown as { patch: ReturnType<typeof vi.fn> }).patch;
+const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
 
 const stableT = (key: string, options?: Record<string, unknown>) => (options?.name ? `${key}:${options.name}` : key);
 vi.mock('react-i18next', () => ({
@@ -82,7 +84,7 @@ async function typeOutsideAct(field: HTMLElement, value: string) {
 
 const sentLists = (id: string) => patch.mock.calls.map((call) => call[1]).filter((body) => Array.isArray(body?.[id]));
 
-describe('Leaving the IT landscape settings page right after typing', () => {
+describe('Saving the IT landscape lists', () => {
   beforeEach(() => {
     get.mockImplementation(async (url: string) => {
       if (url === '/it-ops/settings') return { data: pageSettings };
@@ -95,6 +97,7 @@ describe('Leaving the IT landscape settings page right after typing', () => {
   afterEach(() => {
     get.mockReset();
     patch.mockReset();
+    post.mockReset();
     vi.restoreAllMocks();
   });
 
@@ -115,7 +118,7 @@ describe('Leaving the IT landscape settings page right after typing', () => {
     const sent = sentLists(listId);
     expect(sent).toHaveLength(1);
     expect(sent[0][listId][0][key]).toBe(value);
-    await wait(1600);
+    await wait(900);
     expect(sentLists(listId)).toHaveLength(1);
   }, 20000);
 
@@ -126,11 +129,32 @@ describe('Leaving the IT landscape settings page right after typing', () => {
     fireEvent.click(within(section).getByRole('button', { name: /settingsSection.addItem/ }));
     await wait(50);
     const names = within(section).getAllByRole('textbox', { name: 'common:enumEditor.name' }).map((node) => (node as HTMLInputElement).value);
-    expect(names).toEqual(['', 'HTTPS']);
+    expect(names).toEqual(['HTTPS', '']);
   }, 20000);
 
   it.each([
-    ['sends the value typed during a save in flight once that save returns', 'HTTPS', 2],
+    ['connectionTypes', { code: 'ssh', label: 'SSH', category: 'Remote', typicalPorts: '22', deprecated: false }, 'common:enumEditor.name', 'SSH'],
+    ['domains', { code: 'corp', label: 'Corp', dns_suffix: 'corp.example', deprecated: false, system: false }, 'common:enumEditor.name', 'Corp'],
+    ['subnets', { location_id: '', cidr: '10.0.0.0/24', network_zone: 'lan', description: '', deprecated: false }, 'pages.settings.placeholders.cidr', '10.0.0.0/24'],
+  ])('adds a row of %s at the bottom, the cursor in its field', async (listId, storedRow, field, storedValue) => {
+    const stored = { ...pageSettings, [listId]: [storedRow] };
+    get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: stored };
+      if (String(url).startsWith('/locations')) return { data: { items: [] } };
+      return { data: { total: 0, usage: [] } };
+    });
+    renderPage();
+    const section = await addRow(listId);
+    const fields = () => (listId === 'subnets'
+      ? within(section).getAllByPlaceholderText(field)
+      : within(section).getAllByRole('textbox', { name: field })) as HTMLInputElement[];
+    await waitFor(() => expect(fields()).toHaveLength(2));
+    expect(fields().map((node) => node.value)).toEqual([storedValue, '']);
+    await waitFor(() => expect(document.activeElement).toBe(fields()[1]));
+  }, 20000);
+
+  it.each([
+    ['sends the value typed during a save in flight once that save returns, with the code it brought', 'HTTPS', 2],
     ['sends nothing more when nothing was typed during the save in flight', null, 1],
   ])('%s', async (_name, further, expectedCalls) => {
     let release: (() => void) | undefined;
@@ -143,7 +167,7 @@ describe('Leaving the IT landscape settings page right after typing', () => {
     const section = await addRow('connectionTypes');
     const input = await within(section).findByRole('textbox', { name: 'common:enumEditor.name' });
     fireEvent.change(input, { target: { value: 'HTTP' } });
-    await wait(1600);
+    await wait(900);
     expect(sentLists('connectionTypes')).toHaveLength(1);
     expect(sentLists('connectionTypes')[0].connectionTypes[0].label).toBe('HTTP');
     if (further) await typeOutsideAct(input, further);
@@ -155,15 +179,149 @@ describe('Leaving the IT landscape settings page right after typing', () => {
     const sent = sentLists('connectionTypes');
     expect(sent).toHaveLength(expectedCalls);
     if (further) expect(sent[1].connectionTypes[0]).toMatchObject({ code: 'http', label: further });
-    await wait(1600);
+    await wait(900);
     expect(sentLists('connectionTypes')).toHaveLength(expectedCalls);
+  }, 20000);
+
+  it('holds an in-app move while a typed value waits, and sends it first', async () => {
+    renderPage();
+    const section = await addRow('accessMethods');
+    fireEvent.change(await within(section).findByRole('textbox', { name: 'enumEditor.name' }), { target: { value: 'Kiosk' } });
+    expect(isLeaveGuarded()).toBe(true);
+    let allowed = false;
+    await act(async () => { allowed = await confirmLeave(); });
+    expect(allowed).toBe(true);
+    expect(sentLists('accessMethods')).toHaveLength(1);
+    expect(sentLists('accessMethods')[0].accessMethods.map((row: { label: string }) => row.label)).toEqual(['Kiosk']);
+  }, 20000);
+
+  it('sends a list in its stored order, unsorted', async () => {
+    const stored = { ...pageSettings, connectionTypes: [{ code: 'ssh', label: 'SSH', category: 'Remote', deprecated: false }, { code: 'http', label: 'HTTP', category: 'Application', deprecated: false }] };
+    get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: stored };
+      if (String(url).startsWith('/locations')) return { data: { items: [] } };
+      return { data: { total: 0, usage: [] } };
+    });
+    patch.mockImplementation(async (_url: string, body: Partial<ItOpsSettings>) => ({ data: { ...stored, ...body } }));
+    renderPage();
+    const title = await screen.findByRole('button', { name: /pages.settings.lists.connectionTypes.title/ });
+    await wait(50);
+    fireEvent.click(title);
+    const section = title.closest('.MuiAccordion-root') as HTMLElement;
+    const names = await within(section).findAllByRole('textbox', { name: 'common:enumEditor.name' });
+    expect(names.map((node) => (node as HTMLInputElement).value)).toEqual(['SSH', 'HTTP']);
+    fireEvent.change(names[1], { target: { value: 'HTTP/2' } });
+    fireEvent.blur(names[1]);
+    await wait(50);
+    expect(sentLists('connectionTypes')[0].connectionTypes.map((row: { code: string }) => row.code)).toEqual(['ssh', 'http']);
+  }, 20000);
+
+  it('shows the stored rows again and the refusal under the list when the server refuses a save', async () => {
+    const stored = { ...pageSettings, accessMethods: [{ code: 'web', label: 'Web', deprecated: false }] };
+    get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: stored };
+      if (String(url).startsWith('/locations')) return { data: { items: [] } };
+      return { data: { total: 0, usage: [] } };
+    });
+    patch.mockRejectedValue({ response: { status: 400, data: { message: 'Access methods: "Browser" clashes with "Web"' } } });
+    renderPage();
+    const title = await screen.findByRole('button', { name: /pages.settings.lists.accessMethods.title/ });
+    await wait(50);
+    fireEvent.click(title);
+    const section = title.closest('.MuiAccordion-root') as HTMLElement;
+    const name = await within(section).findByRole('textbox', { name: 'enumEditor.name' });
+    fireEvent.change(name, { target: { value: 'Browser' } });
+    fireEvent.blur(name);
+    expect(await within(section).findByRole('alert')).toHaveTextContent('clashes with');
+    expect((within(section).getByRole('textbox', { name: 'enumEditor.name' }) as HTMLInputElement).value).toBe('Web');
+    expect(screen.getByRole('status')).toHaveTextContent('common:status.notSaved');
+    fireEvent.change(within(section).getByRole('textbox', { name: 'enumEditor.name' }), { target: { value: 'Web app' } });
+    expect(within(section).queryByRole('alert')).not.toBeInTheDocument();
+  }, 20000);
+
+  it('clears a refusal once the default lists are restored', async () => {
+    const stored = { ...pageSettings, accessMethods: [{ code: 'web', label: 'Web', deprecated: false }] };
+    get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: stored };
+      if (String(url).startsWith('/locations')) return { data: { items: [] } };
+      return { data: { total: 0, usage: [] } };
+    });
+    patch.mockRejectedValue({ response: { status: 400, data: { message: 'Access methods: "Browser" clashes with "Web"' } } });
+    post.mockResolvedValue({ data: stored });
+    renderPage();
+    const title = await screen.findByRole('button', { name: /pages.settings.lists.accessMethods.title/ });
+    await wait(50);
+    fireEvent.click(title);
+    const section = title.closest('.MuiAccordion-root') as HTMLElement;
+    const name = await within(section).findByRole('textbox', { name: 'enumEditor.name' });
+    fireEvent.change(name, { target: { value: 'Browser' } });
+    fireEvent.blur(name);
+    expect(await within(section).findByRole('alert')).toHaveTextContent('clashes with');
+    expect(screen.getByRole('status')).toHaveTextContent('common:status.notSaved');
+    fireEvent.click(screen.getByRole('button', { name: 'pages.settings.restore.action' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'pages.settings.restore.confirm' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    await wait(50);
+    expect(within(section).queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).not.toHaveTextContent('common:status.notSaved');
+  }, 20000);
+
+  it('restores the default lists: sends what waits, then shows every list as the server answers', async () => {
+    const stored = { ...pageSettings, accessMethods: [{ code: 'web', label: 'Web', deprecated: false }, { code: 'kiosk', label: 'Kiosk', deprecated: false }] };
+    const restored = { ...pageSettings, accessMethods: [{ code: 'web', label: 'Web', deprecated: false }, { code: 'api', label: 'API', deprecated: false }] };
+    get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: stored };
+      if (String(url).startsWith('/locations')) return { data: { items: [] } };
+      return { data: { total: 0, usage: [] } };
+    });
+    const order: string[] = [];
+    patch.mockImplementation(async (_url: string, body: Partial<ItOpsSettings>) => { order.push('patch'); return { data: { ...stored, ...body } }; });
+    post.mockImplementation(async (url: string) => { order.push(url); return { data: restored }; });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidate = vi.spyOn(client, 'invalidateQueries');
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <QueryClientProvider client={client}>
+          <MemoryRouter>
+            <KanapDialogProvider>
+              <ItOperationsSettingsPage />
+            </KanapDialogProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+    const title = await screen.findByRole('button', { name: /pages.settings.lists.accessMethods.title/ });
+    await wait(50);
+    fireEvent.click(title);
+    const section = title.closest('.MuiAccordion-root') as HTMLElement;
+    fireEvent.change((await within(section).findAllByRole('textbox', { name: 'enumEditor.name' }))[1], { target: { value: 'Kiosk terminal' } });
+    fireEvent.click(screen.getByRole('button', { name: 'pages.settings.restore.action' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('pages.settings.restore.message');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'pages.settings.restore.confirm' }));
+    await waitFor(() => expect(order).toEqual(['patch', '/it-ops/settings/reset']));
+    await waitFor(() => expect(within(section).getAllByRole('textbox', { name: 'enumEditor.name' }).map((node) => (node as HTMLInputElement).value)).toEqual(['Web', 'API']));
+    expect(client.getQueryData(['it-ops-settings'])).toEqual(restored);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['it-ops-catalog-labels'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['application-classification-catalog'] });
+  }, 20000);
+
+  it('restores nothing when the confirmation is cancelled', async () => {
+    renderPage();
+    await screen.findByRole('button', { name: /pages.settings.lists.accessMethods.title/ });
+    await wait(50);
+    fireEvent.click(screen.getByRole('button', { name: 'pages.settings.restore.action' }));
+    fireEvent.keyDown(await screen.findByRole('dialog'), { key: 'Escape' });
+    await wait(50);
+    expect(post).not.toHaveBeenCalled();
   }, 20000);
 
   it('sends nothing when nothing was changed', async () => {
     const view = renderPage();
     await screen.findByRole('button', { name: /pages.settings.lists.connectionTypes.title/ });
     view.unmount();
-    await wait(1600);
+    await wait(900);
     expect(patch).not.toHaveBeenCalled();
   });
 
@@ -194,7 +352,7 @@ describe('Leaving the IT landscape settings page right after typing', () => {
     fireEvent.change(await within(section).findByPlaceholderText('pages.settings.placeholders.typicalPorts'), { target: { value: '443' } });
     await wait(50);
     view.unmount();
-    await wait(1600);
+    await wait(900);
     expect(patch).not.toHaveBeenCalled();
   }, 20000);
 });

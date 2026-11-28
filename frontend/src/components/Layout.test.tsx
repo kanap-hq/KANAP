@@ -1173,13 +1173,13 @@ describe('Layout IT menu', () => {
   it('opens the manual of the tab on screen', () => {
     const open = vi.spyOn(window, 'open').mockImplementation(() => null);
     try {
-      const { unmount } = renderIt('/it/settings?tab=netbox&state=linked');
+      const { unmount } = renderIt('/it/settings/netbox?state=linked');
       fireEvent.click(screen.getByRole('button', { name: 'nav:topBar.openDocs' }));
       expect(open).toHaveBeenCalledWith('https://doc.kadratis.com/netbox/', '_blank', 'noopener,noreferrer');
       unmount();
       open.mockClear();
 
-      renderIt('/it/settings?state=linked');
+      renderIt('/it/settings/lists?state=linked');
       fireEvent.click(screen.getByRole('button', { name: 'nav:topBar.openDocs' }));
       expect(open).toHaveBeenCalledWith('https://doc.kadratis.com/it-ops-settings/', '_blank', 'noopener,noreferrer');
     } finally {

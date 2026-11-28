@@ -17,10 +17,14 @@ Vous ne voyez que les onglets que vos autorisations permettent. Si vous ne voyez
 
 ## Organisation de la page
 
-La page compte deux onglets :
+La page compte deux onglets. Chacun a sa propre adresse : un lien ou un favori ouvre le bon onglet.
 
-- **Listes** contient les valeurs des listes déroulantes décrites sur cette page.
-- **Netbox** contient la synchronisation avec votre inventaire Netbox. Voir [Synchronisation Netbox](netbox.md).
+- **Listes** (`/it/settings/lists`) contient les valeurs des listes déroulantes décrites sur cette page.
+- **Netbox** (`/it/settings/netbox`) contient la synchronisation avec votre inventaire Netbox. Voir [Synchronisation Netbox](netbox.md).
+
+`/it/settings` ouvre le premier onglet que vous pouvez voir. Les anciennes adresses `/it/settings?tab=netbox` et `/it/netbox` ouvrent l'onglet **Netbox**.
+
+Les modifications s'enregistrent d'elles-mêmes. Un seul indicateur, dans l'en-tête de la page, dit si elles sont en cours d'enregistrement, enregistrées ou non enregistrées. Quand une liste est refusée, la raison s'affiche sous cette liste et la liste revient à ses valeurs enregistrées.
 
 Dans l'onglet **Listes**, l'éditeur **Classifications et continuité** se trouve en haut. En dessous, les listes sont regroupées en quatre sections repliables :
 
@@ -35,10 +39,13 @@ Dans une section, les listes sont triées par nom. Chaque liste apparaît comme 
 
 ### Contrôles de l'éditeur
 
-Chaque liste possède ses propres contrôles en haut :
+Chaque liste est un tableau : le nom, les colonnes propres à la liste, **Ne plus proposer**, puis deux icônes par ligne, **Traduire** et **Supprimer**.
 
-- **Ajouter un élément**: Insère une nouvelle ligne en haut de la liste, focalisée et prête à saisir. Son champ de nom affiche un exemple propre à la liste.
-- Les modifications sont enregistrées automatiquement environ une seconde et demie après votre dernière saisie, dès que toutes les lignes sont valides. Un indicateur d'enregistrement s'affiche à côté de la liste.
+- **Ajouter un élément**, sous le tableau, ajoute une ligne en bas de la liste, le curseur dans son nom. Son champ de nom affiche un exemple propre à la liste. Une ligne laissée vide n'est jamais enregistrée.
+- Les valeurs gardent l'ordre affiché. Kadratis ne les trie pas.
+- Un nom saisi s'enregistre peu après votre dernière frappe, ou quand vous quittez le champ. Une case cochée ou un choix s'enregistre aussitôt. Rien ne s'enregistre tant qu'une ligne de la liste enfreint une règle ci-dessous.
+
+Les zones d'administration, les types de connexion, les domaines et les sous-réseaux ont leur propre disposition : leur bouton **Ajouter un élément** se trouve au-dessus du tableau. Il ajoute la ligne en bas de la liste, avec le curseur dedans, sauf pour les zones d'administration, où une nouvelle zone commence en haut.
 
 Pour les longues listes (plus de 25 lignes), le tableau virtualise les lignes, affichant environ 20 à la fois avec un défilement fluide et des en-têtes fixes.
 
@@ -48,7 +55,7 @@ Vous ne voyez et ne saisissez jamais que des **noms**. Kadratis génère un code
 
 Parce que les noms identifient les valeurs, quelques règles s'appliquent au sein d'une liste :
 
-- chaque valeur doit avoir un nom (un astérisque marque la colonne **Nom**), et deux valeurs ne peuvent pas porter le même nom (la casse n'est pas prise en compte) ;
+- chaque valeur doit avoir un nom (un astérisque marque la colonne **Nom**), et deux valeurs ne peuvent pas porter le même nom (la casse n'est pas prise en compte), dans la liste ou tel qu'affiché dans votre langue ;
 - un nom ne peut pas être identique au code interne d'une autre valeur de la même liste ;
 - les noms des **Méthodes d'accès** ne peuvent contenir ni virgule ni point-virgule, car l'export les regroupe dans une seule cellule séparée par des virgules.
 
@@ -56,15 +63,28 @@ Une liste qui enfreint l'une de ces règles n'est pas enregistrée tant que vous
 
 ### Supprimer une valeur
 
-**Supprimer** efface une valeur que rien n'utilise. Lorsque des enregistrements référencent encore la valeur, Kadratis indique combien (applications, actifs, interfaces, connexions, sites, incidents, sous-réseaux…), avec un lien vers la liste filtrée lorsqu'une liste peut être filtrée sur ce champ, et propose **Ne plus proposer** à la place : la valeur reste visible sur les enregistrements qui l'utilisent déjà et n'est plus proposée pour les nouveaux. Une valeur utilisée n'est jamais supprimée, même via l'API.
+**Supprimer** (l'icône de corbeille) efface sans confirmation une valeur que rien n'utilise. Lorsque des enregistrements référencent encore la valeur, Kadratis indique combien (applications, actifs, interfaces, connexions, sites, incidents, sous-réseaux…), avec un lien vers la liste filtrée lorsqu'une liste peut être filtrée sur ce champ, et propose **Ne plus proposer** à la place : la valeur reste visible sur les enregistrements qui l'utilisent déjà et n'est plus proposée pour les nouveaux. Le bouton **Ne plus proposer** de la boîte de dialogue coche la case pour vous. Une valeur utilisée n'est jamais supprimée, même via l'API.
 
-Les valeurs intégrées que Kadratis gère lui-même (les quatre statuts de cycle de vie, les domaines Workgroup et N/A) ne peuvent être ni modifiées ni supprimées. Les zones réseau et types d'actif par défaut, ainsi que le fournisseur cloud Autre, peuvent être modifiés et retirés, mais pas supprimés : le serveur les recréerait.
+Les valeurs intégrées que Kadratis gère lui-même (les quatre statuts de cycle de vie, les domaines Workgroup et N/A) ne peuvent être ni modifiées ni supprimées : elles portent la mention **Intégré**. Les zones réseau et types d'actif par défaut, ainsi que le fournisseur cloud Autre, peuvent être modifiés et retirés, mais pas supprimés : le serveur les recréerait.
 
 ### Traduire vos valeurs
 
-Les valeurs que vous saisissez s'affichent telles quelles dans toutes les langues. Pour les afficher dans la langue de chaque utilisateur, utilisez l'action **Traduire** sur une ligne : la boîte de dialogue présente le nom de base (et la description pour les niveaux de classification) ainsi qu'un champ par langue. Un champ laissé vide utilise la traduction automatique tant que la valeur est encore une valeur par défaut de Kadratis, sinon le texte de base. L'enregistrement des traductions ne modifie jamais le texte de base, et un nom traduit peut être utilisé dans les fichiers CSV et l'API au même titre que le nom lui-même ; c'est pourquoi il ne doit pas faire doublon avec une autre valeur de la liste.
+Une liste affiche chaque valeur sous le nom que le reste de Kadratis affiche dans votre langue : la traduction saisie par votre espace de travail pour cette langue, sinon la traduction livrée avec Kadratis tant que la valeur garde son nom livré, sinon le nom lui-même. Un utilisateur francophone voit la zone réseau livrée Guest sous le nom « Invités », ici comme sur les enregistrements.
 
-Les éditeurs affichent et modifient toujours le texte de base ; lorsque le nom affiché diffère pour votre langue, la ligne l'indique (« Affiché : … »).
+Saisir un nouveau nom dans la liste en fait le nom de base de la valeur. La traduction saisie par votre espace de travail pour votre langue disparaît, pour que le champ garde ce que vous avez saisi ; les traductions des autres langues restent. Saisir dans votre langue le nom que Kadratis livre pour une valeur livrée rend à la valeur son nom et ses traductions livrés.
+
+L'icône **Traduire** ouvre les langues de la valeur : le nom de base (et la description pour les niveaux de classification) ainsi qu'un champ par langue. Un champ laissé vide montre ce qui est affiché à la place, traduction livrée comprise. L'icône est mise en évidence quand la valeur a une traduction saisie par votre espace de travail. L'enregistrement des traductions ne modifie jamais le texte de base, et un nom traduit peut être utilisé dans les fichiers CSV et l'API au même titre que le nom lui-même ; c'est pourquoi il ne doit pas faire doublon avec une autre valeur de la liste.
+
+### Rétablir les listes par défaut
+
+**Rétablir les listes par défaut**, dans l'en-tête de l'onglet **Listes**, remet les listes aux valeurs livrées avec Kadratis, après confirmation. Il faut `settings:admin`. Les modifications pas encore enregistrées sont d'abord enregistrées.
+
+- Chaque valeur livrée revient avec son nom et ses traductions livrés, de nouveau proposée, même si vous l'aviez renommée ou retirée ; une valeur livrée que vous avez supprimée revient aussi, sauf si une valeur que vous gardez porte maintenant son nom. Les traductions saisies par votre espace de travail pour elle disparaissent.
+- Une valeur que vous avez ajoutée reste quand des enregistrements l'utilisent, telle quelle, après les valeurs livrées et dans son ordre d'avant. Une valeur que vous avez ajoutée et que rien n'utilise disparaît. Les sous-réseaux restent seulement quand des actifs les utilisent, avec les zones réseau dont ils ont besoin.
+- Une zone d'administration que vous avez ajoutée et qui est conservée passe en dernier, comme la moins sensible : déplacez-la à sa place. Un niveau de classification conservé devient le moins critique, une vague de reprise conservée la dernière.
+- Un nom livré qui entrerait en conflit avec une valeur conservée reste tel qu'il est.
+
+Les enregistrements ne changent jamais : ils gardent leurs valeurs.
 
 ---
 
@@ -92,7 +112,7 @@ Où sont hébergés les sites et les technologies. Valeurs par défaut : Sur sit
 - Espace de travail Sites > Onglet Vue d'ensemble > Champ **Type d'hébergement**
 - Espace de travail Technologies > panneau Propriétés > **Type d'hébergement**, et la fenêtre de nouvelle technologie. Voir [Technologies](technologies.md#type-dhebergement).
 
-Un type utilisé par une technologie ne peut pas être supprimé : marquez-le plutôt **Ne plus proposer**.
+Un type utilisé par une technologie ne peut pas être supprimé : cochez plutôt **Ne plus proposer**.
 
 La catégorie détermine quels champs apparaissent lors de la modification d'un Site :
 - **Sur site / colocation** affiche Société d'exploitation et champs Datacenter
@@ -112,7 +132,7 @@ Les zones de votre modèle d'administration. Kadratis fournit les trois tiers du
 
 Renommez-les, ajoutez les vôtres ou retirez-les selon votre politique d'administration ou votre modèle d'accès à privilèges. Les trois tiers apparaissent tant que la liste n'a jamais été enregistrée. Une fois la liste enregistrée, même vide, Kadratis ne les ajoute plus : ajoutez-les vous-même si vous en avez besoin.
 
-L'ordre de la liste compte : la première zone est la plus sensible. Faites glisser une ligne par sa poignée pour la déplacer. Une nouvelle zone s'ajoute en haut : déplacez-la ensuite à sa place. La page [Zones d'administration](administration-view.md) affiche les zones dans cet ordre et contrôle les actifs par rapport à la première zone qui n'est pas marquée **Ne plus proposer**.
+L'ordre de la liste compte : la première zone est la plus sensible. Faites glisser une ligne par sa poignée pour la déplacer. Une nouvelle zone s'ajoute en haut : déplacez-la ensuite à sa place. La page [Zones d'administration](administration-view.md) affiche les zones dans cet ordre et contrôle les actifs par rapport à la première zone encore proposée.
 
 **Colonnes** : Nom, Groupe d'administrateurs, Description, Ne plus proposer
 
@@ -123,7 +143,7 @@ L'ordre de la liste compte : la première zone est la plus sensible. Faites glis
 - Espace de travail Technologies > panneau Propriétés > **Zone d'administration**, pour les technologies de la famille **Annuaire et identité**
 - **Cartographie SI > Zones d'administration**, qui compte les actifs et les services d'annuaire de chaque zone, lance les points de contrôle et affecte les zones en masse. Voir [Zones d'administration](administration-view.md).
 
-Une zone marquée **Ne plus proposer** reste sur les technologies et les actifs déjà placés dedans.
+Une zone qui n'est plus proposée reste sur les technologies et les actifs déjà placés dedans.
 
 ### Familles de technologies
 
@@ -380,7 +400,7 @@ Options de cycle de vie partagées par les applications, les instances d'applica
 
 **Colonnes** : Nom, Ne plus proposer
 
-**Codes verrouillés** : Les statuts intégrés (Proposé, Actif, Obsolète, Retiré) ne peuvent pas être supprimés ni voir leur code modifié.
+**Statuts intégrés** : Proposé, Actif, Obsolète et Retiré sont des libellés dans votre langue, marqués **Intégré**. Ils ne peuvent être ni renommés, ni retirés, ni supprimés. Les statuts que vous ajoutez se modifient comme toute autre valeur.
 
 **Où c'est utilisé** :
 - Applications, Instances d'applications, Interfaces, Liaisons d'interfaces, Actifs > Champs **Statut**
@@ -403,7 +423,7 @@ Catégories utilisées pour classer les entrées du registre des incidents.
 ## Impact des modifications sur les données existantes
 
 - **Les enregistrements existants conservent leur valeur**: Renommer ne modifie que ce que les utilisateurs voient, pas les données sous-jacentes.
-- **Valeurs marquées Ne plus proposer** :
+- **Valeurs qui ne sont plus proposées** (**Ne plus proposer** coché) :
   - Restent valides pour les enregistrements qui les utilisent déjà.
   - Sont masquées des menus déroulants lors de la création de nouveaux enregistrements.
   - Apparaissent toujours lors de la modification si l'enregistrement utilise déjà cette valeur.

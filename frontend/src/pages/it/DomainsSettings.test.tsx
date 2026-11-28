@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
-import { DomainsEditor } from './ItOperationsSettingsPage';
+import { DomainsEditor } from './settings/DomainsEditor';
 import type { DomainOption } from '../../services/itOpsSettings';
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(async () => ({ data: { total: 0, usage: [] } })), patch: vi.fn(), post: vi.fn() } }));

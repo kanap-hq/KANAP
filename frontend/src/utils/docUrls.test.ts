@@ -32,6 +32,8 @@ describe('getDocUrl', () => {
 
   it('opens the Netbox manual from the Netbox tab and the IT settings manual from the lists', () => {
     expect(getDocUrl('/it/settings')).toBe('https://doc.kadratis.com/it-ops-settings/');
+    expect(getDocUrl('/it/settings/lists', 'fr')).toBe('https://doc.kadratis.com/fr/it-ops-settings/');
+    expect(getDocUrl('/it/settings/netbox', 'de', '?state=linked')).toBe('https://doc.kadratis.com/de/netbox/');
     expect(getDocUrl('/it/settings', 'fr', '?tab=lists')).toBe('https://doc.kadratis.com/fr/it-ops-settings/');
     expect(getDocUrl('/it/settings', 'de', '?tab=netbox')).toBe('https://doc.kadratis.com/de/netbox/');
     expect(getDocUrl('/it/settings', 'es', '?tab=netbox&state=linked')).toBe('https://doc.kadratis.com/es/netbox/');

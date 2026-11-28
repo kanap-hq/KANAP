@@ -8,7 +8,7 @@ Die Aufteilung der Zuständigkeiten ist bewusst gewählt. Netbox bleibt die Refe
 
 - Modul: **IT-Landschaft**
 - Pfad: **IT-Landschaft > Einstellungen**, Tab **Netbox**
-- Route: `/it/settings?tab=netbox`. Die frühere Adresse `/it/netbox` öffnet denselben Tab.
+- Route: `/it/settings/netbox`. Die früheren Adressen `/it/settings?tab=netbox` und `/it/netbox` öffnen denselben Tab.
 - Verbindungseinstellungen: **Administration > Integrationen**
 - Berechtigung: `infrastructure:admin`, sowohl für die Verbindungskarte als auch für den Tab **Netbox**. Mit dieser Berechtigung erscheint der Eintrag **Einstellungen** im Menü der IT-Landschaft, auch wenn Sie die Listen des Tabs **Listen** nicht sehen.
 - Verfügbar in der Cloud und in der On-Premise-Edition. Es gibt kein Feature-Flag, das aktiviert werden muss.
