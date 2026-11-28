@@ -31,6 +31,18 @@ type ChartCounts = {
 
 const NO_COUNTS: ChartCounts = { companies_count: 0, accounts_count: 0, accounts_unmapped_count: 0, accounts_outside_count: 0 };
 
+const COA_CODE_TAKEN_MESSAGE = 'A Chart of Accounts with this code already exists';
+
+/** 409: another chart of the workspace already has this code. The screen translates `errors:COA_CODE_TAKEN`. */
+function chartCodeTaken(): ConflictException {
+  return new ConflictException({
+    statusCode: 409,
+    error: 'Conflict',
+    code: 'COA_CODE_TAKEN',
+    message: COA_CODE_TAKEN_MESSAGE,
+  });
+}
+
 @Injectable()
 export class ChartOfAccountsService {
   constructor(
@@ -194,7 +206,7 @@ export class ChartOfAccountsService {
       return saved;
     } catch (e: any) {
       if (e?.code === '23505') {
-        throw new ConflictException('A Chart of Accounts with this code already exists');
+        throw chartCodeTaken();
       }
       throw e;
     }
@@ -259,7 +271,7 @@ export class ChartOfAccountsService {
       return saved;
     } catch (e: any) {
       if (e?.code === '23505') {
-        throw new ConflictException('A Chart of Accounts with this code already exists');
+        throw chartCodeTaken();
       }
       throw e;
     }
