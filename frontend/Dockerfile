@@ -48,7 +48,7 @@ RUN set -eu; \
     esac; \
     sed -i "s#__KANAP_API_ORIGIN__#${origin}#g" "$conf"; \
     if grep -q '__KANAP_API_ORIGIN__' "$conf"; then \
-      echo "default.conf: CSP placeholder left in place, connect-src falls back to 'self' https:" >&2; \
+      echo "default.conf.template: CSP placeholder left in place, connect-src falls back to 'self' https:" >&2; \
       sed -i "s#__KANAP_API_ORIGIN__# https:#g" "$conf"; \
     fi; \
     ! grep -q '__KANAP_API_ORIGIN__' "$conf"

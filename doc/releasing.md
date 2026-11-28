@@ -188,8 +188,9 @@ the images of the version it works on, with the current names.
   (`.github/scripts/image-tag-state.mjs`): an image whose `<version>` tag was pushed by an
   earlier run of the same commit (its index annotations `org.opencontainers.image.revision` and
   `org.opencontainers.image.version`) is reused with its digest, and a `<version>` tag from
-  another commit stops the run before anything is built. It builds `kadratis-api`, runs the same
-  checks as the `images` job of `ci.yml` (`.github/scripts/check-api-image.sh`), then pushes the
+  another commit stops the run before anything is built. It builds `kadratis-api` and `kadratis-web`, runs the
+  same checks as the `images` job of `ci.yml` (`.github/scripts/check-api-image.sh`,
+  `.github/scripts/check-web-image.sh`), then pushes the
   missing images with the `<version>` tag only, for `linux/amd64`. Each image carries BuildKit
   provenance and an SBOM. A separate `attest` job, the only one with an OIDC token, adds a
   GitHub provenance attestation to each image; attesting again on a rerun is harmless. The
