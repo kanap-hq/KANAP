@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 // Builds backend/src/technologies/catalog/technologies.catalog.json, the starting catalog of
-// technologies KANAP ships (plan planning/cartographie-technologies.md, lot S): common products by
+// technologies Kadratis ships (plan planning/cartographie-technologies.md, lot S): common products by
 // family, with their editor, CPE product identifiers, major versions and end-of-support dates.
 //
 // Source: the open API of endoflife.date (https://endoflife.date/docs/api/v1/), whose data is
 // published under the MIT license (Copyright 2020 endoflife.date contributors; the notice is in
 // backend/src/technologies/catalog/LICENSE-endoflife-date.txt). The products kept are listed below
-// (PRODUCTS). A product endoflife.date does not cover is maintained by KANAP: one file per product
+// (PRODUCTS). A product endoflife.date does not cover is maintained by Kadratis: one file per product
 // in backend/src/technologies/catalog/curated/ (`slug: null, curated: true`, the key is the file
 // name). Each version keeps the support dates read from the vendor, the page they came from and
-// the day they were checked. Those files are KANAP data. A product with `slug` null and no curated
+// the day they were checked. Those files are Kadratis data. A product with `slug` null and no curated
 // file is written from this list only, with no versions.
 // Operating systems are in this catalog since lot T3. Their version labels are rewritten
 // (`versionLabel`) so they match the former IT settings catalog (`2012 R2`, `22.04 LTS`,
@@ -75,7 +75,7 @@ const ENDED_YEARS_KEPT = 4;
  * Operating systems (family `operating_system`) in place of the two rules above: every version
  * whose last support (standard, extended or end of life) ends on this day or later, however many.
  * Servers run old systems long after their support ended (Windows Server 2003, SLES 11), and
- * KANAP must name them to flag them. Twin of `OS_SUPPORT_ENDED_SINCE` in catalog-releases.ts.
+ * Kadratis must name them to flag them. Twin of `OS_SUPPORT_ENDED_SINCE` in catalog-releases.ts.
  */
 const OS_SUPPORT_ENDED_SINCE = '2010-01-01';
 
@@ -119,7 +119,7 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  * checked against the NVD with --check-cpe --nvd (lot C3, 2026-10-17; the operating systems, lot V3,
  * 2026-10-20; the entries still without one, lot V5, 2026-10-20): CVE name it. A name the dictionary
  * does not list yet is kept when CVE use it (`a:microsoft:entra_provisioning_service`).
- * `versionLabel(release)`: the label stored, when cleanLabel would not match the names KANAP
+ * `versionLabel(release)`: the label stored, when cleanLabel would not match the names Kadratis
  * already shows. `keepRelease(release)`: false for a release cycle the catalog leaves out.
  * Both are twins of `OS_RELEASE_RULES` in catalog-releases.ts.
  * `security_tracker`: the distributor's vulnerability page for an operating system, copied into
@@ -425,7 +425,7 @@ const PRODUCTS = [
   { key: 'azure-devops-server', slug: 'azure-devops-server', name: 'Azure DevOps Server', editor: 'Microsoft', family: 'administration', cpe: ['o:microsoft:azure_devops_server'] },
   // SharePoint: the NVD still files 2019 and the build numbers `16.0.*` (newest CVE-2026-108452). Subscription Edition is `sharepoint_server` with version `-`, so a version cannot be matched. The identifiers are kept.
   { key: 'sharepoint', slug: 'sharepoint', name: 'SharePoint Server', editor: 'Microsoft', family: 'other', cpe: ['a:microsoft:sharepoint_server', 'a:microsoft:sharepoint_enterprise_server'] },
-  // Maintained by KANAP (backend/src/technologies/catalog/curated/). Identifiers checked against
+  // Maintained by Kadratis (backend/src/technologies/catalog/curated/). Identifiers checked against
   // the NVD on 2026-10-20 (planning/catalogue-enrichi/cpe.md, group B). `security` in those notes
   // is the family `network_security`. No entry excludes an identifier or goes without one.
   { key: 'check-point-gaia', slug: null, curated: true, name: 'Check Point Gaia (Quantum)', editor: 'Check Point', family: 'network_security', cpe: ['o:checkpoint:gaia_os', 'o:checkpoint:gaia', 'a:checkpoint:quantum_security_management', 'o:checkpoint:quantum_security_gateway_firmware', 'a:checkpoint:security_gateway'], cpeVersion: 'label' },
@@ -971,7 +971,7 @@ function cpeProductsOf(entry, published) {
   return [...cpe].sort();
 }
 
-// The living catalog (lot C4) reads endoflife.date between two KANAP versions with the same rules:
+// The living catalog (lot C4) reads endoflife.date between two Kadratis versions with the same rules:
 // backend/src/technologies/catalog/catalog-releases.ts repeats `cleanLabel`, `cpeVersionOf` (with the
 // `cpeVersion` and `cpeVersions` of PRODUCTS) and `versionsOf`. Change both; its spec checks that it
 // gives back the `cpe_version` of every shipped version. There too, `productPerRelease` gives a SQL
@@ -1311,7 +1311,7 @@ function buildPrefixesOf(label, aliases) {
   return prefixes;
 }
 
-/** Versions of a KANAP-maintained product, in the file's order. `note` and the other curation fields stay out. */
+/** Versions of a Kadratis-maintained product, in the file's order. `note` and the other curation fields stay out. */
 function versionsOfCurated(file, entry) {
   return file.versions.map((version) => {
     const label = String(version.label);
