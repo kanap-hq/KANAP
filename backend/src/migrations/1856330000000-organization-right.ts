@@ -33,18 +33,20 @@ const tenantName = (slug: string | null, id: string) => `${slug || '(no slug)'} 
  *    assistant read its rows.
  * 2. A planned role without an `organization` row gets `organization:admin`, written with the
  *    role's tenant (`ON CONFLICT (role_id, resource) DO NOTHING`). An Administrator whose row is
- *    below admin is put back to admin. A custom role's row of its own tenant is kept as it is (a
- *    row set by hand: the roles screen did not validate resource names). A row whose tenant is not
- *    its role's opened nothing: it is rewritten as `organization:admin` of the role's tenant.
+ *    below admin is put back to admin. A custom role's row of its own tenant at `reader` or
+ *    `admin` is kept as it is (a row set by hand: the roles screen did not validate resource
+ *    names); at any other level (`manager`, which PermissionGuard does not rank, `member`,
+ *    `contributor`) it is set to admin, as the role's `users:admin` gives. A row whose tenant is
+ *    not its role's opened nothing: it is rewritten as `organization:admin` of the role's tenant.
  * 3. Checks, an exception otherwise (the transaction is rolled back): every planned role holds an
  *    `organization` row of its own tenant, at admin for an Administrator.
  * 4. One log line per tenant with a role given the right, one per role whose row was rewritten or
  *    kept below admin, a summary with the counts. No audit entry (a migration writes none).
  * A second run plans the same roles and writes no row.
  *
- * down() deletes every `organization` row. A role given `users:admin` after up() never had the
- * three pages through `organization`: down() gives them back through `users:admin` (the code of
- * before reads it).
+ * down() deletes every `organization` row, a row set by hand before up() included. A role given
+ * `users:admin` after up() never had the three pages through `organization`: down() gives them
+ * back through `users:admin` (the code of before reads it).
  */
 export class OrganizationRight1856330000000 implements MigrationInterface {
   name = 'OrganizationRight1856330000000';
@@ -93,10 +95,12 @@ export class OrganizationRight1856330000000 implements MigrationInterface {
       const tenants = new Set(planned.map((role) => role.tenant_id)).size;
       const administrators = planned.filter((role) => role.administrator).length;
       const kept = planned.length - toInsert.length - toUpdate.length;
+      const otherLevel = toUpdate.filter((role) => !isReaderOrAdmin(role.level)).length;
       console.log(
         `${LOG_PREFIX} done in ${Date.now() - started} ms: ${planned.length} role(s) of ${tenants} tenant(s) planned `
         + `(${administrators} Administrator, ${planned.length - administrators} with users:admin); `
-        + `${inserted} organization:admin row(s) added, ${updated} row(s) set to admin, ${kept} row(s) already there kept`,
+        + `${inserted} organization:admin row(s) added, ${updated} row(s) set to admin `
+        + `(${otherLevel} of them at a level other than reader or admin), ${kept} row(s) already there kept`,
       );
     });
   }
@@ -110,13 +114,17 @@ export class OrganizationRight1856330000000 implements MigrationInterface {
   }
 }
 
+const isReaderOrAdmin = (level: string | null) => level === 'reader' || level === 'admin';
+
 /**
- * Insert: no row. Update: an Administrator below admin, or a row of another tenant (it opened
- * nothing). Keep: the role's own row, of a custom role, or of an Administrator at admin.
+ * Insert: no row. Update: a row of another tenant (it opened nothing), a row at a level other than
+ * reader or admin, or an Administrator below admin. Keep: the role's own row at reader or admin, of
+ * a custom role, or of an Administrator at admin.
  */
 function actionFor(role: PlannedRole): Action {
   if (role.level === null) return 'insert';
   if (role.row_tenant !== role.tenant_id) return 'update';
+  if (!isReaderOrAdmin(role.level)) return 'update';
   if (role.administrator && role.level !== 'admin') return 'update';
   return 'keep';
 }

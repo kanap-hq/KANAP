@@ -14,8 +14,10 @@ import { OrganizationRight1856330000000 as Migration } from '../../migrations/18
 //   Administrator without any `users` row (gets organization:admin), a custom role with
 //   `users:admin` and an `organization:reader` row set by hand (kept), an Administrator-named row
 //   below admin in tenant B (put back to admin), a custom role whose `organization` row is of
-//   another tenant (rewritten to its own), a custom role named "Administrator " with a trailing
-//   space (the guard does not read it as the Administrator: nothing);
+//   another tenant (rewritten to its own), custom roles with `users:admin` and an `organization`
+//   row at `manager` or `member` (a level other than reader or admin: set to admin), a
+//   custom role named "Administrator " with a trailing space (the guard does not read it as the
+//   Administrator: nothing);
 // - row level security on role_permissions and roles as found, and the counts in the log;
 // - a second run writes no row; down() removes every `organization` row, up() again puts them back.
 // The assertions read this test's own rows, never table-wide counts. Runs on an empty migrated
@@ -131,6 +133,8 @@ async function seedBeforeMigration(runner: QueryRunner): Promise<Seeded> {
     handSet: await seedRole(runner, a.id, 'Auditor set by hand', { users: 'admin', organization: 'reader' }),
     foreignRow: await seedRole(runner, a.id, 'Foreign organization row', { users: 'admin', organization: 'reader' }, { organization: b.id }),
     administratorB: await seedRole(runner, b.id, 'Administrator', { users: 'admin', organization: 'member' }, {}, true),
+    managerRow: await seedRole(runner, a.id, 'Manager level row', { users: 'admin', organization: 'manager' }),
+    memberRow: await seedRole(runner, a.id, 'Member level row', { users: 'admin', organization: 'member' }),
     trailingSpace: await seedRole(runner, a.id, 'Administrator ', { budget: 'admin' }),
     nothing: await seedRole(runner, b.id, 'Budget only', { budget: 'member' }),
   };
@@ -146,6 +150,8 @@ const EXPECTED_AFTER_UP = (roles: Record<string, string>) => ({
   [roles.handSet]: { users: 'admin@A', organization: 'reader@A' },
   [roles.foreignRow]: { users: 'admin@A', organization: 'admin@A' },
   [roles.administratorB]: { users: 'admin@B', organization: 'admin@B' },
+  [roles.managerRow]: { users: 'admin@A', organization: 'admin@A' },
+  [roles.memberRow]: { users: 'admin@A', organization: 'admin@A' },
   [roles.trailingSpace]: { budget: 'admin@A' },
   [roles.nothing]: { budget: 'member@B' },
 });
@@ -181,6 +187,8 @@ async function testGrant() {
     ends('Auditor set by hand', a, 'organization=reader -> kept');
     ends('Foreign organization row', a, `organization=reader (row of tenant ${b.id}, never read) -> organization=admin`);
     ends('Administrator', b, 'organization=member -> organization=admin');
+    ends('Manager level row', a, 'organization=manager -> organization=admin');
+    ends('Member level row', a, 'organization=member -> organization=admin');
     for (const [name, tenant] of [['People admin', a], ['Administrator', a], ['Administrator ', a], ['People reader', a], ['Stray users row', a], ['Budget only', b]] as const) {
       assert.equal(named(name, tenant).length, 0, `${name}: not named`);
     }
@@ -188,7 +196,7 @@ async function testGrant() {
     const summary = lines.find((line) => line.includes('done in'));
     assert.match(
       summary ?? '',
-      /done in \d+ ms: \d+ role\(s\) of \d+ tenant\(s\) planned \(\d+ Administrator, \d+ with users:admin\); \d+ organization:admin row\(s\) added, \d+ row\(s\) set to admin, \d+ row\(s\) already there kept$/,
+      /done in \d+ ms: \d+ role\(s\) of \d+ tenant\(s\) planned \(\d+ Administrator, \d+ with users:admin\); \d+ organization:admin row\(s\) added, \d+ row\(s\) set to admin \(\d+ of them at a level other than reader or admin\), \d+ row\(s\) already there kept$/,
       lines.join('\n'),
     );
   });
@@ -217,7 +225,7 @@ async function testRerun() {
     // Only the row kept below admin is named again; nothing is given or rewritten.
     const ofTests = [...linesOf(second.lines, a.slug), ...linesOf(second.lines, b.slug)];
     assert.deepEqual(ofTests.map((line) => line.slice(line.lastIndexOf(': ') + 2)), ['organization=reader -> kept'], second.lines.join('\n'));
-    assert.match(second.lines.join('\n'), / 0 organization:admin row\(s\) added, 0 row\(s\) set to admin, /);
+    assert.match(second.lines.join('\n'), / 0 organization:admin row\(s\) added, 0 row\(s\) set to admin \(0 of them at a level other than reader or admin\), /);
   });
 }
 
