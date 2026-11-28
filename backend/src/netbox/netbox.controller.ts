@@ -79,7 +79,7 @@ export class NetboxController {
     },
     @Req() req: any,
   ) {
-    return this.config.saveMapping(this.manager(req), this.tenantId(req), body ?? {});
+    return this.config.saveMapping(this.manager(req), this.tenantId(req), body ?? {}, { userId: req?.user?.sub ?? null, sourceRef: req?.id ?? null });
   }
 
   @UseGuards(PermissionGuard)
