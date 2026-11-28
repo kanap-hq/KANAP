@@ -29,11 +29,12 @@ Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug.
 
 | Karten | Wer sie sieht |
 |---|---|
-| Währungen, Budgetspalten, Standard-Zuordnungsmethode, Daten einfrieren / auftauen | Budgetadministration auf Administratorebene (`budget_ops:admin`) |
+| Währungen, Daten einfrieren / auftauen | Budgetadministration auf Administratorebene (`budget_ops:admin`) |
+| Budgetspalten, Standard-Zuordnungsmethode | Budgetadministration auf Leserebene (`budget_ops:reader`), schreibgeschützt. Zum Ändern ist die Administratorebene nötig (`budget_ops:admin`) |
 | Budgetspalten kopieren, Budgetspalte zurücksetzen | Budget auf Administratorebene (`budget:admin`). Die Registerkarten **Alle**, **OPEX** und **CAPEX** öffnen sich alle mit dieser Stufe |
 | Stammdaten einfrieren, Jahreskennzahlen kopieren | Benutzer mit Zugriff auf das Budget, die Administratoren der Budgetadministration, von Unternehmen oder Abteilungen sind. Administratoren von Unternehmen und Abteilungen handeln für ihren eigenen Bereich |
 
-Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied und Budget-Leser sehen keine, daher fehlt **Administration** in ihrem Menü.
+Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied und Budget-Leser sehen die Karten **Budgetspalten** und **Standard-Zuordnungsmethode**, die sich für sie schreibgeschützt öffnen, und keine Operation. Eine Person mit eingeschränktem Datenzugriff sieht keine dieser Karten.
 
 Die Budgetspalten sind Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert. Das sind die Standardnamen. Ihre Organisation kann sie umbenennen, einige ausblenden und unter [Budgetspalten](#budgetspalten) eine Standardspalte wählen. Jede der folgenden Seiten zeigt die Namen, die Ihre Organisation gewählt hat.
 
@@ -216,15 +217,15 @@ Umfasst die Kopie die Beträge und ist die Zielspalte eingefroren, sind **Vorsch
 
 ---
 
-## Budgetspalte zurücksetzen
+## Budgetspalte leeren { #budgetspalte-zurucksetzen }
 
-Löschen Sie alle Daten einer bestimmten Budgetspalte für ein gegebenes Jahr. Dies ist eine destruktive Operation: Verwenden Sie sie, wenn Sie neu beginnen müssen.
+Löschen Sie alle Daten einer Budgetspalte für ein gegebenes Jahr. Dies ist eine destruktive Operation: Verwenden Sie sie, wenn Sie neu beginnen müssen.
 
-Die Registerkarten **Alle** / **OPEX** / **CAPEX** oben auf der Seite legen fest, welche Budgetzeilen geleert werden. **Alle**, die Voreinstellung, leert OPEX- und CAPEX-Zeilen zusammen. Das Zurücksetzen setzt die zwölf Monate der Spalte auf null und entfernt ihren Zeitraum sowie ihre Zeilen, wenn die Spalte aus Menge und Preis aufgebaut wurde. Im Budget-Tab erhält die Spalte danach einen neuen Vorschlag aus den Daten der Budgetzeile. Das Zurücksetzen erfasst alle Budgetzeilen, auch solche, deren Gültigkeit bereits abgelaufen ist. Es gilt ganz oder gar nicht: Schlägt eine Budgetzeile fehl, wird nichts geleert.
+**Zeilentyp** (**Alle** / **OPEX** / **CAPEX**) legt fest, welche Budgetzeilen geleert werden. **Alle**, die Voreinstellung, leert OPEX- und CAPEX-Zeilen zusammen. Das Leeren setzt die zwölf Monate der Spalte auf null und entfernt ihren Zeitraum sowie ihre Zeilen, wenn die Spalte aus Menge und Preis aufgebaut wurde. Im Budget-Tab erhält die Spalte danach einen neuen Vorschlag aus den Daten der Budgetzeile. Das Leeren erfasst alle Budgetzeilen, auch solche, deren Gültigkeit bereits abgelaufen ist. Es gilt ganz oder gar nicht: Schlägt eine Budgetzeile fehl, wird nichts geleert.
 
-Erfordert die Administratorstufe auf Budget (`budget:admin`).
+Erfordert die Administratorstufe auf Budget (`budget:admin`). Andere Benutzer können die Seite nicht öffnen.
 
-Eine Spalte, deren Budgetzeilen keinen Betrag enthalten, kann trotzdem zurückgesetzt werden: Das Zurücksetzen entfernt dann nur die Verteilungszeiträume, und die Bestätigung weist darauf hin.
+Eine Spalte, deren Budgetzeilen keinen Betrag enthalten, kann trotzdem geleert werden: Das Leeren entfernt dann nur die Verteilungszeiträume, und die Seite und die Bestätigung weisen darauf hin.
 
 ### Wann verwenden
 
@@ -236,35 +237,42 @@ Eine Spalte, deren Budgetzeilen keinen Betrag enthalten, kann trotzdem zurückge
 
 | Feld | Beschreibung |
 |------|--------------|
+| **Zeilentyp** | **Alle**, **OPEX** oder **CAPEX** |
 | **Jahr** | Das zu löschende Geschäftsjahr (Bereich: aktuelles Jahr minus eins bis aktuelles Jahr plus fünf) |
 | **Budgetspalte** | Jede angezeigte Spalte, auch Prognose, wenn sie angezeigt wird. Keine Spalte ist vorausgewählt: Das Feld zeigt **Spalte wählen**, und **Spalte leeren** bleibt deaktiviert, bis Sie eine Spalte wählen |
 
 ### Vorschau
 
-Bevor Sie eine Spalte wählen, ersetzt eine einzige Zeile das Grid: „Wählen Sie eine Spalte, um ihre Beträge zu sehen.“ Sobald Sie eine Spalte gewählt haben, zeigt ein Grid jede Zeile des gewählten Typs und ihren aktuellen Wert in dieser Spalte. Der Name der Zeile öffnet sie in einem neuen Tab, und in der Registerkarte **Alle** nennt eine Spalte **Zeilentyp** **OPEX** oder **CAPEX**. Beträge, die geleert werden, erscheinen halbfett; leere Werte sind abgeschwächt. Unterhalb des Grids erscheinen drei Statistiken:
+Bevor Sie eine Spalte wählen, sagt eine einzige Zeile: „Wählen Sie eine Spalte, um ihre Beträge zu sehen.“ Sobald Sie eine Spalte gewählt haben, zeigt die Seite drei Zahlen:
 
-- **Gesamtelemente**
-- **Zeilen mit einer Summe ungleich null**
-- **Aktueller Gesamtwert**
+- **Zeilen**
+- **Zeilen mit einem Betrag**
+- **Gesamtwert**
 
-**Tabelle exportieren** (Download-Symbol) lädt das Raster als CSV- oder Excel-Datei herunter: die Budgetzeilen des gewählten Typs und ihren aktuellen Wert in der gewählten Spalte.
+Darunter stehen die fünf Budgetzeilen mit den höchsten Beträgen in der Spalte, wobei ein negativer Betrag nach seiner Größe eingeordnet wird, dann „und N weitere Zeilen“. In der Registerkarte **Alle** nennt eine Spalte **Zeilentyp** **OPEX** oder **CAPEX**. Ein Satz sagt dann, was das Leeren entfernt, für wie viele Zeilen, und dass es nicht rückgängig gemacht werden kann.
+
+**Alle N Zeilen anzeigen** öffnet unter dem Bereich ein Grid mit allen Zeilen des gewählten Typs und ihrem aktuellen Wert in der Spalte. Das Grid lässt sich nach jeder Spalte sortieren, und der Name der Zeile öffnet sie in einem neuen Tab. Beträge, die geleert werden, erscheinen halbfett; leere Werte sind abgeschwächt. **Zeilen ausblenden** schließt es.
+
+**Tabelle exportieren** (Download-Symbol, neben den Optionen) lädt alle Budgetzeilen und ihren aktuellen Wert in der gewählten Spalte als CSV- oder Excel-Datei herunter. Der Export wird im Audit-Protokoll erfasst.
+
+Wenn die Spalte keinen Betrag enthält, sagt ein Satz dies anstelle der Zahlen, und **Alle N Zeilen anzeigen** öffnet trotzdem das Grid.
 
 ### Bestätigung
 
-Klicken auf **Spalte leeren** öffnet einen Bestätigungsdialog, der zeigt:
+Klicken auf **Spalte leeren** öffnet eine Bestätigung, die fragt „Die Spalte Budget von 2026 leeren?“ und zeigt:
 
-- Die zu löschende Spalte und das Jahr
-- Die Anzahl der betroffenen Elemente
-- Den Gesamtwert, der gelöscht wird
-- Eine deutliche Warnung, dass diese Aktion nicht rückgängig gemacht werden kann
+- Die Anzahl der betroffenen Zeilen und den Gesamtwert, der gelöscht wird
+- Dass die Zeilen und ihre anderen Spalten erhalten bleiben
+- Dass diese Aktion nicht rückgängig gemacht werden kann
 
-Sie müssen im Dialog auf **Spalte leeren** klicken, um fortzufahren, oder **Abbrechen** zum Abbrechen.
+Klicken Sie im Dialog auf **Spalte leeren**, um fortzufahren, oder auf **Abbrechen**, um abzubrechen. Das Ergebnis erscheint neben der Schaltfläche, zum Beispiel „Spalte in 45 Zeilen geleert.“
 
 ### Sicherheitsfunktionen
 
 - Die Schaltfläche **Spalte leeren** bleibt verfügbar, wenn keine Budgetzeile einen Betrag enthält, damit die Verteilungszeiträume trotzdem entfernt werden können
 - Keine Spalte ist vorausgewählt, Sie wählen die zu leerende Spalte also immer selbst
-- Eingefrorene Spalten können nicht zurückgesetzt werden. Tauen Sie sie zuerst auf. In der Registerkarte **Alle** nennt die Meldung den Typ, wenn die Spalte nur für einen Typ eingefroren ist, zum Beispiel „Die Spalte Budget für 2026 ist für CAPEX eingefroren. Tauen Sie sie auf, bevor Sie Daten löschen, oder leeren Sie nur den anderen Typ.“
+- Eingefrorene Spalten können nicht geleert werden. Tauen Sie sie zuerst auf. In der Registerkarte **Alle** nennt die Meldung den Typ, wenn die Spalte nur für einen Typ eingefroren ist, zum Beispiel „Die Spalte Budget für 2026 ist für CAPEX eingefroren. Tauen Sie sie auf, bevor Sie sie leeren, oder leeren Sie nur den anderen Typ.“
+- Während eine andere Budgetoperation läuft, wird das Leeren abgelehnt, und die Meldung neben der Schaltfläche sagt es
 - Der Bestätigungsdialog erfordert eine explizite Bestätigung
 
 ---
@@ -285,7 +293,7 @@ Legen Sie die Methode fest, der OPEX-Zeilen und CAPEX-Investitionen folgen, wenn
 | Feld | Beschreibung |
 |------|--------------|
 | **Geschäftsjahr** | Das Jahr, für das die Einstellung gilt (Bereich: aktuelles Jahr minus eins bis aktuelles Jahr plus fünf) |
-| **Unternehmen** | **Alle aktiven Unternehmen** (Standard): Die Kosten werden auf alle für das Jahr aktiven Unternehmen verteilt. **Ausgewählte Unternehmen**: Die Zuordnung wird auf die von Ihnen ausgewählten Unternehmen beschränkt |
+| **Geltungsbereich der Unternehmen** | **Alle aktiven Unternehmen** (Standard): Die Kosten werden auf alle für das Jahr aktiven Unternehmen verteilt. **Ausgewählte Unternehmen**: Die Zuordnung wird auf die Unternehmen beschränkt, die Sie unter **Unternehmen** auswählen |
 | **Standardmethode** | Der Treiber, der die Unternehmen gewichtet: Mitarbeiterzahl, IT-Benutzer oder Umsatz |
 
 ### Funktionsweise
@@ -293,8 +301,9 @@ Legen Sie die Methode fest, der OPEX-Zeilen und CAPEX-Investitionen folgen, wenn
 1. **Wählen Sie ein Jahr**
 2. **Wählen Sie den Unternehmensumfang**: *Alle aktiven Unternehmen* oder *Ausgewählte Unternehmen* und dann die Unternehmen selbst
 3. **Wählen Sie den Treiber**, der die Unternehmen gewichtet (Mitarbeiterzahl, IT-Benutzer oder Umsatz)
-4. Jede Änderung wird sofort gespeichert, es gibt keine Schaltfläche zum Speichern
-5. Um zur Standardmethode zurückzukehren, klicken Sie auf **Standardmethode verwenden** (wird nur angezeigt, solange ein eigener Standard konfiguriert ist)
+4. Jede Änderung wird von selbst gespeichert: eine Auswahl sobald Sie sie treffen, die Unternehmen sobald sich ihre Liste schließt. Neben dem Titel erscheint **Wird gespeichert…**, dann **Gespeichert**. Es gibt keine Schaltfläche zum Speichern. Das Geschäftsjahr lässt sich nicht wechseln, während eine Änderung gespeichert wird
+5. Eine Änderung, die der Server ablehnt, wird sofort rückgängig gemacht: Das Feld zeigt wieder den gespeicherten Wert, mit dem Grund darunter, bis Sie die Einstellung erneut ändern, und neben dem Titel erscheint **Nicht gespeichert**. Wenn der Server ausgelastet ist, bleibt Ihre Auswahl auf dem Bildschirm, und **Wird gespeichert…** erscheint, während sie erneut gesendet wird. Lässt sie sich immer noch nicht speichern, erscheint **Nicht gespeichert** mit einer Meldung, und die Änderung wird mit Ihrer nächsten Änderung erneut gesendet
+6. Um zur Standardmethode zurückzukehren, klicken Sie neben dem Titel auf **Standardzuordnung wiederherstellen** (wird nur angezeigt, solange ein eigener Standard konfiguriert ist)
 
 ### Ausgewählte Unternehmen
 
@@ -320,7 +329,9 @@ Der Standard wird bei jeder Anzeige der Zuordnungen neu aufgelöst: Eine Änderu
 
 ### Berechtigungen
 
-Das Ändern der Standardmethode erfordert `budget_ops:admin`. Die Karte ist für andere Benutzer ausgeblendet.
+Das Ändern der Standardmethode erfordert `budget_ops:admin`. Budget-Leser und Budget-Mitglied, die die Budgetadministration lesen (`budget_ops:reader`), öffnen die Seite schreibgeschützt: dieselben Felder, die sie nicht ändern können, und keine Schaltfläche **Standardzuordnung wiederherstellen**. Sie können weiterhin das Geschäftsjahr wählen, das sie lesen möchten. Eine Person mit eingeschränktem Datenzugriff kann die Seite nicht öffnen.
+
+Jede Änderung schreibt einen eigenen Eintrag in das Audit-Protokoll.
 
 ---
 
@@ -359,11 +370,15 @@ Standardmäßig sind Budget, Revision, Ist-Werte und Erwarteter Endwert angezeig
 
 ### Speichern
 
-Klicken Sie auf **Speichern**, um Ihre Änderungen anzuwenden. Die Schaltfläche bleibt deaktiviert, bis sich etwas geändert hat und jeder Name gültig ist. **Zurücksetzen** verwirft die Änderungen, die Sie noch nicht gespeichert haben. Fehler werden unter dem Feld oder der Tabelle erklärt, zum Beispiel „Mindestens eine Spalte muss angezeigt bleiben.“ oder „Die Standardspalte muss angezeigt werden: Wählen Sie zuerst eine andere Standardspalte.“ Um die aktuelle Standardspalte auszublenden, wählen Sie zuerst eine andere Standardspalte. Beide Änderungen lassen sich zusammen speichern.
+Jede Änderung wird von selbst gespeichert, ohne Schaltfläche zum Speichern: ein Name, wenn Sie sein Feld verlassen oder nach einer kurzen Pause beim Tippen, ein Schalter oder die Standardspalte, sobald Sie ihn oder sie ändern. Neben dem Titel erscheint **Wird gespeichert…**, dann **Gespeichert**. Jede Änderung schreibt einen eigenen Eintrag in das Audit-Protokoll.
+
+Ein Wert, der abgelehnt würde, wird nicht gespeichert. Er bleibt mit dem Grund darunter auf dem Bildschirm, und die zuvor gespeicherte Einstellung bleibt in Kraft: zum Beispiel „Zwei Spalten können nicht beide „Budget“ heißen.“ unter einem Namen oder „Mindestens eine Spalte muss angezeigt bleiben.“ unter einem Schalter. Um die aktuelle Standardspalte auszublenden, wählen Sie zuerst eine andere Standardspalte und blenden sie dann aus: Das Ausblenden der Standardspalte wird mit „Die Standardspalte muss angezeigt werden: Wählen Sie zuerst eine andere Standardspalte.“ abgelehnt, und der Schalter kehrt bei Ihrer nächsten Änderung in seine gespeicherte Stellung zurück.
+
+Eine Änderung, die der Server ablehnt, wird sofort rückgängig gemacht: Der Name oder der Schalter zeigt wieder seinen gespeicherten Wert, mit dem Grund des Servers darunter, bis Sie dieses Feld erneut ändern, und neben dem Titel erscheint **Nicht gespeichert**. Ihre anderen Änderungen bleiben gespeichert. Wenn der Server ausgelastet ist, bleibt die Änderung auf dem Bildschirm, und **Wird gespeichert…** erscheint, während sie erneut gesendet wird. Lässt sie sich immer noch nicht speichern, erscheint **Nicht gespeichert** mit einer Meldung unter der Tabelle, und die Änderung wird mit Ihrer nächsten Änderung erneut gesendet. Wenn Sie die Seite direkt nach einer abgelehnten Änderung verlassen, bleiben Sie auf der Seite, damit Sie den Grund lesen können. Wenn Sie sie verlassen, während eine Änderung noch auf einen ausgelasteten Server wartet, werden Sie zuerst gefragt.
 
 ### Berechtigungen
 
-Zum Ändern der Einstellungen sind Administrationsrechte für die Budget-Administration erforderlich (`budget_ops:admin`). Die Karte ist für andere Benutzer ausgeblendet.
+Zum Ändern der Einstellungen sind Administrationsrechte für die Budget-Administration erforderlich (`budget_ops:admin`). Budget-Leser und Budget-Mitglied, die die Budget-Administration lesen (`budget_ops:reader`), öffnen die Seite schreibgeschützt: dieselbe Tabelle, die sie nicht ändern können. Eine Person mit eingeschränktem Datenzugriff kann die Seite nicht öffnen.
 
 Wenn die Einstellungen nicht geladen werden können, zeigt die Seite eine einzige Zeile, „Die Spalteneinstellungen konnten nicht geladen werden.“, und keine Steuerelemente.
 

@@ -29,11 +29,12 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 
 | Cartes | Qui les voit |
 |---|---|
-| Devises, Colonnes budgétaires, Méthode de ventilation par défaut, Geler / dégeler les données | Administration budgétaire au niveau administrateur (`budget_ops:admin`) |
+| Devises, Geler / dégeler les données | Administration budgétaire au niveau administrateur (`budget_ops:admin`) |
+| Colonnes budgétaires, Méthode de ventilation par défaut | Administration budgétaire au niveau lecteur (`budget_ops:reader`), en lecture seule. Les modifier nécessite le niveau administrateur (`budget_ops:admin`) |
 | Copier les colonnes budgétaires, Réinitialiser une colonne budgétaire | Budget au niveau administrateur (`budget:admin`). Les onglets **Tout**, **OPEX** et **CAPEX** s'ouvrent tous avec ce niveau |
 | Geler les données de référence, Copier les indicateurs annuels | Utilisateurs ayant accès au budget qui sont administrateurs de l'administration budgétaire, des sociétés ou des départements. Les administrateurs des sociétés et des départements agissent sur leur propre périmètre |
 
-Le rôle intégré Administrateur budget voit toutes les cartes. Membre budget et Lecteur budget n'en voient aucune : **Administration** ne figure donc pas dans leur menu.
+Le rôle intégré Administrateur budget voit toutes les cartes. Membre budget et Lecteur budget voient les cartes **Colonnes budgétaires** et **Méthode de ventilation par défaut**, qui s'ouvrent pour eux en lecture seule, et aucune opération. Une personne dont l'accès aux données est limité ne voit aucune de ces cartes.
 
 Les colonnes budgétaires sont Budget, Révision, Prévision, Réalisé et Atterrissage prévu. Ce sont les noms standard. Votre organisation peut les renommer, en masquer certaines et choisir une colonne par défaut dans [Colonnes budgétaires](#colonnes-budgetaires). Chaque page ci-dessous affiche les noms choisis par votre organisation.
 
@@ -216,15 +217,15 @@ Lorsque la copie comprend les montants et que la colonne de destination est gel�
 
 ---
 
-## Réinitialiser une colonne budgétaire
+## Vider une colonne budgétaire { #reinitialiser-une-colonne-budgetaire }
 
-Effacez toutes les données d'une colonne budgétaire spécifique pour une année donnée. C'est une opération destructive : utilisez-la lorsque vous devez repartir de zéro.
+Effacez toutes les données d'une colonne budgétaire pour une année donnée. C'est une opération destructive : utilisez-la lorsque vous devez repartir de zéro.
 
-Les onglets **Tout** / **OPEX** / **CAPEX** en haut de la page choisissent les lignes budgétaires à effacer. **Tout**, l'onglet par défaut, efface ensemble les lignes OPEX et CAPEX. La réinitialisation met à zéro les douze mois de la colonne et retire sa période, ainsi que ses lignes lorsque la colonne était construite à partir de la quantité et du prix. Dans l'onglet Budget, la colonne reçoit alors une nouvelle suggestion à partir des dates de la ligne budgétaire. La réinitialisation couvre toutes les lignes budgétaires, y compris celles dont la fin de validité est passée. Elle se fait en tout ou rien : si une ligne budgétaire échoue, rien n'est effacé.
+**Type de ligne** (**Tout** / **OPEX** / **CAPEX**) choisit les lignes budgétaires à vider. **Tout**, le choix par défaut, vide ensemble les lignes OPEX et CAPEX. Vider la colonne met à zéro les douze mois de la colonne et retire sa période, ainsi que ses lignes lorsque la colonne était construite à partir de la quantité et du prix. Dans l'onglet Budget, la colonne reçoit alors une nouvelle suggestion à partir des dates de la ligne budgétaire. L'opération couvre toutes les lignes budgétaires, y compris celles dont la fin de validité est passée. Elle se fait en tout ou rien : si une ligne budgétaire échoue, rien n'est vidé.
 
-Nécessite le niveau Admin sur Budget (`budget:admin`).
+Nécessite le niveau Admin sur Budget (`budget:admin`). Les autres utilisateurs ne peuvent pas ouvrir la page.
 
-Une colonne dont les lignes budgétaires ne portent aucun montant peut quand même être réinitialisée : la réinitialisation retire alors seulement les périodes de répartition, et la confirmation l'indique.
+Une colonne dont les lignes budgétaires ne portent aucun montant peut quand même être vidée : l'opération retire alors seulement les périodes de répartition, et la page comme la confirmation l'indiquent.
 
 ### Quand l'utiliser
 
@@ -236,35 +237,42 @@ Une colonne dont les lignes budgétaires ne portent aucun montant peut quand mê
 
 | Champ | Description |
 |-------|-------------|
+| **Type de ligne** | **Tout**, **OPEX** ou **CAPEX** |
 | **Année** | L'année fiscale à nettoyer (plage : année en cours moins un à année en cours plus cinq) |
-| **Colonne budgétaire** | Toute colonne affichée, Prévision comprise quand elle est affichée. Aucune colonne n'est présélectionnée : le champ indique **Choisir une colonne** et **Effacer la colonne** reste désactivé tant que vous n'en avez pas choisi une |
+| **Colonne budgétaire** | Toute colonne affichée, Prévision comprise quand elle est affichée. Aucune colonne n'est présélectionnée : le champ indique **Choisir une colonne** et **Vider la colonne** reste désactivé tant que vous n'en avez pas choisi une |
 
 ### Aperçu
 
-Tant que vous n'avez pas choisi de colonne, une ligne remplace la grille : « Choisissez une colonne pour voir les montants qu'elle contient. » Une fois la colonne choisie, une grille montre chaque ligne du type choisi et sa valeur actuelle dans cette colonne. Le nom de la ligne l'ouvre dans un nouvel onglet, et dans l'onglet **Tout** une colonne **Type de ligne** indique **OPEX** ou **CAPEX**. Les montants qui seront effacés apparaissent en graisse moyenne ; les valeurs vides sont atténuées. Sous la grille, trois statistiques apparaissent :
+Tant que vous n'avez pas choisi de colonne, une ligne indique : « Choisissez une colonne pour voir les montants qu'elle contient. » Une fois la colonne choisie, la page affiche trois chiffres :
 
-- **Total des lignes**
-- **Lignes avec un total non nul**
-- **Valeur totale actuelle**
+- **Lignes**
+- **Lignes avec un montant**
+- **Valeur totale**
 
-**Exporter le tableau** (icône de téléchargement) télécharge la grille dans un fichier CSV ou Excel : les lignes budgétaires du type choisi et leur valeur actuelle dans la colonne choisie.
+En dessous, les cinq lignes budgétaires qui portent les plus gros montants de la colonne, un montant négatif étant classé selon sa taille, puis « et N autres lignes ». Dans l'onglet **Tout**, une colonne **Type de ligne** indique **OPEX** ou **CAPEX**. Une phrase dit ensuite ce que l'opération supprime, pour combien de lignes, et qu'elle est irréversible.
+
+**Voir les N lignes** ouvre sous le panneau une grille de toutes les lignes du type choisi, avec leur valeur actuelle dans la colonne. La grille se trie sur n'importe quelle colonne, et le nom de la ligne l'ouvre dans un nouvel onglet. Les montants qui seront effacés apparaissent en graisse moyenne ; les valeurs vides sont atténuées. **Masquer les lignes** la referme.
+
+**Exporter le tableau** (icône de téléchargement, à côté des options) télécharge toutes les lignes budgétaires et leur valeur actuelle dans la colonne choisie, dans un fichier CSV ou Excel. L'export est inscrit au journal d'audit.
+
+Quand la colonne ne porte aucun montant, une phrase le dit à la place des chiffres, et **Voir les N lignes** ouvre quand même la grille.
 
 ### Confirmation
 
-Cliquer sur **Effacer la colonne** ouvre une boîte de dialogue de confirmation qui affiche :
+Cliquer sur **Vider la colonne** ouvre une confirmation qui demande « Vider la colonne Budget de 2026 ? » et affiche :
 
-- La colonne et l'année en cours de réinitialisation
-- Le nombre de lignes budgétaires affectées
-- La valeur totale en cours de suppression
-- Un avertissement clair que cette action ne peut pas être annulée
+- Le nombre de lignes budgétaires affectées et la valeur totale en cours de suppression
+- Que les lignes et leurs autres colonnes sont conservées
+- Que cette action est irréversible
 
-Vous devez cliquer sur **Effacer la colonne** dans la boîte de dialogue pour continuer, ou **Annuler** pour abandonner.
+Cliquez sur **Vider la colonne** dans la boîte de dialogue pour continuer, ou sur **Annuler** pour abandonner. Le résultat s'affiche à côté du bouton, par exemple « Colonne vidée sur 45 lignes. »
 
 ### Dispositifs de sécurité
 
-- Le bouton **Effacer la colonne** reste disponible lorsqu'aucune ligne ne porte de montant, afin de pouvoir retirer les périodes de répartition
-- Aucune colonne n'est présélectionnée : vous choisissez toujours la colonne à effacer
-- Les colonnes gelées ne peuvent pas être réinitialisées. Dégelez-les d'abord. Dans l'onglet **Tout**, lorsque la colonne n'est gelée que pour un type, le message le nomme, par exemple « La colonne Budget de 2026 est gelée en CAPEX. Dégelez-la avant d'effacer les données, ou effacez seulement l'autre type. »
+- Le bouton **Vider la colonne** reste disponible lorsqu'aucune ligne ne porte de montant, afin de pouvoir retirer les périodes de répartition
+- Aucune colonne n'est présélectionnée : vous choisissez toujours la colonne à vider
+- Les colonnes gelées ne peuvent pas être vidées. Dégelez-les d'abord. Dans l'onglet **Tout**, lorsque la colonne n'est gelée que pour un type, le message le nomme, par exemple « La colonne Budget de 2026 est gelée en CAPEX. Dégelez-la avant de la vider, ou videz seulement l'autre type. »
+- Pendant qu'une autre opération budgétaire s'exécute, vider la colonne est refusé et le message à côté du bouton le dit
 - La boîte de dialogue de confirmation nécessite un acquittement explicite
 
 ---
@@ -285,7 +293,7 @@ Définissez la méthode que les lignes OPEX et CAPEX suivent lorsqu'elles resten
 | Champ | Description |
 |-------|-------------|
 | **Exercice** | L'année à laquelle le réglage s'applique (plage : année en cours moins un à année en cours plus cinq) |
-| **Sociétés** | **Toutes les sociétés actives** (par défaut) : le coût est réparti sur toutes les sociétés actives pour l'année. **Sociétés sélectionnées** : la ventilation est restreinte aux sociétés que vous choisissez |
+| **Périmètre des sociétés** | **Toutes les sociétés actives** (par défaut) : le coût est réparti sur toutes les sociétés actives pour l'année. **Sociétés sélectionnées** : la ventilation est restreinte aux sociétés que vous choisissez dans **Sociétés** |
 | **Méthode par défaut** | L'inducteur qui pondère les sociétés : Effectif, Utilisateurs IT ou Chiffre d'affaires |
 
 ### Comment ça fonctionne
@@ -293,8 +301,9 @@ Définissez la méthode que les lignes OPEX et CAPEX suivent lorsqu'elles resten
 1. **Sélectionnez une année**
 2. **Choisissez le périmètre de sociétés** : *Toutes les sociétés actives*, ou *Sociétés sélectionnées* puis les sociétés elles-mêmes
 3. **Choisissez l'inducteur** qui pondère les sociétés (Effectif, Utilisateurs IT ou Chiffre d'affaires)
-4. Chaque modification est enregistrée immédiatement, il n'y a pas de bouton Enregistrer
-5. Pour revenir au standard, cliquez sur **Revenir à la méthode standard** (affiché uniquement tant qu'une valeur par défaut personnalisée est configurée)
+4. Chaque modification s'enregistre seule : un choix dès que vous le faites, les sociétés quand leur liste se ferme. **Enregistrement…** puis **Enregistré** s'affichent à côté du titre. Il n'y a pas de bouton Enregistrer. L'exercice ne peut pas être changé pendant l'enregistrement d'une modification
+5. Une modification que le serveur refuse est annulée aussitôt : le champ affiche de nouveau la valeur enregistrée, avec le motif en dessous jusqu'à votre prochaine modification, et **Non enregistré** s'affiche à côté du titre. Quand le serveur est occupé, votre choix reste à l'écran et **Enregistrement…** s'affiche pendant qu'il est renvoyé. S'il ne peut toujours pas être enregistré, **Non enregistré** s'affiche avec un message, et la modification est renvoyée avec votre modification suivante
+6. Pour revenir au standard, cliquez sur **Rétablir la ventilation par défaut** à côté du titre (affiché uniquement tant qu'une valeur par défaut personnalisée est configurée)
 
 ### Sociétés sélectionnées
 
@@ -320,7 +329,9 @@ La valeur par défaut est résolue à chaque affichage des ventilations : la mod
 
 ### Autorisations
 
-Modifier la méthode par défaut nécessite `budget_ops:admin`. La carte est masquée pour les autres utilisateurs.
+Modifier la méthode par défaut nécessite `budget_ops:admin`. Lecteur budget et Membre budget, qui lisent l'administration budgétaire (`budget_ops:reader`), ouvrent la page en lecture seule : les mêmes champs, qu'ils ne peuvent pas modifier, et pas de bouton **Rétablir la ventilation par défaut**. Ils peuvent toujours choisir l'exercice à consulter. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
+
+Chaque modification inscrit sa propre entrée au journal d'audit.
 
 ---
 
@@ -359,11 +370,15 @@ Par défaut, Budget, Révision, Réalisé et Atterrissage prévu sont affichées
 
 ### Enregistrement
 
-Cliquez sur **Enregistrer** pour appliquer vos modifications. Le bouton reste désactivé tant que rien n'a changé ou qu'un nom n'est pas valide. **Réinitialiser** annule les modifications pas encore enregistrées. Les erreurs sont expliquées sous le champ ou sous le tableau, par exemple « Au moins une colonne doit rester affichée. » ou « La colonne par défaut doit être affichée : choisissez d'abord une autre colonne par défaut. » Pour masquer la colonne par défaut actuelle, choisissez d'abord une autre colonne par défaut. Les deux modifications peuvent être enregistrées ensemble.
+Chaque modification s'enregistre seule, sans bouton Enregistrer : un nom quand vous quittez son champ ou après une courte pause dans la saisie, un interrupteur ou la colonne par défaut dès que vous le changez. **Enregistrement…** puis **Enregistré** s'affichent à côté du titre. Chaque modification inscrit sa propre entrée au journal d'audit.
+
+Une valeur qui serait refusée n'est pas enregistrée. Elle reste à l'écran avec le motif en dessous, et la valeur enregistrée auparavant reste en vigueur : par exemple « Deux colonnes ne peuvent pas porter le même nom « Budget ». » sous un nom, ou « Au moins une colonne doit rester affichée. » sous un interrupteur. Pour masquer la colonne par défaut actuelle, choisissez d'abord une autre colonne par défaut, puis masquez-la : masquer la colonne par défaut est refusé avec « La colonne par défaut doit être affichée : choisissez d'abord une autre colonne par défaut. », et l'interrupteur revient à sa position enregistrée à votre modification suivante.
+
+Une modification que le serveur refuse est annulée aussitôt : le nom ou l'interrupteur affiche de nouveau sa valeur enregistrée, avec le motif donné par le serveur en dessous jusqu'à votre prochaine modification de ce champ, et **Non enregistré** s'affiche à côté du titre. Vos autres modifications restent enregistrées. Quand le serveur est occupé, la modification reste à l'écran et **Enregistrement…** s'affiche pendant qu'elle est renvoyée. Si elle ne peut toujours pas être enregistrée, **Non enregistré** s'affiche avec un message sous le tableau, et la modification est renvoyée avec votre modification suivante. Quitter la page juste après une modification refusée vous laisse sur la page, pour que vous puissiez lire le motif. Quitter la page pendant qu'une modification attend encore un serveur occupé demande d'abord confirmation.
 
 ### Autorisations
 
-Modifier les réglages nécessite les droits admin sur l'administration budgétaire (`budget_ops:admin`). La carte est masquée pour les autres utilisateurs.
+Modifier les réglages nécessite les droits admin sur l'administration budgétaire (`budget_ops:admin`). Lecteur budget et Membre budget, qui lisent l'administration budgétaire (`budget_ops:reader`), ouvrent la page en lecture seule : le même tableau, qu'ils ne peuvent pas modifier. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
 
 Si les réglages ne peuvent pas être chargés, la page affiche une seule ligne, « Les réglages des colonnes n'ont pas pu être chargés. », et aucun contrôle.
 
