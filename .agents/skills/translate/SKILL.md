@@ -26,6 +26,9 @@ Generate and maintain French, German, and Spanish translations from the English 
 - Source: `backend/src/i18n/email-locales/en.ts`
 - Targets: `backend/src/i18n/email-locales/{fr,de,es}.ts`
 
+### Environment variable registry
+- `backend/src/config/env-registry.labels.json` holds `en`, `fr`, `de`, `es` side by side: fill the missing languages, then run `npm run env:generate` in `backend/`, which writes the generated block of `doc/help/docs/{fr,de,es}/on-premise/configuration.md` (`translate-docs` leaves that block alone).
+
 ### Translation state
 - Manifest: `translation-state/i18n-source-hashes.json`
 
