@@ -206,8 +206,8 @@ describe('AllSettingsPage', () => {
     const search = screen.getByRole('textbox', { name: 'Rechercher un paramètre' });
     fireEvent.change(search, { target: { value: 'devise de reporting' } });
     expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(['Devises']);
-    fireEvent.change(search, { target: { value: 'parametres' } });
-    expect(screen.getByRole('region', { name: 'Portefeuille' })).toBeInTheDocument();
+    fireEvent.change(search, { target: { value: 'equipes' } });
+    expect(within(screen.getByRole('region', { name: 'Portefeuille' })).getAllByRole('link').map((link) => link.textContent)).toEqual(['Équipes']);
   });
 
   it('says in one line that nothing matches', () => {
