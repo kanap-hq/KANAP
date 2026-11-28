@@ -138,6 +138,124 @@ describe('FeaturesProvider: a failed read', () => {
   });
 });
 
+describe('FeaturesProvider: the deployment mode', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  function ModeProbe() {
+    const { isLoading, isSingleTenant } = useFeatures();
+    return <div data-testid="mode">{isLoading ? 'loading' : String(isSingleTenant)}</div>;
+  }
+
+  it.each([['single-tenant', 'true'], ['multi-tenant', 'false']])('reads isSingleTenant from a %s server', async (mode, expected) => {
+    vi.stubGlobal('fetch', vi.fn(() => ok({ deploymentMode: mode, features: {}, version: '1' })));
+    render(<FeaturesProvider><ModeProbe /></FeaturesProvider>);
+    await waitFor(() => expect(screen.getByTestId('mode')).toHaveTextContent(expected));
+  });
+
+  it('is false outside the provider', () => {
+    render(<ModeProbe />);
+    expect(screen.getByTestId('mode')).toHaveTextContent('loading');
+    function Outside() {
+      return <div data-testid="outside">{String(useFeatures().isSingleTenant)}</div>;
+    }
+    render(<Outside />);
+    expect(screen.getByTestId('outside')).toHaveTextContent('false');
+  });
+});
+
+describe('FeaturesProvider: refresh', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const response = (deploymentMode: string, vulnerabilityFeed: boolean) => ({
+    ok: true,
+    json: async () => ({ deploymentMode, features: { vulnerabilityFeed }, version: '1' }),
+  });
+
+  type Api = ReturnType<typeof useFeatures>;
+  function mount(fetchMock: ReturnType<typeof vi.fn>) {
+    vi.stubGlobal('fetch', fetchMock);
+    const seen: string[] = [];
+    const refreshes = new Set<Api['refresh']>();
+    const api: { current: Api | null } = { current: null };
+    function RefreshProbe() {
+      const features = useFeatures();
+      api.current = features;
+      refreshes.add(features.refresh);
+      const shown = features.isLoading ? 'loading' : `${features.config.deploymentMode}:${String(features.config.features.vulnerabilityFeed)}`;
+      seen.push(shown);
+      return <div data-testid="refresh">{shown}</div>;
+    }
+    render(<FeaturesProvider><RefreshProbe /></FeaturesProvider>);
+    return { seen, refreshes, api };
+  }
+
+  it('replaces the configuration with a new read, without loading again', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response('multi-tenant', false))
+      .mockResolvedValueOnce(response('single-tenant', true));
+    const { seen, api, refreshes } = mount(fetchMock);
+    await waitFor(() => expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:false'));
+    const loadedAt = seen.length;
+
+    let result: boolean | undefined;
+    await act(async () => { result = await api.current!.refresh(); });
+
+    expect(result).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('refresh')).toHaveTextContent('single-tenant:true');
+    expect(api.current!.isSingleTenant).toBe(true);
+    expect(seen.slice(loadedAt)).not.toContain('loading');
+    // One function for the life of the provider: an effect that depends on it does not loop.
+    expect(refreshes.size).toBe(1);
+  });
+
+  it('keeps the configuration it had when the read fails, and says so', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response('multi-tenant', true))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ ok: false, status: 502 });
+    const { api } = mount(fetchMock);
+    await waitFor(() => expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:true'));
+
+    let first: boolean | undefined;
+    let second: boolean | undefined;
+    await act(async () => { first = await api.current!.refresh(); });
+    await act(async () => { second = await api.current!.refresh(); });
+
+    expect(first).toBe(false);
+    expect(second).toBe(false);
+    expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:true');
+    expect(api.current!.isLoading).toBe(false);
+  });
+
+  it('makes one read for two calls at the same time', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(response('multi-tenant', false))
+      .mockImplementationOnce(() => new Promise((resolve) => { answer = resolve; }));
+    const { api } = mount(fetchMock);
+    await waitFor(() => expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:false'));
+
+    let results: boolean[] = [];
+    await act(async () => {
+      const both = Promise.all([api.current!.refresh(), api.current!.refresh()]);
+      answer(response('multi-tenant', true));
+      results = await both;
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(results).toEqual([true, true]);
+    expect(screen.getByTestId('refresh')).toHaveTextContent('multi-tenant:true');
+  });
+});
+
 describe('FeaturesProvider: an effect torn down before its read answers', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

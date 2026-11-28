@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 export type FeaturesConfig = {
   deploymentMode: 'single-tenant' | 'multi-tenant';
@@ -68,13 +68,46 @@ function normalizeFeaturesConfig(config: FeaturesConfigResponse | null | undefin
   };
 }
 
-const FeaturesContext = createContext<{ config: FeaturesConfig; isLoading: boolean }>({
+export type FeaturesContextValue = {
+  config: FeaturesConfig;
+  /** True until the server has answered once; never true again afterwards. */
+  isLoading: boolean;
+  isSingleTenant: boolean;
+  /**
+   * Reads `/config/public` again and replaces the configuration. Resolves to true once replaced,
+   * to false when the read failed: the configuration stays as it was. Calls made while a read
+   * runs share it. The same function for the life of the provider.
+   */
+  refresh: () => Promise<boolean>;
+};
+
+const FeaturesContext = createContext<FeaturesContextValue>({
   config: CLOUD_DEFAULTS,
   isLoading: true,
+  isSingleTenant: CLOUD_DEFAULTS.deploymentMode === 'single-tenant',
+  refresh: async () => false,
 });
 
 /** A read that does not answer within this delay is abandoned and retried. */
 const REQUEST_TIMEOUT_MS = 5000;
+
+function configUrl(): string {
+  const apiBase = (import.meta.env.VITE_API_URL as string | undefined) || '/api';
+  return `${apiBase.replace(/\/$/, '')}/config/public`;
+}
+
+/** One read of `/config/public`, abandoned after REQUEST_TIMEOUT_MS or when `controller` aborts. */
+async function readPublicConfig(controller: AbortController): Promise<FeaturesConfig> {
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(configUrl(), { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data: FeaturesConfigResponse = await res.json();
+    return normalizeFeaturesConfig(data);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 /** Delay before the first retry, doubled after each failure up to RETRY_MAX_MS. */
 const RETRY_BASE_MS = 1000;
 const RETRY_MAX_MS = 30000;
@@ -95,9 +128,6 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
     let inFlight: AbortController | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const apiBase = (import.meta.env.VITE_API_URL as string | undefined) || '/api';
-    const base = apiBase.replace(/\/$/, '');
-
     const stopListening = () => {
       window.removeEventListener('focus', retryNow);
       window.removeEventListener('online', retryNow);
@@ -109,15 +139,12 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
       retryTimer = undefined;
       const controller = new AbortController();
       inFlight = controller;
-      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
       try {
-        const res = await fetch(`${base}/config/public`, { signal: controller.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: FeaturesConfigResponse = await res.json();
+        const next = await readPublicConfig(controller);
         if (cancelled) return;
         loaded = true;
         stopListening();
-        setConfig(normalizeFeaturesConfig(data));
+        setConfig(next);
         setIsLoading(false);
       } catch (err) {
         if (cancelled) return;
@@ -126,7 +153,6 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
         console.warn(`[Features] Failed to fetch config, retrying in ${delay / 1000} s:`, (err as Error)?.message);
         retryTimer = setTimeout(() => void load(), delay);
       } finally {
-        clearTimeout(timeout);
         if (inFlight === controller) inFlight = null;
       }
     };
@@ -148,8 +174,36 @@ export function FeaturesProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // The read a refresh is waiting for: a second call made meanwhile waits for the same one.
+  const refreshing = useRef<Promise<boolean> | null>(null);
+  const refresh = useCallback((): Promise<boolean> => {
+    if (refreshing.current) return refreshing.current;
+    const read = readPublicConfig(new AbortController())
+      .then((next) => {
+        setConfig(next);
+        setIsLoading(false);
+        return true;
+      })
+      .catch((err) => {
+        console.warn('[Features] Failed to refresh config:', (err as Error)?.message);
+        return false;
+      })
+      .finally(() => {
+        refreshing.current = null;
+      });
+    refreshing.current = read;
+    return read;
+  }, []);
+
+  const value = useMemo<FeaturesContextValue>(() => ({
+    config,
+    isLoading,
+    isSingleTenant: config.deploymentMode === 'single-tenant',
+    refresh,
+  }), [config, isLoading, refresh]);
+
   return (
-    <FeaturesContext.Provider value={{ config, isLoading }}>
+    <FeaturesContext.Provider value={value}>
       {children}
     </FeaturesContext.Provider>
   );
