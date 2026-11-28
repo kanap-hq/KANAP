@@ -663,7 +663,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   },
   {
     // Tenant branding (organization:admin): a tenant setting (spec §2.7). Its writes are reserved;
-    // its read is left to an organisation reader in limited access (lot A1, P19).
+    // its read is left to an organisation reader in limited access.
     file: 'admin/branding/admin-branding.controller.ts',
     controller: 'AdminBrandingController',
     reserved: ['deleteLogo', 'reset', 'updateSettings', 'uploadLogo'],

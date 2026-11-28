@@ -40,7 +40,7 @@ async function testManagerNeverHidesMemberWithinRole() {
   }
 }
 
-// `settings` and `organization` have two levels, reader and admin (lot A1): a contributor or member
+// `settings` and `organization` have two levels, reader and admin: a contributor or member
 // row reads as reader, so a role seeded with `settings: member` keeps exactly what it could do and
 // shows "Reader". `admin` stays; `manager`, which opens nothing, is not raised to reader.
 async function testReaderOrAdminRights() {

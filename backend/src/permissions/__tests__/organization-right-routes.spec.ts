@@ -10,7 +10,7 @@ import { EntraController } from '../../auth/entra.controller';
 import { Features } from '../../config/features';
 import { RESERVED_TO_UNSCOPED_DATA_ACCESS_KEY } from '../../data-access/reserved-operations';
 
-// The `organization` right (lot A1): the 14 routes of Admin › Branding, Admin › Audit log, Admin ›
+// The `organization` right: the 14 routes of Admin › Branding, Admin › Audit log, Admin ›
 // Authentication and the Microsoft connection, through the real PermissionGuard and the real route
 // metadata. The reads need organization:reader, the writes of Branding organization:admin. The
 // routes that lead to writing persons need organization:admin AND users:admin, and access to all

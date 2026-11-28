@@ -230,7 +230,7 @@ describe('RolesPage levels above own rights', () => {
     expect(option('admin')).not.toHaveAttribute('aria-disabled', 'true');
   });
 
-  // Organization and the IT landscape settings have two levels: read or administer (lot A1).
+  // Organization and the IT landscape settings have two levels: read or administer.
   it('offers reader and admin only for organization and the IT landscape settings', async () => {
     renderPage();
     for (const resource of ['organization', 'settings']) {
