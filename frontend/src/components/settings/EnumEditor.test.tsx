@@ -113,6 +113,45 @@ describe('EnumEditor', () => {
     expect(lastHow(onChange)).toBe('type');
   });
 
+  it('gives a value back its shipped base name when its shipped French name is typed again', async () => {
+    await act(async () => { await i18n.changeLanguage('fr'); });
+    const row = { code: 'virtual_machine', label: 'VM maison', deprecated: false, translations: { de: { label: 'VM' } } };
+    const { onChange } = renderEditor({ items: [row], defaults: catalogDefaults('serverKinds'), usageList: 'serverKinds' });
+    const name = screen.getByRole('textbox', { name: tc('enumEditor.name') });
+    expect(name).toHaveValue('VM maison');
+    fireEvent.change(name, { target: { value: 'Machine virtuelle' } });
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(lastRows(onChange)[0]).toMatchObject({ code: 'virtual_machine', label: 'Virtual Machine', translations: { de: { label: 'VM' } } });
+    expect(name).toHaveValue('Machine virtuelle');
+  });
+
+  it('keeps the shipped base name when the English name shown is typed again', async () => {
+    const row = { code: 'virtual_machine', label: 'Virtual Machine', deprecated: false };
+    const { onChange } = renderEditor({ items: [row], defaults: catalogDefaults('serverKinds'), usageList: 'serverKinds' });
+    const name = screen.getByRole('textbox', { name: tc('enumEditor.name') });
+    expect(name).toHaveValue('Virtual machine');
+    fireEvent.change(name, { target: { value: 'Virtual machin' } });
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
+    fireEvent.change(name, { target: { value: 'Virtual machine' } });
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(2));
+    expect(lastRows(onChange)[0].label).toBe('Virtual Machine');
+    expect(name).toHaveValue('Virtual machine');
+  });
+
+  it('sends the row as stored when a letter is typed and erased', async () => {
+    await act(async () => { await i18n.changeLanguage('fr'); });
+    const row = { code: 'virtual_machine', label: 'Virtual Machine', deprecated: false };
+    const { onChange } = renderEditor({ items: [row], defaults: catalogDefaults('serverKinds'), usageList: 'serverKinds' });
+    const name = screen.getByRole('textbox', { name: tc('enumEditor.name') });
+    fireEvent.change(name, { target: { value: 'Machine virtuelleX' } });
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
+    expect(lastRows(onChange)[0].label).toBe('Machine virtuelleX');
+    fireEvent.change(name, { target: { value: 'Machine virtuelle' } });
+    await waitFor(() => expect(onChange).toHaveBeenCalledTimes(2));
+    const { localId: _localId, ...sent } = lastRows(onChange)[0];
+    expect(sent).toEqual(row);
+  });
+
   it('flags an added value named like the shipped translation of another one', async () => {
     await act(async () => { await i18n.changeLanguage('fr'); });
     renderEditor({ items: [...segments, { code: '', label: 'Invités', deprecated: false }], defaults: catalogDefaults('networkSegments') });

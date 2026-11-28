@@ -122,15 +122,30 @@ export function shownCatalogName(item: EnumItem, locale: CatalogLocale, defaults
   return localizeCatalogItem(item, locale, defaults).label;
 }
 
-/** A retyped name: it is the base name now, and the person's own translation of the name goes. */
-export function renamedCatalogItem<T extends EnumItem>(item: T, text: string, locale: CatalogLocale): Partial<T> {
+/**
+ * The base name behind a typed name: the shipped base name when the text is the name Kadratis shows
+ * for this shipped value in `locale` (its shipped translation, or that of a former shipped name), so
+ * the value keeps its shipped translations in the other languages; otherwise the text itself.
+ */
+function baseNameOf(code: string, text: string, locale: CatalogLocale, defaults?: CatalogDefaults): string {
+  const source = defaults?.source[code];
+  if (source && defaults?.translated(locale, code)?.label === text) return source.label;
+  return defaults?.former?.[code]?.find((entry) => entry[locale] === text)?.source ?? text;
+}
+
+/**
+ * A retyped name: it is the base name now, and the person's own translation of the name goes. The
+ * name Kadratis shows for a shipped value in the person's language gives back its shipped base name.
+ */
+export function renamedCatalogItem<T extends EnumItem>(item: T, text: string, locale: CatalogLocale, defaults?: CatalogDefaults): Partial<T> {
+  const label = baseNameOf(item.code, text, locale, defaults);
   const own = item.translations?.[locale];
-  if (!own?.label) return { label: text } as Partial<T>;
+  if (!own?.label) return { label } as Partial<T>;
   const { label: _dropped, ...rest } = own;
   const translations: CatalogTranslations = { ...item.translations };
   if (Object.keys(rest).length) translations[locale] = rest;
   else delete translations[locale];
-  return { label: text, translations: Object.keys(translations).length ? translations : undefined } as Partial<T>;
+  return { label, translations: Object.keys(translations).length ? translations : undefined } as Partial<T>;
 }
 
 const hasTypedTranslation = (item: EnumItem) => Object.values(item.translations ?? {}).some((entry) => !!entry?.label || !!entry?.description);
@@ -430,7 +445,7 @@ export function EnumEditor<T extends EnumItem>({
               const issue = issueOf(typedItem);
               const cell: EnumEditorCell = {
                 shownName: shown(typedItem),
-                rename: (text) => handleUpdate(typedItem.localId, renamedCatalogItem(typedItem, text, locale), 'type'),
+                rename: (text) => handleUpdate(typedItem.localId, renamedCatalogItem(typedItem, text, locale, defaults), 'type'),
                 builtIn: isLocked,
               };
 
