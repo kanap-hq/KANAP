@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
-import { GlpiLastTest1856340000000 } from '../../migrations/1856340000000-glpi-last-test';
+import { GlpiLastTest1856350000000 } from '../../migrations/1856350000000-glpi-last-test';
 import { AiSettingsService } from '../ai-settings.service';
 
 // The last GLPI test lives in `ai_settings.glpi_last_test`. The migration reruns. A test is
@@ -63,7 +63,7 @@ async function main() {
   await dataSource.initialize();
   try {
     await inTransaction('the migration reruns and leaves every workspace without a test', async (runner) => {
-      const migration = new GlpiLastTest1856340000000();
+      const migration = new GlpiLastTest1856350000000();
       await migration.up(runner);
       await migration.up(runner);
       const columns = await runner.query(
