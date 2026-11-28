@@ -1,8 +1,8 @@
 import { AuditService } from '../audit/audit.service';
 import { ClassificationCatalog, ClassificationLevel, CLASSIFICATION_CATALOG_KEYS, OBSOLETE_CATALOG_METADATA_KEYS, catalogFromMetadata, catalogToMetadata, validateClassificationCatalog } from './classification-catalog';
-import { CatalogTranslations, normalizeTranslations, prepareCatalogListForWrite } from './catalog-codes';
+import { CatalogTranslations, catalogAliases, normalizeAlias, normalizeTranslations, prepareCatalogListForWrite } from './catalog-codes';
 import { catalogValueRefusal, findCatalogOption, offeredCatalogList, offeredCatalogOptions, resolveOfferedCatalogCode } from './catalog-resolve';
-import { CATALOG_USAGE, CatalogUsageItem, UsageKey, countCatalogUsage } from './catalog-usage';
+import { CATALOG_USAGE, CatalogUsageItem, UsageKey, countCatalogUsage, subnetUsageKey, usedCatalogCodes } from './catalog-usage';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { englishList, RecordInUseException } from '../common/record-in-use';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -1358,10 +1358,28 @@ export class ItOpsSettingsService {
       // Saving the catalog never moves an application: levels are referenced by stable code.
       Object.assign(next, this.prepareClassificationCatalog(current, patch));
     }
-    await this.assertCatalogUsage(tenantId, current, next, patch, opts!.manager!);
+    await this.assertCatalogUsage(tenantId, current, next, Object.keys(patch), opts!.manager!);
+    return this.persistSettings(tenant, current, next, opts);
+  }
+
+  /** Stores every list of `next` in the tenant's metadata, other keys kept, with one audit entry. */
+  private async persistSettings(tenant: Tenant, current: ItOpsSettings, next: ItOpsSettings, opts?: { manager?: EntityManager; userId?: string | null }): Promise<ItOpsSettings> {
     const meta: any = tenant.metadata || {};
-    const itOps: any = {
-      ...(meta.it_ops || {}),
+    const itOps: any = { ...(meta.it_ops || {}), ...ItOpsSettingsService.metadataOf(next) };
+    for (const key of OBSOLETE_CATALOG_METADATA_KEYS) delete itOps[key];
+    // The spread above keeps a key the migration already removed. A later save must not put it back.
+    delete itOps.operating_systems;
+    meta.it_ops = itOps;
+    tenant.metadata = meta;
+
+    await this.repo(opts?.manager).save(tenant);
+    await this.audit.log({ table: 'tenants', recordId: tenant.id, action: 'update', before: current, after: next, userId: opts?.userId }, opts);
+    return next;
+  }
+
+  /** The stored form of the lists: the `metadata.it_ops` keys they own. */
+  private static metadataOf(next: ItOpsSettings): Record<string, unknown> {
+    return {
       ...catalogToMetadata(next),
       application_categories: next.applicationCategories,
       data_classes: next.dataClasses,
@@ -1388,15 +1406,6 @@ export class ItOpsSettingsService {
       technology_families: next.technologyFamilies,
       admin_zones: next.adminZones,
     };
-    for (const key of OBSOLETE_CATALOG_METADATA_KEYS) delete itOps[key];
-    // The spread above keeps a key the migration already removed. A later save must not put it back.
-    delete itOps.operating_systems;
-    meta.it_ops = itOps;
-    tenant.metadata = meta;
-
-    await repo.save(tenant);
-    await this.audit.log({ table: 'tenants', recordId: tenantId, action: 'update', before: current, after: next, userId: opts?.userId }, opts);
-    return next;
   }
 
   async getClassificationCatalog(tenantId: string, opts?: { manager?: EntityManager }): Promise<ClassificationCatalog> {
@@ -1470,17 +1479,23 @@ export class ItOpsSettingsService {
   /**
    * A value removed from a list must not be referenced any more; "no longer offered" is the alternative.
    * The settings page checks each removal first (`settings/usage`); this guard answers a save that
-   * removes a value used meanwhile, or sent by another client.
+   * removes a value used meanwhile, or sent by another client. `grouped` (the restore): one read of
+   * the codes in use per list that loses values, with the network zones of the subnets of `next`;
+   * a value found there is then counted for the refusal.
    */
-  private async assertCatalogUsage(tenantId: string, current: ItOpsSettings, next: ItOpsSettings, patch: Partial<ItOpsSettings>, manager: EntityManager): Promise<void> {
+  private async assertCatalogUsage(tenantId: string, current: ItOpsSettings, next: ItOpsSettings, lists: string[], manager: EntityManager, opts?: { grouped?: boolean }): Promise<void> {
+    const checked = new Set(lists);
     for (const [key, meta] of Object.entries(ItOpsSettingsService.LIST_META)) {
-      if ((patch as Record<string, unknown>)[key] === undefined || !(key in CATALOG_USAGE)) continue;
+      if (!checked.has(key) || !(key in CATALOG_USAGE)) continue;
       const before = ((current as any)[key] ?? []) as Array<Record<string, any>>;
       const after = ((next as any)[key] ?? []) as Array<Record<string, any>>;
-      const identity = (row: Record<string, any>) => meta.subnets ? `${row.location_id}:${row.cidr}` : String(row.code);
+      const identity = (row: Record<string, any>) => meta.subnets ? subnetUsageKey(row as SubnetOption) : String(row.code);
       const kept = new Set(after.map(identity));
-      for (const row of before) {
-        if (kept.has(identity(row))) continue;
+      const removed = before.filter((row) => !kept.has(identity(row)));
+      if (!removed.length) continue;
+      const used = opts?.grouped ? await usedCatalogCodes(manager, tenantId, key, next.subnets) : null;
+      for (const row of removed) {
+        if (used && !used.has(identity(row))) continue;
         const usageKey: UsageKey = meta.subnets ? { location_id: row.location_id, cidr: row.cidr } : { code: row.code };
         const { total, usage } = await this.getCatalogUsage(tenantId, key, usageKey, { manager: manager });
         if (!total) continue;
@@ -1490,10 +1505,56 @@ export class ItOpsSettingsService {
     }
   }
 
+  /**
+   * Restores the default lists (decision P6), in one transaction on the locked tenant row, list by
+   * list, a value known by its code (a subnet by its site and CIDR): a shipped value comes back as
+   * shipped, offered, without the translations the workspace typed, deleted or not; a value the
+   * workspace added and records use stays as stored, after the shipped values, in its former order;
+   * an added value nothing uses goes. Subnets first (all added), then the network zones of the kept
+   * subnets. Kept values are copied without the write rules they may predate, so the restore always
+   * succeeds on stored data; a shipped name that would clash with a kept value stays as it is now.
+   */
   async resetToDefaults(tenantId: string, opts?: { manager?: EntityManager; userId?: string | null }): Promise<ItOpsSettings> {
     const manager = opts?.manager ?? this.tenants.manager;
-    const defaults = await this.getMetadataSettings({ id: tenantId, metadata: {} } as Tenant, { manager });
-    return this.updateSettings(tenantId, defaults, opts);
+    return manager.transaction(async (tx) => {
+      await tx.query('SELECT id FROM tenants WHERE id = $1 FOR NO KEY UPDATE', [tenantId]);
+      const tenant = await this.repo(tx).findOne({ where: { id: tenantId } });
+      if (!tenant) throw new Error(`Tenant ${tenantId} not found`);
+      const current = await this.getMetadataSettings(tenant, { manager: tx });
+      const shipped = await this.getMetadataSettings({ id: tenantId, metadata: {} } as Tenant, { manager: tx });
+      const restored = await this.restoredLists(tx, tenantId, current, shipped);
+      // Read back as any stored list is read: a trust to a domain that went is dropped there.
+      const next = await this.getMetadataSettings({ id: tenantId, metadata: { it_ops: ItOpsSettingsService.metadataOf(restored) } } as unknown as Tenant, { manager: tx });
+      await this.assertCatalogUsage(tenantId, current, next, Object.keys(ItOpsSettingsService.LIST_META), tx, { grouped: true });
+      return this.persistSettings(tenant, current, next, { ...opts, manager: tx });
+    });
+  }
+
+  /** The lists of the restore: one read of the codes in use per list that holds an added value. */
+  private async restoredLists(manager: EntityManager, tenantId: string, current: ItOpsSettings, shipped: ItOpsSettings): Promise<ItOpsSettings> {
+    const restored: ItOpsSettings = { ...current };
+    const usedSubnets = current.subnets.length ? await usedCatalogCodes(manager, tenantId, 'subnets') : new Set<string>();
+    restored.subnets = current.subnets.filter((subnet) => usedSubnets.has(subnetUsageKey(subnet)));
+    for (const key of Object.keys(ItOpsSettingsService.LIST_META)) {
+      if (key === 'subnets') continue;
+      const shippedRows = (shipped as any)[key] as ItOpsEnumOption[];
+      const currentRows = (current as any)[key] as ItOpsEnumOption[];
+      const shippedCodes = new Set(shippedRows.map((row) => row.code));
+      const added = currentRows.some((row) => !shippedCodes.has(row.code));
+      const used = added ? await usedCatalogCodes(manager, tenantId, key, restored.subnets) : new Set<string>();
+      (restored as any)[key] = restoredList(shippedRows, currentRows, used);
+    }
+    // A kept level takes the lowest rank, a kept wave the last place: ranks and orders follow the position.
+    for (const key of CLASSIFICATION_CATALOG_KEYS) {
+      const rows = (restored as any)[key] as Array<Record<string, unknown>>;
+      (restored as any)[key] = rows.map((row, index) => {
+        const copy = { ...row };
+        delete copy.rank;
+        delete copy.order;
+        return key === 'recoveryWaves' ? { ...copy, order: index } : { ...copy, rank: rows.length - index };
+      });
+    }
+    return restored;
   }
 
   private normalizeHostingTypes(list: unknown, defaults: ItOpsEnumOption[]): ItOpsEnumOption[] {
@@ -1513,6 +1574,23 @@ export class ItOpsSettingsService {
     const extras = normalized.filter((item) => !this.lockedLifecycleCodes.has(item.code));
     return [...this.lockedLifecycleStates, ...extras];
   }
+}
+
+/**
+ * One list of the restore: the shipped rows in their order, as shipped, then the added rows found in
+ * `used`, as stored. A stored shipped value whose shipped name a kept row already answers to (its
+ * code, its name or a translated name) keeps its current name; no name is invented.
+ */
+function restoredList<T extends { code: string; label: string }>(shipped: T[], current: T[], used: Set<string>): T[] {
+  const shippedCodes = new Set(shipped.map((row) => row.code));
+  const kept = current.filter((row) => !shippedCodes.has(row.code) && used.has(row.code));
+  const keptAliases = new Set(kept.flatMap((row) => catalogAliases(row)));
+  const stored = new Map(current.map((row) => [row.code, row]));
+  const restored = shipped.map((row) => {
+    const now = stored.get(row.code);
+    return now && keptAliases.has(normalizeAlias(row.label)) ? { ...row, label: now.label } : { ...row };
+  });
+  return [...restored, ...kept];
 }
 
 /**
