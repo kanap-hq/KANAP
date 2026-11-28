@@ -107,7 +107,7 @@ export class EntraController {
   private readonly logger = new Logger(EntraController.name);
 
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'admin')
   @Post('setup/start')
   async startSetup(@Req() req: any) {
     if (req?.isPlatformHost) {
@@ -128,7 +128,7 @@ export class EntraController {
   }
 
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'admin')
   @Get('setup/start')
   async startSetupGet(@Req() req: any, @Res() res: Response) {
     const result = await this.startSetup(req);

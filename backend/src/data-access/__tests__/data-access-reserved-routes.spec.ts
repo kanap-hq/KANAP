@@ -38,6 +38,7 @@ import { ContractsController } from '../../contracts/contracts.controller';
 import { UsersController } from '../../users/users.controller';
 import { RolesController } from '../../roles/roles.controller';
 import { AuditLogsController } from '../../audit/audit-logs.controller';
+import { AdminBrandingController } from '../../admin/branding/admin-branding.controller';
 import { CompaniesController } from '../../companies/companies.controller';
 import { CostCentersController } from '../../cost-centers/cost-centers.controller';
 import { ChartOfAccountsController } from '../../accounts/chart-of-accounts.controller';
@@ -144,7 +145,7 @@ const REAL_CONTROLLERS = [
   FreezeController, BudgetColumnsController, CurrencyController, AllocationRulesController,
   MasterDataOperationsController, CompanyMetricsController, DepartmentMetricsController,
   SpendItemsController, CapexItemsController, BudgetLinesController, BudgetOperationsExportController, ContractsController,
-  UsersController, RolesController, AuditLogsController,
+  UsersController, RolesController, AuditLogsController, AdminBrandingController,
   CompaniesController, CostCentersController, ChartOfAccountsController, AnalyticsAxesController,
   AnalyticsCategoriesController, BusinessProcessesController, SuppliersController, ContactsController,
   AiAgentControlController, AiSettingsController, AiModelConfigsController, AiApiKeysController,
@@ -271,6 +272,7 @@ const RESERVED_SAMPLES: Array<[string, Method, string, boolean]> = [
   ['roles', 'PUT', `roles/${ID}/permissions`, false],
   ['audit log list', 'GET', 'audit-logs', false],
   ['audit log entry', 'GET', `audit-logs/${ID}`, false],
+  ['branding write', 'PATCH', 'admin/branding/settings', false],
   ['companies', 'POST', 'companies', false],
   ['cost centres', 'PATCH', `cost-centers/${ID}`, false],
   ['charts of accounts', 'PATCH', `chart-of-accounts/${ID}/global-default`, false],
@@ -295,6 +297,8 @@ const ALLOWED_SAMPLES: Array<[string, Method, string]> = [
   ['supplier contact link', 'POST', `suppliers/${ID}/contacts`],
   ['line update', 'PATCH', `spend-items/${ID}`],
   ['own MCP keys', 'GET', 'ai/keys'],
+  // An organisation reader in limited access reads Branding (lot A1, P19).
+  ['branding settings', 'GET', 'admin/branding/settings'],
 ];
 
 function isReservedRefusal(res: { status: number; body: any }): boolean {

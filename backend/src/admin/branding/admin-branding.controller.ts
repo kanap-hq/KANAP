@@ -73,7 +73,11 @@ class UpdateBrandingSettingsDto {
   name?: string;
 }
 
-@ReservedToUnscopedDataAccess()
+/**
+ * Admin › Branding. Reading needs `organization:reader` (the page opens read-only); every write
+ * needs `organization:admin` and is reserved to people with access to all data. The read is not
+ * reserved: it carries no budget data.
+ */
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('admin/branding')
 export class AdminBrandingController {
@@ -83,7 +87,7 @@ export class AdminBrandingController {
   ) {}
 
   @Get('settings')
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'reader')
   async getSettings(@Req() req: any) {
     const tenant = await this.getTenantFromRequest(req, req?.queryRunner?.manager);
     const branding = this.normalizeBranding(tenant.branding);
@@ -96,7 +100,8 @@ export class AdminBrandingController {
   }
 
   @Post('logo')
-  @RequireLevel('users', 'admin')
+  @ReservedToUnscopedDataAccess()
+  @RequireLevel('organization', 'admin')
   @UseInterceptors(FileInterceptor('file', inlineImageMulterOptions))
   async uploadLogo(
     @UploadedFile() file: Express.Multer.File,
@@ -146,7 +151,8 @@ export class AdminBrandingController {
   }
 
   @Delete('logo')
-  @RequireLevel('users', 'admin')
+  @ReservedToUnscopedDataAccess()
+  @RequireLevel('organization', 'admin')
   async deleteLogo(@Req() req: any, @Query('variant') variantParam?: string) {
     const { field } = LOGO_VARIANTS[parseLogoVariant(variantParam)];
     const manager = req?.queryRunner?.manager;
@@ -170,7 +176,8 @@ export class AdminBrandingController {
   }
 
   @Patch('settings')
-  @RequireLevel('users', 'admin')
+  @ReservedToUnscopedDataAccess()
+  @RequireLevel('organization', 'admin')
   async updateSettings(@Body() body: UpdateBrandingSettingsDto, @Req() req: any) {
     const manager = req?.queryRunner?.manager;
     const tenant = await this.getTenantFromRequest(req, manager);
@@ -213,7 +220,8 @@ export class AdminBrandingController {
   }
 
   @Post('reset')
-  @RequireLevel('users', 'admin')
+  @ReservedToUnscopedDataAccess()
+  @RequireLevel('organization', 'admin')
   async reset(@Req() req: any) {
     const manager = req?.queryRunner?.manager;
     const tenant = await this.getTenantFromRequest(req, manager);

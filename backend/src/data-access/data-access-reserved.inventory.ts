@@ -649,13 +649,14 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     },
   },
   {
+    // Tenant branding (organization:admin): a tenant setting (spec §2.7). Its writes are reserved;
+    // its read is left to an organisation reader in limited access (lot A1, P19).
     file: 'admin/branding/admin-branding.controller.ts',
     controller: 'AdminBrandingController',
-    reservedClass: 'tenant branding (users:admin): a tenant setting (spec §2.7)',
-    reserved: [
-        'deleteLogo', 'getSettings', 'reset', 'updateSettings', 'uploadLogo',
-    ],
-    allowed: {},
+    reserved: ['deleteLogo', 'reset', 'updateSettings', 'uploadLogo'],
+    allowed: {
+      getSettings: 'the workspace name, logos and colours (no budget data); its writes are reserved', // GET settings
+    },
   },
   {
     file: 'admin/scheduled-tasks/scheduled-tasks.controller.ts',

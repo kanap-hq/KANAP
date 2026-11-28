@@ -1,7 +1,7 @@
 import { BadRequestException, Body, ConflictException, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { PermissionGuard } from './permission.guard';
-import { RequireLevel } from './require-level.decorator';
+import { RequireAnyLevel, RequireLevel } from './require-level.decorator';
 import { TenantsService } from '../tenants/tenants.service';
 import { EntraAuthService } from './entra-auth.service';
 import { EntraDirectorySyncService } from './entra-directory-sync.service';
@@ -11,6 +11,14 @@ import { EntraDisconnectService } from './entra-disconnect.service';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
+/**
+ * The person administers the organisation: the Administrator role, or `organization:admin` (the
+ * level PermissionGuard read for the route's `@RequireLevel('organization', …)`).
+ */
+function canAdministerOrganization(req: any): boolean {
+  return req?.isAdmin === true || req?.permissionLevel === 'admin';
+}
+
 class DisconnectDto {
   /** The administrator's new password, when they have none (see EntraDisconnectService). */
   @IsOptional()
@@ -19,6 +27,11 @@ class DisconnectDto {
   password?: string;
 }
 
+/**
+ * Admin › Authentication. Reading needs `organization:reader` (the page opens read-only). The sync
+ * and the disconnect write the persons of the whole workspace: they need `organization:admin` and
+ * `users:admin` both, and access to all data.
+ */
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('admin/auth')
 export class AdminAuthController {
@@ -30,7 +43,7 @@ export class AdminAuthController {
   ) {}
 
   @Get('settings')
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'reader')
   async getSettings(@Req() req: any) {
     if (req?.isPlatformHost) {
       throw new BadRequestException('SSO is not available on the platform admin host');
@@ -61,7 +74,11 @@ export class AdminAuthController {
             disabled: directorySync?.disabled ?? null,
             removed: directorySync?.removed ?? null,
             kept_administrator: directorySync?.kept_administrator ?? null,
-            consent_url: this.entra.buildAdminConsentUrl(tenant.entra_tenant_id as string, tenant.id, req?.user?.sub),
+            // Signed in the person's name, and its return writes the workspace's connection: for
+            // organization:admin only.
+            consent_url: canAdministerOrganization(req)
+              ? this.entra.buildAdminConsentUrl(tenant.entra_tenant_id as string, tenant.id, req?.user?.sub)
+              : null,
           }
         : null,
       // What a disconnect would do to the accounts, for its confirmation.
@@ -76,7 +93,10 @@ export class AdminAuthController {
   @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   @ReservedToUnscopedDataAccess()
   @Post('directory-sync')
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'admin')
+  // A list of one entry next to `@RequireLevel`: PermissionGuard asks for both (the level and one
+  // entry of the list), so this route needs organization:admin AND users:admin.
+  @RequireAnyLevel([{ resource: 'users', level: 'admin' }])
   async runDirectorySync(@Req() req: any) {
     if (req?.isPlatformHost) {
       throw new BadRequestException('SSO is not available on the platform admin host');
@@ -109,7 +129,10 @@ export class AdminAuthController {
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @ReservedToUnscopedDataAccess()
   @Post('disconnect')
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'admin')
+  // A list of one entry next to `@RequireLevel`: PermissionGuard asks for both (the level and one
+  // entry of the list), so this route needs organization:admin AND users:admin.
+  @RequireAnyLevel([{ resource: 'users', level: 'admin' }])
   async disconnect(@Req() req: any, @Body() body: DisconnectDto) {
     if (req?.isPlatformHost) {
       throw new BadRequestException('SSO is not available on the platform admin host');
