@@ -19,6 +19,7 @@ import { InstallationSettingsController } from '../installation-settings.control
 import { InstallationSettingsService } from '../installation-settings.service';
 import { InstallationSettingsSnapshot } from '../installation-settings.snapshot';
 import { AI_INSTALLATION_DOMAIN } from '../ai-installation-settings.domain';
+import { InstallationDomain } from '../installation-settings';
 
 // The installation settings against a real database (a throwaway one: the table is shared by the
 // whole installation and the concurrent case commits):
@@ -472,6 +473,22 @@ async function testMissingKeyWarning(seeded: Seeded) {
   if (platformRows === 0) {
     assert.equal(await warn(false), null, 'nothing stored (cloud)');
     assert.equal(await warn(true), null, 'nothing stored (on-premise)');
+
+    // The secret columns come from the declarations: a secret of a new domain is read too.
+    const specDomain: InstallationDomain = {
+      name: 'spec',
+      table: 'installation_spec_settings',
+      settings: [{ key: 'spec_token', column: 'spec_token_encrypted', env: 'SPEC_TOKEN', type: 'secret', auditKey: 'spec_token_set' }],
+    };
+    await dataSource.query(`CREATE TABLE installation_spec_settings (singleton boolean NOT NULL DEFAULT true UNIQUE, spec_token_encrypted text)`);
+    try {
+      await dataSource.query(`INSERT INTO installation_spec_settings (spec_token_encrypted) VALUES ('v1:a:b:c')`);
+      const options = { singleTenant: false, tenantSlug: seeded.slug, env: {}, domains: [AI_INSTALLATION_DOMAIN, specDomain] };
+      const line = await missingEncryptionSecretWarning(dataSource, options as Parameters<typeof missingEncryptionSecretWarning>[1]);
+      assert.ok(line?.startsWith('[SECRETS] SETTINGS_ENCRYPTION_SECRET is not set'), `a secret of another domain (${String(line)})`);
+    } finally {
+      await dataSource.query(`DROP TABLE installation_spec_settings`);
+    }
   }
   await dataSource.query(`INSERT INTO installation_ai_settings (web_search_api_key_encrypted) VALUES ('v1:a:b:c')`);
   const line = await warn(false);

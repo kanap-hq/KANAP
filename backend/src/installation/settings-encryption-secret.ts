@@ -1,4 +1,6 @@
 import type { DataSource } from 'typeorm';
+import { INSTALLATION_DOMAINS } from './installation-domains';
+import type { InstallationDomain } from './installation-settings';
 
 /**
  * The key that encrypts the secrets Kadratis stores (AI provider keys, connection tokens, the
@@ -34,18 +36,27 @@ export function settingsEncryptionSecret(env: NodeJS.ProcessEnv = process.env): 
   return current ?? former;
 }
 
+/** One condition per secret setting of the installation domains: a stored cipher text. */
+function installationSecretsStored(domains: readonly InstallationDomain[]): string[] {
+  return domains.flatMap((domain) => domain.settings
+    .filter((setting) => setting.type === 'secret')
+    .map((setting) => `EXISTS (SELECT 1 FROM ${domain.table} WHERE ${setting.column} IS NOT NULL)`));
+}
+
 /**
  * Start-up warning (lead process, after the connection): the key is missing while encrypted
- * secrets are stored, so none of them can be read. Reads the installation tables in both modes;
+ * secrets are stored, so none of them can be read. Reads the installation tables in both modes
+ * (the secret settings of every installation domain, and `platform_ai_config`);
  * on-premise, also the secret tables of the single workspace, with its tenant set (in the cloud the
  * workspaces' tables are under forced row level security: a read without a tenant finds nothing).
  * Null when the key is set or nothing is stored. Never throws: a failed read is a null.
  */
 export async function missingEncryptionSecretWarning(
   dataSource: DataSource,
-  options: { singleTenant: boolean; tenantSlug?: string | null; env?: NodeJS.ProcessEnv },
+  options: { singleTenant: boolean; tenantSlug?: string | null; env?: NodeJS.ProcessEnv; domains?: readonly InstallationDomain[] },
 ): Promise<string | null> {
   const env = options.env ?? process.env;
+  const installationStored = [...installationSecretsStored(options.domains ?? INSTALLATION_DOMAINS), 'EXISTS (SELECT 1 FROM platform_ai_config)'];
   try {
     if (settingsEncryptionSecret(env) !== null) return null;
   } catch {
@@ -56,10 +67,7 @@ export async function missingEncryptionSecretWarning(
     await runner.connect();
     await runner.startTransaction();
     try {
-      const [installation] = await runner.query(`
-        SELECT EXISTS (SELECT 1 FROM installation_ai_settings WHERE web_search_api_key_encrypted IS NOT NULL)
-            OR EXISTS (SELECT 1 FROM platform_ai_config) AS stored
-      `);
+      const [installation] = await runner.query(`SELECT ${installationStored.join(' OR ')} AS stored`);
       let stored = installation?.stored === true;
       if (!stored && options.singleTenant) {
         const [tenant] = await runner.query(`SELECT id FROM tenants WHERE slug = $1 LIMIT 1`, [options.tenantSlug || 'default']);
