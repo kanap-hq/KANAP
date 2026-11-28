@@ -296,7 +296,7 @@ Rules:
 | `backend/src/config/features.ts` | Feature flag definitions (single source of truth) |
 | `backend/src/common/feature-gates.ts` | Gate utilities: `throwNotAvailableInMode()`, `throwFeatureDisabled()`, `FeatureDisabledError`, `MultiTenantOnlyGuard` |
 | `backend/src/config/config.controller.ts` | `GET /config/public` — exposes flags to frontend |
-| `frontend/src/config/FeaturesContext.tsx` | React context: fetches `/api/config/public`, provides `useFeatures()` hook |
+| `frontend/src/config/FeaturesContext.tsx` | React context: fetches `/api/config/public`, provides `useFeatures()` (`config`, `isLoading`, `isSingleTenant`, and `refresh()`, which reads the configuration again) |
 | `backend/src/ai/ai-policy.service.ts` | Central AI surface/capability gating for chat, MCP, settings, and readable AI tools |
 | `backend/src/ai/ai-tool.registry.ts` | Runtime AI tool availability checks, including web search gating |
 
@@ -535,7 +535,7 @@ All gates read from `useFeatures()` hook (provided by `FeaturesContext.tsx`).
 
 | Condition | Effect |
 |-----------|--------|
-| `isPlatformHost && !isSingleTenant` | Platform admin nav is used only then. In single-tenant mode an administrator also gets Scheduled tasks (`isSingleTenant`) |
+| `adminPlace()` (`pages/admin/adminMenu.ts`) | The Administration menu is one list, `ADMIN_MENU`, read by the side menu and by `/admin` (first permitted entry). Its groups show on a workspace host of the cloud, on the platform host (`isPlatformHost && !isSingleTenant`) or on site. The **Installation** group shows on site and on the platform host, to `isInstallationOperator` only |
 | `!config.features.billing` | Billing nav item filtered out |
 | `!config.features.sso` | Auth/SSO nav item filtered out |
 | `config.features.billing` | `SubscriptionBanner` hidden when this is false |
@@ -552,6 +552,7 @@ All gates read from `useFeatures()` hook (provided by `FeaturesContext.tsx`).
 | `ProtectedRoute.tsx` | `config.features.billing` | Skips billing/subscription redirect when billing is off |
 | `pages/admin/SampleDataPage.tsx`, `pages/admin/sample-data/SampleDataBanner.tsx` | `useSampleDataAvailable()` | Not single-tenant, sample data flag on, not the platform host, Administrator role. The page shows `ForbiddenPage`; the home banner (rendered first in `WorkspaceDashboardPage.tsx`) renders nothing. No polling or retry after a 403 or 404 |
 | `ProtectedRoute.tsx` | `/admin/sample-data` | Exempt from the billing redirect of a frozen workspace, so an Administrator can erase that workspace |
+| `ProtectedRoute.tsx`, `ScheduledTasksPage.tsx` | `isInstallationOperator` (`pages/admin/adminMenu.ts`) | Every address under `/admin/installation/`, and the former `/admin/scheduled-tasks`, opens to the person `SystemAdminGuard` admits: on site the Administrator role with access to all data, in the cloud a platform administrator on the platform host. Anyone else gets the refusal page |
 
 ### CI
 
