@@ -4,6 +4,8 @@ import { EntityManager } from 'typeorm';
  * Where each IT Ops catalog value is referenced on business records. Used by the usage endpoint and by
  * the PATCH guard, which share the same counts: one count per record type, deduplicated by the record
  * identifier (a connection cited by two columns or two legs counts once), always filtered by tenant.
+ * The restore of the default lists reads, per list, the set of codes in use (`usedCatalogCodes`): one
+ * query per source, whatever the number of values, holding the codes `countCatalogUsage` counts.
  */
 
 export type UsageRecordType = 'applications' | 'assets' | 'interfaces' | 'connections' | 'app_instances' | 'interface_bindings' | 'locations' | 'incidents' | 'server_assignments' | 'subnets' | 'technologies';
@@ -66,6 +68,14 @@ export const CATALOG_USAGE: Record<string, UsageSource[]> = {
 
 export type UsageKey = { code: string } | { location_id: string; cidr: string };
 
+/** An address list stored as something other than an array names nothing (and never breaks a count). */
+const IP_ARRAY = `jsonb_typeof(t.ip_addresses) = 'array'`;
+
+/** The key of a subnet in the set of used subnets: its site and its CIDR. */
+export function subnetUsageKey(subnet: { location_id: string; cidr: string }): string {
+  return `${subnet.location_id}:${subnet.cidr}`;
+}
+
 function predicateSql(predicate: UsagePredicate, head: string): string {
   switch (predicate.kind) {
     case 'scalar':
@@ -77,15 +87,61 @@ function predicateSql(predicate: UsagePredicate, head: string): string {
         ? `$2 = ANY(t.${predicate.column})`
         : `EXISTS (SELECT 1 FROM ${predicate.table} r WHERE r.tenant_id = $1 AND r.${predicate.recordId} = t.id AND $2 = ANY(r.${predicate.column}))`;
     case 'jsonb_type':
-      return `t.ip_addresses IS NOT NULL AND EXISTS (SELECT 1 FROM jsonb_array_elements(t.ip_addresses) e WHERE e->>'type' = $2)`;
+      return `${IP_ARRAY} AND EXISTS (SELECT 1 FROM jsonb_array_elements(t.ip_addresses) e WHERE e->>'type' = $2)`;
     case 'jsonb_subnet':
-      return `t.location_id = $3 AND t.ip_addresses IS NOT NULL AND EXISTS (SELECT 1 FROM jsonb_array_elements(t.ip_addresses) e WHERE e->>'subnet_cidr' = $2)`;
+      return `t.location_id = $3 AND ${IP_ARRAY} AND EXISTS (SELECT 1 FROM jsonb_array_elements(t.ip_addresses) e WHERE e->>'subnet_cidr' = $2)`;
   }
 }
 
 export function usageSql(source: UsageSource): string {
   const where = source.predicates.map((predicate) => `(${predicateSql(predicate, source.table)})`).join(' OR ');
   return `SELECT COUNT(DISTINCT t.id)::int AS count FROM ${source.table} t WHERE t.tenant_id = $1 AND (${where})`;
+}
+
+/**
+ * The codes (site and CIDR for the subnets) that the predicates of `source` find on the records of
+ * tenant `$1`: one statement, every table read filtered by tenant, a joined row counted only with its
+ * head record, as `usageSql` does.
+ */
+export function usedCodesSql(source: UsageSource): string {
+  const join = (predicate: { table: string; recordId?: string }) => `FROM ${predicate.table} r JOIN ${source.table} t ON t.id = r.${predicate.recordId} AND t.tenant_id = $1 WHERE r.tenant_id = $1`;
+  const parts = source.predicates.map((predicate) => {
+    switch (predicate.kind) {
+      case 'scalar':
+        return predicate.table === source.table
+          ? `SELECT t.${predicate.column} AS code FROM ${source.table} t WHERE t.tenant_id = $1`
+          : `SELECT r.${predicate.column} AS code ${join(predicate)}`;
+      case 'array':
+        return predicate.table === source.table
+          ? `SELECT unnest(t.${predicate.column}) AS code FROM ${source.table} t WHERE t.tenant_id = $1`
+          : `SELECT unnest(r.${predicate.column}) AS code ${join(predicate)}`;
+      case 'jsonb_type':
+        return `SELECT e->>'type' AS code FROM ${source.table} t CROSS JOIN LATERAL jsonb_array_elements(t.ip_addresses) e WHERE t.tenant_id = $1 AND ${IP_ARRAY}`;
+      case 'jsonb_subnet':
+        return `SELECT t.location_id::text || ':' || (e->>'subnet_cidr') AS code FROM ${source.table} t CROSS JOIN LATERAL jsonb_array_elements(t.ip_addresses) e WHERE t.tenant_id = $1 AND ${IP_ARRAY}`;
+    }
+  });
+  return `SELECT DISTINCT u.code FROM (${parts.join(' UNION ALL ')}) u WHERE u.code IS NOT NULL`;
+}
+
+/**
+ * Every code of `list` that a record of `tenantId` references: a code is in the set exactly when
+ * `countCatalogUsage` counts it. Subnets are keyed by `subnetUsageKey`; the network zones are the
+ * zones of `settingsSubnets`.
+ */
+export async function usedCatalogCodes(manager: EntityManager, tenantId: string, list: string, settingsSubnets?: Array<{ network_zone?: string }>): Promise<Set<string>> {
+  const used = new Set<string>();
+  for (const source of CATALOG_USAGE[list] ?? []) {
+    if (source.table === 'settings') {
+      for (const subnet of settingsSubnets ?? []) if (subnet.network_zone) used.add(subnet.network_zone);
+      continue;
+    }
+    const subnets = source.predicates.some((predicate) => predicate.kind === 'jsonb_subnet');
+    if (subnets !== (list === 'subnets')) continue;
+    const rows: Array<{ code: string }> = await manager.query(usedCodesSql(source), [tenantId]);
+    for (const row of rows) used.add(String(row.code));
+  }
+  return used;
 }
 
 export function usageListPath(source: UsageSource, code: string): string | undefined {

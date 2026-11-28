@@ -16,15 +16,14 @@ export type AuditEntry = { table: string; recordId?: string | null; action?: str
 
 export function services(audit: AuditEntry[] = []) {
   const auditLog = { log: async (entry: AuditEntry) => void audit.push(entry) };
-  const itOps = {
-    getSettings: async () => ({
-      technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES,
-      lifecycleStates: [{ code: 'active' }, { code: 'retired' }],
-      cyberCriticalityLevels: [{ code: 'high' }],
-      recoveryWaves: [{ code: 'wave_1' }],
-      hostingTypes: DEFAULT_HOSTING_TYPES,
-    }),
+  const settings = {
+    technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES,
+    lifecycleStates: [{ code: 'active' }, { code: 'retired' }],
+    cyberCriticalityLevels: [{ code: 'high' }],
+    recoveryWaves: [{ code: 'wave_1' }],
+    hostingTypes: DEFAULT_HOSTING_TYPES,
   };
+  const itOps = { getSettings: async () => settings, getSettingsForWrite: async () => settings, lockSettingsForWrite: async () => undefined };
   const storage = { putObject: async () => undefined, deleteObject: async () => undefined };
   const reach = new TechnologyReachService();
   const fxRates = { resolveRates: async () => ({ map: new Map(), settings: { reportingCurrency: 'EUR' } }), convertValue: (a: number, r: number) => a * r };

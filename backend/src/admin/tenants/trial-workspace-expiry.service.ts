@@ -52,8 +52,9 @@ type CandidateRow = { id: string; slug: string; status: TenantStatus; stripe_cus
  * otherwise.
  *
  * Each run first erases the note and the date of the discovery calls
- * DISCOVERY_CALL_RETENTION_DAYS days after the call, subscription or not, billing configured or not: one short
- * transaction per live tenant, under its row-level security.
+ * DISCOVERY_CALL_RETENTION_DAYS days after the call, and blanks that date and that note on the
+ * audit entries that hold a date at least that old, subscription or not, billing configured or
+ * not: one short transaction per live tenant, under its row-level security.
  */
 @Injectable()
 export class TrialWorkspaceExpiryService implements OnModuleInit {

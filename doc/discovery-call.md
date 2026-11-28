@@ -43,9 +43,9 @@ Each click posts `POST /api/discovery-call/clicks { placement }` (signed-in user
 - `remove(manager, tenantId, userId?)`;
 - `recordClick(manager, tenantId, userId | null, placement)`.
 
-Every change writes `trial.discovery_call_updated` (before and after: date, state, source, note) or `trial.discovery_call_removed`, with `table_name = 'trial'` and the tenant as `record_id`.
+Every change writes `trial.discovery_call_updated` (before and after: date, state and source, plus `note_changed: true` on the after side when the note was set, edited or cleared) or `trial.discovery_call_removed` (before: date, state and source), with `table_name = 'trial'` and the tenant as `record_id`. The text of the note is left out.
 
-Retention (privacy policy, section 6: at most sixty days after the call): the daily task `trial-workspace-expiry` (`doc/architecture.md`) erases the note and the date of the call `DISCOVERY_CALL_RETENTION_DAYS` (60) days after the call, in every live workspace, subscribed or not, billing configured or not, through `eraseExpiredDiscoveryCall`. A call to come or younger is untouched. The state, the source and the booking uid stay; the erasure writes no audit entry.
+Retention (privacy policy, section 6: at most sixty days after the call): the daily task `trial-workspace-expiry` (`doc/architecture.md`) erases the note and the date of the call `DISCOVERY_CALL_RETENTION_DAYS` (60) days after the call, in every live workspace, subscribed or not, billing configured or not, through `eraseExpiredDiscoveryCall`. A call to come or younger is untouched. The state, the source and the booking uid stay. The same run blanks the date and removes the note on each side of the workspace's `trial.discovery_call_updated` and `trial.discovery_call_removed` entries whose own date is at least that old; a younger side, and a side with no date, stay as they are. The erasure writes no audit entry.
 
 ## Cal.com webhook
 

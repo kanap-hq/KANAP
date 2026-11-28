@@ -20,14 +20,17 @@ type Opts = { manager: QueryRunner['manager']; tenantId: string; userId?: string
 type VersionRow = { label: string; vulnerability_alerts: boolean | null; vulnerability_alerts_effective: boolean };
 
 function technologiesOf(audit: AuditEntry[], events: unknown[]) {
+  const settings = {
+    technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES,
+    hostingTypes: DEFAULT_HOSTING_TYPES,
+    lifecycleStates: [{ code: 'active' }],
+    cyberCriticalityLevels: [],
+    recoveryWaves: [],
+  };
   const itOps = {
-    getSettings: async () => ({
-      technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES,
-      hostingTypes: DEFAULT_HOSTING_TYPES,
-      lifecycleStates: [{ code: 'active' }],
-      cyberCriticalityLevels: [],
-      recoveryWaves: [],
-    }),
+    getSettings: async () => settings,
+    getSettingsForWrite: async () => settings,
+    lockSettingsForWrite: async () => undefined,
   };
   return new TechnologiesService(
     { log: async (entry: AuditEntry) => void audit.push(entry) } as any,

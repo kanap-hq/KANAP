@@ -93,6 +93,10 @@ async function run() {
   // A settings reader keeps the full read.
   assert.equal(await allowed('getSettings', 'GET', 'reader'), true, 'GET settings allowed to a settings reader');
   assert.equal(await allowed('getUsage', 'GET', 'reader'), true, 'usage allowed to a settings reader');
+  // IT Landscape Member has `settings: 'member'`: it neither saves nor restores the lists; an administrator does both.
+  assert.equal(await allowed('resetSettings', 'POST', 'member'), false, 'restore refused to a settings member');
+  assert.equal(await allowed('updateSettings', 'PATCH', 'member'), false, 'PATCH refused to a settings member');
+  assert.equal(await allowed('resetSettings', 'POST', 'admin'), true, 'restore allowed to a settings administrator');
 
   const controller = new ItOpsSettingsController(service());
   const req = { tenant: { id: tenant.id } };
