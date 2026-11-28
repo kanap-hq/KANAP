@@ -1,4 +1,4 @@
-// Component inventory (SBOM) and third-party notices of a KANAP version, to attach to its
+// Component inventory (SBOM) and third-party notices of a Kadratis version, to attach to its
 // published release. No dependency: it reads the package-lock.json of backend, frontend and
 // marketing/web (production dependencies, the packages `npm ci --omit=dev` installs) and writes,
 // in the output folder:
@@ -139,7 +139,7 @@ function inventory(folder, exceptions, timestamp) {
 
 function notices(sections, timestamp) {
   const lines = [
-    'KANAP third-party notices',
+    'Kadratis third-party notices',
     '',
     'KANAP is licensed under the GNU Affero General Public License, version 3 (see LICENSE and NOTICE).',
     'It includes the open-source packages below: the production dependencies of each folder, read',
