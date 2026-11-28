@@ -3343,5 +3343,17 @@
         "cancelled": "Cancelled"
       }
     }
+  },
+  "allSettings": {
+    "title": "All settings",
+    "search": "Search settings",
+    "searchPlaceholder": "e.g., reporting currency",
+    "noMatch": "No settings match “{{query}}”.",
+    "groups": {
+      "person": "My account",
+      "organization": "Administration",
+      "installation": "Installation",
+      "platform": "Platform"
+    }
   }
 }

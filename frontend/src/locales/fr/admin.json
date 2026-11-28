@@ -3343,5 +3343,17 @@
         "cancelled": "Annulé"
       }
     }
+  },
+  "allSettings": {
+    "title": "Tous les paramètres",
+    "search": "Rechercher un paramètre",
+    "searchPlaceholder": "Ex. : devise de reporting",
+    "noMatch": "Aucun paramètre ne correspond à « {{query}} ».",
+    "groups": {
+      "person": "Mon compte",
+      "organization": "Administration",
+      "installation": "Installation",
+      "platform": "Plateforme"
+    }
   }
 }
