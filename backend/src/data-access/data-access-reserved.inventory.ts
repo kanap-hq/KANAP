@@ -343,6 +343,19 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     },
   },
   {
+    // The Microsoft connection: Connect and Reconnect lead to the directory sync, which writes the
+    // persons of the whole workspace (as `AdminAuthController.runDirectorySync`).
+    file: 'auth/entra.controller.ts',
+    controller: 'EntraController',
+    reserved: ['startSetup', 'startSetupGet'],
+    allowed: {
+      callback: 'the return from Microsoft (sign-in, connection or consent), checked by its signed state; no person is signed in yet', // GET callback
+      completeLoginSession: 'the end of a Microsoft sign-in, by its one-time code: the person\'s own session', // POST session
+      confirmLink: 'the confirmation of the person\'s own Microsoft link, by the token mailed to them', // POST link
+      startLogin: 'the start of a Microsoft sign-in (public)', // GET login
+    },
+  },
+  {
     file: 'roles/roles.controller.ts',
     controller: 'RolesController',
     reserved: ['createRole', 'deleteRole', 'duplicateRole', 'setRolePermissions', 'updateRole'],

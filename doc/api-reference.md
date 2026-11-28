@@ -69,7 +69,7 @@ Rate limiting (default enabled):
 
 ### Microsoft Entra SSO
 - POST `/auth/entra/setup/start` → `{ url }`
-  - Requires tenant context + `organization:admin` (GET and POST).
+  - Requires tenant context, `organization:admin` and `users:admin` (`@RequireLevel` plus a one-entry `@RequireAnyLevel`, GET and POST), reserved to unscoped data access (`403 DATA_ACCESS_LIMITED` for a limited person): its return replaces the tenant's directory, and the directory sync then disables the linked accounts that directory does not know.
   - Reads `req.tenant` (blocked on the platform-admin host) and signs a short-lived `state` containing the OIDC `nonce` before returning an Entra consent URL. The SPA immediately navigates to the returned URL.
   - The nonce is validated from signed `state`, not from a browser cookie, so callbacks work across tenant subdomains and custom/on-prem domains.
 - GET `/auth/entra/login?redirectTo=/path`
@@ -92,7 +92,7 @@ Rate limiting (default enabled):
   - Validates that the handoff tenant matches `req.tenant`, issues app tokens, sets the `HttpOnly` `refresh_token` cookie on the tenant host, and returns `{ access_token, expires_in, refresh_expires_in, redirectTo }`.
 
 - GET `/admin/auth/settings`
-  - Requires `organization:reader` and a tenant host. `directory_sync.consent_url` (the Microsoft approval address, signed in the caller's name) is `null` unless the caller is an Administrator or holds `organization:admin`.
+  - Requires `organization:reader` and a tenant host. `directory_sync.consent_url` (the Microsoft approval address, signed in the caller's name; a granted consent starts a sync) is `null` unless the caller has access to all data and is an Administrator or holds both `organization:admin` and `users:admin`.
   - Returns `{ sso_provider, sso_enabled, entra_tenant_id, entra_metadata, directory_sync, disconnect }` for the current tenant. Used by the **Admin → Authentication** UI to show status and surface the “Test Microsoft sign-in” button (which simply calls `/auth/entra/login`).
   - `disconnect` (null when not connected): `{ keep_password, need_password, password_required }`, what a disconnect does. Among the linked accounts that may sign in with a password (`enabled` or `invited`, main role other than Contact), how many keep a password and how many have none; the caller counts with the first when `password_required` (they have no password and must give one).
 - POST `/admin/auth/directory-sync`

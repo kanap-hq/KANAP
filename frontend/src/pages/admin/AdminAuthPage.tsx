@@ -57,12 +57,12 @@ export default function AdminAuthPage() {
   const { hasLevel } = useAuth();
   const { isPlatformHost } = useTenant();
   const canRead = !isPlatformHost && hasLevel('organization', 'reader');
-  // Connect, Test sign-in and the consent: the organisation's administration. A reader sees the state only.
-  const canAdminister = hasLevel('organization', 'admin');
-  // Disconnect and Sync now write the persons of the whole workspace: they also need users:admin and
-  // access to all data, as the other person administration (the server asks for both rights).
+  // The five actions lead to writing the persons of the whole workspace: Disconnect and Sync now
+  // write them, Connect, Reconnect and the consent lead to a sync (which disables the linked
+  // accounts the directory does not know). They need organization:admin, users:admin and access to
+  // all data, as the server asks; Test sign-in sits with them. Anyone else sees the state only.
   const unscopedUsersAdmin = useDataAccessAdmin();
-  const canWritePersons = canAdminister && unscopedUsersAdmin;
+  const canWritePersons = hasLevel('organization', 'admin') && unscopedUsersAdmin;
   const { config } = useFeatures();
 
   const [actionError, setActionError] = React.useState<string | null>(null);
@@ -236,7 +236,7 @@ export default function AdminAuthPage() {
                     </Typography>
                   </Stack>
                 )}
-                {canAdminister && (
+                {canWritePersons && (
                   <Stack direction="row" spacing={2} mt={1}>
                     <Button
                       variant="contained"
@@ -255,16 +255,14 @@ export default function AdminAuthPage() {
                         <Button variant="outlined" onClick={handleTestSignIn} disabled={disconnecting}>
                           {t('auth.actions.testSignIn')}
                         </Button>
-                        {canWritePersons && (
-                          <Button
-                            variant="text"
-                            color="error"
-                            onClick={openDisconnect}
-                            disabled={disconnecting || connecting}
-                          >
-                            {t('auth.actions.disconnect')}
-                          </Button>
-                        )}
+                        <Button
+                          variant="text"
+                          color="error"
+                          onClick={openDisconnect}
+                          disabled={disconnecting || connecting}
+                        >
+                          {t('auth.actions.disconnect')}
+                        </Button>
                       </>
                     )}
                   </Stack>
@@ -305,7 +303,7 @@ export default function AdminAuthPage() {
                       </Alert>
                     )}
                     <Stack direction="row" spacing={2}>
-                      {canAdminister && sync.status !== 'ok' && sync.consent_url && (
+                      {canWritePersons && sync.status !== 'ok' && sync.consent_url && (
                         <Button variant="contained" href={sync.consent_url} disabled={syncing}>
                           {t('auth.sync.grantAccess')}
                         </Button>

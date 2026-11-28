@@ -13,7 +13,7 @@ Navigate to **Admin** from the main menu to access the administration hub.
 - Audit Log: Requires `organization:reader` and access to all data
 - Data access: Requires `users:admin` and access to all data (see [Data access](data-access.md))
 - Billing: Requires billing admin role
-- Authentication: `organization:reader` to view, `organization:admin` to connect (feature-flagged; requires SSO enabled). See [Authentication](#authentication) for the actions that also need `users:admin`
+- Authentication: `organization:reader` to view; every action needs `organization:admin`, `users:admin` and access to all data (feature-flagged; requires SSO enabled). See [Authentication](#authentication)
 - Branding: `organization:reader` to view, `organization:admin` to change (tenant host only; accessible from sidebar)
 - Sample data: Requires the Administrator role (cloud workspaces only; accessible from sidebar)
 
@@ -588,7 +588,7 @@ Each invoice is also sent by email to the invoicing email address. The PDF is in
 
 Configure single sign-on (SSO) for your organization. This page is only available when the SSO feature is enabled and is not accessible from the platform-admin host.
 
-Organization at Reader level shows the connection and the sync results, with no action. **Connect**, **Reconnect**, **Test sign-in** and **Grant access in Microsoft Entra** need Organization at Admin level. **Sync now** and **Disconnect** change the accounts of the whole workspace: they also need `users:admin` and access to all data.
+Organization at Reader or Admin level shows the connection and the sync results, with no action. The actions change the accounts of the whole workspace, or lead to a sync that does: a connection to another directory, then the sync, disables the linked accounts that directory does not know. **Connect**, **Reconnect**, **Test sign-in**, **Grant access in Microsoft Entra**, **Sync now** and **Disconnect** need Organization at Admin level, `users:admin` and access to all data.
 
 ### Microsoft Entra ID
 

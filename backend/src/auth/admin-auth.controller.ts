@@ -12,11 +12,16 @@ import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 /**
- * The person administers the organisation: the Administrator role, or `organization:admin` (the
- * level PermissionGuard read for the route's `@RequireLevel('organization', …)`).
+ * The person may write the persons of the workspace from this page, as the sync and the disconnect
+ * ask: access to all data (the mode the tenant interceptor left on the request), and the
+ * Administrator role or both `organization:admin` and `users:admin` (the rights PermissionGuard
+ * read for the route).
  */
-function canAdministerOrganization(req: any): boolean {
-  return req?.isAdmin === true || req?.permissionLevel === 'admin';
+function mayWritePersons(req: any): boolean {
+  if (req?.dataAccessMode !== 'all') return false;
+  if (req?.isAdmin === true) return true;
+  const rights = (req?.permissions ?? {}) as Record<string, string>;
+  return rights.organization === 'admin' && rights.users === 'admin';
 }
 
 class DisconnectDto {
@@ -30,7 +35,8 @@ class DisconnectDto {
 /**
  * Admin › Authentication. Reading needs `organization:reader` (the page opens read-only). The sync
  * and the disconnect write the persons of the whole workspace: they need `organization:admin` and
- * `users:admin` both, and access to all data.
+ * `users:admin` both, and access to all data. So do the connection (`auth/entra/setup/start`) and
+ * the consent address, which lead to a sync.
  */
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('admin/auth')
@@ -74,9 +80,9 @@ export class AdminAuthController {
             disabled: directorySync?.disabled ?? null,
             removed: directorySync?.removed ?? null,
             kept_administrator: directorySync?.kept_administrator ?? null,
-            // Signed in the person's name, and its return writes the workspace's connection: for
-            // organization:admin only.
-            consent_url: canAdministerOrganization(req)
+            // Signed in the person's name, and its return starts a sync that disables the linked
+            // accounts the directory does not know: for who may run the sync only.
+            consent_url: mayWritePersons(req)
               ? this.entra.buildAdminConsentUrl(tenant.entra_tenant_id as string, tenant.id, req?.user?.sub)
               : null,
           }

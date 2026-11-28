@@ -52,6 +52,7 @@ import { AiSettingsController } from '../../ai/ai-settings.controller';
 import { AiModelConfigsController } from '../../ai/ai-model-configs.controller';
 import { AiApiKeysController } from '../../ai/ai-api-keys.controller';
 import { DemoDataController } from '../../demo-data/demo-data.controller';
+import { EntraController } from '../../auth/entra.controller';
 import {
   DATA_ACCESS_RESERVED_MESSAGE,
   DataAccessReservedException,
@@ -149,7 +150,7 @@ const REAL_CONTROLLERS = [
   CompaniesController, CostCentersController, ChartOfAccountsController, AnalyticsAxesController,
   AnalyticsCategoriesController, BusinessProcessesController, SuppliersController, ContactsController,
   AiAgentControlController, AiSettingsController, AiModelConfigsController, AiApiKeysController,
-  DemoDataController,
+  DemoDataController, EntraController,
 ];
 
 /** A stand-in for any service: every member is a function resolving to undefined. Not a thenable. */
@@ -286,6 +287,9 @@ const RESERVED_SAMPLES: Array<[string, Method, string, boolean]> = [
   ['model configuration writes', 'POST', 'ai/model-configs', true],
   ['API keys administration', 'GET', 'ai/admin/keys', true],
   ['sample data', 'GET', 'admin/sample-data', true],
+  // Connect and Reconnect: the connection's return replaces the directory the sync reads.
+  ['Microsoft connection', 'POST', 'auth/entra/setup/start', false],
+  ['Microsoft connection from the browser', 'GET', 'auth/entra/setup/start', false],
 ];
 
 /** Routes of the same controllers left to every person. */

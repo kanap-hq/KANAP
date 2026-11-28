@@ -112,13 +112,14 @@ describe('AdminAuthPage disconnect', () => {
     auth.dataAccess = null;
   });
 
-  it('shows neither Disconnect nor Sync now to an administrator whose data access is limited', async () => {
+  it('shows none of the actions to an administrator whose data access is limited', async () => {
     auth.dataAccess = { mode: 'limited' };
     api.get.mockResolvedValue({ data: { ...settings({}), disconnect: { keep_password: 1, need_password: 0, password_required: false } } });
     renderPage();
-    expect(await screen.findByRole('button', { name: 'auth.actions.testSignIn' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'auth.actions.disconnect' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'auth.sync.syncNow' })).toBeNull();
+    expect(await screen.findByText('auth.entra.connected')).toBeTruthy();
+    for (const name of ['auth.actions.reconnect', 'auth.actions.testSignIn', 'auth.actions.disconnect', 'auth.sync.syncNow']) {
+      expect(screen.queryByRole('button', { name }), name).toBeNull();
+    }
   });
 
   function connected(disconnect: Record<string, unknown>) {
@@ -217,20 +218,26 @@ describe('AdminAuthPage rights', () => {
     expect(screen.queryByRole('link', { name: 'auth.sync.grantAccess' })).toBeNull();
   });
 
-  it('gives an organization administrator Connect, Test and the consent, and Sync and Disconnect only with users:admin', async () => {
+  // Connect, Reconnect and the consent lead to a sync, which writes persons: as Sync and Disconnect,
+  // they need users:admin too.
+  it('shows the state to an organization administrator without users:admin, with none of the five actions', async () => {
     auth.rights = { organization: 'admin' };
     api.get.mockResolvedValue({ data: withConsent() });
-    const { unmount } = renderPage();
+    renderPage();
+    expect(await screen.findByText('auth.entra.connected')).toBeTruthy();
+    expect(screen.getByText('auth.sync.consentNeeded')).toBeTruthy();
+    for (const name of ACTIONS) expect(screen.queryByRole('button', { name }), name).toBeNull();
+    expect(screen.queryByRole('link', { name: 'auth.sync.grantAccess' })).toBeNull();
+  });
+
+  it('gives the five actions to an organization administrator who also administers users', async () => {
+    auth.rights = { organization: 'admin', users: 'admin' };
+    api.get.mockResolvedValue({ data: withConsent() });
+    renderPage();
     expect(await screen.findByRole('button', { name: 'auth.actions.reconnect' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'auth.actions.testSignIn' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'auth.sync.grantAccess' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'auth.actions.disconnect' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'auth.sync.syncNow' })).toBeNull();
-    unmount();
-
-    auth.rights = { organization: 'admin', users: 'admin' };
-    renderPage();
-    expect(await screen.findByRole('button', { name: 'auth.actions.disconnect' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'auth.actions.disconnect' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'auth.sync.syncNow' })).toBeTruthy();
   });
 
