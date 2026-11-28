@@ -35,7 +35,7 @@ The list shows only the pages you can open with your roles, exactly as the menus
 - A page you can read but not change is listed. It opens in read-only mode.
 - A page you cannot open does not appear, and neither does a group left empty.
 - Pages that depend on a feature appear only when that feature is on: billing in the cloud, **Authentication** when Microsoft sign-in is configured, the AI pages when AI is enabled.
-- With limited data access, the budget administration, the data access and the audit log pages are not listed.
+- With limited data access, these pages are not listed: the pages of **Budget management > Administration**, **Contract settings**, **Data access** and **Audit log**.
 - On an installation on your own servers, the cloud-only pages (billing, sample data) are not listed. The **Installation** group shows to the Administrator role with access to all data.
 - On the platform host, the list holds the installation and platform pages only.
 
