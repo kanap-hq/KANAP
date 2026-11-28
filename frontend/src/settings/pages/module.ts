@@ -49,6 +49,70 @@ const budgetOperation = (
 
 const agentsAvailable = custom('aiAgentsInstance');
 
+// The portfolio settings page: one line per tab, the tab in the address (`/portfolio/settings/<slug>`).
+const portfolioSettingsTab = (
+  slug: string,
+  file: string,
+  labelKey: string,
+  settingKeys: string[],
+  section?: string,
+): SettingsPageEntry => ({
+  id: `portfolio.settings-${slug}`,
+  scope: 'module',
+  module: 'portfolio',
+  path: '/portfolio/settings',
+  tab: { value: slug, in: 'path' },
+  component: 'PortfolioSettingsPage',
+  source: `pages/portfolio/settings/${file}.tsx`,
+  labelKey,
+  menuKeys: ['nav:workspaces.portfolio', 'nav:sidebar.portfolio.settings'],
+  settingKeys,
+  open: level('portfolio_settings', 'reader'),
+  change: level('portfolio_settings', 'admin'),
+  availability: {},
+  doc: section ? { page: 'portfolio-settings', section } : { page: 'portfolio-settings' },
+});
+
+const PORTFOLIO_SETTINGS_TABS: SettingsPageEntry[] = [
+  portfolioSettingsTab('criteria', 'ScoringTab', 'portfolio:settings.tabs.scoringCriteria', [
+    'portfolio:settings.scoring.mandatoryBypassTitle',
+    'portfolio:settings.scoring.title',
+    'portfolio:settings.actions.addCriterion',
+    'portfolio:settings.scoring.chips.weight',
+    'portfolio:settings.scoring.chips.inverted',
+  ], 'Scoring Criteria'),
+  portfolioSettingsTab('skills', 'SkillsTab', 'portfolio:settings.tabs.skills', [
+    'portfolio:settings.actions.addSkill',
+    'portfolio:settings.actions.seedDefaults',
+    'portfolio:settings.skills.empty',
+  ], 'Skills'),
+  portfolioSettingsTab('phase-templates', 'PhaseTemplatesTab', 'portfolio:settings.tabs.phaseTemplates', [
+    'portfolio:settings.actions.addTemplate',
+    'portfolio:settings.phaseTemplates.chips.phaseCount',
+    'portfolio:settings.labels.system',
+  ], 'Phase Templates'),
+  // The four lists' titles are in the files of their sections: the tab file names them in its messages.
+  portfolioSettingsTab('classification', 'ClassificationTab', 'portfolio:settings.tabs.classification', [
+    'portfolio:settings.classification.messages.updateSourceFailed',
+    'portfolio:settings.classification.messages.updateCategoryFailed',
+    'portfolio:settings.classification.messages.updateStreamFailed',
+    'portfolio:settings.classification.messages.updateTaskTypeFailed',
+  ], 'Classification'),
+  // The manual has no section on the teams yet.
+  portfolioSettingsTab('teams', 'TeamsTab', 'portfolio:settings.tabs.teams', [
+    'portfolio:settings.actions.addTeam',
+    'portfolio:settings.actions.seedDefaults',
+    'portfolio:settings.teams.memberCount',
+    'portfolio:settings.labels.system',
+  ]),
+  portfolioSettingsTab('contract-types', 'EmploymentTypesTab', 'portfolio:settings.tabs.employmentTypes', [
+    'portfolio:settings.actions.addEmploymentType',
+    'portfolio:settings.actions.seedDefaults',
+    'portfolio:settings.employmentTypes.usageCount',
+    'portfolio:settings.labels.system',
+  ], 'Contract Types'),
+];
+
 /** Settings of a module, in its own section. Organisation host only, both modes. */
 export const MODULE_SETTINGS_PAGES: SettingsPageEntry[] = [
   {
@@ -250,28 +314,7 @@ export const MODULE_SETTINGS_PAGES: SettingsPageEntry[] = [
     availability: {},
     doc: { page: 'netbox' },
   },
-  {
-    // Six tabs held in the page's state, not in the address.
-    id: 'portfolio.settings',
-    scope: 'module',
-    module: 'portfolio',
-    path: '/portfolio/settings',
-    component: 'PortfolioSettingsPage',
-    labelKey: 'nav:sidebar.portfolio.settings',
-    menuKeys: ['nav:workspaces.portfolio'],
-    settingKeys: [
-      'portfolio:settings.tabs.scoringCriteria',
-      'portfolio:settings.tabs.skills',
-      'portfolio:settings.tabs.phaseTemplates',
-      'portfolio:settings.tabs.classification',
-      'portfolio:settings.tabs.teams',
-      'portfolio:settings.tabs.employmentTypes',
-    ],
-    open: level('portfolio_settings', 'reader'),
-    change: level('portfolio_settings', 'admin'),
-    availability: {},
-    doc: { page: 'portfolio-settings' },
-  },
+  ...PORTFOLIO_SETTINGS_TABS,
   {
     id: 'agents.shared-context',
     scope: 'module',

@@ -49,6 +49,7 @@ export class PortfolioCriteriaController {
     const tenantId = req?.tenant?.id ?? '';
     return this.svc.reorder(body?.criterion_ids ?? [], tenantId, {
       manager: req?.queryRunner?.manager,
+      userId: req?.user?.sub ?? null,
     });
   }
 
