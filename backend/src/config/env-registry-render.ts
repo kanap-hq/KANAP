@@ -113,13 +113,55 @@ export function replaceManualBlock(page: string, block: string): string {
   return page.slice(0, start) + block + page.slice(end + MANUAL_BLOCK_END.length);
 }
 
-/** Every produced file, from the current content of the pages (`read` takes a repository path). */
+/**
+ * Every produced file, from the current content of the pages (`read` takes a repository path).
+ * Throws, naming the page, when a page lacks its pair of markers.
+ */
 export function renderEnvReferenceFiles(read: (file: string) => string): { file: string; content: string }[] {
   return [
     { file: ONPREM_EXAMPLE_FILE, content: renderOnPremExample() },
     ...ENV_LANGUAGES.map((language) => {
       const file = manualConfigurationFile(language);
-      return { file, content: replaceManualBlock(read(file), renderManualBlock(language)) };
+      try {
+        return { file, content: replaceManualBlock(read(file), renderManualBlock(language)) };
+      } catch (error) {
+        throw new Error(`${file}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }),
   ];
+}
+
+export type EnvReferenceCommandIo = {
+  /** Reads and writes a file by its repository path. */
+  read: (file: string) => string;
+  write: (file: string, content: string) => void;
+  log: (line: string) => void;
+  error: (line: string) => void;
+};
+
+/**
+ * `npm run env:generate` (`scripts/generate-env-reference.ts`): writes the files that differ, or
+ * with `check` names them and writes nothing. Returns the exit code; a page it cannot render is
+ * one readable line, with no stack trace.
+ */
+export function runEnvReferenceCommand(check: boolean, io: EnvReferenceCommandIo): number {
+  let files: { file: string; content: string }[];
+  try {
+    files = renderEnvReferenceFiles(io.read);
+  } catch (error) {
+    io.error(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
+  const differing = files.filter(({ file, content }) => io.read(file) !== content);
+  if (check) {
+    for (const { file } of differing) io.error(`${file} differs from the registry: run "npm run env:generate" in backend/.`);
+    if (differing.length === 0) io.log('The example .env and the manual blocks match the registry.');
+    return differing.length === 0 ? 0 : 1;
+  }
+  for (const { file, content } of differing) {
+    io.write(file, content);
+    io.log(`Wrote ${file}`);
+  }
+  if (differing.length === 0) io.log('Nothing to write: the files match the registry.');
+  return 0;
 }

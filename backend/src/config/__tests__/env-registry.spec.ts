@@ -18,6 +18,7 @@ import {
   renderEnvReferenceFiles,
   renderManualBlock,
   renderOnPremExample,
+  runEnvReferenceCommand,
   sectionVariables,
 } from '../env-registry-render';
 import { backendPath } from '../../common/__tests__/backend-root';
@@ -375,6 +376,32 @@ function testProducedFiles() {
   }
 }
 
+/** The command, on files read and written in memory: a page without its markers is one line naming it. */
+function testCommand() {
+  const run = (check: boolean, read: (file: string) => string) => {
+    const out = { written: [] as string[], logged: [] as string[], errors: [] as string[] };
+    const code = runEnvReferenceCommand(check, {
+      read,
+      write: (file) => out.written.push(file),
+      log: (line) => out.logged.push(line),
+      error: (line) => out.errors.push(line),
+    });
+    return { code, ...out };
+  };
+  const clean = run(true, readRepo);
+  assert.deepEqual([clean.code, clean.errors, clean.written], [0, [], []], 'the committed files match');
+
+  const broken = manualConfigurationFile('fr');
+  const withoutEnd = (file: string) => (file === broken ? readRepo(file).replace(MANUAL_BLOCK_END, '') : readRepo(file));
+  for (const check of [true, false]) {
+    const result = run(check, withoutEnd);
+    assert.equal(result.code, 1, `a missing marker fails the command (check: ${check})`);
+    assert.deepEqual(result.written, [], 'nothing is written');
+    assert.equal(result.errors.length, 1, 'one line');
+    assert.ok(result.errors[0].includes(broken) && !result.errors[0].includes('\n'), `the line names the page: ${result.errors[0]}`);
+  }
+}
+
 const FORBIDDEN: [RegExp, string][] = [
   [/Plaid/, 'Plaid (the assistant is Kad)'],
   [/\bKANAP\b/, 'KANAP outside an identifier (the product is Kadratis)'],
@@ -415,7 +442,7 @@ function testTexts() {
 
 function run(): void {
   const failures: string[] = [];
-  for (const test of [testCoverage, testRegistryShape, testProducedFiles, testTexts]) {
+  for (const test of [testCoverage, testRegistryShape, testProducedFiles, testCommand, testTexts]) {
     try {
       test();
     } catch (error) {
