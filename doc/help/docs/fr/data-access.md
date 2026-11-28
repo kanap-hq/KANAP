@@ -226,7 +226,7 @@ Ces nombres apparaissent pour les personnes qui lisent le budget mais pas ces li
 Même si ses rôles le permettent, une personne limitée ne peut pas :
 
 - modifier les réglages de l'espace de travail : geler et dégeler, la règle de ventilation par défaut, les colonnes du budget, les devises, la copie annuelle des données de référence, les effectifs et indicateurs des sociétés et des départements ;
-- lancer des opérations sur de nombreuses lignes : copier et remettre à zéro des colonnes budgétaires, copier les ventilations, supprimer en masse ;
+- lancer des opérations sur de nombreuses lignes : copier et vider des colonnes budgétaires, copier les ventilations, supprimer en masse ;
 - supprimer une ligne ou un contrat ;
 - gérer les personnes : utilisateurs, rôles, accès aux données, journal d'audit ;
 - modifier les données d'organisation : sociétés, départements, centres de coûts, comptes et plans de comptes, processus métier, les dimensions elles-mêmes et les valeurs des dimensions sans valeurs ouvertes ;
