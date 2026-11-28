@@ -150,7 +150,7 @@ export function adminPlace(ctx: Pick<AdminMenuContext, 'singleTenant' | 'platfor
 }
 
 /**
- * The person who runs the installation, as the server's `SystemAdminGuard` and
+ * The person who runs the installation, as the server's `InstallationAdminGuard` and
  * `@ReservedToUnscopedDataAccess()` see them. On site: the Administrator role, with access to all
  * data. In the cloud: a platform administrator on the platform host (`isGlobalAdmin` is not
  * enough there: every Administrator of the platform workspace has it).
