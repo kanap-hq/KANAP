@@ -147,12 +147,18 @@ async function testMigration() {
     ]);
     const [security] = await runner.query(`SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE oid = 'installation_ai_settings'::regclass`);
     assert.deepEqual(security, { relrowsecurity: false, relforcerowsecurity: false }, 'no row level security');
-    await runner.query(`INSERT INTO installation_ai_settings (chat_max_tokens) VALUES (100)`);
+    await runner.query(`INSERT INTO installation_ai_settings (chat_max_tokens, ticket_max_images, ticket_max_image_bytes) VALUES (1024, 10, 52428800)`);
+    await runner.query(`UPDATE installation_ai_settings SET chat_max_tokens = 128000, ticket_max_images = 1, ticket_max_image_bytes = 1048576`);
     for (const [sql, label] of [
-      [`INSERT INTO installation_ai_settings (chat_max_tokens) VALUES (200)`, 'a second row'],
+      [`INSERT INTO installation_ai_settings (chat_max_tokens) VALUES (2000)`, 'a second row'],
       [`INSERT INTO installation_ai_settings (singleton) VALUES (false)`, 'singleton false'],
       [`UPDATE installation_ai_settings SET ticket_max_images = 11`, '11 images'],
+      [`UPDATE installation_ai_settings SET ticket_max_images = 0`, 'no image'],
       [`UPDATE installation_ai_settings SET chat_max_tokens = 0`, 'zero tokens'],
+      [`UPDATE installation_ai_settings SET chat_max_tokens = 1023`, 'below 1,024 tokens'],
+      [`UPDATE installation_ai_settings SET chat_max_tokens = 128001`, 'above 128,000 tokens'],
+      [`UPDATE installation_ai_settings SET ticket_max_image_bytes = 1048575`, 'below 1 MiB'],
+      [`UPDATE installation_ai_settings SET ticket_max_image_bytes = 52428801`, 'above 50 MiB'],
     ]) {
       await runner.query('SAVEPOINT refused');
       await assert.rejects(() => runner.query(sql), Error, label);
@@ -178,7 +184,7 @@ async function testWritesAuditAndLocks(seeded: Seeded) {
     assert.equal(await rows(), 0, 'reading creates no row');
     assert.deepEqual(empty.settings.web_search_api_key, { has_value: false, stored_unreadable: false, source: 'default', locked: false, file_unreadable: false });
     assert.deepEqual(empty.settings.chat_max_tokens, {
-      value: 16384, default: 16384, source: 'default', locked: false, file_unreadable: false, min: 1, max: 2147483647,
+      value: 16384, default: 16384, source: 'default', locked: false, file_unreadable: false, min: 1024, max: 128000,
     });
     assert.equal(empty.encryption_available, true);
 
@@ -211,7 +217,8 @@ async function testWritesAuditAndLocks(seeded: Seeded) {
     assert.equal(await refusalCode(service.update('ai', { ticket_max_images: 0 }, context)), 'installation_setting_invalid');
     assert.equal(await refusalCode(service.update('ai', { chat_max_tokens: 1.5 }, context)), 'installation_setting_invalid');
     assert.equal(await refusalCode(service.update('ai', { chat_max_tokens: '4096' }, context)), 'installation_setting_invalid');
-    assert.equal(await refusalCode(service.update('ai', { chat_max_tokens: 2147483648 }, context)), 'installation_setting_invalid');
+    assert.equal(await refusalCode(service.update('ai', { chat_max_tokens: 128001 }, context)), 'installation_setting_invalid');
+    assert.equal(await refusalCode(service.update('ai', { ticket_max_image_bytes: 52428801 }, context)), 'installation_setting_invalid');
     assert.equal(await refusalCode(service.update('ai', { model: 'x' }, context)), 'installation_setting_unknown');
     assert.equal(await refusalCode(service.update('ai', [] as unknown, context)), 'installation_setting_invalid');
 
@@ -249,7 +256,7 @@ async function testConcurrentWritesAndRefresh(seeded: Seeded) {
   const t1 = await begin(seeded.tenantId);
   const t2 = await begin(seeded.tenantId);
   try {
-    await first.service.update('ai', { chat_max_tokens: 1000 }, { manager: t1.manager, userId: seeded.userId });
+    await first.service.update('ai', { chat_max_tokens: 3000 }, { manager: t1.manager, userId: seeded.userId });
     let settled = false;
     const pending = second.service.update('ai', { ticket_max_images: 4 }, { manager: t2.manager, userId: seeded.userId })
       .finally(() => { settled = true; });
@@ -263,12 +270,12 @@ async function testConcurrentWritesAndRefresh(seeded: Seeded) {
     await finish(t2, 'rollback').catch(() => undefined);
   }
   const [row] = await dataSource.query(`SELECT count(*) OVER ()::int AS n, chat_max_tokens, ticket_max_images FROM installation_ai_settings`);
-  assert.deepEqual(row, { n: 1, chat_max_tokens: 1000, ticket_max_images: 4 }, 'one row with both writes');
+  assert.deepEqual(row, { n: 1, chat_max_tokens: 3000, ticket_max_images: 4 }, 'one row with both writes');
   const reader = await begin(seeded.tenantId);
   const entries = await auditEntries(reader, seeded.tenantId);
   await finish(reader, 'rollback');
   assert.deepEqual(entries.map((e: any) => [e.action, e.before_json, e.after_json]), [
-    ['create', null, { chat_max_tokens: 1000 }],
+    ['create', null, { chat_max_tokens: 3000 }],
     ['update', { ticket_max_images: null }, { ticket_max_images: 4 }],
   ]);
 
@@ -277,7 +284,7 @@ async function testConcurrentWritesAndRefresh(seeded: Seeded) {
   mock.timers.enable({ apis: ['setInterval'] });
   try {
     await third.service.start({ warn: false });
-    assert.equal(third.snapshot.value(AI_INSTALLATION_DOMAIN, 'chat_max_tokens'), 1000);
+    assert.equal(third.snapshot.value(AI_INSTALLATION_DOMAIN, 'chat_max_tokens'), 3000);
     const writer = await begin(seeded.tenantId);
     await first.service.update('ai', { chat_max_tokens: 2000 }, { manager: writer.manager, userId: seeded.userId });
     await finish(writer, 'commit');
@@ -285,7 +292,7 @@ async function testConcurrentWritesAndRefresh(seeded: Seeded) {
     assert.equal(first.snapshot.value(AI_INSTALLATION_DOMAIN, 'chat_max_tokens'), 2000, 'the writing process after the commit');
     mock.timers.tick(29_999);
     for (let round = 0; round < 20; round += 1) await new Promise((resolve) => setImmediate(resolve));
-    assert.equal(third.snapshot.value(AI_INSTALLATION_DOMAIN, 'chat_max_tokens'), 1000, 'not before 30 seconds');
+    assert.equal(third.snapshot.value(AI_INSTALLATION_DOMAIN, 'chat_max_tokens'), 3000, 'not before 30 seconds');
     mock.timers.tick(1);
     await eventually(() => third.snapshot.value(AI_INSTALLATION_DOMAIN, 'chat_max_tokens') === 2000);
   } finally {

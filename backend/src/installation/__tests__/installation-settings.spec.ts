@@ -27,7 +27,7 @@ import { settingsEncryptionSecret } from '../settings-encryption-secret';
 //   refuse the start and name both variables.
 
 const ENV = (values: Record<string, string>) => ({ DEPLOYMENT_MODE: 'multi-tenant', ...values }) as NodeJS.ProcessEnv;
-const ROW = { web_search_api_key: 'database-key', chat_max_tokens: 777, ticket_max_images: 2, ticket_max_image_bytes: 4321 };
+const ROW = { web_search_api_key: 'database-key', chat_max_tokens: 2000, ticket_max_images: 2, ticket_max_image_bytes: 2_000_000 };
 
 function testResolution() {
   // File and database: the file wins and locks.
@@ -65,7 +65,7 @@ function testResolution() {
     const unreadable = resolveDomain(AI_INSTALLATION_DOMAIN, ROW, ENV({ AI_CHAT_MAX_TOKENS: raw }));
     assert.deepEqual(
       [unreadable.get('chat_max_tokens')!.value, unreadable.get('chat_max_tokens')!.source, unreadable.get('chat_max_tokens')!.fileUnreadable],
-      [777, 'database', true],
+      [2000, 'database', true],
       raw,
     );
   }
@@ -165,6 +165,55 @@ function testZeroIsAValueWhenDeclared() {
   );
 }
 
+/**
+ * The bounds of the three limits, for the route and the database: a reply of 1,024 to 128,000
+ * tokens, 1 to 10 images per ticket, an image of 1 to 50 MiB. A file value outside them is read as
+ * the code read it before the settings (positive, the images capped at 10).
+ */
+function testAiLimitBounds() {
+  const MIB = 1024 * 1024;
+  const resolved = resolveDomain(AI_INSTALLATION_DOMAIN, null, ENV({}));
+  const accepted = (body: Record<string, number>) => {
+    try {
+      validateWrite(AI_INSTALLATION_DOMAIN, body, resolved, { canEncrypt: true });
+      return true;
+    } catch (error) {
+      if (error instanceof InstallationSettingWriteError && error.code === 'installation_setting_invalid') return false;
+      throw error;
+    }
+  };
+  const stateOf = (row: Record<string, unknown> | null) => domainState(resolveDomain(AI_INSTALLATION_DOMAIN, row, ENV({}))) as Record<string, any>;
+  const fileValue = (env: Record<string, string>, key: string) => resolveDomain(AI_INSTALLATION_DOMAIN, null, ENV(env)).get(key)!.value;
+  const state = stateOf(null);
+  assert.deepEqual(
+    {
+      writes: {
+        chat: [1023, 1024, 128000, 128001].map((value) => accepted({ chat_max_tokens: value })),
+        images: [0, 1, 10, 11].map((value) => accepted({ ticket_max_images: value })),
+        bytes: [MIB - 1, MIB, 50 * MIB, 50 * MIB + 1].map((value) => accepted({ ticket_max_image_bytes: value })),
+      },
+      bounds: ['chat_max_tokens', 'ticket_max_images', 'ticket_max_image_bytes'].map((key) => [state[key].min, state[key].max]),
+      database: [
+        stateOf({ chat_max_tokens: 1023 }).chat_max_tokens.source,
+        stateOf({ ticket_max_image_bytes: 50 * MIB + 1 }).ticket_max_image_bytes.source,
+      ],
+      file: [
+        fileValue({ AI_CHAT_MAX_TOKENS: '100' }, 'chat_max_tokens'),
+        fileValue({ AI_CHAT_MAX_TOKENS: '500000' }, 'chat_max_tokens'),
+        fileValue({ AI_AGENT_VISION_MAX_IMAGES: '25' }, 'ticket_max_images'),
+        fileValue({ AI_AGENT_VISION_MAX_IMAGE_BYTES: '1' }, 'ticket_max_image_bytes'),
+        fileValue({ AI_AGENT_VISION_MAX_IMAGE_BYTES: String(200 * MIB) }, 'ticket_max_image_bytes'),
+      ],
+    },
+    {
+      writes: { chat: [false, true, true, false], images: [false, true, true, false], bytes: [false, true, true, false] },
+      bounds: [[1024, 128000], [1, 10], [MIB, 50 * MIB]],
+      database: ['default', 'default'],
+      file: [100, 500000, 10, 1, 200 * MIB],
+    },
+  );
+}
+
 function testFeaturesFollowOnlyChanges() {
   const previousKey = process.env.BRAVE_SEARCH_API_KEY;
   delete process.env.BRAVE_SEARCH_API_KEY;
@@ -247,6 +296,7 @@ async function run() {
   testWrites();
   testDeclarationDefaults();
   testZeroIsAValueWhenDeclared();
+  testAiLimitBounds();
   testFeaturesFollowOnlyChanges();
   await testKeyOfSpacesIsNotConfigured();
   testEncryptionKeyNames();

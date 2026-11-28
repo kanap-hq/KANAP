@@ -182,6 +182,8 @@ const IMAGES: Array<Row<number>> = [
 const IMAGE_BYTES: Array<Row<number>> = [
   { label: 'absent', env: {}, expected: 20 * 1024 * 1024, fileDefines: false },
   { label: "'1048576'", env: { AI_AGENT_VISION_MAX_IMAGE_BYTES: '1048576' }, expected: 1048576, fileDefines: true },
+  { label: "'1'", env: { AI_AGENT_VISION_MAX_IMAGE_BYTES: '1' }, expected: 1, fileDefines: true },
+  { label: "'209715200'", env: { AI_AGENT_VISION_MAX_IMAGE_BYTES: '209715200' }, expected: 209715200, fileDefines: true },
   { label: "'abc'", env: { AI_AGENT_VISION_MAX_IMAGE_BYTES: 'abc' }, expected: 20 * 1024 * 1024, fileDefines: false },
   { label: "'-1'", env: { AI_AGENT_VISION_MAX_IMAGE_BYTES: '-1' }, expected: 20 * 1024 * 1024, fileDefines: false },
 ];
