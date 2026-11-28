@@ -55,9 +55,9 @@ describe('ConnectionCard', () => {
     rerender({ configured: true, storedTest: PASSED, dirty: true });
     expect(screen.getByRole('status')).toHaveTextContent('Changes not saved');
 
-    // A test of the values on screen says how it went, with its cause or what the system answered.
+    // A test of the values on screen says how it went, after its date: its cause or what the system answered.
     rerender({ configured: true, storedTest: PASSED, dirty: true, sessionTest: { ...FAILED, cause: 'The server could not be reached.' } });
-    expect(screen.getByRole('status')).toHaveTextContent('The server could not be reached.');
+    expect(screen.getByRole('status')).toHaveTextContent(/^Last test failed on 16 Oct.* · The server could not be reached\.$/);
     rerender({ configured: true, storedTest: PASSED, dirty: true, sessionTest: { ...FAILED, ok: true, detail: 'Version 4.1' } });
     expect(screen.getByRole('status')).toHaveTextContent(/^Last test passed on 16 Oct.* · Version 4\.1$/);
 

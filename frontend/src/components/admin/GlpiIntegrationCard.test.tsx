@@ -136,7 +136,8 @@ describe('GlpiIntegrationCard', () => {
     try {
       await act(async () => { await i18n.changeLanguage('fr'); });
       fireEvent.click(screen.getByRole('button', { name: 'Tester' }));
-      expect(await screen.findByText(/^GLPI a refusé le jeton utilisateur\./)).toBeInTheDocument();
+      const failed = await screen.findByText(/^Dernier test échoué le 16 oct/);
+      expect(within(failed).getByText(/· GLPI a refusé le jeton utilisateur\./)).toBeInTheDocument();
       expect(screen.queryByText('GLPI rejected the user token.')).toBeNull();
       expect((api.post as any).mock.calls[0][1]).toEqual({ glpi_url: 'https://glpi.example.com/', glpi_user_token: 'typed-token' });
       expect(screen.getByLabelText('Jeton utilisateur')).toHaveValue('typed-token');

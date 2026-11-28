@@ -118,13 +118,15 @@ describe('NetboxIntegrationCard', () => {
     await screen.findByLabelText('Netbox address');
 
     fireEvent.click(screen.getByRole('button', { name: 'Test' }));
-    expect(await screen.findByText('The Netbox server could not be reached.')).toBeInTheDocument();
+    // The same line as after a reload: the date, then the cause.
+    const failed = await screen.findByText(/^Last test failed on /);
+    expect(within(failed).getByText(/· The Netbox server could not be reached\.$/)).toBeInTheDocument();
     expect(screen.queryByText(/ECONNREFUSED/)).not.toBeInTheDocument();
     expect(screen.queryByText(/172\.18/)).not.toBeInTheDocument();
 
     // A change makes the result stale: the status line says so.
     fireEvent.change(screen.getByLabelText('Request timeout (seconds)'), { target: { value: '1' } });
-    expect(screen.queryByText('The Netbox server could not be reached.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/The Netbox server could not be reached/)).not.toBeInTheDocument();
     expect(screen.getByText('Changes not saved')).toBeInTheDocument();
 
     (apiClient.put as any).mockRejectedValueOnce({
@@ -137,7 +139,7 @@ describe('NetboxIntegrationCard', () => {
 
     expect(await screen.findByText('The request timeout must be a whole number of seconds between 5 and 120, or empty to use the default.')).toBeInTheDocument();
     expect(screen.queryByText('raw timeout')).not.toBeInTheDocument();
-    expect(screen.queryByText('The Netbox server could not be reached.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/The Netbox server could not be reached/)).not.toBeInTheDocument();
     expect(screen.getAllByRole('alert')).toHaveLength(1);
   });
 

@@ -118,7 +118,9 @@ describe('MonitoringIntegrationCard', () => {
       data: { ok: false, code: 'prtg_auth', message: 'HTTP 401 from upstream', tested_at: '2026-11-20T09:05:00.000Z', persisted: true },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Test' }));
-    expect(await screen.findByText('PRTG rejected the API key. Check that it was copied in full.')).toBeInTheDocument();
+    // The same line as after a reload: the date, then the cause.
+    const failed = await screen.findByText(/^Last test failed on 20 Nov( 2026)? at /);
+    expect(within(failed).getByText(/· PRTG rejected the API key\. Check that it was copied in full\.$/)).toBeInTheDocument();
     expect(screen.queryByText(/HTTP 401/)).toBeNull();
   });
 

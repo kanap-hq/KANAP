@@ -89,8 +89,8 @@ function newer(a: ConnectionTest | null | undefined, b: ConnectionTest | null | 
 /**
  * The status line's state, in this order: a status given; a test running; the test run in this
  * session (on the values on screen); unsaved changes; the stored test; saved; never tested. A
- * stored test says what the session test said: what the system answered, or the cause, after
- * its date.
+ * test says the same line in this session and after a reload: its date, then what the system
+ * answered or the cause.
  */
 export function connectionStatusLine(
   props: Pick<ConnectionCardProps, 'status' | 'testing' | 'sessionTest' | 'storedTest' | 'dirty' | 'configured'>,
@@ -99,7 +99,7 @@ export function connectionStatusLine(
 ): ConnectionStatus & { detail?: string } {
   if (props.status) return props.status;
   if (props.testing) return { tone: 'progress', text: t('common:connectionCard.status.testing') };
-  const describe = (test: ConnectionTest, fresh: boolean): ConnectionStatus & { detail?: string } => {
+  const describe = (test: ConnectionTest): ConnectionStatus & { detail?: string } => {
     const at = new Date(test.tested_at);
     const when = {
       date: formatShortInstantDate(at, locale),
@@ -108,12 +108,11 @@ export function connectionStatusLine(
     if (test.ok) {
       return { tone: 'success', text: t('common:connectionCard.status.passed', when), ...(test.detail ? { detail: test.detail } : {}) };
     }
-    if (fresh && test.cause) return { tone: 'danger', text: test.cause };
     return { tone: 'danger', text: t('common:connectionCard.status.failed', when), ...(test.cause ? { detail: test.cause } : {}) };
   };
-  if (props.sessionTest && newer(props.sessionTest, props.storedTest)) return describe(props.sessionTest, true);
+  if (props.sessionTest && newer(props.sessionTest, props.storedTest)) return describe(props.sessionTest);
   if (props.dirty) return { tone: 'neutral', text: t('common:connectionCard.status.notSaved') };
-  if (props.storedTest) return describe(props.storedTest, false);
+  if (props.storedTest) return describe(props.storedTest);
   return { tone: 'neutral', text: t(props.configured ? 'common:connectionCard.status.savedNotTested' : 'common:connectionCard.status.neverTested') };
 }
 
