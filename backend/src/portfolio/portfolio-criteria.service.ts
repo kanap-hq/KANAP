@@ -7,7 +7,7 @@ import { PortfolioRequest } from './portfolio-request.entity';
 import { PortfolioProject } from './portfolio-project.entity';
 import { PortfolioSettings } from './portfolio-settings.entity';
 import { PortfolioActivity } from './portfolio-activity.entity';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, writeAuditLogs, type AuditEntry } from '../audit/audit.service';
 import {
   CriteriaLabelMaps,
   CriteriaValuesMap,
@@ -363,12 +363,13 @@ export class PortfolioCriteriaService {
   /**
    * Reorder criteria for a tenant by reassigning `display_order` from the
    * given id list. Criteria not present in the payload keep their relative
-   * order, appended after the listed ones, so the tenant order stays dense.
+   * order, appended after the listed ones, so the tenant order stays dense. Each criterion whose
+   * place changes gets its audit row, in the name of `userId`.
    */
   async reorder(
     ids: string[],
     tenantId: string,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; userId?: string | null },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const criteriaRepo = mg.getRepository(PortfolioCriterion);
@@ -395,14 +396,18 @@ export class PortfolioCriteriaService {
       }
     }
 
+    const moved: AuditEntry[] = [];
     for (let i = 0; i < ordered.length; i++) {
       const c = ordered[i];
       if (c.display_order === i) continue;
+      const updatedAt = new Date();
       await criteriaRepo.update(
         { id: c.id, tenant_id: tenantId },
-        { display_order: i, updated_at: new Date() },
+        { display_order: i, updated_at: updatedAt },
       );
+      moved.push({ table: 'portfolio_criteria', recordId: c.id, action: 'update', before: c, after: { ...c, display_order: i, updated_at: updatedAt }, userId: opts?.userId ?? null });
     }
+    if (moved.length > 0) await writeAuditLogs(mg, moved);
 
     return { ok: true };
   }

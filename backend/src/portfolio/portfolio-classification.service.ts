@@ -9,6 +9,8 @@ import { tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { PortfolioTaskType, DEFAULT_TASK_TYPES } from './portfolio-task-type.entity';
 import { checkIds, RecordInUseException, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 import { assertMemberMoveAllowed } from '../common/record-membership-moves';
+import { writeAuditLog, writeAuditLogs, type AuditEntry } from '../audit/audit.service';
+import { assignFields } from './settings-fields';
 
 /** A built-in classification item cannot be deleted (`BUILT_IN_RECORD`): disable it instead. */
 function builtInRefusal(entity: string, name: string): RecordInUseException {
@@ -95,7 +97,8 @@ export interface CategoryWithStreams extends PortfolioCategory {
   streams: PortfolioStream[];
 }
 
-type ServiceOpts = { manager?: EntityManager };
+/** `userId`: the person who writes, named on the audit row of the write. */
+type ServiceOpts = { manager?: EntityManager; userId?: string | null };
 
 @Injectable()
 export class PortfolioClassificationService {
@@ -130,7 +133,8 @@ export class PortfolioClassificationService {
   }
 
   async createSource(tenantId: string, data: CreateSourceDto, opts?: ServiceOpts): Promise<PortfolioSource> {
-    const repo = opts?.manager?.getRepository(PortfolioSource) ?? this.sourceRepo;
+    const mg = opts?.manager ?? this.sourceRepo.manager;
+    const repo = mg.getRepository(PortfolioSource);
 
     // Check for duplicate name
     const existing = await repo.findOne({
@@ -160,11 +164,14 @@ export class PortfolioClassificationService {
       is_system: false,
     });
 
-    return repo.save(source);
+    const saved = await repo.save(source);
+    await writeAuditLog(mg, { table: 'portfolio_sources', recordId: saved.id, action: 'create', before: null, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 
   async updateSource(id: string, tenantId: string, data: UpdateSourceDto, opts?: ServiceOpts): Promise<PortfolioSource> {
-    const repo = opts?.manager?.getRepository(PortfolioSource) ?? this.sourceRepo;
+    const mg = opts?.manager ?? this.sourceRepo.manager;
+    const repo = mg.getRepository(PortfolioSource);
 
     const source = await repo.findOne({
       where: { id, tenant_id: tenantId },
@@ -183,12 +190,13 @@ export class PortfolioClassificationService {
       }
     }
 
-    Object.assign(source, {
-      ...data,
-      updated_at: new Date(),
-    });
+    const before = { ...source };
+    assignFields(source, data, ['name', 'description', 'is_active', 'display_order']);
+    source.updated_at = new Date();
 
-    return repo.save(source);
+    const saved = await repo.save(source);
+    await writeAuditLog(mg, { table: 'portfolio_sources', recordId: id, action: 'update', before, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 
   async deleteSource(id: string, tenantId: string, opts?: ServiceOpts): Promise<void> {
@@ -206,6 +214,7 @@ export class PortfolioClassificationService {
     if (refusal) throw refusal;
 
     await repo.delete(id);
+    await writeAuditLog(mg, { table: 'portfolio_sources', recordId: id, action: 'delete', before: source, after: null, userId: opts?.userId ?? null });
   }
 
   /**
@@ -286,7 +295,8 @@ export class PortfolioClassificationService {
   }
 
   async createCategory(tenantId: string, data: CreateCategoryDto, opts?: ServiceOpts): Promise<PortfolioCategory> {
-    const repo = opts?.manager?.getRepository(PortfolioCategory) ?? this.categoryRepo;
+    const mg = opts?.manager ?? this.categoryRepo.manager;
+    const repo = mg.getRepository(PortfolioCategory);
 
     // Check for duplicate name
     const existing = await repo.findOne({
@@ -316,11 +326,14 @@ export class PortfolioClassificationService {
       is_system: false,
     });
 
-    return repo.save(category);
+    const saved = await repo.save(category);
+    await writeAuditLog(mg, { table: 'portfolio_categories', recordId: saved.id, action: 'create', before: null, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 
   async updateCategory(id: string, tenantId: string, data: UpdateCategoryDto, opts?: ServiceOpts): Promise<PortfolioCategory> {
-    const repo = opts?.manager?.getRepository(PortfolioCategory) ?? this.categoryRepo;
+    const mg = opts?.manager ?? this.categoryRepo.manager;
+    const repo = mg.getRepository(PortfolioCategory);
 
     const category = await repo.findOne({
       where: { id, tenant_id: tenantId },
@@ -339,12 +352,13 @@ export class PortfolioClassificationService {
       }
     }
 
-    Object.assign(category, {
-      ...data,
-      updated_at: new Date(),
-    });
+    const before = { ...category };
+    assignFields(category, data, ['name', 'description', 'is_active', 'display_order']);
+    category.updated_at = new Date();
 
-    return repo.save(category);
+    const saved = await repo.save(category);
+    await writeAuditLog(mg, { table: 'portfolio_categories', recordId: id, action: 'update', before, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 
   async deleteCategory(id: string, tenantId: string, opts?: ServiceOpts): Promise<void> {
@@ -361,8 +375,17 @@ export class PortfolioClassificationService {
     const refusal = await this.refusalOf('categories', category, tenantId, mg);
     if (refusal) throw refusal;
 
-    // Streams will be cascade deleted
+    // Its streams go with it (cascade): each gets its own row, read before the delete.
+    const streams = await mg.getRepository(PortfolioStream).find({
+      where: { tenant_id: tenantId, category_id: id },
+      order: { display_order: 'ASC', name: 'ASC' },
+    });
     await repo.delete(id);
+    const userId = opts?.userId ?? null;
+    await writeAuditLogs(mg, [
+      { table: 'portfolio_categories', recordId: id, action: 'delete', before: category, after: null, userId },
+      ...streams.map((stream) => ({ table: 'portfolio_streams', recordId: stream.id, action: 'delete', before: stream, after: null, userId })),
+    ]);
   }
 
   // ============================================
@@ -433,7 +456,9 @@ export class PortfolioClassificationService {
       display_order: displayOrder,
     });
 
-    return streamRepoLocal.save(stream);
+    const saved = await streamRepoLocal.save(stream);
+    await writeAuditLog(mg, { table: 'portfolio_streams', recordId: saved.id, action: 'create', before: null, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 
   async updateStream(id: string, tenantId: string, data: UpdateStreamDto, opts?: ServiceOpts): Promise<PortfolioStream> {
@@ -476,12 +501,13 @@ export class PortfolioClassificationService {
       }
     }
 
-    Object.assign(stream, {
-      ...data,
-      updated_at: new Date(),
-    });
+    const before = { ...stream };
+    assignFields(stream, data, ['name', 'description', 'is_active', 'display_order', 'category_id']);
+    stream.updated_at = new Date();
 
-    return streamRepoLocal.save(stream);
+    const saved = await streamRepoLocal.save(stream);
+    await writeAuditLog(mg, { table: 'portfolio_streams', recordId: id, action: 'update', before, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 
   async deleteStream(id: string, tenantId: string, opts?: ServiceOpts): Promise<void> {
@@ -499,6 +525,7 @@ export class PortfolioClassificationService {
     if (refusal) throw refusal;
 
     await repo.delete(id);
+    await writeAuditLog(mg, { table: 'portfolio_streams', recordId: id, action: 'delete', before: stream, after: null, userId: opts?.userId ?? null });
   }
 
   // ============================================
@@ -521,7 +548,8 @@ export class PortfolioClassificationService {
   }
 
   async createTaskType(tenantId: string, data: CreateTaskTypeDto, opts?: ServiceOpts): Promise<PortfolioTaskType> {
-    const repo = opts?.manager?.getRepository(PortfolioTaskType) ?? this.taskTypeRepo;
+    const mg = opts?.manager ?? this.taskTypeRepo.manager;
+    const repo = mg.getRepository(PortfolioTaskType);
 
     // Check for duplicate name
     const existing = await repo.findOne({
@@ -551,11 +579,14 @@ export class PortfolioClassificationService {
       is_system: false,
     });
 
-    return repo.save(taskType);
+    const saved = await repo.save(taskType);
+    await writeAuditLog(mg, { table: 'portfolio_task_types', recordId: saved.id, action: 'create', before: null, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 
   async updateTaskType(id: string, tenantId: string, data: UpdateTaskTypeDto, opts?: ServiceOpts): Promise<PortfolioTaskType> {
-    const repo = opts?.manager?.getRepository(PortfolioTaskType) ?? this.taskTypeRepo;
+    const mg = opts?.manager ?? this.taskTypeRepo.manager;
+    const repo = mg.getRepository(PortfolioTaskType);
 
     const taskType = await repo.findOne({
       where: { id, tenant_id: tenantId },
@@ -574,6 +605,7 @@ export class PortfolioClassificationService {
       }
     }
 
+    const before = { ...taskType };
     // Only the editable fields: the code stays with the type through a rename.
     if (data.name !== undefined) taskType.name = data.name;
     if (data.description !== undefined) taskType.description = data.description;
@@ -581,7 +613,9 @@ export class PortfolioClassificationService {
     if (data.display_order !== undefined) taskType.display_order = data.display_order;
     taskType.updated_at = new Date();
 
-    return repo.save(taskType);
+    const saved = await repo.save(taskType);
+    await writeAuditLog(mg, { table: 'portfolio_task_types', recordId: id, action: 'update', before, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 
   async deleteTaskType(id: string, tenantId: string, opts?: ServiceOpts): Promise<void> {
@@ -599,10 +633,13 @@ export class PortfolioClassificationService {
     if (refusal) throw refusal;
 
     await repo.delete(id);
+    await writeAuditLog(mg, { table: 'portfolio_task_types', recordId: id, action: 'delete', before: taskType, after: null, userId: opts?.userId ?? null });
   }
 
-  async seedDefaultTaskTypes(tenantId: string, manager?: EntityManager): Promise<void> {
+  /** Creates the default task types a workspace lacks, and returns those it created. */
+  async seedDefaultTaskTypes(tenantId: string, manager?: EntityManager): Promise<PortfolioTaskType[]> {
     const repo = manager ? manager.getRepository(PortfolioTaskType) : this.taskTypeRepo;
+    const created: PortfolioTaskType[] = [];
 
     for (const def of DEFAULT_TASK_TYPES) {
       // A renamed default keeps its code: it is still there.
@@ -617,9 +654,10 @@ export class PortfolioClassificationService {
           tenant_id: tenantId,
           ...def,
         });
-        await repo.save(taskType);
+        created.push(await repo.save(taskType));
       }
     }
+    return created;
   }
 
   // ============================================
@@ -629,13 +667,33 @@ export class PortfolioClassificationService {
   /**
    * The starting sources and categories of a new workspace (`starting-classification.seed.ts`), in
    * the workspace seed language, as ordinary values, then the task types. No stream: the user
-   * creates their own.
+   * creates their own. Each value created gets its audit row, in the name of `userId`.
    */
-  async seedAllDefaults(tenantId: string, manager?: EntityManager): Promise<void> {
+  async seedAllDefaults(tenantId: string, manager?: EntityManager, userId: string | null = null): Promise<void> {
     const mg = manager ?? this.sourceRepo.manager;
+    const sourcesBefore = await this.idsOf(mg, 'portfolio_sources', tenantId);
+    const categoriesBefore = await this.idsOf(mg, 'portfolio_categories', tenantId);
     const [tenant] = await mg.query(`SELECT metadata FROM tenants WHERE id = $1`, [tenantId]);
     await ensureStartingPortfolioClassification(mg, tenantId, tenantSeedLanguage(tenant?.metadata));
-    await this.seedDefaultTaskTypes(tenantId, manager);
+    const taskTypes = await this.seedDefaultTaskTypes(tenantId, mg);
+
+    const order = { display_order: 'ASC', name: 'ASC' } as const;
+    const sources = (await mg.getRepository(PortfolioSource).find({ where: { tenant_id: tenantId }, order }))
+      .filter((source) => !sourcesBefore.has(source.id));
+    const categories = (await mg.getRepository(PortfolioCategory).find({ where: { tenant_id: tenantId }, order }))
+      .filter((category) => !categoriesBefore.has(category.id));
+    const entries: AuditEntry[] = [
+      ...sources.map((source) => ({ table: 'portfolio_sources', recordId: source.id, action: 'create', before: null, after: source, userId })),
+      ...categories.map((category) => ({ table: 'portfolio_categories', recordId: category.id, action: 'create', before: null, after: category, userId })),
+      ...taskTypes.map((taskType) => ({ table: 'portfolio_task_types', recordId: taskType.id, action: 'create', before: null, after: taskType, userId })),
+    ];
+    if (entries.length > 0) await writeAuditLogs(mg, entries);
+  }
+
+  /** The ids of the values a classification list holds now. */
+  private async idsOf(mg: EntityManager, table: 'portfolio_sources' | 'portfolio_categories', tenantId: string): Promise<Set<string>> {
+    const rows: Array<{ id: string }> = await mg.query(`SELECT id::text AS id FROM ${table} WHERE tenant_id = $1`, [tenantId]);
+    return new Set(rows.map((row) => row.id));
   }
 
   async getCategoriesWithStreams(tenantId: string, opts?: ServiceOpts): Promise<CategoryWithStreams[]> {

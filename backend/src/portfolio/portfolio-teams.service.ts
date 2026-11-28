@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { PortfolioTeam, DEFAULT_TEAMS } from './portfolio-team.entity';
 import { checkIds, RecordInUseException, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
+import { writeAuditLog, writeAuditLogs } from '../audit/audit.service';
+import { assignFields } from './settings-fields';
 
 interface CreateTeamDto {
   name: string;
@@ -59,7 +61,7 @@ export class PortfolioTeamsService {
     });
   }
 
-  async create(tenantId: string, data: CreateTeamDto, opts?: { manager?: EntityManager }): Promise<PortfolioTeam> {
+  async create(tenantId: string, data: CreateTeamDto, opts?: { manager?: EntityManager; userId?: string | null }): Promise<PortfolioTeam> {
     const mg = opts?.manager ?? this.teamRepo.manager;
     const repo = mg.getRepository(PortfolioTeam);
 
@@ -102,10 +104,12 @@ export class PortfolioTeamsService {
       is_system: false,
     });
 
-    return repo.save(team);
+    const saved = await repo.save(team);
+    await writeAuditLog(mg, { table: 'portfolio_teams', recordId: saved.id, action: 'create', before: null, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 
-  async update(id: string, tenantId: string, data: UpdateTeamDto, opts?: { manager?: EntityManager }): Promise<PortfolioTeam> {
+  async update(id: string, tenantId: string, data: UpdateTeamDto, opts?: { manager?: EntityManager; userId?: string | null }): Promise<PortfolioTeam> {
     const mg = opts?.manager ?? this.teamRepo.manager;
     const repo = mg.getRepository(PortfolioTeam);
 
@@ -142,15 +146,16 @@ export class PortfolioTeamsService {
       }
     }
 
-    Object.assign(team, {
-      ...data,
-      updated_at: new Date(),
-    });
+    const before = { ...team };
+    assignFields(team, data, ['name', 'description', 'is_active', 'display_order', 'parent_id']);
+    team.updated_at = new Date();
 
-    return repo.save(team);
+    const saved = await repo.save(team);
+    await writeAuditLog(mg, { table: 'portfolio_teams', recordId: id, action: 'update', before, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 
-  async delete(id: string, tenantId: string, opts?: { manager?: EntityManager }): Promise<void> {
+  async delete(id: string, tenantId: string, opts?: { manager?: EntityManager; userId?: string | null }): Promise<void> {
     const mg = opts?.manager ?? this.teamRepo.manager;
     const repo = mg.getRepository(PortfolioTeam);
 
@@ -165,6 +170,7 @@ export class PortfolioTeamsService {
     if (refusal) throw refusal;
 
     await repo.delete(id);
+    await writeAuditLog(mg, { table: 'portfolio_teams', recordId: id, action: 'delete', before: team, after: null, userId: opts?.userId ?? null });
   }
 
   /**
@@ -200,9 +206,11 @@ export class PortfolioTeamsService {
     return refusalsFrom(wanted, rows, (row) => row.name, (row) => this.refusalOf(row, tenantId, mg));
   }
 
-  async seedDefaults(tenantId: string, manager?: EntityManager): Promise<{ created: number }> {
-    const repo = manager ? manager.getRepository(PortfolioTeam) : this.teamRepo;
-    let created = 0;
+  /** Creates the default teams a workspace lacks; each one gets its audit row, in the name of `userId`. */
+  async seedDefaults(tenantId: string, manager?: EntityManager, userId: string | null = null): Promise<{ created: number }> {
+    const mg = manager ?? this.teamRepo.manager;
+    const repo = mg.getRepository(PortfolioTeam);
+    const created: PortfolioTeam[] = [];
 
     for (const def of DEFAULT_TEAMS) {
       const existing = await repo.findOne({
@@ -213,11 +221,13 @@ export class PortfolioTeamsService {
           tenant_id: tenantId,
           ...def,
         });
-        await repo.save(team);
-        created++;
+        created.push(await repo.save(team));
       }
     }
 
-    return { created };
+    if (created.length > 0) {
+      await writeAuditLogs(mg, created.map((team) => ({ table: 'portfolio_teams', recordId: team.id, action: 'create', before: null, after: team, userId })));
+    }
+    return { created: created.length };
   }
 }

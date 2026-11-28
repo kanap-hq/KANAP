@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { PortfolioSkill, DEFAULT_SKILLS } from './portfolio-skill.entity';
-import { AuditService } from '../audit/audit.service';
+import { AuditService, writeAuditLogs } from '../audit/audit.service';
 
 @Injectable()
 export class PortfolioSkillsService {
@@ -195,7 +195,8 @@ export class PortfolioSkillsService {
       }));
     }
 
-    await repo.save(entities);
+    const saved = await repo.save(entities);
+    await writeAuditLogs(mg, saved.map((skill) => ({ table: 'portfolio_skills', recordId: skill.id, action: 'create', before: null, after: skill, userId })));
 
     return { ok: true, created: entities.length };
   }

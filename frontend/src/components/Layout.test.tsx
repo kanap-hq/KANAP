@@ -386,6 +386,25 @@ describe('Layout master data sidebar', () => {
   });
 });
 
+describe('Layout portfolio settings', () => {
+  it('selects Settings on the address of a tab', () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/portfolio/settings/teams']}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/portfolio/settings/:tab" element={<div>settings</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole('link', { name: 'nav:sidebar.portfolio.settings' })).toHaveClass('Mui-selected');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.portfolio.contributors' })).not.toHaveClass('Mui-selected');
+  });
+});
+
 describe('Layout on the refusal page', () => {
   function renderRefusal(from: string) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
