@@ -239,6 +239,34 @@ describe('Saving the IT landscape lists', () => {
     expect(within(section).queryByRole('alert')).not.toBeInTheDocument();
   }, 20000);
 
+  it('clears a refusal once the default lists are restored', async () => {
+    const stored = { ...pageSettings, accessMethods: [{ code: 'web', label: 'Web', deprecated: false }] };
+    get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: stored };
+      if (String(url).startsWith('/locations')) return { data: { items: [] } };
+      return { data: { total: 0, usage: [] } };
+    });
+    patch.mockRejectedValue({ response: { status: 400, data: { message: 'Access methods: "Browser" clashes with "Web"' } } });
+    post.mockResolvedValue({ data: stored });
+    renderPage();
+    const title = await screen.findByRole('button', { name: /pages.settings.lists.accessMethods.title/ });
+    await wait(50);
+    fireEvent.click(title);
+    const section = title.closest('.MuiAccordion-root') as HTMLElement;
+    const name = await within(section).findByRole('textbox', { name: 'enumEditor.name' });
+    fireEvent.change(name, { target: { value: 'Browser' } });
+    fireEvent.blur(name);
+    expect(await within(section).findByRole('alert')).toHaveTextContent('clashes with');
+    expect(screen.getByRole('status')).toHaveTextContent('common:status.notSaved');
+    fireEvent.click(screen.getByRole('button', { name: 'pages.settings.restore.action' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'pages.settings.restore.confirm' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    await wait(50);
+    expect(within(section).queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).not.toHaveTextContent('common:status.notSaved');
+  }, 20000);
+
   it('restores the default lists: sends what waits, then shows every list as the server answers', async () => {
     const stored = { ...pageSettings, accessMethods: [{ code: 'web', label: 'Web', deprecated: false }, { code: 'kiosk', label: 'Kiosk', deprecated: false }] };
     const restored = { ...pageSettings, accessMethods: [{ code: 'web', label: 'Web', deprecated: false }, { code: 'api', label: 'API', deprecated: false }] };

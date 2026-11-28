@@ -37,6 +37,7 @@ import { DomainsEditor } from './DomainsEditor';
 import { SubnetsEditor } from './SubnetsEditor';
 import { focusAddedRow, makeLocalId, stripLocalIds, withLocalIds } from './editorParts';
 import {
+  enumListIds,
   initialState,
   listRows,
   reducer,
@@ -111,6 +112,9 @@ const listUsageKey = (id: ListId) => `pages.settings.lists.${id}.usage`;
 const HINTED_LISTS: ReadonlySet<ListId> = new Set<ListId>([
   'adminZones', 'domains', 'entities', 'hostingTypes', 'lifecycleStates', 'serverKinds', 'serverRoles', 'technologyFamilies',
 ]);
+
+/** Every list of the page, each one a field of the page's autosave. */
+const ALL_LISTS: ListId[] = [...enumListIds, 'connectionTypes', 'subnets', 'domains'];
 
 /** The lists of the list editor: every list of values but the custom ones. */
 const EDITOR_LISTS: ReadonlySet<ListId> = new Set(enumSections.filter((section) => section.kind !== 'adminZone').map((section) => section.id));
@@ -247,6 +251,8 @@ export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItS
       const next = await resetItOpsSettingsToDefaults();
       queryClient.setQueryData(['it-ops-settings'], next);
       dispatch({ type: 'hydrate', payload: next });
+      // Every list now shows what is stored: a refusal kept from before the restore no longer applies.
+      for (const id of ALL_LISTS) autosave.choose(id, null);
       void queryClient.invalidateQueries({ queryKey: ['it-ops-catalog-labels'] });
       void queryClient.invalidateQueries({ queryKey: ['application-classification-catalog'] });
       notify({ message: t('pages.settings.restore.done'), tone: 'success' });
