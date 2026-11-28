@@ -19,7 +19,7 @@ import { NETBOX_PROVIDER_KEY, NETBOX_PROVIDER_KIND, NetboxConfigService } from '
 // secret its own request did not change, and a secret stays with the address it was
 // entered for.
 
-process.env.AI_SETTINGS_ENCRYPTION_SECRET = process.env.AI_SETTINGS_ENCRYPTION_SECRET || 'concurrent-save-spec-secret';
+process.env.SETTINGS_ENCRYPTION_SECRET ||= process.env.AI_SETTINGS_ENCRYPTION_SECRET || 'concurrent-save-spec-secret';
 
 const fakeCipher = { encrypt: (value: string) => `enc:${value}`, canEncrypt: () => true } as any;
 
