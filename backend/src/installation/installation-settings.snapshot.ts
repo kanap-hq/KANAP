@@ -10,7 +10,8 @@ import {
 /**
  * What one process knows of the installation settings stored in the database: one row per domain
  * (a secret decrypted), loaded before the API listens and refreshed every 30 seconds by
- * `InstallationSettingsService`, at once in the process that writes. The reading sites resolve
+ * `InstallationSettingsService`, and by the process that answers a write once its response is sent
+ * (the transaction has committed): the snapshot only ever holds committed rows. The reading sites resolve
  * synchronously against it; the file is read at each resolution. Without a load (a spec, a script)
  * the database counts as empty: the file, then the default.
  *
@@ -22,9 +23,27 @@ import {
 export class InstallationSettingsSnapshot {
   private readonly rows = new Map<string, Record<string, unknown> | null>();
   private readonly features = new Map<string, boolean>();
+  private reads = 0;
+  /** By domain, the number of the read whose row the snapshot holds. */
+  private readonly kept = new Map<string, number>();
 
-  setRow(domain: string, row: Record<string, unknown> | null): void {
+  /** Numbers a read of the database, in the order the reads begin. */
+  beginRead(): number {
+    this.reads += 1;
+    return this.reads;
+  }
+
+  /**
+   * Keeps the row a read found, unless the row of a read begun after it is already kept: a
+   * refresh begun before a commit that ends after the refresh following the commit never brings
+   * the former row back. Without a read number the row counts as the latest read. Returns whether
+   * the row is kept.
+   */
+  setRow(domain: string, row: Record<string, unknown> | null, read: number = this.beginRead()): boolean {
+    if (read < (this.kept.get(domain) ?? 0)) return false;
+    this.kept.set(domain, read);
     this.rows.set(domain, row ? { ...row } : null);
+    return true;
   }
 
   resolve(domain: InstallationDomain, env: NodeJS.ProcessEnv = process.env): ResolvedDomain {

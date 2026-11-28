@@ -3,6 +3,7 @@ import 'dotenv/config';
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { EventEmitter } from 'node:events';
 import { mock } from 'node:test';
 import { BadRequestException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
@@ -14,6 +15,7 @@ import { Features } from '../../config/features';
 import { assertThrowawayConnection, assertThrowawayDatabase } from '../../common/__tests__/throwaway-database';
 import { missingEncryptionSecretWarning } from '../settings-encryption-secret';
 import { InstallationAiSettings1856320000000 as Migration } from '../../migrations/1856320000000-installation-ai-settings';
+import { InstallationSettingsController } from '../installation-settings.controller';
 import { InstallationSettingsService } from '../installation-settings.service';
 import { InstallationSettingsSnapshot } from '../installation-settings.snapshot';
 import { AI_INSTALLATION_DOMAIN } from '../ai-installation-settings.domain';
@@ -47,8 +49,12 @@ function services(): { service: InstallationSettingsService; snapshot: Installat
   return { service: new InstallationSettingsService(dataSource, audit, new AiSecretCipherService(), snapshot), snapshot };
 }
 
+/** The transactions begun, for `each` to end those a failed test left open. */
+const begun: QueryRunner[] = [];
+
 async function begin(tenantId: string): Promise<QueryRunner> {
   const runner = dataSource.createQueryRunner();
+  begun.push(runner);
   await runner.connect();
   await runner.startTransaction();
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
@@ -56,6 +62,7 @@ async function begin(tenantId: string): Promise<QueryRunner> {
 }
 
 async function finish(runner: QueryRunner, outcome: 'commit' | 'rollback') {
+  if (runner.isReleased) return;
   try {
     if (runner.isTransactionActive) await (outcome === 'commit' ? runner.commitTransaction() : runner.rollbackTransaction());
   } finally {
@@ -179,8 +186,7 @@ async function testWritesAuditAndLocks(seeded: Seeded) {
     assert.equal((created.settings.chat_max_tokens as any).value, 4096);
     assert.equal(created.settings.chat_max_tokens.source, 'database');
     assert.deepEqual(created.settings.web_search_api_key, { has_value: true, source: 'database', locked: false, file_unreadable: false });
-    assert.equal(snapshot.value(AI_INSTALLATION_DOMAIN, 'web_search_api_key'), BRAVE_KEY, 'the snapshot holds the decrypted key');
-    assert.equal(Features.AI_WEB_SEARCH_READY, true, 'the switch follows the stored key');
+    assert.equal(snapshot.value(AI_INSTALLATION_DOMAIN, 'web_search_api_key'), null, 'the snapshot waits for the commit');
     const [stored] = await runner.query(`SELECT web_search_api_key_encrypted AS cipher FROM installation_ai_settings`);
     assert.ok(stored.cipher && !String(stored.cipher).includes(BRAVE_KEY), 'the key is stored encrypted');
 
@@ -188,7 +194,6 @@ async function testWritesAuditAndLocks(seeded: Seeded) {
     await service.update('ai', { ticket_max_images: 3, chat_max_tokens: 4096 }, context); // nothing changes
     const cleared = await service.update('ai', { web_search_api_key: null }, context);
     assert.equal(cleared.settings.web_search_api_key.source, 'default');
-    assert.equal(Features.AI_WEB_SEARCH_READY, false);
 
     const entries = await auditEntries(runner, seeded.tenantId);
     assert.deepEqual(entries.map((e: any) => [e.action, e.before_json, e.after_json]), [
@@ -229,8 +234,7 @@ async function testWritesAuditAndLocks(seeded: Seeded) {
     assert.equal((await service.getState('ai', manager)).encryption_available, false);
     process.env.SETTINGS_ENCRYPTION_SECRET = SECRET;
     const reread = await service.getState('ai', manager);
-    assert.equal(reread.settings.web_search_api_key.source, 'database');
-    assert.equal(snapshot.value(AI_INSTALLATION_DOMAIN, 'web_search_api_key'), BRAVE_KEY, 'the new name decrypts the stored key');
+    assert.deepEqual([reread.settings.web_search_api_key.source, (reread.settings.web_search_api_key as any).has_value], ['database', true], 'the new name decrypts the stored key');
     delete process.env.SETTINGS_ENCRYPTION_SECRET;
     process.env.AI_SETTINGS_ENCRYPTION_SECRET = SECRET;
   } finally {
@@ -276,7 +280,8 @@ async function testConcurrentWritesAndRefresh(seeded: Seeded) {
     const writer = await begin(seeded.tenantId);
     await first.service.update('ai', { chat_max_tokens: 2000 }, { manager: writer.manager, userId: seeded.userId });
     await finish(writer, 'commit');
-    assert.equal(first.snapshot.value(AI_INSTALLATION_DOMAIN, 'chat_max_tokens'), 2000, 'the writing process at once');
+    await first.service.refresh(); // the controller, once the response is sent
+    assert.equal(first.snapshot.value(AI_INSTALLATION_DOMAIN, 'chat_max_tokens'), 2000, 'the writing process after the commit');
     mock.timers.tick(29_999);
     for (let round = 0; round < 20; round += 1) await new Promise((resolve) => setImmediate(resolve));
     assert.equal(third.snapshot.value(AI_INSTALLATION_DOMAIN, 'chat_max_tokens'), 1000, 'not before 30 seconds');
@@ -286,6 +291,131 @@ async function testConcurrentWritesAndRefresh(seeded: Seeded) {
     third.service.stop();
     mock.timers.reset();
   }
+}
+
+/** Runs every test, says each failure, then fails once: one red does not hide the next. */
+async function each(tests: Array<[string, () => Promise<void>]>) {
+  const failures: string[] = [];
+  for (const [name, test] of tests) {
+    try {
+      await test();
+      console.log(`ok - ${name}`);
+    } catch (error) {
+      failures.push(name);
+      console.log(`not ok - ${name}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    for (const runner of begun.splice(0)) await finish(runner, 'rollback').catch(() => undefined);
+  }
+  assert.deepEqual(failures, [], 'every test passes');
+}
+
+/** A request as the controller receives it: its transaction, and a response that ends when the spec says so. */
+function requestOf(runner: QueryRunner, seeded: Seeded) {
+  const res = new EventEmitter();
+  return { ctx: { manager: runner.manager, userId: seeded.userId, tenantId: seeded.tenantId } as any, req: { res }, res };
+}
+
+/** After the response: the refresh the controller starts (a few turns of the event loop), then its end. */
+async function refreshed(started: Array<Promise<void>>) {
+  for (let round = 0; round < 20 && started.length === 0; round += 1) await new Promise((resolve) => setImmediate(resolve));
+  await Promise.all(started);
+}
+
+/** The refreshes the controller starts, to wait for them. */
+function watchRefreshes(service: InstallationSettingsService): Array<Promise<void>> {
+  const started: Array<Promise<void>> = [];
+  const refresh = service.refresh.bind(service);
+  service.refresh = (...args: Parameters<InstallationSettingsService['refresh']>) => {
+    const promise = refresh(...args);
+    started.push(promise);
+    return promise;
+  };
+  return started;
+}
+
+/**
+ * The snapshot follows what is committed, never a transaction (the controller refreshes it once
+ * the response is sent): a rolled back write leaves it as it was; a committed one reaches it after
+ * the response, which already carries the new value; a refresh begun before a commit and ended
+ * after the refresh that follows the commit does not bring the former row back.
+ */
+async function testSnapshotFollowsTheCommit(seeded: Seeded) {
+  const chat = (snapshot: InstallationSettingsSnapshot) => snapshot.value(AI_INSTALLATION_DOMAIN, 'chat_max_tokens');
+  await dataSource.query(`DELETE FROM installation_ai_settings`);
+
+  await each([
+    ['a rolled back write leaves the snapshot and the switch', async () => {
+      const { service, snapshot } = services();
+      const controller = new InstallationSettingsController(service);
+      await service.refresh();
+      const switchBefore = Features.AI_WEB_SEARCH_READY;
+      const refreshes = watchRefreshes(service);
+      const runner = await begin(seeded.tenantId);
+      const request = requestOf(runner, seeded);
+      const answer = await (controller as any).updateAi({ chat_max_tokens: 4000, web_search_api_key: BRAVE_KEY }, request.ctx, request.req);
+      assert.equal(answer.settings.chat_max_tokens.value, 4000, 'the answer carries the value');
+      assert.equal(chat(snapshot), 16384, 'the snapshot waits for the end of the request');
+      await finish(runner, 'rollback');
+      request.res.emit('close');
+      await refreshed(refreshes);
+      assert.equal(chat(snapshot), 16384, 'the snapshot keeps the committed value');
+      assert.equal(snapshot.value(AI_INSTALLATION_DOMAIN, 'web_search_api_key'), null, 'no key in the snapshot');
+      assert.equal(Features.AI_WEB_SEARCH_READY, switchBefore, 'the switch does not move');
+      const [{ n }] = await dataSource.query(`SELECT count(*)::int AS n FROM installation_ai_settings`);
+      assert.equal(n, 0, 'no row');
+    }],
+    ['a committed write reaches the snapshot once the response is sent', async () => {
+      const { service, snapshot } = services();
+      const controller = new InstallationSettingsController(service);
+      await service.refresh();
+      const refreshes = watchRefreshes(service);
+      const runner = await begin(seeded.tenantId);
+      const request = requestOf(runner, seeded);
+      const answer = await (controller as any).updateAi({ chat_max_tokens: 5000, web_search_api_key: BRAVE_KEY }, request.ctx, request.req);
+      assert.equal(answer.settings.chat_max_tokens.value, 5000, 'the answer carries the new value');
+      assert.equal(answer.settings.chat_max_tokens.source, 'database');
+      assert.equal(chat(snapshot), 16384, 'not before the commit');
+      await finish(runner, 'commit');
+      assert.equal(refreshes.length, 0, 'no refresh before the response is sent');
+      request.res.emit('finish');
+      await refreshed(refreshes);
+      assert.equal(refreshes.length, 1, 'one refresh after the response');
+      assert.equal(chat(snapshot), 5000, 'the snapshot follows the commit');
+      assert.equal(Features.AI_WEB_SEARCH_READY, true, 'the switch follows the committed key');
+    }],
+    ['a refresh begun before a commit does not bring the former row back', async () => {
+      const { service, snapshot } = services();
+      const controller = new InstallationSettingsController(service);
+      await service.refresh();
+      const formerValue = chat(snapshot);
+      const [former] = await dataSource.query(
+        `SELECT id, web_search_api_key_encrypted, chat_max_tokens, ticket_max_images, ticket_max_image_bytes FROM installation_ai_settings`,
+      );
+      // A refresh of the same process that read the former row and ends late.
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const slowSource = { manager: { query: async () => { await gate; return former ? [former] : []; } } };
+      const slow = new InstallationSettingsService(slowSource as any, new AuditService(dataSource.getRepository(AuditLog)), new AiSecretCipherService(), snapshot);
+      const late = slow.refresh();
+      const refreshes = watchRefreshes(service);
+      const runner = await begin(seeded.tenantId);
+      const request = requestOf(runner, seeded);
+      await (controller as any).updateAi({ chat_max_tokens: 6000 }, request.ctx, request.req);
+      await finish(runner, 'commit');
+      request.res.emit('finish');
+      await refreshed(refreshes);
+      if (refreshes.length === 0) await service.refresh();
+      assert.equal(chat(snapshot), 6000, 'the refresh after the commit');
+      release();
+      await late;
+      assert.notEqual(formerValue, 6000);
+      assert.equal(chat(snapshot), 6000, 'the late refresh is dropped');
+    }],
+  ]);
+  await dataSource.query(`DELETE FROM installation_ai_settings`);
+  const cleanup = await begin(seeded.tenantId);
+  await cleanup.query(`DELETE FROM audit_log WHERE tenant_id = $1`, [seeded.tenantId]);
+  await finish(cleanup, 'commit');
 }
 
 /**
@@ -329,6 +459,7 @@ async function run() {
     [original] = await dataSource.query(`SELECT * FROM installation_ai_settings`);
     await dataSource.query(`DELETE FROM installation_ai_settings`);
     seeded = await seed();
+    await testSnapshotFollowsTheCommit(seeded);
     await testMigration();
     await testWritesAuditAndLocks(seeded);
     await testConcurrentWritesAndRefresh(seeded);

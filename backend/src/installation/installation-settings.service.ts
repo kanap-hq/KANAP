@@ -11,6 +11,7 @@ import {
   InstallationSettingValue,
   InstallationSettingWriteError,
   ResolvedDomain,
+  resolveDomain,
   validateWrite,
 } from './installation-settings';
 import { installationSettingsSnapshot, InstallationSettingsSnapshot } from './installation-settings.snapshot';
@@ -29,7 +30,10 @@ export type InstallationSettingsState = {
  * The installation settings (installation-settings.ts): loads each domain's row into the
  * process's snapshot before the API listens, refreshes it every 30 seconds, and serves the AI page
  * of the installation (`admin/installation/<domain>`). Writes go through the request's transaction
- * with their audit entry; a refresh or the start writes nothing.
+ * with their audit entry; a refresh or the start writes nothing. The snapshot only reads outside
+ * any transaction, so it holds committed rows only: the state of a page is resolved from the
+ * request's transaction without touching it, and the controller refreshes it once the response of
+ * a write is sent.
  */
 @Injectable()
 export class InstallationSettingsService implements OnModuleDestroy {
@@ -90,16 +94,24 @@ export class InstallationSettingsService implements OnModuleDestroy {
     return lines;
   }
 
-  /** Reads every domain's row into the snapshot and updates the switches of `Features`. */
-  async refresh(manager?: EntityManager): Promise<void> {
-    for (const domain of INSTALLATION_DOMAINS) await this.load(domain, manager);
+  /**
+   * Reads every domain's committed row into the snapshot and updates the switches of `Features`.
+   * A refresh that ends after one begun later keeps nothing (installation-settings.snapshot.ts).
+   */
+  async refresh(): Promise<void> {
+    const read = this.snapshot.beginRead();
+    for (const domain of INSTALLATION_DOMAINS) {
+      const row = await this.readRow(domain, this.dataSource.manager);
+      if (this.snapshot.setRow(domain.name, row ? this.decryptRow(domain, row) : null, read)) {
+        this.snapshot.applyFeatures(domain, Features as unknown as Record<string, unknown>);
+      }
+    }
   }
 
-  private async load(domain: InstallationDomain, manager?: EntityManager): Promise<Record<string, unknown> | null> {
-    const row = await this.readRow(domain, manager ?? this.dataSource.manager);
-    this.snapshot.setRow(domain.name, row ? this.decryptRow(domain, row) : null);
-    this.snapshot.applyFeatures(domain, Features as unknown as Record<string, unknown>);
-    return row;
+  /** A domain's row read in the given transaction and resolved there: the snapshot does not move. */
+  private async resolveIn(domain: InstallationDomain, manager: EntityManager): Promise<{ row: Record<string, unknown> | null; resolved: ResolvedDomain }> {
+    const row = await this.readRow(domain, manager);
+    return { row, resolved: resolveDomain(domain, row ? this.decryptRow(domain, row) : null) };
   }
 
   private async readRow(domain: InstallationDomain, manager: EntityManager): Promise<Record<string, unknown> | null> {
@@ -144,14 +156,14 @@ export class InstallationSettingsService implements OnModuleDestroy {
   /** The state of a domain, read from the database in the request's transaction. */
   async getState(name: string, manager: EntityManager): Promise<InstallationSettingsState> {
     const domain = this.domainOf(name);
-    await this.load(domain, manager);
-    return this.stateOf(this.snapshot.resolve(domain));
+    return this.stateOf((await this.resolveIn(domain, manager)).resolved);
   }
 
   /**
    * Sets the given settings (null clears one), in the request's transaction, under a lock that
    * serialises the writes of the installation; one audit entry with the changed settings only (a
-   * secret as a boolean). A write that changes nothing writes nothing.
+   * secret as a boolean). A write that changes nothing writes nothing. Returns the state read in
+   * the transaction; the snapshot waits for the commit (the controller refreshes it).
    */
   async update(
     name: string,
@@ -161,10 +173,10 @@ export class InstallationSettingsService implements OnModuleDestroy {
     const domain = this.domainOf(name);
     const { manager, userId } = context;
     await manager.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [domain.table]);
-    const existing = await this.load(domain, manager);
+    const { row: existing, resolved } = await this.resolveIn(domain, manager);
     let values: Map<string, InstallationSettingValue | null>;
     try {
-      values = validateWrite(domain, body, this.snapshot.resolve(domain), { canEncrypt: this.cipher.canEncrypt() });
+      values = validateWrite(domain, body, resolved, { canEncrypt: this.cipher.canEncrypt() });
     } catch (error) {
       if (error instanceof InstallationSettingWriteError) {
         throw new BadRequestException({
@@ -199,7 +211,7 @@ export class InstallationSettingsService implements OnModuleDestroy {
       after[declaration.key] = next;
       writes.push({ declaration, stored: next });
     }
-    if (writes.length === 0) return this.stateOf(this.snapshot.resolve(domain));
+    if (writes.length === 0) return this.stateOf(resolved);
 
     const columns = writes.map((write) => write.declaration.column);
     const [saved] = await manager.query(
@@ -220,8 +232,7 @@ export class InstallationSettingsService implements OnModuleDestroy {
       { table: domain.table, recordId: saved.id, action: existing ? 'update' : 'create', before: existing ? before : null, after, userId },
       { manager },
     );
-    await this.load(domain, manager);
-    return this.stateOf(this.snapshot.resolve(domain));
+    return this.stateOf((await this.resolveIn(domain, manager)).resolved);
   }
 }
 
