@@ -292,7 +292,7 @@ When the line replaces another one, or was replaced from a later year after a ty
 - **Supplier**, **Cost center**, **Paying company**, **Account** (filtered by the paying company's chart of accounts and the line's type), **Currency** (only the currencies allowed in your workspace), one field per analytics dimension used for the line's type, **Run or build**, and **Effective start**
 - **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
 - **Created** and **Updated** dates (read only)
-- Type in **Supplier**, **Paying company**, **Account**, **IT owner**, **Business owner** or an analytics dimension field to search by name. Matches appear as you type, so you can find any value even in a very long list; a line under the list reads "Type to narrow down: more results" when there are more matches than shown
+- Type in **Supplier**, **Paying company**, **Account**, **IT owner**, **Business owner** or an analytics dimension field to search by name. For **Supplier** and **Paying company**, a typed reference such as `SUP-12` or `COMP-3` finds that record first, and each choice shows the reference next to the name. Matches appear as you type, so you can find any value even in a very long list; a line under the list reads "Type to narrow down: more results" when there are more matches than shown
 
 **Cost center**:
 

@@ -211,7 +211,7 @@ Para quitar un responsable, pase el cursor sobre su nombre y haga clic en la cru
 Al quitar un responsable, un proceso de negocio, una suite o un contacto de soporte aparece un mensaje con **Deshacer**, que lo restablece.
 
 **Audiencia**:
-- Añada filas de **Empresa / Departamentos** para registrar quién usa esta aplicación. Elija una empresa y opcionalmente restrinja a departamentos específicos.
+- Añada filas de **Empresa / Departamentos** para registrar quién usa esta aplicación. Elija una empresa y opcionalmente restrinja a departamentos específicos. Cada empresa y cada departamento muestra su referencia, por ejemplo `COMP-3` o `DEPT-4`, junto a su nombre, y escribir la referencia encuentra ese registro.
 - Sin ningún departamento elegido, la audiencia es toda la empresa (el campo muestra **Todos los departamentos**). Con departamentos elegidos, se limita a esos departamentos: quítelos para volver a incluir toda la empresa.
 - Se muestra un conteo de **Usuarios** en vivo.
 - **Método de cálculo**: **Derivado** (calculado automáticamente a partir de la audiencia basándose en las métricas de Usuarios IT / Plantilla de los datos maestros) o **Manual** (un único número de sustitución que usted introduce).

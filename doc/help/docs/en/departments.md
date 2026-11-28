@@ -16,7 +16,7 @@ Navigate to **Master Data > Departments** to see your department list. Click **N
 - **Description**: Free-text description of the department's purpose or scope
 - **Headcount**: Number of employees, tracked by year (set on the Details tab after creation)
 
-**Tip**: Import departments from your HR system to keep your org structure aligned.
+**Tip**: Import departments from your HR system to keep your org structure aligned. In a department field, typing a reference such as `DEPT-4` finds that department within its company, and each choice shows the reference next to the name.
 
 ---
 

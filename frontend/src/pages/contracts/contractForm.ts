@@ -1,4 +1,5 @@
 import type { StatusValue } from '../../constants/status';
+import type { CompanyOption } from '../../components/fields/CompanySelect';
 import type { SupplierOption } from '../../components/fields/SupplierSelect';
 
 /** A contract as `GET /contracts/:id` returns it. */
@@ -26,6 +27,8 @@ export type ContractDetail = {
   /** The supplier as its picker shows it, reference included. */
   supplier_option?: SupplierOption | null;
   company_name?: string | null;
+  /** The company as its picker shows it, reference included. */
+  company_option?: CompanyOption | null;
   owner_name?: string | null;
   /** The contract's place in the cost centre tree (a group or a centre), when it has one. */
   cost_center_id?: string | null;

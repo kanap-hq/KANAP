@@ -16,7 +16,7 @@ Navigieren Sie zu **Stammdaten > Abteilungen**, um Ihre Abteilungsliste zu sehen
 - **Beschreibung**: Freitext-Beschreibung des Zwecks oder Umfangs der Abteilung
 - **Mitarbeiterzahl**: Anzahl der Mitarbeiter, jahresweise erfasst (wird nach der Erstellung im Details-Tab gesetzt)
 
-**Tipp**: Importieren Sie Abteilungen aus Ihrem HR-System, um Ihre Organisationsstruktur abzugleichen.
+**Tipp**: Importieren Sie Abteilungen aus Ihrem HR-System, um Ihre Organisationsstruktur abzugleichen. In einem Abteilungsfeld findet die Eingabe einer Referenz wie `DEPT-4` diese Abteilung innerhalb ihres Unternehmens, und jede Auswahl zeigt die Referenz neben dem Namen.
 
 ---
 

@@ -646,6 +646,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             missing={creation.marked}
             names={names}
             supplierOption={shownData?.supplier_option ?? null}
+            companyOption={shownData?.company_option ?? null}
             disabled={!editable}
             onPatch={onPropertiesPatch}
             onTyped={patchTyped}

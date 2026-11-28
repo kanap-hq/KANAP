@@ -17,6 +17,8 @@ Navegue a **Datos maestros > Empresas** para abrir la lista.
 
 **Nombres únicos**: cada empresa tiene su propio nombre, sin distinguir mayúsculas y minúsculas (`Acme` y `acme` son el mismo nombre). Un nombre que ya tiene otra empresa se rechaza, con un mensaje bajo el nombre.
 
+**Consejo**: En un campo de empresa, escribir una referencia como `COMP-3` encuentra esa empresa, y cada opción muestra la referencia junto al nombre.
+
 ## Trabajar con la lista
 
 La lista muestra todas las empresas de su espacio de trabajo. Utilícela para revisar información clave de un vistazo, encontrar empresas rápidamente y abrir espacios de trabajo para editar.
