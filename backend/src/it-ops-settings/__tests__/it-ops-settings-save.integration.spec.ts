@@ -1,6 +1,4 @@
-// @throwaway-db-spec: commits fixtures across connections; refuses a developer's appdb
 import 'reflect-metadata';
-import { assertThrowawayConnection, assertThrowawayDatabase } from '../../common/__tests__/throwaway-database';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import dataSource from '../../data-source';
@@ -9,17 +7,15 @@ import { Location } from '../../locations/location.entity';
 import { CLASSIFICATION_CATALOG_KEYS } from '../classification-catalog';
 import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings.service';
 
-const SPEC = 'it-ops-settings-save.integration.spec.ts';
 const LOCKED_FIRST: Record<string, number> = { lifecycleStates: 4, domains: 2 };
 
 /**
  * A save that carries a classification catalog with other lists keeps every list it carries, and a
- * save of one list stores the order it was sent in (no server sort).
+ * save of one list stores the order it was sent in (no server sort). One connection, rows of the
+ * spec's own workspace only, removed at the end.
  */
 async function main() {
-  assertThrowawayDatabase(SPEC);
   await dataSource.initialize();
-  await assertThrowawayConnection(dataSource, SPEC);
   const tenantId = randomUUID();
   const locationId = randomUUID();
   const runner = dataSource.createQueryRunner();

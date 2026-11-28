@@ -945,8 +945,8 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
     - a value the workspace added that records use (the same records as `GET /it-ops/settings/usage`) stays as stored, retired or not, after the shipped values in its former order; a kept level takes the lowest rank, a kept wave the last place;
     - an added value nothing uses is removed. The subnets are all added: a subnet named by an asset address stays. A network zone stays when a kept subnet carries it. Trusts to a removed domain are dropped. Interface protocols have no usage, so every added protocol goes;
     - the locked lifecycle statuses and the system domains are unchanged;
-    - a shipped name that a kept value already answers to (its code, name or a translated name) keeps its current name.
-  - Always succeeds on stored data: kept values are copied without the write rules they may predate. A second call changes nothing.
+    - a shipped name that a kept value already answers to (its code, name or a translated name) keeps its current name; a deleted shipped value whose code or name a kept value already answers to stays deleted.
+  - Always succeeds on stored data: kept values are copied without the write rules they may predate. A second call changes nothing. The lists it returns save back unchanged through `PATCH /it-ops/settings`, except two kept values that already shared a name before the name rule.
 
 ## Analytics Dimensions and Values (Master Data)
 

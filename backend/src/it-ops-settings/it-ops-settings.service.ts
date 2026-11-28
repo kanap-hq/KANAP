@@ -1512,10 +1512,14 @@ export class ItOpsSettingsService {
    * workspace added and records use stays as stored, after the shipped values, in its former order;
    * an added value nothing uses goes. Subnets first (all added), then the network zones of the kept
    * subnets. Kept values are copied without the write rules they may predate, so the restore always
-   * succeeds on stored data; a shipped name that would clash with a kept value stays as it is now.
+   * succeeds on stored data; a shipped name that would clash with a kept value stays as it is now,
+   * and a deleted shipped value that a kept value already answers to stays deleted.
+   * It runs on the request's manager only: without `app.current_tenant`, the usage reads would see no
+   * record and every added value would pass for unused.
    */
   async resetToDefaults(tenantId: string, opts?: { manager?: EntityManager; userId?: string | null }): Promise<ItOpsSettings> {
-    const manager = opts?.manager ?? this.tenants.manager;
+    const manager = opts?.manager;
+    if (!manager) throw new Error('Restoring the default lists needs the request manager (the tenant set on its connection)');
     return manager.transaction(async (tx) => {
       await tx.query('SELECT id FROM tenants WHERE id = $1 FOR NO KEY UPDATE', [tenantId]);
       const tenant = await this.repo(tx).findOne({ where: { id: tenantId } });
@@ -1579,7 +1583,9 @@ export class ItOpsSettingsService {
 /**
  * One list of the restore: the shipped rows in their order, as shipped, then the added rows found in
  * `used`, as stored. A stored shipped value whose shipped name a kept row already answers to (its
- * code, its name or a translated name) keeps its current name; no name is invented.
+ * code, its name or a translated name) keeps its current name. A deleted shipped value comes back
+ * only when none of its shipped aliases (code, name) is taken by a value the list keeps: otherwise it
+ * stays deleted, so the list read back saves as it is. No name is invented.
  */
 function restoredList<T extends { code: string; label: string }>(shipped: T[], current: T[], used: Set<string>): T[] {
   const shippedCodes = new Set(shipped.map((row) => row.code));
@@ -1588,9 +1594,18 @@ function restoredList<T extends { code: string; label: string }>(shipped: T[], c
   const stored = new Map(current.map((row) => [row.code, row]));
   const restored = shipped.map((row) => {
     const now = stored.get(row.code);
-    return now && keptAliases.has(normalizeAlias(row.label)) ? { ...row, label: now.label } : { ...row };
+    if (!now) return null;
+    return keptAliases.has(normalizeAlias(row.label)) ? { ...row, label: now.label } : { ...row };
   });
-  return [...restored, ...kept];
+  const taken = new Set([...keptAliases, ...restored.flatMap((row) => (row ? catalogAliases(row) : []))]);
+  const back = shipped.map((row, index) => {
+    if (restored[index]) return restored[index];
+    const aliases = catalogAliases(row);
+    if (aliases.some((alias) => taken.has(alias))) return null;
+    for (const alias of aliases) taken.add(alias);
+    return { ...row };
+  });
+  return [...back.filter((row): row is T => row !== null), ...kept];
 }
 
 /**
