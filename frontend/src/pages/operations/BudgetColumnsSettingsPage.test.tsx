@@ -1,9 +1,9 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 
 // Texts come from the real strings so the messages can be read; a test can switch to French.
@@ -14,11 +14,12 @@ vi.mock('react-i18next', async () => {
   const enCommon = (await import('../../locales/en/common.json')).default;
   const frOps = (await import('../../locales/fr/ops.json')).default;
   const frCommon = (await import('../../locales/fr/common.json')).default;
+  const enErrors = (await import('../../locales/en/errors.json')).default;
   const real = i18next.createInstance();
   await real.init({
     lng: 'en',
-    resources: { en: { ops: enOps, common: enCommon }, fr: { ops: frOps, common: frCommon } },
-    ns: ['ops', 'common'], defaultNS: 'ops',
+    resources: { en: { ops: enOps, common: enCommon, errors: enErrors }, fr: { ops: frOps, common: frCommon } },
+    ns: ['ops', 'common', 'errors'], defaultNS: 'ops',
     interpolation: { escapeValue: false },
   });
   const fixed: Record<string, ReturnType<typeof real.getFixedT>> = { en: real.getFixedT('en'), fr: real.getFixedT('fr') };
@@ -85,6 +86,15 @@ async function waitForSetting() {
   await waitFor(() => expect(row(1).getByRole('textbox')).not.toHaveAttribute('readonly'));
 }
 
+/** Simulated time from here on: `advance` moves it and lets the saves answer. */
+function simulatedTime() {
+  vi.useFakeTimers();
+  return async (ms: number) => { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); };
+}
+
+const refusedBy = (message: string) => Object.assign(new Error('Bad Request'), { response: { status: 400, data: { message } } });
+const busyServer = () => Object.assign(new Error('busy'), { response: { status: 503, data: { code: 'busy' } } });
+
 describe('BudgetColumnsSettingsPage', () => {
   beforeEach(() => {
     lang.current = 'en';
@@ -97,6 +107,9 @@ describe('BudgetColumnsSettingsPage', () => {
       throw new Error(`unexpected GET ${url}`);
     });
     mocked.patch.mockImplementation(echo);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('lists the five columns in the fixed order, with the standard names and the file names, and no Save or Reset', async () => {
@@ -168,12 +181,17 @@ describe('BudgetColumnsSettingsPage', () => {
   it('saves a name 700 ms after the last key while the field keeps the focus', async () => {
     renderPage();
     await waitForSetting();
+    const advance = simulatedTime();
 
     const field = row(2).getByRole('textbox');
     fireEvent.focus(field);
+    fireEvent.change(field, { target: { value: 'A' } });
+    await advance(400);
     fireEvent.change(field, { target: { value: 'A1' } });
+    await advance(699);
     expect(mocked.patch).not.toHaveBeenCalled();
-    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    await advance(1);
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
     expect(sent()).toEqual([{ labels: { committed: 'A1' } }]);
     expect(field).toHaveValue('A1');
   });
@@ -290,16 +308,131 @@ describe('BudgetColumnsSettingsPage', () => {
     expect(screen.queryByTestId('budget-column-row-1')).not.toBeInTheDocument();
   });
 
-  it('shows the server message when a save is refused, and the stored choice again', async () => {
-    mocked.patch.mockRejectedValue(Object.assign(new Error('Bad Request'), {
-      response: { status: 400, data: { message: 'Two columns cannot both be named "Réel".' } },
-    }));
+  it('shows the server refusal of a choice under it, with the stored choice again', async () => {
+    mocked.patch.mockRejectedValue(refusedBy('Two columns cannot both be named "Réel".'));
     renderPage();
     await waitForSetting();
 
     fireEvent.click(row(2).getByRole('radio'));
-    expect(await screen.findByText('Two columns cannot both be named "Réel".')).toBeInTheDocument();
+    expect(await row(1).findByText('Two columns cannot both be named "Réel".', {}, { timeout: 2000 })).toBeInTheDocument();
     expect(row(1).getByRole('radio')).toBeChecked();
+    expect(screen.getByRole('status')).toHaveTextContent('Not saved');
+  });
+
+  it('sends every switch changed while the server was slow, when it refuses one of them', async () => {
+    let release: () => void = () => undefined;
+    mocked.patch.mockImplementation(async (url: string, body: any) => {
+      if (body.enabled?.forecast !== undefined) {
+        await new Promise<void>((resolve) => { release = resolve; });
+        return echo(url, body);
+      }
+      if (body.group_spread?.expected_landing !== undefined) throw refusedBy('Refused by the server.');
+      return echo(url, body);
+    });
+    renderPage();
+    await waitForSetting();
+
+    fireEvent.click(row(3).getByRole('checkbox', { name: 'Show Forecast' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    fireEvent.click(row(5).getByRole('checkbox', { name: 'Expected landing follows the spread and the lines' }));
+    fireEvent.click(row(2).getByRole('checkbox', { name: 'Revision follows the spread and the lines' }));
+    release();
+
+    expect(await row(5).findByText('Refused by the server.', {}, { timeout: 2000 })).toBeInTheDocument();
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(3));
+    expect(sent()).toEqual([
+      { enabled: { forecast: true } },
+      { group_spread: { expected_landing: false } },
+      { group_spread: { committed: false } },
+    ]);
+    // The refused switch is back to the stored value; the others show what is stored.
+    await waitFor(() => expect(row(5).getByRole('checkbox', { name: 'Expected landing follows the spread and the lines' })).toBeChecked());
+    expect(row(2).getByRole('checkbox', { name: 'Revision follows the spread and the lines' })).not.toBeChecked();
+    expect(stored.group_spread.committed).toBe(false);
+    expect(screen.getByRole('status')).toHaveTextContent('Not saved');
+
+    // Another change saves, and the refusal stays under its switch.
+    fireEvent.click(row(4).getByRole('checkbox', { name: 'Show Actuals' }));
+    expect(await screen.findByText('Saved')).toBeInTheDocument();
+    expect(row(5).getByText('Refused by the server.')).toBeInTheDocument();
+  });
+
+  it('keeps the chosen value on screen, saying Saving, while a busy server makes the save wait', async () => {
+    let calls = 0;
+    mocked.patch.mockImplementation(async (url: string, body: any) => {
+      calls += 1;
+      if (calls === 1) throw busyServer();
+      return echo(url, body);
+    });
+    renderPage();
+    await waitForSetting();
+    const advance = simulatedTime();
+    const forecast = () => row(3).getByRole('checkbox', { name: 'Show Forecast' });
+
+    fireEvent.click(forecast());
+    await advance(0);
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    expect(forecast()).toBeChecked();
+    expect(screen.getByRole('status')).toHaveTextContent('Saving…');
+    await advance(1000);
+    expect(mocked.patch).toHaveBeenCalledTimes(2);
+    expect(stored.enabled.forecast).toBe(true);
+    expect(forecast()).toBeChecked();
+    expect(screen.getByRole('status')).toHaveTextContent('Saved');
+  });
+
+  it('keeps the chosen value on screen once the retries are spent, and says it is not saved yet', async () => {
+    mocked.patch.mockRejectedValue(busyServer());
+    renderPage();
+    await waitForSetting();
+    const advance = simulatedTime();
+    const forecast = () => row(3).getByRole('checkbox', { name: 'Show Forecast' });
+
+    fireEvent.click(forecast());
+    await advance(0);
+    await advance(1000);
+    await advance(2000);
+    await advance(4000);
+    expect(mocked.patch).toHaveBeenCalledTimes(4);
+    expect(forecast()).toBeChecked();
+    expect(screen.getByRole('status')).toHaveTextContent('Not saved');
+    expect(screen.getByText(/is not saved yet because the server is busy/)).toBeInTheDocument();
+  });
+
+  it('shows the stored name again when the server refuses a name, with the refusal tied to the field until it changes', async () => {
+    mocked.patch.mockImplementation(async (url: string, body: any) => {
+      if (body.labels) throw refusedBy('Refused by the server.');
+      return echo(url, body);
+    });
+    renderPage();
+    await waitForSetting();
+
+    const field = row(2).getByRole('textbox');
+    fireEvent.focus(field);
+    fireEvent.change(field, { target: { value: 'Zed' } });
+    fireEvent.blur(field);
+    expect(await row(2).findByText('Refused by the server.', {}, { timeout: 2000 })).toBeInTheDocument();
+    expect(field).toHaveValue('');
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(field).toHaveAccessibleDescription(expect.stringContaining('Refused by the server.'));
+
+    // Another field's change keeps it; the next change of this name drops it.
+    fireEvent.click(row(3).getByRole('checkbox', { name: 'Show Forecast' }));
+    expect(await screen.findByText('Saved')).toBeInTheDocument();
+    expect(row(2).getByText('Refused by the server.')).toBeInTheDocument();
+    fireEvent.focus(field);
+    fireEvent.change(field, { target: { value: 'Ze' } });
+    expect(row(2).queryByText('Refused by the server.')).not.toBeInTheDocument();
+  });
+
+  it('ties the name a check refuses to its field', async () => {
+    renderPage();
+    await waitForSetting();
+    const field = row(2).getByRole('textbox');
+    fireEvent.focus(field);
+    fireEvent.change(field, { target: { value: 'budget' } });
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(field).toHaveAccessibleDescription(expect.stringContaining('Two columns cannot both be named "budget".'));
   });
 
   it('shows a budget administration reader the same fields, read-only, without the administrator notice', async () => {

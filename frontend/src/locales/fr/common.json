@@ -44,7 +44,8 @@
     "sending": "Envoi…",
     "importing": "Importation…",
     "exporting": "Exportation {{format}}…",
-    "saved": "Enregistré"
+    "saved": "Enregistré",
+    "notSaved": "Non enregistré"
   },
   "statuses": {
     "enabled": "Activé",

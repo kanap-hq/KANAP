@@ -178,11 +178,10 @@ export function OperationPanel({
         >
           {action.busy && action.busyLabel ? action.busyLabel : action.label}
         </Button>
-        {result && (
-          <Typography role="status" sx={{ fontSize: 13, color: result.ok ? 'kanap.text.secondary' : 'kanap.danger' }}>
-            {result.message}
-          </Typography>
-        )}
+        {/* Always there, so a screen reader announces the result when it is written. */}
+        <Typography role="status" aria-live="polite" sx={{ fontSize: 13, color: result && !result.ok ? 'kanap.danger' : 'kanap.text.secondary' }}>
+          {result?.message ?? ''}
+        </Typography>
       </Stack>
     </Stack>
   );

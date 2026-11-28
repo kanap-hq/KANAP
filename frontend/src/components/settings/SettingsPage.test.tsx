@@ -37,6 +37,11 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('');
   });
 
+  it('says Not saved when a save failed', () => {
+    renderIn(<SettingsPage title="T" status="error" />);
+    expect(screen.getByRole('status')).toHaveTextContent('common:status.notSaved');
+  });
+
   it('gives a reader the same fields read-only, without the pills', () => {
     renderIn(
       <SettingsPage title="T" readOnly actions={<Button variant="action">Restore</Button>} history={<Button variant="action">History</Button>}>
@@ -75,6 +80,18 @@ describe('SettingField', () => {
     expect(screen.getByText('Maximum image size (MB)')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Where to find it.' })).toBeInTheDocument();
     const field = screen.getByRole('textbox', { name: 'size' });
+    expect(field).toHaveAccessibleDescription('At most 20.');
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('ties the refusal to a plain control given as is', () => {
+    renderIn(
+      <SettingField label="Size" error="At most 20.">
+        <input aria-label="size" aria-describedby="size-unit" defaultValue="25" />
+      </SettingField>,
+    );
+    const field = screen.getByRole('textbox', { name: 'size' });
+    expect(field.getAttribute('aria-describedby')?.split(' ')).toContain('size-unit');
     expect(field).toHaveAccessibleDescription('At most 20.');
     expect(field).toHaveAttribute('aria-invalid', 'true');
   });

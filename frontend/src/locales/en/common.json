@@ -44,7 +44,8 @@
     "sending": "Sending…",
     "importing": "Importing…",
     "exporting": "Exporting {{format}}…",
-    "saved": "Saved"
+    "saved": "Saved",
+    "notSaved": "Not saved"
   },
   "statuses": {
     "enabled": "Enabled",

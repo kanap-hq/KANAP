@@ -44,7 +44,8 @@
     "sending": "Enviando…",
     "importing": "Importando…",
     "exporting": "Exportando {{format}}…",
-    "saved": "Guardado"
+    "saved": "Guardado",
+    "notSaved": "No guardado"
   },
   "statuses": {
     "enabled": "Activado",

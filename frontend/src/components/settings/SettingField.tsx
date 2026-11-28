@@ -21,7 +21,8 @@ export interface SettingFieldProps {
   /**
    * The control (`TextField variant="standard"`, `Select`), 32 px drawn by the theme. Its placeholder
    * shows an example of the expected shape, or the default that applies when it is empty. A function
-   * receives the read-only state of the page and the error to wire.
+   * receives the read-only state of the page and the error to wire; a plain element (`input`) given
+   * as is gets `aria-describedby` and `aria-invalid` from the field.
    */
   children: React.ReactNode | ((control: SettingFieldControl) => React.ReactNode);
 }
@@ -34,9 +35,18 @@ export interface SettingFieldProps {
 export function SettingField({ label, hint, error, children }: SettingFieldProps) {
   const readOnly = useSettingsReadOnly();
   const errorId = React.useId();
-  const control = typeof children === 'function'
-    ? children({ readOnly, error: !!error, errorId: error ? errorId : undefined })
-    : children;
+  let control: React.ReactNode;
+  if (typeof children === 'function') {
+    control = children({ readOnly, error: !!error, errorId: error ? errorId : undefined });
+  } else if (error && React.isValidElement<React.HTMLAttributes<HTMLElement>>(children) && typeof children.type === 'string') {
+    // A plain element (`input`, `select`) takes the attributes itself. A component (MUI `TextField`,
+    // `Select`) would put them on its wrapper, away from the focusable control: it uses the render
+    // function and wires `errorId` where its control reads it (`inputProps`).
+    const describedBy = [children.props['aria-describedby'], errorId].filter(Boolean).join(' ');
+    control = React.cloneElement(children, { 'aria-describedby': describedBy, 'aria-invalid': true });
+  } else {
+    control = children;
+  }
   return (
     <PropertyRow label={label} hint={hint}>
       {control}

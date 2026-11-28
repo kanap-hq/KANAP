@@ -10,7 +10,7 @@ import type { AmountMeasure } from '../../components/finance/roundPeriod';
 import { SettingsPage } from '../../components/settings/SettingsPage';
 import { useSettingsAutosave, type SettingsAutosave } from '../../components/settings/useSettingsAutosave';
 import { BUDGET_COLUMNS_QUERY_KEY, useBudgetColumns, type BudgetColumnView } from '../../hooks/useBudgetColumns';
-import { autosaveErrorMessage } from '../../hooks/useAutosave';
+import { autosaveErrorMessage, isTransientSaveFailure } from '../../hooks/useAutosave';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import {
   BudgetColumnsPatch,
@@ -18,6 +18,7 @@ import {
   updateBudgetColumns,
 } from '../../services/budgetColumns';
 import { loadNamespace } from '../../i18n';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 /** The server's limit on a column name, in characters (code points). */
 const MAX_NAME_LENGTH = 40;
@@ -151,21 +152,30 @@ type ColumnRowProps = {
   autosave: SettingsAutosave;
   /** The refusal of a name typed for the column, or null when the server would take it. */
   nameErrorOf: (measure: AmountMeasure, typed: string) => string | null;
-  /** The refusal of a choice of this row, kept under it until another change. */
+  /** The refusal of a choice of this row (the page's checks or the server's), under it. */
   choiceError: (field: ChoiceField) => string | null;
+  /** The server's refusal of a field, in plain words, until that field changes again. */
+  serverErrorOf: (field: string) => string | null;
   choose: (field: ChoiceField, value: boolean | AmountMeasure) => void;
   send: (patch: BudgetColumnsPatch) => Promise<void>;
 };
 
 /** One column of the table: its name, saved as it is typed, and its three choices, saved when chosen. */
-function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError, choose, send }: ColumnRowProps) {
+function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError, serverErrorOf, choose, send }: ColumnRowProps) {
   const { t } = useTranslation(['ops', 'common']);
   const { measure } = column;
   const savedLabel = column.customLabel ?? '';
   const name = useFieldDraft(savedLabel);
   const productName = t(column.labelKey);
-  const nameError = normalizeColumnName(name.draft) === (column.customLabel ?? null) ? null : nameErrorOf(measure, name.draft);
+  const nameError = (normalizeColumnName(name.draft) === (column.customLabel ?? null) ? null : nameErrorOf(measure, name.draft))
+    ?? serverErrorOf(`labels.${measure}`);
+  const nameErrorId = React.useId();
   const shownName = column.label;
+  // Read when the server answers: the text then in the field, and the stored name.
+  const draftRef = React.useRef(name.draft);
+  draftRef.current = name.draft;
+  const savedLabelRef = React.useRef(savedLabel);
+  savedLabelRef.current = savedLabel;
   const errorOf = (field: ChoiceField) => {
     const error = choiceError(field);
     return error ? <Typography role="alert" sx={errorLineSx}>{error}</Typography> : null;
@@ -178,7 +188,16 @@ function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError
     const refused = label !== (column.customLabel ?? null) && nameErrorOf(measure, value);
     autosave.type(`labels.${measure}`, refused || label === (column.customLabel ?? null)
       ? null
-      : () => send({ labels: { [measure]: label } }));
+      : async () => {
+        try {
+          await send({ labels: { [measure]: label } });
+        } catch (failure) {
+          // Refused by the server: the stored name shows again, unless something else was typed
+          // since. A save the busy server put off keeps the name typed: it is sent again.
+          if (!isTransientSaveFailure(failure) && draftRef.current === value) name.setDraft(savedLabelRef.current);
+          throw failure;
+        }
+      });
   };
 
   return (
@@ -200,11 +219,14 @@ function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError
           }}
           error={!!nameError}
           InputProps={{ readOnly }}
-          inputProps={{ 'aria-label': t(`${P}.nameOf`, { position: column.position }) }}
+          inputProps={{
+            'aria-label': t(`${P}.nameOf`, { position: column.position }),
+            'aria-describedby': nameError ? nameErrorId : undefined,
+          }}
           sx={{ width: 240 }}
         />
         {nameError && (
-          <Typography sx={{ fontSize: 12, color: 'kanap.danger', mt: 0.25 }}>{nameError}</Typography>
+          <Typography id={nameErrorId} sx={{ fontSize: 12, color: 'kanap.danger', mt: 0.25 }}>{nameError}</Typography>
         )}
         {/* Where the column shows under its technical name. */}
         <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>
@@ -229,6 +251,7 @@ function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError
           disabled={readOnly}
           inputProps={{ 'aria-label': t(`${P}.followsOf`, { column: shownName }) }}
         />
+        {errorOf(`group_spread.${measure}`)}
       </Box>
       <Box component="td" sx={controlCellSx}>
         <Radio
@@ -248,8 +271,10 @@ function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError
 
 /**
  * Budget columns: each change is saved on its own, a name as it is typed, a choice when it is
- * made. A change the server would refuse is never sent: it stays on screen with its reason, and the
- * stored setting stays. A refused choice goes back to the stored value at the next change.
+ * made. A change the page's checks refuse is never sent: it stays on screen with its reason, and the
+ * stored setting stays, until another change. A change the server refuses shows the stored value
+ * again at once, its refusal under the field until that field changes again. While a busy server
+ * makes a save wait, the value chosen stays on screen.
  */
 export default function BudgetColumnsSettingsPage() {
   const { t, i18n } = useTranslation(['ops', 'common']);
@@ -322,20 +347,31 @@ export default function BudgetColumnsSettingsPage() {
     const patch: BudgetColumnsPatch = field === 'default_column'
       ? { default_column: value as AmountMeasure }
       : { [field.split('.')[0]]: { [field.split('.')[1]]: value } };
+    const settle = () => setOverlay((current) => (current[field] === value ? without(current, field) : current));
     autosave.choose(field, async () => {
       try {
         await send(patch);
-      } finally {
-        // Landed: the stored setting shows it. Refused by the server: the stored value is back.
-        setOverlay((current) => (current[field] === value ? without(current, field) : current));
+      } catch (failure) {
+        // Refused by the server: the stored value is back. Put off by a busy server: the value
+        // chosen stays on screen while the save is kept and sent again.
+        if (!isTransientSaveFailure(failure)) settle();
+        throw failure;
       }
+      // Landed: the stored setting shows it.
+      settle();
     });
   };
 
   // Not loaded: the standard values on screen would not be the tenant's, so nothing is offered.
   const loadFailed = !!budgetColumns.error;
   const readOnly = !canEdit;
+  // A save the busy server put off, kept once its retries are spent: it goes with the next change.
   const serverError = canEdit && autosave.error ? autosaveErrorMessage(autosave.error, t, t(`${P}.errors.saveFailed`)) : null;
+  const { errorOf: refusalOf } = autosave;
+  const serverErrorOf = React.useCallback((field: string) => {
+    const refusal = refusalOf(field);
+    return refusal ? getApiErrorMessage(refusal, t, t(`${P}.errors.saveFailed`)) : null;
+  }, [refusalOf, t]);
 
   return (
     <SettingsPage
@@ -365,7 +401,8 @@ export default function BudgetColumnsSettingsPage() {
                 readOnly={readOnly}
                 autosave={autosave}
                 nameErrorOf={nameErrorOf}
-                choiceError={(field) => (refused?.field === field ? refused.error : null)}
+                choiceError={(field) => (refused?.field === field ? refused.error : serverErrorOf(field))}
+                serverErrorOf={serverErrorOf}
                 choose={choose}
                 send={send}
               />

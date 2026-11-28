@@ -15,9 +15,8 @@ import { OperationPanel, type OperationPanelProps } from './OperationPanel';
 
 const rows = Array.from({ length: 8 }, (_, i) => ({ id: `l${i}`, cells: { line: `Line ${i}`, amount: `${100 - i}` } }));
 
-function renderPanel(props: Partial<OperationPanelProps> = {}) {
-  const onRun = vi.fn(async () => undefined);
-  render(
+function panelWith(props: Partial<OperationPanelProps> = {}, onRun: () => Promise<void> = async () => undefined) {
+  return (
     <ThemeProvider theme={createAppTheme('light')}>
       <OperationPanel
         options={<label>Year<select aria-label="Year" /></label>}
@@ -28,9 +27,14 @@ function renderPanel(props: Partial<OperationPanelProps> = {}) {
         {...props}
         action={{ label: 'Clear column', confirm: { title: 'Clear the Budget column of 2026?', message: '8 lines.' }, onRun, ...props.action }}
       />
-    </ThemeProvider>,
+    </ThemeProvider>
   );
-  return { onRun };
+}
+
+function renderPanel(props: Partial<OperationPanelProps> = {}) {
+  const onRun = vi.fn(async () => undefined);
+  const { rerender } = render(panelWith(props, onRun));
+  return { onRun, rerender };
 }
 
 describe('OperationPanel', () => {
@@ -82,6 +86,16 @@ describe('OperationPanel', () => {
     expect(screen.getByRole('button', { name: 'Clear column' })).toBeDisabled();
     expect(screen.getByText('The Revision column of 2026 holds no amount.')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('announces the result: its live region is there before it is written', () => {
+    const { rerender } = renderPanel({ result: null });
+    const region = screen.getByRole('status');
+    expect(region).toHaveAttribute('aria-live', 'polite');
+    expect(region).toHaveTextContent('');
+    rerender(panelWith({ result: { ok: true, message: 'Column cleared on 45 lines.' } }));
+    expect(screen.getByRole('status')).toBe(region);
+    expect(region).toHaveTextContent('Column cleared on 45 lines.');
   });
 
   it('writes the result beside the pill', () => {

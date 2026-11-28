@@ -10,14 +10,19 @@ export function useSettingsReadOnly(): boolean {
   return React.useContext(ReadOnlyContext);
 }
 
-/** The page's save state, in one place: "Saving…" then "Saved", grey 12 px. */
+/**
+ * The page's save state, in one place: "Saving…" then "Saved", grey 12 px. "Not saved" in the danger
+ * colour after a failed save: the refusal shows under its field, a save the busy server put off is
+ * sent again with the next change.
+ */
 export function SettingsSaveStatus({ status }: { status?: AutosaveStatus }) {
   const { t } = useTranslation(['common']);
   const text = status === 'pending' || status === 'saving'
     ? t('common:status.saving')
-    : status === 'saved' ? t('common:status.saved') : '';
+    : status === 'saved' ? t('common:status.saved')
+      : status === 'error' ? t('common:status.notSaved') : '';
   return (
-    <Typography role="status" aria-live="polite" sx={{ fontSize: 12, color: 'kanap.text.tertiary', whiteSpace: 'nowrap' }}>
+    <Typography role="status" aria-live="polite" sx={{ fontSize: 12, color: status === 'error' ? 'kanap.danger' : 'kanap.text.tertiary', whiteSpace: 'nowrap' }}>
       {text}
     </Typography>
   );
