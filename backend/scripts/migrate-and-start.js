@@ -8,11 +8,19 @@
   - Optionally runs integrated-doc repair + verification
   - Starts the NestJS server
 
+  With the argument --migrate-only (`npm run migrate`), the same steps up to the integrated-doc
+  repair, then exit 0: no API, no cluster, no first-start provisioning, no port. For a migration
+  step of its own (a Kubernetes Job, an upgrade by hand), with the API started with
+  SKIP_MIGRATIONS on. A failure exits 1; SKIP_MIGRATIONS on exits 2.
+
+  Every migration run (this script and the API's own start) takes one advisory lock: two runs at
+  once take turns, and the later one finds nothing pending (src/common/startup-migrations.ts).
+
   Env toggles:
   - API_WORKERS=N (default 1): N > 1 runs N API processes with the Node cluster module. This
     process becomes the cluster primary once the migrations ran, and forks the workers
     (src/common/cluster/cluster-primary.ts). With 1, the API runs here, as before.
-  - SKIP_MIGRATIONS=true to skip running migrations at boot
+  - SKIP_MIGRATIONS=true (or 1, yes, y, on) to skip running migrations at boot; the API reads it too
   - INTEGRATED_DOCS_AUTO_ROLLOUT=if-needed|always|off to control boot-time integrated-doc repair
   - INTEGRATED_DOCS_AUTO_ROLLOUT_STRICT=true to fail startup when integrated-doc repair fails
 
@@ -252,6 +260,16 @@ function isConnectionError(err) {
   return /Connection terminated unexpectedly/i.test(String(err?.message || ''));
 }
 
+/**
+ * Whether SKIP_MIGRATIONS is on: `true`, `1`, `yes`, `y` or `on`, in any case, spaces ignored. The
+ * API reads it with the same rule (src/common/skip-migrations.ts); startup-migrations.spec.ts
+ * checks that the two agree.
+ */
+function migrationsSkipped(env = process.env) {
+  const value = String(env.SKIP_MIGRATIONS || '').trim().toLowerCase();
+  return value === 'true' || value === '1' || value === 'yes' || value === 'y' || value === 'on';
+}
+
 /** Closes a data source an attempt left open; a failure to close is only a warning. */
 async function closeQuietly(ds, warn) {
   if (!ds.isInitialized) return;
@@ -282,13 +300,16 @@ async function runMigrationsIfNeeded({
   // no migration runs under them (src/data-access/data-access-availability.ts). Never throws.
   beforeMigrations = (ds) => require(path.resolve(__dirname, '../dist/data-access/data-access-availability.js'))
     .runDataAccessBeforeMigrations(ds),
+  // The steps above and the migrations run under the advisory lock the API's start takes too.
+  withMigrationLock = (ds, fn) => require(path.resolve(__dirname, '../dist/common/startup-migrations.js'))
+    .withMigrationLock(ds, fn),
   exit = (code) => process.exit(code),
   sleepFn = sleep,
   log = console.log,
   warn = console.warn,
   error = console.error,
 } = {}) {
-  if ((env.SKIP_MIGRATIONS || '').toLowerCase() === 'true') {
+  if (migrationsSkipped(env)) {
     log('[entrypoint] SKIP_MIGRATIONS=true → skipping DB migrations');
     return;
   }
@@ -301,13 +322,16 @@ async function runMigrationsIfNeeded({
     try {
       log(`[entrypoint] Initializing DB (attempt ${attempt}/${maxAttempts}) ...`);
       await ds.initialize();
-      step = 'role';
-      await checkDatabaseRole(ds, log);
+      const migrations = await withMigrationLock(ds, async () => {
+        step = 'role';
+        await checkDatabaseRole(ds, log);
+        step = 'connect';
+        await beforeMigrations(ds);
+        log('[entrypoint] DB initialized. Running migrations...');
+        step = 'migrate';
+        return ds.runMigrations();
+      });
       step = 'connect';
-      await beforeMigrations(ds);
-      log('[entrypoint] DB initialized. Running migrations...');
-      step = 'migrate';
-      const migrations = await ds.runMigrations();
       log(`[entrypoint] Migrations complete (${migrations.length} executed).`);
       await ds.destroy();
       return;
@@ -343,9 +367,48 @@ async function runMigrationsIfNeeded({
   }
 }
 
-async function main() {
-  // Migrations run once, here, before any API process starts: TypeORM takes no lock, so two
-  // processes migrating at once would collide.
+/**
+ * `--migrate-only`: the migrations, then the integrated-doc repair when it is on, then exit 0.
+ * Nothing of the API is loaded. SKIP_MIGRATIONS on contradicts the argument: exit 2.
+ */
+async function migrateOnly({
+  env = process.env,
+  exit = (code) => process.exit(code),
+  migrationOptions = {},
+  runRollout = runIntegratedDocsRolloutIfNeeded,
+  strict = isIntegratedDocsRolloutStrict(),
+  log = console.log,
+  error = console.error,
+} = {}) {
+  if (migrationsSkipped(env)) {
+    error('[entrypoint] --migrate-only with SKIP_MIGRATIONS on: no migration ran. Unset SKIP_MIGRATIONS for the migration step.');
+    exit(2);
+    return;
+  }
+  let failed = false;
+  await runMigrationsIfNeeded({ ...migrationOptions, env, exit: (code) => { failed = true; exit(code); } });
+  if (failed) return;
+  try {
+    await runRollout();
+  } catch (err) {
+    if (strict) {
+      error(`[entrypoint] Integrated-doc rollout: ${errorMessage(err)}`);
+      exit(1);
+      return;
+    }
+    error(integratedDocsFailureLine('rollout check', err));
+  }
+  log('[entrypoint] Migration step complete (--migrate-only): exiting without starting the API.');
+  exit(0);
+}
+
+async function main(argv = process.argv.slice(2)) {
+  if (argv.includes('--migrate-only')) {
+    await migrateOnly();
+    return;
+  }
+  // Migrations run once, here, before any API process starts (under the migration lock, which the
+  // API's own start takes too).
   await runMigrationsIfNeeded();
   try {
     await runIntegratedDocsRolloutIfNeeded();
@@ -376,6 +439,8 @@ if (require.main === module) {
 module.exports = {
   integratedDocsFailureLine,
   isConnectionError,
+  migrateOnly,
+  migrationsSkipped,
   integratedDocsRolloutSteps,
   readIntegratedDocsRolloutMode,
   runIntegratedDocsSteps,

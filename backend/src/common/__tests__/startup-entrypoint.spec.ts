@@ -133,6 +133,20 @@ async function main(): Promise<void> {
     assert.ok(!/\.runMigrations\(/.test(appModule), 'app.module.ts runs no migration directly');
     assert.match(appModule, /import \{ isConnectionError \} from '\.\/common\/database-connection-error'/);
     assert.match(appModule, /toRetry: isConnectionError/, 'only a lost connection is retried at start');
+    // SKIP_MIGRATIONS on: the API leaves the migrations to the separate step (the same rule as
+    // the entrypoint, common/skip-migrations.ts) and says when some are pending.
+    assert.match(appModule, /migrationsRun: clusterWorkerId\(\) === null && !migrationsSkipped\(\),/, 'the API does not migrate with SKIP_MIGRATIONS on');
+    assert.match(appModule, /import \{ migrationsSkipped \} from '\.\/common\/skip-migrations'/);
+    assert.match(appModule, /if \(migrationsSkipped\(\) && clusterWorkerId\(\) === null\) await warnPendingMigrations\(dataSource\);/);
+  }
+
+  // 4c. The entrypoint takes the migration lock from dist/, compiled from src/common/.
+  {
+    const script = fs.readFileSync(backendPath('scripts', 'migrate-and-start.js'), 'utf8');
+    assert.ok(
+      /'\.\.\/dist\/common\/startup-migrations\.js'\)\)\s*\.withMigrationLock\(ds, fn\)/.test(script),
+      'the entrypoint requires dist/common/startup-migrations.js for withMigrationLock',
+    );
   }
 
   // 5. The API's own migration run (app.module.ts): role check, data-access guard, migrations.
@@ -142,6 +156,17 @@ async function main(): Promise<void> {
       const statements: string[] = [];
       const ds = {
         options: { migrationsTransactionMode: 'all' },
+        // The migration lock's dedicated connection (common/cluster/startup-lock.ts).
+        createQueryRunner() {
+          return {
+            async connect() { statements.push('lock connection'); },
+            async query(sql: string, params: string[]) {
+              statements.push(`${/unlock/.test(sql) ? 'unlock' : 'lock'} ${params[0]}`);
+              return [];
+            },
+            async release() { statements.push('release'); },
+          };
+        },
         async query(sql: string): Promise<any> {
           if (/ALTER ROLE %I NO(SUPERUSER|BYPASSRLS)/.test(sql)) {
             statements.push('alter role');
@@ -170,7 +195,8 @@ async function main(): Promise<void> {
       // A safe role: one read, no ALTER ROLE.
       const safe = fake({ name: 'kanap', superuser: false, bypassRls: false });
       await runStartupMigrations(safe.ds, safe.guard);
-      assert.deepEqual(safe.statements, ['read role', 'guard', 'migrate (all)']);
+      const locked = (inner: string[]) => ['lock connection', 'lock kanap:migrations', ...inner, 'unlock kanap:migrations', 'release'];
+      assert.deepEqual(safe.statements, locked(['read role', 'guard', 'migrate (all)']), 'under the migration lock');
       assert.deepEqual(logged, []);
 
       // A protected role: stopped before the guard and the migrations.
@@ -179,12 +205,12 @@ async function main(): Promise<void> {
         runStartupMigrations(protectedRole.ds, protectedRole.guard),
         /^Error: \[migrations\] DATABASE_URL resolves to protected PostgreSQL role "postgres" with SUPERUSER, BYPASSRLS\. .*point DATABASE_URL to it and restart\.$/,
       );
-      assert.deepEqual(protectedRole.statements, ['read role']);
+      assert.deepEqual(protectedRole.statements, locked(['read role']), 'the lock is released');
 
       // A superuser application role: hardened before the guard and the migrations.
       const superuser = fake({ name: 'kanap', superuser: true, bypassRls: false });
       await runStartupMigrations(superuser.ds, superuser.guard);
-      assert.deepEqual(superuser.statements, ['read role', 'alter role', 'read role', 'guard', 'migrate (all)']);
+      assert.deepEqual(superuser.statements, locked(['read role', 'alter role', 'read role', 'guard', 'migrate (all)']));
       assert.deepEqual(logged, [
         '[migrations] Hardening PostgreSQL role "kanap" from SUPERUSER to NOSUPERUSER NOBYPASSRLS before the migrations',
         '[migrations] PostgreSQL role "kanap" is ready for native RLS enforcement',

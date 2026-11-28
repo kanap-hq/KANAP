@@ -1,9 +1,12 @@
 import * as assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { defer, lastValueFrom, type Observable } from 'rxjs';
 import { QueryFailedError } from 'typeorm';
 import { backendPath } from './backend-root';
 import { isConnectionError } from '../database-connection-error';
 import { hardenDatabaseRoleBeforeMigrations } from '../database-role-safety';
+import { migrationsSkipped } from '../skip-migrations';
 
 /**
  * The image entrypoint (`scripts/migrate-and-start.js`) retries the database connection while the
@@ -44,6 +47,7 @@ type RunOptions = {
   loadDataSource?: () => FakeDataSource;
   checkDatabaseRole?: (ds: FakeDataSource, log: (line: string) => void) => Promise<unknown>;
   beforeMigrations?: (ds: FakeDataSource) => Promise<void>;
+  withMigrationLock?: <T>(ds: FakeDataSource, fn: () => Promise<T>) => Promise<T>;
   exit?: (code: number) => void;
   sleepFn?: (ms: number) => Promise<void>;
   log?: (...args: unknown[]) => void;
@@ -51,7 +55,22 @@ type RunOptions = {
   error?: (...args: unknown[]) => void;
 };
 
-type Entrypoint = { runMigrationsIfNeeded(options?: RunOptions): Promise<void>; isConnectionError(err: unknown): boolean };
+type MigrateOnlyOptions = {
+  env?: Record<string, string | undefined>;
+  exit?: (code: number) => void;
+  migrationOptions?: RunOptions;
+  runRollout?: () => Promise<void>;
+  strict?: boolean;
+  log?: (...args: unknown[]) => void;
+  error?: (...args: unknown[]) => void;
+};
+
+type Entrypoint = {
+  runMigrationsIfNeeded(options?: RunOptions): Promise<void>;
+  migrateOnly(options?: MigrateOnlyOptions): Promise<void>;
+  isConnectionError(err: unknown): boolean;
+  migrationsSkipped(env: Record<string, string | undefined>): boolean;
+};
 
 // Requiring the entrypoint starts nothing: it runs only as the main module.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -127,19 +146,30 @@ async function run(
   const lines = { log: [] as string[], warn: [] as string[], error: [] as string[] };
   const exits: number[] = [];
   const sleeps: number[] = [];
+  const locks: string[] = [];
   await entrypoint.runMigrationsIfNeeded({
     env: { MIGRATION_MAX_ATTEMPTS: '5', MIGRATION_RETRY_DELAY_MS: '7', ...env },
     loadDataSource: () => ds,
     // The real check, from src/: the entrypoint loads its compiled copy from dist/.
     checkDatabaseRole: (connected, log) => hardenDatabaseRoleBeforeMigrations(connected, 'entrypoint', log),
     beforeMigrations,
+    // The lock of the API's start (startup-migrations.ts), played here: taken on the connected
+    // source, released whatever the steps inside do.
+    withMigrationLock: async (connected, fn) => {
+      locks.push(connected === ds && connected.isInitialized ? 'lock' : 'lock too early');
+      try {
+        return await fn();
+      } finally {
+        locks.push('unlock');
+      }
+    },
     exit: (code) => { exits.push(code); },
     sleepFn: async (ms) => { sleeps.push(ms); },
     log: (...args) => lines.log.push(args.map(String).join(' ')),
     warn: (...args) => lines.warn.push(args.map(String).join(' ')),
     error: (...args) => lines.error.push(args.map(String).join(' ')),
   });
-  return { lines, exits, sleeps };
+  return { lines, exits, sleeps, locks };
 }
 
 async function main(): Promise<void> {
@@ -304,8 +334,9 @@ async function main(): Promise<void> {
   // 9. A safe role: one read of the role, nothing else, then the migrations.
   {
     const { ds, calls, statements } = fakeDataSource(0, async () => [{ name: 'A' }]);
-    const { lines, exits } = await run(ds);
+    const { lines, exits, locks } = await run(ds);
     assert.deepEqual(statements, ['read role', 'migrate'], 'one read, no ALTER ROLE');
+    assert.deepEqual(locks, ['lock', 'unlock'], 'the role check and the migrations run under the migration lock');
     assert.deepEqual(calls, { initialize: 1, runMigrations: 1, destroy: 1 });
     assert.deepEqual(exits, []);
     assert.ok(!lines.log.some((line) => line.includes('Hardening')), 'nothing to harden');
@@ -315,8 +346,9 @@ async function main(): Promise<void> {
   for (const name of ['postgres', 'pg_monitor']) {
     const { ds, calls, statements } = fakeDataSource(0, async () => [{ name: 'A' }], { name, superuser: true, bypassRls: true });
     let guarded = false;
-    const { lines, exits, sleeps } = await run(ds, {}, async () => { guarded = true; });
+    const { lines, exits, sleeps, locks } = await run(ds, {}, async () => { guarded = true; });
     assert.deepEqual(statements, ['read role'], `${name}: no ALTER ROLE, no migration`);
+    assert.deepEqual(locks, ['lock', 'unlock'], `${name}: the lock is released`);
     assert.deepEqual(calls, { initialize: 1, runMigrations: 0, destroy: 1 }, `${name}: the connection closed`);
     assert.equal(guarded, false, `${name}: the data-access guard does not run either`);
     assert.deepEqual(exits, [1]);
@@ -418,20 +450,122 @@ async function main(): Promise<void> {
     assert.deepEqual(role, { name: 'kanap', superuser: false, bypassRls: false });
   }
 
-  // 7. SKIP_MIGRATIONS=true: the data source is not even loaded.
-  {
+  // 7. SKIP_MIGRATIONS on (`true`, `1`, `yes`, `y`, `on`, any case, spaces ignored): the data
+  //    source is not even loaded. The API reads the variable with the same rule.
+  const skipValues: Array<[string | undefined, boolean]> = [
+    ['true', true], ['TRUE', true], [' true ', true], ['1', true], ['yes', true], ['Y', true], ['on', true],
+    [undefined, false], ['', false], ['false', false], ['0', false], ['no', false], ['off', false], ['enabled', false],
+  ];
+  for (const [value, skipped] of skipValues) {
+    const env = { SKIP_MIGRATIONS: value };
+    assert.equal(entrypoint.migrationsSkipped(env), skipped, `SKIP_MIGRATIONS=${JSON.stringify(value)} (entrypoint)`);
+    assert.equal(migrationsSkipped(env), skipped, `SKIP_MIGRATIONS=${JSON.stringify(value)} (API)`);
     let loaded = false;
     const exits: number[] = [];
     const logged: string[] = [];
     await entrypoint.runMigrationsIfNeeded({
-      env: { SKIP_MIGRATIONS: 'true' },
-      loadDataSource: () => { loaded = true; throw new Error('not expected'); },
+      env,
+      loadDataSource: () => { loaded = true; return fakeDataSource(0, async () => []).ds; },
+      checkDatabaseRole: async () => undefined,
+      beforeMigrations: async () => undefined,
+      withMigrationLock: async (_connected, fn) => fn(),
       exit: (code) => { exits.push(code); },
+      sleepFn: async () => undefined,
       log: (...args) => logged.push(args.map(String).join(' ')),
+      warn: () => undefined,
+      error: () => undefined,
     });
+    if (skipped) {
+      assert.equal(loaded, false, `${JSON.stringify(value)}: the data source is not loaded`);
+      assert.deepEqual(exits, []);
+      assert.deepEqual(logged, ['[entrypoint] SKIP_MIGRATIONS=true → skipping DB migrations']);
+    } else {
+      assert.equal(loaded, true, `${JSON.stringify(value)}: the migrations run`);
+      assert.deepEqual(exits, []);
+    }
+  }
+
+  // 7b. --migrate-only: the migration step, then exit 0; nothing of the API is loaded.
+  const migrateOnly = async (options: MigrateOnlyOptions & { ds?: FakeDataSource }) => {
+    const exits: number[] = [];
+    const lines = { log: [] as string[], error: [] as string[] };
+    let rollouts = 0;
+    await entrypoint.migrateOnly({
+      env: { MIGRATION_MAX_ATTEMPTS: '2', MIGRATION_RETRY_DELAY_MS: '1' },
+      runRollout: async () => { rollouts += 1; },
+      strict: false,
+      ...options,
+      exit: (code) => { exits.push(code); },
+      log: (...args) => lines.log.push(args.map(String).join(' ')),
+      error: (...args) => lines.error.push(args.map(String).join(' ')),
+      migrationOptions: options.ds ? {
+        loadDataSource: () => options.ds as FakeDataSource,
+        checkDatabaseRole: (connected, log) => hardenDatabaseRoleBeforeMigrations(connected as any, 'entrypoint', log),
+        beforeMigrations: async () => undefined,
+        withMigrationLock: async (_connected, fn) => fn(),
+        sleepFn: async () => undefined,
+        log: (...args) => lines.log.push(args.map(String).join(' ')),
+        warn: () => undefined,
+        error: (...args) => lines.error.push(args.map(String).join(' ')),
+      } : {},
+    });
+    return { exits, lines, rollouts };
+  };
+  {
+    const { ds, calls } = fakeDataSource(1, async () => [{ name: 'A' }]);
+    const { exits, lines, rollouts } = await migrateOnly({ ds });
+    assert.deepEqual(calls, { initialize: 2, runMigrations: 1, destroy: 1 }, 'the connection is retried, the migrations run once, closed');
+    assert.equal(rollouts, 1, 'the integrated-doc repair runs after the migrations');
+    assert.deepEqual(exits, [0], 'exit 0');
+    assert.ok(lines.log.includes('[entrypoint] Migrations complete (1 executed).'));
+    assert.equal(lines.log[lines.log.length - 1], '[entrypoint] Migration step complete (--migrate-only): exiting without starting the API.');
+  }
+  // A protected role: exit 1, no migration, no repair.
+  {
+    const { ds, calls } = fakeDataSource(0, async () => [{ name: 'A' }], { name: 'postgres', superuser: true, bypassRls: true });
+    const { exits, lines, rollouts } = await migrateOnly({ ds });
+    assert.equal(calls.runMigrations, 0);
+    assert.equal(rollouts, 0);
+    assert.deepEqual(exits, [1], 'exit 1, once');
+    assert.equal(lines.error[1], '[entrypoint] No migration ran.');
+  }
+  // A failed migration: exit 1, no repair.
+  {
+    const { ds } = fakeDataSource(0, async () => { throw new Error('boom'); });
+    const { exits, rollouts } = await migrateOnly({ ds });
+    assert.deepEqual(exits, [1]);
+    assert.equal(rollouts, 0);
+  }
+  // The repair fails: not strict, one error line and exit 0; strict, exit 1.
+  for (const strict of [false, true]) {
+    const { ds } = fakeDataSource(0, async () => []);
+    const { exits, lines } = await migrateOnly({ ds, strict, runRollout: async () => { throw new Error('lock refused'); } });
+    assert.deepEqual(exits, [strict ? 1 : 0], `strict=${strict}`);
+    assert.match(lines.error[0], strict ? /^\[entrypoint\] Integrated-doc rollout: lock refused$/ : /the rollout check step failed \(lock refused\)/);
+  }
+  // SKIP_MIGRATIONS on with the argument: exit 2 and one line, nothing loaded.
+  {
+    let loaded = false;
+    const { exits, lines, rollouts } = await migrateOnly({
+      env: { SKIP_MIGRATIONS: 'yes' },
+      migrationOptions: { loadDataSource: () => { loaded = true; throw new Error('loaded'); } },
+    });
+    assert.deepEqual(exits, [2]);
     assert.equal(loaded, false);
-    assert.deepEqual(exits, []);
-    assert.deepEqual(logged, ['[entrypoint] SKIP_MIGRATIONS=true → skipping DB migrations']);
+    assert.equal(rollouts, 0);
+    assert.deepEqual(lines.error, ['[entrypoint] --migrate-only with SKIP_MIGRATIONS on: no migration ran. Unset SKIP_MIGRATIONS for the migration step.']);
+  }
+  // The real script, as the image starts it: the argument is read before anything else.
+  {
+    const result = spawnSync(process.execPath, [backendPath('scripts', 'migrate-and-start.js'), '--migrate-only'], {
+      env: { PATH: process.env.PATH, SKIP_MIGRATIONS: 'true' },
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    assert.equal(result.status, 2, `the script exits 2 (${result.stderr})`);
+    assert.match(result.stderr, /--migrate-only with SKIP_MIGRATIONS on: no migration ran/);
+    const packageJson = JSON.parse(readFileSync(backendPath('package.json'), 'utf8'));
+    assert.equal(packageJson.scripts.migrate, 'node ./scripts/migrate-and-start.js --migrate-only', 'npm run migrate');
   }
 
   console.log('startup-migrations.spec: ok');
