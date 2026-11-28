@@ -1436,7 +1436,7 @@ looks for answers when it triages work:
   the web, if web search is enabled.
 - **Web search** can be on or off, independent of the chat web-search toggle. It
   only takes effect when the platform has a web-search provider configured
-  (`AI_WEB_SEARCH_READY`, i.e. `BRAVE_SEARCH_API_KEY` is present); otherwise the
+  (`AI_WEB_SEARCH_READY`, i.e. a web search key is set: `BRAVE_SEARCH_API_KEY`, else the installation's AI settings); otherwise the
   agent setting is inert and the corresponding UI control is disabled.
 - **Internal notes of the ticket** (service desk agents, `internal_notes`):
   `used` or `ignored`. An agent saved without the setting uses them, a new agent
@@ -1621,7 +1621,7 @@ There are three different states to keep separate:
 | Area | Current state |
 | --- | --- |
 | GLPI ticket import | Live. Plaid can import one GLPI ticket by numeric ID into one KANAP task, including public followups and inline images where possible, after preview approval. |
-| Public web search | Live when `BRAVE_SEARCH_API_KEY` is configured. Two surfaces share that readiness gate: the Plaid chat `web_search` tool (also gated by the tenant chat web-search toggle) and the per-agent control-plane `web_search` capability (gated by each agent's own web-search setting, independent of the chat toggle). Queries are sanitized to strip internal identifiers before they leave the control plane. |
+| Public web search | Live when a web search key is configured (`BRAVE_SEARCH_API_KEY`, else the installation's AI settings). Two surfaces share that readiness gate: the Plaid chat `web_search` tool (also gated by the tenant chat web-search toggle) and the per-agent control-plane `web_search` capability (gated by each agent's own web-search setting, independent of the chat toggle). Queries are sanitized to strip internal identifiers before they leave the control plane. |
 | Provider contracts | Live as capability contracts and dispatcher paths for monitoring, ticketing, virtualization, directory, and automation. |
 | In-tree provider implementations | Mock/contract implementations. Non-mock adapter configurations currently return unavailable in this control-plane build. |
 | External MCP bridge | Live as governed read-only snapshots and a mock transport for internal/scheduler/alert surfaces. Live external transports are not enabled, and external MCP bridge tools are not re-exported through KANAP MCP. |

@@ -658,6 +658,15 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     allowed: {},
   },
   {
+    file: 'installation/installation-settings.controller.ts',
+    controller: 'InstallationSettingsController',
+    reservedClass: 'installation settings (the operator of the installation): an installation setting (spec §2.7)',
+    reserved: [
+        'getAi', 'updateAi',
+    ],
+    allowed: {},
+  },
+  {
     file: 'admin/scheduled-tasks/scheduled-tasks.controller.ts',
     controller: 'ScheduledTasksController',
     reservedClass: 'scheduled tasks of the tenant: a tenant setting (spec §2.7)',

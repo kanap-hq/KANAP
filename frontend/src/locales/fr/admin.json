@@ -19,7 +19,7 @@
       "keyLabel": "Clé"
     },
     "features": {
-      "braveSearchNotConfigured": "BRAVE_SEARCH_API_KEY non configurée",
+      "braveSearchNotConfigured": "La recherche web n'est pas disponible sur cette installation.",
       "enableChat": "Activer le chat",
       "enableMcp": "Activer MCP",
       "webSearch": "Recherche web"
@@ -1595,6 +1595,7 @@
       "incident_attachments": "Pièces jointes d'incident",
       "incident_technologies": "Technologies d'incident",
       "incidents": "Incidents",
+      "installation_ai_settings": "Paramètres IA de l'installation",
       "interface_attachments": "Pièces jointes d'interface",
       "interface_bindings": "Liaisons d'interface",
       "interface_companies": "Sociétés d'interface",
