@@ -197,7 +197,7 @@ Other visible changes:
 **Database requirements:**
 
 - PostgreSQL 16 or higher (16 and 18 are tested)
-- Extensions: `citext`, `pgcrypto`, `uuid-ossp`
+- Extensions: `citext`, `pgcrypto`, `uuid-ossp`, `pg_trgm`, `unaccent`. On PostgreSQL 16 all five are trusted extensions: the owner of the database can create them without being a superuser. A managed PostgreSQL service may list the extensions it allows: allow these five first.
 - User needs CREATE TABLE / ALTER TABLE permissions for migrations
 - Recommended: dedicated database
 - `DATABASE_URL` must use a dedicated application role
@@ -216,6 +216,8 @@ GRANT ALL PRIVILEGES ON DATABASE kanap TO kanap;
 CREATE EXTENSION IF NOT EXISTS citext;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS unaccent;
 
 -- 3. Grant schema permissions (for migrations)
 GRANT ALL ON SCHEMA public TO kanap;
@@ -516,6 +518,7 @@ With `IMPORT_XLSX=false`, the import buttons read **Import CSV**, the import dia
 | `PASSWORD_RESET_TTL` | Lifetime of a password reset link: a number of seconds or a duration such as `30m` or `2h`. Another value lasts 1 hour, and the API names it in a `[CONFIG]` warning at start. | `1h` |
 | `INVITE_LINK_TTL` | Lifetime of the link to set a password in an invitation e-mail: a number of seconds or a duration such as `72h` or `7d`. Another value lasts 7 days, and the API names it in a `[CONFIG]` warning at start. | `7d` |
 | `LOG_LEVEL` | `debug` or `verbose` adds the details of each scheduled job run to the log. Any other value changes nothing. | *unset* |
+| `SKIP_MIGRATIONS` | `true` (or `1`, `yes`, `y`, `on`): neither the start-up script nor the API runs the database migrations. Use it only when the migrations run as a step of their own (see [Running the images yourself](#running-the-images-yourself)). The API still refuses a role with `SUPERUSER` or `BYPASSRLS`, without changing it. | `false` |
 | `INTEGRATED_DOCS_AUTO_ROLLOUT` | Repairs, at start, the documents linked to requests and projects. Off on-premise unless you set it: `if-needed` runs the repair only when the counts differ, `always` at every start. | *off* |
 | `APP_URL` | Multi-tenant (cloud) only. **Not needed on-premise**: `APP_BASE_URL` is used. | *unset* |
 | `EMAIL_OVERRIDE` | Redirect all emails to this address (dev/QA only, **never in production**) | *unset* |
@@ -549,6 +552,37 @@ The defaults suit a few dozen users. For more users at once, run several API pro
 Measured on 5,000 budget lines: at 10 users one process answers as fast as four. At 50 users, opening a line took 237 ms (95th percentile) with one process, 142 ms with two and 82 ms with four, and one process kept all its database connections busy.
 
 Keep `API_WORKERS` at or below the number of CPU cores the server gives Kadratis. Changes take effect when the API container is created again (`docker compose -f infra/compose.onprem.yml up -d api`).
+
+## Running the images yourself
+
+The installation of this guide runs the images with `infra/compose.onprem.yml`, which needs none of this section. Read it when you run the images with an orchestrator of your own, Kubernetes for instance.
+
+**Migrations as a step of their own.** By default the API container runs the database migrations before the API starts. To run them apart (a Kubernetes Job before each upgrade), start the API image with the command `node scripts/migrate-and-start.js --migrate-only`, and the API with `SKIP_MIGRATIONS=true`.
+
+- The migration step runs the same checks as a normal start (it waits for the database, checks the role, migrates in one transaction), then exits without starting the API. Exit code `0`: done, including when nothing was pending. `1`: a failure, the log says which (the database stayed as it was). `2`: `SKIP_MIGRATIONS` is on in its environment.
+- Two runs at once take turns: the second waits for the first, then finds nothing to do. A Job retried, or an API of the previous version that still migrates during a rolling upgrade, applies nothing twice.
+- Give the migration step and the API the same `DATABASE_URL`. The migration step removes `SUPERUSER` and `BYPASSRLS` from the role, as a normal start does. With `SKIP_MIGRATIONS=true` the API only checks the role: it refuses to start with a role that has either attribute.
+- The organisation and its administrator (`ADMIN_EMAIL`) are created at the first start of the API, after the migrations. An API started with `SKIP_MIGRATIONS=true` on a database the migration step has not prepared names the pending migrations in its log and stops; the orchestrator starts it again.
+
+**Probes.** The API listens on port 8080.
+
+| Probe | Route | Answer |
+|-------|-------|--------|
+| Liveness and start-up | `GET /health` | `200` as long as the process serves requests. It reads no database. |
+| Readiness | `GET /health/ready` | `200` when the database answers and no migration is pending. `503` when the database is unreachable or a migration is pending: the instance receives no traffic. Under heavy load (every database connection taken) it still answers `200` with `"database": "busy"`, so a busy instance stays in service. |
+
+The first start of the API on a new database also creates the organisation: give the start-up probe two minutes, as the compose file does. The web image answers `GET /` on its own port.
+
+**User and file system.** Both images run as any user ID, without capabilities, on a read-only root file system (`runAsNonRoot`, `readOnlyRootFilesystem`, `capabilities: drop: [ALL]` and the `restricted` Pod Security level). The API image names its user by number (`1000:1000`); the web image runs as `101`. Each writes only to `/tmp`: mount a writable volume there (an `emptyDir` on disk). For the API, 1 GB is enough without the [vulnerability feed](#optional-vulnerabilities). With the CVE.org source on, count 4 GB: its daily export (about 700 MB in October 2026) is downloaded and unpacked there. For the web image, count 1 GB: nginx keeps uploads (up to 80 MB each) and large answers there while it passes them on.
+
+**The web image.**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `KANAP_WEB_PORT` | Port the web server listens on inside its container, 1 to 65535. A user other than root cannot always listen below 1024: set `8080` for a container without capabilities. | `80` |
+| `KANAP_API_UPSTREAM` | Host and port where the web container reaches the API: on Kubernetes, the name of the API's Service and its port, for example `kadratis-api:8080`. The name is resolved once, when the web container starts: the Service must exist by then, and the web container must be restarted if its address changes. | `api:8080` |
+
+An invalid value stops the web container at once, with a line that names the variable. These two variables belong to the web container's environment: the `.env` file of the API does not reach it.
 
 ## Full example (.env)
 

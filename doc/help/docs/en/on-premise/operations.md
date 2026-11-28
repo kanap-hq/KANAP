@@ -155,6 +155,16 @@ Check out the previous version before you start Kadratis: a start with the newer
 
 After a rollback, stay on the tag of the version you rolled back to. The `git checkout stable` of the upgrade procedure (its step 3) brings the checkout back to the branch at the next upgrade. The checkout (`git describe --tags`) and the running API (`/api/config/public`, see [Which version runs](#upgrade-procedure)) must show the same version. If they differ, the next `pull` and `up -d` change the running version.
 
+### Upgrading with a separate migration step
+
+The procedure above needs no change: the API container runs the migrations when it starts. When you run the images with an orchestrator and the migrations as a step of their own (see [Running the images yourself](configuration.md#running-the-images-yourself)), an upgrade goes in this order:
+
+1. Back up, as in step 2.
+2. Run the migration step on the image of the new version: `node scripts/migrate-and-start.js --migrate-only`, with the same `DATABASE_URL` as the API and without `SKIP_MIGRATIONS`. Wait for it to exit with `0`. With `1`, its log gives the cause and the database is as it was: the running version keeps serving.
+3. Roll the API and web containers to the new version, the API with `SKIP_MIGRATIONS=true`. Each new API instance receives traffic once `/health/ready` answers `200`.
+
+A new API instance that starts before step 2 has finished answers `503` on `/health/ready` and receives no traffic until the migrations have run. Starting the migration step twice, or while an API without `SKIP_MIGRATIONS` migrates, is harmless: the runs take turns and the later one applies nothing.
+
 ## Version support
 
 Kadratis is a quickly evolving solution. Versions are published about once a month, and we recommend upgrading at least monthly.
@@ -521,6 +531,8 @@ curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 
 `text_processing` reads `starting` for a few seconds after a start. It reads `unavailable` when the API could not start the processing of formatted texts: the API keeps serving, refuses to save formatted texts (descriptions, comments) and tries again every few seconds. The API log gives the reason.
 
+**Readiness.** `GET /health/ready` (`/api/health/ready` through the proxy) answers `{"status":"ok"}` when the database answers and no migration is pending, and `503` with `{"status":"unavailable"}` otherwise. Point an orchestrator's readiness probe at it (see [Running the images yourself](configuration.md#running-the-images-yourself)), and keep the liveness probe on `/health`: a database outage then takes the API out of service without restarting it.
+
 **Containers.** `docker compose -f infra/compose.onprem.yml ps` shows `healthy` for `api` and `web` once they answer. Docker only reports it: nothing restarts on that status.
 
 ```bash
@@ -607,6 +619,8 @@ Start with the API log: `docker compose -f infra/compose.onprem.yml logs --no-lo
 | Everyone shares one sign-in limit (`429` for many users) | `RATE_LIMIT_TRUST_PROXY` and the proxy | With a proxy in front, set `true` and make the proxy send `X-Forwarded-For` |
 | `[SECURITY]` warning at each start | `ADMIN_PASSWORD`, `JWT_SECRET` | Change the administrator's password in the application, or see [Password Reset](#password-reset). Use a `JWT_SECRET` of 32 characters or more |
 | `[entrypoint] No migration ran.` after a message about the PostgreSQL role | The line above it, the role in `DATABASE_URL` | The role is a cluster-admin role, or it has `SUPERUSER` or `BYPASSRLS` and Kadratis could not remove them. Use a dedicated application role, or run the `ALTER ROLE` command the message gives as a PostgreSQL superuser, then `up -d api`. See [Configuration](configuration.md#required-database) |
+| `[migrations] SKIP_MIGRATIONS is on and N migration(s) are pending` in the API log | Whether the migration step ran on this version | Run the migration step (`node scripts/migrate-and-start.js --migrate-only`), or remove `SKIP_MIGRATIONS`. Until then `/health/ready` answers `503`; on an empty database the API stops after this line |
+| `[entrypoint] --migrate-only with SKIP_MIGRATIONS on: no migration ran.` (exit code `2`) | The environment of the migration step | Remove `SKIP_MIGRATIONS` from the migration step: it belongs to the API only |
 | `[entrypoint] A migration failed, not retried: ...` | The message, the `[entrypoint] Failed statement: ...` line after it, the PostgreSQL version (16 or later) and its extensions | The pending migrations were rolled back: the database is as before this start. Fix the cause and run `up -d api` again, or deploy the previous version |
 | 502 from reverse proxy | `docker compose -f infra/compose.onprem.yml ps` | Ensure the api container is running on port 8080 |
 | 413 from the reverse proxy on an upload | `client_max_body_size` | Set `client_max_body_size 80m;` in the nginx file |
