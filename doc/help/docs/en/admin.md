@@ -9,13 +9,15 @@ Navigate to **Admin** from the main menu to access the administration hub.
 **Permissions**: Different admin pages require different permissions:
 - Companies, Departments, Suppliers, Accounts: `{resource}:reader` to view
 - Users & Access: `users:reader` to view, `users:admin` to manage
-- Roles: `users:reader` to view, `users:admin` to edit
-- Audit Log: Requires `users:admin`
+- Roles: `users:admin` to view and edit
+- Audit Log: Requires `organization:reader` and access to all data
 - Data access: Requires `users:admin` and access to all data (see [Data access](data-access.md))
 - Billing: Requires billing admin role
-- Authentication: Requires `users:admin` (feature-flagged; requires SSO enabled)
-- Branding: Requires `users:admin` (tenant host only; accessible from sidebar)
+- Authentication: `organization:reader` to view, `organization:admin` to connect (feature-flagged; requires SSO enabled). See [Authentication](#authentication) for the actions that also need `users:admin`
+- Branding: `organization:reader` to view, `organization:admin` to change (tenant host only; accessible from sidebar)
 - Sample data: Requires the Administrator role (cloud workspaces only; accessible from sidebar)
+
+The Users right covers people and roles. Authentication, Branding and the Audit Log follow the Organization right: a role with `users:admin` and no Organization right does not open them.
 
 ---
 
@@ -30,8 +32,8 @@ The Admin landing page provides quick access to the main administrative function
 | **Suppliers** | Manage suppliers and contacts | `suppliers:reader` |
 | **Accounts** | Manage accounting codes | `accounts:reader` |
 | **Users & Access** | Manage users and roles | `users:reader` |
-| **Roles** | Define role permissions | `users:reader` |
-| **Audit Log** | Browse change history, sign-ins and exports | `users:admin` |
+| **Roles** | Define role permissions | `users:admin` |
+| **Audit Log** | Browse change history, sign-ins and exports | `organization:reader` |
 | **Billing** | Plan and invoices | Billing admin |
 
 Authentication, Branding and Sample data are available from the sidebar navigation but do not appear on the Admin hub landing page.
@@ -45,7 +47,7 @@ The Audit Log page keeps the history of data changes and of security events in y
 ### Access
 
 - Route: `/admin/audit-logs`
-- Required permission: `users:admin`
+- Required permission: `organization:reader`, and access to all data. A person whose data access is limited does not see the Audit Log, whatever their roles.
 - The log is read-only. You can browse it, filter it and export it, but you cannot edit or delete entries.
 
 ### What is recorded
@@ -139,7 +141,7 @@ The Excel file holds the same columns and the same values on one sheet, all as t
 
 ### Who can see what
 
-The **Before** and **After** values hold the complete record as it was saved, including personal data such as names, email addresses and phone numbers. The detail screen and the exported file show the same values, and both need `users:admin`. Password hashes and multi-factor secrets are never written to the log. Treat an exported file like the log itself: store it with the same care.
+The **Before** and **After** values hold the complete record as it was saved, including personal data such as names, email addresses and phone numbers. The detail screen and the exported file show the same values, and both need `organization:reader`: the Reader level of Organization shows the whole log, personal data included. Password hashes and multi-factor secrets are never written to the log. Treat an exported file like the log itself: store it with the same care.
 
 ### Understanding Source and Actor
 
@@ -326,7 +328,7 @@ Define what each role can do across Kadratis.
 Each role has permission levels for different resources:
 - **None**: No access to this resource
 - **Reader**: View only
-- **Contributor**: View and edit existing items, add comments and attachments, but cannot create new top-level items. The role editor offers this level on most resources (not on Knowledge, AI settings, Kad chat or MCP access). Portfolio projects, incidents and AI agents use it today. On every other resource, changes need the Member level, so a Contributor there has Reader access.
+- **Contributor**: View and edit existing items, add comments and attachments, but cannot create new top-level items. The role editor offers this level on most resources (not on Knowledge, AI settings, Kad chat, MCP access, Organization or IT landscape settings). Portfolio projects, incidents and AI agents use it today. On every other resource, changes need the Member level, so a Contributor there has Reader access.
 - **Member**: View, create, and edit
 - **Admin**: Full access including delete
 
@@ -338,7 +340,7 @@ Resources are organized into groups for easier management:
 | Resource | What it controls |
 |----------|------------------|
 | `budget` | Budget lines, OPEX and CAPEX |
-| `budget_ops` | Budget Administration tools, including the currency settings |
+| `budget_ops` | **Budget settings and operations**, including the currency settings |
 | `contracts` | Vendor contracts |
 | `analytics` | Analytics dimensions |
 | `reporting` | Reports access |
@@ -362,7 +364,7 @@ The names of the supplier, companies and departments carried by a budget line yo
 | `applications` | Applications |
 | `infrastructure` | Servers and infrastructure |
 | `locations` | Location master data |
-| `settings` | IT landscape settings only |
+| `settings` | **IT landscape settings** only. Reader or Admin |
 
 **Master Data**
 | Resource | What it controls |
@@ -392,7 +394,10 @@ The Knowledge resource supports Reader, Member, and Admin levels (Contributor is
 | Resource | What it controls |
 |----------|------------------|
 | `users` | User and role management |
+| `organization` | **Organization**: Authentication, Branding and the Audit Log. Reader or Admin |
 | `billing` | Billing and subscription |
+
+Organization and IT landscape settings have two levels, Reader and Admin. A role that held Member on IT landscape settings shows Reader, with the same access as before.
 
 ### Role Types
 
@@ -583,6 +588,8 @@ Each invoice is also sent by email to the invoicing email address. The PDF is in
 
 Configure single sign-on (SSO) for your organization. This page is only available when the SSO feature is enabled and is not accessible from the platform-admin host.
 
+Organization at Reader level shows the connection and the sync results, with no action. **Connect**, **Reconnect**, **Test sign-in** and **Grant access in Microsoft Entra** need Organization at Admin level. **Sync now** and **Disconnect** change the accounts of the whole workspace: they also need `users:admin` and access to all data.
+
 ### Microsoft Entra ID
 
 Connect Kadratis to your Microsoft Entra ID tenant for SSO:
@@ -652,7 +659,7 @@ Sign-ins and failed sign-ins appear in the [Audit Log](#audit-log). When 5 faile
 Use **Admin > Branding** to apply your company identity in Kadratis.
 
 - Route: `/admin/branding`
-- Permission: `users:admin`
+- Permission: `organization:reader` to view, `organization:admin` to change. A reader sees the same fields, greyed out, with no button
 - Scope: tenant hosts only (not available on platform-admin host)
 
 Branding lets you:

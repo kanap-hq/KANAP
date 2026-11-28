@@ -69,7 +69,7 @@ Rate limiting (default enabled):
 
 ### Microsoft Entra SSO
 - POST `/auth/entra/setup/start` → `{ url }`
-  - Requires tenant context + `users:admin` (the user must be an Administrator in the current tenant).
+  - Requires tenant context + `organization:admin` (GET and POST).
   - Reads `req.tenant` (blocked on the platform-admin host) and signs a short-lived `state` containing the OIDC `nonce` before returning an Entra consent URL. The SPA immediately navigates to the returned URL.
   - The nonce is validated from signed `state`, not from a browser cookie, so callbacks work across tenant subdomains and custom/on-prem domains.
 - GET `/auth/entra/login?redirectTo=/path`
@@ -92,13 +92,13 @@ Rate limiting (default enabled):
   - Validates that the handoff tenant matches `req.tenant`, issues app tokens, sets the `HttpOnly` `refresh_token` cookie on the tenant host, and returns `{ access_token, expires_in, refresh_expires_in, redirectTo }`.
 
 - GET `/admin/auth/settings`
-  - Requires `users:admin` and a tenant host.
+  - Requires `organization:reader` and a tenant host. `directory_sync.consent_url` (the Microsoft approval address, signed in the caller's name) is `null` unless the caller is an Administrator or holds `organization:admin`.
   - Returns `{ sso_provider, sso_enabled, entra_tenant_id, entra_metadata, directory_sync, disconnect }` for the current tenant. Used by the **Admin → Authentication** UI to show status and surface the “Test Microsoft sign-in” button (which simply calls `/auth/entra/login`).
   - `disconnect` (null when not connected): `{ keep_password, need_password, password_required }`, what a disconnect does. Among the linked accounts that may sign in with a password (`enabled` or `invited`, main role other than Contact), how many keep a password and how many have none; the caller counts with the first when `password_required` (they have no password and must give one).
 - POST `/admin/auth/directory-sync`
-  - Requires `users:admin`, reserved to unscoped data access (`403 DATA_ACCESS_LIMITED` for a limited person). Runs the directory sync now and returns its result; `409` `DIRECTORY_SYNC_RUNNING` while another sync of the tenant runs.
+  - Requires `organization:admin` and `users:admin` (`@RequireLevel` plus a one-entry `@RequireAnyLevel`: PermissionGuard asks for both), reserved to unscoped data access (`403 DATA_ACCESS_LIMITED` for a limited person). Runs the directory sync now and returns its result; `409` `DIRECTORY_SYNC_RUNNING` while another sync of the tenant runs.
 - POST `/admin/auth/disconnect`
-  - Requires `users:admin`, reserved to unscoped data access (`403 DATA_ACCESS_LIMITED` for a limited person); the waits of the bulk writes (statement limit 2 min). Body (optional): `{ password?: string }`. In the request's transaction: takes the tenant's Microsoft connection lock alone (Microsoft sign-ins hold it shared), then locks the linked accounts and the caller by id; clears `sso_provider`, `sso_enabled`, `entra_tenant_id`, `entra_metadata`; removes the link of every linked account of the tenant (`external_auth_provider`, `external_subject`, `external_synced_at`; the password stays; one `users` audit entry per account, `source_ref = 'entra-disconnect'`, written in one batch); voids the pending link confirmations; writes the tenant's audit entry. No e-mail is sent; open sessions stay open.
+  - Requires `organization:admin` and `users:admin`, reserved to unscoped data access (`403 DATA_ACCESS_LIMITED` for a limited person); the waits of the bulk writes (statement limit 2 min). Body (optional): `{ password?: string }`. In the request's transaction: takes the tenant's Microsoft connection lock alone (Microsoft sign-ins hold it shared), then locks the linked accounts and the caller by id; clears `sso_provider`, `sso_enabled`, `entra_tenant_id`, `entra_metadata`; removes the link of every linked account of the tenant (`external_auth_provider`, `external_subject`, `external_synced_at`; the password stays; one `users` audit entry per account, `source_ref = 'entra-disconnect'`, written in one batch); voids the pending link confirmations; writes the tenant's audit entry. No e-mail is sent; open sessions stay open.
   - A caller without a password must give one of at least 8 characters, written with the rest; a caller who has one is not asked and `password` is ignored.
   - Returns `{ ok: true, accounts_made_local }`. `400` `LOCAL_PASSWORD_REQUIRED` (nothing written), `409` `SSO_NOT_CONNECTED` when the tenant is not connected (a second disconnect at the same time).
 
@@ -166,7 +166,7 @@ Rate limiting (default enabled):
 ## Admin Branding (Tenant)
 These endpoints are tenant-scoped and require:
 - JWT authentication
-- `users:admin` permission
+- `organization:reader` for GET `/admin/branding/settings`, `organization:admin` for the writes (reserved to unscoped data access: `403 DATA_ACCESS_LIMITED` for a limited person)
 - tenant host context (platform host is blocked)
 
 - GET `/admin/branding/settings`
@@ -2073,10 +2073,11 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
   - Body: `{ permissions: { [resource]: 'reader'|'manager'|'admin'|null } }`
   - A caller who is not an administrator raises a level only up to their own: a higher one is `403` `MODULE_RIGHT_REQUIRED` (`params`: the module and the level) and nothing is written. Lowering a level is not limited. The `tasks: reader` added with a right on budget, projects or contracts is added only when the caller reads tasks.
   - `budget` covers every budget line, OPEX and CAPEX alike (lot R, migration `1853990000000`, which gave each role the higher of its former effective `opex` and `capex` levels: a `manager` row, which opened nothing, still opens nothing). The former names are aliases of `budget`: a row still named `opex` or `capex` (a tenant export or a database of before) is read as `budget` at the higher level; in a PUT, the keys that name `budget` are merged at the highest level given, a `null` removes the right only when every key naming it is `null`, and the rows of the former names are replaced. `GET /roles/:id/permissions` and `GET /auth/me` answer `budget`, never `opex` or `capex`
+  - `settings` and `organization` (Authentication, Branding, the audit log; lot A1, migration `1856320000000`, which gave `organization:admin` to every Administrator and every role holding `users:admin` of its own tenant) have two levels, `reader` and `admin`: a `contributor` or `member` row is read, and written, as `reader`
   - Note: `Administrator` and `Contact` are system-locked; the former is always full access, the latter cannot be granted access or login
 
 ## Audit Logs (Admin)
-- Permission: `users:admin`
+- Permission: `organization:reader`, on every route, reserved to unscoped data access (`403 DATA_ACCESS_LIMITED` for a limited person, reads included)
 - GET `/audit-logs?page=1&limit=100&sort=created_at:DESC&q=...&q_tables=...&from=YYYY-MM-DD&to=YYYY-MM-DD&table_name=...&action=...&source=...&user_id=...&filters=<agGridFilterModel>`
   - Returns paginated audit entries for the current tenant:
     - `{ items, total, page, limit }`
@@ -2092,7 +2093,7 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
   - Answers 400 for an invalid `from`, `to` or grid date, and for a `user_id` (parameter or grid filter) that is not a user id (UUID).
   - Besides data changes, the log holds sign-in and session events (`table_name = auth`: `login`, `login_failed`, `logout`, `refresh_denied`, `password_reset_requested`, `password_reset_completed`, `sso_login`, `sso_login_failed`; the reason in `source_ref`; `after_json = { ip, user_agent }`) and exports (`table_name = export`, `action = export`; `after_json = { resource, path, query, ip, user_agent }`, plus `format`, the type of the file sent (`csv`, `xlsx`, `pdf`, `docx`, `odt`, `markdown`, else its media type; absent when the response named none), and `rows` when the export reports its row count, today the budget file). Sign-in and session events are deleted after 365 days.
 - GET `/audit-logs/export?sort=...&q=...&filters=<agGridFilterModel>&from=...&to=...&table_name=...&action=...&source=...&user_id=...`
-  - Permission: `users:admin`. Same filters, search and sort as the list; `page` and `limit` do not apply. Answers 400 on the same invalid dates and user ids as the list, and on a request without a tenant (platform host).
+  - Permission: `organization:reader`. Same filters, search and sort as the list; `page` and `limit` do not apply. Answers 400 on the same invalid dates and user ids as the list, and on a request without a tenant (platform host).
   - Returns the matching entries of the current tenant as a CSV file (`Content-Type: text/csv; charset=utf-8`, `Content-Disposition` with `audit-log-YYYY-MM-DD.csv`). The file is read in batches of 1,000 rows and streamed, so memory stays bounded. If an error occurs after the first part was sent, the server closes the connection and the client receives an incomplete file.
   - At most 100,000 rows, in the list's order (newest first by default). When more rows match, the response carries `X-Export-Truncated: 100000` (the limit) and the file holds the first rows only.
   - One fixed format, whatever the user's language: RFC 4180, comma separator, UTF-8 without a byte order mark, English headers `date,action,table,record_id,user,source,source_ref,ip,user_agent,before,after`. `date` is ISO 8601 in UTC; `action`, `table` and `source_ref` are the stored codes; `user` is the person's name (their address when they have no name), else `Unknown account`, `Webhook` or `System`; `ip` and `user_agent` are filled for sign-in, session and export rows only; `before` and `after` are compact JSON. Every cell is guarded against spreadsheet formulas.

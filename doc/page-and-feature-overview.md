@@ -317,7 +317,7 @@ Platform admins operate through `AdminTenantsService` (`backend/src/admin/tenant
 
 Every mutating service logs to `audit_log` via `backend/src/audit/audit.service.ts`, using the same tenant-scoped `EntityManager`. Entries capture table, record ID, serialized `before`/`after`, actor ID, source metadata (`source`, `source_ref`), and timestamp, ensuring traceability under RLS.
 
-Audit records are exposed in the Admin workspace through `GET /audit-logs`, `GET /audit-logs/filter-values`, and `GET /audit-logs/:id` (all guarded by `users:admin`).
+Audit records are exposed in the Admin workspace through `GET /audit-logs`, `GET /audit-logs/filter-values`, and `GET /audit-logs/:id` (all guarded by `organization:reader` and reserved to people with access to all data).
 
 ## Frontend/Backend Integration Patterns
 

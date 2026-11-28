@@ -322,7 +322,7 @@ PostgreSQL ran on its defaults (128 MB shared buffers, 4 MB work memory; the ste
 ### Platform Administration Channel
 - `PLATFORM_ADMIN_HOST` identifies the platform console. It holds one host, or several separated by commas when the environment is served under several domains (`platform-admin.kanap.net,platform-admin.example.com`); the first is the address written in links. The middleware looks up the `platform-admin` **system tenant** and attaches it to the request, so platform admin runs with a real tenant context and RLS applies normally. `req.isPlatformHost = true` lets guards tell platform routes from tenant routes. The whole channel is multi-tenant only (`MultiTenantOnlyGuard`).
 - `/public/tenant-info` returns `{ platform: true }`, tenant metadata + branding (`slug`, `name`, `displayName`, `logoPath`, `logoVersion`, `useLogoInDark`, `primaryColorLight`, `primaryColorDark`, `microsoftSignIn`: whether the tenant is connected to a directory on an installation with Microsoft sign-in), or `{ marketing: true }`, letting the SPA swap shells without a separate bundle.
-- Branding endpoints (`/admin/branding/*`) require `users:admin` and reject platform-host requests.
+- Branding endpoints (`/admin/branding/*`) require `organization:reader` to read and `organization:admin` to write, and reject platform-host requests.
 - The platform module owns tenant list and stats, plan changes, freeze/unfreeze, synchronous deletion (purge of tenant rows and S3 objects), ops monitoring (`GET /admin/ops/snapshot`: API traffic, DB health, process metrics), platform AI configuration and the scheduled tasks console.
 
 **System tenant protections**
