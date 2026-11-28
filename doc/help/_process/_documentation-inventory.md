@@ -28,6 +28,7 @@ _Note: Supplemental Fast Track guides are excluded from these route-based counts
 
 | Date | Doc File | Changes |
 |------|----------|---------|
+| 2026-11-28 | `scheduled-tasks.md`, `on-premise/configuration.md` (en) | Scheduled tasks move to the **Installation** section of the Administration menu (`/admin/installation/scheduled-tasks`; the former address redirects). Access: the Administrator role with access to all data on site, the platform administrator on the platform host. |
 | 2026-11-28 | `budget-operations.md` (en) | Settings pages of the budget on the shared settings components. **Budget columns** and **Default allocation method** save each change on its own (no Save or Reset), one audit entry per change; a refused value stays with its reason and is not saved; hide the default column only after choosing another default; Budget Reader and Budget Member open both pages read-only. **Default allocation method**: **Restore the default allocation** beside the title. **Reset budget column** retitled **Clear a budget column** (anchor `#reset-budget-column` kept): three numbers, the five largest lines, **Show all N lines** opens the full grid, export beside the options, result beside the button. |
 | 2026-11-28 | `on-premise/configuration.md` (en; fr/de/es by the translation pass) | The full example `.env` is a block generated from the variable registry (`backend/src/config/env-registry.ts`, `npm run env:generate`), between two HTML markers: every on-premise variable, with `APP_ENV=production` commented as in `infra/.env.onprem.example`. Storage: the default region (`nbg1`). Entra: the start-up warning that names the missing variables. `doc-update-map.tsv` maps `backend/src/config/env-registry*`. |
 | 2026-11-07 | `my-dashboard.md` (en/fr/de/es) | Recently viewed also lists business processes. `doc/api-reference.md` names `company` and `business_process` among the types of the existence check. |
@@ -250,7 +251,7 @@ _Note: `/knowledge/new`, `/knowledge/:id`, and `/knowledge/:id/:tab` are covered
 | `/admin/ai` | AdminAiPage | **DOCUMENTED** | `ai-settings.md` |
 | `/admin/ai-usage` | AdminAiUsagePage | **DOCUMENTED** | `ai-usage.md` |
 | `/admin/integrations` | AdminIntegrationsPage | **DOCUMENTED** | `integrations.md` |
-| `/admin/scheduled-tasks` | ScheduledTasksPage | **DOCUMENTED** | `scheduled-tasks.md` |
+| `/admin/installation/scheduled-tasks` | ScheduledTasksPage | **DOCUMENTED** | `scheduled-tasks.md` (former address `/admin/scheduled-tasks` redirects) |
 | `/settings` | SettingsPage | **DOCUMENTED** | mapped to `fast-track/getting-started.md` in `docUrls.ts` (personal settings are covered in the Getting Started guide) |
 | `/settings/connected-apps` | ConnectedAppsTab | **DOCUMENTED** | `connected-apps.md` (mapped before the `/settings` rule in `docUrls.ts`) |
 

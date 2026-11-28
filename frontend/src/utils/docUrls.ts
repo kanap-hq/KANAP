@@ -107,7 +107,7 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/admin\/ai-usage/, 'ai-usage'],
   [/^\/admin\/ai/, 'ai-settings'],
   [/^\/admin\/integrations/, 'integrations'],
-  [/^\/admin\/scheduled-tasks/, 'scheduled-tasks'],
+  [/^\/admin\/installation\/scheduled-tasks/, 'scheduled-tasks'],
 
   // AI Assistant
   [/^\/ai/, 'ai-assistant'],
