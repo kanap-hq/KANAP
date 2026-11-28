@@ -245,7 +245,7 @@ Una columna cuyas líneas no tienen ningún importe también puede vaciarse: en 
 
 Antes de elegir una columna, una línea indica: «Elija una columna para ver los importes que contiene.» Una vez elegida la columna, la página muestra tres cifras:
 
-- **Líneas**
+- **Líneas**: las líneas del tipo elegido aún vigentes el 1 de enero del año
 - **Líneas con un importe**
 - **Valor total**
 
@@ -265,7 +265,7 @@ Al hacer clic en **Vaciar la columna** se abre una confirmación que pregunta «
 - Que las líneas y sus demás columnas se conservan
 - Que esta acción no se puede deshacer
 
-Haga clic en **Vaciar la columna** en el diálogo para continuar, o en **Cancelar** para abandonar. El resultado aparece junto al botón, por ejemplo «Columna vaciada en 45 líneas.»
+Haga clic en **Vaciar la columna** en el diálogo para continuar, o en **Cancelar** para abandonar. El resultado aparece junto al botón, por ejemplo «Columna vaciada en 45 líneas.» Cuenta las líneas cuyos importes se han quitado, como **Líneas con un importe**. Si ninguna línea tenía importe, lo indica: «Columna vaciada: ninguna línea tenía importe.»
 
 ### Medidas de seguridad
 

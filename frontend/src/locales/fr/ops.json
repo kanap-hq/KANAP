@@ -794,6 +794,7 @@
       "confirmAffected_other": "{{count}} lignes sont concernées, pour un total de {{value}}.",
       "clearDone_one": "Colonne vidée sur {{count}} ligne.",
       "clearDone_other": "Colonne vidée sur {{count}} lignes.",
+      "clearDoneNoAmount": "Colonne vidée : aucune ligne ne portait de montant.",
       "confirmPeriodsOnly": "La colonne {{column}} de {{year}} ne contient aucun montant. Seules ses périodes de répartition seront retirées.",
       "chooseColumn": "Choisir une colonne",
       "chooseColumnFirst": "Choisissez une colonne pour voir les montants qu'elle contient.",
@@ -1160,12 +1161,6 @@
         "saveFailed": "Les colonnes budgétaires n'ont pas pu être enregistrées.",
         "controlCharacters": "Un nom de colonne ne peut pas contenir de caractères de contrôle ou invisibles."
       }
-    },
-    "results": {
-      "skipped_one": "{{count}} ligne ignorée.",
-      "skipped_other": "{{count}} lignes ignorées.",
-      "failed_one": "{{count}} ligne en échec.",
-      "failed_other": "{{count}} lignes en échec."
     }
   },
   "confirmations": {

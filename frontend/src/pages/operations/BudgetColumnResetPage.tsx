@@ -32,7 +32,6 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import ItemScopeTabs, { SCOPE_NATURES } from './ItemScopeTabs';
 import OperationLineCell from './OperationLineCell';
 import { formatOperationAmount } from './operationAmount';
-import { operationSummary } from './operationSummary';
 
 type ProcessedRow = {
   id: string;
@@ -152,9 +151,15 @@ export default function BudgetColumnResetPage() {
       // The lines' Allocations tabs show their totals: their cached years are read again.
       forgetAllAllocations(queryClient);
 
+      // The lines whose amounts went, as the preview counts them. The server also passes over the
+      // lines without an amount in the column (no version of the year, or zero months): nothing to
+      // say about them. It clears all or nothing, so no line fails on its own.
+      const { cleared } = result.summary;
       setClearResult({
         ok: true,
-        message: operationSummary(t, 'operations.columnReset.clearDone', result.summary.cleared, result.summary.skipped, result.summary.errors),
+        message: cleared > 0
+          ? t('operations.columnReset.clearDone', { count: cleared })
+          : t('operations.columnReset.clearDoneNoAmount'),
       });
 
       // Every list and report of the budget reads again.

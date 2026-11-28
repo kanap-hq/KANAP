@@ -192,6 +192,10 @@ theme draws it on `kanap.bg.drawer`.
 - The result is written beside the pill: "Column cleared on 45 lines." Its live region
   (`role="status"`) is there before the result, so a screen reader announces it. The state with
   nothing to do fits in one sentence: "The Revision column of 2026 holds no amount."
+- The result counts the lines the preview counted ("lines with an amount"). It names a number of
+  lines left aside only with a reason the person understands (for a copy, a destination that
+  already holds amounts); lines
+  passed over because they hold nothing to change are not counted.
 - The preview lines are the largest amounts by size, a negative amount included.
 - A page whose operation depends on a setting it could not read (the column names, the freeze)
   shows `SettingsPage` `error`: no option, no pill.

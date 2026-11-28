@@ -141,7 +141,7 @@ describe('BudgetColumnResetPage', () => {
     }));
   });
 
-  it('clears the CAPEX column after confirmation and reports the result with plural forms', async () => {
+  it('clears the CAPEX column after confirmation and reports the lines cleared, not those without an amount', async () => {
     operation.mockResolvedValue({ data: { success: true, summary: { totalItems: 3, cleared: 1, skipped: 2, errors: 0 } } });
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
@@ -157,9 +157,22 @@ describe('BudgetColumnResetPage', () => {
     expect(operation.mock.calls[0][1]).toEqual({ scope: 'capex', year: new Date().getFullYear(), column: 'budget' });
     expect(operation.mock.calls[0][0]).toBe('/budget-lines/budget-operations/clear-column');
     // The result is written beside the pill.
-    const result = await screen.findByText('operations.columnReset.clearDone:1 operations.results.skipped:2');
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('operations.columnReset.clearDone:1'));
+    const result = screen.getByRole('status');
     expect(result).toHaveAttribute('role', 'status');
     expect(result.parentElement).toContainElement(screen.getByRole('button', { name: 'operations.columnReset.clearColumn' }));
+  });
+
+  it('says no line held an amount when the clear cleared none, without counting the lines it passed over', async () => {
+    // The 2027 case: lines of the year without a version, none with an amount; the server passes over every line of the type.
+    capexRows.current = [{ id: 'c-2', description: 'Storage', versions: {} }];
+    operation.mockResolvedValue({ data: { success: true, summary: { totalItems: 15, cleared: 0, skipped: 15, errors: 0 } } });
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    await chooseColumn('ops:operations.budgetColumns.revision');
+    fireEvent.click(await screen.findByRole('button', { name: 'operations.columnReset.clearColumn' }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('operations.columnReset.clearDoneNoAmount'));
+    expect(screen.getByRole('status').textContent).not.toMatch(/skipped|15/);
   });
 
   it('gives the line name the free width of the full grid, the type and the amount keeping theirs', async () => {

@@ -794,6 +794,7 @@
       "confirmAffected_other": "{{count}} Zeilen sind betroffen, mit insgesamt {{value}}.",
       "clearDone_one": "Spalte in {{count}} Zeile geleert.",
       "clearDone_other": "Spalte in {{count}} Zeilen geleert.",
+      "clearDoneNoAmount": "Spalte geleert: keine Zeile enthielt einen Betrag.",
       "confirmPeriodsOnly": "Die Spalte {{column}} für {{year}} enthält keinen Betrag. Nur ihre Verteilungszeiträume werden entfernt.",
       "chooseColumn": "Spalte wählen",
       "chooseColumnFirst": "Wählen Sie eine Spalte, um ihre Beträge zu sehen.",
@@ -1159,12 +1160,6 @@
         "saveFailed": "Die Budgetspalten konnten nicht gespeichert werden.",
         "controlCharacters": "Ein Spaltenname darf keine Steuerzeichen oder unsichtbaren Zeichen enthalten."
       }
-    },
-    "results": {
-      "skipped_one": "{{count}} Zeile übersprungen.",
-      "skipped_other": "{{count}} Zeilen übersprungen.",
-      "failed_one": "{{count}} Zeile fehlgeschlagen.",
-      "failed_other": "{{count}} Zeilen fehlgeschlagen."
     }
   },
   "confirmations": {

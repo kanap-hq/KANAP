@@ -245,7 +245,7 @@ Une colonne dont les lignes budgétaires ne portent aucun montant peut quand mê
 
 Tant que vous n'avez pas choisi de colonne, une ligne indique : « Choisissez une colonne pour voir les montants qu'elle contient. » Une fois la colonne choisie, la page affiche trois chiffres :
 
-- **Lignes**
+- **Lignes** : les lignes du type choisi encore valides au 1er janvier de l'année
 - **Lignes avec un montant**
 - **Valeur totale**
 
@@ -265,7 +265,7 @@ Cliquer sur **Vider la colonne** ouvre une confirmation qui demande « Vider la 
 - Que les lignes et leurs autres colonnes sont conservées
 - Que cette action est irréversible
 
-Cliquez sur **Vider la colonne** dans la boîte de dialogue pour continuer, ou sur **Annuler** pour abandonner. Le résultat s'affiche à côté du bouton, par exemple « Colonne vidée sur 45 lignes. »
+Cliquez sur **Vider la colonne** dans la boîte de dialogue pour continuer, ou sur **Annuler** pour abandonner. Le résultat s'affiche à côté du bouton, par exemple « Colonne vidée sur 45 lignes. » Il compte les lignes dont les montants ont été retirés, comme **Lignes avec un montant**. Quand aucune ligne ne portait de montant, il le dit : « Colonne vidée : aucune ligne ne portait de montant. »
 
 ### Dispositifs de sécurité
 

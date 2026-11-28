@@ -794,6 +794,7 @@
       "confirmAffected_other": "{{count}} lines are affected, for a total of {{value}}.",
       "clearDone_one": "Column cleared on {{count}} line.",
       "clearDone_other": "Column cleared on {{count}} lines.",
+      "clearDoneNoAmount": "Column cleared: no line held an amount.",
       "confirmPeriodsOnly": "The {{column}} column for {{year}} holds no amount. Only its spread periods will be removed.",
       "chooseColumn": "Choose a column",
       "chooseColumnFirst": "Choose a column to see the amounts it holds.",
@@ -1159,12 +1160,6 @@
         "saveFailed": "The budget columns could not be saved.",
         "controlCharacters": "A column name cannot contain control or invisible characters."
       }
-    },
-    "results": {
-      "skipped_one": "{{count}} line skipped.",
-      "skipped_other": "{{count}} lines skipped.",
-      "failed_one": "{{count}} line failed.",
-      "failed_other": "{{count}} lines failed."
     }
   },
   "confirmations": {

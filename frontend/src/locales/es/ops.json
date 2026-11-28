@@ -794,6 +794,7 @@
       "confirmAffected_other": "{{count}} líneas afectadas, por un total de {{value}}.",
       "clearDone_one": "Columna vaciada en {{count}} línea.",
       "clearDone_other": "Columna vaciada en {{count}} líneas.",
+      "clearDoneNoAmount": "Columna vaciada: ninguna línea tenía importe.",
       "confirmPeriodsOnly": "La columna {{column}} de {{year}} no tiene importes. Solo se quitarán sus periodos de reparto.",
       "chooseColumn": "Elegir una columna",
       "chooseColumnFirst": "Elija una columna para ver los importes que contiene.",
@@ -1159,12 +1160,6 @@
         "saveFailed": "No se pudieron guardar las columnas presupuestarias.",
         "controlCharacters": "Un nombre de columna no puede contener caracteres de control ni invisibles."
       }
-    },
-    "results": {
-      "skipped_one": "{{count}} línea omitida.",
-      "skipped_other": "{{count}} líneas omitidas.",
-      "failed_one": "{{count}} línea con error.",
-      "failed_other": "{{count}} líneas con error."
     }
   },
   "confirmations": {

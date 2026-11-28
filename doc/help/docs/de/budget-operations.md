@@ -245,7 +245,7 @@ Eine Spalte, deren Budgetzeilen keinen Betrag enthalten, kann trotzdem geleert w
 
 Bevor Sie eine Spalte wählen, sagt eine einzige Zeile: „Wählen Sie eine Spalte, um ihre Beträge zu sehen.“ Sobald Sie eine Spalte gewählt haben, zeigt die Seite drei Zahlen:
 
-- **Zeilen**
+- **Zeilen**: die Zeilen des gewählten Typs, die am 1. Januar des Jahres noch gültig sind
 - **Zeilen mit einem Betrag**
 - **Gesamtwert**
 
@@ -265,7 +265,7 @@ Klicken auf **Spalte leeren** öffnet eine Bestätigung, die fragt „Die Spalte
 - Dass die Zeilen und ihre anderen Spalten erhalten bleiben
 - Dass diese Aktion nicht rückgängig gemacht werden kann
 
-Klicken Sie im Dialog auf **Spalte leeren**, um fortzufahren, oder auf **Abbrechen**, um abzubrechen. Das Ergebnis erscheint neben der Schaltfläche, zum Beispiel „Spalte in 45 Zeilen geleert.“
+Klicken Sie im Dialog auf **Spalte leeren**, um fortzufahren, oder auf **Abbrechen**, um abzubrechen. Das Ergebnis erscheint neben der Schaltfläche, zum Beispiel „Spalte in 45 Zeilen geleert.“ Es zählt die Zeilen, deren Beträge entfernt wurden, wie **Zeilen mit einem Betrag**. Enthielt keine Zeile einen Betrag, sagt es das: „Spalte geleert: keine Zeile enthielt einen Betrag.“
 
 ### Sicherheitsfunktionen
 

@@ -245,7 +245,7 @@ A column whose lines hold no amount can still be cleared: clearing then only rem
 
 Before you choose a column, one line says: "Choose a column to see the amounts it holds." Once you choose a column, the page shows three numbers:
 
-- **Lines**
+- **Lines**: the lines of the chosen type still valid on January 1 of the year
 - **Lines with an amount**
 - **Total value**
 
@@ -265,7 +265,7 @@ Clicking **Clear column** opens a confirmation that asks "Clear the Budget colum
 - That the lines and their other columns are kept
 - That this action cannot be undone
 
-Click **Clear column** in the dialog to proceed, or **Cancel** to abort. The result shows beside the button, for example "Column cleared on 45 lines."
+Click **Clear column** in the dialog to proceed, or **Cancel** to abort. The result shows beside the button, for example "Column cleared on 45 lines." It counts the lines whose amounts were removed, as **Lines with an amount** did. When no line held an amount, it says "Column cleared: no line held an amount."
 
 ### Safety features
 
