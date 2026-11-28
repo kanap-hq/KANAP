@@ -44,18 +44,18 @@ Die Integration wird mandantenweise konfiguriert; die unten stehenden Anmeldedat
 ### Felder
 
 - **GLPI-Ticketimport aktivieren**: Hauptschalter für die Verbindung. Wenn deaktiviert, wird Kadratis nicht versuchen, GLPI abzufragen, selbst wenn Anmeldedaten festgelegt sind. Weder Kad-Importe noch Agentenprüfungen erreichen Ihren Service-Desk.
-- **GLPI-URL**: die Adresse, mit der Sie GLPI öffnen, zum Beispiel `https://glpi.example.com`. Die GLPI-API muss eingeschaltet sein: in GLPI unter **Setup > General > API** die Option **Enable Rest API**.
-- **Benutzer-Token**: das persönliche API-Token des GLPI-Kontos, das Kadratis verwenden wird. Öffnen Sie in GLPI Ihre Einstellungen (Ihr Name oben rechts), dann **Remote access keys**, und kopieren Sie das **API token**. Ist es leer, aktivieren Sie **Regenerate** und speichern.
-- **App-Token**: optional. Öffnen Sie in GLPI unter **Setup > General > API** den API-Client, über den sich Kadratis verbindet, und kopieren Sie sein Anwendungstoken. Lassen Sie das Feld leer, wenn der Client keines hat.
+- **GLPI-URL**: die Adresse, mit der Sie GLPI öffnen, zum Beispiel `https://glpi.example.com`. Die GLPI-API muss eingeschaltet sein: in GLPI unter **Konfiguration > Allgemein > API** die Option **Rest API aktivieren**.
+- **Benutzer-Token**: das persönliche API-Token des GLPI-Kontos, das Kadratis verwenden wird. Öffnen Sie in GLPI Ihre Einstellungen (Ihr Name oben rechts), dann **Schlüssel für Fernzugriff**, und kopieren Sie das **API-Token**. Ist es leer, aktivieren Sie **Neu erzeugen** und speichern.
+- **App-Token**: optional. Öffnen Sie in GLPI unter **Konfiguration > Allgemein > API** den **API-Client**, über den sich Kadratis verbindet, und kopieren Sie sein Anwendungstoken. Lassen Sie das Feld leer, wenn der Client keines hat.
 
-Das Info-Symbol neben jedem Feld sagt, wo Sie seinen Wert finden. Ein gespeichertes Token wird nie wieder angezeigt: Das Feld zeigt Punkte, daneben **Ersetzen**, um ein neues einzugeben. Eine neue URL leert die gespeicherten Token: Die Felder fragen sie erneut ab.
+Das Info-Symbol neben jedem Feld sagt, wo Sie seinen Wert finden. Ein gespeichertes Token wird nie wieder angezeigt: Das Feld zeigt Punkte, daneben **Ersetzen**, um ein neues einzugeben. Eine neue URL leert die gespeicherten Token: Das Feld für das Benutzer-Token fragt es erneut ab, und das Feld für das App-Token sagt, dass das gespeicherte Token nicht an die neue Adresse gesendet wird. Geben Sie das App-Token erneut ein, um es zu behalten.
 
 ### Aktionen
 
-- **Testen**: führt einen authentifizierten Round-Trip gegen GLPI mit den Werten auf der Karte aus, gespeichert oder nicht. Die Statuszeile oben rechts auf der Karte nennt das Ergebnis: „Letzter Test erfolgreich am …“ mit der Antwortzeit oder den Grund des Fehlschlags.
+- **Testen**: führt einen authentifizierten Round-Trip gegen GLPI mit den Werten auf der Karte aus, gespeichert oder nicht. Verfügbar, sobald URL und Benutzer-Token eingetragen sind. Die Statuszeile oben rechts auf der Karte nennt das Ergebnis: „Letzter Test erfolgreich am …“ mit der Antwortzeit oder den Grund des Fehlschlags.
 - **Speichern**: verfügbar, sobald sich etwas geändert hat. Eingegebene Token ersetzen die gespeicherten; ein als Punkte belassenes Token bleibt erhalten.
 
-Die Statuszeile behält den letzten Test der gespeicherten Werte: Er erscheint wieder, wenn Sie zur Seite zurückkehren. Ein Test nicht gespeicherter Werte bleibt sichtbar, bis Sie die Seite verlassen. Ohne Test zeigt die Statuszeile **Gespeichert, noch nicht getestet** oder **Nie getestet**, und **Änderungen nicht gespeichert**, solange die Karte Änderungen enthält. Wenn Sie die Seite mit Änderungen auf einer Karte verlassen, fragt Kadratis zuerst nach einer Bestätigung.
+Die Statuszeile behält den letzten Test der gespeicherten Werte: Er erscheint wieder, wenn Sie zur Seite zurückkehren, mit der Antwortzeit oder dem Grund des Fehlschlags. Ein Test nicht gespeicherter Werte bleibt sichtbar, bis Sie die Seite verlassen. Ohne Test zeigt die Statuszeile **Gespeichert, noch nicht getestet** oder **Nie getestet**, und **Änderungen nicht gespeichert**, solange die Karte Änderungen enthält. Wenn Sie die Seite mit Änderungen auf einer Karte verlassen, fragt Kadratis zuerst nach einer Bestätigung.
 
 ### Geheimnisspeicher
 
@@ -71,13 +71,13 @@ Wenn Ihre Kadratis-Instanz keinen konfigurierten Geheimnisspeicher hat, sagt ein
 
 - **PRTG-Monitoring aktivieren**: Hauptschalter für die Verbindung. Wenn deaktiviert, erreichen Agenten PRTG nicht.
 - **Serveradresse**: die Adresse, unter der Sie PRTG im Browser öffnen, zum Beispiel `https://prtg.example.com`.
-- **API-Schlüssel**: Legen Sie einen in PRTG unter **Setup → API keys** an. Lesezugriff genügt. Ein gespeicherter Schlüssel erscheint als Punkte, daneben **Ersetzen**. Eine neue Adresse leert den gespeicherten Schlüssel: Das Feld fragt ihn erneut ab.
+- **API-Schlüssel**: Legen Sie einen in PRTG unter **Setup | Account Settings | API Keys** an. Lesezugriff genügt. Ein gespeicherter Schlüssel erscheint als Punkte, daneben **Ersetzen**. Eine neue Adresse leert den gespeicherten Schlüssel: Das Feld fragt ihn erneut ab.
 - **Zeitzone des Servers**: die Zeitzone des PRTG-Core-Servers, wie in seinem Betriebssystem eingestellt. Kadratis liest die Zeiten der Alarme in dieser Zone.
 - **Anfrage-Timeout (Sekunden)**: wie lange auf PRTG gewartet wird, zwischen 5 und 120. Für 30 Sekunden leer lassen.
 
 ### Aktionen
 
-**Testen** und **Speichern** funktionieren wie auf der GLPI-Karte. Ein erfolgreicher Test zeigt die PRTG-Version und die Zahl der Sensoren, die der Schlüssel sieht. Sobald eine funktionierende Verbindung gespeichert und eingeschaltet ist, bietet die Karte einen Link zur Agents-Seite, auf der sich ein Monitoring-Agent anlegen lässt.
+**Testen** und **Speichern** funktionieren wie auf der GLPI-Karte: **Testen** ist verfügbar, sobald Adresse und Schlüssel eingetragen sind. Ein erfolgreicher Test zeigt die PRTG-Version und die Zahl der Sensoren, die der Schlüssel sieht. Sobald eine funktionierende Verbindung gespeichert und eingeschaltet ist, bietet die Karte einen Link zur Agents-Seite, auf der sich ein Monitoring-Agent anlegen lässt.
 
 ---
 
@@ -93,9 +93,13 @@ Konfigurieren Sie die Verbindung hier und öffnen Sie dann den Tab **Netbox** un
 
 ## Eine Verbindung entfernen
 
-Alle drei Karten entfernen eine Verbindung auf dieselbe Weise: Leeren Sie ihre Adresse, speichern Sie und bestätigen Sie. Kadratis löscht die Adresse und die gespeicherten Geheimnisse, schaltet die Verbindung aus und schreibt einen Eintrag ins Audit-Protokoll. Bereits Importiertes wird nicht gelöscht. Agenten, die PRTG lesen, melden es bei ihrem nächsten Lauf als nicht verfügbar.
+Alle drei Karten entfernen eine Verbindung auf dieselbe Weise: Leeren Sie ihre Adresse, speichern Sie und bestätigen Sie. Kadratis löscht die Adresse und die gespeicherten Geheimnisse, schaltet die Verbindung aus und schreibt einen Eintrag ins Audit-Protokoll. Die Bestätigung nennt, was sich für jedes System ändert:
 
-Das Audit-Protokoll kennzeichnet auch ein ersetztes Geheimnis: Der Eintrag einer Speicherung, die ein Token oder einen Schlüssel bei gleicher Adresse ändert, zeigt **Geheimnis ersetzt**. Das Geheimnis selbst wird nie ins Protokoll geschrieben.
+- **GLPI**: Tickets können nicht mehr importiert werden. Bereits importierte Tickets bleiben erhalten.
+- **PRTG**: Monitoring-Agenten können PRTG nicht mehr auslesen und melden es bei ihrem nächsten Lauf als nicht verfügbar.
+- **Netbox**: Die automatische Synchronisierung endet. Bereits Synchronisiertes bleibt erhalten.
+
+Das Audit-Protokoll zeigt, ob ein Geheimnis hinterlegt ist, und kennzeichnet ein ersetztes: Der Eintrag einer Speicherung, die einen Schlüssel oder ein Token bei gleicher Adresse ändert, zeigt **Geheimnis ersetzt**, und für GLPI **GLPI-Benutzer-Token ersetzt** oder **GLPI-Anwendungstoken ersetzt**. Das Geheimnis selbst wird nie ins Protokoll geschrieben.
 
 ---
 

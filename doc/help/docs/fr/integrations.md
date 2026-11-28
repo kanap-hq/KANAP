@@ -44,18 +44,18 @@ L'intégration se configure tenant par tenant ; les identifiants ci-dessous sont
 ### Champs
 
 - **Activer l'import de tickets GLPI** : interrupteur principal de la connexion. Lorsqu'il est désactivé, Kadratis n'essaiera pas d'interroger GLPI même si des identifiants sont renseignés : ni les imports Kad ni les contrôles d'agent n'atteindront votre centre de services.
-- **URL GLPI** : l'adresse avec laquelle vous ouvrez GLPI, par exemple `https://glpi.example.com`. L'API de GLPI doit être active : dans GLPI, **Setup > General > API**, **Enable Rest API**.
-- **Jeton utilisateur** : le jeton d'API personnel du compte GLPI que Kadratis utilisera. Dans GLPI, ouvrez vos préférences (votre nom en haut à droite), puis **Remote access keys**, et copiez l'**API token**. S'il est vide, cochez **Regenerate** et enregistrez.
-- **Jeton d'application** : facultatif. Dans GLPI, **Setup > General > API**, ouvrez le client d'API par lequel Kadratis se connecte et copiez son jeton d'application. Laissez le champ vide si le client n'en a pas.
+- **URL GLPI** : l'adresse avec laquelle vous ouvrez GLPI, par exemple `https://glpi.example.com`. L'API de GLPI doit être active : dans GLPI, **Configuration > Générale > API**, **Activer l'API Rest**.
+- **Jeton utilisateur** : le jeton d'API personnel du compte GLPI que Kadratis utilisera. Dans GLPI, ouvrez vos préférences (votre nom en haut à droite), puis **Clefs d'accès distant**, et copiez le **Jeton d'API**. S'il est vide, cochez **Regénérer** et enregistrez.
+- **Jeton d'application** : facultatif. Dans GLPI, **Configuration > Générale > API**, ouvrez le **Client de l'API** par lequel Kadratis se connecte et copiez son jeton d'application. Laissez le champ vide si le client n'en a pas.
 
-L'icône d'information à côté de chaque champ indique où trouver sa valeur. Un jeton enregistré n'est jamais réaffiché : le champ affiche des points, avec **Remplacer** à côté pour en saisir un nouveau. Une nouvelle URL vide les jetons enregistrés : les champs les redemandent.
+L'icône d'information à côté de chaque champ indique où trouver sa valeur. Un jeton enregistré n'est jamais réaffiché : le champ affiche des points, avec **Remplacer** à côté pour en saisir un nouveau. Une nouvelle URL vide les jetons enregistrés : le champ du jeton utilisateur le redemande, et le champ du jeton d'application indique que le jeton enregistré n'est pas envoyé à la nouvelle adresse. Saisissez de nouveau le jeton d'application pour le conserver.
 
 ### Actions
 
-- **Tester** : effectue un aller-retour authentifié vers GLPI avec les valeurs de la carte, enregistrées ou non. La ligne d'état en haut à droite de la carte donne le résultat : « Dernier test réussi le … » avec le temps de réponse, ou la raison de l'échec.
+- **Tester** : effectue un aller-retour authentifié vers GLPI avec les valeurs de la carte, enregistrées ou non. Disponible dès que l'URL et le jeton utilisateur sont renseignés. La ligne d'état en haut à droite de la carte donne le résultat : « Dernier test réussi le … » avec le temps de réponse, ou la raison de l'échec.
 - **Enregistrer** : disponible dès que quelque chose a changé. Les jetons saisis remplacent ceux qui sont enregistrés ; un jeton laissé en points est conservé.
 
-La ligne d'état garde le dernier test des valeurs enregistrées : il s'affiche de nouveau quand vous revenez sur la page. Le test de valeurs non enregistrées reste affiché jusqu'à ce que vous quittiez la page. Sans test, la ligne d'état indique **Enregistré, pas encore testé** ou **Jamais testé**, et **Modifications non enregistrées** tant que la carte contient des changements. Quitter la page avec des changements sur une carte demande d'abord une confirmation.
+La ligne d'état garde le dernier test des valeurs enregistrées : il s'affiche de nouveau quand vous revenez sur la page, avec le temps de réponse ou la raison de l'échec. Le test de valeurs non enregistrées reste affiché jusqu'à ce que vous quittiez la page. Sans test, la ligne d'état indique **Enregistré, pas encore testé** ou **Jamais testé**, et **Modifications non enregistrées** tant que la carte contient des changements. Quitter la page avec des changements sur une carte demande d'abord une confirmation.
 
 ### Stockage des secrets
 
@@ -71,13 +71,13 @@ Si votre instance Kadratis ne dispose pas d'un coffre à secrets configuré, une
 
 - **Activer la supervision PRTG** : interrupteur principal de la connexion. Lorsqu'il est désactivé, les agents n'atteignent pas PRTG.
 - **Adresse du serveur** : l'adresse avec laquelle vous ouvrez PRTG dans votre navigateur, par exemple `https://prtg.example.com`.
-- **Clé API** : créez-en une dans PRTG sous **Setup → API keys**. Un accès en lecture seule suffit. Une clé enregistrée s'affiche en points, avec **Remplacer** à côté. Une nouvelle adresse vide la clé enregistrée : le champ la redemande.
+- **Clé API** : créez-en une dans PRTG sous **Setup | Account Settings | API Keys**. Un accès en lecture seule suffit. Une clé enregistrée s'affiche en points, avec **Remplacer** à côté. Une nouvelle adresse vide la clé enregistrée : le champ la redemande.
 - **Fuseau horaire du serveur** : le fuseau horaire du serveur central PRTG, tel que défini dans son système d'exploitation. Kadratis lit l'heure des alertes dans ce fuseau.
 - **Délai d'attente des requêtes (secondes)** : le temps d'attente de PRTG, entre 5 et 120. Laissez vide pour utiliser 30.
 
 ### Actions
 
-**Tester** et **Enregistrer** fonctionnent comme sur la carte GLPI. Un test réussi indique la version de PRTG et le nombre de capteurs visibles avec la clé. Une fois une connexion fonctionnelle enregistrée et activée, la carte propose un lien vers la page Agents, où vous pouvez créer un agent de supervision.
+**Tester** et **Enregistrer** fonctionnent comme sur la carte GLPI : **Tester** est disponible dès que l'adresse et la clé sont renseignées. Un test réussi indique la version de PRTG et le nombre de capteurs visibles avec la clé. Une fois une connexion fonctionnelle enregistrée et activée, la carte propose un lien vers la page Agents, où vous pouvez créer un agent de supervision.
 
 ---
 
@@ -93,9 +93,13 @@ Configurez la connexion ici, puis ouvrez l'onglet **Netbox** de **Cartographie S
 
 ## Retirer une connexion
 
-Les trois cartes retirent une connexion de la même façon : videz son adresse, enregistrez, puis confirmez. Kadratis supprime l'adresse et les secrets enregistrés, coupe la connexion et écrit une entrée au journal d'audit. Rien de ce qui a déjà été importé n'est supprimé. Les agents qui lisent PRTG le signalent comme indisponible à leur exécution suivante.
+Les trois cartes retirent une connexion de la même façon : videz son adresse, enregistrez, puis confirmez. Kadratis supprime l'adresse et les secrets enregistrés, coupe la connexion et écrit une entrée au journal d'audit. La confirmation indique ce qui change pour chaque système :
 
-Le journal d'audit signale aussi un secret remplacé : l'entrée d'un enregistrement qui change un jeton ou une clé à la même adresse affiche **Secret remplacé**. Le secret lui-même n'est jamais écrit dans le journal.
+- **GLPI** : les tickets ne peuvent plus être importés. Les tickets déjà importés restent.
+- **PRTG** : les agents de supervision ne peuvent plus lire PRTG et le signalent comme indisponible à leur exécution suivante.
+- **Netbox** : la synchronisation automatique s'arrête. Ce qui a déjà été synchronisé reste.
+
+Le journal d'audit indique si un secret est défini, et signale un secret remplacé : l'entrée d'un enregistrement qui change une clé ou un jeton à la même adresse affiche **Secret remplacé**, et pour GLPI **Jeton utilisateur GLPI remplacé** ou **Jeton d'application GLPI remplacé**. Le secret lui-même n'est jamais écrit dans le journal.
 
 ---
 

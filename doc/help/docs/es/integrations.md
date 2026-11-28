@@ -44,18 +44,18 @@ La integración se configura espacio de trabajo por espacio de trabajo; las cred
 ### Campos
 
 - **Habilitar importación de tickets GLPI**: conmutador maestro de la conexión. Cuando está desactivado, Kadratis no intentará consultar GLPI aunque las credenciales estén establecidas: ni las importaciones de Kad ni las comprobaciones de los agentes llegarán a su centro de servicios.
-- **URL de GLPI**: la dirección con la que abre GLPI, por ejemplo `https://glpi.example.com`. La API de GLPI debe estar activada: en GLPI, **Setup > General > API**, **Enable Rest API**.
-- **Token de usuario**: el token API personal de la cuenta GLPI que Kadratis usará. En GLPI, abra sus preferencias (su nombre arriba a la derecha), luego **Remote access keys**, y copie el **API token**. Si está vacío, marque **Regenerate** y guarde.
-- **Token de aplicación**: opcional. En GLPI, **Setup > General > API**, abra el cliente de API a través del cual se conecta Kadratis y copie su token de aplicación. Deje el campo vacío si el cliente no tiene ninguno.
+- **URL de GLPI**: la dirección con la que abre GLPI, por ejemplo `https://glpi.example.com`. La API de GLPI debe estar activada: en GLPI, **Configuración > General > API**, **Activar Rest API**.
+- **Token de usuario**: el token API personal de la cuenta GLPI que Kadratis usará. En GLPI, abra sus preferencias (su nombre arriba a la derecha), luego **Claves de acceso remoto**, y copie el **API token**. Si está vacío, marque **Regenerar** y guarde.
+- **Token de aplicación**: opcional. En GLPI, **Configuración > General > API**, abra en **Clientes API** el cliente a través del cual se conecta Kadratis y copie su token de aplicación. Deje el campo vacío si el cliente no tiene ninguno.
 
-El icono de información junto a cada campo indica dónde encontrar su valor. Un token guardado no se vuelve a mostrar: el campo muestra puntos, con **Reemplazar** al lado para introducir uno nuevo. Una URL nueva vacía los tokens guardados: los campos los vuelven a pedir.
+El icono de información junto a cada campo indica dónde encontrar su valor. Un token guardado no se vuelve a mostrar: el campo muestra puntos, con **Reemplazar** al lado para introducir uno nuevo. Una URL nueva vacía los tokens guardados: el campo del token de usuario lo vuelve a pedir, y el campo del token de aplicación indica que el token guardado no se envía a la nueva dirección. Vuelva a introducir el token de aplicación para conservarlo.
 
 ### Acciones
 
-- **Probar**: ejecuta una ida y vuelta autenticada contra GLPI con los valores de la tarjeta, guardados o no. La línea de estado arriba a la derecha de la tarjeta indica el resultado: «Última prueba correcta el …» con el tiempo de respuesta, o el motivo del fallo.
+- **Probar**: ejecuta una ida y vuelta autenticada contra GLPI con los valores de la tarjeta, guardados o no. Disponible en cuanto la URL y el token de usuario están introducidos. La línea de estado arriba a la derecha de la tarjeta indica el resultado: «Última prueba correcta el …» con el tiempo de respuesta, o el motivo del fallo.
 - **Guardar**: disponible en cuanto algo cambia. Los tokens introducidos reemplazan los guardados; un token que se deja en puntos se conserva.
 
-La línea de estado conserva la última prueba de los valores guardados: vuelve a mostrarse cuando regresa a la página. La prueba de valores sin guardar se muestra hasta que sale de la página. Sin prueba, la línea de estado indica **Guardado, aún sin probar** o **Nunca probado**, y **Cambios sin guardar** mientras la tarjeta tenga cambios. Salir de la página con cambios en una tarjeta pide primero una confirmación.
+La línea de estado conserva la última prueba de los valores guardados: vuelve a mostrarse cuando regresa a la página, con el tiempo de respuesta o el motivo del fallo. La prueba de valores sin guardar se muestra hasta que sale de la página. Sin prueba, la línea de estado indica **Guardado, aún sin probar** o **Nunca probado**, y **Cambios sin guardar** mientras la tarjeta tenga cambios. Salir de la página con cambios en una tarjeta pide primero una confirmación.
 
 ### Almacenamiento de secretos
 
@@ -71,13 +71,13 @@ Si su instancia de Kadratis no tiene un almacén de secretos configurado, una l�
 
 - **Activar la monitorización PRTG**: conmutador maestro de la conexión. Cuando está desactivado, los agentes no llegan a PRTG.
 - **Dirección del servidor**: la dirección con la que abre PRTG en su navegador, por ejemplo `https://prtg.example.com`.
-- **Clave API**: cree una en PRTG en **Setup → API keys**. Basta con acceso de solo lectura. Una clave guardada se muestra en puntos, con **Reemplazar** al lado. Una dirección nueva vacía la clave guardada: el campo la vuelve a pedir.
+- **Clave API**: cree una en PRTG en **Setup | Account Settings | API Keys**. Basta con acceso de solo lectura. Una clave guardada se muestra en puntos, con **Reemplazar** al lado. Una dirección nueva vacía la clave guardada: el campo la vuelve a pedir.
 - **Zona horaria del servidor**: la zona horaria del servidor central de PRTG, tal como está definida en su sistema operativo. Kadratis lee las horas de las alertas en esa zona.
 - **Tiempo de espera de las solicitudes (segundos)**: cuánto esperar a PRTG, entre 5 y 120. Déjelo vacío para usar 30.
 
 ### Acciones
 
-**Probar** y **Guardar** funcionan como en la tarjeta de GLPI. Una prueba correcta muestra la versión de PRTG y el número de sensores que la clave puede ver. Una vez guardada y activada una conexión que funcione, la tarjeta ofrece un enlace a la página de agentes, donde se puede crear un agente de monitorización.
+**Probar** y **Guardar** funcionan como en la tarjeta de GLPI: **Probar** está disponible en cuanto la dirección y la clave están introducidas. Una prueba correcta muestra la versión de PRTG y el número de sensores que la clave puede ver. Una vez guardada y activada una conexión que funcione, la tarjeta ofrece un enlace a la página de agentes, donde se puede crear un agente de monitorización.
 
 ---
 
@@ -93,9 +93,13 @@ Configure aquí la conexión y abra después la pestaña **Netbox** de **Panoram
 
 ## Quitar una conexión
 
-Las tres tarjetas quitan una conexión de la misma manera: vacíe su dirección, guarde y confirme. Kadratis elimina la dirección y los secretos guardados, desactiva la conexión y escribe una entrada en el registro de auditoría. No se elimina nada de lo ya importado. Los agentes que leen PRTG lo indican como no disponible en su siguiente ejecución.
+Las tres tarjetas quitan una conexión de la misma manera: vacíe su dirección, guarde y confirme. Kadratis elimina la dirección y los secretos guardados, desactiva la conexión y escribe una entrada en el registro de auditoría. La confirmación indica qué cambia para cada sistema:
 
-El registro de auditoría también señala un secreto reemplazado: la entrada de un guardado que cambia un token o una clave en la misma dirección muestra **Secreto reemplazado**. El secreto en sí nunca se escribe en el registro.
+- **GLPI**: ya no se pueden importar tickets. Los tickets ya importados se conservan.
+- **PRTG**: los agentes de monitorización ya no pueden leer PRTG y lo indican como no disponible en su siguiente ejecución.
+- **Netbox**: la sincronización automática se detiene. Lo ya sincronizado se conserva.
+
+El registro de auditoría indica si hay un secreto definido y señala uno reemplazado: la entrada de un guardado que cambia una clave o un token en la misma dirección muestra **Secreto reemplazado**, y para GLPI **Token de usuario de GLPI reemplazado** o **Token de aplicación de GLPI reemplazado**. El secreto en sí nunca se escribe en el registro.
 
 ---
 
