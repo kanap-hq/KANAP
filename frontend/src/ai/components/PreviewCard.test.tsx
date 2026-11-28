@@ -726,6 +726,18 @@ describe('PreviewCard in French', () => {
     expect(screen.queryByText('Normal')).not.toBeInTheDocument();
   });
 
+  it('names the screen label Medium as the task priority', async () => {
+    renderCard(preview({
+      summary: 'Création de la tâche autonome « Imprimantes ». Priorité : Moyenne.',
+      changes: {
+        priority: { label: 'Priority', from: null, to: 'Medium', format: 'text' },
+      },
+    }));
+
+    expect(await screen.findByText('Moyenne')).toBeInTheDocument();
+    expect(screen.queryByText('Medium')).not.toBeInTheDocument();
+  });
+
   it('shows an application change with catalog values and keeps the names it does not know', () => {
     renderCard(preview({
       tool_name: 'update_business_record',
