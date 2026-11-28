@@ -37,7 +37,7 @@ import {
 // the request pipeline main.ts installs: the list's rows as a CSV file with flat, stable columns
 // (the person as the page shows them: name, address only without a name, fixed codes otherwise;
 // address and user agent of sign-in events; values as compact JSON), the list's filters and sort, every cell that a spreadsheet would read as a formula
-// prefixed, the tenant's rows only, `users:admin` only, a row limit announced in a header, and the
+// prefixed, the tenant's rows only, `organization:reader` and up only, a row limit announced in a header, and the
 // export itself recorded in the audit log. The file is read in batches and written as they come:
 // batches neither repeat nor skip a row, a read error halfway closes the connection (the file is
 // incomplete for the client, the request rolls back, the server keeps answering). The list and the
@@ -173,9 +173,9 @@ async function main() {
   try {
     const a = await seed(tenantA, async (runner) => {
       const admin = await seedPerson(runner, tenantA, { first: 'Alice', last: 'Admin' }, {}, 'Administrator');
-      const dash = await seedPerson(runner, tenantA, { first: '-Dash', last: 'Person' }, { users: 'admin' }, 'Audit export people admin');
-      const reader = await seedPerson(runner, tenantA, { first: 'Rita', last: 'Reader' }, { users: 'member' }, 'Audit export people member');
-      const french = await seedPerson(runner, tenantA, { first: 'Francine', last: 'Admin' }, { users: 'admin' }, 'Audit export people admin fr');
+      const dash = await seedPerson(runner, tenantA, { first: '-Dash', last: 'Person' }, { organization: 'reader' }, 'Audit export organization reader');
+      const reader = await seedPerson(runner, tenantA, { first: 'Rita', last: 'Reader' }, { users: 'admin' }, 'Audit export people admin');
+      const french = await seedPerson(runner, tenantA, { first: 'Francine', last: 'Admin' }, { organization: 'reader' }, 'Audit export organization reader fr');
       await runner.query(`UPDATE users SET locale = 'fr' WHERE tenant_id = $1 AND id = $2`, [tenantA, french.id]);
       const recordId = randomUUID();
       await insertAudit(runner, tenantA, {
@@ -367,13 +367,14 @@ async function main() {
     assert.equal(odsAnswer.status, 400, 'an unknown format is refused');
     console.log('ok - Excel: the same cells in one sheet, format and rows on the audit row; another format 400');
 
-    // 4. Only `users:admin`: a people member is refused, another administrator is not.
+    // 4. Only `organization:reader` and up: users:admin alone is refused, an organization reader is not.
     const refusedBefore = (await exportRows(tenantA)).length;
     const refused = await get({}, a.reader);
     assert.equal(refused.status, 403);
+    assert.deepEqual(JSON.parse(refused.text || '{}').params, { resource: 'organization', level: 'reader' }, 'the refusal names organization:reader');
     assert.equal((await exportRows(tenantA)).length, refusedBefore, 'a refused export writes no row');
-    assert.equal((await get({ action: 'create' }, a.dash)).status, 200, 'users:admin without the Administrator role');
-    console.log('ok - users:admin only');
+    assert.equal((await get({ action: 'create' }, a.dash)).status, 200, 'organization:reader without the Administrator role');
+    console.log('ok - organization:reader only');
 
     // 5. The tenant's rows only.
     const fromB = await get({}, b.admin);

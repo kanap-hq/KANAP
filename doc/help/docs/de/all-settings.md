@@ -35,7 +35,7 @@ Die Liste zeigt nur die Seiten, die Sie mit Ihren Rollen öffnen können, genau 
 - Eine Seite, die Sie lesen, aber nicht ändern können, steht in der Liste. Sie öffnet sich schreibgeschützt.
 - Eine Seite, die Sie nicht öffnen können, erscheint nicht, ebenso wenig eine Gruppe, die leer bleibt.
 - Seiten, die von einer Funktion abhängen, erscheinen nur, wenn diese Funktion aktiv ist: die Abrechnung in der Cloud, **Authentifizierung**, wenn die Microsoft-Anmeldung eingerichtet ist, die KI-Seiten, wenn die KI aktiviert ist.
-- Bei eingeschränktem Datenzugriff stehen die Budgetadministration und die Seiten des Datenzugriffs nicht in der Liste.
+- Bei eingeschränktem Datenzugriff stehen diese Seiten nicht in der Liste: die Seiten von **Budgetverwaltung > Administration**, **Vertragseinstellungen**, **Datenzugriff** und **Audit-Protokoll**.
 - Bei einer Installation auf Ihren eigenen Servern stehen die Seiten, die es nur in der Cloud gibt (Abrechnung, Beispieldaten), nicht in der Liste. Die Gruppe **Installation** erscheint für die Rolle Administrator mit Zugriff auf alle Daten.
 - Auf dem Plattform-Host enthält die Liste nur die Seiten der Installation und der Plattform.
 

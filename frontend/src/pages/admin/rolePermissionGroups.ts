@@ -11,5 +11,5 @@ export const PERMISSION_GROUPS = {
   'Master Data': ['companies', 'departments', 'cost_centers', 'working_day_profiles', 'suppliers', 'contacts', 'accounts', 'business_processes'],
   'Tasks': ['tasks'],
   'Knowledge': ['knowledge'],
-  'Administration': ['users', 'billing'],
+  'Administration': ['users', 'organization', 'billing'],
 } as const;

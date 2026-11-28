@@ -9,13 +9,15 @@ Navigieren Sie im Hauptmenü zu **Administration**, um den Administrationsbereic
 **Berechtigungen**: Verschiedene Administrationsseiten erfordern unterschiedliche Berechtigungen:
 - Unternehmen, Abteilungen, Lieferanten, Konten: `{resource}:reader` zum Anzeigen
 - Benutzer & Zugriff: `users:reader` zum Anzeigen, `users:admin` zum Verwalten
-- Rollen: `users:reader` zum Anzeigen, `users:admin` zum Bearbeiten
-- Audit-Protokoll: Erfordert `users:admin`
+- Rollen: `users:admin` zum Anzeigen und Bearbeiten
+- Audit-Protokoll: Erfordert `organization:reader` und Zugriff auf alle Daten
 - Datenzugriff: Erfordert `users:admin` und Zugriff auf alle Daten (siehe [Datenzugriff](data-access.md))
 - Abrechnung: Erfordert die Rolle Abrechnungsadministrator
-- Authentifizierung: Erfordert `users:admin` (Feature-Flag-gesteuert; erfordert aktiviertes SSO)
-- Branding: Erfordert `users:admin` (nur Mandanten-Host; über die Seitenleiste zugänglich)
+- Authentifizierung: `organization:reader` zum Anzeigen; jede Aktion erfordert `organization:admin`, `users:admin` und Zugriff auf alle Daten (Feature-Flag-gesteuert; erfordert aktiviertes SSO). Siehe [Authentifizierung](#authentifizierung)
+- Branding: `organization:reader` zum Anzeigen, `organization:admin` zum Ändern (nur Mandanten-Host; über die Seitenleiste zugänglich)
 - Beispieldaten: Erfordert die Rolle Administrator (nur Cloud-Arbeitsbereiche; über die Seitenleiste zugänglich)
+
+Das Recht Benutzer umfasst Personen und Rollen. Authentifizierung, Branding und das Audit-Protokoll folgen dem Recht Organisation: Eine Rolle mit `users:admin` ohne das Recht Organisation sieht sie nicht im Menü Administration und kann sie nicht öffnen. Organisation auf der Stufe Leser genügt allein, um das Menü Administration mit diesen Seiten anzuzeigen.
 
 ---
 
@@ -30,8 +32,8 @@ Die Startseite der Administration bietet schnellen Zugriff auf die wichtigsten V
 | **Lieferanten** | Lieferanten und Kontakte verwalten | `suppliers:reader` |
 | **Konten** | Buchungskonten verwalten | `accounts:reader` |
 | **Benutzer & Zugriff** | Benutzer und Rollen verwalten | `users:reader` |
-| **Rollen** | Rollenberechtigungen definieren | `users:reader` |
-| **Audit-Protokoll** | Änderungshistorie, Anmeldungen und Exporte durchsuchen | `users:admin` |
+| **Rollen** | Rollenberechtigungen definieren | `users:admin` |
+| **Audit-Protokoll** | Änderungshistorie, Anmeldungen und Exporte durchsuchen | `organization:reader` |
 | **Abrechnung** | Tarif und Rechnungen | Abrechnungsadministrator |
 
 Authentifizierung, Branding und Beispieldaten sind über die Seitenleistennavigation erreichbar, erscheinen jedoch nicht auf der Startseite des Administrations-Hubs.
@@ -45,7 +47,7 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 ### Zugriff
 
 - Route: `/admin/audit-logs`
-- Erforderliche Berechtigung: `users:admin`
+- Erforderliche Berechtigung: `organization:reader` und Zugriff auf alle Daten. Eine Person mit eingeschränktem Datenzugriff sieht das Audit-Protokoll nicht, unabhängig von ihren Rollen.
 - Das Protokoll ist schreibgeschützt. Sie können es durchsuchen, filtern und exportieren, aber keine Einträge bearbeiten oder löschen.
 
 ### Was aufgezeichnet wird
@@ -139,7 +141,7 @@ Die Excel-Datei enthält dieselben Spalten und dieselben Werte auf einem Blatt, 
 
 ### Wer was sehen kann
 
-Die Werte **Vorher** und **Nachher** enthalten den vollständigen Datensatz, wie er gespeichert wurde, einschließlich personenbezogener Daten wie Namen, E-Mail-Adressen und Telefonnummern. Die Detailansicht und die exportierte Datei zeigen dieselben Werte, und beide erfordern `users:admin`. Passwort-Hashes und Geheimnisse der Mehrfaktor-Authentifizierung werden nie ins Protokoll geschrieben. Behandeln Sie eine exportierte Datei wie das Protokoll selbst: Bewahren Sie sie mit derselben Sorgfalt auf.
+Die Werte **Vorher** und **Nachher** enthalten den vollständigen Datensatz, wie er gespeichert wurde, einschließlich personenbezogener Daten wie Namen, E-Mail-Adressen und Telefonnummern. Die Detailansicht und die exportierte Datei zeigen dieselben Werte, und beide erfordern `organization:reader`: Die Stufe Leser von Organisation zeigt das gesamte Protokoll, personenbezogene Daten eingeschlossen. Passwort-Hashes und Geheimnisse der Mehrfaktor-Authentifizierung werden nie ins Protokoll geschrieben. Behandeln Sie eine exportierte Datei wie das Protokoll selbst: Bewahren Sie sie mit derselben Sorgfalt auf.
 
 ### Quelle und Akteur verstehen
 
@@ -326,7 +328,7 @@ Definieren Sie, was jede Rolle in Kadratis tun kann.
 Jede Rolle hat Berechtigungsstufen für verschiedene Ressourcen:
 - **Keine**: Kein Zugriff auf diese Ressource
 - **Leser**: Nur Ansicht
-- **Mitwirkender**: Ansicht und Bearbeitung bestehender Elemente, Kommentare und Anhänge hinzufügen, aber keine neuen übergeordneten Elemente erstellen. Der Rolleneditor bietet diese Stufe bei den meisten Ressourcen an (nicht bei Wissensdatenbank, KI-Einstellungen, Kad-Chat und MCP-Zugriff). Portfolio-Projekte, Vorfälle und KI-Agenten nutzen sie heute. Bei allen anderen Ressourcen erfordern Änderungen die Stufe Mitglied, ein Mitwirkender hat dort also Leserechte.
+- **Mitwirkender**: Ansicht und Bearbeitung bestehender Elemente, Kommentare und Anhänge hinzufügen, aber keine neuen übergeordneten Elemente erstellen. Der Rolleneditor bietet diese Stufe bei den meisten Ressourcen an (nicht bei Wissensdatenbank, KI-Einstellungen, Kad-Chat, MCP-Zugriff, Organisation und Einstellungen der IT-Landschaft). Portfolio-Projekte, Vorfälle und KI-Agenten nutzen sie heute. Bei allen anderen Ressourcen erfordern Änderungen die Stufe Mitglied, ein Mitwirkender hat dort also Leserechte.
 - **Mitglied**: Ansicht, Erstellen und Bearbeiten
 - **Administrator**: Vollzugriff einschließlich Löschen
 
@@ -338,7 +340,7 @@ Ressourcen sind zur einfacheren Verwaltung in Gruppen organisiert:
 | Ressource | Was sie steuert |
 |-----------|-----------------|
 | `budget` | Budgetzeilen, OPEX und CAPEX |
-| `budget_ops` | Budget-Administrationswerkzeuge, einschließlich der Währungseinstellungen |
+| `budget_ops` | **Budgeteinstellungen und -operationen**, einschließlich der Währungseinstellungen |
 | `contracts` | Lieferantenverträge |
 | `analytics` | Analysedimensionen |
 | `reporting` | Berichtszugriff |
@@ -362,7 +364,7 @@ Die Namen des Lieferanten, der Unternehmen und der Abteilungen, die eine Budgetz
 | `applications` | Anwendungen |
 | `infrastructure` | Server und Infrastruktur |
 | `locations` | Standort-Stammdaten |
-| `settings` | Nur die Einstellungen der IT-Landschaft |
+| `settings` | Nur die **Einstellungen der IT-Landschaft**. Leser oder Administrator |
 
 **Stammdaten**
 | Ressource | Was sie steuert |
@@ -392,7 +394,10 @@ Die Wissensdatenbank-Ressource unterstützt die Stufen Leser, Mitglied und Admin
 | Ressource | Was sie steuert |
 |-----------|-----------------|
 | `users` | Benutzer- und Rollenverwaltung |
+| `organization` | **Organisation**: Authentifizierung, Branding und das Audit-Protokoll. Leser oder Administrator |
 | `billing` | Abrechnung und Abonnement |
+
+Organisation und Einstellungen der IT-Landschaft haben zwei Stufen, Leser und Administrator. Eine Rolle, die bei den Einstellungen der IT-Landschaft die Stufe Mitglied hatte, zeigt Leser an, mit demselben Zugriff wie zuvor.
 
 ### Rollentypen
 
@@ -583,6 +588,8 @@ Jede Rechnung wird außerdem per E-Mail an die Rechnungs-E-Mail-Adresse gesendet
 
 Konfigurieren Sie Single Sign-On (SSO) für Ihre Organisation. Diese Seite ist nur verfügbar, wenn das SSO-Feature aktiviert ist, und ist vom Plattform-Admin-Host aus nicht zugänglich.
 
+Organisation auf der Stufe Leser oder Administrator zeigt die Verbindung und die Ergebnisse der Synchronisierung, ohne Aktion. Die Aktionen ändern die Konten des gesamten Arbeitsbereichs oder führen zu einer Synchronisierung, die das tut: Eine Verbindung zu einem anderen Verzeichnis, gefolgt von der Synchronisierung, deaktiviert die verknüpften Konten, die dieses Verzeichnis nicht kennt. **Verbinden**, **Erneut verbinden**, **Anmeldung testen**, **Zugriff in Microsoft Entra gewähren**, **Jetzt synchronisieren** und **Trennen** erfordern Organisation auf der Stufe Administrator, `users:admin` und Zugriff auf alle Daten.
+
 ### Microsoft Entra ID
 
 Verbinden Sie Kadratis mit Ihrem Microsoft Entra ID-Mandanten für SSO:
@@ -652,7 +659,7 @@ Anmeldungen und fehlgeschlagene Anmeldungen erscheinen im [Audit-Protokoll](#aud
 Verwenden Sie **Administration > Branding**, um Ihre Unternehmensidentität in Kadratis anzuwenden.
 
 - Route: `/admin/branding`
-- Berechtigung: `users:admin`
+- Berechtigung: `organization:reader` zum Anzeigen, `organization:admin` zum Ändern. Ein Leser sieht dieselben Felder, ausgegraut, ohne Schaltfläche
 - Geltungsbereich: Nur Mandanten-Hosts (nicht auf dem Plattform-Admin-Host verfügbar)
 
 Mit Branding können Sie:

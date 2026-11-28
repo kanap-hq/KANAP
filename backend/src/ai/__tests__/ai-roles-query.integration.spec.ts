@@ -192,7 +192,7 @@ async function testRoleDetailIsTheMatrix(h: Harness, runner: QueryRunner, s: See
   assert.equal(detail.data.permissions.contacts, 'reader', 'a suppliers contributor reads the contacts');
   assert.equal(detail.data.permissions.knowledge, null, 'a right the role does not give is null');
   assert.equal('opex' in detail.data.permissions || 'capex' in detail.data.permissions, false, 'no former name');
-  assert.equal(Object.keys(detail.data.permissions).length, 31, 'every right of the screen');
+  assert.equal(Object.keys(detail.data.permissions).length, 32, 'every right of the screen (organization included)');
   const administrator = await h.tools.execute(ctx(runner, s, 'unlimited'), 'get_entity_detail', { entity_type: 'roles', entity_id: 'Administrator' });
   assert.equal('projects' in administrator.data.permissions, false, 'a right the screen does not show is not read');
   assert.deepEqual(administrator.data.rights.map((right: any) => right.resource), ['budget', 'users']);
