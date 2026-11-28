@@ -164,6 +164,7 @@ ai-settings.md	frontend/src/pages/admin/AdminAiPage.tsx
 ai-settings.md	frontend/src/pages/admin/IncludedModelConfirmation.tsx
 ai-settings.md	frontend/src/pages/admin/McpJournalSection.tsx
 ai-settings.md	frontend/src/pages/oauth/**/*.tsx
+ai-settings.md	frontend/src/ai/components/McpKeyDialog.tsx
 connected-apps.md	frontend/src/pages/settings/ConnectedAppsTab.tsx
 ai-models.md	frontend/src/pages/admin/AdminAiModelsPage.tsx
 ai-usage.md	frontend/src/pages/admin/AdminAiUsagePage.tsx
