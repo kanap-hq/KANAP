@@ -54,12 +54,12 @@ export class OrganizationRight1856330000000 implements MigrationInterface {
     await withoutRowSecurity(queryRunner, ['role_permissions', 'roles'], async () => {
       const planned: PlannedRole[] = await queryRunner.query(
         `SELECT r.id::text AS role_id, r.role_name, r.tenant_id::text AS tenant_id, t.slug::text AS slug,
-                lower(trim(r.role_name)) = 'administrator' AS administrator,
+                lower(r.role_name) = 'administrator' AS administrator,
                 o.level, o.tenant_id::text AS row_tenant
            FROM roles r
            LEFT JOIN tenants t ON t.id = r.tenant_id
            LEFT JOIN role_permissions o ON o.role_id = r.id AND o.resource = 'organization'
-          WHERE lower(trim(r.role_name)) = 'administrator'
+          WHERE lower(r.role_name) = 'administrator'
              OR EXISTS (
                   SELECT 1 FROM role_permissions u
                    WHERE u.role_id = r.id AND u.resource = 'users' AND u.level = 'admin' AND u.tenant_id = r.tenant_id

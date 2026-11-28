@@ -14,7 +14,8 @@ import { OrganizationRight1856330000000 as Migration } from '../../migrations/18
 //   Administrator without any `users` row (gets organization:admin), a custom role with
 //   `users:admin` and an `organization:reader` row set by hand (kept), an Administrator-named row
 //   below admin in tenant B (put back to admin), a custom role whose `organization` row is of
-//   another tenant (rewritten to its own);
+//   another tenant (rewritten to its own), a custom role named "Administrator " with a trailing
+//   space (the guard does not read it as the Administrator: nothing);
 // - row level security on role_permissions and roles as found, and the counts in the log;
 // - a second run writes no row; down() removes every `organization` row, up() again puts them back.
 // The assertions read this test's own rows, never table-wide counts. Runs on an empty migrated
@@ -130,6 +131,7 @@ async function seedBeforeMigration(runner: QueryRunner): Promise<Seeded> {
     handSet: await seedRole(runner, a.id, 'Auditor set by hand', { users: 'admin', organization: 'reader' }),
     foreignRow: await seedRole(runner, a.id, 'Foreign organization row', { users: 'admin', organization: 'reader' }, { organization: b.id }),
     administratorB: await seedRole(runner, b.id, 'Administrator', { users: 'admin', organization: 'member' }, {}, true),
+    trailingSpace: await seedRole(runner, a.id, 'Administrator ', { budget: 'admin' }),
     nothing: await seedRole(runner, b.id, 'Budget only', { budget: 'member' }),
   };
   await runner.query(`SELECT set_config('app.current_tenant', '', true)`);
@@ -144,6 +146,7 @@ const EXPECTED_AFTER_UP = (roles: Record<string, string>) => ({
   [roles.handSet]: { users: 'admin@A', organization: 'reader@A' },
   [roles.foreignRow]: { users: 'admin@A', organization: 'admin@A' },
   [roles.administratorB]: { users: 'admin@B', organization: 'admin@B' },
+  [roles.trailingSpace]: { budget: 'admin@A' },
   [roles.nothing]: { budget: 'member@B' },
 });
 
@@ -178,7 +181,7 @@ async function testGrant() {
     ends('Auditor set by hand', a, 'organization=reader -> kept');
     ends('Foreign organization row', a, `organization=reader (row of tenant ${b.id}, never read) -> organization=admin`);
     ends('Administrator', b, 'organization=member -> organization=admin');
-    for (const [name, tenant] of [['People admin', a], ['Administrator', a], ['People reader', a], ['Stray users row', a], ['Budget only', b]] as const) {
+    for (const [name, tenant] of [['People admin', a], ['Administrator', a], ['Administrator ', a], ['People reader', a], ['Stray users row', a], ['Budget only', b]] as const) {
       assert.equal(named(name, tenant).length, 0, `${name}: not named`);
     }
     assert.ok(lines.every((line) => line.startsWith(LOG_PREFIX)), 'every line is prefixed');
