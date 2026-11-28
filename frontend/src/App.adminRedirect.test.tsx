@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   singleTenant: false,
   aiSettings: false,
   aiData: undefined as unknown,
+  aiLoading: false,
 }));
 
 vi.mock('./auth/AuthContext', () => ({
@@ -42,7 +43,7 @@ vi.mock('./config/FeaturesContext', () => ({
   }),
 }));
 vi.mock('./ai/useAiCapabilities', () => ({
-  useAiCapabilities: () => ({ isLoading: false, isFetching: false, data: state.aiData }),
+  useAiCapabilities: () => ({ isLoading: state.aiLoading, isFetching: state.aiLoading, data: state.aiData }),
 }));
 
 import { AdminDefaultRedirect } from './App';
@@ -67,7 +68,7 @@ const aiAvailable = { surfaces: { settings: { available: true } } };
 
 afterEach(() => {
   Object.assign(state, {
-    isGlobalAdmin: false, isPlatformAdmin: false, grants: {}, isPlatformHost: false, singleTenant: false, aiSettings: false, aiData: undefined,
+    isGlobalAdmin: false, isPlatformAdmin: false, grants: {}, isPlatformHost: false, singleTenant: false, aiSettings: false, aiData: undefined, aiLoading: false,
   });
 });
 
@@ -133,5 +134,44 @@ describe('AdminDefaultRedirect', () => {
     state.singleTenant = true;
     state.isGlobalAdmin = true;
     expect(landing('installation')).toBe('/admin/installation/scheduled-tasks');
+  });
+
+  describe('while the AI capabilities load', () => {
+    /** Where `/admin` stands while they load: no redirect, to a page or to the refusal. */
+    function waiting() {
+      const view = render(
+        <MemoryRouter initialEntries={['/admin']}>
+          <Routes>
+            <Route path="/admin" element={<AdminDefaultRedirect />} />
+            <Route path="*" element={<Where />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+      return view;
+    }
+
+    it.each([
+      ['an Administrator', () => { state.isGlobalAdmin = true; }, '/admin/users'],
+      ['an AI settings administrator alone', () => { state.grants = { ai_settings: 'admin' }; }, '/admin/ai-models'],
+    ])('waits for them, then opens the first page, for %s', (_profile, setUp, first) => {
+      setUp();
+      state.aiSettings = true;
+      state.aiLoading = true;
+      const view = waiting();
+      expect(screen.queryByTestId('where')).toBeNull();
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+
+      state.aiLoading = false;
+      state.aiData = aiAvailable;
+      view.rerender(
+        <MemoryRouter initialEntries={['/admin']}>
+          <Routes>
+            <Route path="/admin" element={<AdminDefaultRedirect />} />
+            <Route path="*" element={<Where />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+      expect(screen.getByTestId('where').textContent).toBe(first);
+    });
   });
 });
