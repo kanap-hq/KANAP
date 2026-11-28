@@ -7,10 +7,7 @@ import {
   isInstallationOperator,
   isInstallationPath,
   routerPath,
-  type AdminGroup,
-  type AdminMenu,
   type AdminMenuContext,
-  type AdminMenuEntry,
 } from './adminMenu';
 import { ADMIN_ROUTE_REQUIREMENTS } from '../../components/ProtectedRoute';
 
@@ -115,9 +112,9 @@ describe('adminMenu: the pages of the Organization right', () => {
 describe('adminMenu: the Installation section', () => {
   const installation = ADMIN_MENU.filter((entry) => entry.group === 'installation').map((entry) => entry.to);
 
-  it('ends the menu of the Administrator on site', () => {
+  it('ends the menu of the Administrator on site, before All settings', () => {
     const shown = paths(context({ singleTenant: true, claims: administrator }));
-    expect(shown.slice(-installation.length)).toEqual(installation);
+    expect(shown.slice(-installation.length - 1, -1)).toEqual(installation);
     expect(shown).toContain('/admin/data-access');
   });
 
@@ -270,49 +267,41 @@ describe('adminMenu: the menu and the route guard name the same requirement', ()
   });
 });
 
-describe('adminMenu: a closing entry that does not count for the menu', () => {
-  // Declared here only: the structure a page open to every signed-in person uses, at the end of the menu.
-  const closing: AdminMenuEntry = {
-    group: 'closing' as AdminGroup,
-    to: '/admin/test-closing',
-    label: 'nav:test.closing',
-    icon: 'Storage',
-    requires: 'signedIn',
-    standalone: true,
-  };
-  // Declared first in the list: its group still comes after every other one.
-  const menu: AdminMenu = {
-    entries: [closing, ...ADMIN_MENU],
-    groups: { ...ADMIN_MENU_GROUPS, closing: { places: ['organization', 'site'], title: '', last: true } },
-  };
-  const shownIn = (ctx: AdminMenuContext) => adminMenuEntries(ctx, menu).map((entry) => entry.to);
+describe('adminMenu: All settings, the closing entry that does not count for the menu', () => {
+  const allSettings = ADMIN_MENU.find((entry) => entry.to === '/admin/all-settings');
 
-  it('comes after every other entry, the Installation section included, under a divider', () => {
-    const shown = shownIn(context({ singleTenant: true, claims: administrator }));
-    expect(shown[shown.length - 1]).toBe('/admin/test-closing');
+  it('is declared once, open to every signed-in person, under a plain divider', () => {
+    expect(allSettings).toMatchObject({ group: 'allSettings', requires: 'signedIn', standalone: true });
+    expect(ADMIN_MENU_GROUPS.allSettings).toEqual({ places: ['organization', 'site'], title: '', last: true });
+  });
+
+  it('comes after every other entry, the Installation section included', () => {
+    const shown = paths(context({ singleTenant: true, claims: administrator }));
+    expect(shown[shown.length - 1]).toBe('/admin/all-settings');
     expect(shown[shown.length - 2]).toBe('/admin/installation/scheduled-tasks');
-    expect(menu.groups.closing.title).toBe('');
+    expect(paths(context({ claims: administrator })).slice(-1)).toEqual(['/admin/all-settings']);
   });
 
   it('shows beside another entry the person sees', () => {
-    expect(shownIn(context({ grants: { users: 'admin' } }))).toEqual([...paths(context({ grants: { users: 'admin' } })), '/admin/test-closing']);
-    expect(shownIn(context({ grants: { billing: 'reader' } }))).toEqual(['/admin/billing', '/admin/test-closing']);
+    expect(paths(context({ grants: { users: 'admin' } })).slice(-1)).toEqual(['/admin/all-settings']);
+    expect(paths(context({ grants: { billing: 'reader' } }))).toEqual(['/admin/billing', '/admin/all-settings']);
   });
 
   it('is absent alone: no menu, and /admin opens nothing', () => {
     for (const ctx of [context({ grants: { budget: 'reader' } }), context({ singleTenant: true, grants: { budget: 'reader' } })]) {
-      expect(adminMenuEntries(ctx, menu)).toEqual([]);
-      expect(firstAdminEntry(ctx, undefined, menu)).toBeNull();
+      expect(adminMenuEntries(ctx)).toEqual([]);
+      expect(firstAdminEntry(ctx)).toBeNull();
     }
   });
 
   it('is ignored by the first entry, even in its own group', () => {
     const ctx = context({ claims: administrator });
-    expect(firstAdminEntry(ctx, undefined, { ...menu, entries: [closing, ...ADMIN_MENU] })?.to).toBe('/admin/users');
-    expect(firstAdminEntry(ctx, 'closing' as AdminGroup, menu)).toBeNull();
+    expect(firstAdminEntry(ctx)?.to).toBe('/admin/users');
+    expect(firstAdminEntry(ctx, 'allSettings')).toBeNull();
   });
 
   it('never shows on the platform host', () => {
-    expect(shownIn(context({ platformHost: true, claims: platformAdmin }))).not.toContain('/admin/test-closing');
+    expect(paths(context({ platformHost: true, claims: platformAdmin }))).not.toContain('/admin/all-settings');
+    expect(paths(context({ platformHost: true, claims: administrator }))).not.toContain('/admin/all-settings');
   });
 });

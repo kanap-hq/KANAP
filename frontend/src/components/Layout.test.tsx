@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { Link, MemoryRouter, Route, Routes, createRoutesFromChildren } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, createRoutesFromChildren, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Drawer from '@mui/material/Drawer';
 import { ThemeProvider, type Theme } from '@mui/material/styles';
@@ -520,7 +520,7 @@ describe('Layout administration sidebar: Installation', () => {
     expect(entry).toHaveAttribute('href', '/admin/installation/scheduled-tasks');
     expect(entry).toHaveClass('Mui-selected');
     expect(heading.compareDocumentPosition(entry) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(menuLinks().slice(-1)[0]).toBe('/admin/installation/scheduled-tasks');
+    expect(menuLinks().slice(-2)).toEqual(['/admin/installation/scheduled-tasks', '/admin/all-settings']);
     expect(menuLinks()).toContain('/admin/data-access');
   });
 
@@ -571,6 +571,127 @@ describe('Layout administration sidebar: Installation', () => {
       '/admin/tenants', '/admin/trials', '/admin/coa-templates', '/admin/standard-accounts',
       '/admin/platform-ai', '/admin/ops-dashboard',
     ]);
+  });
+});
+
+describe('Layout: All settings', () => {
+  afterEach(() => {
+    access.isGlobalAdmin = false;
+    access.isPlatformAdmin = false;
+    access.grants = null;
+    access.deploymentMode = 'multi-tenant';
+    tenant.isPlatformHost = false;
+  });
+
+  function Where() {
+    return <div data-testid="where">{useLocation().pathname}</div>;
+  }
+
+  function renderAt(path: string) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="*" element={<Where />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+  const selectedTabs = () => screen.queryAllByRole('tab').filter((tab) => tab.getAttribute('aria-selected') === 'true');
+
+  it('ends the Administration menu on site, under a divider after the Installation section', () => {
+    access.isGlobalAdmin = true;
+    access.deploymentMode = 'single-tenant';
+    renderAt('/admin/all-settings');
+    const list = screen.getByRole('list');
+    const entry = within(list).getByRole('link', { name: 'nav:sidebar.admin.allSettings' });
+    expect(entry).toHaveAttribute('href', '/admin/all-settings');
+    expect(entry).toHaveClass('Mui-selected');
+    const tasks = within(list).getByRole('link', { name: 'nav:sidebar.platform.scheduledTasks' });
+    const divider = within(list).getAllByRole('separator').slice(-1)[0];
+    expect(tasks.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(divider.compareDocumentPosition(entry) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(list).getAllByRole('link').slice(-1)[0]).toBe(entry);
+    expect(screen.getByRole('tab', { name: 'nav:workspaces.admin' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('ends the Administration menu of a users administrator in the cloud', () => {
+    access.grants = { users: 'admin' };
+    renderAt('/admin/users');
+    const links = within(screen.getByRole('list')).getAllByRole('link').map((link) => link.getAttribute('href'));
+    expect(links.slice(-1)).toEqual(['/admin/all-settings']);
+  });
+
+  it('is absent from the platform menu', () => {
+    tenant.isPlatformHost = true;
+    access.isGlobalAdmin = true;
+    access.isPlatformAdmin = true;
+    renderAt('/admin/tenants');
+    expect(within(screen.getByRole('list')).queryByRole('link', { name: 'nav:sidebar.admin.allSettings' })).not.toBeInTheDocument();
+  });
+
+  it('gives no Administration tab nor side menu to a person who sees no other entry, and highlights no section', () => {
+    access.grants = { budget: 'reader' };
+    renderAt('/admin/all-settings');
+    expect(screen.getByTestId('where')).toHaveTextContent('/admin/all-settings');
+    expect(screen.queryByRole('tab', { name: 'nav:workspaces.admin' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'nav:workspaces.budgetManagement' })).toBeInTheDocument();
+    expect(selectedTabs()).toEqual([]);
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.admin.allSettings' })).not.toBeInTheDocument();
+  });
+
+  it.each<[string, () => void]>([
+    ['a person with no administration right', () => { access.grants = { budget: 'reader' }; }],
+    ['an Administrator', () => { access.isGlobalAdmin = true; }],
+    ['an Administrator on site', () => { access.isGlobalAdmin = true; access.deploymentMode = 'single-tenant'; }],
+    ['the platform administrator, on the platform host', () => {
+      tenant.isPlatformHost = true;
+      access.isGlobalAdmin = true;
+      access.isPlatformAdmin = true;
+    }],
+  ])('sits in the account menu above the profile for %s, and opens the page', (_person, setUp) => {
+    setUp();
+    renderAt('/');
+    fireEvent.click(screen.getByTitle('nav:topBar.account'));
+    const menu = within(screen.getByRole('menu'));
+    const items = menu.getAllByRole('menuitem').map((item) => item.textContent);
+    expect(items.indexOf('nav:sidebar.admin.allSettings')).toBe(items.indexOf('nav:userMenu.myProfile') - 1);
+    fireEvent.click(menu.getByRole('menuitem', { name: 'nav:sidebar.admin.allSettings' }));
+    return waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/admin/all-settings'));
+  });
+});
+
+describe('Layout agents menu: shared context', () => {
+  afterEach(() => {
+    access.grants = null;
+    access.aiSettings = false;
+    access.aiData = undefined;
+  });
+
+  it('shows the shared context profiles to an agents reader', () => {
+    access.grants = { ai_agents: 'reader' };
+    access.aiSettings = true;
+    access.aiData = {
+      surfaces: { chat: { available: false }, settings: { available: false } },
+      instance_features: { ai_settings: true },
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/agents']}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/agents" element={<div>agents</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole('link', { name: 'nav:sidebar.agents.sharedContext' })).toHaveAttribute('href', '/agents/shared-context');
   });
 });
 

@@ -53,10 +53,16 @@ type ValueRule = {
   key: (code: string) => string;
 };
 
+/**
+ * The screens name the stored code `normal` "Medium". A preview sends that label; one stored
+ * earlier sent "Normal", which is the same priority (`codeOf` already lowercases both).
+ */
+const TASK_PRIORITY_CODE: Record<string, string> = { medium: 'normal' };
+
 /** The catalog of each list value, first match wins. */
 const VALUE_RULES: ValueRule[] = [
   { tools: TASK_TOOLS, fields: ['status'], key: (code) => `portfolio:statuses.task.${code}` },
-  { tools: TASK_TOOLS, fields: ['priority', 'priority_level'], key: (code) => `portfolio:priority.${code}` },
+  { tools: TASK_TOOLS, fields: ['priority', 'priority_level'], key: (code) => `portfolio:priority.${TASK_PRIORITY_CODE[code] ?? code}` },
   { tools: TASK_TOOLS, fields: ['relation'], key: (code) => `portfolio:context.${code}` },
   { tools: TASK_TOOLS, fields: ['assignee', 'assignee_email'], key: (code) => (code === 'unassigned' ? 'ai:previewCard.values.unassigned' : '') },
   { tools: new Set(['create_document']), fields: ['status'], key: (code) => `knowledge:statuses.${code}` },

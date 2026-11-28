@@ -1,7 +1,7 @@
 import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // Who opens the data access administration and the Installation section of the Administration
 // menu, on site, on a workspace host of the cloud and on its platform host.
@@ -65,7 +65,7 @@ function openAt(path: string): string {
           <Route path="/admin/installation/scheduled-tasks" element={<div>page</div>} />
           <Route path="/admin/scheduled-tasks" element={<div>page</div>} />
           <Route path="/admin/users" element={<div>page</div>} />
-          <Route path="/admin/test-closing" element={<div>page</div>} />
+          <Route path="/admin/all-settings" element={<div>page</div>} />
         </Route>
         <Route path="/403" element={<div>refused</div>} />
       </Routes>
@@ -155,11 +155,7 @@ describe('ProtectedRoute: Installation section, in the cloud', () => {
   });
 });
 
-describe('ProtectedRoute: a page open to every signed-in person', () => {
-  // Declared here only, as a page of the Administration menu would declare it.
-  beforeAll(() => { ADMIN_ROUTE_REQUIREMENTS['test-closing'] = 'signedIn'; });
-  afterAll(() => { delete ADMIN_ROUTE_REQUIREMENTS['test-closing']; });
-
+describe('ProtectedRoute: All settings, open to every signed-in person', () => {
   it.each<[string, () => void]>([
     ['a workspace host of the cloud', () => undefined],
     ['on site', () => { state.singleTenant = true; }],
@@ -168,17 +164,17 @@ describe('ProtectedRoute: a page open to every signed-in person', () => {
   ])('opens to a person with no administration right, %s', (_place, setUp) => {
     state.grants = { budget: 'reader' };
     setUp();
-    expect(openAt('/admin/test-closing')).toBe('opens');
+    expect(openAt('/admin/all-settings')).toBe('opens');
     expect(openAt('/admin/users')).toBe('refused');
   });
 
   it('is refused without the declaration, as any page of no right of its own', () => {
-    delete ADMIN_ROUTE_REQUIREMENTS['test-closing'];
+    delete ADMIN_ROUTE_REQUIREMENTS['all-settings'];
     try {
       state.grants = { budget: 'reader' };
-      expect(openAt('/admin/test-closing')).toBe('refused');
+      expect(openAt('/admin/all-settings')).toBe('refused');
     } finally {
-      ADMIN_ROUTE_REQUIREMENTS['test-closing'] = 'signedIn';
+      ADMIN_ROUTE_REQUIREMENTS['all-settings'] = 'signedIn';
     }
   });
 });

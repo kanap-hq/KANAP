@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -139,6 +139,14 @@ describe('AdminDefaultRedirect', () => {
 
   it('refuses a person who may open no page of the menu', () => {
     state.grants = { applications: 'reader' };
+    expect(landing()).toBe('/403');
+  });
+
+  it('refuses a person whose only entry of the menu is All settings, in the cloud and on site', () => {
+    state.grants = { budget: 'reader' };
+    expect(landing()).toBe('/403');
+    cleanup();
+    state.singleTenant = true;
     expect(landing()).toBe('/403');
   });
 

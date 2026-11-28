@@ -45,7 +45,7 @@ export type AdminRequirement =
 /** Where the menu shows: a workspace host of the cloud, the platform host of the cloud, on site. */
 export type AdminPlace = 'organization' | 'platform' | 'site';
 
-export type AdminGroup = 'organization' | 'ai' | 'integrations' | 'platform' | 'platformTools' | 'installation';
+export type AdminGroup = 'organization' | 'ai' | 'integrations' | 'platform' | 'platformTools' | 'installation' | 'allSettings';
 
 /** A flag of `/config/public` the page needs; `aiSettings` is the `aiSettingsAvailable` of the context. */
 export type AdminFeature = 'billing' | 'sso' | 'sampleData' | 'aiSettings';
@@ -54,7 +54,7 @@ export type AdminFeature = 'billing' | 'sso' | 'sampleData' | 'aiSettings';
 export type AdminMenuIcon =
   | 'People' | 'Security' | 'LockOutlined' | 'History' | 'CreditCard' | 'AdminPanelSettings' | 'Brush'
   | 'Dataset' | 'Storage' | 'AutoAwesome' | 'MonitorHeart' | 'Extension' | 'Apartment'
-  | 'HourglassBottom' | 'AccountBalance' | 'Schedule';
+  | 'HourglassBottom' | 'AccountBalance' | 'Schedule' | 'Settings';
 
 export type AdminMenuEntry = {
   group: AdminGroup;
@@ -95,6 +95,8 @@ export const ADMIN_MENU_GROUPS: Record<AdminGroup, AdminMenuGroup> = {
   platform: { places: ['platform'], title: null },
   platformTools: { places: ['platform'], title: '' },
   installation: { places: ['site', 'platform'], title: 'nav:sidebar.admin.sections.installation' },
+  // All settings: at the very end, under a plain divider, never on the platform host.
+  allSettings: { places: ['organization', 'site'], title: '', last: true },
 };
 
 /** Every address under it is an installation page, behind `isInstallationOperator`. */
@@ -123,6 +125,7 @@ export const ADMIN_MENU: readonly AdminMenuEntry[] = [
   { group: 'platformTools', to: '/admin/platform-ai', label: 'nav:sidebar.platform.platformAi', icon: 'AutoAwesome', requires: 'none' },
   { group: 'platformTools', to: '/admin/ops-dashboard', label: 'nav:sidebar.platform.opsDashboard', icon: 'MonitorHeart', requires: 'none' },
   { group: 'installation', to: '/admin/installation/scheduled-tasks', label: 'nav:sidebar.platform.scheduledTasks', icon: 'Schedule', requires: 'operator' },
+  { group: 'allSettings', to: '/admin/all-settings', label: 'nav:sidebar.admin.allSettings', icon: 'Settings', requires: 'signedIn', standalone: true },
 ];
 
 const DEFAULT_MENU: AdminMenu = { entries: ADMIN_MENU, groups: ADMIN_MENU_GROUPS };
