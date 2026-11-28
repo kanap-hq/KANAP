@@ -43,6 +43,15 @@ function stringifyErrorValue(value: unknown): string {
   return '';
 }
 
+/**
+ * An application code has no space (`TRIAL_EXPIRED`, `DATA_ACCESS_UNAVAILABLE`).
+ * Nest's HTTP reason has one (`Internal Server Error`, `Bad Gateway`).
+ */
+function isApplicationCode(value: unknown): boolean {
+  const text = stringifyErrorValue(value);
+  return text !== '' && !/\s/.test(text);
+}
+
 /** The refusal code of an API answer: `code`, then `error`. Empty when the answer has none. */
 export function getApiErrorCode(apiError: ApiErrorLike | null | undefined): string {
   const payload = apiError?.response?.data;
@@ -231,9 +240,13 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
     }
   }
 
-  // No answer, or a 5xx with no message and no code of its own: the screen's fallback.
-  // A coded 5xx (`DATA_ACCESS_UNAVAILABLE`, `MARKDOWN_UNAVAILABLE`) still says why, below.
-  if (clientOnly && !payloadMessage && !answerCode) {
+  // No answer, or a 5xx with no application code of its own: the screen's fallback.
+  // Nest names the HTTP reason in `error` ("Internal Server Error"). A coded 5xx
+  // (`DATA_ACCESS_UNAVAILABLE`, `MARKDOWN_UNAVAILABLE`) still says why, below.
+  // The answer's own `code` and `error` only: axios names every failed request
+  // (`ERR_BAD_RESPONSE`), and that name is not a code of the answer.
+  const coded = isApplicationCode(payload?.code) || isApplicationCode(payload?.error);
+  if (clientOnly && !coded) {
     return fallback;
   }
 

@@ -155,7 +155,7 @@ describe('BudgetFreezePage', () => {
     post.mockRejectedValue({ response: { status: 500, data: { message: 'offline' } } });
     renderPage();
     fireEvent.click(cell('A0', 'budget.opex'));
-    expect(await screen.findByRole('alert')).toHaveTextContent('offline');
+    expect(await screen.findByRole('alert')).toHaveTextContent('operations.freeze.freezeError');
     expect(cell('A0', 'budget.opex')).not.toBeDisabled();
   });
 });

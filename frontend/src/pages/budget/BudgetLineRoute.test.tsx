@@ -70,7 +70,7 @@ describe('budget line route resolution', () => {
   it('shows the failure and a retry when the line cannot be read', async () => {
     vi.mocked(api.get).mockRejectedValue(Object.assign(new Error('down'), { response: { status: 503, data: { message: 'Database unavailable' } } }));
     renderAt('/ops/budget/BL-99999/overview');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Database unavailable');
+    expect(await screen.findByRole('alert')).toHaveTextContent('opex.workspace.failedToLoad');
     expect(screen.queryByText('budget.notFound')).toBeNull();
     expect(screen.getByRole('link', { name: 'budget.backToList' })).toHaveAttribute('href', '/ops/budget');
     expect(screen.queryByTestId('workspace')).toBeNull();
