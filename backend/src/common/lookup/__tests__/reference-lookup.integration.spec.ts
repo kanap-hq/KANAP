@@ -8,6 +8,7 @@ import { LOOKUP_MAX_IDS, parseLookupIds, parseLookupRequest, runLookup } from '.
 import { displayName } from '../../display-name';
 import {
   BUSINESS_PROCESS_LOOKUP,
+  COMPANY_LOOKUP,
   lookupAccounts,
   lookupAnalyticsValues,
   lookupContracts,
@@ -118,6 +119,135 @@ async function testSupplierReference() {
     assert.deepEqual(names(await lookupReference(call, SUPPLIER_LOOKUP, { q: 'SUP-999' })), []);
   });
   console.log('ok - a typed SUP-n finds its supplier exactly');
+}
+
+// Companies, departments and contracts (issue 1851): the rows carry their number, and a typed
+// COMP-n, DEPT-n or CTR-n (any case) finds that row first, ahead of a name that starts with the
+// same text. A name search stays a name search. A disabled row is not offered. A department stays
+// inside its company, a contract inside its vendor. Companies and departments have no data-access
+// policy (the company picker filters on the client); a contract outside a limited person's
+// companies is not returned, even by its reference.
+async function testCompanyDepartmentContractReference() {
+  await withTenant(async (runner, tenantId) => {
+    const one = async (sql: string, params: unknown[]) => (await runner.query(sql, params))[0];
+    const company = async (name: string, disabled = false) => one(
+      `INSERT INTO companies (tenant_id, name, country_iso, city, status, disabled_at)
+       VALUES ($1, $2, 'FR', 'Lyon', $3, $4) RETURNING id, item_number`,
+      [tenantId, name, disabled ? 'disabled' : 'enabled', disabled ? PAST : null],
+    );
+    const target = await company('Alpha Works');
+    const decoy = await company('Other Works');
+    const retired = await company('Retired Works', true);
+    const otherCompany = await company('Beta Works');
+    await runner.query(`UPDATE companies SET name = $2 WHERE id = $1`, [decoy.id, `COMP-${target.item_number} Holdings`]);
+    const call = { manager: runner.manager, tenantId };
+
+    const byRef = await lookupReference(call, COMPANY_LOOKUP, { q: `comp-${target.item_number}` });
+    assert.deepEqual(
+      byRef.items.map((row: any) => [row.name, Number(row.item_number)]),
+      [['Alpha Works', Number(target.item_number)], [`COMP-${target.item_number} Holdings`, Number(decoy.item_number)]],
+      'COMP-n finds that company first, with its number, ahead of a name that starts with the text',
+    );
+    assert.deepEqual(names(await lookupReference(call, COMPANY_LOOKUP, { q: `COMP-${target.item_number}` })), byRef.items.map((row: any) => row.name));
+    assert.deepEqual(names(await lookupReference(call, COMPANY_LOOKUP, { q: 'alpha' })), ['Alpha Works'], 'a name search is unchanged');
+    assert.deepEqual(names(await lookupReference(call, COMPANY_LOOKUP, { q: `COMP-${retired.item_number}` })), [], 'a disabled company is not offered');
+    assert.deepEqual(names(await lookupReference(call, COMPANY_LOOKUP, { q: `COMP-0${target.item_number}` })), [], 'a padded number stays text');
+    assert.ok(
+      !names(await lookupReference(call, COMPANY_LOOKUP, { q: String(target.item_number) })).includes('Alpha Works'),
+      'digits alone stay text',
+    );
+
+    const department = async (companyId: string, name: string, disabled = false) => one(
+      `INSERT INTO departments (tenant_id, company_id, name, status, disabled_at)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id, item_number`,
+      [tenantId, companyId, name, disabled ? 'disabled' : 'enabled', disabled ? PAST : null],
+    );
+    const payroll = await department(target.id, 'Payroll');
+    const sameCompanyDecoy = await department(target.id, 'Later renamed');
+    const elsewhere = await department(otherCompany.id, 'Payroll elsewhere');
+    const closedDept = await department(target.id, 'Closed payroll', true);
+    await runner.query(`UPDATE departments SET name = $2 WHERE id = $1`, [sameCompanyDecoy.id, `DEPT-${payroll.item_number} shadow`]);
+
+    const deptByRef = await lookupDepartments(call, { company_id: target.id, q: `dept-${payroll.item_number}` });
+    assert.deepEqual(
+      deptByRef.items.map((row: any) => [row.name, Number(row.item_number)]),
+      [['Payroll', Number(payroll.item_number)], [`DEPT-${payroll.item_number} shadow`, Number(sameCompanyDecoy.item_number)]],
+      'DEPT-n finds that department first, inside its company',
+    );
+    assert.deepEqual(
+      names(await lookupDepartments(call, { company_id: otherCompany.id, q: `DEPT-${payroll.item_number}` })),
+      [],
+      "another company's department is not found by the reference",
+    );
+    assert.deepEqual(names(await lookupDepartments(call, { company_id: target.id, q: 'pay' })), ['Payroll'], 'a name search stays inside the company');
+    assert.deepEqual(names(await lookupDepartments(call, { company_id: target.id, q: `DEPT-${closedDept.item_number}` })), [], 'a disabled department is not offered');
+    assert.equal(Number(elsewhere.item_number) > 0, true);
+
+    const supplier = async (name: string) => one(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2) RETURNING id`, [tenantId, name]);
+    const cisco = await supplier('Cisco');
+    const forti = await supplier('Fortinet');
+    const contract = async (name: string, companyId: string, supplierId: string, disabled = false) => one(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, status, disabled_at)
+       VALUES ($1, $2, $3, $4, '2026-01-01', $5, $6) RETURNING id, item_number`,
+      [tenantId, name, companyId, supplierId, disabled ? 'disabled' : 'enabled', disabled ? PAST : null],
+    );
+    const care = await contract('Cisco Care', target.id, cisco.id);
+    const careDecoy = await contract('Later contract', target.id, cisco.id);
+    const otherVendor = await contract('Forti Care', target.id, forti.id);
+    const closedContract = await contract('Closed care', target.id, cisco.id, true);
+    await runner.query(`UPDATE contracts SET name = $2 WHERE id = $1`, [careDecoy.id, `CTR-${care.item_number} shadow`]);
+
+    const contractByRef = await lookupContracts(call, { supplier_id: cisco.id, q: `ctr-${care.item_number}` });
+    assert.deepEqual(
+      contractByRef.items.map((row: any) => [row.name, Number(row.item_number)]),
+      [['Cisco Care', Number(care.item_number)], [`CTR-${care.item_number} shadow`, Number(careDecoy.item_number)]],
+      'CTR-n finds that contract first, with its number, inside its vendor',
+    );
+    assert.deepEqual(
+      names(await lookupContracts(call, { supplier_id: forti.id, q: `CTR-${care.item_number}` })),
+      [],
+      "another vendor's contract is not found by the reference",
+    );
+    assert.deepEqual(names(await lookupContracts(call, { supplier_id: cisco.id, q: 'care' })), ['Cisco Care'], 'a name search is unchanged');
+    assert.deepEqual(names(await lookupContracts(call, { q: `CTR-${closedContract.item_number}` })), [], 'a disabled contract is not offered');
+    assert.equal(otherVendor.id.length > 0, true);
+
+    const [rolePresent] = await runner.query(`SELECT to_regrole('kanap_data_limited') IS NOT NULL AS present`);
+    if (rolePresent.present !== true) {
+      if (process.env.CI) throw new Error('the role kanap_data_limited is missing');
+      console.log('company/department/contract reference: limited-access part skipped (no kanap_data_limited role)');
+      return;
+    }
+    const [role] = await runner.query(`INSERT INTO roles (tenant_id, role_name) VALUES ($1, 'Lookup limited') RETURNING id`, [tenantId]);
+    const userId = randomUUID();
+    await runner.query(
+      `INSERT INTO users (id, tenant_id, email, role_id, status, data_access_mode) VALUES ($1, $2, $3, $4, 'enabled', 'limited')`,
+      [userId, tenantId, `lookup-limited-${userId.slice(0, 8)}@example.invalid`, role.id],
+    );
+    await runner.query(
+      `INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, access) VALUES ($1, $2, 'company', $3, 'read')`,
+      [tenantId, userId, target.id],
+    );
+    const hidden = await contract('Hidden care', otherCompany.id, cisco.id);
+    await runner.query(`SELECT data_access_apply($1)`, [userId]);
+    assert.deepEqual(
+      names(await lookupContracts(call, { q: `CTR-${hidden.item_number}` })),
+      [],
+      'a limited person does not find a contract outside their companies, even by its reference',
+    );
+    assert.deepEqual(
+      (await lookupContracts(call, { q: `ctr-${care.item_number}` })).items.map((row: any) => row.name),
+      ['Cisco Care', `CTR-${care.item_number} shadow`],
+      'a contract of a company they read is still found by its reference',
+    );
+    // Companies and departments carry no data-access policy: the same person still finds them.
+    assert.equal(
+      (await lookupReference(call, COMPANY_LOOKUP, { q: `COMP-${otherCompany.item_number}` })).items.length,
+      1,
+      'companies stay visible: the picker filters them on the client',
+    );
+  });
+  console.log('ok - COMP-n, DEPT-n and CTR-n find their row first; a contract outside a limited access stays hidden');
 }
 
 async function testTenantPredicate() {
@@ -427,6 +557,7 @@ async function main() {
     await testAccentAndCaseFolding();
     await testPrefixFirstOrder();
     await testSupplierReference();
+    await testCompanyDepartmentContractReference();
     await testTenantPredicate();
     await testLimitAndCap();
     await testLifecycleAndIds();

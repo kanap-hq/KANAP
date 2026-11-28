@@ -848,10 +848,12 @@ export class ContractsService {
     const [names]: Array<{
       supplier_name: string | null; company_name: string | null; cost_center_name: string | null; owner_name: string | null;
       supplier_option: { id: string; item_number: number; name: string; erp_supplier_id: string | null; status: string } | null;
+      company_option: { id: string; item_number: number; name: string } | null;
     }> = await mg.query(
       `SELECT sup.name AS supplier_name, comp.name AS company_name, cc.name AS cost_center_name,
               CASE WHEN sup.id IS NOT NULL THEN json_build_object('id', sup.id, 'item_number', sup.item_number, 'name', sup.name,
                 'erp_supplier_id', sup.erp_supplier_id, 'status', sup.status) END AS supplier_option,
+              CASE WHEN comp.id IS NOT NULL THEN json_build_object('id', comp.id, 'item_number', comp.item_number, 'name', comp.name) END AS company_option,
               NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS owner_name
          FROM contracts c
          LEFT JOIN suppliers sup ON sup.tenant_id = c.tenant_id AND sup.id = c.supplier_id
@@ -879,6 +881,8 @@ export class ContractsService {
       // The supplier picker's option, reference included, as the supplier lookup gives it.
       supplier_option: names?.supplier_option ?? null,
       company_name: names?.company_name ?? null,
+      // The company picker's option, reference included, as the company lookup gives it.
+      company_option: names?.company_option ?? null,
       cost_center_name: names?.cost_center_name ?? null,
       owner_name: names?.owner_name ?? null,
       linked_spend_items: spendItems,

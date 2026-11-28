@@ -37,15 +37,17 @@ export const SUPPLIER_LOOKUP: LookupSpec = {
 
 export const COMPANY_LOOKUP: LookupSpec = {
   table: 'companies',
-  columns: { id: 't.id', name: 't.name' },
+  columns: { id: 't.id', item_number: 't.item_number', name: 't.name' },
   label: 't.name',
+  reference: { prefix: 'COMP', column: 't.item_number' },
   offered: ACTIVE_BY_DISABLED_AT,
 };
 
 export const DEPARTMENT_LOOKUP: LookupSpec = {
   table: 'departments',
-  columns: { id: 't.id', name: 't.name', company_id: 't.company_id' },
+  columns: { id: 't.id', item_number: 't.item_number', name: 't.name', company_id: 't.company_id' },
   label: 't.name',
+  reference: { prefix: 'DEPT', column: 't.item_number' },
   offered: ACTIVE_BY_DISABLED_AT,
 };
 
@@ -157,6 +159,7 @@ export const CONTRACT_LOOKUP: LookupSpec = {
   // The number names the contract CTR-n in a picker.
   columns: { id: 't.id', name: 't.name', item_number: 't.item_number' },
   label: 't.name',
+  reference: { prefix: 'CTR', column: 't.item_number' },
   offered: ACTIVE_BY_DISABLED_AT,
 };
 

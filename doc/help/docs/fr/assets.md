@@ -213,7 +213,7 @@ L'onglet Vue d'ensemble est la page d'accueil de l'actif.
 **Support** : le support fournisseur de l'actif, pour tous les types d'actifs. La section apparaît une fois l'actif créé et s'enregistre d'elle-même pendant la saisie.
 
 - **Fournisseur** : Sélectionner depuis l'annuaire des fournisseurs
-- **Contrat de support** : Lien vers un enregistrement de contrat
+- **Contrat de support** : Lien vers un enregistrement de contrat. Chaque choix montre sa référence, par exemple `CTR-2`, à côté du nom, et saisir la référence trouve ce contrat
 - **Niveau de support** : Texte libre (ex. : Or, Argent, 24x7)
 - **Expiration du support** : Date d'expiration
 - **Notes**
