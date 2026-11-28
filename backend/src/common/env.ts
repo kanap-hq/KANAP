@@ -4,6 +4,7 @@ import { parseDeploymentMode } from './deployment-mode';
 import { PRODUCT_NAME } from '../config/product';
 import { inviteLinkTtlWarning, passwordResetTtlWarning, tokenDurationWarning } from '../auth/token-ttl.util';
 import { apiWorkersConfigWarning } from './cluster/process-role';
+import { settingsEncryptionSecret } from '../installation/settings-encryption-secret';
 
 export function requireEnv(name: string, env: NodeJS.ProcessEnv = process.env): string {
   const value = env[name];
@@ -211,7 +212,8 @@ export type StartupEnvReport = {
 /**
  * Start-up checks of the environment. Throws only where the API refuses to start:
  * `DEPLOYMENT_MODE` outside `single-tenant`, `multi-tenant` or unset, `DATABASE_URL` or
- * `JWT_SECRET` missing, and in production mode `APP_BASE_URL` or `CORS_ORIGINS` missing.
+ * `JWT_SECRET` missing, `SETTINGS_ENCRYPTION_SECRET` and `AI_SETTINGS_ENCRYPTION_SECRET` set to
+ * different values, and in production mode `APP_BASE_URL` or `CORS_ORIGINS` missing.
  * Everything else is returned as a warning, including a token lifetime, `API_WORKERS` or
  * `S3_BUCKET` the API will not use as written. The lead process prints the lines once per start.
  */
@@ -224,6 +226,9 @@ export function validateStartupEnv(
   parseDeploymentMode(env.DEPLOYMENT_MODE);
   requireEnv('DATABASE_URL', env);
   requireEnv('JWT_SECRET', env);
+  // SETTINGS_ENCRYPTION_SECRET and its former name AI_SETTINGS_ENCRYPTION_SECRET set to different
+  // values: the stored secrets would become unreadable (installation/settings-encryption-secret.ts).
+  settingsEncryptionSecret(env);
   const mode = getRuntimeMode(env);
   const warnings: string[] = [];
 
