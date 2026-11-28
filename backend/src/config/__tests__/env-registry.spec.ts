@@ -143,9 +143,12 @@ function walk(dir: string, accept: (file: string) => boolean, out: string[] = []
 
 const isSource = (file: string) => /\.(ts|js|mjs|cjs)$/.test(file) && !/\.(spec|test)\.(ts|js|mjs|cjs)$/.test(file);
 
-/** The code of the API: backend/src without its tests, and the entrypoint. Paths from backend/. */
+/** The registry and its renderer write every name: they read none, and would make every entry look read. */
+const isRegistryFile = (file: string) => file.startsWith('src/config/env-registry');
+
+/** The code of the API: backend/src without its tests and the registry, and the entrypoint. Paths from backend/. */
 function apiCode(): { file: string; text: string }[] {
-  const files = walk(backendPath('src'), isSource).map((full) => path.relative(backendPath(), full));
+  const files = walk(backendPath('src'), isSource).map((full) => path.relative(backendPath(), full)).filter((file) => !isRegistryFile(file));
   files.push('scripts/migrate-and-start.js');
   return files.sort().map((file) => ({ file, text: fs.readFileSync(backendPath(file), 'utf8') }));
 }
@@ -235,12 +238,16 @@ function testCoverage() {
     ...['backend/Dockerfile', 'frontend/Dockerfile', 'frontend/Dockerfile.dev', 'marketing/Dockerfile'].map(readRepo),
   ].join('\n');
   const declared = new Set(Object.values(DYNAMIC_READERS).flatMap((reader) => reader.names));
+  // Names a declared reader builds from a prefix (its builtFrom, checked above): written whole nowhere.
+  const built = new Set(Object.values(DYNAMIC_READERS).filter((reader) => reader.builtFrom).flatMap((reader) => reader.names));
   for (const variable of ENV_REGISTRY) {
     if (variable.readBy && /\//.test(variable.readBy)) {
       assert.ok(readRepo(variable.readBy).includes(variable.name), `${variable.name} is read by ${variable.readBy}`);
     } else if (variable.family) {
       const pattern = new RegExp(envNamePattern(variable.name).source.slice(1, -1), 'g');
       assert.ok(declared.has(variable.name) || pattern.test(allCode), `the family ${variable.name} is read by the code`);
+    } else if (built.has(variable.name)) {
+      continue;
     } else {
       assert.ok(new RegExp(`\\b${variable.name}\\b`).test(corpus), `${variable.name} is read in the code, infra/ or a Dockerfile: remove its entry, or name the place that reads it (readBy)`);
     }
