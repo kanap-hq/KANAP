@@ -215,6 +215,12 @@ export const ORGANIZATION_SETTINGS_PAGES: SettingsPageEntry[] = [
     scope: 'organization',
     path: '/admin/integrations',
     component: 'AdminIntegrationsPage',
+    // One card per connection, each in its own file.
+    source: [
+      'components/admin/GlpiIntegrationCard.tsx',
+      'components/admin/MonitoringIntegrationCard.tsx',
+      'components/admin/NetboxIntegrationCard.tsx',
+    ],
     labelKey: 'nav:sidebar.admin.integrations',
     menuKeys: ['nav:workspaces.admin', 'nav:sidebar.admin.sections.integrations'],
     settingKeys: [
@@ -222,6 +228,10 @@ export const ORGANIZATION_SETTINGS_PAGES: SettingsPageEntry[] = [
       'admin:aiAdmin.glpi.fields.url',
       'admin:aiAdmin.glpi.fields.appToken',
       'admin:aiAdmin.glpi.fields.userToken',
+      'admin:aiAdmin.prtg.title',
+      'admin:aiAdmin.prtg.fields.baseUrl',
+      'admin:aiAdmin.prtg.fields.apiKey',
+      'admin:integrations.netbox.title',
     ],
     open: anyOf(aiSettingsAdmin, level('infrastructure', 'admin')),
     change: anyOf(aiSettingsAdmin, level('infrastructure', 'admin')),
