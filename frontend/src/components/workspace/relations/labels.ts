@@ -1,7 +1,27 @@
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../../auth/AuthContext';
 import useApplicationClassificationCatalog from '../../../hooks/useApplicationClassificationCatalog';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { DASH } from './helpers';
+
+/** Same text as the throw in `useAuth` (`AuthContext.tsx`). */
+const AUTH_PROVIDER_REQUIRED = 'useAuth must be used within AuthProvider';
+
+/**
+ * The applications or the infrastructure reader level: the pair the classification catalog route
+ * requires. Component tests render this hook with no `AuthProvider`: `useAuth` throws there. The
+ * app always mounts the provider (`main.tsx`), so a missing one is not a person who lacks the
+ * right, and the fetch stays on for those tests.
+ */
+function useCanReadClassificationCatalog(): boolean {
+  try {
+    const { hasLevel } = useAuth();
+    return hasLevel('applications', 'reader') || hasLevel('infrastructure', 'reader');
+  } catch (error) {
+    if (error instanceof Error && error.message === AUTH_PROVIDER_REQUIRED) return true;
+    throw error;
+  }
+}
 
 /** The same environment keys as the assets list (`AssetsPage`). */
 const ENV_LABEL_KEYS: Record<string, string> = {
@@ -23,7 +43,9 @@ const camel = (code: string) => code.replace(/_([a-z])/g, (_, letter: string) =>
 export function useRelationLabels() {
   const { t } = useTranslation('it');
   const { labelFor } = useItOpsEnumOptions();
-  const { data: catalog } = useApplicationClassificationCatalog();
+  // Without either reader level the route answers 403 and the translated level is the label.
+  const canReadCatalog = useCanReadClassificationCatalog();
+  const { data: catalog } = useApplicationClassificationCatalog({ enabled: canReadCatalog });
   const text = (code: string | null | undefined, label: string) => (code ? label || code : DASH);
 
   return {
