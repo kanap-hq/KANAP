@@ -17,7 +17,7 @@ Navigate to **Admin** from the main menu to access the administration hub.
 - Branding: `organization:reader` to view, `organization:admin` to change (tenant host only; accessible from sidebar)
 - Sample data: Requires the Administrator role (cloud workspaces only; accessible from sidebar)
 
-The Users right covers people and roles. Authentication, Branding and the Audit Log follow the Organization right: a role with `users:admin` and no Organization right does not open them.
+The Users right covers people and roles. Authentication, Branding and the Audit Log follow the Organization right: a role with `users:admin` and no Organization right neither sees them in the Admin menu nor opens them. Organization at Reader level alone is enough to show the Admin menu with these pages.
 
 ---
 
