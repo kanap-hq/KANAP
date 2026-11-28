@@ -49,7 +49,7 @@ function renderTile() {
           <Where />
           <Routes>
             <Route path="/" element={<NetboxSyncTile />} />
-            <Route path="/it/settings" element={<div>settings</div>} />
+            <Route path="/it/settings/:tab" element={<div>settings</div>} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -96,8 +96,7 @@ describe('NetboxSyncTile', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '2 objects to decide' }));
     const decided = new URLSearchParams(screen.getByTestId('where').textContent?.split('?')[1]);
-    expect(screen.getByTestId('where').textContent?.startsWith('/it/settings?')).toBe(true);
-    expect(decided.get('tab')).toBe('netbox');
+    expect(screen.getByTestId('where').textContent?.startsWith('/it/settings/netbox?')).toBe(true);
     expect(decided.get('state')).toBe('ambiguous');
   });
 
@@ -105,6 +104,6 @@ describe('NetboxSyncTile', () => {
     (apiClient.get as any).mockResolvedValue(BASE_STATUS);
     renderTile();
     fireEvent.click(await screen.findByRole('button', { name: 'View all' }));
-    expect(screen.getByTestId('where')).toHaveTextContent('/it/settings?tab=netbox');
+    expect(screen.getByTestId('where')).toHaveTextContent('/it/settings/netbox');
   });
 });

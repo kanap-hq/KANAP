@@ -168,7 +168,7 @@ export default function NetboxIntegrationCard() {
           ? `${t('integrations.netbox.messages.saved')} ${t('integrations.netbox.messages.nextStep')}`
           : t('integrations.netbox.messages.saved'),
         ...(showNext
-          ? { linkTo: '/it/settings?tab=netbox', linkLabel: t('integrations.netbox.actions.goToSync') }
+          ? { linkTo: '/it/settings/netbox', linkLabel: t('integrations.netbox.actions.goToSync') }
           : {}),
       });
       setForm((prev) => ({ ...prev, api_token: '' }));

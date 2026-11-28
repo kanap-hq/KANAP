@@ -19,9 +19,8 @@ import {
   Typography,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import PageHeader from '../../components/PageHeader';
 import { RequiredMark } from '../../components/design';
-import { SettingsSection, SettingsControls, SettingsGroup } from '../../components/settings';
+import { SettingsPage, SettingsSection, SettingsControls, SettingsGroup } from '../../components/settings';
 import { EnumEditor, HostingTypeEditor, AssetKindEditor, ServerRoleEditor, EntityEditor } from '../../components/settings';
 import type {
   HostingTypeItem,
@@ -69,7 +68,7 @@ import {
   updateItOpsSettings,
 } from '../../services/itOpsSettings';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import ForbiddenPage from '../ForbiddenPage';
 import WorkspaceTabs from '../portfolio/workspace/WorkspaceTabs';
@@ -902,7 +901,15 @@ export function autosaveBlocked(state: SettingsState, id: ListId): boolean {
 // Main Component
 // ============================================================================
 
-function ItSettingsLists() {
+type ItSettingsListsProps = {
+  /** The page's tab row. */
+  tabs: React.ReactNode;
+  /** The Lists tab is the one on screen; otherwise the lists stay mounted, hidden, under `netbox`. */
+  listsShown: boolean;
+  netbox: React.ReactNode;
+};
+
+function ItSettingsLists({ tabs, listsShown, netbox }: ItSettingsListsProps) {
   const { t } = useTranslation(['it', 'common']);
   const listHint = (id: ListId) => (HINTED_LISTS.has(id) ? t(listDescriptionKey(id)) : undefined);
   const { hasLevel } = useAuth();
@@ -1054,7 +1061,9 @@ function ItSettingsLists() {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <SettingsPage title={t('pages.settings.title')} tabs={tabs} readOnly={readOnly}>
+    {/* Kept mounted while hidden: a list draft not yet saved survives a visit to the Netbox tab. */}
+    <Box sx={{ display: listsShown ? 'flex' : 'none', flexDirection: 'column', gap: 2 }}>
       {isError && <Alert severity="error">{t('pages.settings.loadFailed')}</Alert>}
       {state.successMessage && <Alert severity="success">{state.successMessage}</Alert>}
       {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
@@ -1150,75 +1159,60 @@ function ItSettingsLists() {
         })}
       </Stack>
     </Box>
+    {netbox}
+    </SettingsPage>
   );
 }
 
 const LISTS_TAB = 'lists';
 const NETBOX_TAB = 'netbox';
+const SETTINGS_PATH = '/it/settings';
+
+/** The tab named by the address: `/it/settings/<tab>`, or the former `?tab=` of the page. */
+function requestedTab(pathname: string, search: string): string | null {
+  const segment = /^\/it\/settings\/([^/]+)/.exec(pathname)?.[1];
+  return segment ?? new URLSearchParams(search).get('tab');
+}
 
 /**
  * IT settings: the reusable lists, and the Netbox synchronisation. Each tab is shown only to
- * someone who could open that page before. The address uses `tab` for this choice (`netbox`,
- * or absent for the lists). Netbox keeps its own record filter in `state`.
+ * someone who may open it; the tab is in the path (`/it/settings/lists`, `/it/settings/netbox`).
+ * An address without a tab, with a tab the person cannot open or with the former `?tab=` is
+ * replaced by the tab on screen, its other parameters kept (Netbox keeps its record filter there).
  */
 export default function ItOperationsSettingsPage() {
   const { t } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const canLists = hasLevel('settings', 'reader');
   const canNetbox = hasLevel('infrastructure', 'admin');
   const tabs = [
     ...(canLists ? [{ key: LISTS_TAB, label: t('pages.settings.tabs.lists') }] : []),
     ...(canNetbox ? [{ key: NETBOX_TAB, label: t('pages.settings.tabs.netbox') }] : []),
   ];
-  const requested = searchParams.get('tab');
+  const requested = requestedTab(location.pathname, location.search);
   const active = tabs.some((tab) => tab.key === requested) ? requested! : (tabs[0]?.key ?? '');
 
-  // The help button reads the address. A tab the user cannot open, and a Netbox-only visit
-  // with no `tab`, are written back so the address matches the tab on screen.
+  // The help button reads the address: it always names the tab on screen.
   React.useEffect(() => {
     if (!active) return;
-    const want = active === LISTS_TAB ? null : active;
-    const have = searchParams.get('tab');
-    const matches = want === null ? have === null || have === LISTS_TAB : have === want;
-    if (matches) return;
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      if (want === null) next.delete('tab');
-      else next.set('tab', want);
-      return next;
-    }, { replace: true });
-  }, [active, searchParams, setSearchParams]);
+    const params = new URLSearchParams(location.search);
+    const legacy = params.has('tab');
+    params.delete('tab');
+    if (location.pathname === `${SETTINGS_PATH}/${active}` && !legacy) return;
+    const search = params.toString();
+    navigate({ pathname: `${SETTINGS_PATH}/${active}`, search: search ? `?${search}` : '' }, { replace: true });
+  }, [active, location.pathname, location.search, navigate]);
 
   const changeTab = (next: string) => {
-    setSearchParams((current) => {
-      const params = new URLSearchParams(current);
-      if (next === LISTS_TAB) params.delete('tab');
-      else params.set('tab', next);
-      return params;
-    }, { replace: true });
+    navigate({ pathname: `${SETTINGS_PATH}/${next}`, search: location.search }, { replace: true });
   };
 
   if (!active) return <ForbiddenPage />;
 
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Box>
-        <Box sx={{ pt: 1, pb: 1 }}>
-          <PageHeader title={t('pages.settings.title')} />
-        </Box>
-        <Box sx={{ borderBottom: '1px solid', borderColor: 'kanap.border.default' }}>
-          <WorkspaceTabs
-            tabs={tabs}
-            activeTab={active}
-            onTabChange={changeTab}
-            ariaLabel={t('pages.settings.title')}
-          />
-        </Box>
-      </Box>
-      {/* Kept mounted while hidden: a list draft not yet saved survives a visit to the Netbox tab. */}
-      {canLists && <Box hidden={active !== LISTS_TAB}><ItSettingsLists /></Box>}
-      {active === NETBOX_TAB && <NetboxSyncPanel />}
-    </Box>
-  );
+  const tabRow = <WorkspaceTabs tabs={tabs} activeTab={active} onTabChange={changeTab} ariaLabel={t('pages.settings.title')} />;
+  const netbox = active === NETBOX_TAB ? <NetboxSyncPanel /> : null;
+  if (!canLists) return <SettingsPage title={t('pages.settings.title')} tabs={tabRow}>{netbox}</SettingsPage>;
+  return <ItSettingsLists tabs={tabRow} listsShown={active === LISTS_TAB} netbox={netbox} />;
 }

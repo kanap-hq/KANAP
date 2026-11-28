@@ -41,6 +41,7 @@ function renderAt(path: string) {
       <Routes>
         <Route element={<ProtectedRoute />}>
           <Route path="/it/settings" element={<div>settings page</div>} />
+          <Route path="/it/settings/:tab" element={<div>settings page</div>} />
           <Route path="/403" element={<div>forbidden</div>} />
         </Route>
       </Routes>
@@ -66,9 +67,21 @@ describe('ProtectedRoute for IT settings', () => {
     expect(screen.getByText('settings page')).toBeInTheDocument();
   });
 
+  it('applies the same rule to each tab address', () => {
+    rights.infrastructure = 4;
+    renderAt('/it/settings/netbox');
+    expect(screen.getByText('settings page')).toBeInTheDocument();
+  });
+
   it('refuses an infrastructure reader', () => {
     rights.infrastructure = 1;
     renderAt('/it/settings');
+    expect(screen.getByText('forbidden')).toBeInTheDocument();
+  });
+
+  it('refuses an infrastructure reader at a tab address', () => {
+    rights.infrastructure = 1;
+    renderAt('/it/settings/lists');
     expect(screen.getByText('forbidden')).toBeInTheDocument();
   });
 });

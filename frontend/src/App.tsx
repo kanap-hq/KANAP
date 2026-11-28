@@ -386,6 +386,7 @@ function AppRoutes() {
           <Route path="/it/connection-map" element={<ConnectionMapPage />} />
           <Route path="/it/netbox" element={<ItNetboxRedirect />} />
           <Route path="/it/settings" element={<ItOperationsSettingsPage />} />
+          <Route path="/it/settings/:tab" element={<ItOperationsSettingsPage />} />
           {/* Portfolio */}
           <Route path="/portfolio" element={<PortfolioDefaultRedirect />} />
           <Route path="/portfolio/requests" element={<PortfolioRequestsPage />} />

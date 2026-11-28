@@ -169,7 +169,7 @@ const MAPPING_OPTIONS_WITH_OS_SUGGESTION = {
   suggested_os_map: { 'debian-12': 'Debian 12 (bookworm)' },
 };
 
-function renderPage(initialPath = '/it/settings?tab=netbox') {
+function renderPage(initialPath = '/it/settings/netbox') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -316,14 +316,14 @@ describe('NetboxSyncPage', () => {
   });
 
   it('honours the state query parameter', async () => {
-    renderPage('/it/settings?tab=netbox&state=linked');
+    renderPage('/it/settings/netbox?state=linked');
 
     expect(await screen.findByText('par-nas-01')).toBeInTheDocument();
     expect(screen.getByText('AST-9')).toBeInTheDocument();
   });
 
   it('shows the asset type of a linked object, not the Netbox object type', async () => {
-    renderPage('/it/settings?tab=netbox&state=linked');
+    renderPage('/it/settings/netbox?state=linked');
 
     expect(await screen.findByText('par-nas-01')).toBeInTheDocument();
     expect(screen.getByText('Network switch')).toBeInTheDocument();
@@ -867,7 +867,7 @@ describe('NetboxSyncPage', () => {
       throw new Error(`Unexpected GET ${url}`);
     });
 
-    renderPage('/it/settings?tab=netbox&state=linked');
+    renderPage('/it/settings/netbox?state=linked');
 
     expect(await screen.findByText('Netbox reports this object as failed.')).toBeInTheDocument();
     expect(screen.queryByText(/SHOULD NOT BE SHOWN/)).not.toBeInTheDocument();

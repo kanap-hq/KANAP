@@ -10,18 +10,18 @@ function Landed() {
 }
 
 describe('ItNetboxRedirect', () => {
-  it('sends /it/netbox to the Netbox tab and keeps the other parameters', () => {
+  it('sends /it/netbox to the Netbox tab and keeps the parameters', () => {
     render(
       <MemoryRouter initialEntries={['/it/netbox?state=linked&foo=1']}>
         <Routes>
           <Route path="/it/netbox" element={<ItNetboxRedirect />} />
-          <Route path="/it/settings" element={<Landed />} />
+          <Route path="/it/settings/:tab" element={<Landed />} />
         </Routes>
       </MemoryRouter>,
     );
     const landed = new URLSearchParams(screen.getByTestId('landed').textContent?.split('?')[1]);
-    expect(screen.getByTestId('landed').textContent?.startsWith('/it/settings?')).toBe(true);
-    expect(landed.get('tab')).toBe('netbox');
+    expect(screen.getByTestId('landed').textContent?.startsWith('/it/settings/netbox?')).toBe(true);
+    expect(landed.has('tab')).toBe(false);
     expect(landed.get('state')).toBe('linked');
     expect(landed.get('foo')).toBe('1');
   });

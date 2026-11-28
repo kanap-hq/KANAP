@@ -205,11 +205,11 @@ export const MODULE_SETTINGS_PAGES: SettingsPageEntry[] = [
     doc: { page: 'contracts', section: 'Decision window' },
   },
   {
-    // The lists tab is the page's default: no tab in the address.
     id: 'it.settings-lists',
     scope: 'module',
     module: 'it',
     path: '/it/settings',
+    tab: { value: 'lists', in: 'path' },
     component: 'ItOperationsSettingsPage',
     labelKey: 'it:pages.settings.title',
     menuKeys: ['nav:workspaces.itOperations', 'nav:sidebar.it.settings'],
@@ -233,7 +233,7 @@ export const MODULE_SETTINGS_PAGES: SettingsPageEntry[] = [
     scope: 'module',
     module: 'it',
     path: '/it/settings',
-    tab: { value: 'netbox', in: 'query' },
+    tab: { value: 'netbox', in: 'path' },
     component: 'ItOperationsSettingsPage',
     source: 'pages/it/NetboxSyncPage.tsx',
     labelKey: 'it:pages.settings.tabs.netbox',
