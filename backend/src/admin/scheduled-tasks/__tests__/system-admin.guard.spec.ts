@@ -5,7 +5,8 @@ import { SystemAdminGuard } from '../system-admin.guard';
 import { Features } from '../../../config/features';
 
 // The scheduled task routes answer a 403 the screen can translate by its code: the platform admin
-// host, the platform admin account, and the workspace administrator (single-tenant mode).
+// host, the platform admin account, and the workspace administrator (single-tenant mode). The
+// database side (roles read in the request's workspace) is in system-admin.guard.integration.spec.ts.
 
 function requestOf(req: Record<string, unknown>): any {
   return { switchToHttp: () => ({ getRequest: () => req }) };
@@ -29,8 +30,7 @@ async function run() {
   const previousAllowlist = process.env.PLATFORM_ADMIN_EMAILS;
   process.env.PLATFORM_ADMIN_EMAILS = 'admin@example.com';
   try {
-    const dataSource = { getRepository: () => ({ find: async () => [] }) } as any;
-    const guard = new SystemAdminGuard(dataSource);
+    const guard = new SystemAdminGuard();
 
     const noHost = await refusal(guard, { user: { sub: 'u', email: 'admin@example.com' }, isPlatformHost: false });
     assert.equal(noHost.getStatus(), 403);
@@ -46,13 +46,17 @@ async function run() {
     const previousSingleTenant = Features.SINGLE_TENANT;
     Features.SINGLE_TENANT = true;
     try {
-      const singleTenant = (roles: string[]) => new SystemAdminGuard({
-        getRepository: () => ({ find: async () => roles.map((role_name) => ({ role: { role_name } })) }),
-      } as any);
-      const administrator = await refusal(singleTenant(['Reader']), { user: { sub: 'u' } });
+      // The extra roles come from the request's tenant transaction (`req.queryRunner.manager`).
+      const singleTenant = (roles: string[], principal = 'Reader') => ({
+        user: { sub: 'u', role: { role_name: principal } },
+        tenant: { id: 't' },
+        queryRunner: { manager: { getRepository: () => ({ find: async () => roles.map((role_name) => ({ role: { role_name } })) }) } },
+      });
+      const administrator = await refusal(guard, singleTenant(['Reader']));
       assert.equal(bodyOf(administrator).code, 'administrator_required');
       assert.equal(bodyOf(administrator).message, 'Administrator access required');
-      assert.equal(await singleTenant(['Administrator']).canActivate(requestOf({ user: { sub: 'u' } })), true);
+      assert.equal(await guard.canActivate(requestOf(singleTenant(['Administrator']))), true, 'extra role');
+      assert.equal(await guard.canActivate(requestOf(singleTenant([], 'Administrator'))), true, 'principal role');
     } finally {
       Features.SINGLE_TENANT = previousSingleTenant;
     }
