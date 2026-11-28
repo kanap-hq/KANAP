@@ -256,7 +256,7 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen
 - Beim Wechsel des Tabs, beim Wechsel zur vorherigen oder nächsten Zeile oder beim Schließen des Arbeitsbereichs werden ausstehende Änderungen zuerst gespeichert. Schlägt ein Speichervorgang fehl, bleiben Sie an Ort und Stelle und eine Meldung nennt den Grund, sodass keine Änderung unbemerkt verloren geht
 - **Strg+S** (**Cmd+S** auf dem Mac) speichert sofort
 - Kann eine Speicherung nicht sofort erfolgen, weil gerade eine andere Speicherung auf denselben Daten läuft, wiederholt Kadratis sie automatisch für Sie
-- Läuft ein Budgetvorgang für viele Zeilen (zum Beispiel eine Spaltenkopie oder ein Zurücksetzen in der Budgetadministration), werden Änderungen hier mit der Meldung „Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.“ zurückgestellt. Versuchen Sie es erneut, sobald er abgeschlossen ist
+- Läuft ein Budgetvorgang für viele Zeilen (zum Beispiel das Kopieren oder Leeren einer Spalte in der Budgetadministration), werden Änderungen hier mit der Meldung „Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.“ zurückgestellt. Versuchen Sie es erneut, sobald er abgeschlossen ist
 
 **Gleichzeitiges Bearbeiten**:
 
@@ -403,7 +403,7 @@ Bei einer leeren Spalte wechselt ein Klick auf einen Tab sofort. Bei einer Spalt
 **Spalte leeren**:
 
 - **Spalte leeren**, rechts unter dem Editor, setzt jeden Monat der aktiven Spalte auf null, zum Beispiel bevor Sie den ganzen Betrag in einem einzigen Monat erfassen. Enthält die Spalte Beträge, bestätigen Sie zuerst: „Alle Monate der Spalte Budget für 2026 leeren? Die anderen Spalten bleiben unverändert.“ Das zählt als Änderung von Hand
-- Um Beträge und Zeitraum einer Spalte für alle Zeilen zu entfernen, verwenden Sie **Budgetspalte zurücksetzen** in der Budget-Administration
+- Um Beträge und Zeitraum einer Spalte für alle Zeilen zu entfernen, verwenden Sie **Budgetspalte leeren** in der Budget-Administration
 
 **Ergebnis pro Monat**:
 
@@ -523,7 +523,7 @@ Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzuf�
 - Die Spalte auf **Betrag** oder **Pro Monat** umstellen, einen Monat in der Tabelle eingeben oder **Spalte leeren**
 - **Budgetspalten kopieren** in der Budgetadministration oder **Ausgehend von**: Waren die Quellbeträge nicht aus Zeilen berechnet, überträgt die Kopie die Zeilen der Quellspalte als Referenz. Eine aus ihren Zeilen berechnete Spalte bleibt berechnet, mit um den Prozentsatz erhöhten Preisen. Siehe [Eine aus Zeilen aufgebaute Spalte kopieren](budget-operations.md#eine-aus-zeilen-aufgebaute-spalte-kopieren)
 - Geänderte Arbeitstage eines Kalenders: Der Tab **Menge und Preis** zeigt zum Beispiel „Seit der letzten Berechnung geänderte Arbeitstage: März: 20 Tage, jetzt 19.“, gefolgt von **Die Zeilen wieder verwenden**. An der Spalte ändert sich nichts, bis Sie auf **Die Zeilen wieder verwenden** klicken. Die Zeilen bleiben bis dahin bearbeitbar
-- **Budgetspalte zurücksetzen** in der Budgetadministration entfernt die Zeilen zusammen mit den Beträgen. Siehe [Budgetspalte zurücksetzen](budget-operations.md#budgetspalte-zurucksetzen)
+- **Budgetspalte leeren** in der Budgetadministration entfernt die Zeilen zusammen mit den Beträgen. Siehe [Budgetspalte leeren](budget-operations.md#budgetspalte-zurucksetzen)
 - Eine Budgetdatei ändert die Monate einer Spalte und lässt ihre Zeilen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md)
 
 #### Wenn das Konto eine Erfassung nach Menge und Preis erwartet { #quantity-and-price-expected }
@@ -780,7 +780,7 @@ Der Zugriff auf Budgetzeilen wird durch die Ressource Budget gesteuert, die für
 
 - `budget:reader`: Liste anzeigen, Zeilen öffnen, Budgets und Zuordnungen einsehen (schreibgeschützt), Anhänge herunterladen
 - `budget:member`: Zeilen erstellen und bearbeiten, ihren Typ ändern, Budgets und Zuordnungen aktualisieren, Anhänge hochladen und löschen, Beziehungen, Verknüpfungen und Kontakte verwalten, Zeilen in großer Zahl ändern
-- `budget:admin`: Alle Mitglied-Rechte plus Import und Export, Budget-Operationen (Budgetspalten kopieren, mit Beträgen und Zuordnungen, und Budgetspalte zurücksetzen) und das Löschen von Zeilen aus der Liste oder von der Zeile
+- `budget:admin`: Alle Mitglied-Rechte plus Import und Export, Budget-Operationen (Budgetspalten kopieren, mit Beträgen und Zuordnungen, und Budgetspalte leeren) und das Löschen von Zeilen aus der Liste oder von der Zeile
 
 Das Einfrieren von Budgetspalten erfordert die Budgetadministration (`budget_ops:admin`).
 

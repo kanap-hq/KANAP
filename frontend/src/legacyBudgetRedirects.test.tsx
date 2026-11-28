@@ -8,6 +8,7 @@ const translation = vi.hoisted(() => ({ t: (key: string) => key, i18n: { languag
 vi.mock('react-i18next', () => ({ useTranslation: () => translation }));
 const auth = vi.hoisted(() => ({
   grants: {} as Record<string, string>,
+  dataAccess: null as null | { mode: 'all' | 'limited' },
   rank: { reader: 1, member: 3, admin: 4 } as Record<string, number>,
 }));
 vi.mock('./auth/AuthContext', () => ({
@@ -20,6 +21,7 @@ vi.mock('./auth/AuthContext', () => ({
     claims: { isGlobalAdmin: false, isPlatformAdmin: false, isBillingAdmin: false },
     hasLevel: (resource: string, level: string) => (auth.rank[auth.grants[resource]] ?? 0) >= auth.rank[level],
     hasAnyAccess: true,
+    dataAccess: auth.dataAccess,
     subscription: null,
   }),
 }));
@@ -41,7 +43,11 @@ const NEW_ROUTES = [
   '/ops/operations/metrics-copy',
   '/ops/operations/freeze',
   '/ops/operations/copy-budget',
+  '/ops/operations/column-reset',
 ];
+
+/** The two settings pages of the landing, open read-only to every reader of budget administration. */
+const SETTINGS_ROUTES = ['/ops/operations/columns', '/ops/operations/allocation-default'];
 
 /** A page stub that shows its path and query, so a redirect's parameters can be read. */
 function PageStub({ route }: { route: string }) {
@@ -58,7 +64,7 @@ function renderAt(path: string) {
           {legacyBudgetRedirectRoutes()}
           <Route element={<ProtectedRoute />}>
             <Route path="/ops/operations" element={<BudgetOperationsLandingPage />} />
-            {NEW_ROUTES.map((route) => (
+            {[...NEW_ROUTES, ...SETTINGS_ROUTES].map((route) => (
               <Route key={route} path={route} element={<PageStub route={route} />} />
             ))}
           </Route>
@@ -72,6 +78,7 @@ function renderAt(path: string) {
 describe('legacy budget redirects', () => {
   beforeEach(() => {
     auth.grants = { budget: 'admin', budget_ops: 'admin' };
+    auth.dataAccess = null;
   });
 
   it('sends /master-data/operations to the administration landing', () => {
@@ -129,6 +136,10 @@ const tileHrefs = () => screen.getAllByRole('region')
 const BUDGET_MEMBER = { budget: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
 
 describe('budget administration access', () => {
+  beforeEach(() => {
+    auth.dataAccess = null;
+  });
+
   it.each(['/ops/operations', '/ops/operations/'])('opens %s to a budget administrator', (path) => {
     auth.grants = { budget_ops: 'admin' };
     renderAt(path);
@@ -143,9 +154,29 @@ describe('budget administration access', () => {
     ]);
   });
 
-  it('keeps the landing closed to a budget member, who can use none of its pages', () => {
+  it('opens the landing to a budget member with only the two settings pages they read', () => {
     auth.grants = BUDGET_MEMBER;
     renderAt('/ops/operations');
+    expect(screen.getByRole('heading', { name: 'operations.title' })).toBeInTheDocument();
+    expect(tileHrefs()).toEqual(SETTINGS_ROUTES);
+  });
+
+  it.each(SETTINGS_ROUTES)('opens %s to a budget member', (route) => {
+    auth.grants = BUDGET_MEMBER;
+    renderAt(route);
+    expect(screen.getByText(`page ${route}`)).toBeInTheDocument();
+  });
+
+  it.each(['/ops/operations', ...SETTINGS_ROUTES])('keeps %s closed to a budget lines reader without budget administration', (route) => {
+    auth.grants = { budget: 'reader' };
+    renderAt(route);
+    expect(screen.getByText('forbidden')).toBeInTheDocument();
+  });
+
+  it.each(['/ops/operations', ...SETTINGS_ROUTES])('keeps %s closed to a person with limited data access', (route) => {
+    auth.grants = BUDGET_MEMBER;
+    auth.dataAccess = { mode: 'limited' };
+    renderAt(route);
     expect(screen.getByText('forbidden')).toBeInTheDocument();
   });
 
