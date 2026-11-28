@@ -52,8 +52,8 @@
       },
       "hints": {
         "url": "L'adresse avec laquelle vous ouvrez GLPI, par exemple https://glpi.example.com. Son API doit être active : dans GLPI, Configuration > Générale > API, Activer l'API Rest.",
-        "userToken": "Dans GLPI, ouvrez vos préférences (votre nom en haut à droite), puis Clés d'accès distant, et copiez le jeton d'API. S'il est vide, cochez Régénérer et enregistrez.",
-        "appToken": "Facultatif. Dans GLPI, Configuration > Générale > API, ouvrez le client d'API par lequel Kadratis se connecte et copiez son jeton d'application. Laissez vide si le client n'en a pas."
+        "userToken": "Dans GLPI, ouvrez vos préférences (votre nom en haut à droite), puis Clefs d'accès distant, et copiez le jeton d'API. S'il est vide, cochez Regénérer et enregistrez.",
+        "appToken": "Facultatif. Dans GLPI, Configuration > Générale > API, ouvrez le client de l'API par lequel Kadratis se connecte et copiez son jeton d'application. Laissez vide si le client n'en a pas."
       }
     },
     "keys": {
@@ -1019,7 +1019,18 @@
       "web_search_enabled": "Recherche web activée",
       "linked_records": "Fiches liées",
       "expected_units": "Unités attendues",
-      "secret_replaced": "Secret remplacé"
+      "secret_replaced": "Secret remplacé",
+      "credential": "Secret défini",
+      "glpi_user_token_replaced": "Jeton utilisateur GLPI remplacé",
+      "glpi_app_token_replaced": "Jeton d'application GLPI remplacé",
+      "implementation": "Connecteur",
+      "provider_key": "Système connecté",
+      "auto_sync": "Synchronisation automatique",
+      "default_environment": "Environnement des nouveaux actifs",
+      "insecure_tls": "Ignorer les erreurs de certificat",
+      "request_timeout_seconds": "Délai d'attente des requêtes (secondes)",
+      "server_timezone": "Fuseau horaire du serveur",
+      "enabled": "Activé"
     },
     "history": {
       "empty": "Aucun historique",
@@ -3020,7 +3031,10 @@
   "integrations": {
     "secretAddressChanged": "L'adresse a changé : saisissez de nouveau cette valeur.",
     "removeConnection": {
-      "title": "Retirer la connexion {{name}} ?"
+      "title": "Retirer la connexion {{name}} ?",
+      "glpi": "Son adresse et les jetons enregistrés sont supprimés, et les tickets ne peuvent plus être importés. Les tickets déjà importés restent.",
+      "prtg": "Son adresse et la clé enregistrée sont supprimées. Les agents de supervision ne peuvent plus lire PRTG.",
+      "netbox": "Son adresse et le jeton enregistré sont supprimés, et la synchronisation automatique s'arrête. Ce qui a déjà été synchronisé reste."
     },
     "netbox": {
       "title": "Inventaire Netbox",
@@ -3059,7 +3073,8 @@
         "goToSync": "Configurer la synchronisation"
       }
     },
-    "latency": "réponse en {{ms}} ms"
+    "latency": "réponse en {{ms}} ms",
+    "optionalSecretAddressChanged": "La valeur enregistrée n'est pas envoyée à la nouvelle adresse. Saisissez-la de nouveau pour la conserver."
   },
   "sampleData": {
     "title": "Données d'exemple",

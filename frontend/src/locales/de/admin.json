@@ -51,9 +51,9 @@
         "plaidRequired": "{{agent}} muss aktiviert sein, damit Benutzer GLPI-Tickets aus dem Chat importieren können."
       },
       "hints": {
-        "url": "Die Adresse, unter der Sie GLPI öffnen, zum Beispiel https://glpi.example.com. Die API muss aktiv sein: in GLPI unter Einrichtung > Allgemein > API, REST-API aktivieren.",
-        "userToken": "Öffnen Sie in GLPI Ihre Einstellungen (Ihr Name oben rechts), dann Fernzugriffsschlüssel, und kopieren Sie das API-Token. Ist es leer, aktivieren Sie Neu generieren und speichern Sie.",
-        "appToken": "Optional. Öffnen Sie in GLPI unter Einrichtung > Allgemein > API den API-Client, über den sich Kadratis verbindet, und kopieren Sie sein Anwendungstoken. Leer lassen, wenn der Client keines hat."
+        "url": "Die Adresse, unter der Sie GLPI öffnen, zum Beispiel https://glpi.example.com. Die API muss aktiv sein: in GLPI unter Konfiguration > Allgemein > API, Rest API aktivieren.",
+        "userToken": "Öffnen Sie in GLPI Ihre Einstellungen (Ihr Name oben rechts), dann Schlüssel für Fernzugriff, und kopieren Sie das API-Token. Ist es leer, aktivieren Sie Neu erzeugen und speichern Sie.",
+        "appToken": "Optional. Öffnen Sie in GLPI unter Konfiguration > Allgemein > API den API-Client, über den sich Kadratis verbindet, und kopieren Sie sein Anwendungstoken. Leer lassen, wenn der Client keines hat."
       }
     },
     "keys": {
@@ -1019,7 +1019,18 @@
       "web_search_enabled": "Websuche aktiviert",
       "linked_records": "Verknüpfte Datensätze",
       "expected_units": "Erwartete Einheiten",
-      "secret_replaced": "Geheimnis ersetzt"
+      "secret_replaced": "Geheimnis ersetzt",
+      "credential": "Geheimnis hinterlegt",
+      "glpi_user_token_replaced": "GLPI-Benutzer-Token ersetzt",
+      "glpi_app_token_replaced": "GLPI-Anwendungstoken ersetzt",
+      "implementation": "Konnektor",
+      "provider_key": "Verbundenes System",
+      "auto_sync": "Automatische Synchronisierung",
+      "default_environment": "Umgebung für neue Assets",
+      "insecure_tls": "Zertifikatsfehler ignorieren",
+      "request_timeout_seconds": "Anfrage-Timeout (Sekunden)",
+      "server_timezone": "Zeitzone des Servers",
+      "enabled": "Aktiviert"
     },
     "history": {
       "empty": "Noch kein Verlauf",
@@ -3020,7 +3031,10 @@
   "integrations": {
     "secretAddressChanged": "Die Adresse hat sich geändert: Geben Sie den Wert erneut ein.",
     "removeConnection": {
-      "title": "Verbindung {{name}} entfernen?"
+      "title": "Verbindung {{name}} entfernen?",
+      "glpi": "Die Adresse und die gespeicherten Tokens werden gelöscht, und Tickets können nicht mehr importiert werden. Bereits importierte Tickets bleiben erhalten.",
+      "prtg": "Die Adresse und der gespeicherte Schlüssel werden gelöscht. Monitoring-Agenten können PRTG nicht mehr auslesen.",
+      "netbox": "Die Adresse und das gespeicherte Token werden gelöscht, und die automatische Synchronisierung endet. Bereits Synchronisiertes bleibt erhalten."
     },
     "netbox": {
       "title": "Netbox-Inventar",
@@ -3059,7 +3073,8 @@
         "goToSync": "Synchronisierung einrichten"
       }
     },
-    "latency": "Antwort in {{ms}} ms"
+    "latency": "Antwort in {{ms}} ms",
+    "optionalSecretAddressChanged": "Der gespeicherte Wert wird nicht an die neue Adresse gesendet. Geben Sie ihn erneut ein, um ihn zu behalten."
   },
   "sampleData": {
     "title": "Beispieldaten",

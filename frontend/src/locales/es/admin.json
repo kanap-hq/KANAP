@@ -51,9 +51,9 @@
         "plaidRequired": "{{agent}} debe estar habilitado para que los usuarios puedan importar tickets GLPI desde el chat."
       },
       "hints": {
-        "url": "La dirección con la que abre GLPI, por ejemplo https://glpi.example.com. Su API debe estar activa: en GLPI, Configuración > General > API, Habilitar API Rest.",
-        "userToken": "En GLPI, abra sus preferencias (su nombre arriba a la derecha), luego Claves de acceso remoto, y copie el token de API. Si está vacío, marque Regenerar y guarde.",
-        "appToken": "Opcional. En GLPI, Configuración > General > API, abra el cliente de API por el que se conecta Kadratis y copie su token de aplicación. Déjelo vacío si el cliente no tiene."
+        "url": "La dirección con la que abre GLPI, por ejemplo https://glpi.example.com. Su API debe estar activa: en GLPI, Configuración > General > API, Activar Rest API.",
+        "userToken": "En GLPI, abra sus preferencias (su nombre arriba a la derecha), luego Claves de acceso remoto, y copie el API token. Si está vacío, marque Regenerar y guarde.",
+        "appToken": "Opcional. En GLPI, Configuración > General > API, abra el cliente API por el que se conecta Kadratis y copie su token de aplicación. Déjelo vacío si el cliente no tiene."
       }
     },
     "keys": {
@@ -1019,7 +1019,18 @@
       "web_search_enabled": "Búsqueda web activada",
       "linked_records": "Registros vinculados",
       "expected_units": "Unidades esperadas",
-      "secret_replaced": "Secreto reemplazado"
+      "secret_replaced": "Secreto reemplazado",
+      "credential": "Secreto definido",
+      "glpi_user_token_replaced": "Token de usuario de GLPI reemplazado",
+      "glpi_app_token_replaced": "Token de aplicación de GLPI reemplazado",
+      "implementation": "Conector",
+      "provider_key": "Sistema conectado",
+      "auto_sync": "Sincronización automática",
+      "default_environment": "Entorno de los nuevos activos",
+      "insecure_tls": "Ignorar los errores de certificado",
+      "request_timeout_seconds": "Tiempo de espera de las solicitudes (segundos)",
+      "server_timezone": "Zona horaria del servidor",
+      "enabled": "Activado"
     },
     "history": {
       "empty": "Todavía no hay historial",
@@ -3020,7 +3031,10 @@
   "integrations": {
     "secretAddressChanged": "La dirección ha cambiado: vuelva a introducir este valor.",
     "removeConnection": {
-      "title": "¿Quitar la conexión {{name}}?"
+      "title": "¿Quitar la conexión {{name}}?",
+      "glpi": "Se eliminan su dirección y los tokens guardados, y ya no se pueden importar tickets. Los tickets ya importados se conservan.",
+      "prtg": "Se eliminan su dirección y la clave guardada. Los agentes de monitorización ya no pueden leer PRTG.",
+      "netbox": "Se eliminan su dirección y el token guardado, y la sincronización automática se detiene. Lo ya sincronizado se conserva."
     },
     "netbox": {
       "title": "Inventario de Netbox",
@@ -3059,7 +3073,8 @@
         "goToSync": "Configurar la sincronización"
       }
     },
-    "latency": "respuesta en {{ms}} ms"
+    "latency": "respuesta en {{ms}} ms",
+    "optionalSecretAddressChanged": "El valor guardado no se envía a la nueva dirección. Vuelva a introducirlo para conservarlo."
   },
   "sampleData": {
     "title": "Datos de ejemplo",
