@@ -11,7 +11,7 @@ import { DataSource, QueryRunner } from 'typeorm';
 // nature, the route's audit rows and the version's allocation are compared with the tab's.
 
 process.env.JWT_SECRET ||= 'test-jwt-secret';
-process.env.AI_SETTINGS_ENCRYPTION_SECRET ||= 'test-ai-secret';
+process.env.SETTINGS_ENCRYPTION_SECRET ||= process.env.AI_SETTINGS_ENCRYPTION_SECRET || 'test-ai-secret';
 process.env.STRIPE_SECRET_KEY = '';
 process.env.S3_ENDPOINT ||= 'http://127.0.0.1:9000';
 process.env.S3_BUCKET ||= 'test-bucket';

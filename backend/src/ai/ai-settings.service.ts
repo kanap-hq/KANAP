@@ -13,6 +13,7 @@ import { normalizeGlpiPathname } from './glpi/glpi-url';
 import { BuiltinProviderIdentity, PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 import { PRODUCT_NAME } from '../config/product';
+import { WEB_SEARCH_UNAVAILABLE } from './web-search/brave-search.service';
 
 export type AiSettingsView = {
   id: string;
@@ -418,7 +419,7 @@ export class AiSettingsService {
     if (Object.prototype.hasOwnProperty.call(input, 'web_search_enabled')) {
       const wantEnabled = input.web_search_enabled === true;
       if (wantEnabled && !Features.AI_WEB_SEARCH_READY) {
-        throw new BadRequestException('Web search cannot be enabled: BRAVE_SEARCH_API_KEY is not configured.');
+        throw new BadRequestException(WEB_SEARCH_UNAVAILABLE);
       }
       settings.web_search_enabled = wantEnabled;
     }

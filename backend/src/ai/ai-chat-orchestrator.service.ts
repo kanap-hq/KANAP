@@ -93,6 +93,7 @@ import {
 } from './ai-write-texts';
 import { workspaceDisplayName } from '../config/product';
 import { replayLatestBulkCard } from './mutation/ai-bulk-edit';
+import { aiChatMaxTokens, aiReasoningMaxTokens } from '../installation/ai-installation-settings';
 
 const MAX_TOOL_ITERATIONS = parsePositiveIntEnv(process.env.AI_CHAT_MAX_TOOL_ITERATIONS, 40);
 /**
@@ -105,11 +106,8 @@ const MAX_TOOL_ITERATIONS = parsePositiveIntEnv(process.env.AI_CHAT_MAX_TOOL_ITE
  * Claude 3.5+, GPT-4o, qwen3-* with vLLM) all support at least this much output.
  * Operators can override via env if their model needs more or less.
  */
-const DEFAULT_MAX_TOKENS = parsePositiveIntEnv(process.env.AI_CHAT_MAX_TOKENS, 16384);
-const OPENAI_REASONING_MAX_TOKENS = parsePositiveIntEnv(
-  process.env.AI_CHAT_REASONING_MAX_TOKENS,
-  Math.max(DEFAULT_MAX_TOKENS, 16384),
-);
+// The longest answer is an installation setting (AI_CHAT_MAX_TOKENS, else the AI page of the
+// installation, else 16 384), read at each call: installation/ai-installation-settings.ts.
 
 function parsePositiveIntEnv(value: string | undefined, fallback: number): number {
   const trimmed = String(value ?? '').trim();
@@ -1233,9 +1231,9 @@ function toolResultContextItems(toolName: string, result: unknown): AiChatContex
 
 export function resolveProviderMaxTokens(providerId: string, model: string): number {
   if (providerId === 'openai' && isOpenAiReasoningModel(model)) {
-    return OPENAI_REASONING_MAX_TOKENS;
+    return aiReasoningMaxTokens();
   }
-  return DEFAULT_MAX_TOKENS;
+  return aiChatMaxTokens();
 }
 
 export function resolveChatProviderTimeoutMs(rawValue = process.env.AI_CHAT_PROVIDER_TIMEOUT_MS): number {

@@ -229,6 +229,23 @@ function assertUnitsFollowSetting(account: Pick<Account, 'quantity_price_expecte
   account.expected_units = null;
 }
 
+const ACCOUNT_NUMBER_TAKEN_SELECTED = 'An account with this number already exists in the selected Chart of Accounts';
+const ACCOUNT_NUMBER_TAKEN_TARGET = 'An account with this number already exists in the target Chart of Accounts';
+
+/**
+ * 400: this number is already used in the chart the write names. Create names the chart the
+ * person selected; an update (a move, or a number changed to one the chart already has)
+ * names the target chart. The screen translates `errors:<code>`.
+ */
+function accountNumberTaken(target: boolean): BadRequestException {
+  return new BadRequestException({
+    statusCode: 400,
+    error: 'Bad Request',
+    code: target ? 'ACCOUNT_NUMBER_TAKEN_TARGET' : 'ACCOUNT_NUMBER_TAKEN',
+    message: target ? ACCOUNT_NUMBER_TAKEN_TARGET : ACCOUNT_NUMBER_TAKEN_SELECTED,
+  });
+}
+
 /** The refusal of units on an account without the setting, coded for the screen's words (`errors:<code>`). */
 function unitsWithoutEntry() {
   return new BadRequestException({
@@ -631,7 +648,7 @@ export class AccountsService {
     } catch (e: any) {
       if (e?.code === '23505') {
         // Likely unique on (tenant_id, coa_id, account_number)
-        throw new BadRequestException('An account with this number already exists in the selected Chart of Accounts');
+        throw accountNumberTaken(false);
       }
       if (numberOutOfRange(e)) throw new BadRequestException(`account_number ${ACCOUNT_NUMBER_RULE}`);
       if (isUnitsWithoutEntry(e)) throw unitsWithoutEntry();
@@ -733,7 +750,7 @@ export class AccountsService {
     } catch (e: any) {
       if (e?.code === '23505') {
         // Unique violation on (tenant_id, coa_id, account_number)
-        throw new BadRequestException('An account with this number already exists in the target Chart of Accounts');
+        throw accountNumberTaken(true);
       }
       if (numberOutOfRange(e)) throw new BadRequestException(`account_number ${ACCOUNT_NUMBER_RULE}`);
       if (isUnitsWithoutEntry(e)) throw unitsWithoutEntry();

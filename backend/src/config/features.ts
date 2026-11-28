@@ -1,6 +1,7 @@
 import { parseDeploymentMode } from '../common/deployment-mode';
 import { parseBoolean } from '../common/env';
 import { hasConfiguredEmailTransport } from '../email/email-config';
+import { installationSettingsSnapshot } from '../installation/installation-settings.snapshot';
 
 // Throws at load on any value other than single-tenant, multi-tenant or unset (unset is
 // multi-tenant). validateStartupEnv repeats the check for an env object passed to it.
@@ -9,6 +10,10 @@ const isSingleTenant = deploymentMode === 'single-tenant';
 const vulnerabilityFeedEnabled = (process.env.VULNERABILITY_FEED_ENABLED ?? '').trim()
   ? parseBoolean(process.env.VULNERABILITY_FEED_ENABLED)
   : !isSingleTenant;
+// The switches that follow an installation setting (installation/): here the value with an empty
+// database (the file, else the default). InstallationSettingsService rewrites the field when the
+// value stored in the database changes it, at each refresh.
+const installationFeatures = installationSettingsSnapshot.featuresAtLoad();
 
 export const Features = {
   DEPLOYMENT_MODE: deploymentMode,
@@ -19,7 +24,8 @@ export const Features = {
   AI_CHAT_ENABLED: parseBoolean(process.env.AI_CHAT_ENABLED),
   AI_MCP_ENABLED: parseBoolean(process.env.AI_MCP_ENABLED),
   AI_SETTINGS_ENABLED: parseBoolean(process.env.AI_SETTINGS_ENABLED),
-  AI_WEB_SEARCH_READY: !!process.env.BRAVE_SEARCH_API_KEY,
+  // The web search key (BRAVE_SEARCH_API_KEY, else the one set on the installation's AI page).
+  AI_WEB_SEARCH_READY: installationFeatures.AI_WEB_SEARCH_READY === true,
   // The living catalog of technologies reads endoflife.date (or ENDOFLIFE_API_BASE_URL): on by
   // default in the cloud, off by default on-premise, where the catalog shipped with each version is
   // synced at start. TECHNOLOGY_CATALOG_SYNC_ENABLED set either way wins.

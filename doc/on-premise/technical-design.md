@@ -307,6 +307,8 @@ Rules:
 | File | What | Behavior |
 |------|------|----------|
 | `main.ts` | `bootstrap` (`createSingleTenantOnFirstStart`) | Creates tenant, admin user, subscription (On-Prem, no user limit) |
+| `installation/installation-admin.guard.ts` | `InstallationAdminGuard` (installation settings `admin/installation/*`, scheduled tasks `admin/scheduled-tasks`) | Multi-tenant: platform host and platform administrator, else 403 `platform_admin_required`. Single-tenant: the Administrator role, primary or extra (read in the request's tenant transaction), else 403 `administrator_required`. In both modes the person is read again in that transaction, as `PermissionGuard` does (a disabled person: 401 `USER_DISABLED`; roles from the database, never from the token). The routes also carry `@ReservedToUnscopedDataAccess()` |
+| `installation/settings-encryption-secret.ts` | `missingEncryptionSecretWarning` (start-up, lead process) | Warns when no encryption key is set while secrets are stored: the installation tables in both modes; single-tenant also reads the secrets of the single tenant (with its `app.current_tenant`) |
 | `common/tenancy/request-tenancy.middleware.ts` | `createRequestTenancyMiddleware` | Skips Host parsing when `singleTenant`, resolves to `defaultTenantSlug`; returns 503 `TENANT_NOT_READY` if the tenant is not ready. `main.ts` calls `applyTenancyAndPipeline` |
 | `platform-admin.util.ts` | `isPlatformAdmin` | Returns `false` when `SINGLE_TENANT` is true |
 | `public.controller.ts` | `@Post('start-trial')` | 404 via `throwNotAvailableInMode` |
@@ -502,7 +504,7 @@ No feature flag. The module is registered and the API is reachable in both modes
 | File | What | Behavior |
 |------|------|----------|
 | `netbox/netbox-sync.service.ts`, `netbox/netbox-config.service.ts` | `assertPublicHttpUrl` | Netbox address validation and every outbound call. A private Netbox address is refused in multi-tenant, accepted in single-tenant. On-prem installs reaching an internal Netbox need nothing extra; a dev/cloud install does via `SSRF_ALLOWED_HOSTS`. |
-| `ai/ai-secret-cipher.service.ts` | `canEncrypt` (`AI_SETTINGS_ENCRYPTION_SECRET`) | The Netbox API token is encrypted with that variable, so it is required to configure Netbox even when all AI features are off. Without it, `canEncrypt()` is false and the card warns that the token cannot be stored. |
+| `ai/ai-secret-cipher.service.ts` | `canEncrypt` (`SETTINGS_ENCRYPTION_SECRET`, formerly `AI_SETTINGS_ENCRYPTION_SECRET`) | The Netbox API token is encrypted with that variable, so it is required to configure Netbox even when all AI features are off. Without it, `canEncrypt()` is false and the card warns that the token cannot be stored. |
 | `netbox/netbox-scheduled-sync.service.ts` | `netbox-inventory-sync` | Hourly task, registered in both modes. Per-tenant `auto_sync` switch. Frozen or trial-expired tenants are skipped via `evaluateSubscriptionAccess`; the check returns early when `isConfigured()` is false, so it is a no-op on-prem. |
 | `frontend/src/components/ProtectedRoute.tsx` | `/admin/integrations` | Admitted by `hasLevel('ai_settings', 'admin')` or `hasLevel('infrastructure', 'admin')`. Mode-agnostic. |
 | `frontend/src/components/Layout.tsx` | `canShowIntegrations` | Admin nav entry for Integrations. The same widened condition; the Integrations entry alone can justify showing the Admin workspace. |
@@ -552,7 +554,7 @@ All gates read from `useFeatures()` hook (provided by `FeaturesContext.tsx`).
 | `ProtectedRoute.tsx` | `config.features.billing` | Skips billing/subscription redirect when billing is off |
 | `pages/admin/SampleDataPage.tsx`, `pages/admin/sample-data/SampleDataBanner.tsx` | `useSampleDataAvailable()` | Not single-tenant, sample data flag on, not the platform host, Administrator role. The page shows `ForbiddenPage`; the home banner (rendered first in `WorkspaceDashboardPage.tsx`) renders nothing. No polling or retry after a 403 or 404 |
 | `ProtectedRoute.tsx` | `/admin/sample-data` | Exempt from the billing redirect of a frozen workspace, so an Administrator can erase that workspace |
-| `ProtectedRoute.tsx`, `ScheduledTasksPage.tsx` | `isInstallationOperator` (`pages/admin/adminMenu.ts`) | Every address under `/admin/installation/`, and the former `/admin/scheduled-tasks`, opens to the person the server admits: on site the Administrator role, principal or extra, read in the workspace of the request (`SystemAdminGuard`), with access to all data (`@ReservedToUnscopedDataAccess()`), in the cloud a platform administrator on the platform host (`SystemAdminGuard`). Anyone else gets the refusal page |
+| `ProtectedRoute.tsx`, `ScheduledTasksPage.tsx` | `isInstallationOperator` (`pages/admin/adminMenu.ts`) | Every address under `/admin/installation/`, and the former `/admin/scheduled-tasks`, opens to the person `InstallationAdminGuard` admits (its row under Backend Gates, "Deployment mode"): on site `isGlobalAdmin` without limited data access, in the cloud `isPlatformAdmin` on the platform host. Anyone else gets the refusal page |
 
 ### CI
 
