@@ -4,6 +4,8 @@ import type { SettingsPageEntry } from './types';
 // Budget administration (`pages/operations/operationAccess.ts`): every page is reserved to people
 // with access to all data.
 const budgetSettingsAdmin = allOf(fullDataAccess, level('budget_ops', 'admin'));
+// A settings page of the budget opens read-only to the readers of budget administration.
+const budgetSettingsReader = allOf(fullDataAccess, level('budget_ops', 'reader'));
 const budgetLinesAdmin = allOf(fullDataAccess, level('budget', 'admin'));
 const budgetReader = anyOf(level('budget', 'reader'), level('budget_ops', 'reader'));
 const masterDataAdmin = allOf(
@@ -11,10 +13,10 @@ const masterDataAdmin = allOf(
   budgetReader,
   anyOf(level('budget_ops', 'admin'), level('companies', 'admin'), level('departments', 'admin')),
 );
-const anyBudgetOperation = allOf(
+const anyBudgetOperation = (settingsLevel: 'reader' | 'admin') => allOf(
   fullDataAccess,
   anyOf(
-    level('budget_ops', 'admin'),
+    level('budget_ops', settingsLevel),
     level('budget', 'admin'),
     allOf(budgetReader, anyOf(level('companies', 'admin'), level('departments', 'admin'))),
   ),
@@ -29,6 +31,7 @@ const budgetOperation = (
   settingKeys: string[],
   rule: SettingsPageEntry['open'],
   doc: SettingsPageEntry['doc'],
+  change: SettingsPageEntry['change'] = rule,
 ): SettingsPageEntry => ({
   id,
   scope: 'module',
@@ -39,7 +42,7 @@ const budgetOperation = (
   menuKeys: BUDGET_MENU,
   settingKeys,
   open: rule,
-  change: rule,
+  change,
   availability: {},
   doc,
 });
@@ -62,8 +65,8 @@ export const MODULE_SETTINGS_PAGES: SettingsPageEntry[] = [
       'ops:operations.cards.freezeTitle',
       'ops:operations.cards.copyBudgetTitle',
     ],
-    open: anyBudgetOperation,
-    change: anyBudgetOperation,
+    open: anyBudgetOperation('reader'),
+    change: anyBudgetOperation('admin'),
     availability: {},
     doc: { page: 'budget-operations' },
   },
@@ -93,8 +96,9 @@ export const MODULE_SETTINGS_PAGES: SettingsPageEntry[] = [
       'ops:operations.budgetColumnsSettings.follows',
       'ops:operations.budgetColumnsSettings.default',
     ],
+    budgetSettingsReader,
+    { page: 'budget-operations', section: 'Budget columns' },
     budgetSettingsAdmin,
-    { page: 'budget-operations' },
   ),
   budgetOperation(
     'budget.allocation-default',
@@ -107,8 +111,9 @@ export const MODULE_SETTINGS_PAGES: SettingsPageEntry[] = [
       'ops:operations.allocationDefault.companies',
       'ops:operations.allocationDefault.year',
     ],
-    budgetSettingsAdmin,
+    budgetSettingsReader,
     { page: 'budget-operations', section: 'Default Allocation Method' },
+    budgetSettingsAdmin,
   ),
   budgetOperation(
     'budget.freeze',
@@ -149,7 +154,7 @@ export const MODULE_SETTINGS_PAGES: SettingsPageEntry[] = [
       'ops:operations.columnReset.clearColumn',
     ],
     budgetLinesAdmin,
-    { page: 'budget-operations', section: 'Reset Budget Column' },
+    { page: 'budget-operations', section: 'Clear a budget column' },
   ),
   budgetOperation(
     'budget.master-data-freeze',
