@@ -2,6 +2,10 @@ import '../i18n';
 import i18n from 'i18next';
 import { describe, expect, it } from 'vitest';
 import { getApiErrorMessage, getDocumentSaveErrorMessage, isDataAccessRefusal } from './apiErrorMessage';
+import enErrors from '../locales/en/errors.json';
+import frErrors from '../locales/fr/errors.json';
+import deErrors from '../locales/de/errors.json';
+import esErrors from '../locales/es/errors.json';
 import { appQueryClient } from '../lib/appQueryClient';
 import { csvMessageText } from '../components/csv/csvMessage';
 import { withCatalogValueName } from './catalogReportMessage';
@@ -61,6 +65,48 @@ describe('getApiErrorMessage', () => {
       .toBe("L'adresse de l'application n'est pas configurée. Demandez à votre administrateur de la renseigner.");
     expect(getApiErrorMessage(refusal(400, 'MICROSOFT_SIGN_IN_NOT_SET_UP', 'Microsoft sign-in is not set up for this workspace.'), fr, 'fallback'))
       .toBe("La connexion avec Microsoft n'est pas configurée pour cet espace de travail.");
+  });
+
+  it('words a taken cost center, account or chart in the language of the screen', () => {
+    const codes = ['COST_CENTER_CODE_TAKEN', 'ACCOUNT_NUMBER_TAKEN', 'ACCOUNT_NUMBER_TAKEN_TARGET', 'COA_CODE_TAKEN'] as const;
+    const files = { en: enErrors, fr: frErrors, de: deErrors, es: esErrors } as const;
+    for (const code of codes) {
+      const english = files.en[code];
+      for (const language of ['en', 'fr', 'de', 'es'] as const) {
+        expect(files[language][code], `${language} ${code}`).toEqual(expect.any(String));
+        expect(files[language][code].trim().length, `${language} ${code}`).toBeGreaterThan(0);
+      }
+      expect(files.fr[code], code).not.toBe(english);
+      expect(files.de[code], code).not.toBe(english);
+      expect(files.es[code], code).not.toBe(english);
+    }
+
+    const refusal = (status: number, code: string, message: string, params?: Record<string, unknown>) => ({
+      response: { status, data: { statusCode: status, code, message, ...(params ? { params } : {}) } },
+    });
+    const fr = i18n.getFixedT('fr');
+    expect(getApiErrorMessage(refusal(400, 'COST_CENTER_CODE_TAKEN', 'A cost center with code DSI-GRP already exists.', { code: 'DSI-GRP' }), fr, 'fallback'))
+      .toBe('Un centre de coûts avec le code DSI-GRP existe déjà.');
+    expect(getApiErrorMessage(refusal(400, 'ACCOUNT_NUMBER_TAKEN', 'An account with this number already exists in the selected Chart of Accounts'), fr, 'fallback'))
+      .toBe('Un compte portant ce numéro existe déjà dans le plan comptable sélectionné.');
+    expect(getApiErrorMessage(refusal(400, 'ACCOUNT_NUMBER_TAKEN_TARGET', 'An account with this number already exists in the target Chart of Accounts'), fr, 'fallback'))
+      .toBe('Un compte portant ce numéro existe déjà dans le plan comptable cible.');
+    expect(getApiErrorMessage(refusal(409, 'COA_CODE_TAKEN', 'A Chart of Accounts with this code already exists'), fr, 'fallback'))
+      .toBe('Un plan comptable avec ce code existe déjà.');
+
+    expect(getApiErrorMessage(refusal(400, 'COST_CENTER_CODE_TAKEN', 'A cost center with code DSI-GRP already exists.', { code: 'DSI-GRP' }), t, 'fallback'))
+      .toBe('A cost center with code DSI-GRP already exists.');
+    expect(getApiErrorMessage(refusal(400, 'ACCOUNT_NUMBER_TAKEN', 'An account with this number already exists in the selected Chart of Accounts'), t, 'fallback'))
+      .toBe('An account with this number already exists in the selected Chart of Accounts');
+    expect(getApiErrorMessage(refusal(400, 'ACCOUNT_NUMBER_TAKEN_TARGET', 'An account with this number already exists in the target Chart of Accounts'), t, 'fallback'))
+      .toBe('An account with this number already exists in the target Chart of Accounts');
+    expect(getApiErrorMessage(refusal(409, 'COA_CODE_TAKEN', 'A Chart of Accounts with this code already exists'), t, 'fallback'))
+      .toBe('A Chart of Accounts with this code already exists');
+
+    expect(getApiErrorMessage(refusal(400, 'COST_CENTER_CODE_TAKEN', 'A cost center with code DSI-GRP already exists.', { code: 'DSI-GRP' }), i18n.getFixedT('de'), 'fallback'))
+      .toBe('Eine Kostenstelle mit dem Code DSI-GRP existiert bereits.');
+    expect(getApiErrorMessage(refusal(400, 'COST_CENTER_CODE_TAKEN', 'A cost center with code DSI-GRP already exists.', { code: 'DSI-GRP' }), i18n.getFixedT('es'), 'fallback'))
+      .toBe('Ya existe un centro de coste con el código DSI-GRP.');
   });
 
   it('translates a repeated data access query in French, with its parameter', () => {
