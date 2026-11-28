@@ -40,7 +40,8 @@ export type EnvKind = 'operator' | 'internal' | 'tooling' | 'build' | 'deprecate
  * - `root-of-trust`: decides who the installation is and whom it talks to;
  * - `security-boundary`: a screen that widened it would contradict itself;
  * - `outside-node`: read by Compose, nginx, PostgreSQL, Node itself, or fixed at build;
- * - `bootstrap`: read at the first start only;
+ * - `bootstrap`: creates what the installation starts with (its workspace, its first
+ *   administrator) and changes nothing once that exists;
  * - `tooling`: development, QA, transition;
  * - `tuning`: fine tuning with no business meaning.
  * `null`: none of the seven; a screen may offer the setting later, the file staying master.
@@ -55,9 +56,13 @@ export type EnvReason =
   | 'tuning';
 
 /**
- * When a new value applies, once the API container has been created again with it:
- * `first-start` (read when the installation starts for the first time only), `restart` (read at
- * start), `next-run` (read at the next run of a scheduled task), `immediate` (read at each use).
+ * When a new value applies. A value set in the file reaches the API when its container is created
+ * again, whatever moment the code reads it at:
+ * - `restart`: the value comes from the file and changes at the restart;
+ * - `first-start`: read only while the thing it creates does not exist yet (the workspace of a
+ *   single-tenant installation); a later change is ignored;
+ * - `next-run` (the next run of a scheduled task) and `immediate` (the next use): for a value a
+ *   screen can change, set by the changes that bring that screen.
  * `null` for a variable the running API does not read (`build`, `internal`).
  */
 export type EnvTakesEffect = 'first-start' | 'restart' | 'next-run' | 'immediate';
@@ -185,8 +190,8 @@ export const ENV_REGISTRY: readonly EnvVariable[] = [
   entry('DEFAULT_TENANT_SLUG', { domain: 'deployment', modes: BOTH, kind: 'operator', reason: 'root-of-trust', default: 'default', example: active('tenant', 'default') }),
   entry('DEFAULT_TENANT_NAME', { domain: 'deployment', modes: ONPREM, kind: 'operator', reason: 'bootstrap', takesEffect: 'first-start', default: 'My Organization', example: active('tenant', 'My Organization') }),
   entry('DEFAULT_TENANT_LANGUAGE', { domain: 'deployment', modes: ONPREM, kind: 'operator', reason: 'bootstrap', takesEffect: 'first-start', default: 'en', example: active('tenant', 'en') }),
-  entry('ADMIN_EMAIL', { domain: 'deployment', modes: BOTH, kind: 'operator', reason: 'bootstrap', takesEffect: 'first-start', required: true, example: active('admin', 'admin@company.com') }),
-  entry('ADMIN_PASSWORD', { domain: 'deployment', modes: BOTH, kind: 'operator', reason: 'bootstrap', takesEffect: 'first-start', required: true, secret: true, example: active('admin', 'ChangeThisPassword123!') }),
+  entry('ADMIN_EMAIL', { domain: 'deployment', modes: BOTH, kind: 'operator', reason: 'bootstrap', required: true, example: active('admin', 'admin@company.com') }),
+  entry('ADMIN_PASSWORD', { domain: 'deployment', modes: BOTH, kind: 'operator', reason: 'bootstrap', required: true, secret: true, example: active('admin', 'ChangeThisPassword123!') }),
   entry('SEED_ADMIN', { domain: 'deployment', modes: CLOUD, kind: 'operator', reason: 'bootstrap', default: 'false' }),
   entry('PLATFORM_ADMIN_HOST', { domain: 'deployment', modes: CLOUD, kind: 'operator', reason: 'root-of-trust' }),
   entry('PLATFORM_ADMIN_EMAILS', { domain: 'deployment', modes: CLOUD, kind: 'operator', reason: 'root-of-trust' }),
@@ -491,8 +496,9 @@ export const ENV_EXAMPLE_SECTIONS: readonly EnvExampleSection[] = [
     'the analytics dimensions the workspace starts with, read at the first start only.',
   ]),
   section('admin', [
-    'These two lines create the first administrator account at the first start. Changing them later',
-    'changes nothing while an active administrator exists.',
+    'These two lines create the first administrator account at the first start, and create or',
+    'restore it at a later start when no active administrator remains. Changing them changes',
+    'nothing while an active administrator exists.',
     'Replace the example password with a value of your own, 12 characters or more',
     '(for example the output of: openssl rand -base64 18). An example value or a shorter one makes',
     "the API print a [SECURITY] warning at each start until the account's password is changed.",

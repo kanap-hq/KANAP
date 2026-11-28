@@ -10,7 +10,7 @@
     },
     "admin": {
       "title": { "en": "ADMIN CREDENTIALS (required)" },
-      "note": { "en": "Read at the first start only. Replace the example password with a value of your own, 12 characters or more." }
+      "note": { "en": "They change nothing while an active administrator exists. Replace the example password with a value of your own, 12 characters or more." }
     },
     "security": {
       "title": { "en": "SECURITY (required)" },
@@ -61,8 +61,8 @@
     "DEFAULT_TENANT_SLUG": { "en": "Short name of the workspace a single-tenant installation serves. Changing it later creates a second, empty workspace." },
     "DEFAULT_TENANT_NAME": { "en": "Name of your organization at the first start. Change it later on the Branding page of the administration." },
     "DEFAULT_TENANT_LANGUAGE": { "en": "Language of the analytics dimensions the workspace starts with (en, fr, de or es), read at the first start only." },
-    "ADMIN_EMAIL": { "en": "Email of the first administrator account, created at the first start." },
-    "ADMIN_PASSWORD": { "en": "Password of the first administrator account, 12 characters or more. An example value makes the API warn at each start until the password is changed." },
+    "ADMIN_EMAIL": { "en": "Email of the first administrator account, created at the first start, and created or restored at a later start when no active administrator remains." },
+    "ADMIN_PASSWORD": { "en": "Password of the first administrator account, 12 characters or more, set when the account is created or has none. An example value makes the API warn at each start until the password is changed." },
     "SEED_ADMIN": { "en": "true creates or checks the administrator account of ADMIN_EMAIL at each start of a multi-tenant installation." },
     "PLATFORM_ADMIN_HOST": { "en": "Host names of the platform console, comma-separated. The first one is the address written in links." },
     "PLATFORM_ADMIN_EMAILS": { "en": "Emails of the platform administrators, comma-separated. Empty: nobody. The * value works in development mode only." },

@@ -567,8 +567,8 @@ DEFAULT_TENANT_NAME=My Organization
 DEFAULT_TENANT_LANGUAGE=en
 
 # ADMIN CREDENTIALS (required)
-# Read at the first start only. Replace the example password with a value of your own, 12 characters
-# or more.
+# They change nothing while an active administrator exists. Replace the example password with a
+# value of your own, 12 characters or more.
 ADMIN_EMAIL=admin@company.com
 ADMIN_PASSWORD=ChangeThisPassword123!
 
