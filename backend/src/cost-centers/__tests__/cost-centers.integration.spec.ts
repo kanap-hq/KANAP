@@ -32,6 +32,25 @@ import {
 // races the locks exist for (reparenting, and a line assignment against a
 // conversion to group).
 
+/** A refusal that names its code, its English sentence and, when it has them, its field and parameters. */
+async function expectCodedRefusal(
+  runner: QueryRunner,
+  expected: { status: number; code: string; message: string; field?: string; params?: Record<string, unknown> },
+  run: () => Promise<unknown>,
+) {
+  const savepoint = `cc_coded_${randomUUID().replace(/-/g, '')}`;
+  await runner.query(`SAVEPOINT ${savepoint}`);
+  const error = await run().then(() => null, (caught: unknown) => caught) as { getStatus?: () => number; getResponse?: () => unknown } | null;
+  await runner.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+  assert.ok(error instanceof BadRequestException, `${expected.code}: refused`);
+  assert.equal(error.getStatus(), expected.status, `${expected.code}: status`);
+  const body = error.getResponse() as { code?: string; message?: string; field?: string; params?: unknown };
+  assert.equal(body.code, expected.code, expected.message);
+  assert.equal(body.message, expected.message, expected.code);
+  assert.equal(body.field, expected.field, `${expected.code}: field`);
+  assert.deepEqual(body.params, expected.params, `${expected.code}: params`);
+}
+
 async function seedBasics(runner: QueryRunner, tag: string) {
   const tenantId = await seedTenant(runner, tag);
   const paris = await seedCompany(runner, tenantId, 'Test company Paris');
@@ -263,6 +282,22 @@ async function testCodes() {
     assert.equal(node.name, 'Infrastructure');
     await expectRefused(runner, /A cost center with code it-100 already exists/, () =>
       svc.create({ code: 'it-100', kind: 'group', name: 'Duplicate' }, ctx));
+    // The same refusal, on create and on a code change, carries a code the screen translates.
+    await expectCodedRefusal(runner, {
+      status: 400,
+      code: 'COST_CENTER_CODE_TAKEN',
+      message: 'A cost center with code it-100 already exists.',
+      field: 'code',
+      params: { code: 'it-100' },
+    }, () => svc.create({ code: 'it-100', kind: 'group', name: 'Duplicate again' }, ctx));
+    const other = await svc.create({ code: 'IT-200', kind: 'group', name: 'Other' }, ctx);
+    await expectCodedRefusal(runner, {
+      status: 400,
+      code: 'COST_CENTER_CODE_TAKEN',
+      message: 'A cost center with code IT-100 already exists.',
+      field: 'code',
+      params: { code: 'IT-100' },
+    }, () => svc.update(other.id, { code: 'IT-100' }, ctx));
     await expectRefused(runner, /Code is required/, () => svc.create({ code: '   ', kind: 'group', name: 'Blank' }, ctx));
     await expectRefused(runner, /Code must be 50 characters or fewer/, () =>
       svc.create({ code: 'X'.repeat(51), kind: 'group', name: 'Long' }, ctx));
