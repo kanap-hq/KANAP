@@ -1202,7 +1202,7 @@
   },
   "enumEditor": {
     "name": "Name",
-    "noLongerOffered": "No longer offered",
+    "noLongerOffered": "Stop offering",
     "remove": "Remove",
     "locked": "Built-in",
     "protectedHint": "Built-in value: it can be retired but not removed.",
@@ -1218,7 +1218,7 @@
     "nameMatchesCode": "This name matches another value",
     "noComma": "Commas and semicolons are not allowed",
     "usageTitle": "Value still in use",
-    "usageIntro": "\"{{name}}\" cannot be removed while records use it. Mark it as no longer offered instead: it stays on existing records and is no longer proposed.",
+    "usageIntro": "\"{{name}}\" cannot be deleted while records use it. Tick \"Stop offering\" instead: it stays on existing records and is no longer offered.",
     "usageView": "View",
     "usageChecking": "Checking usage…",
     "usageFailed": "Usage could not be checked",
@@ -1279,7 +1279,7 @@
     }
   },
   "settingsSection": {
-    "addItem": "Add item",
+    "addItem": "Add an item",
     "saveChanges": "Save changes"
   },
   "contacts": {

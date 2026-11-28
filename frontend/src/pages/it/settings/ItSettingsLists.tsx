@@ -3,19 +3,25 @@ import { Box, Button, Stack, Typography } from '@mui/material';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
-  AssetKindEditor,
-  EntityEditor,
   EnumEditor,
-  HostingTypeEditor,
-  ServerRoleEditor,
+  graphTierColumn,
+  hostingCategoryColumn,
+  nameColumn,
+  physicalColumn,
+  retiredColumn,
+  shownCatalogName,
   SettingsControls,
   SettingsGroup,
   SettingsPage,
   SettingsSection,
   useSettingsAutosave,
 } from '../../../components/settings';
-import type { AssetKindItem, EntityItem, HostingTypeItem, ServerRoleItem } from '../../../components/settings';
-import { catalogListIssues } from '../../../components/settings/catalogValidation';
+import type { EnumEditorColumn, EnumItem } from '../../../components/settings';
+import { catalogEditorIssues, catalogListIssues } from '../../../components/settings/catalogValidation';
+import { useCatalogLocale } from '../../../hooks/useLocalizedTaskTypes';
+import { catalogDefaults } from '../../../utils/itOpsSettingsLocalization';
+import type { CatalogLocale } from '../../../services/itOpsSettings';
+import type { TFunction } from 'i18next';
 import { useKanapDialogs } from '../../../components/design';
 import { useNotify } from '../../../components/notify/NotifyProvider';
 import { useAuth } from '../../../auth/AuthContext';
@@ -23,7 +29,7 @@ import useItOpsSettings from '../../../hooks/useItOpsSettings';
 import { useLocationOptions } from '../../../hooks/useLocationOptions';
 import { autosaveErrorMessage, isTransientSaveFailure } from '../../../hooks/useAutosave';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { resetItOpsSettingsToDefaults, updateItOpsSettings, type AdminZoneOption, type ItOpsEnumOption, type ItOpsSettings } from '../../../services/itOpsSettings';
+import { resetItOpsSettingsToDefaults, updateItOpsSettings, type AdminZoneOption, type ItOpsSettings } from '../../../services/itOpsSettings';
 import ClassificationCatalogSettings from '../components/ClassificationCatalogSettings';
 import { AdminZonesEditor } from './AdminZonesEditor';
 import { ConnectionTypesEditor } from './ConnectionTypesEditor';
@@ -106,14 +112,39 @@ const HINTED_LISTS: ReadonlySet<ListId> = new Set<ListId>([
   'adminZones', 'domains', 'entities', 'hostingTypes', 'lifecycleStates', 'serverKinds', 'serverRoles', 'technologyFamilies',
 ]);
 
+/** The lists of the list editor: every list of values but the custom ones. */
+const EDITOR_LISTS: ReadonlySet<ListId> = new Set(enumSections.filter((section) => section.kind !== 'adminZone').map((section) => section.id));
+
 /**
  * The page's own checks before a list is sent: every name given and valid (unique, not another
- * row's code, no comma where the CSV serializes the list with commas); a subnet needs its CIDR.
+ * row's code, no comma where the CSV serializes the list with commas); in the list editor, no two
+ * values shown with the same name in the person's language either. A subnet needs its CIDR.
  */
-function listReady(state: SettingsState, id: ListId, rows: any[]): boolean {
+function listReady(state: SettingsState, id: ListId, rows: any[], locale: CatalogLocale): boolean {
   if (id === 'subnets') return rows.every((row) => String(row.cidr || '').trim() !== '');
   const skipCodes = new Set((state.baseline?.lockedCodes?.[id] || []).map((code) => code.toLowerCase()));
-  return catalogListIssues(rows, { forbidComma: id === 'accessMethods', skipCodes }).size === 0;
+  const options = { forbidComma: id === 'accessMethods', skipCodes };
+  if (!EDITOR_LISTS.has(id)) return catalogListIssues(rows, options).size === 0;
+  const defaults = catalogDefaults(id as EnumListId);
+  return catalogEditorIssues(rows, (row) => shownCatalogName(row as EnumItem, locale, defaults), options).size === 0;
+}
+
+/** The columns of a list in the list editor: the name, the list's own columns, then "Stop offering". */
+function editorColumns(kind: EnumSectionConfig['kind'], t: TFunction, placeholder?: string): EnumEditorColumn<any>[] | undefined {
+  if (kind === 'hosting') return [nameColumn(t, '35%', placeholder), hostingCategoryColumn(t, '35%'), retiredColumn(t, '15%')];
+  if (kind === 'serverKind') return [nameColumn(t, '45%', placeholder), physicalColumn(t, '15%'), retiredColumn(t, '20%')];
+  if (kind === 'serverRole') return [nameColumn(t, '40%', placeholder), graphTierColumn(t, 'center', '25%'), retiredColumn(t, '15%')];
+  if (kind === 'entity') return [nameColumn(t, '40%', placeholder), graphTierColumn(t, 'top', '25%'), retiredColumn(t, '15%')];
+  return undefined;
+}
+
+/** The other fields of a new row of a list. */
+function newRowOf(kind: EnumSectionConfig['kind']): Record<string, unknown> {
+  if (kind === 'hosting') return { category: 'cloud' };
+  if (kind === 'serverKind') return { is_physical: false };
+  if (kind === 'serverRole') return { graph_tier: 'center' };
+  if (kind === 'entity') return { graph_tier: 'top' };
+  return {};
 }
 
 type ItSettingsListsProps = {
@@ -132,6 +163,8 @@ type ItSettingsListsProps = {
  */
 export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItSettingsListsProps) {
   const { t } = useTranslation(['it', 'common']);
+  const { t: tc } = useTranslation('common');
+  const locale = useCatalogLocale();
   const listHint = (id: ListId) => (HINTED_LISTS.has(id) ? t(listDescriptionKey(id)) : undefined);
   const { hasLevel } = useAuth();
   const readOnly = !hasLevel('settings', 'admin');
@@ -161,7 +194,7 @@ export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItS
   // list then sends the codes the first one brought back.
   const saveOf = React.useCallback((id: ListId) => async () => {
     const rows = sendableRows(latestStateRef.current, id);
-    if (!listReady(latestStateRef.current, id, rows) || sameAsStored(latestStateRef.current, id, rows)) return;
+    if (!listReady(latestStateRef.current, id, rows, locale) || sameAsStored(latestStateRef.current, id, rows)) return;
     try {
       const next = await updateItOpsSettings({ [id]: stripLocalIds(rows) } as Partial<ItOpsSettings>);
       queryClient.setQueryData(['it-ops-settings'], next);
@@ -170,7 +203,7 @@ export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItS
       if (!isTransientSaveFailure(error)) dispatch({ type: 'revertList', id });
       throw error;
     }
-  }, [dispatch, queryClient]);
+  }, [dispatch, locale, queryClient]);
 
   /** A list changed: it waits to be sent (a text) or goes at once (a choice), unless the checks refuse it. */
   const changeList = React.useCallback((id: ListId, items: any[], how: 'type' | 'choose' = 'type') => {
@@ -178,10 +211,10 @@ export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItS
     dispatch({ type: 'setList', id, items });
     const current = latestStateRef.current;
     const rows = sendableRows(current, id);
-    const save = listReady(current, id, rows) && !sameAsStored(current, id, rows) ? saveOf(id) : null;
+    const save = listReady(current, id, rows, locale) && !sameAsStored(current, id, rows) ? saveOf(id) : null;
     if (how === 'choose') autosave.choose(id, save);
     else autosave.type(id, save);
-  }, [autosave, dispatch, readOnly, saveOf]);
+  }, [autosave, dispatch, locale, readOnly, saveOf]);
 
   const refusal = (id: ListId) => {
     const error = autosave.errorOf(id);
@@ -196,14 +229,6 @@ export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItS
     protectedCodes: state.baseline?.protectedCodes?.[id],
     readOnly,
   });
-
-  const makeEmptyEnumRow = (id: EnumListId): ItOpsEnumOption => {
-    if (id === 'hostingTypes') return { code: '', label: '', category: 'cloud', deprecated: false };
-    if (id === 'serverKinds') return { code: '', label: '', is_physical: false, deprecated: false } as any;
-    if (id === 'serverRoles') return { code: '', label: '', graph_tier: 'center', deprecated: false } as any;
-    if (id === 'entities') return { code: '', label: '', graph_tier: 'top', deprecated: false } as any;
-    return { code: '', label: '', deprecated: false };
-  };
 
   // Restore the default lists: what waits is sent first, then every list takes the server's answer.
   const dialogs = useKanapDialogs();
@@ -303,26 +328,32 @@ export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItS
                   const items = state.enums[id] || [];
                   const exampleKey = nameExampleKey[id];
                   const namePlaceholder = exampleKey ? t(`pages.settings.placeholders.${exampleKey}`) : undefined;
-                  const onChange = (next: any[]) => changeList(id, withLocalIds(next, id));
+
+                  if (enumSection.kind === 'adminZone') {
+                    return (
+                      <SettingsSection key={id} title={enumSection.title} description={t(listUsageKey(id))} hint={listHint(id)}>
+                        <SettingsControls onAdd={() => addOnTop(id, { code: '', label: '', deprecated: false })} readOnly={readOnly} />
+                        <Box onBlur={autosave.commit}>
+                          <AdminZonesEditor items={items as AdminZoneOption[]} onChange={(next) => changeList(id, withLocalIds(next, id))} readOnly={readOnly} />
+                        </Box>
+                        {refusal(id)}
+                      </SettingsSection>
+                    );
+                  }
 
                   return (
                     <SettingsSection key={id} title={enumSection.title} description={t(listUsageKey(id))} hint={listHint(id)}>
-                      <SettingsControls onAdd={() => addOnTop(id, makeEmptyEnumRow(id))} readOnly={readOnly} />
-                      <Box onBlur={autosave.commit}>
-                        {enumSection.kind === 'hosting' ? (
-                          <HostingTypeEditor items={items as HostingTypeItem[]} onChange={onChange} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(id)} />
-                        ) : enumSection.kind === 'serverKind' ? (
-                          <AssetKindEditor items={items as AssetKindItem[]} onChange={onChange} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(id)} />
-                        ) : enumSection.kind === 'serverRole' ? (
-                          <ServerRoleEditor items={items as ServerRoleItem[]} onChange={onChange} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(id)} />
-                        ) : enumSection.kind === 'adminZone' ? (
-                          <AdminZonesEditor items={items as AdminZoneOption[]} onChange={onChange} readOnly={readOnly} />
-                        ) : enumSection.kind === 'entity' ? (
-                          <EntityEditor items={items as EntityItem[]} onChange={onChange} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(id)} />
-                        ) : (
-                          <EnumEditor items={items} onChange={onChange} hideAddButton namePlaceholder={namePlaceholder} forbidComma={id === 'accessMethods'} {...editorGuards(id)} />
-                        )}
-                      </Box>
+                      <EnumEditor
+                        items={items}
+                        onChange={(next, how) => changeList(id, withLocalIds(next, id), how)}
+                        onCommit={autosave.commit}
+                        columns={editorColumns(enumSection.kind, tc, namePlaceholder)}
+                        newRow={() => newRowOf(enumSection.kind)}
+                        namePlaceholder={namePlaceholder}
+                        defaults={catalogDefaults(id)}
+                        forbidComma={id === 'accessMethods'}
+                        {...editorGuards(id)}
+                      />
                       {refusal(id)}
                     </SettingsSection>
                   );

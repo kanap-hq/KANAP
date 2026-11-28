@@ -17,17 +17,21 @@ export type {
 export { useSettingsAutosave, SETTINGS_TEXT_DELAY_MS } from './useSettingsAutosave';
 export type { SettingsAutosave, SettingSave } from './useSettingsAutosave';
 
-export { EnumEditor, HostingTypeEditor, AssetKindEditor, ServerRoleEditor, EntityEditor } from './EnumEditor';
+export {
+  EnumEditor,
+  nameColumn,
+  retiredColumn,
+  hostingCategoryColumn,
+  physicalColumn,
+  graphTierColumn,
+  shownCatalogName,
+  renamedCatalogItem,
+} from './EnumEditor';
 export type {
   EnumItem,
+  EnumEditorCell,
+  EnumEditorChange,
   EnumEditorColumn,
   EnumEditorProps,
-  HostingTypeItem,
-  HostingTypeEditorProps,
-  AssetKindItem,
-  AssetKindEditorProps,
-  ServerRoleItem,
-  ServerRoleEditorProps,
-  EntityItem,
-  EntityEditorProps,
+  GraphTier,
 } from './EnumEditor';

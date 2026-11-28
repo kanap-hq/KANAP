@@ -1,12 +1,13 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import '../../i18n';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
-import EnumEditor, { AssetKindEditor, HostingTypeEditor } from './EnumEditor';
-import { catalogListIssues } from './catalogValidation';
+import { catalogDefaults } from '../../utils/itOpsSettingsLocalization';
+import EnumEditor, { nameColumn, physicalColumn, retiredColumn, type EnumItem } from './EnumEditor';
+import { catalogEditorIssues, catalogListIssues } from './catalogValidation';
 
 const serviceMocks = vi.hoisted(() => ({ fetchCatalogUsage: vi.fn() }));
 vi.mock('../../services/itOpsSettings', async (importOriginal) => ({
@@ -20,20 +21,31 @@ const items = [
   { code: 'lan', label: 'LAN', deprecated: false },
 ];
 
-function renderEditor(props: Partial<React.ComponentProps<typeof EnumEditor>> = {}) {
+const segments = [
+  { code: 'guest', label: 'Guest', deprecated: false },
+  { code: 'wifi', label: 'Wi-Fi', deprecated: false },
+];
+
+const tc = (key: string) => i18n.t(`common:${key}`);
+
+function renderEditor(props: Partial<React.ComponentProps<typeof EnumEditor<any>>> = {}) {
   const onChange = vi.fn();
-  render(
+  const onCommit = vi.fn();
+  const view = render(
     <MemoryRouter>
       <ThemeProvider theme={createAppTheme('light')}>
-        <EnumEditor items={items} onChange={onChange} usageList="applicationCategories" hideAddButton {...props} />
+        <EnumEditor items={items} onChange={onChange} onCommit={onCommit} usageList="applicationCategories" {...props} />
       </ThemeProvider>
     </MemoryRouter>,
   );
-  return { onChange };
+  return { onChange, onCommit, view };
 }
 
+const lastRows = (onChange: ReturnType<typeof vi.fn>) => onChange.mock.calls[onChange.mock.calls.length - 1][0];
+const lastHow = (onChange: ReturnType<typeof vi.fn>) => onChange.mock.calls[onChange.mock.calls.length - 1][1];
+
 describe('catalogListIssues', () => {
-  it('flags empty, duplicate, code-colliding and comma names, and skips server-managed rows', () => {
+  it('flags empty, duplicate, code-colliding and comma names, and keeps the names of server-managed rows taken', () => {
     const issues = catalogListIssues([
       { code: 'a', label: 'Same' }, { code: 'b', label: ' same ' }, { code: 'c', label: '' },
       { code: 'high', label: 'High' }, { code: 'd', label: 'high' }, { code: 'e', label: 'Web, mobile' }, { code: 'locked', label: '' },
@@ -41,15 +53,25 @@ describe('catalogListIssues', () => {
     expect([...issues.entries()].sort()).toEqual([[0, 'nameExists'], [1, 'nameExists'], [2, 'nameRequired'], [3, 'nameExists'], [4, 'nameExists'], [5, 'noComma']]);
     expect(catalogListIssues([{ code: 'high', label: 'Élevée' }, { code: 'custom', label: 'high' }]).get(1)).toBe('nameMatchesCode');
     expect(catalogListIssues([{ code: 'high', label: 'high' }]).size).toBe(0);
+    // A built-in status still owns its name: a value named the same is flagged, and so is the status.
+    const locked = catalogListIssues([{ code: 'active', label: 'Active' }, { code: '', label: 'active' }], { skipCodes: new Set(['active']) });
+    expect([...locked.entries()].sort()).toEqual([[0, 'nameExists'], [1, 'nameExists']]);
+  });
+
+  it('flags two values shown with the same name in the language of the person', () => {
+    const rows = [{ code: 'guest', label: 'Guest' }, { code: '', label: 'Invités' }, { code: 'lan', label: 'LAN' }];
+    const shown = (row: { code?: string; label?: string }) => (row.code === 'guest' ? 'Invités' : row.label ?? '');
+    expect([...catalogEditorIssues(rows, shown).entries()].sort()).toEqual([[0, 'nameExists'], [1, 'nameExists']]);
+    expect(catalogEditorIssues(rows, (row) => row.label ?? '').size).toBe(0);
   });
 });
 
 describe('EnumEditor', () => {
   beforeEach(() => { vi.clearAllMocks(); });
+  afterEach(async () => { await act(async () => { await i18n.changeLanguage('en'); }); });
 
-  it('shows names without any code field and flags a duplicate name', () => {
+  it('shows names without any code field and flags a duplicate name on both rows', () => {
     renderEditor();
-    expect(screen.queryByPlaceholderText('internal_code')).not.toBeInTheDocument();
     expect(screen.queryByText('Code')).not.toBeInTheDocument();
     const names = screen.getAllByRole('textbox', { name: 'Name' });
     expect(names).toHaveLength(3);
@@ -57,89 +79,133 @@ describe('EnumEditor', () => {
     expect(screen.getAllByText('This name already exists')).toHaveLength(2);
   });
 
-  it('shows the catalog name example and no shared tier example', () => {
-    renderEditor({ namePlaceholder: 'e.g., Productivity' });
-    expect(screen.getAllByRole('textbox', { name: 'Name' })[0]).toHaveAttribute('placeholder', 'e.g., Productivity');
-    expect(screen.queryByPlaceholderText('e.g., Tier 1')).not.toBeInTheDocument();
-    cleanup();
-    render(
+  it('marks Name as required, shows the example and no helper under an empty name', () => {
+    renderEditor({ items: [{ code: '', label: '', deprecated: false }], namePlaceholder: 'e.g., Productivity' });
+    expect(screen.getByRole('columnheader', { name: /Name/ })).toHaveTextContent('*');
+    expect(screen.queryByText('A name is required')).not.toBeInTheDocument();
+    const name = screen.getByRole('textbox', { name: 'Name' });
+    expect(name).toBeRequired();
+    expect(name).toHaveAttribute('placeholder', 'e.g., Productivity');
+  });
+
+  it('shows a shipped value by its name in the language of the person, and sends it back with its base name', async () => {
+    await act(async () => { await i18n.changeLanguage('fr'); });
+    const { onChange } = renderEditor({ items: segments, defaults: catalogDefaults('networkSegments'), usageList: 'networkSegments' });
+    const names = screen.getAllByRole('textbox', { name: tc('enumEditor.name') });
+    expect(names.map((field) => (field as HTMLInputElement).value)).toEqual(['Invités', 'Wi-Fi']);
+    fireEvent.click(screen.getByRole('checkbox', { name: `${tc('enumEditor.noLongerOffered')} Wi-Fi` }));
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(lastRows(onChange)[0]).toMatchObject({ code: 'guest', label: 'Guest' });
+    expect(lastRows(onChange)[0].translations).toBeUndefined();
+    expect(lastHow(onChange)).toBe('choose');
+  });
+
+  it('makes a retyped name the base name and drops only the translation typed in the language of the person', async () => {
+    await act(async () => { await i18n.changeLanguage('fr'); });
+    const row = { code: 'guest', label: 'Guest', deprecated: false, translations: { fr: { label: 'Visiteurs' }, de: { label: 'Besucher' } } };
+    const { onChange } = renderEditor({ items: [row], defaults: catalogDefaults('networkSegments') });
+    const name = screen.getByRole('textbox', { name: tc('enumEditor.name') });
+    expect(name).toHaveValue('Visiteurs');
+    fireEvent.change(name, { target: { value: 'Réseau invités' } });
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(lastRows(onChange)[0]).toMatchObject({ code: 'guest', label: 'Réseau invités', translations: { de: { label: 'Besucher' } } });
+    expect(lastRows(onChange)[0].translations.fr).toBeUndefined();
+    expect(lastHow(onChange)).toBe('type');
+  });
+
+  it('flags an added value named like the shipped translation of another one', async () => {
+    await act(async () => { await i18n.changeLanguage('fr'); });
+    renderEditor({ items: [...segments, { code: '', label: 'Invités', deprecated: false }], defaults: catalogDefaults('networkSegments') });
+    expect(screen.getAllByText(tc('enumEditor.nameExists'))).toHaveLength(2);
+  });
+
+  it('previews the shipped translation in the dialog and stores a typed one, which darkens the icon', async () => {
+    const { onChange, view } = renderEditor({ items: segments, defaults: catalogDefaults('networkSegments') });
+    const icon = screen.getByRole('button', { name: 'Translate Guest' });
+    const plain = getComputedStyle(icon).color;
+    fireEvent.click(icon);
+    const french = await screen.findByRole('textbox', { name: 'Name Français' });
+    expect(french).toHaveAttribute('placeholder', 'Shown: Invités');
+    fireEvent.change(french, { target: { value: 'Visiteurs' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(lastRows(onChange)[0]).toMatchObject({ code: 'guest', label: 'Guest', translations: { fr: { label: 'Visiteurs' } } });
+    expect(lastHow(onChange)).toBe('choose');
+    view.rerender(
       <MemoryRouter>
         <ThemeProvider theme={createAppTheme('light')}>
-          <HostingTypeEditor items={[{ code: 'colocation', label: 'Colocation' }]} onChange={() => undefined} namePlaceholder="e.g., Colocation" hideAddButton />
+          <EnumEditor items={lastRows(onChange)} onChange={onChange} defaults={catalogDefaults('networkSegments')} />
         </ThemeProvider>
       </MemoryRouter>,
     );
-    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveAttribute('placeholder', 'e.g., Colocation');
-    expect(screen.queryByPlaceholderText('e.g., Tier 1')).not.toBeInTheDocument();
+    expect(getComputedStyle(screen.getByRole('button', { name: 'Translate Guest' })).color).not.toBe(plain);
+    expect(getComputedStyle(screen.getByRole('button', { name: 'Translate Wi-Fi' })).color).toBe(plain);
   });
 
-  it('marks Name as required and does not show a helper under an empty name', () => {
-    renderEditor({ items: [{ code: '', label: '', deprecated: false }] });
-    expect(screen.getByRole('columnheader', { name: /Name/ })).toHaveTextContent('*');
-    expect(screen.queryByText('A name is required')).not.toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Name' })).toBeRequired();
+  it('adds a row at the bottom with the cursor in its name, and commits when a field is left', async () => {
+    const { onChange, onCommit } = renderEditor({ newRow: () => ({ is_physical: true }) as Partial<EnumItem> });
+    fireEvent.click(screen.getByRole('button', { name: 'Add an item' }));
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(lastRows(onChange).map((row: any) => row.code)).toEqual(['analytics', 'security', 'lan', '']);
+    expect(lastRows(onChange)[3]).toMatchObject({ label: '', deprecated: false, is_physical: true });
+    const names = screen.getAllByRole('textbox', { name: 'Name' });
+    await waitFor(() => expect(names[3]).toHaveFocus());
+    fireEvent.blur(names[3]);
+    expect(onCommit).toHaveBeenCalled();
   });
 
-  it('removes an unused value directly and offers "no longer offered" for a used one', async () => {
+  it('removes an unused value directly and offers to stop offering a used one', async () => {
     serviceMocks.fetchCatalogUsage.mockResolvedValueOnce({ total: 0, usage: [] });
     const { onChange } = renderEditor();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[2]);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete LAN' }));
     await waitFor(() => expect(onChange).toHaveBeenCalled());
-    expect(onChange.mock.calls[0][0].map((row: any) => row.code)).toEqual(['analytics', 'security']);
+    expect(lastRows(onChange).map((row: any) => row.code)).toEqual(['analytics', 'security']);
+    expect(lastHow(onChange)).toBe('choose');
     expect(serviceMocks.fetchCatalogUsage).toHaveBeenCalledWith('applicationCategories', { code: 'lan' });
 
     serviceMocks.fetchCatalogUsage.mockResolvedValueOnce({ total: 3, usage: [{ record: 'applications', count: 3, listPath: '/it/applications?filters=x' }] });
-    fireEvent.click(screen.getAllByRole('button', { name: 'Remove' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Analytics' }));
     expect(await screen.findByText('Value still in use')).toBeInTheDocument();
     expect(screen.getByText('3 applications')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View' })).toHaveAttribute('href', '/it/applications?filters=x');
-    fireEvent.click(screen.getByRole('button', { name: 'No longer offered' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Stop offering' }));
     await waitFor(() => expect(onChange).toHaveBeenCalledTimes(2));
-    const retired = onChange.mock.calls[1][0].find((row: any) => row.code === 'analytics');
-    expect(retired.deprecated).toBe(true);
-    expect(onChange.mock.calls[1][0]).toHaveLength(2);
+    expect(lastRows(onChange).find((row: any) => row.code === 'analytics').deprecated).toBe(true);
+    expect(lastRows(onChange)).toHaveLength(2);
   });
 
-  it('keeps locked rows read-only and protected rows without a remove action', () => {
+  it('shows a built-in value as text and keeps protected values without a delete action', () => {
     renderEditor({ lockedCodes: ['analytics'], protectedCodes: ['lan'] });
-    expect(screen.getAllByRole('textbox', { name: 'Name' })[0]).toBeDisabled();
-    expect(screen.getAllByRole('textbox', { name: 'Name' })[2]).toBeEnabled();
-    expect(screen.getAllByRole('button', { name: 'Remove' })).toHaveLength(1);
+    expect(screen.getAllByRole('textbox', { name: 'Name' })).toHaveLength(2);
+    expect(screen.getByText('Analytics')).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Stop offering Analytics' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Translate Analytics' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Delete / })).toHaveLength(1);
     expect(screen.getAllByText('Built-in')).toHaveLength(2);
   });
 
-  it('opens the translations dialog for a saved row and stores the result on the row', async () => {
-    const { onChange } = renderEditor();
-    fireEvent.click(screen.getByRole('button', { name: 'Translate Analytics' }));
-    fireEvent.change(await screen.findByRole('textbox', { name: 'Name Français' }), { target: { value: 'Analytique' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  it('declares extra columns, and saves a ticked box at once', async () => {
+    const t = i18n.getFixedT('en', 'common');
+    const { onChange } = renderEditor({
+      items: [{ code: 'vm', label: 'Virtual machine', is_physical: false, deprecated: false }],
+      columns: [nameColumn(t, '50%'), physicalColumn(t), retiredColumn(t)],
+      protectedCodes: ['vm'],
+    });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Physical Virtual machine' }));
     await waitFor(() => expect(onChange).toHaveBeenCalled());
-    expect(onChange.mock.calls[0][0][0]).toMatchObject({ code: 'analytics', label: 'Analytics', translations: { fr: { label: 'Analytique' } } });
+    expect(lastRows(onChange)[0].is_physical).toBe(true);
+    expect(lastHow(onChange)).toBe('choose');
+    expect(screen.queryByRole('button', { name: /^Delete / })).not.toBeInTheDocument();
   });
 
-  it('locks every field and hides add, remove and translate when read-only', () => {
-    renderEditor({ readOnly: true, hideAddButton: false });
+  it('locks every field and hides add, delete and translate for a reader', () => {
+    renderEditor({ readOnly: true });
     const fields = [...screen.getAllByRole('textbox'), ...screen.getAllByRole('checkbox')];
     expect(fields.length).toBeGreaterThan(0);
     fields.forEach((field) => expect(field).toBeDisabled());
-    expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Delete / })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Translate/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Add value' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add an item' })).not.toBeInTheDocument();
     expect(screen.queryByText('Built-in')).not.toBeInTheDocument();
-  });
-
-  it('derived editors expose their extra columns and pass the guards through', () => {
-    const onChange = vi.fn();
-    render(
-      <MemoryRouter>
-        <ThemeProvider theme={createAppTheme('light')}>
-          <AssetKindEditor items={[{ code: 'vm', label: 'Virtual machine', is_physical: false }]} onChange={onChange} protectedCodes={['vm']} hideAddButton />
-        </ThemeProvider>
-      </MemoryRouter>,
-    );
-    expect(screen.queryByText('Code')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Physical Virtual machine' }));
-    expect(onChange.mock.calls[0][0][0].is_physical).toBe(true);
-    expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
   });
 });

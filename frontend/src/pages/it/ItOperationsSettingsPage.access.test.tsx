@@ -62,7 +62,7 @@ vi.mock('./NetboxSyncPage', () => ({
   NetboxSyncPanel: () => <div>netbox panel</div>,
 }));
 
-const WRITE_BUTTONS = ['Add item', 'Remove', 'Edit catalog', 'Save changes', 'Add level', 'Move up', 'Move down', 'Drag to reorder', 'Add value'];
+const WRITE_BUTTONS = ['Add an item', 'Remove', 'Edit catalog', 'Save changes', 'Add level', 'Move up', 'Move down', 'Drag to reorder', 'Add value'];
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -120,6 +120,7 @@ describe('IT settings write access', () => {
       expect(screen.queryAllByRole('button', { name })).toHaveLength(0);
     });
     expect(screen.queryAllByRole('button', { name: /Translate/ })).toHaveLength(0);
+    expect(screen.queryAllByRole('button', { name: /^Delete / })).toHaveLength(0);
 
     const controls = fields();
     expect(controls.length).toBeGreaterThan(0);
@@ -138,8 +139,9 @@ describe('IT settings write access', () => {
     expect(screen.queryByText('Critical, High')).not.toBeInTheDocument();
     expandEveryList();
 
-    expect(screen.getAllByRole('button', { name: 'Add item' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Add an item' }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: 'Remove' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Delete Analytics' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Drag to reorder' }).length).toBeGreaterThan(0);
     expect(screen.queryAllByRole('button', { name: 'Save changes' })).toHaveLength(0);
 
@@ -148,6 +150,8 @@ describe('IT settings write access', () => {
     expect(screen.getByDisplayValue('Analytics')).toBeEnabled();
     expect(screen.getByDisplayValue('Corp')).toBeEnabled();
     expect(screen.getByDisplayValue('Tier 0')).toBeEnabled();
-    expect(screen.getByDisplayValue('Proposed')).toBeDisabled();
+    // A built-in lifecycle status is a line of text.
+    expect(screen.getByText('Proposed')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Proposed')).not.toBeInTheDocument();
   });
 });
