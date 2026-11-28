@@ -175,7 +175,7 @@ async function testWritesAuditAndLocks(seeded: Seeded) {
 
     const empty = await service.getState('ai', manager);
     assert.equal(await rows(), 0, 'reading creates no row');
-    assert.deepEqual(empty.settings.web_search_api_key, { has_value: false, source: 'default', locked: false, file_unreadable: false });
+    assert.deepEqual(empty.settings.web_search_api_key, { has_value: false, stored_unreadable: false, source: 'default', locked: false, file_unreadable: false });
     assert.deepEqual(empty.settings.chat_max_tokens, {
       value: 16384, default: 16384, source: 'default', locked: false, file_unreadable: false, min: 1, max: 2147483647,
     });
@@ -185,7 +185,7 @@ async function testWritesAuditAndLocks(seeded: Seeded) {
     assert.equal(await rows(), 1);
     assert.equal((created.settings.chat_max_tokens as any).value, 4096);
     assert.equal(created.settings.chat_max_tokens.source, 'database');
-    assert.deepEqual(created.settings.web_search_api_key, { has_value: true, source: 'database', locked: false, file_unreadable: false });
+    assert.deepEqual(created.settings.web_search_api_key, { has_value: true, stored_unreadable: false, source: 'database', locked: false, file_unreadable: false });
     assert.equal(snapshot.value(AI_INSTALLATION_DOMAIN, 'web_search_api_key'), null, 'the snapshot waits for the commit');
     const [stored] = await runner.query(`SELECT web_search_api_key_encrypted AS cipher FROM installation_ai_settings`);
     assert.ok(stored.cipher && !String(stored.cipher).includes(BRAVE_KEY), 'the key is stored encrypted');
@@ -419,6 +419,47 @@ async function testSnapshotFollowsTheCommit(seeded: Seeded) {
 }
 
 /**
+ * A key stored under another encryption key than today's: the state says a value is stored that
+ * cannot be read (`stored_unreadable`), without counting it as set; a new key or a clear works,
+ * and the audit says a key was stored before.
+ */
+async function testUnreadableStoredKey(seeded: Seeded) {
+  const { service } = services();
+  const runner = await begin(seeded.tenantId);
+  try {
+    const context = { manager: runner.manager, userId: seeded.userId };
+    await service.update('ai', { web_search_api_key: BRAVE_KEY }, context);
+    process.env.AI_SETTINGS_ENCRYPTION_SECRET = `${SECRET}-other`;
+    const state = await service.getState('ai', runner.manager);
+    assert.deepEqual(state.settings.web_search_api_key, {
+      has_value: false, stored_unreadable: true, source: 'default', locked: false, file_unreadable: false,
+    }, 'a stored key that cannot be read is said');
+
+    const replaced = await service.update('ai', { web_search_api_key: 'replacement-key' }, context);
+    assert.deepEqual(replaced.settings.web_search_api_key, {
+      has_value: true, stored_unreadable: false, source: 'database', locked: false, file_unreadable: false,
+    }, 'a new key is stored under the encryption key of today');
+
+    process.env.AI_SETTINGS_ENCRYPTION_SECRET = SECRET;
+    const unreadableAgain = await service.getState('ai', runner.manager);
+    assert.equal((unreadableAgain.settings.web_search_api_key as any).stored_unreadable, true, 'the former key cannot read it');
+    const cleared = await service.update('ai', { web_search_api_key: null }, context);
+    assert.deepEqual(cleared.settings.web_search_api_key, {
+      has_value: false, stored_unreadable: false, source: 'default', locked: false, file_unreadable: false,
+    }, 'cleared');
+
+    const entries = await auditEntries(runner, seeded.tenantId);
+    assert.deepEqual(entries.slice(-2).map((e: any) => [e.before_json, e.after_json]), [
+      [{ web_search_key_set: true }, { web_search_key_set: true }],
+      [{ web_search_key_set: true }, { web_search_key_set: false }],
+    ], 'the audit says a key was stored');
+  } finally {
+    process.env.AI_SETTINGS_ENCRYPTION_SECRET = SECRET;
+    await finish(runner, 'rollback');
+  }
+}
+
+/**
  * The start-up warning: no encryption key while encrypted secrets are stored. The installation
  * table in both modes; the workspace's secrets on-premise only (in the cloud a read without a
  * tenant finds none). The key set: nothing to say.
@@ -460,6 +501,7 @@ async function run() {
     await dataSource.query(`DELETE FROM installation_ai_settings`);
     seeded = await seed();
     await testSnapshotFollowsTheCommit(seeded);
+    await testUnreadableStoredKey(seeded);
     await testMigration();
     await testWritesAuditAndLocks(seeded);
     await testConcurrentWritesAndRefresh(seeded);

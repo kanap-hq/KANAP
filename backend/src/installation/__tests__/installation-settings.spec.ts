@@ -76,10 +76,10 @@ function testResolution() {
 
 function testStateHoldsNoSecret() {
   const state = domainState(resolveDomain(AI_INSTALLATION_DOMAIN, ROW, ENV({})));
-  assert.deepEqual(state.web_search_api_key, { has_value: true, source: 'database', locked: false, file_unreadable: false });
+  assert.deepEqual(state.web_search_api_key, { has_value: true, stored_unreadable: false, source: 'database', locked: false, file_unreadable: false });
   assert.ok(!JSON.stringify(state).includes('database-key'));
   const fromFile = domainState(resolveDomain(AI_INSTALLATION_DOMAIN, null, ENV({ BRAVE_SEARCH_API_KEY: 'file-key' })));
-  assert.deepEqual(fromFile.web_search_api_key, { has_value: true, source: 'file', locked: true, file_unreadable: false });
+  assert.deepEqual(fromFile.web_search_api_key, { has_value: true, stored_unreadable: false, source: 'file', locked: true, file_unreadable: false });
   assert.ok(!JSON.stringify(fromFile).includes('file-key'));
   assert.deepEqual(state.ticket_max_images, { value: 2, default: 5, source: 'database', locked: false, file_unreadable: false, min: 1, max: 10 });
 }

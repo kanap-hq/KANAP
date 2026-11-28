@@ -88,6 +88,11 @@ export type ResolvedSetting = {
   locked: boolean;
   /** The file sets the variable to a value that cannot be read: it counts as absent. */
   fileUnreadable: boolean;
+  /**
+   * A secret only: the database stores one that cannot be decrypted (the encryption key is
+   * missing or another one). It counts as absent; a new value or a clear replaces it.
+   */
+  storedUnreadable: boolean;
   /** The value without the file and the database. */
   defaultValue: InstallationSettingValue | null;
 };
@@ -154,12 +159,14 @@ function defaultValue(declaration: InstallationSettingDeclaration, context: Inst
 
 /**
  * Resolves each setting of a domain, in the order of its declaration. `row` holds the values
- * stored in the database by setting key (a secret already decrypted), or null without a row.
+ * stored in the database by setting key (a secret already decrypted), or null without a row;
+ * `storedUnreadable` the keys of the secrets stored that cannot be decrypted.
  */
 export function resolveDomain(
   domain: InstallationDomain,
   row: Record<string, unknown> | null,
   env: NodeJS.ProcessEnv = process.env,
+  storedUnreadable: ReadonlySet<string> = new Set(),
 ): ResolvedDomain {
   const resolved: ResolvedDomain = new Map();
   const context: InstallationDefaultContext = {
@@ -170,7 +177,12 @@ export function resolveDomain(
     const file = fileValue(declaration, env);
     const fallback = defaultValue(declaration, context);
     const stored = databaseValue(declaration, row);
-    const base = { declaration, defaultValue: fallback, fileUnreadable: file.present && !file.readable };
+    const base = {
+      declaration,
+      defaultValue: fallback,
+      fileUnreadable: file.present && !file.readable,
+      storedUnreadable: declaration.type === 'secret' && storedUnreadable.has(declaration.key),
+    };
     if (file.present && file.readable) {
       resolved.set(declaration.key, { ...base, value: file.value, source: 'file', locked: true });
     } else if (stored !== null) {
@@ -182,7 +194,18 @@ export function resolveDomain(
   return resolved;
 }
 
-export type SecretSettingState = { has_value: boolean; source: InstallationSettingSource; locked: boolean; file_unreadable: boolean };
+/**
+ * A secret: whether one applies (`has_value`, never the value), and `stored_unreadable` when the
+ * database stores one that cannot be decrypted (the encryption key is missing or another one): it
+ * does not apply, a new value or a clear replaces it.
+ */
+export type SecretSettingState = {
+  has_value: boolean;
+  stored_unreadable: boolean;
+  source: InstallationSettingSource;
+  locked: boolean;
+  file_unreadable: boolean;
+};
 export type ValueSettingState = {
   value: InstallationSettingValue | null;
   default: InstallationSettingValue | null;
@@ -201,7 +224,7 @@ export function domainState(resolved: ResolvedDomain): Record<string, SecretSett
     const common = { source: setting.source, locked: setting.locked, file_unreadable: setting.fileUnreadable };
     const declaration = setting.declaration;
     if (declaration.type === 'secret') {
-      state[key] = { has_value: setting.value !== null, ...common };
+      state[key] = { has_value: setting.value !== null, stored_unreadable: setting.storedUnreadable, ...common };
       continue;
     }
     state[key] = {

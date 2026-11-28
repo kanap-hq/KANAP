@@ -102,7 +102,7 @@ export class InstallationSettingsService implements OnModuleDestroy {
     const read = this.snapshot.beginRead();
     for (const domain of INSTALLATION_DOMAINS) {
       const row = await this.readRow(domain, this.dataSource.manager);
-      if (this.snapshot.setRow(domain.name, row ? this.decryptRow(domain, row) : null, read)) {
+      if (this.snapshot.setRow(domain.name, row ? this.decryptRow(domain, row).values : null, read)) {
         this.snapshot.applyFeatures(domain, Features as unknown as Record<string, unknown>);
       }
     }
@@ -111,7 +111,8 @@ export class InstallationSettingsService implements OnModuleDestroy {
   /** A domain's row read in the given transaction and resolved there: the snapshot does not move. */
   private async resolveIn(domain: InstallationDomain, manager: EntityManager): Promise<{ row: Record<string, unknown> | null; resolved: ResolvedDomain }> {
     const row = await this.readRow(domain, manager);
-    return { row, resolved: resolveDomain(domain, row ? this.decryptRow(domain, row) : null) };
+    const stored = row ? this.decryptRow(domain, row) : null;
+    return { row, resolved: resolveDomain(domain, stored?.values ?? null, process.env, stored?.unreadable) };
   }
 
   private async readRow(domain: InstallationDomain, manager: EntityManager): Promise<Record<string, unknown> | null> {
@@ -120,9 +121,13 @@ export class InstallationSettingsService implements OnModuleDestroy {
     return row ?? null;
   }
 
-  /** The row by setting key, a secret decrypted (one that cannot be decrypted counts as absent, with a warning). */
-  private decryptRow(domain: InstallationDomain, row: Record<string, unknown>): Record<string, unknown> {
+  /**
+   * The row by setting key, a secret decrypted; one that cannot be decrypted counts as absent,
+   * with a warning, and its key is in `unreadable`.
+   */
+  private decryptRow(domain: InstallationDomain, row: Record<string, unknown>): { values: Record<string, unknown>; unreadable: Set<string> } {
     const values: Record<string, unknown> = {};
+    const unreadable = new Set<string>();
     for (const setting of domain.settings) {
       const stored = row[setting.column];
       if (setting.type !== 'secret' || stored == null) {
@@ -134,13 +139,14 @@ export class InstallationSettingsService implements OnModuleDestroy {
         this.unreadableSecrets.delete(setting.column);
       } catch {
         values[setting.key] = null;
+        unreadable.add(setting.key);
         if (!this.unreadableSecrets.has(setting.column)) {
           this.unreadableSecrets.add(setting.column);
           this.logger.warn(`[SECRETS] ${domain.table}.${setting.column} cannot be decrypted (the encryption key is missing or is another one): it is ignored.`);
         }
       }
     }
-    return values;
+    return { values, unreadable };
   }
 
   private domainOf(name: string): InstallationDomain {
