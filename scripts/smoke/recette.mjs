@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// KANAP smoke test: checks that an instance works after an update.
+// Kadratis smoke test: checks that an instance works after an update.
 // Node 20+, no npm dependency. Usage and options: scripts/smoke/README.md.
 
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -329,7 +329,7 @@ async function readChecks() {
 async function writeChecks() {
   const stamp = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
   const title = `recette ${stamp}`;
-  const fileContent = `KANAP smoke test attachment, ${stamp}\n`;
+  const fileContent = `Kadratis smoke test attachment, ${stamp}\n`;
   const task = { id: null, ref: null, attachmentId: null };
 
   const ready = () => {
@@ -427,7 +427,7 @@ process.on('SIGINT', () => {
 
 const runStarted = performance.now();
 if (!jsonOutput) {
-  process.stdout.write(`KANAP smoke test: ${origin}${writeEnabled ? ' (write checks on)' : ''}\n\n`);
+  process.stdout.write(`Kadratis smoke test: ${origin}${writeEnabled ? ' (write checks on)' : ''}\n\n`);
 }
 
 try {
