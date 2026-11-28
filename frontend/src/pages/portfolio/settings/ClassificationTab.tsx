@@ -1,351 +1,252 @@
-import { useState } from 'react';
-import {
-  Alert, Box, Button, Card, CardContent, Collapse, IconButton, Stack, Switch, Typography,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Stack } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { localizeTaskType } from '../../../utils/taskTypeLocalization';
-import { useCatalogLocale } from '../../../hooks/useLocalizedTaskTypes';
-import type { PortfolioCategory, PortfolioSource, PortfolioStream, PortfolioTaskType } from './types';
+import api from '../../../api';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { CategoriesSection } from './CategoriesSection';
+import { CategoryEditDialog } from './CategoryEditDialog';
+import { useInvalidateSharedLists } from './sharedLists';
+import { SourceEditDialog } from './SourceEditDialog';
+import { SourcesSection } from './SourcesSection';
+import { StreamEditDialog } from './StreamEditDialog';
+import { TaskTypeEditDialog } from './TaskTypeEditDialog';
+import { TaskTypesSection } from './TaskTypesSection';
+import type {
+  PortfolioCategory, PortfolioSource, PortfolioStream, PortfolioTaskType, SettingsTabProps,
+} from './types';
+import { useSettingsDelete } from './useSettingsDelete';
 
-// Classification Section Component
-export function ClassificationSection({
-  sources,
-  categories,
-  taskTypes,
-  canEdit,
-  onEditSource,
-  onCreateSource,
-  onDeleteSource,
-  onToggleSource,
-  onEditCategory,
-  onCreateCategory,
-  onDeleteCategory,
-  onToggleCategory,
-  onEditStream,
-  onCreateStream,
-  onDeleteStream,
-  onToggleStream,
-  onEditTaskType,
-  onCreateTaskType,
-  onDeleteTaskType,
-  onToggleTaskType,
-}: {
-  sources: PortfolioSource[];
-  categories: PortfolioCategory[];
-  taskTypes: PortfolioTaskType[];
-  canEdit: boolean;
-  onEditSource: (source: PortfolioSource) => void;
-  onCreateSource: () => void;
-  onDeleteSource: (id: string) => void;
-  onToggleSource: (source: PortfolioSource) => void;
-  onEditCategory: (category: PortfolioCategory) => void;
-  onCreateCategory: () => void;
-  onDeleteCategory: (id: string) => void;
-  onToggleCategory: (category: PortfolioCategory) => void;
-  onEditStream: (stream: PortfolioStream) => void;
-  onCreateStream: (categoryId: string) => void;
-  onDeleteStream: (id: string) => void;
-  onToggleStream: (stream: PortfolioStream) => void;
-  onEditTaskType: (taskType: PortfolioTaskType) => void;
-  onCreateTaskType: () => void;
-  onDeleteTaskType: (id: string) => void;
-  onToggleTaskType: (taskType: PortfolioTaskType) => void;
-}) {
+/** The classification tab: the sources, the categories with their streams, and the task types. */
+export default function ClassificationTab({ canEdit }: SettingsTabProps) {
   const { t } = useTranslation(['portfolio', 'common']);
-  const catalogLocale = useCatalogLocale();
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const invalidate = useInvalidateSharedLists();
+  const [sources, setSources] = useState<PortfolioSource[]>([]);
+  const [categories, setCategories] = useState<PortfolioCategory[]>([]);
+  const [taskTypes, setTaskTypes] = useState<PortfolioTaskType[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [sourceDialogOpen, setSourceDialogOpen] = useState(false);
+  const [editingSource, setEditingSource] = useState<PortfolioSource | null>(null);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<PortfolioCategory | null>(null);
+  const [streamDialogOpen, setStreamDialogOpen] = useState(false);
+  const [editingStream, setEditingStream] = useState<PortfolioStream | null>(null);
+  const [streamCategoryId, setStreamCategoryId] = useState<string | null>(null);
+  const [taskTypeDialogOpen, setTaskTypeDialogOpen] = useState(false);
+  const [editingTaskType, setEditingTaskType] = useState<PortfolioTaskType | null>(null);
 
-  const toggleCategory = (id: string) => {
-    setExpandedCategories((prev) => ({ ...prev, [id]: !prev[id] }));
+  const loadData = useCallback(async () => {
+    try {
+      const classificationRes = await api.get('/portfolio/classification/all');
+      setSources(classificationRes.data?.sources || []);
+      setCategories(classificationRes.data?.categories || []);
+      setTaskTypes(classificationRes.data?.taskTypes || []);
+    } catch (e: any) {
+      setError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
+    }
+  }, [t]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const classificationChanged = useCallback(() => {
+    loadData();
+    invalidate('classification');
+  }, [invalidate, loadData]);
+
+  const deleteItem = useSettingsDelete({ canEdit, onDeleted: classificationChanged, onError: setError });
+
+  const handleEditSource = useCallback((source: PortfolioSource) => {
+    setEditingSource(source);
+    setSourceDialogOpen(true);
+  }, []);
+
+  const handleCreateSource = useCallback(() => {
+    setEditingSource(null);
+    setSourceDialogOpen(true);
+  }, []);
+
+  const handleDeleteSource = useCallback((id: string) => deleteItem({
+    id,
+    name: sources.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/classification/sources',
+    check: true,
+    failed: t('settings.classification.messages.deleteSourceFailed'),
+  }), [deleteItem, sources, t]);
+
+  const handleToggleSource = useCallback(async (source: PortfolioSource) => {
+    if (!canEdit) return;
+    try {
+      await api.patch(`/portfolio/classification/sources/${source.id}`, { is_active: !source.is_active });
+      classificationChanged();
+    } catch (e: any) {
+      setError(getApiErrorMessage(e, t, t('settings.classification.messages.updateSourceFailed')));
+    }
+  }, [canEdit, classificationChanged, t]);
+
+  const handleEditCategory = useCallback((category: PortfolioCategory) => {
+    setEditingCategory(category);
+    setCategoryDialogOpen(true);
+  }, []);
+
+  const handleCreateCategory = useCallback(() => {
+    setEditingCategory(null);
+    setCategoryDialogOpen(true);
+  }, []);
+
+  const handleDeleteCategory = useCallback((id: string) => deleteItem({
+    id,
+    name: categories.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/classification/categories',
+    check: true,
+    message: t('settings.classification.confirmations.deleteCategory'),
+    failed: t('settings.classification.messages.deleteCategoryFailed'),
+  }), [categories, deleteItem, t]);
+
+  const handleToggleCategory = useCallback(async (category: PortfolioCategory) => {
+    if (!canEdit) return;
+    try {
+      await api.patch(`/portfolio/classification/categories/${category.id}`, { is_active: !category.is_active });
+      classificationChanged();
+    } catch (e: any) {
+      setError(getApiErrorMessage(e, t, t('settings.classification.messages.updateCategoryFailed')));
+    }
+  }, [canEdit, classificationChanged, t]);
+
+  const handleEditStream = useCallback((stream: PortfolioStream) => {
+    setEditingStream(stream);
+    setStreamCategoryId(stream.category_id);
+    setStreamDialogOpen(true);
+  }, []);
+
+  const handleCreateStream = useCallback((categoryId: string) => {
+    setEditingStream(null);
+    setStreamCategoryId(categoryId);
+    setStreamDialogOpen(true);
+  }, []);
+
+  const handleDeleteStream = useCallback((id: string) => deleteItem({
+    id,
+    name: categories.flatMap((category) => category.streams ?? []).find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/classification/streams',
+    check: true,
+    failed: t('settings.classification.messages.deleteStreamFailed'),
+  }), [categories, deleteItem, t]);
+
+  const handleToggleStream = useCallback(async (stream: PortfolioStream) => {
+    if (!canEdit) return;
+    try {
+      await api.patch(`/portfolio/classification/streams/${stream.id}`, { is_active: !stream.is_active });
+      classificationChanged();
+    } catch (e: any) {
+      setError(getApiErrorMessage(e, t, t('settings.classification.messages.updateStreamFailed')));
+    }
+  }, [canEdit, classificationChanged, t]);
+
+  const handleEditTaskType = useCallback((taskType: PortfolioTaskType) => {
+    setEditingTaskType(taskType);
+    setTaskTypeDialogOpen(true);
+  }, []);
+
+  const handleCreateTaskType = useCallback(() => {
+    setEditingTaskType(null);
+    setTaskTypeDialogOpen(true);
+  }, []);
+
+  const handleDeleteTaskType = useCallback((id: string) => deleteItem({
+    id,
+    name: taskTypes.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/classification/task-types',
+    check: true,
+    failed: t('settings.classification.messages.deleteTaskTypeFailed'),
+  }), [deleteItem, taskTypes, t]);
+
+  const handleToggleTaskType = useCallback(async (taskType: PortfolioTaskType) => {
+    if (!canEdit) return;
+    try {
+      await api.patch(`/portfolio/classification/task-types/${taskType.id}`, { is_active: !taskType.is_active });
+      classificationChanged();
+    } catch (e: any) {
+      setError(getApiErrorMessage(e, t, t('settings.classification.messages.updateTaskTypeFailed')));
+    }
+  }, [canEdit, classificationChanged, t]);
+
+  const saved = (close: () => void) => () => {
+    close();
+    classificationChanged();
   };
 
   return (
-    <Stack spacing={3}>
+    <>
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-      {/* Sources Section */}
-      <Box>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-          <Typography variant="h6">{t('settings.classification.sections.sources')}</Typography>
-          {canEdit && (
-            <Button size="small" startIcon={<AddIcon />} onClick={onCreateSource}>
-              {t('settings.actions.addSource')}
-            </Button>
-          )}
-        </Stack>
-        <Card>
-          <CardContent sx={{ p: 2 }}>
-            <Stack spacing={1}>
-              {sources.map((source) => (
-                <Stack
-                  key={source.id}
-                  direction="row"
-                  alignItems="center"
-                  spacing={1}
-                  sx={{
-                    p: 1,
-                    bgcolor: 'action.hover',
-                    borderRadius: 1,
-                    opacity: source.is_active ? 1 : 0.6,
-                  }}
-                >
-                  <Switch
-                    checked={source.is_active}
-                    onChange={() => onToggleSource(source)}
-                    size="small"
-                    disabled={!canEdit}
-                  />
-                  <Typography sx={{ flex: 1 }}>{source.name}</Typography>
-                  {source.description && (
-                    <Typography variant="caption" color="text.secondary" sx={{ flex: 2 }}>
-                      {source.description}
-                    </Typography>
-                  )}
-                  {source.is_system && (
-                    <Typography variant="body2" color="info.main" sx={{ fontSize: '0.8125rem' }}>
-                      {t('settings.labels.system')}
-                    </Typography>
-                  )}
-                  {canEdit && (
-                    <>
-                      <IconButton size="small" onClick={() => onEditSource(source)}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => onDeleteSource(source.id)}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </>
-                  )}
-                </Stack>
-              ))}
-              {sources.length === 0 && (
-                <Typography color="text.secondary">{t('settings.classification.empty.sources')}</Typography>
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
-      </Box>
+      <Stack spacing={3}>
+        <SourcesSection
+          sources={sources}
+          canEdit={canEdit}
+          onEditSource={handleEditSource}
+          onCreateSource={handleCreateSource}
+          onDeleteSource={handleDeleteSource}
+          onToggleSource={handleToggleSource}
+        />
+        <CategoriesSection
+          categories={categories}
+          canEdit={canEdit}
+          onEditCategory={handleEditCategory}
+          onCreateCategory={handleCreateCategory}
+          onDeleteCategory={handleDeleteCategory}
+          onToggleCategory={handleToggleCategory}
+          onEditStream={handleEditStream}
+          onCreateStream={handleCreateStream}
+          onDeleteStream={handleDeleteStream}
+          onToggleStream={handleToggleStream}
+        />
+        <TaskTypesSection
+          taskTypes={taskTypes}
+          canEdit={canEdit}
+          onEditTaskType={handleEditTaskType}
+          onCreateTaskType={handleCreateTaskType}
+          onDeleteTaskType={handleDeleteTaskType}
+          onToggleTaskType={handleToggleTaskType}
+        />
+      </Stack>
 
-      {/* Categories & Streams Section */}
-      <Box>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-          <Typography variant="h6">{t('settings.classification.sections.categoriesAndStreams')}</Typography>
-          {canEdit && (
-            <Button size="small" startIcon={<AddIcon />} onClick={onCreateCategory}>
-              {t('settings.actions.addCategory')}
-            </Button>
-          )}
-        </Stack>
-        <Stack spacing={2}>
-          {categories.map((category) => {
-            const isExpanded = expandedCategories[category.id] ?? true;
-            const activeStreams = category.streams.filter((s) => s.is_active).length;
+      {/* Edit/Create Source Dialog */}
+      <SourceEditDialog
+        open={sourceDialogOpen}
+        source={editingSource}
+        onClose={() => setSourceDialogOpen(false)}
+        onSave={saved(() => setSourceDialogOpen(false))}
+      />
 
-            return (
-              <Card key={category.id} sx={{ opacity: category.is_active ? 1 : 0.7 }}>
-                <CardContent sx={{ pb: isExpanded ? 2 : '16px !important' }}>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    spacing={1}
-                    sx={{ cursor: 'pointer' }}
-                    onClick={() => toggleCategory(category.id)}
-                  >
-                    <IconButton size="small">
-                      {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                    </IconButton>
-                    <Switch
-                      checked={category.is_active}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        onToggleCategory(category);
-                      }}
-                      size="small"
-                      disabled={!canEdit}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <Typography variant="subtitle1" sx={{ flex: 1 }}>
-                      {category.name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
-                      {t('settings.classification.chips.streamsCount', {
-                        active: activeStreams,
-                        total: category.streams.length,
-                      })}
-                    </Typography>
-                    {category.is_system && (
-                      <Typography variant="body2" color="info.main" sx={{ fontSize: '0.8125rem' }}>
-                        {t('settings.labels.system')}
-                      </Typography>
-                    )}
-                    {canEdit && (
-                      <>
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEditCategory(category);
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteCategory(category.id);
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </>
-                    )}
-                  </Stack>
+      {/* Edit/Create Category Dialog */}
+      <CategoryEditDialog
+        open={categoryDialogOpen}
+        category={editingCategory}
+        onClose={() => setCategoryDialogOpen(false)}
+        onSave={saved(() => setCategoryDialogOpen(false))}
+      />
 
-                  <Collapse in={isExpanded}>
-                    <Box sx={{ mt: 2, pl: 5 }}>
-                      <Stack spacing={1}>
-                        {category.streams.map((stream) => (
-                          <Stack
-                            key={stream.id}
-                            direction="row"
-                            alignItems="center"
-                            spacing={1}
-                            sx={{
-                              p: 1,
-                              bgcolor: 'action.hover',
-                              borderRadius: 1,
-                              opacity: stream.is_active ? 1 : 0.6,
-                            }}
-                          >
-                            <Switch
-                              checked={stream.is_active}
-                              onChange={() => onToggleStream(stream)}
-                              size="small"
-                              disabled={!canEdit}
-                            />
-                            <Typography variant="body2" sx={{ flex: 1 }}>
-                              {stream.name}
-                            </Typography>
-                            {canEdit && (
-                              <>
-                                <IconButton size="small" onClick={() => onEditStream(stream)}>
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={() => onDeleteStream(stream.id)}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </>
-                            )}
-                          </Stack>
-                        ))}
-                        {category.streams.length === 0 && (
-                          <Typography variant="body2" color="text.secondary">
-                            {t('settings.classification.empty.streams')}
-                          </Typography>
-                        )}
-                        {canEdit && (
-                          <Button
-                            size="small"
-                            startIcon={<AddIcon />}
-                            onClick={() => onCreateStream(category.id)}
-                            sx={{ alignSelf: 'flex-start' }}
-                          >
-                            {t('settings.actions.addStream')}
-                          </Button>
-                        )}
-                      </Stack>
-                    </Box>
-                  </Collapse>
-                </CardContent>
-              </Card>
-            );
-          })}
-          {categories.length === 0 && (
-            <Alert severity="info">{t('settings.classification.empty.categories')}</Alert>
-          )}
-        </Stack>
-      </Box>
+      {/* Edit/Create Stream Dialog */}
+      <StreamEditDialog
+        open={streamDialogOpen}
+        stream={editingStream}
+        categoryId={streamCategoryId}
+        onClose={() => setStreamDialogOpen(false)}
+        onSave={saved(() => setStreamDialogOpen(false))}
+      />
 
-      {/* Task Types Section */}
-      <Box>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-          <Typography variant="h6">{t('settings.classification.sections.taskTypes')}</Typography>
-          {canEdit && (
-            <Button size="small" startIcon={<AddIcon />} onClick={onCreateTaskType}>
-              {t('settings.actions.addTaskType')}
-            </Button>
-          )}
-        </Stack>
-        <Card>
-          <CardContent sx={{ p: 2 }}>
-            <Stack spacing={1}>
-              {taskTypes.map((taskType) => (
-                <Stack
-                  key={taskType.id}
-                  direction="row"
-                  alignItems="center"
-                  spacing={1}
-                  sx={{
-                    p: 1,
-                    bgcolor: 'action.hover',
-                    borderRadius: 1,
-                    opacity: taskType.is_active ? 1 : 0.6,
-                  }}
-                >
-                  <Switch
-                    checked={taskType.is_active}
-                    onChange={() => onToggleTaskType(taskType)}
-                    size="small"
-                    disabled={!canEdit}
-                  />
-                  <Typography sx={{ flex: 1 }}>{localizeTaskType(taskType, catalogLocale).name}</Typography>
-                  {taskType.description && (
-                    <Typography variant="caption" color="text.secondary" sx={{ flex: 2 }}>
-                      {localizeTaskType(taskType, catalogLocale).description}
-                    </Typography>
-                  )}
-                  {taskType.is_system && (
-                    <Typography variant="body2" color="info.main" sx={{ fontSize: '0.8125rem' }}>
-                      {t('settings.labels.system')}
-                    </Typography>
-                  )}
-                  {canEdit && (
-                    <>
-                      <IconButton size="small" onClick={() => onEditTaskType(taskType)}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => onDeleteTaskType(taskType.id)}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </>
-                  )}
-                </Stack>
-              ))}
-              {taskTypes.length === 0 && (
-                <Typography color="text.secondary">{t('settings.classification.empty.taskTypes')}</Typography>
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
-      </Box>
-    </Stack>
+      {/* Edit/Create Task Type Dialog */}
+      <TaskTypeEditDialog
+        open={taskTypeDialogOpen}
+        taskType={editingTaskType}
+        onClose={() => setTaskTypeDialogOpen(false)}
+        onSave={saved(() => setTaskTypeDialogOpen(false))}
+      />
+    </>
   );
 }

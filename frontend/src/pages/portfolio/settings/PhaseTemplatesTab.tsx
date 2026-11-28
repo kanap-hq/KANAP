@@ -1,11 +1,95 @@
-import { Alert, Box, Card, CardContent, IconButton, Stack, Typography } from '@mui/material';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Box, Button, Card, CardContent, IconButton, Stack, Typography } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { useTranslation } from 'react-i18next';
-import type { PhaseTemplate } from './types';
+import api from '../../../api';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { PhaseTemplateEditDialog } from './PhaseTemplateEditDialog';
+import TabActions from './TabActions';
+import type { PhaseTemplate, SettingsTabProps } from './types';
+import { useSettingsDelete } from './useSettingsDelete';
+
+/** The phase templates tab: the phases a new project can start from. */
+export default function PhaseTemplatesTab({ canEdit }: SettingsTabProps) {
+  const { t } = useTranslation(['portfolio', 'common']);
+  const [phaseTemplates, setPhaseTemplates] = useState<PhaseTemplate[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<PhaseTemplate | null>(null);
+
+  const loadData = useCallback(async () => {
+    try {
+      const templatesRes = await api.get('/portfolio/phase-templates');
+      setPhaseTemplates(templatesRes.data || []);
+    } catch (e: any) {
+      setError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
+    }
+  }, [t]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const deleteItem = useSettingsDelete({ canEdit, onDeleted: loadData, onError: setError });
+
+  const handleEditTemplate = useCallback((template: PhaseTemplate) => {
+    setEditingTemplate(template);
+    setTemplateDialogOpen(true);
+  }, []);
+
+  const handleCreateTemplate = useCallback(() => {
+    setEditingTemplate(null);
+    setTemplateDialogOpen(true);
+  }, []);
+
+  const handleDeleteTemplate = useCallback((id: string) => deleteItem({
+    id,
+    name: phaseTemplates.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/phase-templates',
+    failed: t('settings.phaseTemplates.messages.deleteFailed'),
+  }), [deleteItem, phaseTemplates, t]);
+
+  return (
+    <>
+      {canEdit && (
+        <TabActions>
+          <Button variant="action-primary" startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />} onClick={handleCreateTemplate}>
+            {t('settings.actions.addTemplate')}
+          </Button>
+        </TabActions>
+      )}
+
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <PhaseTemplatesSection
+        templates={phaseTemplates}
+        canEdit={canEdit}
+        onEdit={handleEditTemplate}
+        onDelete={handleDeleteTemplate}
+      />
+
+      {/* Edit/Create Phase Template Dialog */}
+      <PhaseTemplateEditDialog
+        open={templateDialogOpen}
+        template={editingTemplate}
+        onClose={() => setTemplateDialogOpen(false)}
+        onSave={() => {
+          setTemplateDialogOpen(false);
+          loadData();
+        }}
+      />
+    </>
+  );
+}
 
 // Phase Templates Section Component
-export function PhaseTemplatesSection({
+function PhaseTemplatesSection({
   templates,
   canEdit,
   onEdit,

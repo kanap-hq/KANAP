@@ -1,11 +1,133 @@
-import { Box, Card, CardContent, IconButton, Stack, Switch, Typography } from '@mui/material';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, Box, Button, Card, CardContent, IconButton, Stack, Switch, Typography } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
 import { useTranslation } from 'react-i18next';
-import type { PortfolioTeam } from './types';
+import api from '../../../api';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { TeamEditDialog } from './TeamEditDialog';
+import { useInvalidateSharedLists } from './sharedLists';
+import TabActions from './TabActions';
+import type { PortfolioTeam, SettingsTabProps } from './types';
+import { useSettingsDelete } from './useSettingsDelete';
+
+/** The teams tab: the teams contributors belong to. */
+export default function TeamsTab({ canEdit }: SettingsTabProps) {
+  const { t } = useTranslation(['portfolio', 'common']);
+  const invalidate = useInvalidateSharedLists();
+  const [teams, setTeams] = useState<PortfolioTeam[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<PortfolioTeam | null>(null);
+
+  const loadData = useCallback(async () => {
+    try {
+      const res = await api.get('/portfolio/teams');
+      setTeams(res.data || []);
+    } catch (e: any) {
+      setError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
+    }
+  }, [t]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const teamsChanged = useCallback(() => {
+    loadData();
+    invalidate('teams');
+  }, [invalidate, loadData]);
+
+  const deleteItem = useSettingsDelete({ canEdit, onDeleted: teamsChanged, onError: setError });
+
+  const handleEditTeam = useCallback((team: PortfolioTeam) => {
+    setEditingTeam(team);
+    setTeamDialogOpen(true);
+  }, []);
+
+  const handleCreateTeam = useCallback(() => {
+    setEditingTeam(null);
+    setTeamDialogOpen(true);
+  }, []);
+
+  const handleDeleteTeam = useCallback((id: string) => deleteItem({
+    id,
+    name: teams.find((entry) => entry.id === id)?.name ?? '',
+    base: '/portfolio/teams',
+    check: true,
+    failed: t('settings.teams.messages.deleteFailed'),
+  }), [deleteItem, teams, t]);
+
+  const handleToggleTeam = useCallback(async (team: PortfolioTeam) => {
+    if (!canEdit) return;
+    try {
+      await api.patch(`/portfolio/teams/${team.id}`, { is_active: !team.is_active });
+      teamsChanged();
+    } catch (e: any) {
+      setError(getApiErrorMessage(e, t, t('settings.teams.messages.updateFailed')));
+    }
+  }, [canEdit, teamsChanged, t]);
+
+  const handleSeedTeams = useCallback(async () => {
+    if (!canEdit) return;
+    try {
+      const res = await api.post('/portfolio/teams/seed-defaults');
+      if (res.data?.created > 0) {
+        teamsChanged();
+      }
+    } catch (e: any) {
+      setError(getApiErrorMessage(e, t, t('settings.teams.messages.seedDefaultsFailed')));
+    }
+  }, [canEdit, teamsChanged, t]);
+
+  return (
+    <>
+      {canEdit && (
+        <TabActions>
+          <Stack direction="row" spacing={1}>
+            {teams.length === 0 && (
+              <Button variant="action" startIcon={<PlaylistAddIcon sx={{ fontSize: '14px !important' }} />} onClick={handleSeedTeams}>
+                {t('settings.actions.seedDefaults')}
+              </Button>
+            )}
+            <Button variant="action-primary" startIcon={<AddIcon sx={{ fontSize: '14px !important' }} />} onClick={handleCreateTeam}>
+              {t('settings.actions.addTeam')}
+            </Button>
+          </Stack>
+        </TabActions>
+      )}
+
+      {error && (
+        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <TeamsSection
+        teams={teams}
+        canEdit={canEdit}
+        onEdit={handleEditTeam}
+        onDelete={handleDeleteTeam}
+        onToggle={handleToggleTeam}
+      />
+
+      <TeamEditDialog
+        open={teamDialogOpen}
+        team={editingTeam}
+        onClose={() => setTeamDialogOpen(false)}
+        onSave={() => {
+          setTeamDialogOpen(false);
+          teamsChanged();
+        }}
+      />
+    </>
+  );
+}
 
 // Teams Section Component
-export function TeamsSection({
+function TeamsSection({
   teams,
   canEdit,
   onEdit,

@@ -394,6 +394,7 @@ function AppRoutes() {
           <Route path="/portfolio/contributors/:id" element={<PortfolioContributorWorkspacePage />} />
           <Route path="/portfolio/contributors/:id/:tab" element={<PortfolioContributorWorkspacePage />} />
           <Route path="/portfolio/settings" element={<PortfolioSettingsPage />} />
+          <Route path="/portfolio/settings/:tab" element={<PortfolioSettingsPage />} />
           <Route path="/portfolio/tasks" element={<TasksPage />} />
           <Route path="/portfolio/tasks/:id" element={<TaskWorkspacePage />} />
           <Route path="/portfolio/tasks/:id/:tab" element={<TaskWorkspacePage />} />

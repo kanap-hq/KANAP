@@ -99,3 +99,6 @@ export interface PortfolioCategory {
   is_system: boolean;
   streams: PortfolioStream[];
 }
+
+/** What every tab of the portfolio settings page receives from the page. */
+export type SettingsTabProps = { canEdit: boolean };
