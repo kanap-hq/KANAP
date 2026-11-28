@@ -57,7 +57,7 @@ describe('CsvExportDialog', () => {
     const onClose = vi.fn();
     render(<CsvExportDialog open onClose={onClose} endpoint="/suppliers" />);
     fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
-    expect(await screen.findByText('Boom')).toBeInTheDocument();
+    expect(await screen.findByText('messages.exportFailed')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });
 
