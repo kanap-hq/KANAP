@@ -24,7 +24,7 @@ The page exposes three inputs and an optional list:
 | Default CAPEX currency | Pre-filled in the CAPEX editor. |
 | Allowed currencies (optional) | Comma-separated ISO codes. The OPEX and CAPEX selectors will limit their dropdown to this set plus the reporting/default currencies. Leave blank for the full list of ISO currencies. |
 
-Permissions: budget readers (`budget_ops:reader`) see the page read-only; budget administrators (`budget_ops:admin`) change the settings and run the FX sync. The API also lets OPEX and CAPEX readers read the settings and rates (their forms' currency picker), and the page opens for them read-only. The empty FX rates table suggests the sync only to budget administrators.
+Permissions: the page opens to budget administrators (`budget_ops:admin`), who change the settings and run the FX sync. The API also lets readers of budget administration (`budget_ops:reader`) and of the budget lines (`budget:reader`) read the settings and rates, for the currency pickers of their forms; the page does not open for them. The empty FX rates table suggests the sync only to budget administrators.
 
 The panel also contains two actions:
 
@@ -114,7 +114,7 @@ A manual rate belongs to the reporting currency of the set it was written on. Af
 
 ### API
 
-Readers are `budget_ops:reader` or `budget:reader` (`CURRENCY_READERS`). Writers are `budget_ops:admin`.
+The read routes accept `budget_ops:reader` or `budget:reader` (`CURRENCY_READERS`), so the built-in Budget Reader, who holds `budget:reader` only, reads the currencies of its forms and reports. Writers are `budget_ops:admin`.
 
 - `GET /currency/rates` returns `{ currencies, rates }`. `rates` is the latest set of each fiscal year whose `base_currency` is the current reporting currency (one object per year: `{ fiscalYear, baseCurrency, rates, rateSources, capturedAt, source }`). A set stored for a previous reporting currency is not read. `rateSources` is `rate_sources`, or `{}` when the column is null. `baseCurrency` is the stored code, trimmed. Each year's `rates` and `rateSources` keep the currencies in use (the reporting currency, the default currencies, the allowed list, and every currency of a budget line, a company turnover or a contract) plus any currency whose source on that set is `manual`. `currencies` is that row list, the reporting currency first and the rest in alphabetical order, including a currency in use that no set rates yet and a manual rate for a currency no longer in use. Example: `{ "currencies": ["EUR", "GBP", "USD"], "rates": [{ "fiscalYear": 2024, "baseCurrency": "EUR", "rates": { "EUR": 1, "USD": 1.08 }, "rateSources": { "EUR": "identity", "USD": "world-bank-annual" }, "capturedAt": "2024-06-01T00:00:00.000Z", "source": "world-bank-annual" }] }`.
 - `GET /currency/rates/missing` returns `{ items: Array<{ currency: string, year: number }> }`. Declared before the parameterised delete route.
