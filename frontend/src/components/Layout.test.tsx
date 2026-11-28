@@ -24,6 +24,8 @@ const access = vi.hoisted(() => ({
   grants: null as Record<string, 'reader' | 'member' | 'admin'> | null,
   rank: { reader: 1, member: 3, admin: 4 } as Record<string, number>,
   isGlobalAdmin: false,
+  isPlatformAdmin: false,
+  limited: false,
   deploymentMode: 'multi-tenant' as 'multi-tenant' | 'single-tenant',
   sampleData: false,
   version: 'unknown',
@@ -62,7 +64,8 @@ vi.mock('../auth/AuthContext', () => ({
       const granted = access.grants[resource];
       return !!granted && access.rank[granted] >= access.rank[level];
     },
-    claims: { isGlobalAdmin: access.isGlobalAdmin, isPlatformAdmin: false, isBillingAdmin: false },
+    claims: { isGlobalAdmin: access.isGlobalAdmin, isPlatformAdmin: access.isPlatformAdmin, isBillingAdmin: false },
+    dataAccess: access.limited ? { available: true, mode: 'limited', nodes: [], modules: [] } : null,
     profile: access.profile,
     refreshMe: vi.fn(),
     // A trial in progress by default: the subscription banner shows. A test may replace it.
@@ -82,10 +85,10 @@ vi.mock('./onboarding/onboardingApi', async () => {
   };
 });
 
-const tenant = vi.hoisted(() => ({ logoUrl: null as string | null }));
+const tenant = vi.hoisted(() => ({ logoUrl: null as string | null, isPlatformHost: false }));
 
 vi.mock('../tenant/TenantContext', () => ({
-  useTenant: () => ({ isPlatformHost: false, tenantName: 'Acme', organisationName: 'Acme Industries', logoUrl: tenant.logoUrl, useLogoInDark: false }),
+  useTenant: () => ({ isPlatformHost: tenant.isPlatformHost, tenantName: 'Acme', organisationName: 'Acme Industries', logoUrl: tenant.logoUrl, useLogoInDark: false }),
 }));
 
 vi.mock('../config/FeaturesContext', () => ({
@@ -95,6 +98,7 @@ vi.mock('../config/FeaturesContext', () => ({
       features: { billing: true, aiChat: access.aiChat, aiSettings: access.aiSettings, sso: false, email: false, sampleData: access.sampleData, vulnerabilityFeed: access.vulnerabilityFeed },
       version: access.version,
     },
+    isSingleTenant: access.deploymentMode === 'single-tenant',
     isLoading: false,
   }),
 }));
@@ -478,6 +482,95 @@ describe('Layout administration sidebar: sample data', () => {
   });
 
 
+});
+
+describe('Layout administration sidebar: Installation', () => {
+  afterEach(() => {
+    access.isGlobalAdmin = false;
+    access.isPlatformAdmin = false;
+    access.limited = false;
+    access.grants = null;
+    access.deploymentMode = 'multi-tenant';
+    tenant.isPlatformHost = false;
+  });
+
+  function renderAdmin() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/admin/installation/scheduled-tasks']}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/admin/installation/scheduled-tasks" element={<div>tasks</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+  const menuLinks = () => within(screen.getByRole('list')).getAllByRole('link').map((link) => link.getAttribute('href'));
+
+  it('ends the menu with the Installation section for the Administrator on site', () => {
+    access.isGlobalAdmin = true;
+    access.deploymentMode = 'single-tenant';
+    renderAdmin();
+    const heading = screen.getByText('nav:sidebar.admin.sections.installation');
+    const entry = screen.getByRole('link', { name: 'nav:sidebar.platform.scheduledTasks' });
+    expect(entry).toHaveAttribute('href', '/admin/installation/scheduled-tasks');
+    expect(entry).toHaveClass('Mui-selected');
+    expect(heading.compareDocumentPosition(entry) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(menuLinks().slice(-1)[0]).toBe('/admin/installation/scheduled-tasks');
+    expect(menuLinks()).toContain('/admin/data-access');
+  });
+
+  it('shows neither Installation nor Data access to a limited Administrator on site', () => {
+    access.isGlobalAdmin = true;
+    access.limited = true;
+    access.deploymentMode = 'single-tenant';
+    renderAdmin();
+    expect(screen.queryByText('nav:sidebar.admin.sections.installation')).not.toBeInTheDocument();
+    expect(menuLinks()).not.toContain('/admin/installation/scheduled-tasks');
+    expect(menuLinks()).not.toContain('/admin/data-access');
+    expect(menuLinks()).toContain('/admin/users');
+  });
+
+  it('shows no Installation section to a users administrator on site', () => {
+    access.grants = { users: 'admin' };
+    access.deploymentMode = 'single-tenant';
+    renderAdmin();
+    expect(screen.queryByText('nav:sidebar.admin.sections.installation')).not.toBeInTheDocument();
+    expect(menuLinks()).toContain('/admin/data-access');
+  });
+
+  it('shows no Installation section on a workspace host of the cloud', () => {
+    access.isGlobalAdmin = true;
+    renderAdmin();
+    expect(screen.queryByText('nav:sidebar.admin.sections.installation')).not.toBeInTheDocument();
+    expect(menuLinks()).not.toContain('/admin/installation/scheduled-tasks');
+  });
+
+  it('puts the Installation group after Platform AI and the Ops dashboard on the platform host', () => {
+    tenant.isPlatformHost = true;
+    access.isGlobalAdmin = true;
+    access.isPlatformAdmin = true;
+    renderAdmin();
+    expect(screen.getByText('nav:sidebar.admin.sections.installation')).toBeInTheDocument();
+    expect(menuLinks()).toEqual([
+      '/admin/tenants', '/admin/trials', '/admin/coa-templates', '/admin/standard-accounts',
+      '/admin/platform-ai', '/admin/ops-dashboard', '/admin/installation/scheduled-tasks',
+    ]);
+  });
+
+  it('keeps the platform pages without the Installation group for an Administrator of the platform workspace', () => {
+    tenant.isPlatformHost = true;
+    access.isGlobalAdmin = true;
+    renderAdmin();
+    expect(screen.queryByText('nav:sidebar.admin.sections.installation')).not.toBeInTheDocument();
+    expect(menuLinks()).toEqual([
+      '/admin/tenants', '/admin/trials', '/admin/coa-templates', '/admin/standard-accounts',
+      '/admin/platform-ai', '/admin/ops-dashboard',
+    ]);
+  });
 });
 
 describe('Layout user menu: about', () => {
