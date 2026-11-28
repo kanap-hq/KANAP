@@ -97,7 +97,7 @@ async function testLookupFailureLogUsesAFixedFormat() {
 }
 
 /**
- * The liveness probe never looks the tenant up, in both modes: no database connection, never
+ * The liveness probe and the readiness probe (`/health/ready`) never look the tenant up, in both modes: no database connection, never
  * refused because the pool is busy, and 200 even before the single tenant is provisioned (the
  * process is alive). Any other route is still looked up and refused.
  */
@@ -108,8 +108,10 @@ async function testHealthIsNeverLookedUp() {
     ['single tenant', { singleTenant: true }, 'kanap.example.com'],
     ['subdomain', {}, 'acme.kanap.net'],
     ['platform admin host', {}, 'admin.kanap.net'],
+    // An orchestrator's probe names the pod address: no tenant in it, in either mode.
+    ['pod address, single tenant', { singleTenant: true }, '10.244.0.7:8080'],
   ] as const) {
-    for (const path of ['/health', '/api/health', '/health/', '/ops/metrics', '/api/ops/metrics']) {
+    for (const path of ['/health', '/api/health', '/health/', '/health/ready', '/api/health/ready', '/health/ready/', '/ops/metrics', '/api/ops/metrics']) {
       const res = await quietly(() => run({ ...options, query: poolTimeout }, host, path));
       assert.equal(res.nextCalled, true, `${label} ${path}: goes on`);
       assert.equal(res.status, undefined, `${label} ${path}: not answered`);
@@ -120,6 +122,13 @@ async function testHealthIsNeverLookedUp() {
     assert.equal(other.status, 503, `${label}: only the liveness route itself is exempt`);
     queries = 0;
   }
+  // The cloud with a pod address: an address names no tenant, so nothing is looked up for any route.
+  for (const path of ['/health', '/health/ready', '/api/health/ready']) {
+    const res = await quietly(() => run({ query: poolTimeout }, '10.244.0.7:8080', path));
+    assert.equal(res.nextCalled, true, `pod address, cloud ${path}: goes on`);
+    assert.equal(res.tenant, null, `pod address, cloud ${path}: without a tenant`);
+  }
+  assert.equal(queries, 0, 'pod address, cloud: no lookup');
   const notReady = await run({ singleTenant: true, query: async () => [] }, 'x', '/health');
   assert.equal(notReady.nextCalled, true, 'single tenant not provisioned yet: /health still answers');
   const otherNotReady = await run({ singleTenant: true, query: async () => [] }, 'x', '/spend-items');

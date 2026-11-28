@@ -20,8 +20,9 @@ import { parsePlatformAdminHosts } from '../platform-admin-hosts';
  *   looked up at all and goes on with `req.tenant = null`, so it costs no
  *   connection and still answers that the process is alive when the pool is
  *   exhausted (a monitor or an orchestrator does not restart a busy API), or
- *   before the single tenant is provisioned. Same for the ops metrics of a
- *   monitoring tool (`/ops/metrics`).
+ *   before the single tenant is provisioned. Same for the readiness route
+ *   (`/health/ready`), which reads the database itself, and for the ops metrics
+ *   of a monitoring tool (`/ops/metrics`).
  * - A tenant being reset to its starting state (`metadata.demo.status` is
  *   `resetting`, demo-data.service.ts): its write requests get 409
  *   `tenant_resetting`, so nothing written during the reset survives it. Reads
@@ -59,11 +60,12 @@ export function refusedWhileResetting(req: Request, demoStatus: string | null | 
 }
 
 /**
- * Routes that need no tenant and are never looked up: the liveness route, and the ops metrics of
+ * Routes that need no tenant and are never looked up: the liveness and readiness routes
+ * (health/health.controller.ts; the readiness route reads the database itself), and the ops metrics of
  * a monitoring tool (token-protected, admin/ops/ops-metrics.controller.ts), which must answer
  * when the pool is saturated.
  */
-const LIVENESS_PATHS = new Set(['/health', '/api/health', '/ops/metrics', '/api/ops/metrics']);
+const LIVENESS_PATHS = new Set(['/health', '/api/health', '/health/ready', '/api/health/ready', '/ops/metrics', '/api/ops/metrics']);
 
 /** The request path without a trailing slash (`/health/` is `/health`). */
 export function routePath(req: Pick<Request, 'path'>): string {
