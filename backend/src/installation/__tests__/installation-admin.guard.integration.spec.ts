@@ -2,7 +2,7 @@ import 'dotenv/config';
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { Features } from '../../config/features';
@@ -19,7 +19,10 @@ import { InstallationAdminGuard } from '../installation-admin.guard';
 // - an Administrator whose data access is limited: the guard allows, and the data access stays
 //   "all" (an Administrator is never limited, data_access_apply): the reserved route serves them;
 // - a limited person without the Administrator role: 403 `administrator_required`, before the
-//   tenant interceptor would answer `DATA_ACCESS_LIMITED`.
+//   tenant interceptor would answer `DATA_ACCESS_LIMITED`;
+// - the person is read again, as `PermissionGuard` does, while the access token still names the
+//   former state: an Administrator moved to another role gets 403 `administrator_required`, a
+//   disabled one 401 `USER_DISABLED`, a person whose extra Administrator role was removed 403.
 
 type Seeded = {
   tenantId: string;
@@ -28,6 +31,9 @@ type Seeded = {
   reader: string;
   limitedAdmin: string;
   limitedReader: string;
+  demoted: string;
+  disabled: string;
+  extraRemoved: string;
 };
 
 function contextOf(req: Record<string, unknown>): any {
@@ -81,14 +87,23 @@ async function seed(): Promise<Seeded> {
       }
       return id;
     };
-    return {
+    const seeded = {
       tenantId,
       primaryAdmin: await person(administrator, 'all'),
       extraAdmin: await person(reader, 'all', administrator),
       reader: await person(reader, 'all'),
       limitedAdmin: await person(administrator, 'limited'),
       limitedReader: await person(reader, 'limited'),
+      demoted: await person(administrator, 'all'),
+      disabled: await person(administrator, 'all'),
+      extraRemoved: await person(reader, 'all', administrator),
     };
+    // After their access token was signed: one moved to another role, one disabled, one whose
+    // extra Administrator role was removed.
+    await runner.query(`UPDATE users SET role_id = $2 WHERE id = $1`, [seeded.demoted, reader]);
+    await runner.query(`UPDATE users SET status = 'disabled' WHERE id = $1`, [seeded.disabled]);
+    await runner.query(`DELETE FROM user_roles WHERE user_id = $1`, [seeded.extraRemoved]);
+    return seeded;
   }, true);
 }
 
@@ -110,8 +125,8 @@ async function answer(seeded: Seeded, userId: string, primaryRole: string): Prom
       assert.equal(await guard.canActivate(contextOf(req)), true);
       return true;
     } catch (error) {
-      assert.ok(error instanceof ForbiddenException, `a 403, got ${String(error)}`);
-      return String((error.getResponse() as Record<string, unknown>).code);
+      assert.ok(error instanceof ForbiddenException || error instanceof UnauthorizedException, `a 403 or a 401, got ${String(error)}`);
+      return `${error.getStatus()} ${String((error.getResponse() as Record<string, unknown>).code)}`;
     }
   });
 }
@@ -132,10 +147,20 @@ async function run() {
     seeded = await seed();
     assert.equal(await answer(seeded, seeded.primaryAdmin, 'Administrator'), true, 'Administrator as the primary role');
     assert.equal(await answer(seeded, seeded.extraAdmin, 'IT Landscape Reader'), true, 'Administrator as an extra role');
-    assert.equal(await answer(seeded, seeded.reader, 'IT Landscape Reader'), 'administrator_required', 'another role');
+    assert.equal(await answer(seeded, seeded.reader, 'IT Landscape Reader'), '403 administrator_required', 'another role');
     assert.equal(await answer(seeded, seeded.limitedAdmin, 'Administrator'), true, 'a limited Administrator passes the guard');
     assert.equal(await dataAccessModeOf(seeded, seeded.limitedAdmin), 'all', 'an Administrator is never limited');
-    assert.equal(await answer(seeded, seeded.limitedReader, 'IT Landscape Reader'), 'administrator_required', 'a limited person without the role');
+    assert.equal(await answer(seeded, seeded.limitedReader, 'IT Landscape Reader'), '403 administrator_required', 'a limited person without the role');
+    // The token still says Administrator (or the former extra role): the database decides.
+    assert.deepEqual(
+      {
+        demoted: await answer(seeded, seeded.demoted, 'Administrator'),
+        disabled: await answer(seeded, seeded.disabled, 'Administrator'),
+        extraRemoved: await answer(seeded, seeded.extraRemoved, 'IT Landscape Reader'),
+      },
+      { demoted: '403 administrator_required', disabled: '401 USER_DISABLED', extraRemoved: '403 administrator_required' },
+      'the person as stored, with a token still valid',
+    );
   } finally {
     Features.SINGLE_TENANT = previousSingleTenant;
     if (seeded) await remove(seeded);
