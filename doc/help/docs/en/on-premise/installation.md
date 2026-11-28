@@ -269,7 +269,7 @@ server {
 1. Navigate to `https://<your-name>`
 2. Sign in with `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `.env`
 3. **Change the admin password** in your profile if you started with a value you do not want to keep. The `[SECURITY]` warning in the API log stops once the password has been changed (see below).
-4. Add your logo and colors in **Admin → Branding** (optional)
+4. Add your logo and colors in **Administration → Branding** (optional)
 5. Invite additional users (if email is configured)
 
 **About the administrator account.** Kadratis creates it at the first start from `ADMIN_EMAIL` and `ADMIN_PASSWORD`, and only then. Changing those two lines later changes nothing while an active administrator exists: change the password in the application. If no active administrator remains, the next start restores the `ADMIN_EMAIL` account as an enabled administrator and keeps its existing password. `ADMIN_PASSWORD` must be a value of your own, 12 characters or more: `openssl rand -base64 18` generates one. An example value or a shorter one makes the API print a `[SECURITY]` warning at each start until the account's password is changed. See [Configuration](configuration.md#required-admin-credentials).
@@ -304,7 +304,7 @@ docker compose -f infra/compose.onprem.yml logs api | grep DATA-ACCESS
 
 The log reads `[DATA-ACCESS] data-scoped access available`. When it lists what is missing instead, read the lines above it. When the API waited too long for a table in use, it says so and tries again at its next start: restart it again a little later.
 
-**Remove it.** First give **All data** back to the limited people (**Admin > Data access** lists them): while the role is missing, they are refused. Then run the script with `mode=uninstall`, as a superuser, and restart the API:
+**Remove it.** First give **All data** back to the limited people (**Administration > Data access** lists them): while the role is missing, they are refused. Then run the script with `mode=uninstall`, as a superuser, and restart the API:
 
 ```bash
 cd /opt/kanap

@@ -1,13 +1,13 @@
 # Freeze master data and copy yearly metrics
 
-Two tools of [Budget Administration](budget-operations.md) manage company and department metrics across fiscal years: **Freeze master data** and **Copy yearly metrics**. Use them to lock finalized numbers, to carry a baseline forward into next year's planning, or to check what is frozen and what is not.
+Two tools of [Budget settings](budget-operations.md) manage company and department metrics across fiscal years: **Freeze master data** and **Copy yearly metrics**. Use them to lock finalized numbers, to carry a baseline forward into next year's planning, or to check what is frozen and what is not.
 
 The yearly metrics are the headcount, IT users and turnover of companies and the headcount of departments. They are master data, and the budget cycle freezes and rolls them forward, so the two tools sit with the other budget operations.
 
 ## Where to find it
 
-- Workspace: **Budget management**
-- Path: **Budget management > Administration**, section **Operations**, tiles **Freeze master data** and **Copy yearly metrics**
+- Module: **Budget management**
+- Path: **Budget management > Settings**, section **Operations**, tiles **Freeze master data** and **Copy yearly metrics**
 - Permissions:
   - Access to the budget (reader access to Budget or Budget administration), plus one of `companies:admin`, `departments:admin` or `budget_ops:admin`
   - The tiles are hidden from other users
@@ -119,7 +119,7 @@ If you only have access to one scope, the other is greyed out in the Data Source
 
 Your 2025 budget is approved. Lock it so no one accidentally changes the numbers.
 
-1. Open **Budget management > Administration > Freeze master data**
+1. Open **Budget management > Settings > Freeze master data**
 2. Select year **2025**
 3. Check **Companies** and **Departments**
 4. Click **Freeze Data**
@@ -130,7 +130,7 @@ All company and department metrics for 2025 are now read-only until you unfreeze
 
 You want to start 2026 planning using 2025 headcount and turnover as a baseline.
 
-1. Open **Budget management > Administration > Copy yearly metrics**
+1. Open **Budget management > Settings > Copy yearly metrics**
 2. Set **Source Year** to **2025** and **Destination Year** to **2026**
 3. Under **Data Sources**, select **Companies**
 4. Under **Company Metrics**, select **Headcount** and **Turnover** (deselect IT Users if you do not need it)
@@ -143,7 +143,7 @@ All companies now carry 2025's headcount and turnover into 2026. Adjust individu
 
 You froze 2025 but spotted an error in one company's headcount.
 
-1. Open **Budget management > Administration > Freeze master data**
+1. Open **Budget management > Settings > Freeze master data**
 2. Select year **2025**, check **Companies**, and click **Unfreeze Data**
 3. Edit the company's headcount in **Master Data → Companies → Details**
 4. Return to **Freeze master data** and re-freeze 2025 Companies

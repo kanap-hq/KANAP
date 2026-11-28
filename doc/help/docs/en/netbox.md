@@ -6,7 +6,7 @@ The split of responsibility is deliberate. Netbox stays the reference for the eq
 
 ## Where to find it
 
-- Workspace: **IT Landscape**
+- Module: **IT Landscape**
 - Path: **IT Landscape > Settings**, **Netbox** tab
 - Route: `/it/settings?tab=netbox`. The former address `/it/netbox` opens the same tab.
 - Connection settings: **Administration > Integrations**

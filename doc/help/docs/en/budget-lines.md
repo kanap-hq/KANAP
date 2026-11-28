@@ -256,7 +256,7 @@ Click any row in the list to open the workspace. Its address names the line by i
 - Switching tabs, moving to the previous or next line, or closing the workspace saves pending edits first. If a save fails, you stay where you are and an error explains why, so no edit is lost silently
 - **Ctrl+S** (**Cmd+S** on Mac) saves immediately
 - If a save cannot go through right away because another save is in progress on the same data, Kadratis retries it for you
-- If a bulk budget operation is running (for example a column copy or reset in Budget Administration), edits here are paused with the message "Another budget operation is running. Try again when it has finished." Try again once it is done
+- If a bulk budget operation is running (for example copying or clearing a column in Budget settings), edits here are paused with the message "Another budget operation is running. Try again when it has finished." Try again once it is done
 
 **Editing at the same time**:
 
@@ -337,7 +337,7 @@ The Budget tab holds the amounts of the line, year by year and column by column.
     - **Forecast**: An additional planning column, hidden by default
     - **Actuals**: Actual spend, as it is recorded during the year
     - **Expected landing**: Your best estimate of the year-end figure
-- A budget administrator can rename the columns, hide some and choose the default column in **Budget management > Administration > Budget columns** (see [Budget columns](budget-operations.md#budget-columns)). A hidden column keeps its amounts
+- A budget administrator can rename the columns, hide some and choose the default column in **Budget management > Settings > Budget columns** (see [Budget columns](budget-operations.md#budget-columns)). A hidden column keeps its amounts
 - Each shown column has a card under the year tabs: its name, its total for the year, how its amounts were produced and its period, for example "Spread flat" and "9 months, April to December". A column with nothing in it shows its zero alone. Hover a card to see its quantity and price lines
 - Click a card to work on that column. The tab opens on the [default column](budget-operations.md#budget-columns), or on the first shown column that is not frozen when the default column is frozen
 - With a single shown column, there are no cards: the editor shows the column directly
@@ -403,7 +403,7 @@ On an empty column, a click on a tab switches at once. On a column with amounts,
 **Clear column**:
 
 - **Clear column**, on the right under the editor, sets every month of the active column to zero, for example before entering the whole amount in a single month. When the column holds amounts, you confirm first: "Clear every month of Budget for 2026? The other columns stay as they are." It counts as an edit by hand
-- To remove both the amounts and the period of a column for every line, use **Reset budget column** in Budget Administration
+- To remove both the amounts and the period of a column for every line, use **Clear a budget column** in Budget settings
 
 **Monthly result**:
 
@@ -424,8 +424,8 @@ On an empty column, a click on a tab switches at once. On a column with amounts,
 
 **Freeze behavior**:
 
-- If a year's budget columns are frozen for the line's type (via Budget Administration), the card of each frozen column shows a lock icon, and so does its header in the table
-- A frozen column is read only. Its editor reads, for example, "The Budget 2026 column is frozen" and "Read only. An administrator can unfreeze it in Administration › Freeze / unfreeze data.", with its total and how it was produced
+- If a year's budget columns are frozen for the line's type (via Budget settings), the card of each frozen column shows a lock icon, and so does its header in the table
+- A frozen column is read only. Its editor reads, for example, "The Budget 2026 column is frozen" and "Read only. An administrator can unfreeze it in Settings › Freeze / unfreeze data.", with its total and how it was produced
 - When some columns are frozen, a line under the chart says "Some columns are frozen and read-only."
 - Each column can be frozen independently
 
@@ -433,7 +433,7 @@ On an empty column, a click on a tab switches at once. On a column with amounts,
 
 - A short label on each card tells you where the amounts of the column come from, followed by its period. With a single column, it sits under the editor title
 - **Spread flat**, **Spread 4-4-5** or **Spread by quarter**: the amounts come from a spread
-- **Copied from Budget 2025 +2%**: the amounts come from **Copy budget columns** in Budget Administration, or from **Start from**, with the percentage shown when there is one
+- **Copied from Budget 2025 +2%**: the amounts come from **Copy budget columns** in Budget settings, or from **Start from**, with the percentage shown when there is one
 - **Quantity and price · 3 lines · 1.00 FTE**: the amounts come from lines, with their number and, when the lines count people or days, the column's FTE. The FTE is the full-year average. Hover the card to see the lines, for example "Project manager: 1 person × 1,200 per day, 5 days per month, Feb to Jul"
 - **Edited by hand**: a month was changed in the table or by a budget file import
 - An amount at a date shows its date instead of a period, for example "On 10 February 2026"
@@ -521,9 +521,9 @@ Click **Add a line** under the table to add a line, and the cross at the end of 
 **When the amounts change another way**: the lines stay with the column as a reference, read only. Under **Amount** or **By month**, a line says how many lines are kept, for example "4 lines kept as a reference (48,000).", followed by a **Use the lines again** link. The link saves the lines as they are and computes the column from them again. Choosing the **Quantity and price** tab does the same, after a question. To change a line kept as a reference, use the lines again first, then edit it.
 
 - Switching the column to **Amount** or **By month**, typing a month in the table, or **Clear column**
-- **Copy budget columns** in Budget Administration, or **Start from**: when the source amounts were not calculated from lines, the copy brings the source column's lines as a reference. A column calculated from its lines stays calculated, with its prices raised by the percentage. See [Copying a column built from lines](budget-operations.md#copying-a-column-built-from-lines)
+- **Copy budget columns** in Budget settings, or **Start from**: when the source amounts were not calculated from lines, the copy brings the source column's lines as a reference. A column calculated from its lines stays calculated, with its prices raised by the percentage. See [Copying a column built from lines](budget-operations.md#copying-a-column-built-from-lines)
 - A calendar's working days changed: the **Quantity and price** tab reads, for example, "Working days changed since the last computation: March: 20 days, now 19.", followed by **Use the lines again**. Nothing changes on the column until you click it. The lines stay editable meanwhile
-- **Reset budget column** in Budget Administration removes the lines with the amounts. See [Reset budget column](budget-operations.md#reset-budget-column)
+- **Clear a budget column** in Budget settings removes the lines with the amounts. See [Clear a budget column](budget-operations.md#reset-budget-column)
 
 - A budget file changes the months of a column and leaves its lines. See [Load a budget from a spreadsheet](budget-file.md)
 
@@ -585,7 +585,7 @@ The Allocations tab distributes the spend of a year across your companies and de
 
 **Default vs pinned methods**:
 
-- The **default** entry, shown as *Headcount (default)* until your organisation configures another method, follows the setting in **Budget management > Administration > Default allocation method**. Every line left on the default is re-driven when an admin changes that setting
+- The **default** entry, shown as *Headcount (default)* until your organisation configures another method, follows the setting in **Budget management > Settings > Default allocation method**. Every line left on the default is re-driven when an admin changes that setting
 - That setting can also restrict the default to a **selection of companies** (for example the entity that carries the IT budget): the driver then applies to those companies only, and the option reads *Default (n companies)*
 - **Headcount**, **IT users** and **Turnover** pin that method on the line: a pinned method keeps working even if the organisation default changes later
 - Lines with a manual allocation are never affected by the default setting
@@ -771,7 +771,7 @@ A budget file never changes the type of a line. See [Load a budget from a spread
 
 13. **Use deep linking**: Click directly on a budget column in the list to jump to the Budget tab for that year. Click the Task column to jump to the line's tasks on the Overview tab. This saves navigation time.
 
-14. **Freeze budgets after year-end close**: Use Budget Administration to freeze prior-year budgets once actuals are finalized, preventing accidental edits.
+14. **Freeze budgets after year-end close**: Use Budget settings to freeze prior-year budgets once actuals are finalized, preventing accidental edits.
 
 ---
 
@@ -781,7 +781,7 @@ Access to budget lines is controlled by the Budget resource, which covers OPEX a
 
 - `budget:reader`: View the list, open lines, see budgets and allocations (read-only), download attachments
 - `budget:member`: Create and edit lines, change their type, update budgets and allocations, upload and delete attachments, manage relations, links and contacts, change lines in bulk
-- `budget:admin`: All member rights plus import and export, budget operations (copy budget columns, with their amounts and allocations, and reset budget column), and deleting lines from the list or from the line
+- `budget:admin`: All member rights plus import and export, budget operations (copy budget columns, with their amounts and allocations, and clear a budget column), and deleting lines from the list or from the line
 
 Freezing budget columns needs Budget administration (`budget_ops:admin`).
 

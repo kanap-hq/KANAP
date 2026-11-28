@@ -4,7 +4,7 @@ The **Connected apps** tab lists the applications that can read your Kadratis da
 
 ## Where to find it
 
-- Path: click your avatar (top right), then **My profile**, then the **Connected apps** tab
+- Path: click your avatar (top right), then **My account**, then the **Connected apps** tab
 - Route: `/settings/connected-apps`
 - Shown when MCP is switched on for your workspace and you have MCP access (the **AI MCP User** role, or a role that includes it)
 

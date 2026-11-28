@@ -371,7 +371,7 @@ The smoke test of step 9 reads it from `.env` without showing it. Step 10 shows 
 Notes on the file:
 
 - The administrator account is created at the first start from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Changing them later changes nothing while an active administrator exists.
-- `DEFAULT_TENANT_NAME` is your organization's name, from step 0. Kadratis reads it at the first start only. An administrator changes it later in **Admin → Branding**. The workspace address stays as it is.
+- `DEFAULT_TENANT_NAME` is your organization's name, from step 0. Kadratis reads it at the first start only. An administrator changes it later in **Administration → Branding**. The workspace address stays as it is.
 - The `DATABASE_URL` password and the `JWT_SECRET` were generated in step 0. Do not reuse example values.
 - With `sslmode=disable` the connection to PostgreSQL stays on the server. For another PostgreSQL server, see [`sslmode`](configuration.md#required-database).
 - If you reach Kadratis by IP address instead of a name, set `APP_BASE_URL` and `CORS_ORIGINS` to `https://<ip address>`.
@@ -633,7 +633,7 @@ docker compose -f infra/compose.onprem.yml logs api | grep 'PutObject fallback' 
 1. Open `https://<your name>` in a browser (accept the certificate warning if you use a self-signed certificate; the workstation must resolve the name).
 2. Sign in with `ADMIN_EMAIL` and the administrator password. To see the password, run `grep '^ADMIN_PASSWORD=' /opt/kanap/.env | cut -d= -f2-` on the server. It shows on screen, so run it when nobody else can see your screen.
 3. Change the password in your profile right after this first sign-in. Kadratis reads the `.env` value at the first start only.
-4. Add your logo and colors in **Admin → Branding** (optional).
+4. Add your logo and colors in **Administration → Branding** (optional).
 5. Invite additional users (if email is configured).
 
 **Optional: data-scoped access.** If some people must see only part of the budget and the contracts, run the one-time step of [Data-scoped access](installation.md#optional-data-scoped-access). With this guide, the application role and the database are both `kanap`: its commands use them as written. Skip it if nobody needs to be limited.

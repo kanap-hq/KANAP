@@ -1,10 +1,10 @@
 # Currency Settings
 
-The Currency Settings page (**Budget management > Administration > Currencies**) is where you configure how currencies are stored, displayed, and converted across your workspace. It controls the tenant-wide reporting currency, default currencies for new lines, and optional restrictions on which currencies can be used.
+The Currency Settings page (**Budget management > Settings > Currencies**) is where you configure how currencies are stored, displayed, and converted across your workspace. It controls the tenant-wide reporting currency, default currencies for new lines, and optional restrictions on which currencies can be used.
 
 ## Who can see and change it
 
-Currencies are a budget setting. The page sits with the other budget settings in [Budget Administration](budget-operations.md).
+Currencies are a budget setting. The page sits with the other budget settings in [Budget settings](budget-operations.md).
 
 - **Open the page, change settings, run the FX rates sync and enter manual rates**: Budget administration at admin level. The card is hidden from other users.
 - **Use currencies on items**: OPEX and CAPEX users pick from the allowed currencies in their line forms, without opening this page.
@@ -240,7 +240,7 @@ Kadratis fetches the rates of that year in the background (at most once every si
 Your group switches from EUR-based to USD-based reporting.
 
 **Steps**:
-  1. Go to **Budget management > Administration > Currencies**
+  1. Go to **Budget management > Settings > Currencies**
   2. Change Reporting Currency from `EUR` to `USD`
   3. Click **Save**, read the confirmation dialog (manual rates that stop applying, frozen versions), then click **Change the currency**
   4. Read the result of the rate fetch. For each pair still missing, enter a manual rate or run **Force FX rates sync** later
@@ -253,7 +253,7 @@ Your group switches from EUR-based to USD-based reporting.
 Your finance team requires all spend to be recorded in EUR, USD, or GBP only.
 
 **Steps**:
-  1. Go to **Budget management > Administration > Currencies**
+  1. Go to **Budget management > Settings > Currencies**
   2. Set Allowed Currencies to `EUR, USD, GBP`
   3. Click **Save**
   4. Run **Force FX rates sync** to ensure rates are available for all three currencies
@@ -264,7 +264,7 @@ Your finance team requires all spend to be recorded in EUR, USD, or GBP only.
 Your company starts operations in Switzerland and needs to track CHF spend.
 
 **Steps**:
-  1. Go to **Budget management > Administration > Currencies**
+  1. Go to **Budget management > Settings > Currencies**
   2. Add `CHF` to Allowed Currencies (e.g., `EUR, USD, GBP, CHF`)
   3. Click **Save**
   4. Click **Force FX rates sync** to fetch CHF rates immediately
@@ -276,7 +276,7 @@ Your company starts operations in Switzerland and needs to track CHF spend.
 It's December, and you're preparing for next year's budget planning.
 
 **Steps**:
-  1. Go to **Budget management > Administration > Currencies**
+  1. Go to **Budget management > Settings > Currencies**
   2. Click **Force FX rates sync** to refresh rates for the upcoming year
   3. Check the FX Rate Snapshots table to see the forward estimates for the next year
   4. Note that future year rates are forward estimates (reusing current year's rate). Review them as the year approaches

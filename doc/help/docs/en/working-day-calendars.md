@@ -165,7 +165,7 @@ The **Delete** button (trash icon) in the header deletes the calendar after a co
 
 The same rule applies to **Delete selected** in the list: a calendar used by budget lines is kept, with a reason such as "This calendar is used by 3 OPEX lines and 1 CAPEX line. Disable it instead of deleting it."
 
-A budget line uses a calendar when one of its columns, in any year, has a line priced per day on it. Removing that line in the budget tab, or **Reset budget column** in Budget Administration, removes the link. See [Reset budget column](budget-operations.md#reset-budget-column).
+A budget line uses a calendar when one of its columns, in any year, has a line priced per day on it. Removing that line in the budget tab, or **Clear a budget column** in Budget settings, removes the link. See [Clear a budget column](budget-operations.md#reset-budget-column).
 
 ---
 

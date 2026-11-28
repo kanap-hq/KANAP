@@ -1,11 +1,11 @@
-# Budget Administration
+# Budget settings
 
-Budget Administration gives you a set of tools for managing and transforming budget data across years and columns. These are the operations you reach for during budget planning cycles: preparing next year's numbers, locking approved budgets, and managing year-over-year transitions.
+Budget settings gives you a set of tools for managing and transforming budget data across years and columns. These are the operations you reach for during budget planning cycles: preparing next year's numbers, locking approved budgets, and managing year-over-year transitions.
 
 ## Where to find it
 
-- Path: **Budget Management > Administration**
-- Permissions: each card shows only to the users who can use it (see the table below). **Administration** appears in the menu when you can use at least one card.
+- Path: **Budget Management > Settings**
+- Permissions: each card shows only to the users who can use it (see the table below). **Settings** appears in the menu when you can use at least one card.
 
 The landing page has two sections. Each card links to a dedicated tool. An empty section is hidden.
 
@@ -23,7 +23,7 @@ The landing page has two sections. Each card links to a dedicated tool. An empty
 |------|---------|
 | **Freeze / unfreeze data** | Lock budget columns to prevent changes |
 | **Copy budget columns** | Copy amounts between years and columns, with an optional percentage, and allocations to another year |
-| **Reset budget column** | Clear all data from a specific column |
+| **Clear a budget column** | Clear all data from a specific column |
 | **Freeze master data** | Lock company and department metrics for a year. See [Freeze master data and copy yearly metrics](master-data-operations.md) |
 | **Copy yearly metrics** | Copy company and department metrics from one year to another. See [Freeze master data and copy yearly metrics](master-data-operations.md) |
 

@@ -29,7 +29,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 **What to do.** Open the **Budget** tab, then **Relations** and **History**.
 
-**What you see.** **Budget** shows the amounts of the year in four budget columns out of the five available. Their names and which ones show are set in **Budget management > Administration**. **Relations** links the line to what it pays for: contracts, applications, projects. **History** keeps every change with its author and date.
+**What you see.** **Budget** shows the amounts of the year in four budget columns out of the five available. Their names and which ones show are set in **Budget management > Settings**. **Relations** links the line to what it pays for: contracts, applications, projects. **History** keeps every change with its author and date.
 
 ## 3. A report
 

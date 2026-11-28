@@ -4,8 +4,8 @@ This page controls the [Kad chat assistant](ai-assistant.md): which AI model it 
 
 ## Where to find it
 
-- Workspace: **Admin**
-- Path: **Admin → Artificial intelligence → Kad**
+- Module: **Administration**
+- Path: **Administration → Artificial intelligence → Kad**
 - Route: `/admin/ai`
 - Permission: `ai_settings:admin`
 - Feature flag: requires the AI settings surface to be enabled. When it is off, the page shows a notice ("AI settings are disabled for this instance") and no controls are available.
@@ -277,4 +277,4 @@ The journal also records calls made with a key or a connection that was revoked 
 - **A vision model is an agent requirement, not a chat one.** If your triage agents need to read ticket screenshots, that belongs on *their* model: see **Understands images** on the [AI models](ai-models.md) page.
 - **Prefer connections for Claude.** Each person signs in with their own account and reads with their own access, so nobody shares a key. Keep keys for clients that need one, rotate them, and use **Key max lifetime (days)** to set a ceiling no request can exceed.
 - **Set a retention window.** Keeping conversations forever is convenient until the database grows large or a compliance review asks how long chat content is kept. A value of 90 or 180 days is a common starting point.
-- **GLPI lives elsewhere.** The ticketing connection your agents work against is configured under **Admin → Integrations**, not here (see [Integrations](integrations.md)).
+- **GLPI lives elsewhere.** The ticketing connection your agents work against is configured under **Administration → Integrations**, not here (see [Integrations](integrations.md)).

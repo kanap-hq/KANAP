@@ -6,7 +6,7 @@ Unlike a file share, Knowledge is not just a place to store documents. The impor
 
 ## Where to find it
 
-- Workspace: **Knowledge**
+- Module: **Knowledge**
 - Permissions:
   - `knowledge:reader` lets you open and read documents
   - `knowledge:member` lets you create, edit, comment, organize folders, and manage document metadata

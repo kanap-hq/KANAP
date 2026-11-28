@@ -10,7 +10,7 @@ The files described here are the contract to rely on. Their columns are document
 |---|---|---|
 | **OPEX line** | A recurring cost, carried from year to year | **Budget management > Budget lines** |
 | **CAPEX line** | An investment, carried from year to year | **Budget management > Budget lines** |
-| **Budget columns** | The five amount columns every line has for each year | **Budget management > Administration > Budget columns** |
+| **Budget columns** | The five amount columns every line has for each year | **Budget management > Settings > Budget columns** |
 | **Quantity and price lines** | The lines a column can be calculated from | The **Budget** tab of a line |
 | **Allocation** | How a line's cost of one year is split over companies or departments | The **Allocations** tab of a line |
 | **Company** | A legal entity that pays, with its yearly metrics | **Master data > Companies** |
@@ -21,7 +21,7 @@ The files described here are the contract to rely on. Their columns are document
 | **Analytics dimension** and **value** | Free classifications for reporting | **Master data > Analytics dimensions** |
 | **Working-day calendar** | Working days per month and year, for prices per day | **Master data > Working-day calendars** |
 | **User** | IT and business owners, budget holders | **Administration > Users** |
-| **Currencies** | Allowed currencies, reporting currency, exchange rates | **Budget management > Administration > Currencies** |
+| **Currencies** | Allowed currencies, reporting currency, exchange rates | **Budget management > Settings > Currencies** |
 
 ## How the objects relate
 

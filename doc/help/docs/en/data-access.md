@@ -8,8 +8,8 @@ Every person starts with **All data**. Nothing changes until an administrator li
 
 ## Where to find it
 
-- **The user window**: open a user from **Admin > Users** and choose the **Data access** tab, next to **Identity**. The **Data access** entry of a row's menu opens the window on that tab.
-- **Admin > Data access**: the list of the people whose access is limited, with the import and the export.
+- **The user window**: open a user from **Administration > Users** and choose the **Data access** tab, next to **Identity**. The **Data access** entry of a row's menu opens the window on that tab.
+- **Administration > Data access**: the list of the people whose access is limited, with the import and the export.
 - **The Access tab** of a company and of a cost center or group: who sees it, and through which node.
 
 Permissions: these screens need the Admin level on users (`users:admin`), and all data for yourself. You cannot change your own access.
@@ -66,7 +66,7 @@ An older budget line can have no paying company.
 - Charged to a cost center, it follows that cost center: the people whose nodes cover the cost center read it, and an Edit node lets them edit it. Saving it gives it the company of its cost center.
 - With no cost center, it is visible only to people with all data, to people with an **Everything** node, and to the people named on it.
 
-**Admin > Data access** counts the lines without a company, with a link to the list.
+**Administration > Data access** counts the lines without a company, with a link to the list.
 
 ## The role says what, the nodes say where
 
@@ -121,7 +121,7 @@ One **Save** writes the whole window: the identity tab, then the access. When so
 
 ## The Data access page
 
-**Admin > Data access** lists every limited person, including those with no node:
+**Administration > Data access** lists every limited person, including those with no node:
 
 | Column | Content |
 |---|---|
@@ -136,7 +136,7 @@ One **Save** writes the whole window: the identity tab, then the access. When so
 
 People in **All data** are not listed.
 
-In **Admin > Users**, an **Access** column appears once someone is limited. It reads **All data**, the names of the person's nodes (**Everything** for that node), or **None** for a limited person with no node.
+In **Administration > Users**, an **Access** column appears once someone is limited. It reads **All data**, the names of the person's nodes (**Everything** for that node), or **None** for a limited person with no node.
 
 ## The Access tab of companies and cost centers
 
@@ -156,7 +156,7 @@ Changes on these tabs save at once. When the person you add has all data, a conf
 
 ## Import and export
 
-**Import** and **Export** on **Admin > Data access** move the access of many people at once, in a CSV file or an Excel workbook (`.xlsx`). See [CSV and Excel files](csv-files.md). A file holds one row per person and per node:
+**Import** and **Export** on **Administration > Data access** move the access of many people at once, in a CSV file or an Excel workbook (`.xlsx`). See [CSV and Excel files](csv-files.md). A file holds one row per person and per node:
 
 | Column | Content |
 |---|---|
@@ -226,7 +226,7 @@ These counts appear to people who read the budget but not those lines. A person 
 Even when their roles allow it, a limited person cannot:
 
 - change the workspace settings: freeze and unfreeze, the default allocation rule, budget columns, currencies, the yearly copy of master data, the headcount and metrics of companies and departments;
-- run operations on many lines: copy and reset budget columns, copy allocations, bulk delete;
+- run operations on many lines: copy and clear budget columns, copy allocations, bulk delete;
 - delete a line or a contract;
 - manage people: users, roles, data access, the audit log;
 - edit organisation data: companies, departments, cost centers, accounts and charts of accounts, business processes, the dimensions themselves and the values of dimensions without open values;
@@ -239,7 +239,7 @@ The checks that come with these operations (the impact previews, the check befor
 
 ## When data access is unavailable
 
-Limiting data access needs a one-time step on the database server. Until it is done, **Limited to** is greyed out in the user window, with "Limiting data access needs a one-time step on the database, done by the person who runs Kadratis." and a link to this page. **Admin > Data access** shows the same message, with what is missing.
+Limiting data access needs a one-time step on the database server. Until it is done, **Limited to** is greyed out in the user window, with "Limiting data access needs a one-time step on the database, done by the person who runs Kadratis." and a link to this page. **Administration > Data access** shows the same message, with what is missing.
 
 On-premise, the step is in the installation guide: [Data-scoped access](on-premise/installation.md#optional-data-scoped-access).
 

@@ -4,7 +4,7 @@ Portfolio Requests are the intake layer for proposed work. A request lets you ca
 
 ## Where to find it
 
-- Workspace: **Portfolio**
+- Module: **Portfolio**
 - Path: **Portfolio > Requests**
 
 ### Permissions

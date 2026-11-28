@@ -10,7 +10,7 @@ One thing to be clear about from the start, because it drives every good use of 
 
 ## Where to find it
 
-- Workspace: **AI Agents > Shared context**
+- Module: **AI Agents > Shared context**
 - Route: `/agents/shared-context`
 - Permissions:
   - `ai_agents:reader` lets you open the page and read the profile list
