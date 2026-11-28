@@ -1269,6 +1269,71 @@ async function testTrailingLineBreak() {
   assert.deepEqual(edited.plans.map((plan) => plan.body), [{ notes: 'test 2' }], 'a real change still writes');
 }
 
+/**
+ * A name that already ends with a period keeps that one period, at the end of the sentence and in
+ * the middle of it. A name without a period still takes the sentence's period. The fields keep the
+ * name as stored.
+ */
+async function testPeriodAfterAName() {
+  const cat = catalog({
+    companies: [
+      { id: 'c-sa', name: 'Fromage & Co SA', coaId: null, disabledAt: null },
+      { id: 'c-inc', name: 'Fromage & Co Inc.', coaId: null, disabledAt: null },
+      { id: 'c-globex', name: 'Globex', coaId: null, disabledAt: null },
+      { id: 'c-ltd', name: 'Acme Ltd.', coaId: null, disabledAt: null },
+    ],
+    accounts: [{ id: 'a1', number: '6100', coaId: null, disabledAt: null }],
+    costCenters: [
+      { id: 'cc-sa', code: 'FR-DIS-100', kind: 'cost_center', companyId: 'c-sa', disabledAt: null },
+      { id: 'cc-inc', code: 'CC-INC', kind: 'cost_center', companyId: 'c-inc', disabledAt: null },
+    ],
+  });
+  const header = 'item_number,name,company_name,cost_center_code,account_number,currency\n';
+  const named = await preflight('opex', `${header},Line,Fromage & Co Inc.,FR-DIS-100,6100,EUR\n,Line,Globex,CC-INC,6100,EUR\n,Line,Acme Ltd.,CC-INC,6100,EUR\n`, [], { cat, reads: true });
+  assert.equal(named.ok, true, JSON.stringify(named.errors));
+  assert.deepEqual(named.warnings.costCenterCompanies.map((warning) => [warning.line, warning.message]), [
+    [2, 'Cost center FR-DIS-100 belongs to Fromage & Co SA. The line is paid by Fromage & Co Inc.'],
+    [3, 'Cost center CC-INC belongs to Fromage & Co Inc. The line is paid by Globex.'],
+    [4, 'Cost center CC-INC belongs to Fromage & Co Inc. The line is paid by Acme Ltd.'],
+  ]);
+  assert.deepEqual(named.warnings.costCenterCompanies.map((warning) => [warning.company, warning.costCenterCompany]), [
+    ['Fromage & Co Inc.', 'Fromage & Co SA'],
+    ['Globex', 'Fromage & Co Inc.'],
+    ['Acme Ltd.', 'Fromage & Co Inc.'],
+  ]);
+
+  const unread = await preflight('opex', `${header},Line,Fromage & Co Inc.,FR-DIS-100,6100,EUR\n`, [], { cat });
+  assert.deepEqual(unread.warnings.costCenterCompanies.map((warning) => [warning.code, warning.company, warning.message]), [
+    ['BUDGET_FILE_COST_CENTER_OTHER_COMPANY_UNREAD', 'Fromage & Co Inc.', 'Cost center FR-DIS-100 belongs to another company. The line is paid by Fromage & Co Inc.'],
+  ]);
+
+  const medianCat = catalog({
+    companies: [{ id: 'c1', name: 'Acme', coaId: 'chart', disabledAt: null, baseCurrency: 'EUR' }],
+    accounts: [{ id: 'a1', number: '6100', coaId: 'chart', disabledAt: null }],
+    suppliers: [
+      { id: 's-ltd', name: 'Acme Ltd.', erpId: null, disabledAt: null },
+      { id: 's-orange', name: 'Orange', erpId: null, disabledAt: null },
+    ],
+  });
+  const peer = (id: string, n: number, supplierId: string, cents: bigint) => line({
+    id, itemNumber: n, legacyNumber: null, name: `Peer ${n}`, supplierId, companyId: 'c1', accountId: 'a1',
+    versions: [budgetOf(cents, YEAR, `ver-${id}`)],
+  });
+  const stored = [
+    peer('l1', 1, 's-ltd', 1000000n), peer('l2', 2, 's-ltd', 1200000n), peer('l3', 3, 's-ltd', 1100000n),
+    peer('l4', 4, 's-orange', 1000000n), peer('l5', 5, 's-orange', 1200000n), peer('l6', 6, 's-orange', 1100000n),
+  ];
+  const far = await lookPlan(
+    ['opex,,Fibre,Acme,6100,EUR,Acme Ltd.,500000', 'opex,,Fibre 2,Acme,6100,EUR,Orange,500000'],
+    { stored, cat: medianCat, reads: true },
+  );
+  assert.equal(far.report.ok, true, JSON.stringify(far.report.errors));
+  assert.deepEqual(far.report.warnings.consistency?.map((warning) => [warning.line, warning.message, warning.params?.supplier]), [
+    [2, 'Budget 2026 at 500 000, against a median of 11 000 on 3 lines of Acme Ltd.', 'Acme Ltd.'],
+    [3, 'Budget 2026 at 500 000, against a median of 11 000 on 3 lines of Orange.', 'Orange'],
+  ]);
+}
+
 /** company_name of another company than the cost center's: accepted, with one warning on the line. */
 async function testCostCenterOfAnotherCompany() {
   const cat = catalog({
@@ -1494,6 +1559,7 @@ async function main() {
   await testConsistency();
   await testTrailingLineBreak();
   await testCapexDescription();
+  await testPeriodAfterAName();
   await testCostCenterOfAnotherCompany();
   await testCalculationLinesCap();
   await testCalculationLinesSilentCases();
