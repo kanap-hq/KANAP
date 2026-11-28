@@ -246,7 +246,7 @@ At every start, before the migrations, Kadratis changes the application role to 
 | `AWS_SECRET_ACCESS_KEY` | Secret key | `secret` |
 | `S3_FORCE_PATH_STYLE` | `true` for RustFS, MinIO, Garage and most self-hosted stores; `false` for AWS S3 and Cloudflare R2 | `false` |
 
-**Region.** Use `us-east-1` with RustFS. A provider can require its own region (the one it shows in its console). With Garage the region must be the one set in its configuration. A wrong region produces errors such as "Authorization header malformed".
+**Region.** Without `S3_REGION`, Kadratis uses `nbg1`. Use `us-east-1` with RustFS. A provider can require its own region (the one it shows in its console). With Garage the region must be the one set in its configuration. A wrong region produces errors such as "Authorization header malformed".
 
 **Bucket requirements:**
 
@@ -380,7 +380,7 @@ The command prints nothing when all is well. A line that starts with `Warning: I
 
 See the dedicated guide: [Microsoft Entra SSO](sso-entra.md).
 
-It covers the app registration, the delegated and application permissions, and the daily directory sync that refreshes user attributes and disables accounts removed from the directory. The variables are `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`, `ENTRA_AUTHORITY` and `ENTRA_REDIRECT_URI`; all four are needed. The API needs outbound access to `login.microsoftonline.com` and `graph.microsoft.com`.
+It covers the app registration, the delegated and application permissions, and the daily directory sync that refreshes user attributes and disables accounts removed from the directory. The variables are `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`, `ENTRA_AUTHORITY` and `ENTRA_REDIRECT_URI`; all four are needed. When `ENTRA_CLIENT_ID` is set without one of the other three, the API names the missing ones in a `[CONFIG]` warning at start. The API needs outbound access to `login.microsoftonline.com` and `graph.microsoft.com`.
 
 ## Optional: AI features
 

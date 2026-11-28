@@ -212,8 +212,8 @@ export type StartupEnvReport = {
  * Start-up checks of the environment. Throws only where the API refuses to start:
  * `DEPLOYMENT_MODE` outside `single-tenant`, `multi-tenant` or unset, `DATABASE_URL` or
  * `JWT_SECRET` missing, and in production mode `APP_BASE_URL` or `CORS_ORIGINS` missing.
- * Everything else is returned as a warning, including a token lifetime, `API_WORKERS` or
- * `S3_BUCKET` the API will not use as written. The lead process prints the lines once per start.
+ * Everything else is returned as a warning, including a token lifetime, `API_WORKERS`,
+ * `S3_BUCKET` or a Microsoft Entra variable the API will not use as written. The lead process prints the lines once per start.
  */
 export function validateStartupEnv(
   env: NodeJS.ProcessEnv = process.env,
@@ -285,6 +285,7 @@ export function validateStartupEnv(
     inviteLinkTtlWarning(env.INVITE_LINK_TTL),
     apiWorkersConfigWarning(env.API_WORKERS),
     s3BucketWarning(env),
+    entraConfigWarning(env),
   ]) {
     if (warning) warnings.push(warning);
   }
@@ -301,4 +302,17 @@ function s3BucketWarning(env: NodeJS.ProcessEnv): string | null {
   if (typeof raw === 'string' && raw.trim() !== '') return null;
   const named = typeof raw === 'string' && raw !== '' ? `is ${JSON.stringify(raw)}` : 'is not set';
   return `[CONFIG] S3_BUCKET ${named}: file storage fails at the first upload or download. Set S3_BUCKET to the name of the bucket.`;
+}
+
+const ENTRA_COMPANION_VARIABLES = ['ENTRA_CLIENT_SECRET', 'ENTRA_AUTHORITY', 'ENTRA_REDIRECT_URI'] as const;
+
+/**
+ * Microsoft Entra sign-in turns on with `ENTRA_CLIENT_ID` (`config/features.ts`) and needs the
+ * three others: without one of them every Entra sign-in fails. Names the missing ones, never a value.
+ */
+export function entraConfigWarning(env: NodeJS.ProcessEnv): string | null {
+  if (!String(env.ENTRA_CLIENT_ID ?? '').trim()) return null;
+  const missing = ENTRA_COMPANION_VARIABLES.filter((name) => !String(env[name] ?? '').trim());
+  if (missing.length === 0) return null;
+  return `[CONFIG] ENTRA_CLIENT_ID is set without ${missing.join(', ')}: Microsoft Entra sign-in fails until all four ENTRA_ variables are set.`;
 }

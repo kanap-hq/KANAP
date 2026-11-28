@@ -262,8 +262,26 @@ function testConfigValueWarnings() {
   });
 }
 
+// Microsoft Entra sign-in needs four variables; the feature turns on with ENTRA_CLIENT_ID alone.
+function testEntraWarning() {
+  const entra = (extra: Record<string, string | undefined>) => configured(extra).warnings.filter((warning) => warning.includes('ENTRA_'));
+  const alone = entra({ ENTRA_CLIENT_ID: 'client-id' });
+  assert.equal(alone.length, 1, alone.join(' | '));
+  assert.ok(alone[0].startsWith('[CONFIG] '), alone[0]);
+  for (const name of ['ENTRA_CLIENT_SECRET', 'ENTRA_AUTHORITY', 'ENTRA_REDIRECT_URI']) assert.ok(alone[0].includes(name), `${name} named: ${alone[0]}`);
+  const oneMissing = entra({ ENTRA_CLIENT_ID: 'client-id', ENTRA_CLIENT_SECRET: 'secret', ENTRA_AUTHORITY: 'https://login.example.test/tenant' });
+  assert.equal(oneMissing.length, 1);
+  assert.ok(oneMissing[0].includes('ENTRA_REDIRECT_URI') && !oneMissing[0].includes('ENTRA_CLIENT_SECRET') && !oneMissing[0].includes('ENTRA_AUTHORITY,'), oneMissing[0]);
+  assert.ok(!oneMissing[0].includes('secret'), 'no value in the line');
+  // Blank values count as missing; all four, or none, give no line.
+  assert.equal(entra({ ENTRA_CLIENT_ID: 'client-id', ENTRA_CLIENT_SECRET: ' ', ENTRA_AUTHORITY: 'a', ENTRA_REDIRECT_URI: 'b' }).length, 1);
+  assert.deepEqual(entra({ ENTRA_CLIENT_ID: 'client-id', ENTRA_CLIENT_SECRET: 'secret', ENTRA_AUTHORITY: 'a', ENTRA_REDIRECT_URI: 'b' }), []);
+  assert.deepEqual(entra({ ENTRA_CLIENT_SECRET: 'secret' }), []);
+}
+
 testModeMatrix();
 testDecisionsPerMode();
 testStartupChecks();
 testConfigValueWarnings();
+testEntraWarning();
 console.log('run-mode.spec: ok');
