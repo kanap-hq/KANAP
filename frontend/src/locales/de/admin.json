@@ -3351,5 +3351,18 @@
         "cancelled": "Abgesagt"
       }
     }
+  },
+  "allSettings": {
+    "title": "Alle Einstellungen",
+    "search": "Einstellungen durchsuchen",
+    "searchPlaceholder": "z. B. Reporting-Währung",
+    "noMatch": "Keine Einstellung entspricht „{{query}}“.",
+    "empty": "Hier steht Ihnen keine Einstellungsseite offen.",
+    "groups": {
+      "person": "Mein Konto",
+      "organization": "Administration",
+      "installation": "Installation",
+      "platform": "Plattform"
+    }
   }
 }
