@@ -1975,5 +1975,9 @@
     "applied": "{{field}}: {{value}}",
     "toCheck": "Zu prüfen: {{count}}",
     "willCheck": "Davon {{count}} zu prüfen"
+  },
+  "operationPanel": {
+    "moreLines_one": "und {{count}} weitere Zeile",
+    "moreLines_other": "und {{count}} weitere Zeilen"
   }
 }
