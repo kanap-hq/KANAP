@@ -13,12 +13,12 @@ This document tracks documentation coverage for the Kadratis user manual.
 | IT Landscape | 14 | 14 | 0 |
 | Knowledge | 1 | 1 | 0 |
 | Master Data | 8 | 8 | 0 |
-| Admin & Settings | 18 | 18 | 0 |
+| Admin & Settings | 19 | 19 | 0 |
 | Kad | 1 | 1 | 0 |
 | AI Agents | 5 | 5 | 0 |
 | Reports | 9 | 9 | 0 |
 | Portfolio | 10 | 10 | 0 |
-| **TOTAL** | **71** | **71** | **0** |
+| **TOTAL** | **72** | **72** | **0** |
 
 _Note: Supplemental Fast Track guides are excluded from these route-based counts. All tenant-facing routes have a manual. The classic product (through the 2026-05-10 sweep) is available in en/fr/de/es; the AI Agents section (added 2026-07-05) is also available in en/fr/de/es. The two AI model registry pages (added 2026-08-10) are available in en/fr/de/es._
 
@@ -28,6 +28,7 @@ _Note: Supplemental Fast Track guides are excluded from these route-based counts
 
 | Date | Doc File | Changes |
 |------|----------|---------|
+| 2026-11-28 | `all-settings.md` (en) | New page for **All settings** (`/admin/all-settings`, every signed-in person): the groups (My account, one per module, Administration, Installation, Platform), the search on page and setting names, what the list hides according to rights, mode and host, and the two menu entries. Wired mkdocs nav, `docUrls.ts`, `doc-update-map.tsv` (`AllSettingsPage.tsx`, `frontend/src/settings/**`). |
 | 2026-11-07 | `my-dashboard.md` (en/fr/de/es) | Recently viewed also lists business processes. `doc/api-reference.md` names `company` and `business_process` among the types of the existence check. |
 | 2026-11-02 | `first-steps/*.md` (en/fr/de/es) | Six first-steps guides, one per trial path and mode: budget, IT landscape and portfolio, with the example or with your own data. Each follows the five steps of the **Your first five steps** tile (`onboarding-paths.ts`), with the screen each step opens, what to do and what to read. Wired mkdocs nav (**First steps**, fr/de/es labels), `doc-update-map.tsv`; `docUrls.ts` opens the guide of a step from the screen it opened (`?step=`). |
 | 2026-11-01 | `my-dashboard.md` (en/fr/de/es) | Trial onboarding. The Budget management overview (`/ops`) and the Master data home page are gone: the budget tiles, their buttons and **Customize** form the new **Budget management section** of the home page (My tasks left out); `operations-dashboard.md` removed in every language, with its nav entry, its `index.md` links and its `doc-update-map.tsv` rows; `docUrls.ts` maps `/ops` to `my-dashboard`. New subsection on the trial path ordering the home page tiles. |
@@ -249,6 +250,7 @@ _Note: `/knowledge/new`, `/knowledge/:id`, and `/knowledge/:id/:tab` are covered
 | `/admin/ai-usage` | AdminAiUsagePage | **DOCUMENTED** | `ai-usage.md` |
 | `/admin/integrations` | AdminIntegrationsPage | **DOCUMENTED** | `integrations.md` |
 | `/admin/scheduled-tasks` | ScheduledTasksPage | **DOCUMENTED** | `scheduled-tasks.md` |
+| `/admin/all-settings` | AllSettingsPage | **DOCUMENTED** | `all-settings.md` |
 | `/settings` | SettingsPage | **DOCUMENTED** | mapped to `fast-track/getting-started.md` in `docUrls.ts` (personal settings are covered in the Getting Started guide) |
 | `/settings/connected-apps` | ConnectedAppsTab | **DOCUMENTED** | `connected-apps.md` (mapped before the `/settings` rule in `docUrls.ts`) |
 

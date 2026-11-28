@@ -469,6 +469,7 @@ nav:
     - "Usage & costs": ai-usage.md
     - Integrations: integrations.md
     - Scheduled Tasks: scheduled-tasks.md
+    - All settings: all-settings.md
 
   - On-Premise:
     - Overview: on-premise/index.md

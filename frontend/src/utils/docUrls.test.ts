@@ -43,6 +43,11 @@ describe('getDocUrl', () => {
     expect(getDocUrl('/admin/data-access', 'fr')).toBe('https://doc.kadratis.com/fr/data-access/');
   });
 
+  it('opens the all settings manual from its page', () => {
+    expect(getDocUrl('/admin/all-settings')).toBe('https://doc.kadratis.com/all-settings/');
+    expect(getDocUrl('/admin/all-settings', 'de')).toBe('https://doc.kadratis.com/de/all-settings/');
+  });
+
   it('opens the guide of the trial step a screen was opened from', () => {
     expect(getDocUrl('/ops/budget', undefined, '?step=budget_overview')).toBe('https://doc.kadratis.com/first-steps/budget-example/');
     expect(getDocUrl('/it/locations', 'fr', '?step=own_sites')).toBe('https://doc.kadratis.com/fr/first-steps/landscape-own-data/');
