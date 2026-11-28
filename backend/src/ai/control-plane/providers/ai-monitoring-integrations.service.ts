@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable } from '@nestjs/common';
 import { writeAuditLog } from '../../../audit/audit.service';
 import { sameSecretDestination } from '../../../common/secret-destination';
 import { assertPublicHttpUrl } from '../../../common/ssrf-guard';
@@ -8,6 +8,13 @@ import { PrtgService, sanitizePrtgText } from '../../prtg/prtg.service';
 import { PrtgApiError, PrtgAuth } from '../../prtg/prtg.types';
 import { AiAdapterConfig } from './adapter-config.entity';
 import { AiAdapterConfigService, parseCredentialRef } from './adapter-config.service';
+import {
+  clearAdapterConnectionTest,
+  LAST_CONNECTION_TEST_KEY,
+  readLastConnectionTest,
+  recordAdapterConnectionTest,
+  StoredConnectionTest,
+} from './adapter-connection-test';
 import { PRTG_MONITORING_IMPLEMENTATION, PRTG_MONITORING_PROVIDER_KEY } from './provider-constants';
 import { PRTG_MAX_TIMEOUT_SECONDS, PRTG_MIN_TIMEOUT_SECONDS } from './prtg-monitoring.provider';
 import { ProviderCredentialRef } from './provider.types';
@@ -32,6 +39,8 @@ export type MonitoringIntegrationView = {
     shape: 'api_token' | 'username_passhash' | 'secret_ref' | 'none';
   };
   updated_at: string | null;
+  /** The last connection test run on the saved address and credential. Null until one is kept. */
+  last_test: StoredConnectionTest | null;
 };
 
 export type PrtgIntegrationSaveInput = {
@@ -52,10 +61,54 @@ export type PrtgIntegrationTestInput = {
 
 export type PrtgIntegrationTestResult = {
   ok: boolean;
+  /** A code the card translates (`errors:<code>`), on a failure; `message` is the English fallback. */
+  code?: PrtgTestFailureCode;
   prtg_version?: string;
   sensor_count?: number;
   message: string;
+  /** When the test ran, and whether it was kept on the saved configuration. */
+  tested_at: string;
+  persisted: boolean;
 };
+
+/** The causes of a failed test, translated by the card; the address refusals are the common ones. */
+export type PrtgTestFailureCode =
+  | 'prtg_base_url_missing'
+  | 'prtg_base_url_invalid'
+  | 'prtg_token_needed_for_address'
+  | 'prtg_credential_missing'
+  | 'prtg_credential_unavailable'
+  | 'prtg_credential_incomplete'
+  | 'prtg_auth'
+  | 'prtg_forbidden'
+  | 'prtg_timeout'
+  | 'prtg_rate_limited'
+  | 'prtg_invalid_response'
+  | 'prtg_unreachable'
+  | 'address_private_host'
+  | 'address_unresolved';
+
+const PRTG_API_CODES: Record<PrtgApiError['errorCode'], PrtgTestFailureCode> = {
+  unauthorized: 'prtg_auth',
+  forbidden: 'prtg_forbidden',
+  not_found: 'prtg_invalid_response',
+  timeout: 'prtg_timeout',
+  rate_limited: 'prtg_rate_limited',
+  provider_unavailable: 'prtg_unreachable',
+  invalid_response: 'prtg_invalid_response',
+};
+
+const UNREACHABLE_MESSAGE = 'PRTG did not respond. Check the server address and that the PRTG web server is reachable.';
+
+/** The code a refused address or configuration carries (`prtg_base_url_invalid`, `address_*`), if any. */
+function refusalCode(error: unknown): PrtgTestFailureCode | null {
+  if (!(error instanceof HttpException)) return null;
+  const response = error.getResponse();
+  const code = response && typeof response === 'object' ? (response as { code?: unknown }).code : null;
+  return code === 'prtg_base_url_invalid' || code === 'address_private_host' || code === 'address_unresolved'
+    ? code
+    : null;
+}
 
 const BASE_URL_MESSAGE = 'The PRTG server address must be a full web address starting with http:// or https:// '
   + '(for example https://prtg.example.com). You can copy it from the browser address bar when logged into PRTG.';
@@ -169,6 +222,11 @@ function credentialSummary(raw: unknown): MonitoringIntegrationView['credential'
 }
 
 function toView(config: AiAdapterConfig): MonitoringIntegrationView {
+  return { ...auditView(config), last_test: readLastConnectionTest(asRecord(config.metadata_json)) };
+}
+
+/** What an audit entry keeps of the connection: the view without its last test, which is never audited. */
+function auditView(config: AiAdapterConfig): Omit<MonitoringIntegrationView, 'last_test'> {
   const metadata = asRecord(config.metadata_json);
   return {
     provider_key: config.provider_key,
@@ -276,6 +334,10 @@ export class AiMonitoringIntegrationsService {
     const apiToken = textOrNull(input.api_token);
     const username = textOrNull(input.username);
     const passhash = textOrNull(input.passhash);
+    const credentialTyped = !!apiToken || !!(username && passhash);
+    // A credential replaced at the same address leaves both sides of the entry alike: it says so.
+    const secretReplaced = credentialTyped && !!existing?.credential_ref_json
+      && sameSecretDestination(existing.base_url, baseUrl);
     if (apiToken) {
       credentialRef = this.encryptedCredentialRef(apiToken, 'api_token');
     } else if (username || passhash) {
@@ -300,11 +362,16 @@ export class AiMonitoringIntegrationsService {
       table: 'ai_adapter_configs',
       recordId: saved.id,
       action: existing ? 'update' : 'create',
-      before: existing ? toView(existing) : null,
-      after: toView(saved),
+      before: existing ? auditView(existing) : null,
+      after: { ...auditView(saved), ...(secretReplaced ? { secret_replaced: true } : {}) },
       userId: context.userId || null,
       sourceRef: context.requestId ?? null,
     });
+    // A new address or a new credential makes the stored test describe values that are gone.
+    if (existing && readLastConnectionTest(asRecord(existing.metadata_json))
+      && (textOrNull(existing.base_url) !== baseUrl || credentialTyped)) {
+      await clearAdapterConnectionTest(context.manager, saved.id, context.tenantId);
+    }
     return { ok: true };
   }
 
@@ -321,6 +388,9 @@ export class AiMonitoringIntegrationsService {
     if (!existing || (!textOrNull(existing.base_url) && !existing.credential_ref_json && !existing.enabled)) {
       return null;
     }
+    // The test of the removed server goes with it; the time zone and the timeout stay.
+    const metadata: Record<string, unknown> = { ...(asRecord(existing.metadata_json) ?? {}) };
+    delete metadata[LAST_CONNECTION_TEST_KEY];
     const saved = await this.adapterConfigs.saveConfig(context, {
       provider_kind: 'monitoring',
       provider_key: PRTG_MONITORING_PROVIDER_KEY,
@@ -329,52 +399,90 @@ export class AiMonitoringIntegrationsService {
       enabled: false,
       base_url: null,
       credential_ref_json: null,
+      metadata_json: Object.keys(metadata).length > 0 ? metadata : null,
     });
     await writeAuditLog(context.manager, {
       table: 'ai_adapter_configs',
       recordId: saved.id,
       action: 'update',
-      before: toView(existing),
-      after: toView(saved),
+      before: auditView(existing),
+      after: auditView(saved),
       userId: context.userId || null,
       sourceRef: context.requestId ?? null,
     });
     return { ok: true };
   }
 
+  /**
+   * Admin "Test". Values typed on the card win over the stored ones, so an address can be
+   * checked before it is saved. Never throws for a connection problem: the card shows the cause
+   * from `code`. The outcome is kept on the configuration only when the test used the saved
+   * address and credential, and only if they are still saved when it ends.
+   */
   async testPrtgIntegration(
     context: AiExecutionContextWithManager,
     input: PrtgIntegrationTestInput,
   ): Promise<PrtgIntegrationTestResult> {
     const config = await this.adapterConfigs.getConfig(context, 'monitoring', PRTG_MONITORING_PROVIDER_KEY);
-
-    const baseUrlInput = textOrNull(input.base_url);
-    const baseUrl = baseUrlInput ? normalizePrtgBaseUrl(baseUrlInput) : textOrNull(config?.base_url);
-    if (!baseUrl) {
-      return { ok: false, message: 'Add the PRTG server address first, then run the test again.' };
+    const outcome = await this.runPrtgTest(context, config, input);
+    const testedAt = new Date().toISOString();
+    let persisted = false;
+    if (config && outcome.storedValues) {
+      try {
+        persisted = await recordAdapterConnectionTest(context.manager, config, { ok: outcome.result.ok, tested_at: testedAt });
+      } catch {
+        // The outcome still shows on the card for this session.
+      }
     }
-    assertPublicHttpUrl(baseUrl); // SSRF: block internal targets in cloud (no-op on-prem)
+    return { ...outcome.result, tested_at: testedAt, persisted };
+  }
 
+  private async runPrtgTest(
+    context: AiExecutionContextWithManager,
+    config: AiAdapterConfig | null,
+    input: PrtgIntegrationTestInput,
+  ): Promise<{ storedValues: boolean; result: Omit<PrtgIntegrationTestResult, 'tested_at' | 'persisted'> }> {
+    const fail = (code: PrtgTestFailureCode, message: string, storedValues = false) => ({
+      storedValues,
+      result: { ok: false, code, message },
+    });
+    const baseUrlInput = textOrNull(input.base_url);
+    let baseUrl: string | null;
+    try {
+      baseUrl = baseUrlInput ? normalizePrtgBaseUrl(baseUrlInput) : textOrNull(config?.base_url);
+    } catch (error) {
+      return fail(refusalCode(error) ?? 'prtg_base_url_invalid', error instanceof Error ? error.message : BASE_URL_MESSAGE);
+    }
+    if (!baseUrl) {
+      return fail('prtg_base_url_missing', 'Add the PRTG server address first, then run the test again.');
+    }
     let material = textOrNull(input.api_token);
+    const storedValues = !!config && !material && baseUrl === textOrNull(config.base_url);
+    try {
+      assertPublicHttpUrl(baseUrl); // SSRF: block internal targets in cloud (no-op on-prem)
+    } catch (error) {
+      return fail(refusalCode(error) ?? 'prtg_base_url_invalid', error instanceof Error ? error.message : BASE_URL_MESSAGE, storedValues);
+    }
+
     if (!material) {
       // The stored credential is only sent to the stored address.
       if (config?.credential_ref_json && !sameSecretDestination(config.base_url, baseUrl)) {
-        return { ok: false, message: 'Enter the API token to test an address other than the saved one.' };
+        return fail('prtg_token_needed_for_address', 'Enter the API token to test an address other than the saved one.');
       }
       if (!config?.credential_ref_json) {
-        return { ok: false, message: 'No PRTG credential is saved yet. Enter an API token to test with, or save one first.' };
+        return fail('prtg_credential_missing', 'No PRTG credential is saved yet. Enter an API token to test with, or save one first.');
       }
       try {
         material = this.secretResolver.resolve(context, config.credential_ref_json).reveal();
       } catch {
         // Structured missing-credential outcome — never surfaces resolver
         // details (they may reference internal env naming).
-        return { ok: false, message: 'The saved PRTG credential is not available on this server. Enter the API token again and save.' };
+        return fail('prtg_credential_unavailable', 'The saved PRTG credential is not available on this server. Enter the API token again and save.', storedValues);
       }
     }
     const auth = parsePrtgAuthMaterial(material);
     if (!auth) {
-      return { ok: false, message: 'The saved PRTG credential is incomplete. Enter the API token (or user name and passhash) again and save.' };
+      return fail('prtg_credential_incomplete', 'The saved PRTG credential is incomplete. Enter the API token (or user name and passhash) again and save.', storedValues);
     }
 
     // Apply the tuned timeout to the probe too: a slow-but-working PRTG
@@ -388,20 +496,26 @@ export class AiMonitoringIntegrationsService {
       const version = probe.prtgVersion;
       const count = probe.sensorCount;
       return {
-        ok: true,
-        ...(version ? { prtg_version: version } : {}),
-        ...(count != null ? { sensor_count: count } : {}),
-        message: version
-          ? `Connected to PRTG ${version}. ${count ?? 0} sensor(s) are visible to this account.`
-          : 'Connected to PRTG.',
+        storedValues,
+        result: {
+          ok: true,
+          ...(version ? { prtg_version: version } : {}),
+          ...(count != null ? { sensor_count: count } : {}),
+          message: version
+            ? `Connected to PRTG ${version}. ${count ?? 0} sensor(s) are visible to this account.`
+            : 'Connected to PRTG.',
+        },
       };
     } catch (error) {
       // PrtgApiError messages are already sanitized by the transport; anything
       // else gets a fixed plain-language message so no URL/token can leak.
-      const message = error instanceof PrtgApiError
-        ? sanitizePrtgText(error.message)
-        : 'PRTG did not respond. Check the server address and that the PRTG web server is reachable.';
-      return { ok: false, message };
+      if (error instanceof PrtgApiError) {
+        return fail(PRTG_API_CODES[error.errorCode] ?? 'prtg_unreachable', sanitizePrtgText(error.message), storedValues);
+      }
+      const refused = refusalCode(error);
+      return refused
+        ? fail(refused, error instanceof Error ? error.message : UNREACHABLE_MESSAGE, storedValues)
+        : fail('prtg_unreachable', UNREACHABLE_MESSAGE, storedValues);
     }
   }
 

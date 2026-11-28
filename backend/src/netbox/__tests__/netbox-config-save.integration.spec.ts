@@ -146,6 +146,17 @@ async function main() {
       assert.deepEqual(row.metadata_json.role_map, { server: 'physical_server' });
     });
 
+    await inTransaction('a token replaced at the same address says so in the audit entry, never the token', async (runner) => {
+      const { tenantId, configId } = await seed(runner);
+      await service().save(runner.manager, tenantId, { base_url: STORED_URL, api_token: 'nbt_rotated' }, { userId: null });
+      await service().save(runner.manager, tenantId, { base_url: 'https://other.example.com', api_token: 'nbt_other' }, { userId: null });
+      await service().save(runner.manager, tenantId, { auto_sync: true }, { userId: null });
+      const audits = await auditRows(runner, configId);
+      assert.deepEqual(audits.map((row: any) => row.after_json.secret_replaced), [true, undefined, undefined]);
+      assert.equal(audits[0].before_json.secret_replaced, undefined);
+      assert.doesNotMatch(JSON.stringify(audits), /nbt_rotated|nbt_other|stored-token|ciphertext|last_connection_test/);
+    });
+
     await inTransaction('an empty token on the same address keeps the stored test', async (runner) => {
       const { tenantId, configId } = await seed(runner);
       const view = await service().save(runner.manager, tenantId, { api_token: '   ', auto_sync: true });
