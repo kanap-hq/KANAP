@@ -227,8 +227,18 @@ const CONTROL_OR_FORMAT = /[\p{Cc}\p{Cf}]/u;
 const INT_MIN = -2147483648;
 const INT_MAX = 2147483647;
 
-export function costCenterRefusal(message: string, field?: CostCenterField | 'status'): BadRequestException {
-  return new BadRequestException({ statusCode: 400, error: 'Bad Request', message, ...(field ? { field } : {}) });
+export function costCenterRefusal(
+  message: string,
+  field?: CostCenterField | 'status',
+  coded?: { code: string; params?: Record<string, unknown> },
+): BadRequestException {
+  return new BadRequestException({
+    statusCode: 400,
+    error: 'Bad Request',
+    message,
+    ...(field ? { field } : {}),
+    ...(coded ? { code: coded.code, ...(coded.params ? { params: coded.params } : {}) } : {}),
+  });
 }
 
 export function normalizeCostCenterCode(raw: unknown): string {
@@ -649,7 +659,11 @@ export class CostCentersService {
       saved = (Array.isArray(rows[0]) ? (rows[0] as any)[0] : rows[0]) as StoredCostCenter;
     } catch (err: any) {
       if (err?.code === '23505') {
-        throw costCenterRefusal(`A cost center with code ${values.code} already exists.`, 'code');
+        throw costCenterRefusal(
+          `A cost center with code ${values.code} already exists.`,
+          'code',
+          { code: 'COST_CENTER_CODE_TAKEN', params: { code: values.code } },
+        );
       }
       throw err;
     }
