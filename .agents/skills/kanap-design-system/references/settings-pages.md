@@ -73,12 +73,15 @@ as it is: extend the one in the repository, never write a second one for the sam
 - **A secret** is never read back: the field shows dots, greyed, with the link "Replace" on its
   right. "Replace" empties the field and makes it editable.
 - The refusal of a value (`error`) shows under the field, in `kanap.danger`, tied to the control
-  (`aria-describedby`).
+  (`aria-describedby`, `aria-invalid`). A plain element given as is (`<input>`, `<select>`) gets
+  both attributes from `SettingField`. A component (`TextField`, `Select`) uses the render function
+  and wires `errorId` itself: given as is, it would carry the attributes on its wrapper, away from
+  the focusable control (`inputProps` for a `TextField`, `SelectDisplayProps` for a `Select`).
 
 ```tsx
 <SettingField label={t('…method')} hint={t('…methodHelp')} error={error}>
   {({ readOnly, error, errorId }) => (
-    <Select variant="standard" readOnly={readOnly} error={error} inputProps={{ 'aria-describedby': errorId }} …>…</Select>
+    <Select variant="standard" readOnly={readOnly} error={error} SelectDisplayProps={{ 'aria-describedby': errorId }} …>…</Select>
   )}
 </SettingField>
 ```
@@ -94,14 +97,30 @@ theme draws it on `kanap.bg.drawer`.
     loses the focus (`commit()` in its `onBlur`).
   - `save` is `null` when the page's checks refuse the value: nothing is sent for that field and
     what waited for it is dropped. The refused value stays in the field with its error under it;
-    the value before stays stored.
-- The state is read in one place: "Saving…" then "Saved" (1.5 s), grey 12 px. In the page header
-  for a settings page, in the section header for a list of values.
-- A save the server refuses is reported through `error` (show it with `autosaveErrorMessage`) and
-  the page shows the stored value again.
+    the value before stays stored. A choice refused this way goes back to the stored value at the
+    next change of the page (the check is often about another field).
+- The state is read in one place: "Saving…" then "Saved" (1.5 s), grey 12 px; "Not saved" in
+  `kanap.danger` after a failed save. In the page header for a settings page, in the section
+  header for a list of values.
+- Every field waiting is sent, whatever the server answers the others.
+- **A save the server refuses** (any answer but a busy server): the field shows the stored value
+  again at once, text or choice, and the refusal stays under that field until that field changes
+  again, whatever else changes meanwhile. The hook keeps it by field: `errorOf(field)`, shown with
+  `getApiErrorMessage`. The page's save function puts the stored value back when the failure is
+  not transient (`isTransientSaveFailure`), then throws it again.
+- **A save a busy server puts off** (409 `retry`, 503 `busy`): the value chosen stays on screen and
+  the state says "Saving…" while `useAutosave` retries it (1, 2, 4 s). Once the retries are spent,
+  the save stays kept: the state says "Not saved", `error` holds the failure (show it with
+  `autosaveErrorMessage`: "not saved yet… sent again with your next change"), the value chosen
+  stays on screen, and the save goes again with the next change, when a text field loses the focus,
+  or on leaving.
 - Leaving the page while a save waits sends it first (`useLeaveGuard`): the menu, the top bar tabs
-  and in-app links wait for it. Only a save that could not go through asks before leaving
+  and in-app links wait for it. A save refused then keeps the person on the page, without a
+  question, the refusal under its field. A save still kept for a busy server asks before leaving
   ("Changes not saved"). A reload or a closed tab warns while a save waits.
+- A choice that decides what the page shows (the year of a per-year setting) is off while a save
+  of the page is on its way or kept: the refusal and the stored value put back are those of the
+  year on screen.
 - Each change writes its own audit entry: one per field changed.
 
 ## 5. The list of values
@@ -160,8 +179,12 @@ theme draws it on `kanap.bg.drawer`.
 - The confirmation asks with the verb ("Clear the Revision column of 2026?"), says the effect in
   numbers and what is kept ("The lines and their other columns are kept."), and its button
   repeats the verb.
-- The result is written beside the pill: "45 lines cleared." The state with nothing to do fits in
-  one sentence: "The Revision column of 2026 holds no amount."
+- The result is written beside the pill: "Column cleared on 45 lines." Its live region
+  (`role="status"`) is there before the result, so a screen reader announces it. The state with
+  nothing to do fits in one sentence: "The Revision column of 2026 holds no amount."
+- The preview lines are the largest amounts by size, a negative amount included.
+- A page whose operation depends on a setting it could not read (the column names, the freeze)
+  shows `SettingsPage` `error`: no option, no pill.
 - A refusal (a frozen column in `notices`, another operation running in `result`) reads as a
   refusal, never as a silent failure.
 - The panel is a frame: the page computes the preview, runs the operation and writes the result.

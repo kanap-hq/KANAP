@@ -29,11 +29,12 @@ The landing page has two sections. Each card links to a dedicated tool. An empty
 
 | Cards | Who sees them |
 |---|---|
-| Currencies, Budget columns, Default allocation method, Freeze / unfreeze data | Budget administration at admin level (`budget_ops:admin`) |
+| Currencies, Freeze / unfreeze data | Budget administration at admin level (`budget_ops:admin`) |
+| Budget columns, Default allocation method | Budget administration at reader level (`budget_ops:reader`), read-only. Changing them needs the admin level (`budget_ops:admin`) |
 | Copy budget columns, Reset budget column | Budget at admin level (`budget:admin`). The **All**, **OPEX** and **CAPEX** tabs all open with it |
 | Freeze master data, Copy yearly metrics | Users with access to the budget who are admins of Budget administration, companies or departments. Company and department admins act on their own scope |
 
-The built-in Budget Administrator role sees every card. Budget Member and Budget Reader see none, so **Administration** is not in their menu.
+The built-in Budget Administrator role sees every card. Budget Member and Budget Reader see the **Budget columns** and **Default allocation method** cards, which open read-only for them, and no operation. A person whose data access is limited sees none of these cards.
 
 The budget columns are Budget, Revision, Forecast, Actuals and Expected landing. These are the standard names. Your organisation can rename them, hide some and choose a default column in [Budget columns](#budget-columns). Every page below shows the names your organisation chose.
 
@@ -248,7 +249,7 @@ Before you choose a column, one line says: "Choose a column to see the amounts i
 - **Lines with an amount**
 - **Total value**
 
-Under them, the five lines with the largest amounts in the column, then "and N more lines". On the **All** tab a **Line type** column says **OPEX** or **CAPEX**. A sentence then says what clearing removes, for how many lines, and that it cannot be undone.
+Under them, the five lines with the largest amounts in the column, a negative amount ranked by its size, then "and N more lines". On the **All** tab a **Line type** column says **OPEX** or **CAPEX**. A sentence then says what clearing removes, for how many lines, and that it cannot be undone.
 
 **Show all N lines** opens a grid of every line of the chosen type under the panel, with its current value in the column. The grid sorts by any column, and the line's name opens it in a new tab. Amounts that will be cleared are shown in medium weight; empty values are muted. **Hide the lines** closes it.
 
@@ -264,7 +265,7 @@ Clicking **Clear column** opens a confirmation that asks "Clear the Budget colum
 - That the lines and their other columns are kept
 - That this action cannot be undone
 
-Click **Clear column** in the dialog to proceed, or **Cancel** to abort. The result shows beside the button, for example "45 lines cleared."
+Click **Clear column** in the dialog to proceed, or **Cancel** to abort. The result shows beside the button, for example "Column cleared on 45 lines."
 
 ### Safety features
 
@@ -292,7 +293,7 @@ Set the method that OPEX lines and CAPEX investments follow when they are left o
 | Field | Description |
 |-------|-------------|
 | **Fiscal year** | The year the setting applies to (range: current year minus one through current year plus five) |
-| **Companies** | **All enabled companies** (default) spreads the cost over every company active for the year. **Selected companies** restricts it to the companies you pick |
+| **Company scope** | **All enabled companies** (default) spreads the cost over every company active for the year. **Selected companies** restricts it to the companies you pick in **Companies** |
 | **Default method** | The driver weighting the companies: Headcount, IT Users, or Turnover |
 
 ### How it works
@@ -300,8 +301,9 @@ Set the method that OPEX lines and CAPEX investments follow when they are left o
 1. **Select a year**
 2. **Pick the company scope**: *All enabled companies*, or *Selected companies* and then the companies themselves
 3. **Pick the driver** that weights the companies (Headcount, IT Users, or Turnover)
-4. Every change saves on its own: a choice as soon as you make it, the companies when their list closes. **Saving…** then **Saved** shows beside the title. There is no Save button
-5. To return to the standard, click **Restore the default allocation** beside the title (shown only while a custom default is configured)
+4. Every change saves on its own: a choice as soon as you make it, the companies when their list closes. **Saving…** then **Saved** shows beside the title. There is no Save button. The fiscal year cannot be changed while a change is being saved
+5. A change the server refuses is undone at once: the field shows the saved setting again, with the reason under it until you change the setting again, and **Not saved** shows beside the title. When the server is busy, your choice stays on the screen and **Saving…** shows while it is sent again. If it still cannot be saved, **Not saved** shows with a message, and the change is sent again with your next change
+6. To return to the standard, click **Restore the default allocation** beside the title (shown only while a custom default is configured)
 
 ### Selected companies
 
@@ -371,6 +373,8 @@ By default, Budget, Revision, Actuals and Expected landing are shown and Forecas
 Every change saves on its own, without a Save button: a name when you leave its field or after a short pause in typing, a switch or the default column as soon as you change it. **Saving…** then **Saved** shows beside the title. Each change writes its own entry in the audit log.
 
 A value that would be refused is not saved. It stays on the screen with the reason under it, and the setting saved before stays in force: for example "Two columns cannot both be named "Budget"." under a name, or "At least one column must stay shown." under a switch. To hide the current default column, choose another default column first, then hide it: hiding the default column is refused with "The default column must be shown: choose another default column first.", and the switch goes back to its saved position at your next change.
+
+A change the server refuses is undone at once: the name or the switch shows its saved value again, with the server's reason under it until you change that field again, and **Not saved** shows beside the title. Your other changes are still saved. When the server is busy, the change stays on the screen and **Saving…** shows while it is sent again. If it still cannot be saved, **Not saved** shows with a message under the table, and the change is sent again with your next change. Leaving the page right after a refused change keeps you on the page, so that you can read the reason. Leaving while a change still waits for a busy server asks first.
 
 ### Permissions
 
