@@ -23,7 +23,7 @@ const state = vi.hoisted(() => ({
 
 const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, manager: 3, admin: 4 };
 // Same reserved levels as `auth/dataAccess.ts` for a limited person.
-const RESERVED_WRITES = new Set(['companies', 'departments', 'cost_centers', 'accounts', 'business_processes', 'analytics', 'budget_ops', 'users', 'ai_settings']);
+const RESERVED_WRITES = new Set(['companies', 'departments', 'cost_centers', 'accounts', 'business_processes', 'analytics', 'budget_ops', 'users', 'organization', 'ai_settings']);
 
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
@@ -184,6 +184,25 @@ describe('AllSettingsPage', () => {
     expect(linksOf('Administration')).not.toContain('Data access');
   });
 
+  it.each([['reader'], ['admin']])('shows an organization %s alone the audit log, Authentication and Branding', (level) => {
+    as({ perms: { organization: level } });
+    renderPage();
+    expect(groupNames()).toEqual(['My account', 'Administration']);
+    expect(linksOf('Administration')).toEqual(['Audit log', 'Authentication', 'Branding']);
+  });
+
+  it('shows an organization reader with limited data access Authentication and Branding, not the audit log', () => {
+    as({ perms: { organization: 'reader' }, limited: true });
+    renderPage();
+    expect(linksOf('Administration')).toEqual(['Authentication', 'Branding']);
+  });
+
+  it('shows a users administrator alone none of the organization pages', () => {
+    as({ perms: { users: 'admin' } });
+    renderPage();
+    expect(linksOf('Administration')).toEqual(['Users', 'Roles', 'Data access']);
+  });
+
   it('shows an agents reader the shared context profiles, which open read only', () => {
     as({ perms: { ai_agents: 'reader' } });
     renderPage();
@@ -218,8 +237,8 @@ describe('AllSettingsPage', () => {
     const search = screen.getByRole('textbox', { name: 'Rechercher un paramètre' });
     fireEvent.change(search, { target: { value: 'devise de reporting' } });
     expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(['Devises']);
-    fireEvent.change(search, { target: { value: 'parametres' } });
-    expect(screen.getByRole('region', { name: 'Portefeuille' })).toBeInTheDocument();
+    fireEvent.change(search, { target: { value: 'equipes' } });
+    expect(within(screen.getByRole('region', { name: 'Portefeuille' })).getAllByRole('link').map((link) => link.textContent)).toEqual(['Équipes']);
   });
 
   it('says in one line that nothing matches', () => {

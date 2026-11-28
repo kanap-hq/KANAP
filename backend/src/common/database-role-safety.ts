@@ -1,5 +1,6 @@
 import { DataSource, EntityManager, QueryRunner } from 'typeorm';
 import { PRODUCT_NAME } from '../config/product';
+import { isLeadProcess } from './cluster/process-role';
 
 export type DatabaseRoleSafetyState = {
   currentUser: string;
@@ -61,6 +62,9 @@ export async function getDatabaseRoleSafetyState(
   };
 }
 
+/** The refusal of a role that bypasses row-level security (`assertSafeDatabaseRole`). */
+export class UnsafeDatabaseRoleError extends Error {}
+
 export async function assertSafeDatabaseRole(
   executor: QueryExecutor,
   context = 'startup',
@@ -73,19 +77,49 @@ export async function assertSafeDatabaseRole(
   const prefix = `[${context}]`;
   const flags = formatRoleFlags(state);
   if (isProtectedState(state)) {
-    throw new Error(
+    throw new UnsafeDatabaseRoleError(
       `${prefix} DATABASE_URL resolves to protected PostgreSQL role "${state.currentUser}" with ${flags}. `
       + `${PRODUCT_NAME} refuses to run with cluster-admin roles because they bypass row-level security. `
       + 'Use a dedicated application role without SUPERUSER or BYPASSRLS.',
     );
   }
 
-  throw new Error(
+  throw new UnsafeDatabaseRoleError(
     `${prefix} DATABASE_URL resolves to PostgreSQL role "${state.currentUser}" with ${flags}. `
     + 'This bypasses tenant isolation. Remove these attributes as a PostgreSQL superuser '
     + `(ALTER ROLE ${quoteRole(state.currentUser)} NOSUPERUSER NOBYPASSRLS) and restart, `
     + 'or update DATABASE_URL to a dedicated application role.',
   );
+}
+
+/**
+ * The role check of the API's start (main.ts, every API process). A role with SUPERUSER or
+ * BYPASSRLS stops the process with exit 1 and the refusal on one line, with no stack: with
+ * SKIP_MIGRATIONS on nothing hardened the role before, so this is the start's only refusal. Only
+ * the lead process writes (the single process, or worker 1): one line whatever the number of
+ * workers. Any other error (the role cannot be read) is thrown as it is.
+ */
+export async function assertSafeDatabaseRoleAtStart(
+  executor: QueryExecutor,
+  {
+    env = process.env,
+    error = console.error,
+    exit = (code: number) => process.exit(code),
+  }: {
+    env?: NodeJS.ProcessEnv;
+    error?: (line: string) => void;
+    exit?: (code: number) => void;
+  } = {},
+): Promise<DatabaseRoleSafetyState> {
+  try {
+    return await assertSafeDatabaseRole(executor, 'startup');
+  } catch (failure) {
+    if (!(failure instanceof UnsafeDatabaseRoleError)) throw failure;
+    if (isLeadProcess(env)) error(failure.message);
+    exit(1);
+    // process.exit does not return; an `exit` that does (a spec) gets the refusal back.
+    throw failure;
+  }
 }
 
 /**

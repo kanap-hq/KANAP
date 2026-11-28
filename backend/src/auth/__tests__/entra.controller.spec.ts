@@ -851,7 +851,9 @@ async function testConsentEntryNamesTheAdministratorWhoOpenedIt() {
         {} as any,
         {} as any,
       );
-      const { directory_sync: sync } = await settings.getSettings({ tenant: { id: WORKSPACE_A.id }, user: { sub: 'user-admin-1' } });
+      // What PermissionGuard and the tenant interceptor leave for an Administrator: the consent
+      // address is for who may run the sync only.
+      const { directory_sync: sync } = await settings.getSettings({ tenant: { id: WORKSPACE_A.id }, user: { sub: 'user-admin-1' }, isAdmin: true, dataAccessMode: 'all' });
       const state = new URL(sync?.consent_url as string).searchParams.get('state') as string;
       await h.back({ state, ...answer });
       assert.equal(h.auditEntries.length, 1);

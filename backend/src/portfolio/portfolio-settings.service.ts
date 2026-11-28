@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { PortfolioSettings } from './portfolio-settings.entity';
+import { writeAuditLog } from '../audit/audit.service';
 
 @Injectable()
 export class PortfolioSettingsService {
@@ -31,18 +32,21 @@ export class PortfolioSettingsService {
   async update(
     tenantId: string,
     body: { mandatory_bypass_enabled?: boolean },
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; userId?: string | null },
   ): Promise<PortfolioSettings> {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioSettings);
 
-    let settings = await this.get(tenantId, { manager: mg });
+    const settings = await this.get(tenantId, { manager: mg });
+    const before = { ...settings };
 
     if (Object.prototype.hasOwnProperty.call(body, 'mandatory_bypass_enabled')) {
       settings.mandatory_bypass_enabled = body.mandatory_bypass_enabled === true;
     }
 
     settings.updated_at = new Date();
-    return repo.save(settings);
+    const saved = await repo.save(settings);
+    await writeAuditLog(mg, { table: 'portfolio_settings', recordId: saved.id, action: 'update', before, after: saved, userId: opts?.userId ?? null });
+    return saved;
   }
 }

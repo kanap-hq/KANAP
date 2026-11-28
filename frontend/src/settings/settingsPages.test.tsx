@@ -72,6 +72,9 @@ const ROUTE_WIDER_THAN_OPEN: Record<string, string> = {
 const MENU_OR_PAGE_GAPS: Record<string, string> = {
   'org.users': 'The page reads for a users reader; the route and the menu entry ask the Admin level.',
   'it.settings-lists': 'The menu entry and the route also open to an infrastructure administrator, on the Netbox tab.',
+  'portfolio.settings-phase-templates': 'The tab reads its list with the portfolio projects Reader level as well: without it, the tab shows its error.',
+  'portfolio.settings-teams': 'The tab reads its list with the portfolio requests Reader level as well: without it, the tab shows its error.',
+  'portfolio.settings-contract-types': 'The tab reads its list with the portfolio requests Reader level as well: without it, the tab shows its error.',
 };
 
 /** Conditions kept in code, named in the lines. */

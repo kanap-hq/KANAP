@@ -4,6 +4,13 @@ import type { SettingsPageEntry } from './types';
 const ADMIN_MENU = ['nav:workspaces.admin'];
 const AI_MENU = ['nav:workspaces.admin', 'nav:sidebar.admin.sections.ai'];
 const usersAdmin = level('users', 'admin');
+const organizationReader = level('organization', 'reader');
+// The audit log shows the before and after of every table: the server reserves it, reads included,
+// to people with access to all data (`useAuditLogReadable`).
+const auditLogReader = allOf(organizationReader, fullDataAccess);
+// Connecting, syncing and disconnecting Microsoft write the persons of the whole workspace: they ask
+// the Organization and Users Admin levels and access to all data (`canWritePersons`, `AdminAuthPage`).
+const directoryWriter = allOf(level('organization', 'admin'), usersAdmin, fullDataAccess);
 const aiSettingsAdmin = allOf(custom('aiSettingsSurface'), level('ai_settings', 'admin'));
 
 /** The organisation's settings, in the Administration menu. Organisation host, both modes unless said. */
@@ -77,8 +84,8 @@ export const ORGANIZATION_SETTINGS_PAGES: SettingsPageEntry[] = [
       'admin:auditLogs.details.before',
       'admin:auditLogs.details.after',
     ],
-    open: usersAdmin,
-    change: usersAdmin,
+    open: auditLogReader,
+    change: auditLogReader,
     availability: {},
     doc: { page: 'admin', section: 'Audit Log' },
   },
@@ -114,8 +121,8 @@ export const ORGANIZATION_SETTINGS_PAGES: SettingsPageEntry[] = [
       'admin:auth.actions.testSignIn',
       'admin:auth.sync.syncNow',
     ],
-    open: usersAdmin,
-    change: usersAdmin,
+    open: organizationReader,
+    change: directoryWriter,
     availability: { features: ['sso'] },
     doc: { page: 'admin' },
   },
@@ -132,8 +139,8 @@ export const ORGANIZATION_SETTINGS_PAGES: SettingsPageEntry[] = [
       'admin:branding.colors.darkModePrimary',
       'admin:branding.actions.uploadLogo',
     ],
-    open: usersAdmin,
-    change: usersAdmin,
+    open: organizationReader,
+    change: level('organization', 'admin'),
     availability: {},
     doc: { page: 'branding' },
   },

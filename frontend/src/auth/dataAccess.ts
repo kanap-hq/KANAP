@@ -40,12 +40,13 @@ export function chargebackCompanyIds(dataAccess: DataAccessProfile | null | unde
  * for a limited person these modules read as reader at most, so their edit commands are hidden and
  * their reads stay. Organisation data (companies, departments, cost centers, accounts and charts,
  * processes, dimensions), the budget settings (`budget_ops`: currencies, columns, freeze, default
- * allocation rule), persons and the tenant administration behind `users` (users, roles, audit log,
- * branding, scheduled tasks) and the AI administration.
+ * allocation rule), persons behind `users` (users, roles, scheduled tasks), the organisation's
+ * administration behind `organization` (branding, the Microsoft connection; the audit log is closed to
+ * a limited person whatever the level, see `useAuditLogReadable`) and the AI administration.
  */
 const DATA_ACCESS_RESERVED_WRITES = new Set([
   'companies', 'departments', 'cost_centers', 'accounts', 'business_processes', 'analytics',
-  'budget_ops', 'users', 'ai_settings',
+  'budget_ops', 'users', 'organization', 'ai_settings',
 ]);
 /** Closed to a limited person entirely: the agent screens (spec §2.7). */
 const DATA_ACCESS_RESERVED_MODULES = new Set(['ai_agents']);
@@ -70,4 +71,15 @@ export function useDataAccessLimited(): boolean {
 export function useDataAccessAdmin(): boolean {
   const { hasLevel } = useAuth();
   return hasLevel('users', 'admin') && !useDataAccessLimited();
+}
+
+/**
+ * Admin › Audit log: `organization:reader`, and access to all data (the log shows the before and
+ * after of every table; the server reserves every route of it). A limited person sees neither the
+ * page nor its menu entry, whatever their roles: the page reads this, the menu line and the route
+ * guard say `allData: true` (`pages/admin/adminMenu.ts`, `ADMIN_ROUTE_REQUIREMENTS`).
+ */
+export function useAuditLogReadable(): boolean {
+  const { hasLevel } = useAuth();
+  return hasLevel('organization', 'reader') && !useDataAccessLimited();
 }

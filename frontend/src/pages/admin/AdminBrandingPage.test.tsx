@@ -3,7 +3,7 @@ import '../../i18n';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminBrandingPage from './AdminBrandingPage';
 import { createAppTheme } from '../../config/ThemeContext';
 import api from '../../api';
@@ -22,8 +22,16 @@ vi.mock('../../api', () => ({
   },
 }));
 
+// The reader's rights: every level by default (an Administrator), or the levels listed.
+const auth = vi.hoisted(() => ({ rights: null as null | Record<string, string> }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: () => true }),
+  useAuth: () => ({
+    hasLevel: (resource: string, level: string) => {
+      if (!auth.rights) return true;
+      const rank: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
+      return (rank[auth.rights[resource]] ?? 0) >= (rank[level] ?? 0);
+    },
+  }),
 }));
 
 vi.mock('../../tenant/TenantContext', () => ({
@@ -54,7 +62,7 @@ function settings(name: string, extra: Record<string, unknown> = {}) {
 }
 
 function renderPage() {
-  render(
+  return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <MemoryRouter>
         <KanapDialogProvider>
@@ -163,5 +171,61 @@ describe('AdminBrandingPage dark mode logo', () => {
     });
     expect(stored).toEqual({ has_logo: true, has_dark_logo: false });
     await screen.findByRole('checkbox', { name: 'Use the light mode logo' });
+  });
+});
+
+describe('AdminBrandingPage for an organisation reader', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    auth.rights = { organization: 'reader' };
+    (api.get as any).mockImplementation((url: string) => {
+      if (url === '/admin/branding/settings') {
+        return Promise.resolve({ data: settings('Acme', { has_logo: true, primary_color_light: '#1A6B7A' }) });
+      }
+      return Promise.reject(new Error(`Unexpected GET ${url}`));
+    });
+  });
+
+  afterEach(() => {
+    auth.rights = null;
+  });
+
+  it('shows the same fields read-only, and no action', async () => {
+    renderPage();
+    const name = await screen.findByRole('textbox', { name: 'Workspace name' });
+    expect(name).toHaveValue('Acme');
+    expect(name).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'Light mode primary' })).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'Dark mode primary' })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: 'Use the light mode logo' })).toBeDisabled();
+    // No save, discard, reset, logo upload or removal, colour picker, preset or clear.
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.queryByLabelText('Light mode logo')).toBeNull();
+    expect(api.post).not.toHaveBeenCalled();
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it('disables the two hidden colour pickers for a reader, and not for an organisation administrator', async () => {
+    const { unmount } = renderPage();
+    await screen.findByRole('textbox', { name: 'Workspace name' });
+    const readerPickers = document.querySelectorAll('input[type="color"]');
+    expect(readerPickers).toHaveLength(2);
+    readerPickers.forEach((input) => expect(input).toBeDisabled());
+    unmount();
+
+    auth.rights = { organization: 'admin' };
+    renderPage();
+    await screen.findByRole('textbox', { name: 'Workspace name' });
+    const adminPickers = document.querySelectorAll('input[type="color"]');
+    expect(adminPickers).toHaveLength(2);
+    adminPickers.forEach((input) => expect(input).not.toBeDisabled());
+  });
+
+  it('refuses the page to users:admin alone, and does not read the settings', async () => {
+    auth.rights = { users: 'admin' };
+    renderPage();
+    expect(await screen.findByText('Access denied')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Workspace name' })).toBeNull();
+    expect(api.get).not.toHaveBeenCalled();
   });
 });

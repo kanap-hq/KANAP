@@ -1,24 +1,32 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createAppTheme } from '../../config/ThemeContext';
-import { KanapDialogProvider } from '../../components/design';
-import i18n from '../../i18n';
-import SettingsPage from './SettingsPage';
+import { createAppTheme } from '../../../config/ThemeContext';
+import { KanapDialogProvider } from '../../../components/design';
+import i18n from '../../../i18n';
+import SettingsPage from '../SettingsPage';
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn(), patch: vi.fn() }));
-vi.mock('../../api', () => ({ default: api }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
+vi.mock('../../../api', () => ({ default: api }));
+vi.mock('../../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 
 function renderPage() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <ThemeProvider theme={createAppTheme('light')}>
-      <KanapDialogProvider>
-        <MemoryRouter><SettingsPage /></MemoryRouter>
-      </KanapDialogProvider>
-    </ThemeProvider>,
+    <QueryClientProvider client={client}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={['/portfolio/settings/criteria']}>
+            <Routes>
+              <Route path="/portfolio/settings/:tab" element={<SettingsPage />} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
 }
 

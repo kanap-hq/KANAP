@@ -30,6 +30,7 @@ export class PortfolioSettingsController {
     const tenantId = req?.tenant?.id ?? '';
     return this.svc.update(tenantId, body, {
       manager: req?.queryRunner?.manager,
+      userId: req?.user?.sub ?? null,
     });
   }
 }

@@ -76,7 +76,10 @@ COPY --from=build /app/scripts/migrate-and-start.js ./scripts/
 COPY --from=build /app/scripts/lib/*.mjs ./scripts/lib/
 COPY --from=build /app/fixtures ./fixtures
 COPY --from=build /app/help-docs ./help-docs
-USER node
+# The node user of the base image, by number (1000:1000): an orchestrator that refuses root
+# images (Kubernetes runAsNonRoot) can only check a numeric user. Any other UID works too: the
+# image writes only to /tmp.
+USER 1000:1000
 # Exec form: node receives SIGTERM itself and drains in-flight requests before it exits
 # (src/common/graceful-shutdown.ts). Through `sh -lc` the signal never reached node and every
 # stop waited for the kill. API_WORKERS > 1 runs several API processes (Node cluster).
