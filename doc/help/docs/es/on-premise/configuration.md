@@ -391,12 +391,13 @@ Todas las funciones de IA están desactivadas por defecto en una instalación on
 | `AI_CHAT_ENABLED` | Activa el [asistente de chat Kad](../ai-assistant.md) para la instalación. | `false` |
 | `AI_MCP_ENABLED` | Activa el servidor MCP: claves API y conexiones sin clave. Consulte [Conectar asistentes de IA mediante MCP](#connecting-ai-assistants-over-mcp). | `false` |
 | `AI_SETTINGS_ENABLED` | Abre **Administración → Inteligencia artificial** (modelos IA, configuración de Kad) y los [agentes](../agents-overview.md) a los administradores. Sin ella, nadie puede configurar un proveedor. | `false` |
-| `AI_SETTINGS_ENCRYPTION_SECRET` | Secreto que cifra las claves de proveedor que introduce en Kadratis. Genérelo con `openssl rand -hex 32`. | *sin definir* |
+| `SETTINGS_ENCRYPTION_SECRET` | Secreto que cifra las claves de proveedor y los tokens de conexión que introduce en Kadratis. Genérelo con `openssl rand -hex 32`. Su nombre anterior, `AI_SETTINGS_ENCRYPTION_SECRET`, sigue funcionando. | *sin definir* |
 
 Notas:
 
-- Sin `AI_SETTINGS_ENCRYPTION_SECRET`, Kadratis se niega a guardar una clave de proveedor ("AI secret storage is not configured on this instance").
-- Cambiar `AI_SETTINGS_ENCRYPTION_SECRET` más tarde hace ilegibles las claves guardadas. Guárdelo con `.env` y vuelva a introducir las claves si lo pierde.
+- Sin `SETTINGS_ENCRYPTION_SECRET`, Kadratis se niega a guardar una clave de proveedor ("AI secret storage is not configured on this instance"). Cuando ya hay claves guardadas, la API lo indica en su registro al arrancar.
+- Cambiar `SETTINGS_ENCRYPTION_SECRET` más tarde hace ilegibles las claves guardadas. Guárdelo con `.env` y vuelva a introducir las claves si lo pierde.
+- Si su `.env` todavía usa `AI_SETTINGS_ENCRYPTION_SECRET`, conserve esa variable o cámbiele el nombre manteniendo el mismo valor. La API no arranca si los dos nombres están definidos con valores distintos.
 - Una instalación on-premise no incluye ningún modelo: usted añade su propio proveedor o servidor de modelos en **Administración → Inteligencia artificial → Modelos IA**. Consulte [Modelos IA](../ai-models.md) y [Configuración de Kad](../ai-settings.md). Cada espacio de trabajo tiene también allí sus propios interruptores.
 - La API necesita acceso saliente al proveedor que elija (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
 
@@ -619,7 +620,7 @@ S3_FORCE_PATH_STYLE=false
 # AI_CHAT_ENABLED=false
 # AI_MCP_ENABLED=false
 # AI_SETTINGS_ENABLED=false
-# AI_SETTINGS_ENCRYPTION_SECRET=
+# SETTINGS_ENCRYPTION_SECRET=
 
 # VULNERABILIDADES (opcional - desactivadas por defecto)
 # VULNERABILITY_FEED_ENABLED=false
