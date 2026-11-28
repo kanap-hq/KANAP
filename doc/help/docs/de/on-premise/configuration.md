@@ -618,13 +618,13 @@ S3_FORCE_PATH_STYLE=false
 # EMAIL (optional: choose one transport)
 # SMTP works on single-tenant only and wins over Resend when both are set.
 # RESEND_API_KEY=re_xxxxx
-# RESEND_FROM_EMAIL=Kadratis <noreply@yourdomain.com>
-# SMTP_HOST=smtp.company.com
+# RESEND_FROM_EMAIL=Kadratis <noreply@your-domain.com>
+# SMTP_HOST=smtp.your-domain.com
 # SMTP_PORT=587
 # SMTP_SECURE=false
 # SMTP_USER=
 # SMTP_PASSWORD=
-# SMTP_FROM=Kadratis <noreply@company.com>
+# SMTP_FROM=Kadratis <noreply@your-domain.com>
 
 # SSO (optional: Microsoft Entra ID, all four are required together)
 # ENTRA_CLIENT_ID=
@@ -715,7 +715,7 @@ S3_FORCE_PATH_STYLE=false
 # JWT_REFRESH_TOKEN_TTL=4h
 # PASSWORD_RESET_TTL=1h
 # INVITE_LINK_TTL=7d
-# JWT_LEGACY_ACCESS_TOKEN_DEADLINE=YYYY-MM-DDTHH:MM:SS.sssZ
+# JWT_LEGACY_ACCESS_TOKEN_DEADLINE=<YYYY-MM-DDTHH:MM:SSZ>
 # RATE_LIMIT_ENABLED=true
 # LOG_LEVEL=
 # NO_COLOR=
@@ -726,7 +726,7 @@ S3_FORCE_PATH_STYLE=false
 # MIGRATION_MAX_ATTEMPTS=30
 # MIGRATION_RETRY_DELAY_MS=2000
 # DEBUG_MIGRATIONS=
-# INTEGRATED_DOCS_AUTO_ROLLOUT=if-needed
+# INTEGRATED_DOCS_AUTO_ROLLOUT=off
 # INTEGRATED_DOCS_AUTO_ROLLOUT_STRICT=false
 # INTEGRATED_DOCS_BATCH_SIZE=100
 # INTEGRATED_DOCS_BATCH_PAUSE_MS=0

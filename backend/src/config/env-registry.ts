@@ -232,7 +232,7 @@ export const ENV_REGISTRY: readonly EnvVariable[] = [
   entry('JWT_REFRESH_TOKEN_TTL', { domain: 'auth', modes: BOTH, kind: 'operator', default: '4h', example: commented('advanced', '4h') }),
   entry('PASSWORD_RESET_TTL', { domain: 'auth', modes: BOTH, kind: 'operator', default: '1h', example: commented('advanced', '1h', ['Password reset link lifetime: a number of seconds or a duration such as 30m or 2h.']) }),
   entry('INVITE_LINK_TTL', { domain: 'auth', modes: BOTH, kind: 'operator', default: '7d', example: commented('advanced', '7d', ['Invitation link lifetime (the link that sets the password), same format.']) }),
-  entry('JWT_LEGACY_ACCESS_TOKEN_DEADLINE', { domain: 'auth', modes: BOTH, kind: 'operator', reason: 'tooling', example: commented('advanced', 'YYYY-MM-DDTHH:MM:SS.sssZ', [
+  entry('JWT_LEGACY_ACCESS_TOKEN_DEADLINE', { domain: 'auth', modes: BOTH, kind: 'operator', reason: 'tooling', example: commented('advanced', '<YYYY-MM-DDTHH:MM:SSZ>', [
     'Access tokens carry a purpose marker; tokens without it, issued by older builds, are refused.',
     'To keep accepting them until a given instant, set an ISO-8601 instant with an offset (`Z` or',
     '+HH:MM). Leave it unset unless an older instance still issues tokens.',
@@ -311,7 +311,7 @@ export const ENV_REGISTRY: readonly EnvVariable[] = [
     domain: 'process', modes: BOTH, kind: 'operator', reason: 'tuning',
     example: commented('advanced', '', ['NO_COLOR: any value turns off the colours of the log on a terminal.']),
   }),
-  entry('INTEGRATED_DOCS_AUTO_ROLLOUT', { domain: 'process', modes: BOTH, kind: 'operator', reason: 'tuning', default: 'off', example: commented('start-up', 'if-needed') }),
+  entry('INTEGRATED_DOCS_AUTO_ROLLOUT', { domain: 'process', modes: BOTH, kind: 'operator', reason: 'tuning', default: 'off', example: commented('start-up', 'off') }),
   entry('INTEGRATED_DOCS_AUTO_ROLLOUT_STRICT', { domain: 'process', modes: BOTH, kind: 'operator', reason: 'tuning', default: 'false', example: commented('start-up', 'false') }),
   entry('INTEGRATED_DOCS_BATCH_SIZE', { domain: 'process', modes: BOTH, kind: 'operator', reason: 'tuning', default: '100', example: commented('start-up', '100') }),
   entry('INTEGRATED_DOCS_BATCH_PAUSE_MS', { domain: 'process', modes: BOTH, kind: 'operator', reason: 'tuning', default: '0', example: commented('start-up', '0') }),
@@ -340,11 +340,11 @@ export const ENV_REGISTRY: readonly EnvVariable[] = [
 
   // Email.
   entry('RESEND_API_KEY', { domain: 'email', modes: BOTH, kind: 'operator', secret: true, example: commented('email', 're_xxxxx', ['Resend:']) }),
-  entry('RESEND_FROM_EMAIL', { domain: 'email', modes: BOTH, kind: 'operator', default: 'Kadratis <no-reply@kadratis.com>', example: commented('email', 'Kadratis <noreply@yourdomain.com>') }),
+  entry('RESEND_FROM_EMAIL', { domain: 'email', modes: BOTH, kind: 'operator', default: 'Kadratis <no-reply@kadratis.com>', example: commented('email', 'Kadratis <noreply@your-domain.com>') }),
   entry('RESEND_BASE_URL', { domain: 'email', modes: BOTH, kind: 'tooling', readBy: 'backend/node_modules/resend/dist/index.cjs', reason: 'tooling' }),
   entry('SMTP_HOST', {
     domain: 'email', modes: ONPREM, kind: 'operator',
-    example: commented('email', 'smtp.company.com', [
+    example: commented('email', 'smtp.your-domain.com', [
       'SMTP (single-tenant only, wins over Resend when both are set).',
       'SMTP_USER and SMTP_PASSWORD go together: set both or neither.',
     ]),
@@ -354,7 +354,7 @@ export const ENV_REGISTRY: readonly EnvVariable[] = [
   entry('SMTP_USER', { domain: 'email', modes: ONPREM, kind: 'operator', example: commented('email', '') }),
   entry('SMTP_PASSWORD', { domain: 'email', modes: ONPREM, kind: 'operator', secret: true, aliases: ['SMTP_PASS'], example: commented('email', '') }),
   entry('SMTP_PASS', { domain: 'email', modes: ONPREM, kind: 'deprecated', reason: 'tooling', secret: true }),
-  entry('SMTP_FROM', { domain: 'email', modes: ONPREM, kind: 'operator', example: commented('email', 'Kadratis <noreply@company.com>') }),
+  entry('SMTP_FROM', { domain: 'email', modes: ONPREM, kind: 'operator', example: commented('email', 'Kadratis <noreply@your-domain.com>') }),
   entry('EMAIL_QUEUE_MIN_INTERVAL_MS', { domain: 'email', modes: BOTH, kind: 'operator', reason: 'tuning', default: '700 with Resend, 2100 with SMTP', example: commented('email-tuning', '') }),
   entry('EMAIL_RATE_LIMIT_MAX_RETRIES', { domain: 'email', modes: BOTH, kind: 'operator', reason: 'tuning', default: '5', example: commented('email-tuning', '5') }),
   entry('EMAIL_RATE_LIMIT_RETRY_BASE_MS', { domain: 'email', modes: BOTH, kind: 'operator', reason: 'tuning', default: '1500', example: commented('email-tuning', '1500') }),

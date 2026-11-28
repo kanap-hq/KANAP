@@ -117,7 +117,7 @@
     "OPS_METRICS_TOKEN": { "en": "Token that opens GET /api/ops/metrics to a monitoring tool, 24 characters or more." },
     "LOG_LEVEL": { "en": "debug or verbose adds the details of each scheduled job run to the log." },
     "NO_COLOR": { "en": "Any value turns off the colours of the log on a terminal." },
-    "INTEGRATED_DOCS_AUTO_ROLLOUT": { "en": "Repairs at start the documents linked to requests and projects: if-needed when the counts differ, always at every start." },
+    "INTEGRATED_DOCS_AUTO_ROLLOUT": { "en": "Repairs at start the documents linked to requests and projects: off (the default) never, if-needed when the counts differ, always at every start." },
     "INTEGRATED_DOCS_AUTO_ROLLOUT_STRICT": { "en": "true stops the start when that repair fails, instead of logging the failure." },
     "INTEGRATED_DOCS_BATCH_SIZE": { "en": "Documents repaired per batch by that repair." },
     "INTEGRATED_DOCS_BATCH_PAUSE_MS": { "en": "Milliseconds of pause between two batches of that repair." },
