@@ -1,20 +1,22 @@
 import React from 'react';
-import { Alert, Box, Button, Paper, Radio, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Radio, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../auth/AuthContext';
 import { AMOUNT_COLUMNS } from '../../components/finance/amountColumns';
 import type { AmountMeasure } from '../../components/finance/roundPeriod';
-import { BUDGET_COLUMNS_QUERY_KEY, useBudgetColumns } from '../../hooks/useBudgetColumns';
+import { SettingsPage } from '../../components/settings/SettingsPage';
+import { useSettingsAutosave, type SettingsAutosave } from '../../components/settings/useSettingsAutosave';
+import { BUDGET_COLUMNS_QUERY_KEY, useBudgetColumns, type BudgetColumnView } from '../../hooks/useBudgetColumns';
+import { autosaveErrorMessage } from '../../hooks/useAutosave';
+import { useFieldDraft } from '../../hooks/useFieldDraft';
 import {
   BudgetColumnsPatch,
   BudgetColumnsSettings,
   updateBudgetColumns,
 } from '../../services/budgetColumns';
-import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { loadNamespace } from '../../i18n';
 
 /** The server's limit on a column name, in characters (code points). */
@@ -98,21 +100,6 @@ export function validateBudgetColumnsDraft(
   return { names, form };
 }
 
-/** Only what changed against the saved setting; empty when nothing did. */
-export function buildBudgetColumnsPatch(saved: BudgetColumnsSettings, draft: BudgetColumnsDraft): BudgetColumnsPatch {
-  const patch: BudgetColumnsPatch = {};
-  for (const { measure } of AMOUNT_COLUMNS) {
-    const label = normalizeColumnName(draft.labels[measure]);
-    if (label !== (saved.labels[measure] ?? null)) patch.labels = { ...patch.labels, [measure]: label };
-    if (draft.enabled[measure] !== saved.enabled[measure]) patch.enabled = { ...patch.enabled, [measure]: draft.enabled[measure] };
-    if (draft.group_spread[measure] !== saved.group_spread[measure]) {
-      patch.group_spread = { ...patch.group_spread, [measure]: draft.group_spread[measure] };
-    }
-  }
-  if (draft.default_column !== saved.default_column) patch.default_column = draft.default_column;
-  return patch;
-}
-
 const headSx = { textAlign: 'left', fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', px: 1, py: 0.75, whiteSpace: 'nowrap' } as const;
 const cellSx = { px: 1, py: 0.75, fontSize: 13, color: 'kanap.text.primary', verticalAlign: 'top' } as const;
 const controlCellSx = { ...cellSx, py: 0.25 } as const;
@@ -131,6 +118,139 @@ function HeadWithInfo({ label, info }: { label: string; info: string }) {
   );
 }
 
+
+/** A choice of the page: a flag of a column, or the default column. */
+type ChoiceField = `enabled.${AmountMeasure}` | `group_spread.${AmountMeasure}` | 'default_column';
+/** Choices shown before the server has them: being sent, or refused by the checks and kept with their error. */
+type Overlay = Partial<Record<ChoiceField, boolean | AmountMeasure>>;
+
+function withOverlay(draft: BudgetColumnsDraft, overlay: Overlay): BudgetColumnsDraft {
+  const next: BudgetColumnsDraft = { ...draft, enabled: { ...draft.enabled }, group_spread: { ...draft.group_spread } };
+  for (const [field, value] of Object.entries(overlay) as Array<[ChoiceField, boolean | AmountMeasure]>) {
+    if (field === 'default_column') next.default_column = value as AmountMeasure;
+    else {
+      const [map, measure] = field.split('.') as ['enabled' | 'group_spread', AmountMeasure];
+      next[map][measure] = value as boolean;
+    }
+  }
+  return next;
+}
+
+function without(overlay: Overlay, field: ChoiceField): Overlay {
+  const next = { ...overlay };
+  delete next[field];
+  return next;
+}
+
+const errorLineSx = { fontSize: 12, color: 'kanap.danger', mt: 0.25, maxWidth: 220, whiteSpace: 'normal' } as const;
+
+type ColumnRowProps = {
+  column: BudgetColumnView;
+  draft: BudgetColumnsDraft;
+  readOnly: boolean;
+  autosave: SettingsAutosave;
+  /** The refusal of a name typed for the column, or null when the server would take it. */
+  nameErrorOf: (measure: AmountMeasure, typed: string) => string | null;
+  /** The refusal of a choice of this row, kept under it until another change. */
+  choiceError: (field: ChoiceField) => string | null;
+  choose: (field: ChoiceField, value: boolean | AmountMeasure) => void;
+  send: (patch: BudgetColumnsPatch) => Promise<void>;
+};
+
+/** One column of the table: its name, saved as it is typed, and its three choices, saved when chosen. */
+function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError, choose, send }: ColumnRowProps) {
+  const { t } = useTranslation(['ops', 'common']);
+  const { measure } = column;
+  const savedLabel = column.customLabel ?? '';
+  const name = useFieldDraft(savedLabel);
+  const productName = t(column.labelKey);
+  const nameError = normalizeColumnName(name.draft) === (column.customLabel ?? null) ? null : nameErrorOf(measure, name.draft);
+  const shownName = column.label;
+  const errorOf = (field: ChoiceField) => {
+    const error = choiceError(field);
+    return error ? <Typography role="alert" sx={errorLineSx}>{error}</Typography> : null;
+  };
+
+  const onName = (value: string) => {
+    name.setDraft(value);
+    const label = normalizeColumnName(value);
+    // A refused name, or the stored one again: nothing to send, the stored name stays.
+    const refused = label !== (column.customLabel ?? null) && nameErrorOf(measure, value);
+    autosave.type(`labels.${measure}`, refused || label === (column.customLabel ?? null)
+      ? null
+      : () => send({ labels: { [measure]: label } }));
+  };
+
+  return (
+    <Box component="tr" data-testid={`budget-column-row-${column.position}`}>
+      <Box component="td" sx={{ ...cellSx, fontVariantNumeric: 'tabular-nums', color: 'kanap.text.secondary', width: 64 }}>
+        {column.position}
+      </Box>
+      <Box component="td" sx={{ ...controlCellSx, minWidth: 240 }}>
+        <TextField
+          variant="standard"
+          size="small"
+          value={name.draft}
+          placeholder={productName}
+          onChange={(e) => onName(e.target.value)}
+          onFocus={name.onFocus}
+          onBlur={() => {
+            name.onBlur();
+            autosave.commit();
+          }}
+          error={!!nameError}
+          InputProps={{ readOnly }}
+          inputProps={{ 'aria-label': t(`${P}.nameOf`, { position: column.position }) }}
+          sx={{ width: 240 }}
+        />
+        {nameError && (
+          <Typography sx={{ fontSize: 12, color: 'kanap.danger', mt: 0.25 }}>{nameError}</Typography>
+        )}
+        {/* Where the column shows under its technical name. */}
+        <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>
+          {t(`${P}.inFiles`, { name: measure })}
+        </Typography>
+      </Box>
+      <Box component="td" sx={controlCellSx}>
+        <Switch
+          size="small"
+          checked={draft.enabled[measure]}
+          onChange={(e) => choose(`enabled.${measure}`, e.target.checked)}
+          disabled={readOnly}
+          inputProps={{ 'aria-label': t(`${P}.shownOf`, { column: shownName }) }}
+        />
+        {errorOf(`enabled.${measure}`)}
+      </Box>
+      <Box component="td" sx={controlCellSx}>
+        <Switch
+          size="small"
+          checked={draft.group_spread[measure]}
+          onChange={(e) => choose(`group_spread.${measure}`, e.target.checked)}
+          disabled={readOnly}
+          inputProps={{ 'aria-label': t(`${P}.followsOf`, { column: shownName }) }}
+        />
+      </Box>
+      <Box component="td" sx={controlCellSx}>
+        <Radio
+          size="small"
+          name="budget-default-column"
+          value={measure}
+          checked={draft.default_column === measure}
+          onChange={() => choose('default_column', measure)}
+          disabled={readOnly}
+          inputProps={{ 'aria-label': t(`${P}.defaultOf`, { column: shownName }) }}
+        />
+        {draft.default_column === measure && errorOf('default_column')}
+      </Box>
+    </Box>
+  );
+}
+
+/**
+ * Budget columns: each change is saved on its own, a name as it is typed, a choice when it is
+ * made. A change the server would refuse is never sent: it stays on screen with its reason, and the
+ * stored setting stays. A refused choice goes back to the stored value at the next change.
+ */
 export default function BudgetColumnsSettingsPage() {
   const { t, i18n } = useTranslation(['ops', 'common']);
   // The server checks names against the English product names, whatever the viewer's language:
@@ -155,166 +275,113 @@ export default function BudgetColumnsSettingsPage() {
   const queryClient = useQueryClient();
   const budgetColumns = useBudgetColumns();
   const saved = budgetColumns.settings;
+  const autosave = useSettingsAutosave();
 
-  const [draft, setDraft] = React.useState<BudgetColumnsDraft>(() => draftFromSettings(saved));
-  const [savedFlash, setSavedFlash] = React.useState(false);
-  // Follow the stored setting when it loads or a save lands.
-  React.useEffect(() => { setDraft(draftFromSettings(saved)); }, [saved]);
+  const [overlay, setOverlay] = React.useState<Overlay>({});
+  const [refused, setRefused] = React.useState<{ field: ChoiceField; error: string } | null>(null);
+  const draft = React.useMemo(() => withOverlay(draftFromSettings(saved), overlay), [saved, overlay]);
+  // What the server holds once the choices being sent land, without a refused one.
+  const accepted = React.useMemo(
+    () => withOverlay(draftFromSettings(saved), refused ? without(overlay, refused.field) : overlay),
+    [saved, overlay, refused],
+  );
 
-  const errors = React.useMemo(() => validateBudgetColumnsDraft(draft, t, englishName), [draft, t, englishName]);
-  const patch = React.useMemo(() => buildBudgetColumnsPatch(saved, draft), [saved, draft]);
-  const dirty = Object.keys(patch).length > 0;
-  const valid = !errors.form && Object.keys(errors.names).length === 0;
+  const send = React.useCallback(async (patch: BudgetColumnsPatch) => {
+    const next = await updateBudgetColumns(patch);
+    queryClient.setQueryData(BUDGET_COLUMNS_QUERY_KEY, next);
+    void queryClient.invalidateQueries({ queryKey: BUDGET_COLUMNS_QUERY_KEY });
+  }, [queryClient]);
 
-  const mutation = useMutation({
-    mutationFn: (next: BudgetColumnsPatch) => updateBudgetColumns(next),
-    onSuccess: (next) => {
-      queryClient.setQueryData(BUDGET_COLUMNS_QUERY_KEY, next);
-      void queryClient.invalidateQueries({ queryKey: BUDGET_COLUMNS_QUERY_KEY });
-      setSavedFlash(true);
-    },
-  });
-  React.useEffect(() => {
-    if (!savedFlash) return undefined;
-    const timer = window.setTimeout(() => setSavedFlash(false), 1500);
-    return () => window.clearTimeout(timer);
-  }, [savedFlash]);
+  const nameErrorOf = React.useCallback((measure: AmountMeasure, typed: string): string | null => {
+    const before = validateBudgetColumnsDraft(accepted, t, englishName).names;
+    const after = validateBudgetColumnsDraft({ ...accepted, labels: { ...accepted.labels, [measure]: typed } }, t, englishName).names;
+    // A clash with a stored name is the typed name's fault, whichever row comes first.
+    return after[measure] ?? Object.entries(after).find(([other]) => other !== measure && !before[other as AmountMeasure])?.[1] ?? null;
+  }, [accepted, t, englishName]);
 
-  const update = (change: (prev: BudgetColumnsDraft) => BudgetColumnsDraft) => {
-    mutation.reset();
-    setSavedFlash(false);
-    setDraft(change);
+  const choose = (field: ChoiceField, value: boolean | AmountMeasure) => {
+    // A choice refused before goes back to the stored value once another one changes.
+    const base = refused && refused.field !== field ? without(overlay, refused.field) : overlay;
+    const next: Overlay = { ...base, [field]: value };
+    const form = validateBudgetColumnsDraft(withOverlay(draftFromSettings(saved), next), t, englishName).form;
+    if (form) {
+      setOverlay(next);
+      setRefused({ field, error: form });
+      autosave.choose(field, null);
+      return;
+    }
+    const wasRefused = refused?.field === field;
+    setRefused(null);
+    if (wasRefused && readChoice(draftFromSettings(saved), field) === value) {
+      // Back to the stored value before anything was sent.
+      setOverlay(without(next, field));
+      autosave.choose(field, null);
+      return;
+    }
+    setOverlay(next);
+    const patch: BudgetColumnsPatch = field === 'default_column'
+      ? { default_column: value as AmountMeasure }
+      : { [field.split('.')[0]]: { [field.split('.')[1]]: value } };
+    autosave.choose(field, async () => {
+      try {
+        await send(patch);
+      } finally {
+        // Landed: the stored setting shows it. Refused by the server: the stored value is back.
+        setOverlay((current) => (current[field] === value ? without(current, field) : current));
+      }
+    });
   };
-  const setFlag = (map: 'enabled' | 'group_spread', measure: AmountMeasure, value: boolean) =>
-    update((prev) => ({ ...prev, [map]: { ...prev[map], [measure]: value } }));
 
-  const busy = mutation.isPending;
   // Not loaded: the standard values on screen would not be the tenant's, so nothing is offered.
   const loadFailed = !!budgetColumns.error;
-  const readOnly = !canEdit || busy || !budgetColumns.ready || loadFailed;
-  const serverError = mutation.error ? getApiErrorMessage(mutation.error, t, t(`${P}.errors.saveFailed`)) : null;
+  const readOnly = !canEdit;
+  const serverError = canEdit && autosave.error ? autosaveErrorMessage(autosave.error, t, t(`${P}.errors.saveFailed`)) : null;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <PageHeader title={t(`${P}.title`)} />
-
-      {!canEdit && <Alert severity="info" sx={{ maxWidth: 720 }}>{t('operations.budgetAdminOnly')}</Alert>}
-
-      {loadFailed ? (
-        <Typography role="alert" sx={{ fontSize: 13, color: 'error.main' }}>{t(`${P}.loadError`)}</Typography>
-      ) : (
-        <Paper variant="outlined" sx={{ p: 2, maxWidth: 880 }}>
-          <Box sx={{ overflowX: 'auto' }}>
-            <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', '& th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' }, '& tbody td': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' } }}>
-              <Box component="thead">
-                <Box component="tr">
-                  <Box component="th" sx={headSx}>{t(`${P}.column`)}</Box>
-                  <Box component="th" sx={headSx}>{t(`${P}.name`)}</Box>
-                  <HeadWithInfo label={t(`${P}.shown`)} info={t(`${P}.helpHidden`)} />
-                  <HeadWithInfo label={t(`${P}.follows`)} info={t(`${P}.helpFollows`)} />
-                  <HeadWithInfo label={t(`${P}.default`)} info={t(`${P}.helpDefault`)} />
-                </Box>
-              </Box>
-              <Box component="tbody">
-                {budgetColumns.all.map((column) => {
-                  const { measure } = column;
-                  const productName = t(column.labelKey);
-                  const nameError = errors.names[measure];
-                  const shownName = normalizeColumnName(draft.labels[measure]) ?? productName;
-                  return (
-                    <Box component="tr" key={measure} data-testid={`budget-column-row-${column.position}`}>
-                      <Box component="td" sx={{ ...cellSx, fontVariantNumeric: 'tabular-nums', color: 'kanap.text.secondary', width: 64 }}>
-                        {column.position}
-                      </Box>
-                      <Box component="td" sx={{ ...controlCellSx, minWidth: 240 }}>
-                        <TextField
-                          variant="standard"
-                          size="small"
-                          value={draft.labels[measure]}
-                          placeholder={productName}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            update((prev) => ({ ...prev, labels: { ...prev.labels, [measure]: value } }));
-                          }}
-                          error={!!nameError}
-                          InputProps={{ readOnly }}
-                          inputProps={{ 'aria-label': t(`${P}.nameOf`, { position: column.position }) }}
-                          sx={{ width: 240 }}
-                        />
-                        {nameError && (
-                          <Typography sx={{ fontSize: 12, color: 'error.main', mt: 0.25 }}>{nameError}</Typography>
-                        )}
-                        {/* Where the column shows under its technical name. */}
-                        <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>
-                          {t(`${P}.inFiles`, { name: measure })}
-                        </Typography>
-                      </Box>
-                      <Box component="td" sx={controlCellSx}>
-                        <Switch
-                          size="small"
-                          checked={draft.enabled[measure]}
-                          onChange={(e) => setFlag('enabled', measure, e.target.checked)}
-                          disabled={readOnly}
-                          inputProps={{ 'aria-label': t(`${P}.shownOf`, { column: shownName }) }}
-                        />
-                      </Box>
-                      <Box component="td" sx={controlCellSx}>
-                        <Switch
-                          size="small"
-                          checked={draft.group_spread[measure]}
-                          onChange={(e) => setFlag('group_spread', measure, e.target.checked)}
-                          disabled={readOnly}
-                          inputProps={{ 'aria-label': t(`${P}.followsOf`, { column: shownName }) }}
-                        />
-                      </Box>
-                      <Box component="td" sx={controlCellSx}>
-                        <Radio
-                          size="small"
-                          name="budget-default-column"
-                          value={measure}
-                          checked={draft.default_column === measure}
-                          onChange={() => update((prev) => ({ ...prev, default_column: measure }))}
-                          disabled={readOnly}
-                          inputProps={{ 'aria-label': t(`${P}.defaultOf`, { column: shownName }) }}
-                        />
-                      </Box>
-                    </Box>
-                  );
-                })}
-              </Box>
+    <SettingsPage
+      title={t(`${P}.title`)}
+      status={autosave.status}
+      readOnly={readOnly}
+      loading={!budgetColumns.ready}
+      error={loadFailed ? t(`${P}.loadError`) : undefined}
+    >
+      <Box sx={{ overflowX: 'auto', mt: 2 }}>
+        <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', '& th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' }, '& tbody td': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' } }}>
+          <Box component="thead">
+            <Box component="tr">
+              <Box component="th" sx={headSx}>{t(`${P}.column`)}</Box>
+              <Box component="th" sx={headSx}>{t(`${P}.name`)}</Box>
+              <HeadWithInfo label={t(`${P}.shown`)} info={t(`${P}.helpHidden`)} />
+              <HeadWithInfo label={t(`${P}.follows`)} info={t(`${P}.helpFollows`)} />
+              <HeadWithInfo label={t(`${P}.default`)} info={t(`${P}.helpDefault`)} />
             </Box>
           </Box>
-
-          {canEdit && errors.form && (
-            <Typography role="alert" sx={{ fontSize: 13, color: 'error.main', mt: 1.5 }}>{errors.form}</Typography>
-          )}
-          {canEdit && serverError && (
-            <Alert severity="error" sx={{ mt: 1.5 }}>{serverError}</Alert>
-          )}
-
-          {canEdit && (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 2 }}>
-              <Button
-                variant="contained"
-                onClick={() => mutation.mutate(patch)}
-                disabled={!dirty || !valid || readOnly}
-              >
-                {t('common:buttons.save')}
-              </Button>
-              <Button
-                variant="action"
-                onClick={() => update(() => draftFromSettings(saved))}
-                disabled={!dirty || busy}
-              >
-                {t('common:buttons.reset')}
-              </Button>
-              <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
-                {busy ? t('common:status.saving', 'Saving…') : savedFlash ? t('common:status.saved', 'Saved') : ''}
-              </Typography>
-            </Stack>
-          )}
-        </Paper>
+          <Box component="tbody">
+            {budgetColumns.all.map((column) => (
+              <ColumnRow
+                key={column.measure}
+                column={column}
+                draft={draft}
+                readOnly={readOnly}
+                autosave={autosave}
+                nameErrorOf={nameErrorOf}
+                choiceError={(field) => (refused?.field === field ? refused.error : null)}
+                choose={choose}
+                send={send}
+              />
+            ))}
+          </Box>
+        </Box>
+      </Box>
+      {serverError && (
+        <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.danger', mt: 1.5 }}>{serverError}</Typography>
       )}
-    </Box>
+    </SettingsPage>
   );
+}
+
+function readChoice(draft: BudgetColumnsDraft, field: ChoiceField): boolean | AmountMeasure {
+  if (field === 'default_column') return draft.default_column;
+  const [map, measure] = field.split('.') as ['enabled' | 'group_spread', AmountMeasure];
+  return draft[map][measure];
 }

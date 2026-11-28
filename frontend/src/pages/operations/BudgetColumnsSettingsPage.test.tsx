@@ -41,9 +41,9 @@ const auth = vi.hoisted(() => ({ admin: true }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string, level: string) => resource === 'budget_ops' && level === 'admin' && auth.admin }),
 }));
-vi.mock('../../components/PageHeader', () => ({ default: ({ title }: { title: string }) => <h1>{title}</h1> }));
 
 import api from '../../api';
+import { KanapDialogProvider } from '../../components/design';
 import BudgetColumnsSettingsPage from './BudgetColumnsSettingsPage';
 import { DEFAULT_BUDGET_COLUMNS, type BudgetColumnsSettings } from '../../services/budgetColumns';
 
@@ -55,16 +55,29 @@ function renderPage() {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter>
-          <BudgetColumnsSettingsPage />
-        </MemoryRouter>
+        <KanapDialogProvider>
+          <MemoryRouter>
+            <BudgetColumnsSettingsPage />
+          </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
 }
 
 const row = (position: number) => within(screen.getByTestId(`budget-column-row-${position}`));
-const save = () => screen.getByRole('button', { name: 'Save' });
+/** The body of each PATCH sent, in order. */
+const sent = () => mocked.patch.mock.calls.map((call) => call[1]);
+const echo = async (_url: string, body: any) => {
+  const next = {
+    labels: { ...stored.labels, ...(body.labels ?? {}) },
+    enabled: { ...stored.enabled, ...(body.enabled ?? {}) },
+    group_spread: { ...stored.group_spread, ...(body.group_spread ?? {}) },
+    default_column: body.default_column ?? stored.default_column,
+  };
+  stored = next;
+  return { data: next };
+};
 
 /** Waits until the stored setting is on screen (the Name fields are editable). */
 async function waitForSetting() {
@@ -83,9 +96,10 @@ describe('BudgetColumnsSettingsPage', () => {
       if (url === '/budget-columns') return { data: stored };
       throw new Error(`unexpected GET ${url}`);
     });
+    mocked.patch.mockImplementation(echo);
   });
 
-  it('lists the five columns in the fixed order, with the standard names and the file names', async () => {
+  it('lists the five columns in the fixed order, with the standard names and the file names, and no Save or Reset', async () => {
     renderPage();
     await waitForSetting();
 
@@ -97,7 +111,8 @@ describe('BudgetColumnsSettingsPage', () => {
     expect(row(3).getByRole('checkbox', { name: 'Show Forecast' })).not.toBeChecked();
     expect(row(4).getByRole('checkbox', { name: 'Actuals follows the spread and the lines' })).toBeChecked();
     expect(row(1).getByRole('radio')).toBeChecked();
-    expect(save()).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument();
   });
 
   it('explains Default and Follows in info tooltips on their headers, not in lines under the table', async () => {
@@ -117,61 +132,113 @@ describe('BudgetColumnsSettingsPage', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent(defaultHelp);
   });
 
-  it('saves only what changed', async () => {
-    mocked.patch.mockImplementation(async (_url: string, body: unknown) => ({ data: { ...stored, ...(body as object) } }));
+  it('saves each change on its own, one request per change, and says it is saved', async () => {
     renderPage();
     await waitForSetting();
 
-    fireEvent.change(row(3).getByRole('textbox'), { target: { value: '  A2  ' } });
-    fireEvent.click(row(3).getByRole('checkbox', { name: 'Show A2' }));
-    fireEvent.click(row(5).getByRole('checkbox', { name: 'Expected landing follows the spread and the lines' }));
-    fireEvent.click(row(3).getByRole('radio'));
-    fireEvent.click(save());
-
+    fireEvent.click(row(3).getByRole('checkbox', { name: 'Show Forecast' }));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
-    expect(mocked.patch).toHaveBeenCalledWith('/budget-columns', {
-      labels: { forecast: 'A2' },
-      enabled: { forecast: true },
-      group_spread: { expected_landing: false },
-      default_column: 'forecast',
-    });
+    fireEvent.click(row(5).getByRole('checkbox', { name: 'Expected landing follows the spread and the lines' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    fireEvent.click(row(3).getByRole('radio'));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(3));
+    expect(sent()).toEqual([
+      { enabled: { forecast: true } },
+      { group_spread: { expected_landing: false } },
+      { default_column: 'forecast' },
+    ]);
     expect(await screen.findByText('Saved')).toBeInTheDocument();
+    expect(row(3).getByRole('radio')).toBeChecked();
   });
 
-  it('says readably that at least one column must stay shown', async () => {
+  it('saves a name when the field is left, trimmed, once', async () => {
     renderPage();
     await waitForSetting();
 
-    for (const p of [1, 2, 4, 5]) fireEvent.click(row(p).getAllByRole('checkbox')[0]);
-    expect(screen.getByRole('alert')).toHaveTextContent('At least one column must stay shown.');
-    expect(save()).toBeDisabled();
+    const field = row(3).getByRole('textbox');
+    fireEvent.focus(field);
+    fireEvent.change(field, { target: { value: '  A' } });
+    fireEvent.change(field, { target: { value: '  A2  ' } });
+    fireEvent.blur(field);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    expect(sent()).toEqual([{ labels: { forecast: 'A2' } }]);
+    await waitFor(() => expect(row(3).getByRole('checkbox', { name: 'Show A2' })).toBeInTheDocument());
   });
 
-  it('says readably that the default column must be shown', async () => {
+  it('saves a name 700 ms after the last key while the field keeps the focus', async () => {
+    renderPage();
+    await waitForSetting();
+
+    const field = row(2).getByRole('textbox');
+    fireEvent.focus(field);
+    fireEvent.change(field, { target: { value: 'A1' } });
+    expect(mocked.patch).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    expect(sent()).toEqual([{ labels: { committed: 'A1' } }]);
+    expect(field).toHaveValue('A1');
+  });
+
+  it('refuses to hide the last shown column, under its switch, and sends nothing', async () => {
+    stored = { ...DEFAULT_BUDGET_COLUMNS, enabled: { planned: true, committed: false, forecast: false, actual: false, expected_landing: false } };
     renderPage();
     await waitForSetting();
 
     fireEvent.click(row(1).getByRole('checkbox', { name: 'Show Budget' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('The default column must be shown: choose another default column first.');
-    expect(save()).toBeDisabled();
-
-    // Moving the default first makes the change valid, in one save.
-    fireEvent.click(row(2).getByRole('radio'));
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(save()).toBeEnabled();
+    expect(row(1).getByRole('alert')).toHaveTextContent('At least one column must stay shown.');
+    expect(row(1).getByRole('checkbox', { name: 'Show Budget' })).not.toBeChecked();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mocked.patch).not.toHaveBeenCalled();
   });
 
-  it('refuses two columns with the same name, whatever the case, and a name over 40 characters', async () => {
+  it('refuses to hide the default column until another default is chosen: the two changes are saved one after the other', async () => {
     renderPage();
     await waitForSetting();
 
-    fireEvent.change(row(2).getByRole('textbox'), { target: { value: 'budget' } });
-    expect(row(2).getByText('Two columns cannot both be named "budget".')).toBeInTheDocument();
-    expect(save()).toBeDisabled();
+    fireEvent.click(row(1).getByRole('checkbox', { name: 'Show Budget' }));
+    expect(row(1).getByRole('alert')).toHaveTextContent('The default column must be shown: choose another default column first.');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mocked.patch).not.toHaveBeenCalled();
 
-    fireEvent.change(row(2).getByRole('textbox'), { target: { value: 'x'.repeat(41) } });
+    // Choosing another default drops the refused change: Budget is shown again, as stored.
+    fireEvent.click(row(2).getByRole('radio'));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(row(1).getByRole('checkbox', { name: 'Show Budget' })).toBeChecked();
+
+    fireEvent.click(row(1).getByRole('checkbox', { name: 'Show Budget' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    expect(sent()).toEqual([{ default_column: 'committed' }, { enabled: { planned: false } }]);
+  });
+
+  it('refuses two columns with the same name, whatever the case, and a name over 40 characters, and sends neither', async () => {
+    renderPage();
+    await waitForSetting();
+
+    const field = row(2).getByRole('textbox');
+    fireEvent.focus(field);
+    fireEvent.change(field, { target: { value: 'budget' } });
+    expect(row(2).getByText('Two columns cannot both be named "budget".')).toBeInTheDocument();
+    fireEvent.change(field, { target: { value: 'x'.repeat(41) } });
     expect(row(2).getByText('A column name can have at most 40 characters.')).toBeInTheDocument();
-    expect(save()).toBeDisabled();
+    fireEvent.blur(field);
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    expect(mocked.patch).not.toHaveBeenCalled();
+    // The refused name stays in the field, with its reason.
+    expect(field).toHaveValue('x'.repeat(41));
+  });
+
+  it('puts the error on the name typed even when the clashing name is stored on a later column', async () => {
+    stored = { ...DEFAULT_BUDGET_COLUMNS, labels: { ...DEFAULT_BUDGET_COLUMNS.labels, expected_landing: 'A1' } };
+    renderPage();
+    await waitForSetting();
+
+    const field = row(1).getByRole('textbox');
+    fireEvent.focus(field);
+    fireEvent.change(field, { target: { value: 'a1' } });
+    expect(row(1).getByText('Two columns cannot both be named "A1".')).toBeInTheDocument();
+    fireEvent.blur(field);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mocked.patch).not.toHaveBeenCalled();
   });
 
   it('applies the server rules: English standard names, composed accents, characters not code units, invisible characters', async () => {
@@ -180,41 +247,32 @@ describe('BudgetColumnsSettingsPage', () => {
     await waitForSetting();
 
     // Column 3 shows "Prévision" in French, but the server also checks its English name.
-    fireEvent.change(row(1).getByRole('textbox'), { target: { value: 'Forecast' } });
+    const first = row(1).getByRole('textbox');
+    fireEvent.focus(first);
+    fireEvent.change(first, { target: { value: 'Forecast' } });
     expect(row(1).getByText('Deux colonnes ne peuvent pas porter le même nom « Forecast ».')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
 
-    // "Réel" typed with a combining accent is the same name as "Réel".
-    fireEvent.change(row(1).getByRole('textbox'), { target: { value: 'Réel' } });
-    fireEvent.change(row(2).getByRole('textbox'), { target: { value: 'Re\u0301el' } });
+    // "Réel" typed with a combining accent is the same name as the stored "Réel".
+    fireEvent.change(first, { target: { value: 'Réel' } });
+    fireEvent.blur(first);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(row(1).getByRole('textbox')).toHaveValue('Réel'));
+    const second = row(2).getByRole('textbox');
+    fireEvent.focus(second);
+    fireEvent.change(second, { target: { value: 'Réel' } });
     expect(row(2).getByText(/Deux colonnes ne peuvent pas porter le même nom/)).toBeInTheDocument();
 
     // 40 emoji are 40 characters (80 code units): accepted; 41 are refused.
-    fireEvent.change(row(2).getByRole('textbox'), { target: { value: '\u{1F600}'.repeat(40) } });
-    expect(row(2).queryByText(/40 caractères/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
-    fireEvent.change(row(2).getByRole('textbox'), { target: { value: '\u{1F600}'.repeat(41) } });
+    fireEvent.change(second, { target: { value: '\u{1F600}'.repeat(41) } });
     expect(row(2).getByText('Un nom de colonne compte au plus 40 caractères.')).toBeInTheDocument();
-
     // A zero width space would make a second "Budget" look different.
-    fireEvent.change(row(2).getByRole('textbox'), { target: { value: 'Budget\u200B' } });
+    fireEvent.change(second, { target: { value: 'Budget​' } });
     expect(row(2).getByText('Un nom de colonne ne peut pas contenir de caractères de contrôle ou invisibles.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
-  });
-
-  it('Reset brings back the saved setting', async () => {
-    stored = { ...DEFAULT_BUDGET_COLUMNS, labels: { ...DEFAULT_BUDGET_COLUMNS.labels, planned: 'A0' } };
-    renderPage();
-    await waitForSetting();
-
-    fireEvent.change(row(1).getByRole('textbox'), { target: { value: 'Other' } });
-    fireEvent.click(row(2).getByRole('radio'));
-    expect(save()).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
-    expect(row(1).getByRole('textbox')).toHaveValue('A0');
-    expect(row(1).getByRole('radio')).toBeChecked();
-    expect(save()).toBeDisabled();
-    expect(mocked.patch).not.toHaveBeenCalled();
+    fireEvent.change(second, { target: { value: '\u{1F600}'.repeat(40) } });
+    expect(row(2).queryByText(/40 caractères/)).not.toBeInTheDocument();
+    fireEvent.blur(second);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(2));
+    expect(sent()).toEqual([{ labels: { planned: 'Réel' } }, { labels: { committed: '\u{1F600}'.repeat(40) } }]);
   });
 
   it('groups the default radios so the arrow keys move between them', async () => {
@@ -230,33 +288,33 @@ describe('BudgetColumnsSettingsPage', () => {
     renderPage();
     expect(await screen.findByText('The column settings could not be loaded.', {}, { timeout: 4000 })).toBeInTheDocument();
     expect(screen.queryByTestId('budget-column-row-1')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
   });
 
-  it('shows the server message when a save is refused', async () => {
+  it('shows the server message when a save is refused, and the stored choice again', async () => {
     mocked.patch.mockRejectedValue(Object.assign(new Error('Bad Request'), {
       response: { status: 400, data: { message: 'Two columns cannot both be named "Réel".' } },
     }));
     renderPage();
     await waitForSetting();
 
-    fireEvent.change(row(4).getByRole('textbox'), { target: { value: 'Réel' } });
-    fireEvent.click(save());
+    fireEvent.click(row(2).getByRole('radio'));
     expect(await screen.findByText('Two columns cannot both be named "Réel".')).toBeInTheDocument();
+    expect(row(1).getByRole('radio')).toBeChecked();
   });
 
-  it('is read-only without budget administration', async () => {
+  it('shows a budget administration reader the same fields, read-only, without the administrator notice', async () => {
     auth.admin = false;
     stored = { ...DEFAULT_BUDGET_COLUMNS, labels: { ...DEFAULT_BUDGET_COLUMNS.labels, planned: 'A0' } };
     renderPage();
     await waitFor(() => expect(row(1).getByRole('textbox')).toHaveValue('A0'));
 
-    expect(screen.getByText('You need budget administrator rights to use this page.')).toBeInTheDocument();
+    expect(screen.queryByText('You need budget administrator rights to use this page.')).not.toBeInTheDocument();
     expect(row(1).getByRole('textbox')).toHaveAttribute('readonly');
     for (const p of [1, 2, 3, 4, 5]) {
       for (const control of row(p).getAllByRole('checkbox')) expect(control).toBeDisabled();
       expect(row(p).getByRole('radio')).toBeDisabled();
     }
-    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
