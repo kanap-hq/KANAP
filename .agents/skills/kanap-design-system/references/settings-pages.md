@@ -84,6 +84,9 @@ as it is: extend the one in the repository, never write a second one for the sam
   A plain element given as is (`<input>`, `<select>`) gets both attributes from `SettingField`. A
   component uses the render function and spreads `aria` (both attributes, empty without an error)
   where its focusable control reads them: given as is, it would carry them on its wrapper.
+- A table of fields (one row per item, as Budget columns) fixes its column widths (`table-layout:
+  fixed`, a `colgroup`): a refusal wraps in its cell, and the columns never move when it appears or
+  goes.
 
 ```tsx
 <SettingField label={t('…method')} hint={t('…methodHelp')} error={error}>

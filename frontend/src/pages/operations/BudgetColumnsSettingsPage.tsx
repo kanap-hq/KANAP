@@ -143,7 +143,13 @@ function without(overlay: Overlay, field: ChoiceField): Overlay {
   return next;
 }
 
-const errorLineSx = { fontSize: 12, color: 'kanap.danger', mt: 0.25, maxWidth: 220, whiteSpace: 'normal' } as const;
+const errorLineSx = { fontSize: 12, color: 'kanap.danger', mt: 0.25 } as const;
+
+/**
+ * The widths of the table's columns, fixed so that a refusal appearing under a field wraps in its
+ * cell instead of moving the columns beside it. Follows takes what the others leave.
+ */
+const COLUMN_WIDTHS = [72, 264, 176, undefined, 112] as const;
 
 type ColumnRowProps = {
   column: BudgetColumnView;
@@ -210,10 +216,10 @@ function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError
 
   return (
     <Box component="tr" data-testid={`budget-column-row-${column.position}`}>
-      <Box component="td" sx={{ ...cellSx, fontVariantNumeric: 'tabular-nums', color: 'kanap.text.secondary', width: 64 }}>
+      <Box component="td" sx={{ ...cellSx, fontVariantNumeric: 'tabular-nums', color: 'kanap.text.secondary' }}>
         {column.position}
       </Box>
-      <Box component="td" sx={{ ...controlCellSx, minWidth: 240 }}>
+      <Box component="td" sx={controlCellSx}>
         <TextField
           variant="standard"
           size="small"
@@ -234,7 +240,7 @@ function ColumnRow({ column, draft, readOnly, autosave, nameErrorOf, choiceError
           sx={{ width: 240 }}
         />
         {nameError && (
-          <Typography id={nameErrorId} sx={{ fontSize: 12, color: 'kanap.danger', mt: 0.25 }}>{nameError}</Typography>
+          <Typography id={nameErrorId} sx={errorLineSx}>{nameError}</Typography>
         )}
         {/* Where the column shows under its technical name. */}
         <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>
@@ -392,7 +398,10 @@ export default function BudgetColumnsSettingsPage() {
       error={loadFailed ? t(`${P}.loadError`) : undefined}
     >
       <Box sx={{ overflowX: 'auto', mt: 2 }}>
-        <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', '& th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' }, '& tbody td': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' } }}>
+        <Box component="table" sx={{ width: '100%', minWidth: 840, tableLayout: 'fixed', borderCollapse: 'collapse', '& th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' }, '& tbody td': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' } }}>
+          <colgroup>
+            {COLUMN_WIDTHS.map((width, index) => <col key={index} style={width ? { width } : undefined} />)}
+          </colgroup>
           <Box component="thead">
             <Box component="tr">
               <Box component="th" sx={headSx}>{t(`${P}.column`)}</Box>
