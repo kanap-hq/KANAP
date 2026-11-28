@@ -3051,7 +3051,7 @@
         "enabled": "Activar la sincronización con Netbox",
         "baseUrl": "Dirección de Netbox",
         "apiToken": "Token de API",
-        "requestTimeout": "Tiempo de espera (segundos)",
+        "requestTimeout": "Tiempo de espera de las solicitudes (segundos)",
         "insecureTls": "Ignorar los errores de certificado",
         "autoSync": "Sincronización automática",
         "defaultEnvironment": "Entorno de los nuevos activos"
