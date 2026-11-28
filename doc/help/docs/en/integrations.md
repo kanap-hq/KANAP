@@ -48,14 +48,14 @@ The integration is configured tenant-by-tenant; the credentials below are scoped
 - **User token**: the personal API token of the GLPI account Kadratis will use. In GLPI, open your preferences (your name at the top right), then **Remote access keys**, and copy the **API token**. If it is empty, tick **Regenerate** and save.
 - **App token**: optional. In GLPI, **Setup > General > API**, open the API client Kadratis connects through and copy its application token. Leave it empty if the client has none.
 
-The information icon beside each field says where to find its value. A saved token is never shown again: the field shows dots, with **Replace** beside it to enter a new one. A new URL empties the saved tokens: the fields ask for them again.
+The information icon beside each field says where to find its value. A saved token is never shown again: the field shows dots, with **Replace** beside it to enter a new one. A new URL empties the saved tokens: the user token field asks for it again, and the app token field says that the saved token is not sent to the new address. Enter the app token again to keep it.
 
 ### Actions
 
-- **Test**: runs an authenticated round-trip against GLPI with the values on the card, saved or not. The status line at the top right of the card says how it went: "Last test passed on …" with the response time, or the reason it failed.
+- **Test**: runs an authenticated round-trip against GLPI with the values on the card, saved or not. It is available once the URL and the user token are there. The status line at the top right of the card says how it went: "Last test passed on …" with the response time, or the reason it failed.
 - **Save**: available once something changed. Typed tokens replace the saved ones; a token left as dots stays.
 
-The status line keeps the last test of the saved values: it shows again when you come back to the page. A test of values you have not saved shows until you leave the page. Without a test, the status line says **Saved, not tested yet** or **Never tested**, and **Changes not saved** while the card holds changes. Leaving the page with changes on a card asks for confirmation first.
+The status line keeps the last test of the saved values: it shows again when you come back to the page, with the response time or the reason it failed. A test of values you have not saved shows until you leave the page. Without a test, the status line says **Saved, not tested yet** or **Never tested**, and **Changes not saved** while the card holds changes. Leaving the page with changes on a card asks for confirmation first.
 
 ### Secret storage
 
@@ -71,13 +71,13 @@ If your Kadratis instance does not have a configured secret store, a line under 
 
 - **Enable PRTG monitoring**: master switch for the connection. When off, agents do not reach PRTG.
 - **Server address**: the address you open PRTG with in your browser, for example `https://prtg.example.com`.
-- **API key**: create one in PRTG under **Setup → API keys**. Read-only access is enough. A saved key shows as dots, with **Replace** beside it. A new address empties the saved key: the field asks for it again.
+- **API key**: create one in PRTG under **Setup | Account Settings | API Keys**. Read-only access is enough. A saved key shows as dots, with **Replace** beside it. A new address empties the saved key: the field asks for it again.
 - **Server time zone**: the time zone of the PRTG core server, as set in its operating system. Kadratis reads the times of alerts in this zone.
 - **Request timeout (seconds)**: how long to wait for PRTG, between 5 and 120. Leave it empty to use 30.
 
 ### Actions
 
-**Test** and **Save** work as on the GLPI card. A passed test shows the PRTG version and the number of sensors the key can see. Once a working connection is saved and switched on, the card offers a link to the agents page, where a monitoring agent can be created.
+**Test** and **Save** work as on the GLPI card: **Test** is available once the address and the key are there. A passed test shows the PRTG version and the number of sensors the key can see. Once a working connection is saved and switched on, the card offers a link to the agents page, where a monitoring agent can be created.
 
 ---
 
@@ -93,9 +93,13 @@ Configure the connection here, then open the **Netbox** tab of **IT Landscape > 
 
 ## Removing a connection
 
-The three cards remove a connection the same way: empty its address, save, and confirm. Kadratis deletes the address and the saved secrets, turns the connection off and writes an entry to the audit log. Nothing already imported is deleted. Agents that read PRTG report it as unavailable at their next run.
+The three cards remove a connection the same way: empty its address, save, and confirm. Kadratis deletes the address and the saved secrets, turns the connection off and writes an entry to the audit log. The confirmation says what changes for each system:
 
-The audit log also marks a replaced secret: the entry of a save that changes a token or a key at the same address shows **Secret replaced**. The secret itself is never written to the log.
+- **GLPI**: tickets can no longer be imported. Tickets already imported stay.
+- **PRTG**: monitoring agents can no longer read PRTG and report it as unavailable at their next run.
+- **Netbox**: the automatic synchronisation stops. What was already synchronised stays.
+
+The audit log says whether a secret is set, and marks a replaced one: the entry of a save that changes a key or a token at the same address shows **Secret replaced**, and for GLPI **GLPI user token replaced** or **GLPI application token replaced**. The secret itself is never written to the log.
 
 ---
 
