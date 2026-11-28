@@ -1217,7 +1217,7 @@
     "nameMatchesCode": "Ce nom correspond à une autre valeur",
     "noComma": "Virgule et point-virgule non autorisés",
     "usageTitle": "Valeur encore utilisée",
-    "usageIntro": "« {{name}} » ne peut pas être supprimée tant que des enregistrements l'utilisent. Cochez « Ne plus proposer » : elle reste sur les enregistrements existants et n'est plus proposée.",
+    "usageIntro": "« {{name}} » ne peut pas être supprimée tant que des enregistrements l'utilisent. Choisissez « Ne plus proposer » : elle reste sur les enregistrements existants et n'est plus proposée.",
     "usageView": "Voir",
     "usageChecking": "Vérification de l'utilisation…",
     "usageFailed": "L'utilisation n'a pas pu être vérifiée",
