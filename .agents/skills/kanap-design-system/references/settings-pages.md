@@ -143,7 +143,8 @@ theme draws it on `kanap.bg.drawer`.
   its name.
 - **Deleting** a value that records use opens "Value still in use": "“Colocation” cannot be
   deleted while records use it. Tick “Stop offering”: it stays on existing records and is no
-  longer offered." One button, Close. A free value is deleted without a dialog.
+  longer offered." Its button "Stop offering" ticks the box for the person; Cancel closes. A
+  free value is deleted without a dialog.
 - **Order**: a handle on the left only when order means something (administration zones: from
   level 0 down). Otherwise no handle.
 - **Product values** that cannot be changed (lifecycle statuses): a line of text and the word

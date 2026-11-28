@@ -17,10 +17,14 @@ You only see the tabs your permissions allow. If you don't see the **Settings** 
 
 ## How the page is organized
 
-The page has two tabs:
+The page has two tabs, each with its own address, so a link or a bookmark opens the right one:
 
-- **Lists** holds the dropdown values described on this page.
-- **Netbox** holds the synchronisation with your Netbox inventory. See [Netbox synchronisation](netbox.md).
+- **Lists** (`/it/settings/lists`) holds the dropdown values described on this page.
+- **Netbox** (`/it/settings/netbox`) holds the synchronisation with your Netbox inventory. See [Netbox synchronisation](netbox.md).
+
+`/it/settings` opens the first tab you may see. The former addresses `/it/settings?tab=netbox` and `/it/netbox` open the **Netbox** tab.
+
+Changes save on their own. One indicator in the page header says whether they are saving, saved or not saved. When a list is refused, the reason shows under that list and the list goes back to its saved values.
 
 On the **Lists** tab, the **Classifications and continuity** editor sits at the top. Below it, lists are grouped into four collapsible sections:
 
@@ -35,10 +39,13 @@ Within a section, lists are sorted by name. Each list appears as an expandable p
 
 ### Editor controls
 
-Each list has its own controls at the top:
+Each list is a table: the name, the list's own columns, **Stop offering**, then two icons per row, **Translate** and **Delete**.
 
-- **Add item**: Inserts a new row at the top of the list, focused and ready to type. Its name field shows an example for that list.
-- Edits save automatically about a second and a half after your last change, once every row is valid. A saving indicator shows next to the list.
+- **Add an item**, under the table, adds a row at the bottom of the list with the cursor in its name. Its name field shows an example for that list. A row left empty is never saved.
+- Values keep the order you see. Kadratis does not sort them.
+- A typed name saves shortly after your last keystroke, or when you leave the field. A ticked box or a choice saves at once. Nothing saves while a row of the list breaks a rule below.
+
+Administration zones, connection types, domains and subnets have their own layout: their **Add an item** button sits above the table and adds the row at the top.
 
 For long lists (more than 25 rows), the table virtualizes rows, showing about 20 at a time with smooth scrolling and sticky headers.
 
@@ -48,7 +55,7 @@ You only ever see and type **names**. Kadratis generates a stable internal code 
 
 Because names identify values, a few rules apply within a list:
 
-- every value needs a name (an asterisk marks the **Name** column), and two values cannot have the same name (case does not matter);
+- every value needs a name (an asterisk marks the **Name** column), and two values cannot have the same name (case does not matter), in the list or as shown in your language;
 - a name cannot be identical to the internal code of another value in the same list;
 - names of **Access methods** cannot contain a comma or a semicolon, because the export lists them in one comma-separated cell.
 
@@ -56,15 +63,28 @@ A list that breaks one of these rules is not saved until you fix it; the row sho
 
 ### Removing a value
 
-**Remove** deletes a value that nothing uses. When records still reference the value, Kadratis shows how many (applications, assets, interfaces, connections, sites, incidents, subnets…), with a link to the filtered list where a list can be filtered on that field, and offers **No longer offered** instead: the value stays visible on the records that already use it and is no longer proposed for new ones. A value in use is never removed, even through the API.
+**Delete** (the bin icon) deletes a value that nothing uses, without asking. When records still reference the value, Kadratis shows how many (applications, assets, interfaces, connections, sites, incidents, subnets…), with a link to the filtered list where a list can be filtered on that field, and offers **Stop offering** instead: the value stays visible on the records that already use it and is no longer proposed for new ones. The dialog's **Stop offering** button ticks the box for you. A value in use is never removed, even through the API.
 
-Built-in values that Kadratis manages itself (the four lifecycle statuses, the Workgroup and N/A domains) cannot be edited or removed. Default network zones and asset types, and the cloud provider Other, can be edited and retired but not removed: the server would add them back.
+Built-in values that Kadratis manages itself (the four lifecycle statuses, the Workgroup and N/A domains) cannot be edited or removed: they are marked **Built-in**. Default network zones and asset types, and the cloud provider Other, can be edited and retired but not removed: the server would add them back.
 
 ### Translating your values
 
-The values you type are shown as is in every language. To show them in the language of each user, use the **Translate** action on a row: the dialog shows the base name (and description for classification levels) and one field per language. A field left empty uses the automatic translation when the value is still a Kadratis default, otherwise the base text. Saving translations never changes the base text, and a translated name can be used in CSV files and the API like the name itself, which is why it must not duplicate another value of the list.
+A list shows each value under the name the rest of Kadratis shows in your language: the translation your workspace typed for that language, else the translation shipped with Kadratis while the value keeps its shipped name, else the name itself. A French-speaking user sees the shipped Guest network zone as "Invités", here as on the records.
 
-Editors always show and edit the base text; when the displayed name differs for your language, the row says so ("Shown: …").
+Typing a new name in the list makes it the base name of the value. The translation your workspace typed for your language goes, so that the field keeps what you typed; the translations of the other languages stay.
+
+The **Translate** icon opens the languages of the value: the base name (and description for classification levels) and one field per language. A field left empty shows what is displayed instead, a shipped translation included. The icon stands out when the value has a translation your workspace typed. Saving translations never changes the base text, and a translated name can be used in CSV files and the API like the name itself, which is why it must not duplicate another value of the list.
+
+### Restore the default lists
+
+**Restore the default lists**, in the header of the **Lists** tab, puts the lists back to the values shipped with Kadratis, after a confirmation. It needs `settings:admin`. Edits not yet saved are saved first.
+
+- Each shipped value comes back with its shipped name and translations, offered again, even if you renamed, retired or deleted it. The translations your workspace typed for it go.
+- A value you added stays when records use it, as it is, after the shipped values and in its former order. A value you added that nothing uses goes. Subnets stay only when assets use them, with the network zones they need.
+- An administration zone you added and kept comes last, as the least sensitive: move it to its place. A kept classification level becomes the least critical, a kept recovery wave the last one.
+- A shipped name that would clash with a value you keep stays as it is now.
+
+Records never change: they keep their values.
 
 ---
 
@@ -76,7 +96,7 @@ Cloud providers used by servers and locations (e.g., AWS, Azure, GCP).
 
 Other is a built-in value. It can be retired but not removed, and a saved list that leaves it out gets it back. AWS, Azure and GCP can be removed.
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Where used**:
 - Assets workspace → properties panel → **Cloud provider** (read-only, derived from the location)
@@ -86,13 +106,13 @@ Other is a built-in value. It can be retired but not removed, and a saved list t
 
 Where locations and technologies are hosted. Defaults: On-prem, Colocation, Public cloud, Private cloud, SaaS.
 
-**Columns**: Name, Category (**On-prem / colocation** or **Cloud / SaaS**), No longer offered
+**Columns**: Name, Category (**On-prem / colocation** or **Cloud / SaaS**), Stop offering
 
 **Where used**:
 - Locations workspace → Overview tab → **Hosting Type** field
 - Technologies workspace → properties panel → **Hosting type**, and the new technology window. See [Technologies](technologies.md#hosting-type).
 
-A type a technology uses cannot be removed: mark it **No longer offered** instead.
+A type a technology uses cannot be removed: tick **Stop offering** instead.
 
 The category determines which fields appear when editing a Location:
 - **On-prem / colocation** shows Operating Company and Datacenter fields
@@ -112,9 +132,9 @@ The zones of your administration model. Kadratis ships the three tiers of the ti
 
 Rename them, add your own or retire them to match your administration policy or your privileged access model. The three tiers appear as long as the list has never been saved. Once it has been saved, even empty, Kadratis no longer adds them: add them yourself if you need them.
 
-The order of the list matters: the first zone is the most sensitive. Drag a row by its handle to move it. A new zone is added at the top, so move it to its place. The [Administration zones](administration-view.md) page shows the zones in this order and checks the assets against the first zone that is not marked **No longer offered**.
+The order of the list matters: the first zone is the most sensitive. Drag a row by its handle to move it. A new zone is added at the top, so move it to its place. The [Administration zones](administration-view.md) page shows the zones in this order and checks the assets against the first zone still offered.
 
-**Columns**: Name, Administrator group, Description, No longer offered
+**Columns**: Name, Administrator group, Description, Stop offering
 
 - **Administrator group**: the directory group or the team that administers the zone, for example "Domain admins".
 
@@ -123,13 +143,13 @@ The order of the list matters: the first zone is the most sensitive. Drag a row 
 - Technologies workspace → properties panel → **Administration zone**, for the technologies of the **Directory and identity** family
 - **IT Landscape > Administration zones**, which counts the assets and directory services of each zone, runs the control points and assigns zones in bulk. See [Administration zones](administration-view.md).
 
-A zone marked **No longer offered** stays on the technologies and assets already placed in it.
+A zone no longer offered stays on the technologies and assets already placed in it.
 
 ### Technology families
 
 What kind of technology each one is: database, hypervisor, directory and identity, and so on. The technologies list and the reports group technologies by family, and the [Administration zones](administration-view.md) page finds the directory services through the **Directory and identity** family.
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Where used**:
 - Technologies workspace → header and properties panel → **Family**, and the new technology window
@@ -142,7 +162,7 @@ The default list has a **Network** family for switches, routers and load balance
 
 A two-level catalog (category and entry) of connection protocols, with typical ports.
 
-**Columns**: Category (e.g., Database, Remote Access), Name, Typical ports, No longer offered
+**Columns**: Category (e.g., Database, Remote Access), Name, Typical ports, Stop offering
 
 **Where used**:
 - Connections workspace → **Connection Type** selector
@@ -155,7 +175,7 @@ Default categories include: Application, Authentication, Backup, Database, Email
 
 Active Directory or DNS domains for assets. Built-in entries cannot be modified. The DNS suffix is used to compute the fully qualified domain name (FQDN) for each asset.
 
-**Columns**: Name, DNS suffix, Forest, Number of accounts, Number of computers, Trusts, No longer offered
+**Columns**: Name, DNS suffix, Forest, Number of accounts, Number of computers, Trusts, Stop offering
 
 - **Forest**: the Active Directory forest of the domain, as shown in Active Directory Domains and Trusts.
 - **Number of accounts** and **Number of computers**: the numbers of user accounts and computers in the domain, as counted in Active Directory Users and Computers or by a count of the user and computer objects of the domain. Whole numbers only.
@@ -180,7 +200,7 @@ Hover the **Forest**, **Number of accounts** and **Number of computers** headers
 
 Endpoints used in connections and maps (e.g., Internal Users, Internet, Partner Networks, External Systems). The graph tier sets their default placement on the map.
 
-**Columns**: Name, Graph tier, No longer offered
+**Columns**: Name, Graph tier, Stop offering
 
 **Where used**:
 - Connections workspace → **Source Entity** and **Target Entity** fields
@@ -200,7 +220,7 @@ The graph tier controls the preferred vertical band in Connection Map when **Rol
 
 Types of IP addresses for assets. Useful for distinguishing between different network interfaces like host IPs, management interfaces, and storage networks.
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Default values**: Host, IPMI, Management, iSCSI
 
@@ -216,7 +236,7 @@ Assets can have multiple IP addresses, each with its own type. For example, a ph
 
 Network zones used to categorize subnets and describe connectivity (e.g., LAN, DMZ, Industrial LAN, WiFi, Public Cloud, Guest, Management, Storage, VPN).
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Where used**:
 - Subnets list → **Network Zone** selector
@@ -226,7 +246,7 @@ Network zones used to categorize subnets and describe connectivity (e.g., LAN, D
 
 Define network subnets with CIDR notation and optional VLAN assignments. Each subnet belongs to a network zone and to a location.
 
-**Columns**: Location, CIDR, VLAN (1-4094), Network zone, Description, No longer offered
+**Columns**: Location, CIDR, VLAN (1-4094), Network zone, Description, Stop offering
 
 **Where used**:
 - Assets workspace → Network tab → **Subnet** selector
@@ -242,7 +262,7 @@ Define network subnets with CIDR notation and optional VLAN assignments. Each su
 
 Roles assigned to servers when linking app instances (e.g., Web server, Database server, Worker). The graph tier sets their placement on the connection map.
 
-**Columns**: Name, Graph tier, No longer offered
+**Columns**: Name, Graph tier, Stop offering
 
 **Where used**:
 - Applications workspace → Servers tab → **Role** dropdown when linking an asset to an instance
@@ -257,7 +277,7 @@ Default built-in examples:
 
 Logical types for servers and infrastructure assets (e.g., Physical server, Virtual machine, Container, Serverless, Appliance). Physical assets can track hardware and support information.
 
-**Columns**: Name, Physical, No longer offered
+**Columns**: Name, Physical, Stop offering
 
 **Where used**:
 - Assets workspace → properties panel → **Asset type** field
@@ -270,7 +290,7 @@ Logical types for servers and infrastructure assets (e.g., Physical server, Virt
 
 Methods by which users access applications (e.g., Web, Mobile, VDI).
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Default values**: Web, Locally installed application, Mobile application, Proprietary HMI (industrial interface), Terminal / CLI, VDI / Remote Desktop, Kiosk
 
@@ -283,7 +303,7 @@ Methods by which users access applications (e.g., Web, Mobile, VDI).
 
 Categories that describe the primary purpose of each application or service.
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Default values**: Line-of-business, Productivity, Security, Analytics, Development, Integration, Infrastructure
 
@@ -323,7 +343,7 @@ The **Data confidentiality** list holds the data classes used by applications an
 
 Integration patterns used by interface legs (e.g., REST API, File batch, Queue, DB staging).
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Where used**:
 - Interface legs → **Pattern** field
@@ -332,7 +352,7 @@ Integration patterns used by interface legs (e.g., REST API, File batch, Queue, 
 
 Authentication modes for interface legs and bindings (e.g., Service account, OAuth2, API key, Certificate).
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Where used**:
 - Interface bindings → **Auth Mode** field
@@ -341,7 +361,7 @@ Authentication modes for interface legs and bindings (e.g., Service account, OAu
 
 Business data categories for interfaces (e.g., Master Data, Transactional, Reporting, Control).
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Where used**:
 - Interfaces workspace → **Data Category** field
@@ -350,7 +370,7 @@ Business data categories for interfaces (e.g., Master Data, Transactional, Repor
 
 Data formats for interface legs (e.g., CSV, JSON, XML, IDoc, Binary).
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Where used**:
 - Interface legs → **Format** field
@@ -359,7 +379,7 @@ Data formats for interface legs (e.g., CSV, JSON, XML, IDoc, Binary).
 
 Supported protocols for interface bindings between applications (e.g., HTTP/REST, gRPC, SFTP, Kafka, Database).
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Where used**:
 - Interface bindings → **Protocol** field (legacy bindings)
@@ -368,7 +388,7 @@ Supported protocols for interface bindings between applications (e.g., HTTP/REST
 
 Trigger types for interface legs (e.g., Event-based, Scheduled, Real-time, Manual).
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Where used**:
 - Interface legs → **Trigger** field
@@ -377,9 +397,9 @@ Trigger types for interface legs (e.g., Event-based, Scheduled, Real-time, Manua
 
 Shared lifecycle options for applications, app instances, interfaces, interface bindings, and servers.
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
-**Locked codes**: The built-in statuses (Proposed, Active, Deprecated, Retired) cannot be deleted or have their codes changed.
+**Built-in statuses**: Proposed, Active, Deprecated and Retired are lines of text in your language, marked **Built-in**. They cannot be renamed, retired or deleted. The statuses you add are edited like any other value.
 
 **Where used**:
 - Applications, App Instances, Interfaces, Interface Bindings, Assets → **Status** fields
@@ -392,7 +412,7 @@ Shared lifecycle options for applications, app instances, interfaces, interface 
 
 Categories used to classify entries in the incident register.
 
-**Columns**: Name, No longer offered
+**Columns**: Name, Stop offering
 
 **Where used**:
 - Incidents → **Category** selector
@@ -402,7 +422,7 @@ Categories used to classify entries in the incident register.
 ## How changes affect existing data
 
 - **Existing records keep their value**: Renaming only changes what users see, not the underlying data.
-- **Values marked No longer offered**:
+- **Values no longer offered** (**Stop offering** ticked):
   - Remain valid for records that already use them.
   - Are hidden from dropdowns when creating new records.
   - Still appear during edits if the record already uses that value.
@@ -444,7 +464,7 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 ## Tips
 
 - **Align names with your terminology**: Review the defaults and rename values to match how your organization talks about these concepts. Records keep their link to the value; only the name changes.
-- **Retire gradually**: When transitioning away from a value, mark it **No longer offered** rather than removing it. This keeps historical data intact while steering users toward new options.
+- **Retire gradually**: When transitioning away from a value, tick **Stop offering** rather than removing it. This keeps historical data intact while steering users toward new options.
 - **Coordinate data classes with security**: Changes to data classes should align with your information security policies. Discuss with compliance before adding or renaming classification levels.
 - **Use typical ports as documentation**: The **Typical ports** field of connection types is informational. Fill it in to help users understand what ports each connection type commonly uses.
 - **Tune map readability with tiers**: Keep the graph tiers of entities and server roles aligned with your architecture layers (edge, app, data) for clearer Connection Map layouts.
