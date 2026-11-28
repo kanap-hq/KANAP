@@ -30,11 +30,11 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 | Tarjetas | Quién las ve |
 |---|---|
 | Monedas, Congelar / descongelar datos | Administración presupuestaria con nivel de administrador (`budget_ops:admin`) |
-| Columnas presupuestarias, Método de asignación por defecto | Administración presupuestaria con nivel de lector (`budget_ops:reader`), en solo lectura. Para cambiarlos se necesita el nivel de administrador (`budget_ops:admin`) |
+| Columnas presupuestarias, Método de asignación por defecto | Administración presupuestaria con nivel de lector (`budget_ops:reader`, como el rol integrado Miembro de presupuesto), en solo lectura. Para cambiarlos se necesita el nivel de administrador (`budget_ops:admin`) |
 | Copiar columnas presupuestarias, Vaciar una columna presupuestaria | Presupuesto con nivel de administrador (`budget:admin`). Cada **Tipo de línea** (**Todo**, **OPEX**, **CAPEX**) se abre con este nivel |
 | Congelar datos maestros, Copiar indicadores anuales | Usuarios con acceso al presupuesto que son administradores de la administración presupuestaria, de empresas o de departamentos. Los administradores de empresas y departamentos actúan sobre su propio alcance |
 
-El rol integrado Administrador de presupuesto ve todas las tarjetas. Miembro de presupuesto y Lector de presupuesto ven las tarjetas **Columnas presupuestarias** y **Método de asignación por defecto**, que se abren para ellos en solo lectura, y ninguna operación. Una persona con acceso a los datos limitado no ve ninguna de estas tarjetas.
+El rol integrado Administrador de presupuesto ve todas las tarjetas. Miembro de presupuesto ve las tarjetas **Columnas presupuestarias** y **Método de asignación por defecto**, que se abren en solo lectura, y ninguna operación. Lector de presupuesto lee las líneas presupuestarias y no su configuración: la entrada **Administración** del menú Gestión presupuestaria no se muestra para este rol. Una persona con acceso a los datos limitado no ve ninguna de estas tarjetas.
 
 Las columnas presupuestarias son Presupuesto, Revisión, Previsión, Realizado y Aterrizaje previsto. Son los nombres estándar. Su organización puede renombrarlas, ocultar algunas y elegir una columna por defecto en [Columnas presupuestarias](#columnas-presupuestarias). Cada página a continuación muestra los nombres que eligió su organización.
 
@@ -329,7 +329,7 @@ El valor por defecto se resuelve cada vez que se muestran las asignaciones, por 
 
 ### Permisos
 
-Cambiar el método por defecto requiere `budget_ops:admin`. Lector de presupuesto y Miembro de presupuesto, que leen la Administración presupuestaria (`budget_ops:reader`), abren la página en solo lectura: los mismos campos, que no pueden cambiar, y sin el botón **Restablecer la asignación por defecto**. Pueden seguir eligiendo el ejercicio que quieren consultar. Una persona con acceso a los datos limitado no puede abrir la página.
+Cambiar el método por defecto requiere `budget_ops:admin`. Miembro de presupuesto, que lee la Administración presupuestaria (`budget_ops:reader`), abre la página en solo lectura: los mismos campos, que no puede cambiar, y sin el botón **Restablecer la asignación por defecto**. Puede seguir eligiendo el ejercicio que quiere consultar. Lector de presupuesto y una persona con acceso a los datos limitado no pueden abrir la página.
 
 Cada cambio escribe su propia entrada en el registro de auditoría.
 
@@ -378,7 +378,7 @@ Un cambio que el servidor rechaza se deshace en el acto: el nombre o el interrup
 
 ### Permisos
 
-Cambiar la configuración requiere derechos de administración de la Administración presupuestaria (`budget_ops:admin`). Lector de presupuesto y Miembro de presupuesto, que leen la Administración presupuestaria (`budget_ops:reader`), abren la página en solo lectura: la misma tabla, que no pueden cambiar. Una persona con acceso a los datos limitado no puede abrir la página.
+Cambiar la configuración requiere derechos de administración de la Administración presupuestaria (`budget_ops:admin`). Miembro de presupuesto, que lee la Administración presupuestaria (`budget_ops:reader`), abre la página en solo lectura: la misma tabla, que no puede cambiar. Lector de presupuesto y una persona con acceso a los datos limitado no pueden abrir la página.
 
 Si la configuración no se puede cargar, la página muestra una sola línea, «No se pudo cargar la configuración de las columnas.», y ningún control.
 

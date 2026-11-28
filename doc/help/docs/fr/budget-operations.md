@@ -30,11 +30,11 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 | Cartes | Qui les voit |
 |---|---|
 | Devises, Geler / dégeler les données | Administration budgétaire au niveau administrateur (`budget_ops:admin`) |
-| Colonnes budgétaires, Méthode de ventilation par défaut | Administration budgétaire au niveau lecteur (`budget_ops:reader`), en lecture seule. Les modifier nécessite le niveau administrateur (`budget_ops:admin`) |
+| Colonnes budgétaires, Méthode de ventilation par défaut | Administration budgétaire au niveau lecteur (`budget_ops:reader`, comme le rôle intégré Membre budget), en lecture seule. Les modifier nécessite le niveau administrateur (`budget_ops:admin`) |
 | Copier les colonnes budgétaires, Vider une colonne budgétaire | Budget au niveau administrateur (`budget:admin`). Chaque **Type de ligne** (**Tout**, **OPEX**, **CAPEX**) s'ouvre avec ce niveau |
 | Geler les données de référence, Copier les indicateurs annuels | Utilisateurs ayant accès au budget qui sont administrateurs de l'administration budgétaire, des sociétés ou des départements. Les administrateurs des sociétés et des départements agissent sur leur propre périmètre |
 
-Le rôle intégré Administrateur budget voit toutes les cartes. Membre budget et Lecteur budget voient les cartes **Colonnes budgétaires** et **Méthode de ventilation par défaut**, qui s'ouvrent pour eux en lecture seule, et aucune opération. Une personne dont l'accès aux données est limité ne voit aucune de ces cartes.
+Le rôle intégré Administrateur budget voit toutes les cartes. Membre budget voit les cartes **Colonnes budgétaires** et **Méthode de ventilation par défaut**, qui s'ouvrent en lecture seule, et aucune opération. Lecteur budget lit les lignes budgétaires et non leurs réglages : l'entrée **Administration** du menu Gestion budgétaire ne s'affiche pas pour lui. Une personne dont l'accès aux données est limité ne voit aucune de ces cartes.
 
 Les colonnes budgétaires sont Budget, Révision, Prévision, Réalisé et Atterrissage prévu. Ce sont les noms standard. Votre organisation peut les renommer, en masquer certaines et choisir une colonne par défaut dans [Colonnes budgétaires](#colonnes-budgetaires). Chaque page ci-dessous affiche les noms choisis par votre organisation.
 
@@ -329,7 +329,7 @@ La valeur par défaut est résolue à chaque affichage des ventilations : la mod
 
 ### Autorisations
 
-Modifier la méthode par défaut nécessite `budget_ops:admin`. Lecteur budget et Membre budget, qui lisent l'administration budgétaire (`budget_ops:reader`), ouvrent la page en lecture seule : les mêmes champs, qu'ils ne peuvent pas modifier, et pas de bouton **Rétablir la ventilation par défaut**. Ils peuvent toujours choisir l'exercice à consulter. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
+Modifier la méthode par défaut nécessite `budget_ops:admin`. Membre budget, qui lit l'administration budgétaire (`budget_ops:reader`), ouvre la page en lecture seule : les mêmes champs, qu'il ne peut pas modifier, et pas de bouton **Rétablir la ventilation par défaut**. Il peut toujours choisir l'exercice à consulter. Lecteur budget et une personne dont l'accès aux données est limité ne peuvent pas ouvrir la page.
 
 Chaque modification inscrit sa propre entrée au journal d'audit.
 
@@ -378,7 +378,7 @@ Une modification que le serveur refuse est annulée aussitôt : le nom ou l'inte
 
 ### Autorisations
 
-Modifier les réglages nécessite les droits admin sur l'administration budgétaire (`budget_ops:admin`). Lecteur budget et Membre budget, qui lisent l'administration budgétaire (`budget_ops:reader`), ouvrent la page en lecture seule : le même tableau, qu'ils ne peuvent pas modifier. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
+Modifier les réglages nécessite les droits admin sur l'administration budgétaire (`budget_ops:admin`). Membre budget, qui lit l'administration budgétaire (`budget_ops:reader`), ouvre la page en lecture seule : le même tableau, qu'il ne peut pas modifier. Lecteur budget et une personne dont l'accès aux données est limité ne peuvent pas ouvrir la page.
 
 Si les réglages ne peuvent pas être chargés, la page affiche une seule ligne, « Les réglages des colonnes n'ont pas pu être chargés. », et aucun contrôle.
 
