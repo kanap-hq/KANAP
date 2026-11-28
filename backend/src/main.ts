@@ -30,6 +30,8 @@ import { DemoDataService } from './demo-data/demo-data.service';
 import { applyHttpMiddleware, applyTenancyAndPipeline } from './http-app';
 import { runDataAccessStartup } from './data-access/data-access-availability';
 import { DEFAULT_ORGANISATION_NAME } from './config/product';
+import { InstallationSettingsService } from './installation/installation-settings.service';
+import { missingEncryptionSecretWarning } from './installation/settings-encryption-secret';
 
 /**
  * Environment checks (common/env.ts): throws where the API refuses to start (a DEPLOYMENT_MODE
@@ -194,6 +196,17 @@ async function bootstrap() {
   // other processes check the availability when they first need it.
   if (isLeadProcess()) await runDataAccessStartup(ds);
 
+  // The encryption key is missing while encrypted secrets are stored (installation tables; on
+  // premise, also the workspace's secrets): once per start, by the lead process. Never throws.
+  if (isLeadProcess()) {
+    const missingKey = await missingEncryptionSecretWarning(ds, {
+      singleTenant: Features.SINGLE_TENANT,
+      tenantSlug: (process.env.DEFAULT_TENANT_SLUG || 'default').trim(),
+    });
+    // eslint-disable-next-line no-console
+    if (missingKey) console.warn(missingKey);
+  }
+
   // Tenant resolution from the Host header, the request pipeline and the finalizer (http-app.ts).
   applyTenancyAndPipeline(app, ds);
 
@@ -206,6 +219,11 @@ async function bootstrap() {
       + 'text are refused (503 MARKDOWN_UNAVAILABLE) and emails show comments as plain text.',
     );
   }
+
+  // The installation settings stored in the database, loaded before the API listens and refreshed
+  // every 30 seconds in every process (installation/installation-settings.service.ts). The lead
+  // process names the file values that cannot be read.
+  await app.get(InstallationSettingsService).start({ warn: isLeadProcess() });
 
   const port = process.env.PORT || 8080;
   await app.listen(port as number);

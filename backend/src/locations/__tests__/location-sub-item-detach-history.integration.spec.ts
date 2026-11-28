@@ -12,7 +12,7 @@ import { DataSource } from 'typeorm';
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret-of-at-least-32-characters';
-process.env.AI_SETTINGS_ENCRYPTION_SECRET ||= 'test-ai-secret';
+process.env.SETTINGS_ENCRYPTION_SECRET ||= process.env.AI_SETTINGS_ENCRYPTION_SECRET || 'test-ai-secret';
 process.env.S3_ENDPOINT ||= 'http://127.0.0.1:9';
 process.env.S3_BUCKET ||= 'location-sub-item-detach-spec';
 process.env.AWS_ACCESS_KEY_ID ||= 'test';

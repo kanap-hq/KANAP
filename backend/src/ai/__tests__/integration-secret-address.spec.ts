@@ -17,7 +17,8 @@ import { PrtgService } from '../prtg/prtg.service';
 // against another address needs its secret in the request. Two spellings of one
 // address (host case, trailing slash, default port) are the same address.
 
-process.env.AI_SETTINGS_ENCRYPTION_SECRET = 'integration-secret-address-spec';
+process.env.SETTINGS_ENCRYPTION_SECRET = 'integration-secret-address-spec';
+delete process.env.AI_SETTINGS_ENCRYPTION_SECRET;
 process.env.SSRF_ALLOWED_HOSTS = [
   'models.example.test', 'other-models.example.test',
   'prtg.example.test', 'prtg-other.example.test', 'glpi.internal', 'glpi-other.internal',

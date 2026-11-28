@@ -67,6 +67,7 @@ import { KnowledgeModule } from './knowledge/knowledge.module';
 import { AiModule } from './ai/ai.module';
 import { PlatformAiModule } from './ai/platform/platform-ai.module';
 import { ScheduledTasksModule } from './admin/scheduled-tasks/scheduled-tasks.module';
+import { InstallationModule } from './installation/installation.module';
 import { DataAccessModule } from './data-access/data-access.module';
 import { CleanupModule } from './cleanup/cleanup.module';
 import { NetboxModule } from './netbox/netbox.module';
@@ -196,6 +197,7 @@ import { readPoolMax } from './common/db-pool-budget';
     PlatformAiModule,
     AiModule,
     ScheduledTasksModule,
+    InstallationModule,
     CleanupModule,
     NetboxModule,
     ListContextsModule,

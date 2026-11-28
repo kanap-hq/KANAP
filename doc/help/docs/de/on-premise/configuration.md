@@ -391,12 +391,13 @@ Alle KI-Funktionen sind auf einer On-Premise-Installation standardmäßig ausges
 | `AI_CHAT_ENABLED` | Schaltet den [Kad-Chat-Assistenten](../ai-assistant.md) für die Installation ein. | `false` |
 | `AI_MCP_ENABLED` | Schaltet den MCP-Server ein: API-Schlüssel und Verbindungen ohne Schlüssel. Siehe [KI-Assistenten über MCP verbinden](#connecting-ai-assistants-over-mcp). | `false` |
 | `AI_SETTINGS_ENABLED` | Öffnet **Administration → Künstliche Intelligenz** (KI-Modelle, Kad-Einstellungen) und die [Agenten](../agents-overview.md) für Administratoren. Ohne diesen Schalter kann niemand einen Anbieter einrichten. | `false` |
-| `AI_SETTINGS_ENCRYPTION_SECRET` | Geheimnis, das die Anbieterschlüssel verschlüsselt, die Sie in Kadratis eingeben. Erzeugen Sie es mit `openssl rand -hex 32`. | *nicht gesetzt* |
+| `SETTINGS_ENCRYPTION_SECRET` | Geheimnis, das die Anbieterschlüssel und Verbindungstokens verschlüsselt, die Sie in Kadratis eingeben. Erzeugen Sie es mit `openssl rand -hex 32`. Sein früherer Name, `AI_SETTINGS_ENCRYPTION_SECRET`, funktioniert weiterhin. | *nicht gesetzt* |
 
 Hinweise:
 
-- Ohne `AI_SETTINGS_ENCRYPTION_SECRET` verweigert Kadratis das Speichern eines Anbieterschlüssels ("AI secret storage is not configured on this instance").
-- Eine spätere Änderung von `AI_SETTINGS_ENCRYPTION_SECRET` macht die gespeicherten Schlüssel unlesbar. Sichern Sie es zusammen mit `.env`, und geben Sie die Schlüssel erneut ein, wenn Sie es verlieren.
+- Ohne `SETTINGS_ENCRYPTION_SECRET` verweigert Kadratis das Speichern eines Anbieterschlüssels ("AI secret storage is not configured on this instance"). Wenn bereits Schlüssel gespeichert sind, meldet die API dies in ihrem Protokoll beim Start.
+- Eine spätere Änderung von `SETTINGS_ENCRYPTION_SECRET` macht die gespeicherten Schlüssel unlesbar. Sichern Sie es zusammen mit `.env`, und geben Sie die Schlüssel erneut ein, wenn Sie es verlieren.
+- Wenn Ihre `.env` noch `AI_SETTINGS_ENCRYPTION_SECRET` verwendet, behalten Sie die Variable, oder benennen Sie sie mit demselben Wert um. Die API startet nicht, wenn beide Namen mit unterschiedlichen Werten gesetzt sind.
 - Eine On-Premise-Installation enthält kein Modell: Sie fügen Ihren eigenen Anbieter oder Modellserver unter **Administration → Künstliche Intelligenz → KI-Modelle** hinzu. Siehe [KI-Modelle](../ai-models.md) und [Kad-Einstellungen](../ai-settings.md). Dort hat außerdem jeder Mandant seine eigenen Schalter.
 - Die API braucht ausgehenden Zugriff auf den gewählten Anbieter (siehe [Firewall-Regeln](#firewall-regeln)).
 
@@ -670,7 +671,7 @@ S3_FORCE_PATH_STYLE=false
 # AI_CHAT_ENABLED=false
 # AI_MCP_ENABLED=false
 # AI_SETTINGS_ENABLED=false
-# AI_SETTINGS_ENCRYPTION_SECRET=
+# SETTINGS_ENCRYPTION_SECRET=
 # BRAVE_SEARCH_API_KEY=
 
 # KI-GRENZEN (optional, die Standardwerte passen)
