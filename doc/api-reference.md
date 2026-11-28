@@ -2287,7 +2287,8 @@ Requires JWT authentication. All endpoints operate on the current user's prefere
 
 ## Health
 
-- GET `/health` → `{ status: 'ok' }` — liveness probe
+- GET `/health` → `{ status: 'ok', text_processing }`: liveness probe. Public, no database query.
+- GET `/health/ready` → readiness probe. Public, no tenant lookup. 200 `{ status: 'ok' }` when `SELECT 1` answers within 2 s and no migration of the build is pending; 503 `{ status: 'unavailable' }` (no detail) when the database is unreachable or a migration is pending; 200 `{ status: 'ok', database: 'busy' }` when the connection pool is saturated.
 
 ### Recently viewed check
 

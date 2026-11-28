@@ -19,7 +19,7 @@ This document describes the technical design for on-premise deployments. User-fa
 - **Database requirement, analytics values:** the values of a dimension sort by their position, then by name with the same ICU collation: the values list, its CSV export, the reorder and the value pickers need it like the OPEX and CAPEX lists. Without it the migration that numbers the existing values still runs (it falls back to `lower(name), name`) and the API starts, but those endpoints fail
 - **Storage:** S3-compatible storage via AWS SDK v3 S3 client (`S3_ENDPOINT`). Any S3-compatible store works; tested with RustFS (the store of the on-premise installation example, since MinIO stopped publishing binaries and images), Garage, MinIO, AWS S3, Cloudflare R2 and Hetzner Object Storage
 - **Billing:** Disabled when `STRIPE_SECRET_KEY` is not set (backend returns `FEATURE_DISABLED`, UI hides billing features)
-- **Migrations:** Run automatically on container startup (`migrate-and-start.js`)
+- **Migrations:** Run automatically on container startup (`migrate-and-start.js`), under an advisory lock that every migration run takes. A deployment that migrates in a step of its own (a Kubernetes Job) runs `node scripts/migrate-and-start.js --migrate-only` and starts the API with `SKIP_MIGRATIONS=true`; the readiness probe `/health/ready` answers 503 until the migrations ran
 - **Local Auth:** Username/password works without external dependencies
 - **SSO:** Entra ID is optional; local auth is fallback
 - **FX Rates:** Gracefully degrades if API keys are not configured
