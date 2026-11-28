@@ -1,10 +1,10 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { I18nextProvider } from 'react-i18next';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
 
@@ -96,8 +96,79 @@ describe('AllocationDefaultPage settings', () => {
     serve(null);
   });
 
-  // The company scope and the company list are both labelled "Companies": the scope comes first.
-  const combobox = (name: string) => screen.getAllByRole('combobox', { name })[0];
+  afterEach(() => { vi.useRealTimers(); });
+
+  const combobox = (name: string) => screen.getByRole('combobox', { name });
+  /** The rule the server answers after a save of `body`. */
+  const answer = (body: unknown) => ({ data: {
+    fiscal_year: YEAR, mode: 'manual_company', method: 'headcount', source: 'tenant',
+    standard_mode: 'auto', standard_method: 'headcount', company_ids: ['paris', 'ny'], shares: [], ...(body as object),
+  } });
+  const busyServer = () => Object.assign(new Error('busy'), { response: { status: 503, data: { code: 'busy' } } });
+
+  it('names the company scope apart from the company list', async () => {
+    await renderPage();
+    await screen.findByText('35 M USD');
+    expect(combobox('Company scope')).toHaveTextContent('Selected companies');
+    expect(combobox('Companies')).toHaveTextContent('2 companies selected');
+  });
+
+  it('offers no field when the rule of the year cannot be read', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/allocation-rules/active') throw new Error('network down');
+      if (url === '/companies') return { data: { items: [] } };
+      throw new Error(`unexpected GET ${url}`);
+    });
+    await renderPage();
+    expect(await screen.findByText('Could not load the default allocation method.')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Default method' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Company scope' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the chosen method on screen while a busy server makes the save wait', async () => {
+    let calls = 0;
+    mocked.patch.mockImplementation(async (_url: string, body: unknown) => {
+      calls += 1;
+      if (calls === 1) throw busyServer();
+      return answer(body);
+    });
+    await renderPage();
+    await screen.findByText('35 M USD');
+    fireEvent.mouseDown(combobox('Default method'));
+    const option = await screen.findByRole('option', { name: 'Headcount' });
+    vi.useFakeTimers();
+    fireEvent.click(option);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(mocked.patch).toHaveBeenCalledTimes(1);
+    expect(combobox('Default method')).toHaveTextContent('Headcount');
+    expect(screen.getByRole('status')).toHaveTextContent('Saving…');
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(mocked.patch).toHaveBeenCalledTimes(2);
+    expect(combobox('Default method')).toHaveTextContent('Headcount');
+  });
+
+  it('shows the stored method again when the server refuses it, with the refusal under the field', async () => {
+    mocked.patch.mockRejectedValue(Object.assign(new Error('Bad Request'), { response: { status: 400, data: { message: 'Refused by the server.' } } }));
+    await renderPage();
+    await screen.findByText('35 M USD');
+    fireEvent.mouseDown(combobox('Default method'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Headcount' }));
+    await waitFor(() => expect(combobox('Default method')).toHaveAccessibleDescription('Refused by the server.'), { timeout: 2000 });
+    expect(combobox('Default method')).toHaveTextContent('Turnover');
+  });
+
+  it('keeps the year list off while a save is on its way', async () => {
+    let release: (value: unknown) => void = () => undefined;
+    mocked.patch.mockImplementation((_url: string, body: unknown) => new Promise((resolve) => { release = () => resolve(answer(body)); }));
+    await renderPage();
+    await screen.findByText('35 M USD');
+    fireEvent.mouseDown(combobox('Default method'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Headcount' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
+    expect(combobox('Fiscal year')).toHaveAttribute('aria-disabled', 'true');
+    await act(async () => { release(undefined); });
+    await waitFor(() => expect(combobox('Fiscal year')).not.toHaveAttribute('aria-disabled', 'true'));
+  });
 
   it('saves the method as soon as it is chosen, and says it is saved in the header', async () => {
     mocked.patch.mockImplementation(async (_url: string, body: unknown) => ({ data: {
@@ -122,7 +193,7 @@ describe('AllocationDefaultPage settings', () => {
     });
     await renderPage();
     await screen.findByText('Standard method: no override configured for this year.');
-    fireEvent.mouseDown(combobox('Companies'));
+    fireEvent.mouseDown(combobox('Company scope'));
     fireEvent.click(await screen.findByRole('option', { name: 'Selected companies' }));
     expect(await screen.findByText('Select at least one company: the selection is saved when the list closes.')).toBeInTheDocument();
     expect(mocked.patch).not.toHaveBeenCalled();
@@ -145,11 +216,11 @@ describe('AllocationDefaultPage settings', () => {
     auth.admin = false;
     await renderPage();
     await screen.findByText('35 M USD');
-    for (const field of [...screen.getAllByRole('combobox', { name: 'Companies' }), combobox('Default method')]) {
+    for (const field of [combobox('Company scope'), combobox('Companies'), combobox('Default method')]) {
       fireEvent.mouseDown(field);
       expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     }
-    expect(combobox('Companies')).toHaveTextContent('Selected companies');
+    expect(combobox('Company scope')).toHaveTextContent('Selected companies');
     expect(combobox('Default method')).toHaveTextContent('Turnover');
     expect(screen.queryByRole('button', { name: 'Restore the default allocation' })).not.toBeInTheDocument();
     expect(screen.queryByText(/budget administration rights/)).not.toBeInTheDocument();

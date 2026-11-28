@@ -6,7 +6,8 @@ import { SettingsPage } from '../../components/settings/SettingsPage';
 import { SettingsSection } from '../../components/settings/SettingsSection';
 import { SettingField } from '../../components/settings/SettingField';
 import { useSettingsAutosave } from '../../components/settings/useSettingsAutosave';
-import { autosaveErrorMessage } from '../../hooks/useAutosave';
+import { autosaveErrorMessage, isTransientSaveFailure } from '../../hooks/useAutosave';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { compactSelectMenuProps, drawerMenuItemSx, pageSelectSx, selectPlaceholderSx } from '../../theme/formSx';
 import { useAuth } from '../../auth/AuthContext';
 import api from '../../api';
@@ -42,10 +43,16 @@ type Company = {
 
 const A = 'operations.allocationDefault';
 
+/** The control a save of the rule came from: its refusal shows under it. */
+type RuleControl = 'mode' | 'companies' | 'method' | 'restore';
+
 /**
  * The default allocation of a fiscal year. Every choice is saved when it is made, the companies
  * once their list closes; the manual mode stays on this screen until a company is chosen (the
- * server refuses it without one). A budget administration reader sees the same fields, read-only.
+ * server refuses it without one). A choice the server refuses shows the stored rule again, the
+ * refusal under the field; a choice a busy server puts off stays on screen while it is sent again.
+ * The year cannot change while a save of the rule is on its way or kept. A budget administration
+ * reader sees the same fields, read-only.
  */
 export default function AllocationDefaultPage() {
   const { t } = useTranslation(['ops', 'common']);
@@ -64,6 +71,8 @@ export default function AllocationDefaultPage() {
   const [pendingMode, setPendingMode] = React.useState<AllocationRuleMode | null>(null);
   const [pendingMethod, setPendingMethod] = React.useState<AllocationMethod | null>(null);
   const [selectedCompanies, setSelectedCompanies] = React.useState<string[]>([]);
+  // The control of the last save of the rule, where its refusal shows.
+  const [savedFrom, setSavedFrom] = React.useState<RuleControl | null>(null);
 
   const { data, isLoading, isError } = useQuery<AllocationRuleResolution>({
     queryKey: ['allocation-rule', year],
@@ -91,25 +100,32 @@ export default function AllocationDefaultPage() {
     setPendingMethod(null);
   }, [data]);
 
-  /** Saves the year's rule (or drops the override); a refused save shows what is actually stored. */
-  const saveRule = (run: (fiscalYear: number) => Promise<AllocationRuleResolution>) => {
+  /**
+   * Saves the year's rule (or drops the override). A refused save shows what is actually stored; a
+   * save the busy server puts off keeps the choice on screen, and is sent again.
+   */
+  const saveRule = (from: RuleControl, run: (fiscalYear: number) => Promise<AllocationRuleResolution>) => {
     const fiscalYear = year;
+    setSavedFrom(from);
     autosave.choose('rule', async () => {
       try {
         queryClient.setQueryData(['allocation-rule', fiscalYear], await run(fiscalYear));
       } catch (failure) {
         // A rejected save (unusable selection, lost permission…) must not leave the controls
-        // showing a state the server refused: fall back to what is actually stored.
-        const stored = queryClient.getQueryData<AllocationRuleResolution>(['allocation-rule', fiscalYear]);
-        setSelectedCompanies(stored?.company_ids ?? []);
-        setPendingMode(null);
-        setPendingMethod(null);
+        // showing a state the server refused: fall back to what is actually stored. The year
+        // list stays off meanwhile, so the year shown is the year of the save.
+        if (!isTransientSaveFailure(failure)) {
+          const stored = queryClient.getQueryData<AllocationRuleResolution>(['allocation-rule', fiscalYear]);
+          setSelectedCompanies(stored?.company_ids ?? []);
+          setPendingMode(null);
+          setPendingMethod(null);
+        }
         throw failure;
       }
     });
   };
-  const save = (payload: { mode: AllocationRuleMode; method: AllocationMethod; companyIds: string[] | null }) =>
-    saveRule((fiscalYear) => saveAllocationRule(fiscalYear, payload));
+  const save = (from: RuleControl, payload: { mode: AllocationRuleMode; method: AllocationMethod; companyIds: string[] | null }) =>
+    saveRule(from, (fiscalYear) => saveAllocationRule(fiscalYear, payload));
 
   const methodLabel = React.useCallback(
     (method: AllocationMethod | null | undefined) =>
@@ -154,13 +170,13 @@ export default function AllocationDefaultPage() {
   const applyMode = (next: AllocationRuleMode) => {
     if (next === 'auto') {
       setPendingMode(null);
-      save({ mode: 'auto', method, companyIds: null });
+      save('mode', { mode: 'auto', method, companyIds: null });
       return;
     }
     // Manual mode only becomes persistable once at least one company is selected.
     setPendingMode('manual_company');
     if (selectedCompanies.length > 0) {
-      save({ mode: 'manual_company', method, companyIds: selectedCompanies });
+      save('mode', { mode: 'manual_company', method, companyIds: selectedCompanies });
     }
   };
 
@@ -179,7 +195,7 @@ export default function AllocationDefaultPage() {
       && stored.every((id, idx) => id === selectedCompanies[idx])
       && data?.method === method;
     if (unchanged) return;
-    save({ mode: 'manual_company', method, companyIds: selectedCompanies });
+    save('companies', { mode: 'manual_company', method, companyIds: selectedCompanies });
   };
 
   const applyDriver = (next: AllocationMethod) => {
@@ -188,7 +204,7 @@ export default function AllocationDefaultPage() {
       // Nothing persistable yet: the driver is stored with the first company selection.
       return;
     }
-    save({
+    save('method', {
       mode: mode === 'manual_company' ? 'manual_company' : 'auto',
       method: next,
       companyIds: mode === 'manual_company' ? selectedCompanies : null,
@@ -197,23 +213,31 @@ export default function AllocationDefaultPage() {
 
   const shares = data?.shares ?? [];
   const manualPendingWithoutSelection = mode === 'manual_company' && selectedCompanies.length === 0;
+  // A save the busy server put off, kept once its retries are spent: it goes with the next change.
   const saveError = autosave.error ? autosaveErrorMessage(autosave.error, t, t(`${A}.saveError`)) : null;
+  const refusal = autosave.errorOf('rule');
+  const refusalOf = (control: RuleControl) => (refusal && savedFrom === control ? getApiErrorMessage(refusal, t, t(`${A}.saveError`)) : null);
+  // A save of the rule on its way, waiting or kept: the year it is for stays on screen.
+  const saving = autosave.status === 'pending' || autosave.status === 'saving' || !!autosave.error;
+  // Not loaded: the standard values on screen would not be the year's rule, so nothing is offered.
+  const loadFailed = isError && !data;
 
   return (
     <SettingsPage
       title={t(`${A}.title`)}
       status={autosave.status}
       readOnly={readOnly}
+      error={loadFailed ? t(`${A}.loadError`) : undefined}
       actions={isOverridden ? (
         // Drops the organisation's setting of the year: the standard method applies again.
-        <Button variant="action" onClick={() => saveRule(resetAllocationRule)}>
+        <Button variant="action" onClick={() => saveRule('restore', resetAllocationRule)}>
           {t(`${A}.restoreDefault`)}
         </Button>
       ) : undefined}
     >
       <Stack spacing={1.5} sx={{ mb: 1 }}>
-        {isError && <Alert severity="error">{t(`${A}.loadError`)}</Alert>}
         {saveError && <Alert severity="error">{saveError}</Alert>}
+        {refusalOf('restore') && <Alert severity="error">{refusalOf('restore')}</Alert>}
         {data?.preview_error && (
           <Alert severity="warning">
             {t(`${A}.previewError`, { reason: data.preview_error })}
@@ -230,6 +254,7 @@ export default function AllocationDefaultPage() {
           variant="standard"
           value={String(year)}
           onChange={(e) => setYear(Number(e.target.value))}
+          disabled={saving}
           sx={pageSelectSx}
           MenuProps={compactSelectMenuProps}
           inputProps={{ 'aria-label': t(`${A}.year`) }}
@@ -242,8 +267,8 @@ export default function AllocationDefaultPage() {
         </Select>
       </SettingField>
 
-      <SettingField label={t(`${A}.mode`)}>
-        {({ readOnly: fieldReadOnly }) => (
+      <SettingField label={t(`${A}.mode`)} error={refusalOf('mode')}>
+        {({ readOnly: fieldReadOnly, error: fieldError, errorId }) => (
           <Select
             variant="standard"
             value={mode}
@@ -252,7 +277,9 @@ export default function AllocationDefaultPage() {
             sx={pageSelectSx}
             MenuProps={compactSelectMenuProps}
             disabled={isLoading}
+            error={fieldError}
             inputProps={{ 'aria-label': t(`${A}.mode`) }}
+            SelectDisplayProps={{ 'aria-describedby': errorId }}
           >
             {MODES.map((value) => (
               <MenuItem key={value} value={value} sx={drawerMenuItemSx}>
@@ -264,8 +291,8 @@ export default function AllocationDefaultPage() {
       </SettingField>
 
       {mode === 'manual_company' && (
-        <SettingField label={t(`${A}.companies`)}>
-          {({ readOnly: fieldReadOnly }) => (
+        <SettingField label={t(`${A}.companies`)} error={refusalOf('companies')}>
+          {({ readOnly: fieldReadOnly, error: fieldError, errorId }) => (
             <Select
               multiple
               variant="standard"
@@ -277,7 +304,9 @@ export default function AllocationDefaultPage() {
               MenuProps={compactSelectMenuProps}
               disabled={isLoading}
               displayEmpty
+              error={fieldError}
               inputProps={{ 'aria-label': t(`${A}.companies`) }}
+              SelectDisplayProps={{ 'aria-describedby': errorId }}
               renderValue={(selected) => {
                 const ids = selected as string[];
                 const single = ids.length === 1 ? companyLabel(ids[0]) : null;
@@ -297,8 +326,8 @@ export default function AllocationDefaultPage() {
         </SettingField>
       )}
 
-      <SettingField label={t(`${A}.method`)} hint={t(`${A}.methodHelp`)}>
-        {({ readOnly: fieldReadOnly }) => (
+      <SettingField label={t(`${A}.method`)} hint={t(`${A}.methodHelp`)} error={refusalOf('method')}>
+        {({ readOnly: fieldReadOnly, error: fieldError, errorId }) => (
           <Select
             variant="standard"
             value={method}
@@ -307,7 +336,9 @@ export default function AllocationDefaultPage() {
             sx={pageSelectSx}
             MenuProps={compactSelectMenuProps}
             disabled={isLoading}
+            error={fieldError}
             inputProps={{ 'aria-label': t(`${A}.method`) }}
+            SelectDisplayProps={{ 'aria-describedby': errorId }}
           >
             {METHODS.map((value) => (
               <MenuItem key={value} value={value} sx={drawerMenuItemSx}>

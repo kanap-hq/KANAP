@@ -67,7 +67,7 @@ const unifiedRows = [
 ];
 
 // The tenant's column settings, set per test.
-const columnsSetting = vi.hoisted(() => ({ current: null as unknown }));
+const columnsSetting = vi.hoisted(() => ({ current: null as unknown, failed: false }));
 vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
   const mod = await importOriginal<typeof import('../../hooks/useBudgetColumns')>();
   let cache: { settings: unknown; value: ReturnType<typeof mod.resolveBudgetColumns> } | null = null;
@@ -75,6 +75,7 @@ vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
   return {
     ...mod,
     useBudgetColumns: () => {
+      if (columnsSetting.failed) return mod.resolveBudgetColumns(columnsSetting.current as never, t, true, new Error('network down'));
       if (!cache || cache.settings !== columnsSetting.current) {
         cache = { settings: columnsSetting.current, value: mod.resolveBudgetColumns(columnsSetting.current as never, t) };
       }
@@ -112,6 +113,7 @@ function renderPage() {
 describe('BudgetColumnResetPage', () => {
   beforeEach(() => {
     columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
+    columnsSetting.failed = false;
     post.mockReset();
     operation.mockReset();
     post.mockImplementation(async (url: string, body: any) => {
@@ -166,8 +168,8 @@ describe('BudgetColumnResetPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
     await chooseColumn('ops:operations.budgetColumns.budget');
     fireEvent.click(await screen.findByRole('button', { name: 'operations.columnReset.clearColumn' }));
-    const refusal = await screen.findByRole('status');
-    expect(refusal.textContent).toMatch(/operation_running|Another budget operation/);
+    // The result region is there from the start: wait for the refusal to be written in it.
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/operation_running|Another budget operation/));
   });
 
   it('shows the three numbers, the five lines with the largest amounts, the rest counted, and the consequence', async () => {
@@ -190,6 +192,27 @@ describe('BudgetColumnResetPage', () => {
     fireEvent.click(within(table).getByRole('button', { name: 'operations.columnReset.showAllLines:7' }));
     expect(screen.getByTestId('row-c-0')).toBeInTheDocument();
     expect(screen.getByText('operations.columnReset.allLinesTitle')).toBeInTheDocument();
+  });
+
+  it('puts the largest amounts first in the preview, a negative one included', async () => {
+    const year = `y${new Date().getFullYear()}`;
+    capexRows.current = [100, -900, 300].map((amount, i) => ({
+      id: `c-${i}`, description: `Asset ${i}`, item_number: i + 1, line_number: 500200 + i,
+      versions: { [year]: { totals: { budget: amount, revision: 0, follow_up: 0, landing: 0 } } },
+    }));
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    await chooseColumn('ops:operations.budgetColumns.budget');
+    const table = await screen.findByRole('table');
+    expect(within(table).getAllByRole('row').slice(1, 4).map((r) => r.firstElementChild?.textContent)).toEqual(['Asset 1', 'Asset 2', 'Asset 0']);
+  });
+
+  it('offers nothing when the budget columns cannot be read', () => {
+    columnsSetting.failed = true;
+    renderPage();
+    expect(screen.getByRole('alert')).toHaveTextContent('operations.columnReset.loadError');
+    expect(screen.queryByRole('button', { name: 'operations.columnReset.clearColumn' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
   it('does nothing when the confirmation is cancelled', async () => {

@@ -68,7 +68,7 @@ export default function BudgetColumnResetPage() {
   // The grid of every line, under the panel: opened from the preview.
   const [showAll, setShowAll] = useState(false);
 
-  const { data: freezeData, isLoading: freezeLoading } = useFreezeState(year);
+  const { data: freezeData, isLoading: freezeLoading, isError: freezeFailed } = useFreezeState(year);
   // The natures of the scope whose column is frozen: any refuses the whole reset.
   const frozenNatures = column
     ? SCOPE_NATURES[scope].filter((nature) => freezeData?.summary?.scopes[nature][budgetColumns.get(column).freezeKey]?.frozen)
@@ -166,11 +166,11 @@ export default function BudgetColumnResetPage() {
     }
   };
 
-  // The five lines with the largest amounts; the full grid opens below on demand.
+  // The five lines with the largest amounts, a negative one by its size; the full grid opens below on demand.
   const previewRows = useMemo(
     () => processedData
       .filter((row) => row.currentValue !== 0)
-      .sort((a, b) => b.currentValue - a.currentValue)
+      .sort((a, b) => Math.abs(b.currentValue) - Math.abs(a.currentValue))
       .map((row) => ({
         id: row.id,
         cells: {
@@ -195,8 +195,12 @@ export default function BudgetColumnResetPage() {
   else if (isLoading) message = t('operations.columnReset.loadingData');
   else if (stats.itemsWithData === 0) message = t('operations.columnReset.noDataInfo', { column: columnLabel, year });
 
+  // The column names or the freeze of the year not read: a column could be cleared under a name
+  // that is not the tenant's, or while it is frozen. Nothing is offered.
+  const loadFailed = !!budgetColumns.error || (freezeFailed && !freezeData);
+
   return (
-    <SettingsPage title={t('operations.columnReset.title')}>
+    <SettingsPage title={t('operations.columnReset.title')} error={loadFailed ? t('operations.columnReset.loadError') : undefined}>
       <OperationPanel
         options={
           <>
