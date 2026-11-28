@@ -5,7 +5,7 @@ type HasLevel = (resource: string, level: Level) => boolean;
 const hasBudgetAccess = (hasLevel: HasLevel) => ['budget', 'budget_ops'].some((resource) => hasLevel(resource, 'reader'));
 const budgetAdmin = (hasLevel: HasLevel) => hasLevel('budget_ops', 'admin');
 /**
- * A settings page of the budget (decision P4, 2026-11-27): it opens to every reader of budget
+ * A settings page of the budget: it opens to every reader of budget
  * administration (Budget Reader, Budget Member), read-only. Changing it stays `budget_ops:admin`,
  * read in the page itself.
  */
