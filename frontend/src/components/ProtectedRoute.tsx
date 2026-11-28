@@ -36,7 +36,9 @@ type RouteRequirement = {
 /**
  * What opens each page under `/admin/`, by its first segment. A page of the Administration menu
  * names the same here as on its line of `ADMIN_MENU` (`pages/admin/adminMenu.ts`):
- * `adminMenu.test.ts` compares them. The Installation section has its own guard and no line here.
+ * `adminMenu.test.ts` compares them. Three kinds of page have no line here: the Installation
+ * section (`isInstallationOperator`), the AI settings pages (`isAdminAiRoute`) and the
+ * integrations page (`isAdminIntegrationsRoute`), each behind its own branch below.
  */
 export const ADMIN_ROUTE_REQUIREMENTS: Record<string, RouteRequirement> = {
   users: { resource: 'users', level: 'admin' },
@@ -46,13 +48,9 @@ export const ADMIN_ROUTE_REQUIREMENTS: Record<string, RouteRequirement> = {
   branding: { resource: 'users', level: 'admin' },
   // The page itself requires the Administrator role.
   'sample-data': { resource: 'users', level: 'admin' },
-  integrations: { resource: 'ai_settings', level: 'admin' },
   'audit-logs': { resource: 'users', level: 'admin' },
   billing: { resource: 'billing', level: 'reader' },
   'choose-plan': { resource: 'billing', level: 'reader' },
-  ai: { resource: 'ai_settings', level: 'admin' },
-  'ai-models': { resource: 'ai_settings', level: 'admin' },
-  'ai-usage': { resource: 'ai_settings', level: 'admin' },
   'agent-control': { resource: 'ai_agents', level: 'reader' },
 };
 

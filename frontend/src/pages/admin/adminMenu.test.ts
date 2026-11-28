@@ -192,9 +192,11 @@ describe('adminMenu: the menu and the route guard name the same requirement', ()
         // The route asks for the users administration; the page checks the role itself.
         expect(route).toEqual({ resource: 'users', level: 'admin' });
         break;
+      case 'aiSettings':
       case 'integrations':
-        // The route admits an AI settings administrator or an infrastructure administrator.
-        expect(route).toEqual({ resource: 'ai_settings', level: 'admin' });
+        // Guarded by their own branch of ProtectedRoute, not by the table:
+        // `ProtectedRoute.adminBranches.test.tsx` opens them as the menu shows them.
+        expect(route).toBeUndefined();
         break;
       case 'none':
         // Pages of the platform host, without a line of their own: the route asks for the segment as a resource.

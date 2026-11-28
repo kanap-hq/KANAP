@@ -2,10 +2,12 @@
  * The Administration menu: one line per page, in menu order. The side menu (`Layout`) and the
  * `/admin` address (`AdminDefaultRedirect` in `App.tsx`) read it.
  *
- * Each line names what opens its page. The route guard names the same in
+ * Each line names what opens its page. A page guarded by a module right names the same in
  * `ADMIN_ROUTE_REQUIREMENTS` (`components/ProtectedRoute.tsx`), and `adminMenu.test.ts` compares
- * the two: a change of right is made on both lines. The Installation section has a single guard,
- * `isInstallationOperator`, which covers every address under `/admin/installation/`.
+ * the two: a change of right is made on both lines. The AI settings and integrations pages
+ * (`'aiSettings'`, `'integrations'`) have their own branch of the guard, which
+ * `ProtectedRoute.adminBranches.test.tsx` compares with the menu. The Installation section has a
+ * single guard, `isInstallationOperator`, which covers every address under `/admin/installation/`.
  */
 
 export type AdminLevel = 'reader' | 'contributor' | 'member' | 'admin';
@@ -19,7 +21,15 @@ export type AdminRequirement =
   | 'administrator'
   /** The person who runs the installation: `isInstallationOperator`. */
   | 'operator'
-  /** The integrations page: the `canShowIntegrations` of the context. */
+  /**
+   * The AI settings pages: an AI settings administrator. Their route is guarded by its own branch
+   * of `ProtectedRoute` (`isAdminAiRoute`), with no line in `ADMIN_ROUTE_REQUIREMENTS`.
+   */
+  | 'aiSettings'
+  /**
+   * The integrations page: the `canShowIntegrations` of the context. Its route is guarded by its
+   * own branch of `ProtectedRoute` (`isAdminIntegrationsRoute`), with no line in the table.
+   */
   | 'integrations'
   /**
    * No right of its own: the pages of the platform host. Their route asks `hasLevel(<segment>,
@@ -78,9 +88,9 @@ export const ADMIN_MENU: readonly AdminMenuEntry[] = [
   { group: 'organization', to: '/admin/auth', label: 'nav:sidebar.admin.authentication', icon: 'AdminPanelSettings', requires: { resource: 'users', level: 'admin' }, feature: 'sso' },
   { group: 'organization', to: '/admin/branding', label: 'nav:sidebar.admin.branding', icon: 'Brush', requires: { resource: 'users', level: 'admin' } },
   { group: 'organization', to: '/admin/sample-data', label: 'nav:sidebar.admin.sampleData', icon: 'Dataset', requires: 'administrator', feature: 'sampleData', cloudOnly: true },
-  { group: 'ai', to: '/admin/ai-models', label: 'nav:sidebar.admin.aiModels', icon: 'Storage', requires: { resource: 'ai_settings', level: 'admin' }, feature: 'aiSettings' },
-  { group: 'ai', to: '/admin/ai', label: 'nav:sidebar.admin.ai', icon: 'AutoAwesome', requires: { resource: 'ai_settings', level: 'admin' }, feature: 'aiSettings' },
-  { group: 'ai', to: '/admin/ai-usage', label: 'nav:sidebar.admin.aiUsage', icon: 'MonitorHeart', requires: { resource: 'ai_settings', level: 'admin' }, feature: 'aiSettings' },
+  { group: 'ai', to: '/admin/ai-models', label: 'nav:sidebar.admin.aiModels', icon: 'Storage', requires: 'aiSettings', feature: 'aiSettings' },
+  { group: 'ai', to: '/admin/ai', label: 'nav:sidebar.admin.ai', icon: 'AutoAwesome', requires: 'aiSettings', feature: 'aiSettings' },
+  { group: 'ai', to: '/admin/ai-usage', label: 'nav:sidebar.admin.aiUsage', icon: 'MonitorHeart', requires: 'aiSettings', feature: 'aiSettings' },
   { group: 'integrations', to: '/admin/integrations', label: 'nav:sidebar.admin.integrations', icon: 'Extension', requires: 'integrations' },
   { group: 'platform', to: '/admin/tenants', label: 'nav:sidebar.platform.tenants', icon: 'Apartment', requires: 'none' },
   { group: 'platform', to: '/admin/trials', label: 'nav:sidebar.platform.trials', icon: 'HourglassBottom', requires: 'none' },
@@ -153,6 +163,7 @@ export function meetsAdminRequirement(requirement: AdminRequirement, ctx: AdminM
     case 'none': return true;
     case 'administrator': return !!ctx.claims?.isGlobalAdmin;
     case 'operator': return isInstallationOperator(ctx);
+    case 'aiSettings': return ctx.hasLevel('ai_settings', 'admin');
     case 'integrations': return ctx.canShowIntegrations;
     default:
       return ctx.hasLevel(requirement.resource, requirement.level) && !(requirement.allData && ctx.dataAccessLimited);
