@@ -15,7 +15,7 @@ as it is: extend the one in the repository, never write a second one for the sam
 |---|---|---|---|
 | Settings page | Simple fields: text, number, choice, switch | `SettingsPage` > `SettingsSection variant="flat"` > `SettingField` | Automatic, `useSettingsAutosave` |
 | List of values | Named values edited in place | A list editor in a collapsible `SettingsSection` (built by the first list screen that moves to this design; today `EnumEditor`) | Automatic, per row |
-| External connection | A third-party system: address, credentials, secret | A connection card (built by the first connection screen that moves to this design) | Save button, Test button |
+| External connection | A third-party system: address, credentials, secret | `ConnectionCard` > `SettingField`, `ConnectionSecretField`, `ConnectionSwitchField` | Save button, Test button |
 | Operation | A one-off action | `OperationPanel` | Confirmation |
 | List and record | Many objects (users, roles, AI models, keys) | The existing standard: `PageHeader`, grid, `KanapDialog` | Dialog |
 
@@ -177,6 +177,34 @@ theme draws it on `kanap.bg.drawer`.
 - Several providers for one service: a choice above the card ("Send through: SMTP server /
   Resend"), one card visible.
 - Leaving the page with a changed card asks for confirmation (`useLeaveGuard`).
+
+`ConnectionCard` is a frame: the card's owner holds the form, says what changed (`dirty`), saves
+and tests. It gives the card the saved test (`storedTest`, shown after a reload) and the test run
+on the screen (`sessionTest`, with its `cause` or its `detail`), cleared at each change; the card
+writes the status line from them. Keep a test only when it ran on the saved values, and never
+audit it.
+
+- `ConnectionSecretField`: dots and Replace for a saved secret; `addressChanged` opens it and asks
+  for it again. Give it a `key` that changes after a save.
+- `ConnectionSwitchField`: a switch across both columns, its hint beside the label.
+- `source="file"`: values set in the configuration file. A lock line with `fileHint` at the top,
+  every field read-only (`locked`), no Save and no Replace; Test stays.
+- `actions`: the card's own buttons in place of Save (connect, disconnect an account).
+- `status`: a state the card cannot derive (an account disconnected), shown as given.
+- `notice`: one line under the fields (`ConnectionNotice`): what a save did, or why it was refused.
+- A failed test says its cause from the server's code (`connectionTestCause`, `errors:<code>`).
+
+```tsx
+<ConnectionCard title="Netbox" configured={saved} dirty={changed} storedTest={view.last_test}
+  sessionTest={test} testing={testing} onTest={runTest} onSave={save}>
+  {({ locked }) => (
+    <>
+      <SettingField label={t('…address')} hint={t('…whereToFind')}>…</SettingField>
+      <ConnectionSecretField key={saves} label={t('…token')} stored={view.has_token} … />
+    </>
+  )}
+</ConnectionCard>
+```
 
 ## 7. The operation: `OperationPanel`
 
