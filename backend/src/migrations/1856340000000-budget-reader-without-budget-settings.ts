@@ -42,7 +42,7 @@ export class BudgetReaderWithoutBudgetSettings1856340000000 implements Migration
            JOIN roles r ON r.id = rp.role_id
            LEFT JOIN tenants t ON t.id = r.tenant_id
           WHERE r.is_built_in AND r.role_name = $1 AND rp.resource = ANY ($2::text[])
-          ORDER BY t.slug NULLS LAST, r.tenant_id, r.id, rp.resource`,
+          ORDER BY t.slug NULLS LAST, r.tenant_id, r.id, rp.resource COLLATE "C"`,
         [ROLE, BUDGET_OPS_NAMES],
       );
       if (rows.length === 0) {
