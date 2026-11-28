@@ -78,7 +78,7 @@ async function testRejectsWebSearchWhenEnvVarAbsent() {
 
     await assert.rejects(
       () => service.update('tenant-1', { web_search_enabled: true }),
-      (error: any) => error.message?.includes('BRAVE_SEARCH_API_KEY') || error.response?.message?.includes('BRAVE_SEARCH_API_KEY'),
+      (error: any) => error.message === 'Web search is not available on this installation.',
     );
   } finally {
     (Features as any).AI_WEB_SEARCH_READY = original;

@@ -13,6 +13,7 @@ import { TicketImageEvidence } from './ai-ticket-need-representation.types';
 import { isRecord } from '../../../common/object-guards';
 import { estimateJsonTokens } from './json-token-estimate';
 import { HTML_TAGS } from '../../../common/text-scan';
+import { aiTicketMaxImageBytes, aiTicketMaxImages } from '../../../installation/ai-installation-settings';
 
 export type TicketEvidenceExtractionResult = {
   attachmentRefs: TicketAttachmentRef[];
@@ -32,8 +33,6 @@ export type TicketEvidenceExtractionResult = {
 // AI_AGENT_VISION_EXTRACTION_TIMEOUT_MS.
 const DEFAULT_VISION_TIMEOUT_MS = 120_000;
 const MAX_VISION_EXTRACTION_OUTPUT_TOKENS = 12000;
-const DEFAULT_MAX_IMAGES = 5;
-const DEFAULT_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const SUPPORTED_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 function schemaText(value: unknown, maxLength: number): string | null {
@@ -124,11 +123,6 @@ const VisionEvidenceSchema = z.preprocess(
 );
 
 type ParsedVisionEvidence = z.infer<typeof VisionEvidenceSchema>;
-
-function parsePositiveIntEnv(value: string | undefined, fallback: number): number {
-  const parsed = Number.parseInt(String(value ?? '').trim(), 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
 
 function normalizeMimeType(value: string | null | undefined): string {
   return String(value || 'application/octet-stream').split(';')[0].trim().toLowerCase();
@@ -258,8 +252,15 @@ export class AiTicketEvidenceExtractionService {
     return MAX_VISION_EXTRACTION_OUTPUT_TOKENS;
   }
 
+  // The screenshots read per ticket and their largest size: installation settings
+  // (AI_AGENT_VISION_MAX_IMAGES, AI_AGENT_VISION_MAX_IMAGE_BYTES, else the installation's AI page,
+  // else 5 images of 20 MiB), installation/ai-installation-settings.ts.
   maxImageCount(): number {
-    return Math.min(parsePositiveIntEnv(process.env.AI_AGENT_VISION_MAX_IMAGES, DEFAULT_MAX_IMAGES), 10);
+    return aiTicketMaxImages();
+  }
+
+  maxImageBytes(): number {
+    return aiTicketMaxImageBytes();
   }
 
   buildPromptPayload(input: {
@@ -347,7 +348,7 @@ export class AiTicketEvidenceExtractionService {
     }
 
     const maxImages = this.maxImageCount();
-    const maxBytes = parsePositiveIntEnv(process.env.AI_AGENT_VISION_MAX_IMAGE_BYTES, DEFAULT_MAX_IMAGE_BYTES);
+    const maxBytes = this.maxImageBytes();
     const selectedRefs = attachmentRefs.slice(0, maxImages);
     const warnings: string[] = [];
     if (attachmentRefs.length > selectedRefs.length) {

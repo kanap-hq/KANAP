@@ -1,3 +1,5 @@
+import type { DataSource } from 'typeorm';
+
 /**
  * The key that encrypts the secrets Kadratis stores (AI provider keys, connection tokens, the
  * installation settings that are secrets): `SETTINGS_ENCRYPTION_SECRET`, or its former name
@@ -30,4 +32,65 @@ export function settingsEncryptionSecret(env: NodeJS.ProcessEnv = process.env): 
   const former = present(env[SETTINGS_ENCRYPTION_SECRET_FORMER_VARIABLE]);
   if (current !== null && former !== null && current !== former) throw new SettingsEncryptionSecretConflictError();
   return current ?? former;
+}
+
+/**
+ * Start-up warning (lead process, after the connection): the key is missing while encrypted
+ * secrets are stored, so none of them can be read. Reads the installation tables in both modes;
+ * on-premise, also the secret tables of the single workspace, with its tenant set (in the cloud the
+ * workspaces' tables are under forced row level security: a read without a tenant finds nothing).
+ * Null when the key is set or nothing is stored. Never throws: a failed read is a null.
+ */
+export async function missingEncryptionSecretWarning(
+  dataSource: DataSource,
+  options: { singleTenant: boolean; tenantSlug?: string | null; env?: NodeJS.ProcessEnv },
+): Promise<string | null> {
+  const env = options.env ?? process.env;
+  try {
+    if (settingsEncryptionSecret(env) !== null) return null;
+  } catch {
+    return null; // The conflict already refused the start.
+  }
+  const runner = dataSource.createQueryRunner();
+  try {
+    await runner.connect();
+    await runner.startTransaction();
+    try {
+      const [installation] = await runner.query(`
+        SELECT EXISTS (SELECT 1 FROM installation_ai_settings WHERE web_search_api_key_encrypted IS NOT NULL)
+            OR EXISTS (SELECT 1 FROM platform_ai_config) AS stored
+      `);
+      let stored = installation?.stored === true;
+      if (!stored && options.singleTenant) {
+        const [tenant] = await runner.query(`SELECT id FROM tenants WHERE slug = $1 LIMIT 1`, [options.tenantSlug || 'default']);
+        if (tenant?.id) {
+          await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
+          const [workspace] = await runner.query(
+            `
+              SELECT EXISTS (
+                       SELECT 1 FROM ai_settings
+                        WHERE tenant_id = $1
+                          AND (llm_api_key_encrypted IS NOT NULL OR glpi_user_token_encrypted IS NOT NULL OR glpi_app_token_encrypted IS NOT NULL)
+                     )
+                  OR EXISTS (SELECT 1 FROM ai_model_configs WHERE tenant_id = $1 AND api_key_encrypted IS NOT NULL)
+                  OR EXISTS (SELECT 1 FROM ai_adapter_configs WHERE tenant_id = $1 AND credential_ref_json->>'kind' = 'encrypted')
+                  AS stored
+            `,
+            [tenant.id],
+          );
+          stored = workspace?.stored === true;
+        }
+      }
+      if (!stored) return null;
+      return `[SECRETS] ${SETTINGS_ENCRYPTION_SECRET_VARIABLE} is not set while encrypted secrets are stored: `
+        + 'the AI provider keys, connection tokens and installation secrets cannot be read. '
+        + `Set ${SETTINGS_ENCRYPTION_SECRET_VARIABLE} (or ${SETTINGS_ENCRYPTION_SECRET_FORMER_VARIABLE}) to the value they were stored with.`;
+    } finally {
+      await runner.rollbackTransaction();
+    }
+  } catch {
+    return null;
+  } finally {
+    await runner.release();
+  }
 }
