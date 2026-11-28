@@ -865,7 +865,7 @@
       "methodsReplaced_other": "{{count}} Zeilen ändern ihre Zuordnungsmethode in {{year}}. Ohne „Vorhandene Daten überschreiben“ behält die Kopie nur die von Hand erfassten Zuordnungen.",
       "defaultManualLabel": "ausgewählte Unternehmen ({{count}})",
       "defaultManualLabel_one": "ausgewähltes Unternehmen ({{count}})",
-      "defaultBasisWarning": "{{count}} Zeilen stehen auf der Standardzuordnung: {{destinationYear}} verwendet {{destinationLabel}}, {{sourceYear}} dagegen {{sourceLabel}}. Kopierte Zeilen folgen weiterhin der Standardeinstellung ihres eigenen Jahres. Konfigurieren Sie {{destinationYear}} in der Budget-Administration, wenn die Basis gleich bleiben soll.",
+      "defaultBasisWarning": "{{count}} Zeilen stehen auf der Standardzuordnung: {{destinationYear}} verwendet {{destinationLabel}}, {{sourceYear}} dagegen {{sourceLabel}}. Kopierte Zeilen folgen weiterhin der Standardeinstellung ihres eigenen Jahres. Konfigurieren Sie {{destinationYear}} in den Budget-Einstellungen, wenn die Basis gleich bleiben soll.",
       "summary": {
         "preview_one": "{{count}} Zeile in der Vorschau.",
         "preview_other": "{{count}} Zeilen in der Vorschau.",

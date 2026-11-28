@@ -165,7 +165,7 @@ Die Schaltfläche **Löschen** (Papierkorbsymbol) in der Kopfzeile löscht den K
 
 Dieselbe Regel gilt für **Auswahl löschen** in der Liste: Ein Kalender, den Budgetzeilen verwenden, bleibt erhalten, mit einem Grund wie „Dieser Kalender wird noch verwendet: 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie ihn, statt ihn zu löschen.“
 
-Eine Budgetzeile verwendet einen Kalender, wenn eine ihrer Spalten, in einem beliebigen Jahr, eine Zeile mit Preis pro Tag auf diesem Kalender hat. Das Entfernen dieser Zeile im Budget-Tab oder **Budgetspalte zurücksetzen** in der Budgetadministration hebt die Verknüpfung auf. Siehe [Budgetspalte zurücksetzen](budget-operations.md#budgetspalte-zurucksetzen).
+Eine Budgetzeile verwendet einen Kalender, wenn eine ihrer Spalten, in einem beliebigen Jahr, eine Zeile mit Preis pro Tag auf diesem Kalender hat. Das Entfernen dieser Zeile im Budget-Tab oder **Budgetspalte leeren** in den Budget-Einstellungen hebt die Verknüpfung auf. Siehe [Budgetspalte leeren](budget-operations.md#budgetspalte-zurucksetzen).
 
 ---
 

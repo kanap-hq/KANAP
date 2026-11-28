@@ -4,7 +4,7 @@ Cette page pilote l'[assistant de chat Kad](ai-assistant.md) : le modèle IA auq
 
 ## Où la trouver
 
-- Espace de travail : **Administration**
+- Module : **Administration**
 - Chemin : **Administration → Intelligence artificielle → Kad**
 - Route : `/admin/ai`
 - Autorisation : `ai_settings:admin`

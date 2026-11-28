@@ -1,12 +1,12 @@
 # Paramètres de devises
 
-La page des paramètres de devises (**Gestion budgétaire > Administration > Devises**) règle la manière dont Kadratis enregistre, affiche et convertit les devises. Elle fixe la devise de reporting de tout l'espace de travail, les devises proposées par défaut sur les nouvelles lignes et, si besoin, la liste des devises autorisées.
+La page des paramètres de devises (**Gestion budgétaire > Paramètres > Devises**) règle la manière dont Kadratis enregistre, affiche et convertit les devises. Elle fixe la devise de reporting de tout l'espace de travail, les devises proposées par défaut sur les nouvelles lignes et, si besoin, la liste des devises autorisées.
 
 Pour le fonctionnement détaillé des devises et des conversions, consultez le guide de gestion des devises.
 
 ## Qui peut la consulter et la modifier
 
-Les devises sont un paramètre budgétaire. La page se trouve avec les autres paramètres budgétaires dans l'[Administration budgétaire](budget-operations.md).
+Les devises sont un paramètre budgétaire. La page se trouve avec les autres paramètres budgétaires dans les [paramètres du budget](budget-operations.md).
 
 - **Ouvrir la page, modifier les paramètres, lancer la synchronisation des taux de change et saisir des taux manuels** : administration budgétaire au niveau administrateur. La carte est masquée pour les autres utilisateurs.
 - **Utiliser les devises sur les lignes** : les utilisateurs OPEX et CAPEX choisissent parmi les devises autorisées dans leurs formulaires de ligne, sans ouvrir cette page.
@@ -239,7 +239,7 @@ Kadratis récupère les taux de cette année en arrière-plan (au plus une fois 
 Votre groupe passe d'une consolidation en EUR à une consolidation en USD.
 
 **Étapes** :
-  1. Allez dans **Gestion budgétaire > Administration > Devises**
+  1. Allez dans **Gestion budgétaire > Paramètres > Devises**
   2. Remplacez la devise de reporting `EUR` par `USD`
   3. Cliquez sur **Enregistrer**, lisez la fenêtre de confirmation (taux manuels qui ne s'appliquent plus, versions gelées), puis cliquez sur **Changer la devise**
   4. Lisez le résultat de la récupération des taux. Pour chaque paire encore manquante, saisissez un taux manuel ou relancez plus tard **Forcer la synchronisation des taux de change**
@@ -252,7 +252,7 @@ Votre groupe passe d'une consolidation en EUR à une consolidation en USD.
 Votre direction financière impose que toutes les dépenses soient enregistrées en EUR, USD ou GBP.
 
 **Étapes** :
-  1. Allez dans **Gestion budgétaire > Administration > Devises**
+  1. Allez dans **Gestion budgétaire > Paramètres > Devises**
   2. Renseignez les devises autorisées : `EUR, USD, GBP`
   3. Cliquez sur **Enregistrer**
   4. Lancez **Forcer la synchronisation des taux de change** pour disposer des taux des trois devises
@@ -263,7 +263,7 @@ Votre direction financière impose que toutes les dépenses soient enregistrées
 Votre entreprise ouvre une activité en Suisse et doit suivre des dépenses en CHF.
 
 **Étapes** :
-  1. Allez dans **Gestion budgétaire > Administration > Devises**
+  1. Allez dans **Gestion budgétaire > Paramètres > Devises**
   2. Ajoutez `CHF` aux devises autorisées (par exemple `EUR, USD, GBP, CHF`)
   3. Cliquez sur **Enregistrer**
   4. Cliquez sur **Forcer la synchronisation des taux de change** pour récupérer aussitôt les taux du CHF
@@ -275,7 +275,7 @@ Votre entreprise ouvre une activité en Suisse et doit suivre des dépenses en C
 En décembre, vous préparez le budget de l'année prochaine.
 
 **Étapes** :
-  1. Allez dans **Gestion budgétaire > Administration > Devises**
+  1. Allez dans **Gestion budgétaire > Paramètres > Devises**
   2. Cliquez sur **Forcer la synchronisation des taux de change** pour mettre à jour les taux de l'année à venir
   3. Consultez dans le tableau des taux les estimations de l'année prochaine
   4. Gardez en tête que les taux des années futures reprennent celui de l'année en cours : revoyez-les à l'approche de l'année

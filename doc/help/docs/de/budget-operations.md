@@ -1,11 +1,11 @@
-# Budget-Administration
+# Budget-Einstellungen
 
-Die Budget-Administration bietet Ihnen eine Reihe von Werkzeugen zur Verwaltung und Transformation von Budgetdaten über Jahre und Spalten hinweg. Dies sind die Operationen, die Sie während der Budgetplanungszyklen benötigen: die Vorbereitung der Zahlen für das nächste Jahr, das Einfrieren genehmigter Budgets und die Verwaltung von Jahresübergängen.
+Die Budget-Einstellungen bieten Ihnen eine Reihe von Werkzeugen zur Verwaltung und Transformation von Budgetdaten über Jahre und Spalten hinweg. Dies sind die Operationen, die Sie während der Budgetplanungszyklen benötigen: die Vorbereitung der Zahlen für das nächste Jahr, das Einfrieren genehmigter Budgets und die Verwaltung von Jahresübergängen.
 
 ## Wo Sie es finden
 
-- Pfad: **Budgetverwaltung > Administration**
-- Berechtigungen: Jede Karte wird nur den Benutzern angezeigt, die sie verwenden können (siehe die Tabelle unten). **Administration** erscheint im Menü, sobald Sie mindestens eine Karte verwenden können.
+- Pfad: **Budgetverwaltung > Einstellungen**
+- Berechtigungen: Jede Karte wird nur den Benutzern angezeigt, die sie verwenden können (siehe die Tabelle unten). **Einstellungen** erscheint im Menü, sobald Sie mindestens eine Karte verwenden können.
 
 Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug. Ein leerer Abschnitt wird ausgeblendet.
 
@@ -23,7 +23,7 @@ Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug.
 |----------|-------|
 | **Daten einfrieren / auftauen** | Budgetspalten sperren, um Änderungen zu verhindern |
 | **Budgetspalten kopieren** | Beträge zwischen Jahren und Spalten kopieren, mit optionalem Prozentsatz, und Zuordnungen in ein anderes Jahr |
-| **Budgetspalte zurücksetzen** | Alle Daten einer bestimmten Spalte löschen |
+| **Budgetspalte leeren** | Alle Daten einer bestimmten Spalte löschen |
 | **Stammdaten einfrieren** | Die Kennzahlen der Unternehmen und Abteilungen für ein Jahr sperren. Siehe [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md) |
 | **Jahreskennzahlen kopieren** | Die Kennzahlen der Unternehmen und Abteilungen von einem Jahr in ein anderes kopieren. Siehe [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md) |
 

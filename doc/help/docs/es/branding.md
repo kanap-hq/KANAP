@@ -4,7 +4,7 @@ Use la página Personalización para aplicar la identidad de su empresa en Kadra
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: menú **Administración** → **Personalización**
+- Módulo: menú **Administración** → **Personalización**
 - Ruta: `/admin/branding`
 - Permiso: `users:admin`
 - Disponible solo en hosts de espacio de trabajo (no en el host de administración de plataforma)

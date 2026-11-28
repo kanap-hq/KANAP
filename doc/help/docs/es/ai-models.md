@@ -4,7 +4,7 @@ Esta página es la lista de modelos IA que su organización puede utilizar. Aña
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Administración**
+- Módulo: **Administración**
 - Ruta: **Administración → Inteligencia artificial → Modelos IA**
 - Ruta URL: `/admin/ai-models`
 - Permiso: `ai_settings:admin`

@@ -6,7 +6,7 @@ Der wichtigste Gedanke, den Sie sich merken sollten: Ein Agent schlägt vor, Sie
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **KI-Agenten**
+- Modul: **KI-Agenten**
 - Pfad: **KI-Agenten → Übersicht**
 - Route: `/agents`
 - Berechtigung: `ai_agents:reader`, um den Bereich anzuzeigen, `ai_agents:contributor`, um auf die Arbeit eines Agenten zu reagieren. Die unten beschriebenen Bedienelemente zum Erstellen, für die Notfallpause und zum Löschen erfordern die Administratorstufe für KI-Agenten (`ai_agents:admin`); der Administrator für KI-Einstellungen (`ai_settings:admin`) schaltet sie ebenfalls frei.

@@ -4,7 +4,7 @@ Utilisez la page Personnalisation pour appliquer l'identité de votre entreprise
 
 ## Où la trouver
 
-- Espace de travail : menu **Administration** → **Personnalisation**
+- Module : menu **Administration** → **Personnalisation**
 - Route : `/admin/branding`
 - Autorisation : `users:admin`
 - Disponible uniquement sur les hôtes tenant (pas sur l'hôte d'administration de la plateforme)

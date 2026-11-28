@@ -6,7 +6,7 @@ Le partage des rôles est volontaire. Netbox reste la référence pour les équi
 
 ## Où le trouver
 
-- Espace : **Cartographie SI**
+- Module : **Cartographie SI**
 - Chemin : **Cartographie SI > Paramètres**, onglet **Netbox**
 - Route : `/it/settings?tab=netbox`. L'ancienne adresse `/it/netbox` ouvre le même onglet.
 - Paramètres de connexion : **Administration > Intégrations**

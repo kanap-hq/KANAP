@@ -10,7 +10,7 @@ Hay algo que conviene dejar claro desde el principio, porque condiciona todo bue
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Agentes IA > Contexto compartido**
+- Módulo: **Agentes IA > Contexto compartido**
 - Ruta URL: `/agents/shared-context`
 - Permisos:
   - `ai_agents:reader` le permite abrir la página y leer la lista de perfiles

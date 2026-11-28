@@ -6,7 +6,7 @@ La idea importante que hay que recordar: el agente propone, usted dispone. Todo 
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Agentes IA**
+- Módulo: **Agentes IA**
 - Ruta: **Agentes IA → Vista general**
 - Ruta URL: `/agents`
 - Permiso: `ai_agents:reader` para ver la sección, `ai_agents:contributor` para actuar sobre el trabajo de un agente. Los controles de creación, pausa de emergencia y eliminación descritos a continuación requieren el nivel de administrador de Agentes IA (`ai_agents:admin`); el administrador de Configuración de IA (`ai_settings:admin`) también los desbloquea.

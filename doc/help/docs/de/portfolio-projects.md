@@ -8,7 +8,7 @@ Für portfolio-weite Sequenzierung und Roadmap-Arbeit verwenden Sie [Portfolio-P
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Portfolio**
+- Modul: **Portfolio**
 - Pfad: **Portfolio > Projekte**
 
 ## Berechtigungen

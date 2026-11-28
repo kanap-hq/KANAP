@@ -4,7 +4,7 @@ Verwenden Sie die Integrationsseite, um Kadratis mit Drittanbieter-Tools zu verb
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Administration**
+- Modul: **Administration**
 - Pfad: **Administration → Integrationen**
 - Route: `/admin/integrations`
 - Berechtigung: `ai_settings:admin` oder `infrastructure:admin`. Jede Karte hat ihre eigene Anforderung: Die GLPI- und die Monitoring-Verbindung benötigen `ai_settings:admin`, die Netbox-Verbindung benötigt `infrastructure:admin`. Sie sehen nur die Karten, die Sie konfigurieren dürfen.

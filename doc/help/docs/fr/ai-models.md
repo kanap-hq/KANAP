@@ -4,7 +4,7 @@ Cette page est la liste des modèles IA que votre organisation est autorisée à
 
 ## Où la trouver
 
-- Espace de travail : **Administration**
+- Module : **Administration**
 - Chemin : **Administration → Intelligence artificielle → Modèles IA**
 - Route : `/admin/ai-models`
 - Autorisation : `ai_settings:admin`

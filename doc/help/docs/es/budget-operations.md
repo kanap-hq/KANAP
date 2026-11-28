@@ -1,11 +1,11 @@
-# Administración presupuestaria
+# Configuración del presupuesto
 
-La Administración presupuestaria le ofrece un conjunto de herramientas para gestionar y transformar datos presupuestarios entre años y columnas. Estas son las operaciones a las que recurre durante los ciclos de planificación presupuestaria: preparar las cifras del próximo año, bloquear presupuestos aprobados y gestionar las transiciones entre años.
+La Configuración del presupuesto le ofrece un conjunto de herramientas para gestionar y transformar datos presupuestarios entre años y columnas. Estas son las operaciones a las que recurre durante los ciclos de planificación presupuestaria: preparar las cifras del próximo año, bloquear presupuestos aprobados y gestionar las transiciones entre años.
 
 ## Dónde encontrarla
 
-- Ruta: **Gestión presupuestaria > Administración**
-- Permisos: cada tarjeta se muestra solo a los usuarios que pueden usarla (consulte la tabla a continuación). **Administración** aparece en el menú cuando puede usar al menos una tarjeta.
+- Ruta: **Gestión presupuestaria > Configuración**
+- Permisos: cada tarjeta se muestra solo a los usuarios que pueden usarla (consulte la tabla a continuación). **Configuración** aparece en el menú cuando puede usar al menos una tarjeta.
 
 La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta dedicada. Una sección vacía se oculta.
 
@@ -23,7 +23,7 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 |-------------|-----------|
 | **Congelar / descongelar datos** | Bloquear columnas presupuestarias para prevenir cambios |
 | **Copiar columnas presupuestarias** | Copiar importes entre años y columnas, con un porcentaje opcional, y asignaciones a otro año |
-| **Restablecer columna presupuestaria** | Borrar todos los datos de una columna específica |
+| **Vaciar una columna presupuestaria** | Borrar todos los datos de una columna específica |
 | **Congelar datos maestros** | Bloquear los indicadores de empresas y departamentos para un año. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
 | **Copiar indicadores anuales** | Copiar los indicadores de empresas y departamentos de un año a otro. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
 

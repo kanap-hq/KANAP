@@ -29,7 +29,7 @@ Ce sont les cinq étapes de la tuile **Vos cinq premiers pas** de l'accueil, pou
 
 **Le geste.** Ouvrez l'onglet **Budget**, puis **Relations** et **Historique**.
 
-**Ce que vous lisez.** **Budget** montre les montants de l'année dans quatre colonnes budgétaires sur les cinq possibles. Leurs noms et celles qui s'affichent se règlent dans **Gestion budgétaire > Administration**. **Relations** relie la ligne à ce qu'elle paie : contrats, applications, projets. **Historique** garde chaque modification avec son auteur et sa date.
+**Ce que vous lisez.** **Budget** montre les montants de l'année dans quatre colonnes budgétaires sur les cinq possibles. Leurs noms et celles qui s'affichent se règlent dans **Gestion budgétaire > Paramètres**. **Relations** relie la ligne à ce qu'elle paie : contrats, applications, projets. **Historique** garde chaque modification avec son auteur et sa date.
 
 ## 3. Un rapport
 

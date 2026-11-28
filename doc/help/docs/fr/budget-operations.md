@@ -1,11 +1,11 @@
-# Administration budgétaire
+# Paramètres du budget
 
-L'administration budgétaire met à votre disposition un ensemble d'outils pour gérer et transformer les données budgétaires entre les années et les colonnes. Ce sont les opérations que vous utilisez pendant les cycles de planification budgétaire : préparer les chiffres de l'année suivante, verrouiller les budgets approuvés et gérer les transitions d'une année à l'autre.
+Les paramètres du budget mettent à votre disposition un ensemble d'outils pour gérer et transformer les données budgétaires entre les années et les colonnes. Ce sont les opérations que vous utilisez pendant les cycles de planification budgétaire : préparer les chiffres de l'année suivante, verrouiller les budgets approuvés et gérer les transitions d'une année à l'autre.
 
 ## Où trouver cette page
 
-- Chemin : **Gestion budgétaire > Administration**
-- Autorisations : chaque carte s'affiche uniquement pour les utilisateurs qui peuvent l'utiliser (voir le tableau ci-dessous). **Administration** apparaît dans le menu dès que vous pouvez utiliser au moins une carte.
+- Chemin : **Gestion budgétaire > Paramètres**
+- Autorisations : chaque carte s'affiche uniquement pour les utilisateurs qui peuvent l'utiliser (voir le tableau ci-dessous). **Paramètres** apparaît dans le menu dès que vous pouvez utiliser au moins une carte.
 
 La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédié. Une section vide est masquée.
 
@@ -23,7 +23,7 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 |-------|----------|
 | **Geler / dégeler les données** | Verrouiller les colonnes budgétaires pour empêcher les modifications |
 | **Copier les colonnes budgétaires** | Copier les montants entre années et colonnes, avec un pourcentage facultatif, et les ventilations vers une autre année |
-| **Réinitialiser une colonne budgétaire** | Effacer toutes les données d'une colonne spécifique |
+| **Vider une colonne budgétaire** | Effacer toutes les données d'une colonne spécifique |
 | **Geler les données de référence** | Verrouiller les indicateurs des sociétés et des départements pour une année. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
 | **Copier les indicateurs annuels** | Copier les indicateurs des sociétés et des départements d'une année à l'autre. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
 
@@ -351,7 +351,7 @@ Les en-têtes **Suit la répartition et les lignes** et **Par défaut** portent 
 
 Par défaut, Budget, Révision, Réalisé et Atterrissage prévu sont affichées et Prévision est masquée, toutes les colonnes suivent la répartition et les lignes, et Budget est la colonne par défaut.
 
-### Ce que changent les réglages
+### Ce que changent les paramètres
 
 - **Les colonnes masquées** disparaissent des listes, du sélecteur de colonnes, de l'onglet Budget, des sélecteurs des rapports, des pages de copie et de réinitialisation et de la vue d'ensemble. Elles gardent leurs montants : masquer une colonne n'efface jamais de données, et l'afficher de nouveau fait revenir les montants. Les colonnes masquées acceptent toujours les imports par le fichier budgétaire, et les gels s'appliquent toujours à elles. La page de gel liste aussi les colonnes masquées, avec la mention **Masquée** : vous pouvez les geler comme les autres
 - **La colonne par défaut** est présélectionnée dans chaque rapport. Elle trie la liste des lignes budgétaires et sa navigation précédent et suivant. La tuile **Top lignes**, classée par **Montant** ou par **Hausse**, et les tuiles **Mon budget** et **Par centre de coûts** de la vue d'ensemble l'utilisent. La liste l'affiche pour l'année en cours, à côté de la dernière colonne affichée. Une liste dont la personne a choisi les colonnes de montants les garde et reçoit la nouvelle colonne par défaut. C'est aussi le montant de référence de l'onglet Ventilations et la colonne de départ de la ligne **Écart avec** de l'onglet Budget. L'onglet Budget d'une ligne s'ouvre sur elle tant qu'elle n'est pas gelée. La geler pour une année fige les taux de change de cette année (voir [Geler la colonne par défaut fige les taux de change](#geler-la-colonne-par-defaut-fige-les-taux-de-change))

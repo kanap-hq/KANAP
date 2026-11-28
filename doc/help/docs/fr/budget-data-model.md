@@ -10,7 +10,7 @@ Les fichiers décrits ici sont le contrat sur lequel s'appuyer. Leurs colonnes s
 |---|---|---|
 | **Ligne OPEX** | Un coût récurrent, reporté d'une année sur l'autre | **Gestion budgétaire > Lignes budgétaires** |
 | **Ligne CAPEX** | Un investissement, reporté d'une année sur l'autre | **Gestion budgétaire > Lignes budgétaires** |
-| **Colonnes budgétaires** | Les cinq colonnes de montants que chaque ligne budgétaire a pour chaque année | **Gestion budgétaire > Administration > Colonnes budgétaires** |
+| **Colonnes budgétaires** | Les cinq colonnes de montants que chaque ligne budgétaire a pour chaque année | **Gestion budgétaire > Paramètres > Colonnes budgétaires** |
 | **Lignes Quantité et prix** | Les lignes à partir desquelles une colonne peut être calculée | L'onglet **Budget** d'une ligne |
 | **Ventilation** | La répartition du coût d'une année d'une ligne entre sociétés ou départements | L'onglet **Ventilations** d'une ligne |
 | **Société** | Une entité juridique qui paie, avec ses indicateurs annuels | **Données de référence > Sociétés** |
@@ -21,7 +21,7 @@ Les fichiers décrits ici sont le contrat sur lequel s'appuyer. Leurs colonnes s
 | **Dimension analytique** et **valeur** | Des classifications libres pour le reporting | **Données de référence > Dimensions analytiques** |
 | **Calendrier de jours ouvrés** | Les jours ouvrés par mois et par année, pour les prix par jour | **Données de référence > Calendriers de jours ouvrés** |
 | **Utilisateur** | Responsables IT et métier, responsables budgétaires | **Administration > Utilisateurs** |
-| **Devises** | Devises autorisées, devise de reporting, taux de change | **Gestion budgétaire > Administration > Devises** |
+| **Devises** | Devises autorisées, devise de reporting, taux de change | **Gestion budgétaire > Paramètres > Devises** |
 
 ## Les relations entre les objets
 

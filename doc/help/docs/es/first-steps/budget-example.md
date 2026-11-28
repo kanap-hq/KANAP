@@ -29,7 +29,7 @@ Son los cinco pasos del mosaico **Sus cinco primeros pasos** de la página de in
 
 **Qué hacer.** Abra la pestaña **Presupuesto**, luego **Relaciones** e **Historial**.
 
-**Qué ve.** **Presupuesto** muestra los importes del año en cuatro de las cinco columnas presupuestarias posibles. Sus nombres y cuáles se muestran se configuran en **Gestión presupuestaria > Administración**. **Relaciones** vincula la línea con lo que paga: contratos, aplicaciones, proyectos. **Historial** guarda cada cambio con su autor y su fecha.
+**Qué ve.** **Presupuesto** muestra los importes del año en cuatro de las cinco columnas presupuestarias posibles. Sus nombres y cuáles se muestran se configuran en **Gestión presupuestaria > Configuración**. **Relaciones** vincula la línea con lo que paga: contratos, aplicaciones, proyectos. **Historial** guarda cada cambio con su autor y su fecha.
 
 ## 3. Un informe
 

@@ -1752,8 +1752,8 @@
         },
         "budget_line": {
           "title": "Une ligne budgétaire",
-          "hint": "Ouvrez une ligne et explorez ses onglets. Le budget, l'onglet principal, affiche 4 colonnes parmi 5 possibles, toutes paramétrables dans « Paramètres ». L'onglet Relations permet de relier le budget aux éléments qu'il porte.",
-          "hintRecord": "Vous êtes dans la fiche {{record}}. Explorez les onglets. Le budget, l'onglet principal, affiche 4 colonnes parmi 5 possibles, toutes paramétrables dans « Paramètres ». L'onglet Relations permet de relier le budget aux éléments qu'il porte."
+          "hint": "Ouvrez une ligne et explorez ses onglets. Le budget, l'onglet principal, affiche 4 colonnes parmi 5 possibles, toutes définies dans « Paramètres ». L'onglet Relations permet de relier le budget aux éléments qu'il porte.",
+          "hintRecord": "Vous êtes dans la fiche {{record}}. Explorez les onglets. Le budget, l'onglet principal, affiche 4 colonnes parmi 5 possibles, toutes définies dans « Paramètres ». L'onglet Relations permet de relier le budget aux éléments qu'il porte."
         },
         "budget_report": {
           "title": "Un rapport",

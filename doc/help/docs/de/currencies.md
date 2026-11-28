@@ -1,12 +1,12 @@
 # Währungseinstellungen
 
-Die Seite Währungseinstellungen (**Budgetverwaltung > Administration > Währungen**) ist der Ort, an dem Sie konfigurieren, wie Währungen in Ihrem Arbeitsbereich gespeichert, angezeigt und umgerechnet werden. Sie steuert die mandantenweite Berichtswährung, Standardwährungen für neue Budgetzeilen und optionale Einschränkungen, welche Währungen verwendet werden können.
+Die Seite Währungseinstellungen (**Budgetverwaltung > Einstellungen > Währungen**) ist der Ort, an dem Sie konfigurieren, wie Währungen in Ihrem Arbeitsbereich gespeichert, angezeigt und umgerechnet werden. Sie steuert die mandantenweite Berichtswährung, Standardwährungen für neue Budgetzeilen und optionale Einschränkungen, welche Währungen verwendet werden können.
 
 Für Hintergrundinformationen zu Währungskonzepten und Umrechnungsmechanismen siehe den Leitfaden zur Währungsverwaltung.
 
 ## Wer sie sehen und ändern kann
 
-Währungen sind eine Budgeteinstellung. Die Seite steht bei den anderen Budgeteinstellungen in der [Budgetadministration](budget-operations.md).
+Währungen sind eine Budgeteinstellung. Die Seite steht bei den anderen Budgeteinstellungen in den [Budget-Einstellungen](budget-operations.md).
 
 - **Die Seite öffnen, Einstellungen ändern, die Wechselkurssynchronisierung starten und manuelle Kurse eingeben**: Budgetadministration auf Administratorebene. Die Karte ist für andere Benutzer ausgeblendet.
 - **Währungen bei Zeilen verwenden**: OPEX- und CAPEX-Benutzer wählen in ihren Zeilenformularen aus den erlaubten Währungen, ohne diese Seite zu öffnen.
@@ -240,7 +240,7 @@ Kadratis ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle 
 Ihr Konzern wechselt von EUR-basierter zu USD-basierter Berichterstattung.
 
 **Schritte**:
-  1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
+  1. Gehen Sie zu **Budgetverwaltung > Einstellungen > Währungen**
   2. Ändern Sie die Berichtswährung von `EUR` auf `USD`
   3. Klicken Sie auf **Speichern**, lesen Sie den Bestätigungsdialog (manuelle Kurse, die nicht mehr gelten, eingefrorene Versionen) und klicken Sie dann auf **Währung ändern**
   4. Lesen Sie das Ergebnis des Kursabrufs. Geben Sie für jedes noch fehlende Paar einen manuellen Kurs ein oder führen Sie später **Wechselkurssynchronisierung erzwingen** aus
@@ -253,7 +253,7 @@ Ihr Konzern wechselt von EUR-basierter zu USD-basierter Berichterstattung.
 Ihre Finanzabteilung verlangt, dass alle Ausgaben nur in EUR, USD oder GBP erfasst werden.
 
 **Schritte**:
-  1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
+  1. Gehen Sie zu **Budgetverwaltung > Einstellungen > Währungen**
   2. Setzen Sie erlaubte Währungen auf `EUR, USD, GBP`
   3. Klicken Sie auf **Speichern**
   4. Führen Sie **Wechselkurssynchronisierung erzwingen** durch, um sicherzustellen, dass Kurse für alle drei Währungen verfügbar sind
@@ -264,7 +264,7 @@ Ihre Finanzabteilung verlangt, dass alle Ausgaben nur in EUR, USD oder GBP erfas
 Ihr Unternehmen beginnt Geschäftstätigkeit in der Schweiz und muss CHF-Ausgaben erfassen.
 
 **Schritte**:
-  1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
+  1. Gehen Sie zu **Budgetverwaltung > Einstellungen > Währungen**
   2. Fügen Sie `CHF` zu den erlaubten Währungen hinzu (z. B. `EUR, USD, GBP, CHF`)
   3. Klicken Sie auf **Speichern**
   4. Klicken Sie auf **Wechselkurssynchronisierung erzwingen**, um CHF-Kurse sofort abzurufen
@@ -276,7 +276,7 @@ Ihr Unternehmen beginnt Geschäftstätigkeit in der Schweiz und muss CHF-Ausgabe
 Es ist Dezember, und Sie bereiten die Budgetplanung für das nächste Jahr vor.
 
 **Schritte**:
-  1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
+  1. Gehen Sie zu **Budgetverwaltung > Einstellungen > Währungen**
   2. Klicken Sie auf **Wechselkurssynchronisierung erzwingen**, um die Kurse für das kommende Jahr zu aktualisieren
   3. Prüfen Sie die FX-Kurs-Snapshot-Tabelle, um die Forward-Schätzungen für das nächste Jahr zu sehen
   4. Beachten Sie, dass Kurse für zukünftige Jahre Forward-Schätzungen sind (Wiederverwendung des Kurses des aktuellen Jahres). Überprüfen Sie sie, wenn das Jahr näher rückt

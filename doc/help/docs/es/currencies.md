@@ -1,12 +1,12 @@
 # Configuración de monedas
 
-La página de Configuración de monedas (**Gestión presupuestaria > Administración > Monedas**) es donde configura cómo se almacenan, muestran y convierten las monedas en su espacio de trabajo. Controla la moneda de reporte de todo el espacio de trabajo, las monedas predeterminadas para nuevos elementos y restricciones opcionales sobre qué monedas pueden utilizarse.
+La página de Configuración de monedas (**Gestión presupuestaria > Configuración > Monedas**) es donde configura cómo se almacenan, muestran y convierten las monedas en su espacio de trabajo. Controla la moneda de reporte de todo el espacio de trabajo, las monedas predeterminadas para nuevos elementos y restricciones opcionales sobre qué monedas pueden utilizarse.
 
 Para información sobre conceptos de moneda y mecánicas de conversión, consulte la guía de Gestión de monedas.
 
 ## Quién puede verla y modificarla
 
-Las monedas son un ajuste presupuestario. La página está junto a los demás ajustes presupuestarios, en la [Administración presupuestaria](budget-operations.md).
+Las monedas son un parámetro del presupuesto. La página está junto a los demás parámetros del presupuesto, en la [Configuración del presupuesto](budget-operations.md).
 
 - **Abrir la página, cambiar los ajustes, lanzar la sincronización de tipos de cambio e introducir tipos manuales**: administración presupuestaria con nivel de administrador. La tarjeta se oculta a los demás usuarios.
 - **Usar monedas en las líneas**: los usuarios de OPEX y CAPEX eligen entre las monedas permitidas en los formularios de sus líneas, sin abrir esta página.
@@ -240,7 +240,7 @@ Kadratis obtiene los tipos de ese año en segundo plano (como máximo una vez ca
 Su grupo pasa de un reporte en EUR a un reporte en USD.
 
 **Pasos**:
-  1. Vaya a **Gestión presupuestaria > Administración > Monedas**
+  1. Vaya a **Gestión presupuestaria > Configuración > Monedas**
   2. Cambie la moneda de reporte de `EUR` a `USD`
   3. Haga clic en **Guardar**, lea el diálogo de confirmación (tipos manuales que dejan de aplicarse, versiones congeladas) y haga clic en **Cambiar la moneda**
   4. Lea el resultado de la recuperación de tipos. Para cada par que siga faltando, introduzca un tipo manual o ejecute más tarde **Forzar sincronización de tipos de cambio**
@@ -253,7 +253,7 @@ Su grupo pasa de un reporte en EUR a un reporte en USD.
 Su equipo financiero exige que todo el gasto se registre solo en EUR, USD o GBP.
 
 **Pasos**:
-  1. Vaya a **Gestión presupuestaria > Administración > Monedas**
+  1. Vaya a **Gestión presupuestaria > Configuración > Monedas**
   2. Establezca las monedas permitidas en `EUR, USD, GBP`
   3. Haga clic en **Guardar**
   4. Ejecute **Forzar sincronización de tipos de cambio** para disponer de los tipos de las tres monedas
@@ -264,7 +264,7 @@ Su equipo financiero exige que todo el gasto se registre solo en EUR, USD o GBP.
 Su empresa inicia operaciones en Suiza y necesita registrar gasto en CHF.
 
 **Pasos**:
-  1. Vaya a **Gestión presupuestaria > Administración > Monedas**
+  1. Vaya a **Gestión presupuestaria > Configuración > Monedas**
   2. Añada `CHF` a las monedas permitidas (p. ej., `EUR, USD, GBP, CHF`)
   3. Haga clic en **Guardar**
   4. Haga clic en **Forzar sincronización de tipos de cambio** para obtener los tipos del CHF de inmediato
@@ -276,7 +276,7 @@ Su empresa inicia operaciones en Suiza y necesita registrar gasto en CHF.
 Es diciembre y prepara el presupuesto del próximo año.
 
 **Pasos**:
-  1. Vaya a **Gestión presupuestaria > Administración > Monedas**
+  1. Vaya a **Gestión presupuestaria > Configuración > Monedas**
   2. Haga clic en **Forzar sincronización de tipos de cambio** para actualizar los tipos del próximo año
   3. Consulte en la tabla de tipos de cambio las estimaciones del próximo año
   4. Tenga en cuenta que los tipos de los años futuros reutilizan el del año en curso: revíselos a medida que se acerque el año

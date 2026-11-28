@@ -1,13 +1,13 @@
 # Geler les données de référence et copier les indicateurs annuels
 
-Deux outils de l'[administration budgétaire](budget-operations.md) gèrent les indicateurs des sociétés et des départements sur les exercices fiscaux : **Geler les données de référence** et **Copier les indicateurs annuels**. Utilisez-les pour verrouiller des chiffres finalisés, pour reporter une base vers la planification de l'année suivante, ou pour vérifier ce qui est gelé et ce qui ne l'est pas.
+Deux outils des [paramètres du budget](budget-operations.md) gèrent les indicateurs des sociétés et des départements sur les exercices fiscaux : **Geler les données de référence** et **Copier les indicateurs annuels**. Utilisez-les pour verrouiller des chiffres finalisés, pour reporter une base vers la planification de l'année suivante, ou pour vérifier ce qui est gelé et ce qui ne l'est pas.
 
 Les indicateurs annuels sont l'effectif, les utilisateurs IT et le chiffre d'affaires des sociétés, et l'effectif des départements. Ce sont des données de référence, et le cycle budgétaire les gèle et les reporte d'une année à l'autre. Les deux outils se trouvent donc avec les autres opérations budgétaires.
 
 ## Où la trouver
 
-- Espace de travail : **Gestion budgétaire**
-- Chemin : **Gestion budgétaire > Administration**, section **Opérations**, cartes **Geler les données de référence** et **Copier les indicateurs annuels**
+- Module : **Gestion budgétaire**
+- Chemin : **Gestion budgétaire > Paramètres**, section **Opérations**, cartes **Geler les données de référence** et **Copier les indicateurs annuels**
 - Autorisations :
   - Accès au budget (accès lecteur au Budget ou à l'administration budgétaire), plus l'un des droits `companies:admin`, `departments:admin` ou `budget_ops:admin`
   - Les cartes sont masquées pour les autres utilisateurs
@@ -119,7 +119,7 @@ Si vous n'avez accès qu'à un seul périmètre, l'autre est grisé dans le sél
 
 Votre budget 2025 est approuvé. Verrouillez-le pour que personne ne modifie accidentellement les chiffres.
 
-1. Ouvrez **Gestion budgétaire > Administration > Geler les données de référence**
+1. Ouvrez **Gestion budgétaire > Paramètres > Geler les données de référence**
 2. Sélectionnez l'année **2025**
 3. Cochez **Sociétés** et **Départements**
 4. Cliquez sur **Geler les données**
@@ -130,7 +130,7 @@ Toutes les métriques des sociétés et départements pour 2025 sont maintenant 
 
 Vous souhaitez commencer la planification 2026 en utilisant l'effectif et le chiffre d'affaires 2025 comme base.
 
-1. Ouvrez **Gestion budgétaire > Administration > Copier les indicateurs annuels**
+1. Ouvrez **Gestion budgétaire > Paramètres > Copier les indicateurs annuels**
 2. Définissez **Année source** sur **2025** et **Année de destination** sur **2026**
 3. Sous **Sources de données**, sélectionnez **Sociétés**
 4. Sous **Métriques de société**, sélectionnez **Effectif** et **Chiffre d'affaires** (désélectionnez Utilisateurs IT si vous n'en avez pas besoin)
@@ -143,7 +143,7 @@ Toutes les sociétés portent maintenant l'effectif et le chiffre d'affaires 202
 
 Vous avez gelé 2025 mais repéré une erreur dans l'effectif d'une société.
 
-1. Ouvrez **Gestion budgétaire > Administration > Geler les données de référence**
+1. Ouvrez **Gestion budgétaire > Paramètres > Geler les données de référence**
 2. Sélectionnez l'année **2025**, cochez **Sociétés**, et cliquez sur **Dégeler les données**
 3. Modifiez l'effectif de la société dans **Données de référence > Sociétés > Détails**
 4. Revenez à **Geler les données de référence** et regelez les Sociétés 2025

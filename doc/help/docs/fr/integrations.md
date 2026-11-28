@@ -4,7 +4,7 @@ Utilisez la page Intégrations pour connecter Kadratis à des outils tiers qui c
 
 ## Où la trouver
 
-- Espace de travail : **Administration**
+- Module : **Administration**
 - Chemin : **Administration → Intégrations**
 - Route : `/admin/integrations`
 - Autorisation : `ai_settings:admin` ou `infrastructure:admin`. Chaque carte a son exigence propre : les connexions GLPI et supervision demandent `ai_settings:admin`, la connexion Netbox demande `infrastructure:admin`. Vous ne voyez que les cartes que vous avez le droit de configurer.

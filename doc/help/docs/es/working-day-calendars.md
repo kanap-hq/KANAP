@@ -165,7 +165,7 @@ El botón **Eliminar** (icono de papelera) del encabezado elimina el calendario 
 
 La misma regla se aplica a **Eliminar selección** en la lista: un calendario usado por líneas de presupuesto se conserva, con un motivo como "Este calendario se usa en 3 líneas OPEX y 1 línea CAPEX. Desactívelo en lugar de eliminarlo."
 
-Una línea de presupuesto usa un calendario cuando una de sus columnas, en cualquier año, tiene una línea con precio por día sobre él. Quitar esa línea en la pestaña Presupuesto, o **Restablecer columna presupuestaria** en la Administración presupuestaria, quita el vínculo. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria).
+Una línea de presupuesto usa un calendario cuando una de sus columnas, en cualquier año, tiene una línea con precio por día sobre él. Quitar esa línea en la pestaña Presupuesto, o **Vaciar una columna presupuestaria** en la Configuración del presupuesto, quita el vínculo. Consulte [Vaciar una columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria).
 
 ---
 

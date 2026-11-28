@@ -6,7 +6,7 @@ Die Aufteilung der Zuständigkeiten ist bewusst gewählt. Netbox bleibt die Refe
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **IT-Landschaft**
+- Modul: **IT-Landschaft**
 - Pfad: **IT-Landschaft > Einstellungen**, Tab **Netbox**
 - Route: `/it/settings?tab=netbox`. Die frühere Adresse `/it/netbox` öffnet denselben Tab.
 - Verbindungseinstellungen: **Administration > Integrationen**

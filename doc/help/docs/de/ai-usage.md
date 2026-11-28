@@ -4,7 +4,7 @@ Diese Seite beantwortet zwei Fragen, die Administratoren sich regelmäßig stell
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Administration**
+- Modul: **Administration**
 - Pfad: **Administration → Künstliche Intelligenz → Nutzung & Kosten**
 - Route: `/admin/ai-usage`
 - Berechtigung: `ai_settings:admin`

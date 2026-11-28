@@ -10,7 +10,7 @@ Los archivos descritos aquí son el contrato en el que apoyarse. Sus columnas es
 |---|---|---|
 | **Línea OPEX** | Un coste recurrente, que se mantiene de un año a otro | **Gestión presupuestaria > Líneas presupuestarias** |
 | **Línea CAPEX** | Una inversión, que se mantiene de un año a otro | **Gestión presupuestaria > Líneas presupuestarias** |
-| **Columnas presupuestarias** | Las cinco columnas de importes que cada línea tiene para cada año | **Gestión presupuestaria > Administración > Columnas presupuestarias** |
+| **Columnas presupuestarias** | Las cinco columnas de importes que cada línea tiene para cada año | **Gestión presupuestaria > Configuración > Columnas presupuestarias** |
 | **Líneas de Cantidad y precio** | Las líneas a partir de las que se puede calcular una columna | La pestaña **Presupuesto** de una línea |
 | **Asignación** | Cómo se reparte el coste de un año de una línea entre empresas o departamentos | La pestaña **Asignaciones** de una línea |
 | **Empresa** | Una entidad jurídica que paga, con sus indicadores anuales | **Datos maestros > Empresas** |
@@ -21,7 +21,7 @@ Los archivos descritos aquí son el contrato en el que apoyarse. Sus columnas es
 | **Dimensión analítica** y **valor** | Clasificaciones libres para los informes | **Datos maestros > Dimensiones analíticas** |
 | **Calendario laboral** | Días laborables por mes y por año, para los precios por día | **Datos maestros > Calendarios laborales** |
 | **Usuario** | Responsables de IT y de negocio, responsables del presupuesto | **Administración > Usuarios** |
-| **Monedas** | Monedas permitidas, moneda de informes, tipos de cambio | **Gestión presupuestaria > Administración > Monedas** |
+| **Monedas** | Monedas permitidas, moneda de informes, tipos de cambio | **Gestión presupuestaria > Configuración > Monedas** |
 
 ## Cómo se relacionan los objetos
 

@@ -197,12 +197,12 @@ Une ligne garde la valeur qu'elle a déjà sur une dimension qui ne s'applique p
 
 Donner à une ligne une valeur sur une dimension qui ne s'applique pas à elle est refusé, dans l'application, dans un fichier budgétaire et par l'API. Dans l'application et par l'API, renvoyer la valeur que la ligne porte déjà ne change rien. Dans un fichier budgétaire, laissez cette cellule vide : l'export le fait.
 
-Une même valeur peut aussi être réservée à un seul type de ligne. Les deux réglages agissent à des niveaux différents. Par exemple, la dimension **Nature de coût** est utilisée pour **OPEX et CAPEX**, et sa valeur **Main-d'œuvre interne** est réservée à **OPEX uniquement** :
+Une même valeur peut aussi être réservée à un seul type de ligne. Les deux paramètres agissent à des niveaux différents. Par exemple, la dimension **Nature de coût** est utilisée pour **OPEX et CAPEX**, et sa valeur **Main-d'œuvre interne** est réservée à **OPEX uniquement** :
 
 - Le réglage de la dimension décide si le champ existe pour un type de ligne. Quand le champ disparaît, les valeurs que portent les lignes sont masquées.
 - Le réglage de la valeur filtre les choix. Le champ reste, les lignes CAPEX ne proposent plus **Main-d'œuvre interne**, et une ligne CAPEX qui l'a déjà le garde, l'affiche et reste modifiable. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex).
 
-Les deux réglages doivent concorder. Une dimension ne peut pas être réglée sur un seul type de ligne tant que certaines de ses valeurs sont réservées à l'autre type : Kadratis refuse et nomme les valeurs (trois au plus, puis « and N more »), par exemple « 2 values of this dimension are for CAPEX lines only (Matériel, Logiciel). Set them to OPEX and CAPEX first. »
+Les deux paramètres doivent concorder. Une dimension ne peut pas être réglée sur un seul type de ligne tant que certaines de ses valeurs sont réservées à l'autre type : Kadratis refuse et nomme les valeurs (trois au plus, puis « and N more »), par exemple « 2 values of this dimension are for CAPEX lines only (Matériel, Logiciel). Set them to OPEX and CAPEX first. »
 
 ### Dimensions obligatoires
 
@@ -369,7 +369,7 @@ Les sept rapports budgétaires peuvent aussi être restreints à une valeur d'un
 - Quand Kad crée une ligne, il lui faut une valeur sur chaque dimension obligatoire du type de la ligne. Dans un espace de travail créé avant les dimensions recommandées, une ligne CAPEX demande **PP&E type**, **Investment type** et **Priority**.
 - Kad sait quelles dimensions sont obligatoires. Une nouvelle ligne doit avoir une valeur sur chacune d'elles, et Kad ne peut pas effacer la valeur d'une dimension obligatoire. Kad refuse une demande qui enfreint la règle et en donne la raison, par exemple « Nature de coût is required for spend item creation. »
 - Kad peut aussi créer une valeur dans la dimension que vous nommez. Sans dimension, la valeur est créée dans la dimension par défaut.
-- Avec le droit de lecture sur l'analytique, Kad lit aussi les réglages de chaque dimension, son nombre de valeurs et les lignes qui l'utilisent. Demandez par exemple : « Quelles dimensions sont obligatoires ? »
+- Avec le droit de lecture sur l'analytique, Kad lit aussi les paramètres de chaque dimension, son nombre de valeurs et les lignes qui l'utilisent. Demandez par exemple : « Quelles dimensions sont obligatoires ? »
 
 ---
 
@@ -395,7 +395,7 @@ Pour renseigner des valeurs sur les lignes budgétaires depuis un fichier, utili
 | `description` | Texte libre |
 | `status` | `enabled` ou `disabled`. Vide signifie `enabled` pour une nouvelle valeur et conserve le statut enregistré lors d'une mise à jour |
 | `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée. Vide s'il n'y a pas de fin. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la valeur aujourd'hui |
-| `applies_to` | Le réglage **Utilisé pour**, toujours la dernière colonne. `opex`, `capex`, ou vide pour **OPEX et CAPEX**. Un fichier sans cette colonne laisse les réglages tels quels. Une cellule vide garde le réglage d'une valeur enregistrée, et `-` règle sur **OPEX et CAPEX**. Une nouvelle valeur avec une cellule vide est pour **OPEX et CAPEX** |
+| `applies_to` | Le réglage **Utilisé pour**, toujours la dernière colonne. `opex`, `capex`, ou vide pour **OPEX et CAPEX**. Un fichier sans cette colonne laisse les paramètres tels quels. Une cellule vide garde le réglage d'une valeur enregistrée, et `-` règle sur **OPEX et CAPEX**. Une nouvelle valeur avec une cellule vide est pour **OPEX et CAPEX** |
 
 Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `status`, `disabled_at` ou `applies_to` manque, les valeurs existantes conservent ce qui est enregistré, et les nouvelles valeurs sont activées, sans description. Un fichier sans `axis_code` place toutes les lignes dans la dimension par défaut.
 

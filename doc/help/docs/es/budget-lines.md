@@ -173,7 +173,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 **Importes sin tipo de cambio**:
 
 - Cuando la moneda de una línea no tiene tipo de cambio para un año, su importe de ese año aparece en su propia moneda con una pequeña marca naranja. Pase el cursor sobre la marca para leer, por ejemplo, «Sin tipo de cambio de USD para 2026: excluido de los totales.»
-- Los totales excluyen estos importes, y un aviso de una línea bajo la lista los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente.
+- Los totales excluyen estos importes, y un aviso de una línea bajo la lista los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre la configuración de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente.
 - En una columna ordenada, estas líneas van al final. Un filtro de importe nunca las conserva.
 - Vea [Tipos manuales](currencies.md#tipos-manuales) para introducir usted mismo el tipo que falta.
 
@@ -256,7 +256,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dir
 - Cambiar de pestaña, pasar a la línea anterior o siguiente, o cerrar el espacio de trabajo guarda primero los cambios pendientes. Si un guardado falla, usted se queda donde está y un mensaje explica el motivo, de modo que ningún cambio se pierde sin que lo sepa
 - **Ctrl+S** (**Cmd+S** en Mac) guarda de inmediato
 - Si un guardado no puede completarse de inmediato porque hay otro guardado en curso sobre los mismos datos, Kadratis lo reintenta automáticamente
-- Si hay una operación de presupuesto masiva en curso (por ejemplo, una copia o un restablecimiento de columna en la Administración presupuestaria), las ediciones aquí se detienen con el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» Vuelva a intentarlo cuando haya terminado
+- Si hay una operación de presupuesto masiva en curso (por ejemplo, la copia o el vaciado de una columna en la Configuración del presupuesto), las ediciones aquí se detienen con el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» Vuelva a intentarlo cuando haya terminado
 
 **Edición simultánea**:
 
@@ -337,7 +337,7 @@ La pestaña Presupuesto contiene los importes de la línea, año por año y colu
     - **Previsión**: Una columna de planificación adicional, oculta por defecto
     - **Realizado**: El gasto real, tal como se registra durante el año
     - **Aterrizaje previsto**: Su mejor estimación de la cifra de fin de año
-- Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y elegir la columna por defecto en **Gestión presupuestaria > Administración > Columnas presupuestarias** (consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)). Una columna oculta conserva sus importes
+- Un administrador de presupuesto puede renombrar las columnas, ocultar algunas y elegir la columna por defecto en **Gestión presupuestaria > Configuración > Columnas presupuestarias** (consulte [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias)). Una columna oculta conserva sus importes
 - Cada columna visible tiene una tarjeta bajo las pestañas de año: su nombre, su total del año, el origen de sus importes y su periodo, por ejemplo «Reparto uniforme» y «9 meses, abril a diciembre». Una columna vacía muestra solo su cero. Pase el cursor sobre una tarjeta para ver sus líneas de cantidad y precio
 - Haga clic en una tarjeta para trabajar en esa columna. La pestaña se abre en la [columna por defecto](budget-operations.md#columnas-presupuestarias), o en la primera columna visible que no está congelada cuando la columna por defecto está congelada
 - Con una sola columna visible no hay tarjetas: el editor muestra la columna directamente
@@ -403,7 +403,7 @@ En una columna vacía, un clic en una pestaña cambia de inmediato. En una colum
 **Borrar columna**:
 
 - **Borrar columna**, a la derecha bajo el editor, pone a cero todos los meses de la columna activa, por ejemplo antes de introducir todo el importe en un solo mes. Cuando la columna tiene importes, primero confirma: «¿Borrar todos los meses de la columna Presupuesto en 2026? Las demás columnas no cambian.» Cuenta como una edición a mano
-- Para eliminar a la vez los importes y el periodo de una columna en todas las líneas, use **Restablecer columna presupuestaria** en la Administración presupuestaria
+- Para eliminar a la vez los importes y el periodo de una columna en todas las líneas, use **Vaciar una columna presupuestaria** en la Configuración del presupuesto
 
 **Resultado por mes**:
 
@@ -424,8 +424,8 @@ En una columna vacía, un clic en una pestaña cambia de inmediato. En una colum
 
 **Comportamiento de congelación**:
 
-- Si las columnas presupuestarias de un año están congeladas para el tipo de la línea (a través de la Administración presupuestaria), la tarjeta de cada columna congelada muestra un candado, igual que su cabecera en la tabla
-- Una columna congelada es de solo lectura. Su editor indica, por ejemplo, «La columna Presupuesto 2026 está congelada» y «Solo lectura. Un administrador puede descongelarla en Administración › Congelar / descongelar datos.», con su total y el origen de sus importes
+- Si las columnas presupuestarias de un año están congeladas para el tipo de la línea (a través de la Configuración del presupuesto), la tarjeta de cada columna congelada muestra un candado, igual que su cabecera en la tabla
+- Una columna congelada es de solo lectura. Su editor indica, por ejemplo, «La columna Presupuesto 2026 está congelada» y «Solo lectura. Un administrador puede descongelarla en Configuración › Congelar / descongelar datos.», con su total y el origen de sus importes
 - Cuando hay columnas congeladas, una línea bajo el gráfico indica «Algunas columnas están congeladas y son de solo lectura.»
 - Cada columna puede congelarse de forma independiente
 
@@ -433,7 +433,7 @@ En una columna vacía, un clic en una pestaña cambia de inmediato. En una colum
 
 - Una etiqueta corta en cada tarjeta indica de dónde vienen los importes de la columna, seguida de su periodo. Con una sola columna, está bajo el título del editor
 - **Reparto uniforme**, **Reparto 4-4-5** o **Reparto por trimestre**: los importes vienen de un reparto
-- **Copiado de Presupuesto 2025 +2 %**: los importes vienen de **Copiar columnas presupuestarias** en la Administración presupuestaria, o de **Partir de**, con el porcentaje cuando lo hay
+- **Copiado de Presupuesto 2025 +2 %**: los importes vienen de **Copiar columnas presupuestarias** en la Configuración del presupuesto, o de **Partir de**, con el porcentaje cuando lo hay
 - **Cantidad y precio · 3 líneas · 1.00 ETC**: los importes vienen de líneas, con su número y, cuando las líneas cuentan personas o días, el ETC de la columna. El ETC es la media del año. Pase el cursor sobre la tarjeta para ver las líneas, por ejemplo «Jefe de proyecto: 1 persona × 1.200 por día, 5 días al mes, feb. a jul.»
 - **Editado a mano**: un mes se cambió en la tabla o mediante la importación de un archivo de presupuesto
 - Un importe en una fecha muestra su fecha en lugar de un periodo, por ejemplo «El 10 de febrero de 2026»
@@ -521,9 +521,9 @@ Haga clic en **Añadir una línea** bajo la tabla para añadir una línea, y en 
 **Cuando los importes cambian de otra forma**: las líneas se quedan en la columna como referencia, en solo lectura. Bajo **Importe** o **Por mes**, una línea indica cuántas líneas se conservan, por ejemplo «4 líneas conservadas como referencia (48.000).», seguida del enlace **Usar de nuevo las líneas**. El enlace guarda las líneas tal como están y vuelve a calcular la columna a partir de ellas. Elegir la pestaña **Cantidad y precio** hace lo mismo, tras una pregunta. Para cambiar una línea conservada como referencia, use primero de nuevo las líneas y luego modifíquela.
 
 - Pasar la columna a **Importe** o **Por mes**, introducir un mes en la tabla, o **Borrar columna**
-- **Copiar columnas presupuestarias** en la Administración presupuestaria, o **Partir de**: cuando los importes de origen no se calcularon a partir de líneas, la copia lleva las líneas de la columna de origen como referencia. Una columna calculada a partir de sus líneas sigue calculada, con sus precios aumentados por el porcentaje. Consulte [Copiar una columna construida a partir de líneas](budget-operations.md#copiar-una-columna-construida-a-partir-de-lineas)
+- **Copiar columnas presupuestarias** en la Configuración del presupuesto, o **Partir de**: cuando los importes de origen no se calcularon a partir de líneas, la copia lleva las líneas de la columna de origen como referencia. Una columna calculada a partir de sus líneas sigue calculada, con sus precios aumentados por el porcentaje. Consulte [Copiar una columna construida a partir de líneas](budget-operations.md#copiar-una-columna-construida-a-partir-de-lineas)
 - Los días laborables de un calendario cambiaron: la pestaña **Cantidad y precio** indica, por ejemplo, «Días laborables modificados desde el último cálculo: marzo: 20 días, ahora 19.», seguido de **Usar de nuevo las líneas**. Nada cambia en la columna hasta que haga clic en **Usar de nuevo las líneas**. Las líneas siguen siendo editables mientras tanto
-- **Restablecer columna presupuestaria** en la Administración presupuestaria quita las líneas junto con los importes. Consulte [Restablecer columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria)
+- **Vaciar una columna presupuestaria** en la Configuración del presupuesto quita las líneas junto con los importes. Consulte [Vaciar una columna presupuestaria](budget-operations.md#restablecer-columna-presupuestaria)
 - Un archivo de presupuesto cambia los meses de una columna y deja sus líneas. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md)
 
 #### Cuando la cuenta espera una introducción por cantidad y precio { #quantity-and-price-expected }
@@ -584,7 +584,7 @@ La pestaña Asignaciones distribuye el gasto de un año entre sus empresas y dep
 
 **Métodos por defecto y fijados**:
 
-- La opción **por defecto**, mostrada como *Plantilla (por defecto)* hasta que su organización configure otro método, sigue la configuración de **Gestión presupuestaria > Administración > Método de asignación por defecto**. Cada línea que se deje en el valor por defecto se recalcula cuando un administrador cambia esa configuración
+- La opción **por defecto**, mostrada como *Plantilla (por defecto)* hasta que su organización configure otro método, sigue la configuración de **Gestión presupuestaria > Configuración > Método de asignación por defecto**. Cada línea que se deje en el valor por defecto se recalcula cuando un administrador cambia esa configuración
 - Esa configuración también puede restringir el valor por defecto a una **selección de empresas** (por ejemplo la entidad que lleva el presupuesto IT): el inductor se aplica entonces solo a esas empresas, y la opción muestra *Por defecto (n sociedades)*
 - **Plantilla**, **Usuarios IT** y **Facturación** fijan ese método en la línea: un método fijado sigue funcionando aunque el valor por defecto de la organización cambie más adelante
 - Las líneas con una asignación manual nunca se ven afectadas por la configuración por defecto
@@ -770,7 +770,7 @@ Un archivo de presupuesto nunca cambia el tipo de una línea. Consulte [Cargar u
 
 13. **Use enlace directo**: Haga clic directamente en una columna de presupuesto en la lista para ir a la pestaña Presupuesto de ese año. Haga clic en la columna Tarea para ir a las tareas de la línea en la pestaña Vista general. Esto ahorra tiempo de navegación.
 
-14. **Congele presupuestos después del cierre de año**: Utilice Administración presupuestaria para congelar los presupuestos del año anterior una vez que el realizado esté finalizado, previniendo ediciones accidentales.
+14. **Congele presupuestos después del cierre de año**: Utilice la Configuración del presupuesto para congelar los presupuestos del año anterior una vez que el realizado esté finalizado, previniendo ediciones accidentales.
 
 ---
 
@@ -780,7 +780,7 @@ El acceso a las líneas presupuestarias se controla con el recurso Presupuesto, 
 
 - `budget:reader`: Ver la lista, abrir líneas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
 - `budget:member`: Crear y editar líneas, cambiar su tipo, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos, modificar líneas en bloque
-- `budget:admin`: Todos los derechos de miembro más importación y exportación, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y restablecer columna presupuestaria) y la eliminación de líneas desde la lista o desde la línea
+- `budget:admin`: Todos los derechos de miembro más importación y exportación, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y vaciar una columna presupuestaria) y la eliminación de líneas desde la lista o desde la línea
 
 Congelar columnas presupuestarias requiere la administración presupuestaria (`budget_ops:admin`).
 

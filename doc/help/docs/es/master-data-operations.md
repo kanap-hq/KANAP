@@ -6,8 +6,8 @@ Los indicadores anuales son la plantilla, los usuarios IT y la facturación de l
 
 ## Dónde encontrarla
 
-- Espacio de trabajo: **Gestión presupuestaria**
-- Ruta: **Gestión presupuestaria > Administración**, sección **Operaciones**, tarjetas **Congelar datos maestros** y **Copiar indicadores anuales**
+- Módulo: **Gestión presupuestaria**
+- Ruta: **Gestión presupuestaria > Configuración**, sección **Operaciones**, tarjetas **Congelar datos maestros** y **Copiar indicadores anuales**
 - Permisos:
   - Acceso al presupuesto (acceso de lector a Presupuesto o a la administración presupuestaria), más uno de los permisos `companies:admin`, `departments:admin` o `budget_ops:admin`
   - Las tarjetas se ocultan a los demás usuarios
@@ -119,7 +119,7 @@ Si solo tiene acceso a un alcance, el otro está en gris en el selector de Fuent
 
 Su presupuesto 2025 está aprobado. Bloquéelo para que nadie cambie accidentalmente las cifras.
 
-1. Abra **Gestión presupuestaria > Administración > Congelar datos maestros**
+1. Abra **Gestión presupuestaria > Configuración > Congelar datos maestros**
 2. Seleccione el año **2025**
 3. Marque **Empresas** y **Departamentos**
 4. Haga clic en **Congelar datos**
@@ -130,7 +130,7 @@ Todas las métricas de empresas y departamentos para 2025 son ahora de solo lect
 
 Desea comenzar la planificación de 2026 usando la plantilla y facturación de 2025 como línea base.
 
-1. Abra **Gestión presupuestaria > Administración > Copiar indicadores anuales**
+1. Abra **Gestión presupuestaria > Configuración > Copiar indicadores anuales**
 2. Establezca **Año de origen** en **2025** y **Año de destino** en **2026**
 3. En **Fuentes de datos**, seleccione **Empresas**
 4. En **Métricas de empresa**, seleccione **Plantilla** y **Facturación** (deseleccione Usuarios IT si no lo necesita)
@@ -143,7 +143,7 @@ Todas las empresas ahora llevan la plantilla y facturación de 2025 a 2026. Ajus
 
 Congeló 2025 pero detectó un error en la plantilla de una empresa.
 
-1. Abra **Gestión presupuestaria > Administración > Congelar datos maestros**
+1. Abra **Gestión presupuestaria > Configuración > Congelar datos maestros**
 2. Seleccione el año **2025**, marque **Empresas** y haga clic en **Descongelar datos**
 3. Edite la plantilla de la empresa en **Datos maestros > Empresas > Detalles**
 4. Vuelva a **Congelar datos maestros** y vuelva a congelar Empresas 2025

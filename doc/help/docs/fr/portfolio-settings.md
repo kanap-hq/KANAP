@@ -4,7 +4,7 @@ Les paramètres du portefeuille vous permettent de configurer le système d'éva
 
 ## Où les trouver
 
-- Espace de travail : **Portefeuille**
+- Module : **Portefeuille**
 - Chemin : **Portefeuille > Paramètres**
 - Autorisations :
   - Vous avez besoin de `portfolio_settings:admin` pour modifier les paramètres

@@ -4,7 +4,7 @@ Las Solicitudes del portafolio son la capa de recepción para el trabajo propues
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Portafolio**
+- Módulo: **Portafolio**
 - Ruta: **Portafolio > Solicitudes**
 
 ### Permisos

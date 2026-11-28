@@ -324,7 +324,7 @@ Comparez les métriques budgétaires sur plusieurs années sur un seul graphique
 - **Mesure** : **Montant** ou **ETP** (voir [Choisir le montant ou les ETP](#choisir-le-montant-ou-les-etp))
 - **Année de début** : Début de la plage (année en cours moins 2 à plus 2)
 - **Année de fin** : Fin de la plage
-- **Métriques** : Multi-sélection parmi les colonnes budgétaires affichées. Le rapport démarre sur la colonne par défaut et la dernière colonne affichée (Budget et Atterrissage prévu avec les réglages standard). Si vous retirez toutes les métriques, la colonne par défaut est utilisée
+- **Métriques** : Multi-sélection parmi les colonnes budgétaires affichées. Le rapport démarre sur la colonne par défaut et la dernière colonne affichée (Budget et Atterrissage prévu avec les paramètres standard). Si vous retirez toutes les métriques, la colonne par défaut est utilisée
 - **Centre de coûts**, **Run ou build**, **Lignes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
@@ -600,7 +600,7 @@ Les noms des fichiers exportés contiennent le nom de la colonne, par exemple `t
 
 ### Métriques disponibles
 
-Chaque sélecteur de métrique ou de colonne propose les mêmes colonnes budgétaires : celles que votre organisation affiche, sous leurs noms. Avec les réglages standard, ce sont Budget, Révision, Réalisé et Atterrissage prévu. Prévision est proposée quand elle est affichée. Voir [Colonnes budgétaires dans les rapports](#colonnes-budgetaires-dans-les-rapports).
+Chaque sélecteur de métrique ou de colonne propose les mêmes colonnes budgétaires : celles que votre organisation affiche, sous leurs noms. Avec les paramètres standard, ce sont Budget, Révision, Réalisé et Atterrissage prévu. Prévision est proposée quand elle est affichée. Voir [Colonnes budgétaires dans les rapports](#colonnes-budgetaires-dans-les-rapports).
 
 ### Navigation
 
