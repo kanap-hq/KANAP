@@ -118,7 +118,10 @@ export type EnvVariable = {
   domain: EnvDomain;
   modes: readonly EnvMode[];
   kind: EnvKind;
-  /** The place that reads a `build` or library variable, when the code of the API does not. */
+  /**
+   * The place that reads a `build` or library variable, when the code of the API does not: a path
+   * from the root of the repository, `npm:<package>` for a library of `backend/`, or words.
+   */
   readBy: string | null;
   secret: boolean;
   /** The value carries a secret although the variable is not one (`DATABASE_URL`). */
@@ -249,6 +252,7 @@ export const ENV_REGISTRY: readonly EnvVariable[] = [
   entry('MARKETING_BASE_URL', { domain: 'addresses', modes: CLOUD, kind: 'operator', reason: 'root-of-trust', default: 'the public Kadratis website' }),
   entry('CORS_ORIGINS', { domain: 'addresses', modes: BOTH, kind: 'operator', reason: 'root-of-trust', required: true, example: active('cors', 'https://kadratis.your-domain.com') }),
   entry('VITE_API_URL', { domain: 'addresses', modes: BOTH, kind: 'build', readBy: 'frontend/Dockerfile', reason: 'outside-node', default: '/api' }),
+  entry('VITE_MARKETING_URL', { domain: 'addresses', modes: BOTH, kind: 'build', readBy: 'frontend/src/tenant/TenantContext.tsx', reason: 'outside-node', default: 'the public Kadratis website' }),
 
   // Request limits and the client address.
   entry('RATE_LIMIT_TRUST_PROXY', {
@@ -344,7 +348,7 @@ export const ENV_REGISTRY: readonly EnvVariable[] = [
   // Email.
   entry('RESEND_API_KEY', { domain: 'email', modes: BOTH, kind: 'operator', secret: true, example: commented('email', 're_xxxxx', ['Resend:']) }),
   entry('RESEND_FROM_EMAIL', { domain: 'email', modes: BOTH, kind: 'operator', default: 'Kadratis <no-reply@kadratis.com>', example: commented('email', 'Kadratis <noreply@your-domain.com>') }),
-  entry('RESEND_BASE_URL', { domain: 'email', modes: BOTH, kind: 'tooling', readBy: 'backend/node_modules/resend/dist/index.cjs', reason: 'tooling' }),
+  entry('RESEND_BASE_URL', { domain: 'email', modes: BOTH, kind: 'tooling', readBy: 'npm:resend', reason: 'tooling' }),
   entry('SMTP_HOST', {
     domain: 'email', modes: ONPREM, kind: 'operator',
     example: commented('email', 'smtp.your-domain.com', [

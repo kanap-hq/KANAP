@@ -16,7 +16,8 @@
 #   - frontend/: frontend, builds, and backend full for the modules the backend specs import
 #     (auditLogLabels, recordHistoryTables, contractTerms, reportAggregates, rolePermissionGroups),
 #     the lists of HTML tags and of link schemes of a rich text (richTextHtmlElements and
-#     richTextLinkAddress, read by rich-text-html-rule.spec),
+#     richTextLinkAddress, read by rich-text-html-rule.spec), TenantContext (env-registry.spec
+#     checks it reads VITE_MARKETING_URL),
 #     the locale files those specs read (including errors.json) and the Dockerfiles (container-images
 #     spec);
 #   - infra/, any Dockerfile: backend full (container-images, admin-password-policy and
@@ -69,6 +70,7 @@ while IFS= read -r f; do
       frontend/src/pages/portfolio/contributorsOrdering.* | frontend/src/pages/portfolio/skillsMatrix.* | \
       frontend/src/pages/it/components/versionLabelMatch.* | \
       frontend/src/pages/portfolio/roadmapOccupation.* | frontend/src/lib/richTextHtmlElements.* | frontend/src/lib/richTextLinkAddress.* | \
+      frontend/src/tenant/TenantContext.* | \
       frontend/src/locales/*/portfolio.json | frontend/src/locales/*/it.json | frontend/src/locales/*/ops.json | \
       frontend/src/locales/*/admin.json | frontend/src/locales/*/master-data.json | frontend/src/locales/*/nav.json | \
       frontend/src/locales/*/errors.json | frontend/src/locales/*/common.json)

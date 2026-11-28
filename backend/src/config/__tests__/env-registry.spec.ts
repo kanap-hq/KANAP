@@ -129,6 +129,19 @@ const TOOLING_SCRIPTS = [
   'scripts/verify-version-totals.ts',
 ];
 
+/**
+ * The files of infra/ the reverse check reads, named one by one: a walk of the folder would also
+ * read what a workstation adds there (a local docker-compose.yml), and the compiled spec runs
+ * where git may be absent. The generated example is left out: it is the registry's output.
+ */
+const INFRA_FILES = [
+  'infra/compose.onprem.yml',
+  'infra/compose.onprem.build.yml',
+  'infra/compose.qa.yml',
+  'infra/compose.prod.yml',
+  'infra/docker-compose.example.yml',
+];
+
 /** The 17 active lines of the on-premise example, unchanged since before the registry. */
 const ACTIVE_EXAMPLE_LINES = [
   'DEPLOYMENT_MODE=single-tenant',
@@ -284,17 +297,20 @@ function testCoverage() {
   assert.deepEqual(devExample.filter((name) => !findEnvVariable(name)), [], 'every name of backend/.env.example is in the registry');
 
   // The other way: each entry is read in the code, infra/, a Dockerfile, or by the place it names.
-  const generated = new Set([path.join(REPO_ROOT, ONPREM_EXAMPLE_FILE)]);
   const corpus = [
     allCode,
-    ...walk(path.join(REPO_ROOT, 'infra'), (file) => !generated.has(file)).map((file) => fs.readFileSync(file, 'utf8')),
+    ...INFRA_FILES.map(readRepo),
     ...['backend/Dockerfile', 'frontend/Dockerfile', 'frontend/Dockerfile.dev', 'marketing/Dockerfile'].map(readRepo),
   ].join('\n');
   const declared = new Set(Object.values(DYNAMIC_READERS).flatMap((reader) => reader.names));
   // Names a declared reader builds from a prefix (its builtFrom, checked above): written whole nowhere.
   const built = new Set(Object.values(DYNAMIC_READERS).filter((reader) => reader.builtFrom).flatMap((reader) => reader.names));
+  const backendPackage = JSON.parse(readRepo('backend/package.json')) as { dependencies?: Record<string, string> };
   for (const variable of ENV_REGISTRY) {
-    if (variable.readBy && /\//.test(variable.readBy)) {
+    if (variable.readBy?.startsWith('npm:')) {
+      const library = variable.readBy.slice('npm:'.length);
+      assert.ok(backendPackage.dependencies?.[library], `${variable.name} is read by ${library}, a dependency of backend/`);
+    } else if (variable.readBy && /\//.test(variable.readBy)) {
       assert.ok(readRepo(variable.readBy).includes(variable.name), `${variable.name} is read by ${variable.readBy}`);
     } else if (variable.family) {
       const pattern = new RegExp(envNamePattern(variable.name).source.slice(1, -1), 'g');

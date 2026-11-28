@@ -88,6 +88,7 @@
     "MARKETING_BASE_URL": { "en": "Multi-tenant only: address of the public website, used in trial emails and redirects." },
     "CORS_ORIGINS": { "en": "Browser origins allowed to call the API, comma-separated. On an installation, the exact address users open." },
     "VITE_API_URL": { "en": "Path or address of the API the web application calls, fixed when the web image is built." },
+    "VITE_MARKETING_URL": { "en": "Address of the public website the web application links to, fixed when the web image is built." },
     "RATE_LIMIT_TRUST_PROXY": { "en": "How many reverse proxies sit in front of the API: true for one, false for none, or a number up to 3. Sign-in and request limits read the client address through them." },
     "RATE_LIMIT_ENABLED": { "en": "Limits of sign-in attempts and requests per client address. false turns them off." },
     "CAPTCHA_MODE": { "en": "CAPTCHA of the public forms of the cloud: off, monitor or enforce. Unset, it stays off on single-tenant installations." },
