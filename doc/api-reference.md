@@ -2226,6 +2226,7 @@ One file for both natures since lot C1b: a `nature` column (`opex`, `capex`) say
 - GET `/freeze-states?year=YYYY`
   - Returns `{ year, entries: FreezeState[], summary }`
   - `entries` list raw rows (`scope`, optional `column`, timestamps, user IDs); `summary` aggregates by scope/column for quick status checks
+  - Requires `budget`, `budget_ops`, `companies` or `departments` at reader level (the padlocks of the budget lines read it)
 - POST `/freeze-states/freeze`
   - Body: `{ year: number, scopes: Array<{ scope: 'opex'|'capex'|'companies'|'departments', columns?: ('budget'|'revision'|'forecast'|'actual'|'landing')[] }> }`
   - Locks the requested year/scope combinations (OPEX/CAPEX without `columns` freezes all five; ignored for company/department metrics)
