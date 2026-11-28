@@ -16,7 +16,7 @@ Navegue a **Datos maestros > Departamentos** para ver su lista de departamentos.
 - **Descripción**: Descripción de texto libre del propósito o alcance del departamento
 - **Plantilla**: Número de empleados, seguido por año (se configura en la pestaña Detalles después de la creación)
 
-**Consejo**: Importe departamentos desde su sistema de RRHH para mantener su estructura organizativa alineada.
+**Consejo**: Importe departamentos desde su sistema de RRHH para mantener su estructura organizativa alineada. En un campo de departamento, escribir una referencia como `DEPT-4` encuentra ese departamento dentro de su empresa, y cada opción muestra la referencia junto al nombre.
 
 ---
 

@@ -490,7 +490,7 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
             <Stack spacing={1.5} sx={{ mb: 1 }}>
               {!isCreate && doc?.item_number && (
                 <Typography variant="caption" color="text.secondary">
-                  {t('sidebar.values.documentVersion', { itemNumber: doc.item_number, version: form.revision || 1 })}
+                  {`DOC-${doc.item_number}`}
                 </Typography>
               )}
               <PropertyRow
