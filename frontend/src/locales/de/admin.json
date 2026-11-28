@@ -157,7 +157,8 @@
         "tenantDefault": "Standardmodell ({{name}})",
         "noDefault": "Kein Modell konfiguriert",
         "hintPrefix": "Modelle werden verwaltet auf der Seite",
-        "hintLink": "KI-Modelle"
+        "hintLink": "KI-Modelle",
+        "notBuiltin": "{{agent}} verwendet nicht das inklusive {{product}}-Modell."
       }
     },
     "prtg": {
@@ -2912,6 +2913,13 @@
     "visionNo": "Nur Text",
     "usedByChat": "{{agent}}",
     "usedByNone": "Nicht zugewiesen",
+    "usedBy": {
+      "title": "Verwendet von {{list}}",
+      "agents_one": "{{count}} Agent",
+      "agents_other": "{{count}} Agenten",
+      "fallbackAgents": "Agenten ohne eigenes Modell",
+      "none": "Keine Verwendung"
+    },
     "messagesThisMonth_one": "{{count}} Nachricht in diesem Monat",
     "messagesThisMonth_other": "{{count}} Nachrichten in diesem Monat",
     "edit": "Bearbeiten",
@@ -2936,7 +2944,8 @@
       "caption": "Von {{product}} betrieben, in Ihrem Abonnement enthalten",
       "model": "Von {{product}} verwaltet",
       "quota": "{{used}} / {{limit}} inklusive Nachrichten in diesem Monat",
-      "fallback": "Wird verwendet, wenn kein anderes Modell zugewiesen ist"
+      "fallback": "Wird verwendet, wenn kein anderes Modell zugewiesen ist",
+      "notUsed": "Nicht verwendet"
     },
     "errors": {
       "loadFailed": "Die KI-Modelle konnten nicht geladen werden.",
@@ -2973,9 +2982,10 @@
       "priceCacheReadPlaceholder": "z. B. 0,30",
       "cacheReadHint": "Preis pro Million Tokens, die aus dem Cache des Anbieters gelesen werden (auf seiner Preisseite oft „cached input“). Leer: Es gelten die Eingabekosten, bei Anthropic ein Zehntel davon.",
       "advanced": "Erweiterte Einstellungen",
-      "timeout": "Zeitlimit",
-      "timeoutPlaceholder": "z. B. 120",
-      "timeoutHint": "Wie lange, in Sekunden, auf dieses Modell gewartet wird, bevor abgebrochen wird. Leer lassen für das Standardlimit. Lokale Modelle brauchen oft mehr Zeit.",
+      "timeout": "Zeitlimit (Sekunden)",
+      "timeoutHint": "Wie lange auf dieses Modell gewartet wird, bevor abgebrochen wird. Lokale Modelle brauchen oft mehr Zeit.",
+      "timeoutDefaultBoth": "{{agent}}: {{chat}}, Agenten: {{agents}}",
+      "timeoutRange": "{{min}} bis {{max}}",
       "reasoningEffort": "Denkaufwand",
       "reasoningEffortDefault": "Standard des Anbieters",
       "reasoningEffortHint": "Wie viel das Modell nachdenkt, bevor es antwortet. Mehr Aufwand: sorgfältigere, langsamere und teurere Antworten. Die angebotenen Stufen hängen von Anbieter und Modell ab. „Verbindung testen“ zeigt den gesendeten Aufwand.",

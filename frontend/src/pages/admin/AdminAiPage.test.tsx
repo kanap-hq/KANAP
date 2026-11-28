@@ -19,16 +19,24 @@ vi.mock('../../api', () => ({
   },
 }));
 
+const featuresState = vi.hoisted(() => ({ builtinAiProvider: false, aiMcp: true }));
 vi.mock('../../config/FeaturesContext', () => ({
   useFeatures: () => ({
     config: {
       features: {
         aiSettings: true,
         aiWebSearch: false,
-        builtinAiProvider: false,
+        aiMcp: featuresState.aiMcp,
+        builtinAiProvider: featuresState.builtinAiProvider,
       },
     },
   }),
+}));
+
+// The rights of the person on the page: the resources they hold at least at the level asked.
+const authState = vi.hoisted(() => ({ resources: ['ai_settings', 'ai_mcp'] as string[] }));
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({ hasLevel: (resource: string) => authState.resources.includes(resource) }),
 }));
 
 vi.mock('../../components/PageHeader', () => ({
@@ -43,7 +51,7 @@ function renderPage() {
     },
   });
 
-  render(
+  return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={client}>
         <MemoryRouter>
@@ -66,6 +74,9 @@ let journalPage: any = EMPTY_JOURNAL;
 describe('AdminAiPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    featuresState.builtinAiProvider = false;
+    featuresState.aiMcp = true;
+    authState.resources = ['ai_settings', 'ai_mcp'];
 
     (api.get as any).mockImplementation((url: string) => {
       switch (url) {
@@ -423,24 +434,59 @@ describe('AdminAiPage', () => {
     journalPage = EMPTY_JOURNAL;
   });
 
-  it('shows the server address and a Claude Code command for a new key', async () => {
+  it('creates a key in the shared dialog and refreshes the list of keys', async () => {
     const endpoint = `${window.location.origin}/api/ai/mcp`;
-    (api.post as any).mockResolvedValueOnce({ data: { key: 'kanap_mcp_secret', record: { id: 'key-1' } } });
+    const fakeKey = 'kanap_mcp_FAKE_TEST_KEY_0000';
+    (api.post as any).mockResolvedValueOnce({ data: { key: fakeKey, record: { id: 'key-1' } } });
     renderPage();
 
     expect(await screen.findByDisplayValue(endpoint)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy address' })).toBeInTheDocument();
+    const keyLoads = () => (api.get as any).mock.calls.filter(([url]: [string]) => url === '/ai/admin/keys').length;
+    await waitFor(() => expect(keyLoads()).toBe(1));
 
     fireEvent.click(screen.getByRole('button', { name: 'Create key' }));
     const dialog = await screen.findByRole('dialog');
-    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'Laptop' } });
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Label' }), { target: { value: 'Laptop' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
 
-    expect(await within(dialog).findByDisplayValue('kanap_mcp_secret')).toBeInTheDocument();
+    expect(await within(dialog).findByDisplayValue(fakeKey)).toBeInTheDocument();
     expect(within(dialog).getByDisplayValue(
-      `claude mcp add --transport http kanap ${endpoint} --header "Authorization: Bearer kanap_mcp_secret"`,
+      `claude mcp add --transport http kanap ${endpoint} --header "Authorization: Bearer ${fakeKey}"`,
     )).toBeInTheDocument();
     expect(api.post).toHaveBeenCalledWith('/ai/keys', { label: 'Laptop' });
+    await waitFor(() => expect(keyLoads()).toBe(2));
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.queryByDisplayValue(fakeKey)).not.toBeInTheDocument();
+  });
+
+  it('offers Create key only to a person who may create one', async () => {
+    authState.resources = ['ai_settings'];
+    const { unmount } = renderPage();
+    expect(await screen.findByText('No MCP keys or connections.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create key' })).not.toBeInTheDocument();
+    unmount();
+
+    // MCP off on the instance: no key can be created either.
+    authState.resources = ['ai_settings', 'ai_mcp'];
+    featuresState.aiMcp = false;
+    renderPage();
+    expect(await screen.findByText('No MCP keys or connections.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Create key' })).not.toBeInTheDocument();
+  });
+
+  it('says under the selector that a model assigned to the assistant hides the included model', async () => {
+    featuresState.builtinAiProvider = true;
+    renderPage();
+    expect(await screen.findByText(`${AGENT_NAME} does not use the ${PRODUCT_NAME} included model.`)).toBeInTheDocument();
+  });
+
+  it('says nothing of the included model on-premise', async () => {
+    renderPage();
+    await screen.findByText(`Model used by ${AGENT_NAME}`);
+    expect(screen.queryByText(`${AGENT_NAME} does not use the ${PRODUCT_NAME} included model.`)).not.toBeInTheDocument();
   });
 });
 
@@ -494,8 +540,14 @@ describe('AdminAiPage included model', () => {
     });
   }
 
+  let modelIsDefault = false;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    featuresState.builtinAiProvider = false;
+    featuresState.aiMcp = true;
+    authState.resources = ['ai_settings', 'ai_mcp'];
+    modelIsDefault = false;
     (api.get as any).mockImplementation((url: string) => {
       switch (url) {
         case '/ai/settings':
@@ -506,10 +558,12 @@ describe('AdminAiPage included model', () => {
               available_providers: [],
             },
           });
+        case '/ai/settings/builtin-usage':
+          return Promise.resolve({ data: { count: 4, limit: 200, reset_date: '2026-12-01T00:00:00.000Z' } });
         case '/ai/model-configs':
           return Promise.resolve({
             data: {
-              model_configs: [{ id: 'model-1', name: 'Our model', status: 'active', is_default: false }],
+              model_configs: [{ id: 'model-1', name: 'Our model', status: 'active', is_default: modelIsDefault }],
               secret_writable: true,
             },
           });
@@ -700,5 +754,32 @@ describe('AdminAiPage included model', () => {
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
     await waitFor(() => expect(api.patch).toHaveBeenLastCalledWith('/ai/settings', { accept_builtin_provider_key: 'anthropic||Anthropic|EU' }));
+  });
+
+  const NOT_INCLUDED = `${AGENT_NAME} does not use the ${PRODUCT_NAME} included model.`;
+
+  it('says nothing under the selector while the assistant runs on the included model, and says it once another model is chosen', async () => {
+    featuresState.builtinAiProvider = true;
+    settings = baseSettings({ builtin_provider: provider({ accepted: true }) });
+    renderPage();
+
+    const label = await screen.findByText(`Model used by ${AGENT_NAME}`);
+    const selector = within(label.closest('.kanap-field-label')!.parentElement as HTMLElement).getByRole('combobox');
+    await waitFor(() => expect(selector).toHaveTextContent(`${PRODUCT_NAME} included model`));
+    expect(screen.queryByText(NOT_INCLUDED)).not.toBeInTheDocument();
+
+    // The value on screen counts, as for the quota card.
+    fireEvent.mouseDown(selector);
+    fireEvent.click(await screen.findByRole('option', { name: 'Our model' }));
+    expect(await screen.findByText(NOT_INCLUDED)).toBeInTheDocument();
+  });
+
+  it('says it when the default model of the workspace serves the assistant', async () => {
+    featuresState.builtinAiProvider = true;
+    modelIsDefault = true;
+    settings = baseSettings({ builtin_provider: provider({ in_use: false, used_by_assistant: false }) });
+    renderPage();
+    expect(await screen.findByText('Default model (Our model)')).toBeInTheDocument();
+    expect(screen.getByText(NOT_INCLUDED)).toBeInTheDocument();
   });
 });

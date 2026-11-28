@@ -23,6 +23,8 @@ Eine einzige Auswahlliste entscheidet, welches Modell Chat-Fragen beantwortet:
 - **Kein Modell konfiguriert**: erscheint, wenn es weder einen Standard *noch* ein inklusives Modell gibt, also im On-Premise-Fall. Beachten Sie: Diese Option zeigt weiterhin *Kein Modell konfiguriert* an, bis irgendein Modell als Organisationsstandard mit dem Stern markiert ist, selbst wenn Sie längst mehrere registriert haben: sie beschreibt den Rückfall, nicht Ihre Modellliste.
 - **Jedes aktive Modell namentlich**: heftet Kad an ein bestimmtes Modell, unabhängig vom Standard. Archivierte Modelle werden nicht angeboten.
 
+Im gehosteten Dienst steht unter der Auswahlliste *Kad verwendet nicht das inklusive Kadratis-Modell.*, wenn die angezeigte Option Kad auf einem Ihrer eigenen Modelle laufen lässt: dem Standardmodell oder einem namentlich gewählten Modell. Die Zeile folgt der Auswahl schon vor dem Speichern. Auf der Seite [KI-Modelle](ai-models.md) zeigt das inklusive Modell dann **Nicht verwendet**, wenn auch kein Agent darauf läuft.
+
 Es gibt also zwei Wege, den Chat zum Laufen zu bringen: Markieren Sie auf der Seite [KI-Modelle](ai-models.md) einen Standard mit dem Stern und lassen Sie diese Auswahlliste auf der ersten Option stehen, oder wählen Sie hier ein Modell namentlich aus. Das Anheften hier funktioniert unabhängig davon, ob ein Standard existiert.
 
 Der Hinweis darunter verlinkt direkt auf die Seite **KI-Modelle**, aus der jede Option dieser Liste stammt. Anbieter, Endpunkt oder API-Schlüssel tragen Sie hier nicht mehr ein, und einen separaten Multimodal-Schalter gibt es ebenfalls nicht mehr: ob ein Modell Bilder lesen kann, ist eine Eigenschaft des Modells und wird einmalig in dessen Editor festgelegt.
@@ -112,19 +114,20 @@ Beide Wege teilen den Rest:
 - Eine Grenze von 60 MCP-Anfragen pro Minute für jeden Schlüssel und jede Verbindung. Darüber hinaus werden Anfragen mit einem `Retry-After`-Header abgelehnt, der die Wartezeit in Sekunden angibt.
 - Dasselbe [MCP-Protokoll](#mcp-journal).
 
-Die Karte **MCP-Schlüssel und -Verbindungen** zeigt eine Schaltfläche **Schlüssel erstellen**, die **Serveradresse**, mit der sich Clients verbinden (mit einer Kopierschaltfläche), die Obergrenze **Max. Lebensdauer des Schlüssels (Tage)** und eine Tabelle mit **Bezeichnung**, **Typ**, **Person**, **Erstellt**, **Läuft ab**, **Zuletzt verwendet** und **Status** (**Aktiv** oder **Widerrufen**).
+Die Karte **MCP-Schlüssel und -Verbindungen** zeigt eine Schaltfläche **Schlüssel erstellen** (für Personen mit MCP-Zugriff, siehe unten), die **Serveradresse**, mit der sich Clients verbinden (mit einer Kopierschaltfläche), die Obergrenze **Max. Lebensdauer des Schlüssels (Tage)** und eine Tabelle mit **Bezeichnung**, **Typ**, **Person**, **Erstellt**, **Läuft ab**, **Zuletzt verwendet** und **Status** (**Aktiv** oder **Widerrufen**).
 
 Die Spalte **Typ** zeigt **API-Schlüssel** oder **Verbindung**. Eine Verbindungszeile zeigt den Namen der Anwendung und den Host, zu dem sie zurückkehrt, zum Beispiel *Claude · claude.ai*. Ein API-Schlüssel zeigt sein Präfix neben seiner Bezeichnung, zum Beispiel *Laptop · abcd1234*. **Person** nennt, wer den Schlüssel erstellt oder die Verbindung genehmigt hat.
 
 ### Einen Schlüssel erstellen
 
-Schlüssel werden nur auf dieser Seite erstellt, also erstellen sie nur Personen, die diese Seite öffnen können (`ai_settings:admin`, mit MCP-Zugriff). Ein Schlüssel liest mit den Zugriffsrechten der Person, die ihn erstellt hat: Ein von einem Administrator erstellter Schlüssel liest alles, was ein Administrator sieht. Behandeln Sie ihn wie das Passwort dieser Person, und bevorzugen Sie eine Verbindung, wenn sich jeder Benutzer anmelden kann.
+Schlüssel werden auf dieser Seite von Personen erstellt, die sie öffnen können und zusätzlich MCP-Zugriff haben (`ai_mcp:reader` oder Administrator): Nur für sie erscheint **Schlüssel erstellen**. Ein Schlüssel liest mit den Zugriffsrechten der Person, die ihn erstellt hat: Ein von einem Administrator erstellter Schlüssel liest alles, was ein Administrator sieht. Behandeln Sie ihn wie das Passwort dieser Person, und bevorzugen Sie eine Verbindung, wenn sich jeder Benutzer anmelden kann.
 
 1. Klicken Sie auf **Schlüssel erstellen**.
-2. Geben Sie eine beschreibende **Bezeichnung** ein (zum Beispiel „Cursor auf meinem Laptop“).
-3. Klicken Sie auf **Erstellen**. Kadratis generiert ein einmaliges Geheimnis, das mit `kanap_mcp_` beginnt.
+2. Geben Sie eine beschreibende **Bezeichnung** ein (zum Beispiel „Cursor auf meinem Laptop“). **Erstellen** bleibt deaktiviert, bis eine Bezeichnung eingegeben ist.
+3. Klicken Sie auf **Erstellen**. Kadratis generiert ein einmaliges Geheimnis, das mit `kanap_mcp_` beginnt. Eine Ablehnung wird im Dialog angezeigt.
 4. Kopieren Sie das Geheimnis sofort. Es wird nur einmal angezeigt und kann später nicht mehr abgerufen werden.
 5. Wenn Sie Claude Code mit einem Schlüssel verwenden, kopieren Sie den **Claude-Code-Befehl** unter dem Schlüssel. Er enthält bereits die Serveradresse und den Schlüssel.
+6. Klicken Sie auf **Fertig**. Wenn Sie den Dialog schließen, mit **Fertig** oder Escape, verschwindet das Geheimnis vom Bildschirm: Das nächste **Schlüssel erstellen** beginnt einen neuen Schlüssel.
 
 Das Feld **Max. Lebensdauer des Schlüssels (Tage)** begrenzt, wie lange ein neu ausgestellter Schlüssel gültig sein kann, unabhängig davon, was die Anfrage verlangt. Es begrenzt auch, wie lange eine Verbindung besteht. Lassen Sie es leer, wenn es keine Ablaufbegrenzung geben soll. Dieses Feld gehört zu den Einstellungen weiter oben und nicht zu dieser Karte: Es wird von der Schaltfläche **Einstellungen speichern** geschrieben, nicht durch das Erstellen eines Schlüssels.
 

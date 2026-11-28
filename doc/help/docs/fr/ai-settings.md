@@ -23,6 +23,8 @@ Un unique sélecteur décide quel modèle répond aux questions du chat :
 - **Aucun modèle configuré** : affiché lorsqu'il n'y a ni modèle par défaut *ni* modèle inclus, c'est-à-dire le cas d'une installation on-premise. Notez que cette option continue d'afficher *Aucun modèle configuré* tant qu'aucun modèle n'a été marqué d'une étoile comme modèle par défaut de l'organisation, même si vous en avez déjà enregistré plusieurs : elle décrit le repli, pas votre registre.
 - **N'importe quel modèle actif, par son nom** : épinglez Kad à un modèle précis, indépendamment du modèle par défaut. Les modèles archivés ne sont pas proposés.
 
+Sur le service hébergé, une ligne sous le sélecteur indique *Kad n'utilise pas le modèle inclus de Kadratis.* quand l'option affichée fait fonctionner Kad sur l'un de vos modèles : le modèle par défaut, ou un modèle choisi par son nom. Elle suit le sélecteur avant l'enregistrement. Sur la page [Modèles IA](ai-models.md), le modèle inclus affiche alors **Non utilisé** si aucun agent ne fonctionne dessus non plus.
+
 Il y a donc deux façons de faire fonctionner le chat : marquer un modèle par défaut d'une étoile sur la page [Modèles IA](ai-models.md) et laisser ce sélecteur sur la première option, ou choisir ici un modèle par son nom. Épingler un modèle ici fonctionne qu'un modèle par défaut existe ou non.
 
 L'indication en dessous renvoie directement vers la page **Modèles IA**, d'où proviennent toutes les options de la liste. Il n'y a plus ici ni fournisseur, ni point d'accès, ni clé API à renseigner, ni commutateur multimodal distinct : la capacité du modèle à lire les images est une propriété du modèle, définie une fois pour toutes dans son éditeur.
@@ -112,19 +114,20 @@ Les deux modes partagent le reste :
 - Une limite de 60 requêtes MCP par minute pour chaque clé et chaque connexion. Au-delà, les requêtes sont refusées avec un en-tête `Retry-After` qui indique le nombre de secondes à attendre.
 - Le même [journal MCP](#mcp-journal).
 
-La carte **Clés et connexions MCP** présente un bouton **Créer une clé**, l'**Adresse du serveur** à laquelle les clients se connectent (avec un bouton de copie), le plafond **Durée de vie maximale de la clé (jours)** et un tableau avec **Libellé**, **Type**, **Personne**, **Créé**, **Expire**, **Dernière utilisation** et **Statut** (**Active** ou **Révoquée**).
+La carte **Clés et connexions MCP** présente un bouton **Créer une clé** (pour les personnes qui ont l'accès MCP, voir plus bas), l'**Adresse du serveur** à laquelle les clients se connectent (avec un bouton de copie), le plafond **Durée de vie maximale de la clé (jours)** et un tableau avec **Libellé**, **Type**, **Personne**, **Créé**, **Expire**, **Dernière utilisation** et **Statut** (**Active** ou **Révoquée**).
 
 La colonne **Type** indique **Clé API** ou **Connexion**. Une ligne de connexion affiche le nom de l'application et l'hôte vers lequel elle revient, par exemple *Claude · claude.ai*. Une clé API affiche son préfixe à côté de son libellé, par exemple *Portable · abcd1234*. **Personne** nomme qui a créé la clé ou approuvé la connexion.
 
 ### Créer une clé
 
-Les clés se créent uniquement sur cette page : seules les personnes qui peuvent l'ouvrir en créent (`ai_settings:admin`, avec l'accès MCP). Une clé lit avec les accès de la personne qui l'a créée : une clé créée par un administrateur lit tout ce qu'un administrateur voit. Traitez-la comme le mot de passe de cette personne, et préférez une connexion quand chaque utilisateur peut se connecter.
+Les clés se créent sur cette page, par les personnes qui peuvent l'ouvrir et ont aussi l'accès MCP (`ai_mcp:reader`, ou Administrateur) : **Créer une clé** n'apparaît que pour elles. Une clé lit avec les accès de la personne qui l'a créée : une clé créée par un administrateur lit tout ce qu'un administrateur voit. Traitez-la comme le mot de passe de cette personne, et préférez une connexion quand chaque utilisateur peut se connecter.
 
 1. Cliquez sur **Créer une clé**.
-2. Saisissez un **Libellé** descriptif (par exemple « Cursor sur mon portable »).
-3. Cliquez sur **Créer**. Kadratis génère un secret à usage unique qui commence par `kanap_mcp_`.
+2. Saisissez un **Libellé** descriptif (par exemple « Cursor sur mon portable »). **Créer** reste désactivé tant qu'aucun libellé n'est saisi.
+3. Cliquez sur **Créer**. Kadratis génère un secret à usage unique qui commence par `kanap_mcp_`. Un refus s'affiche dans le dialogue.
 4. Copiez le secret immédiatement. Il n'est affiché qu'une seule fois et ne pourra pas être récupéré par la suite.
 5. Si vous utilisez Claude Code avec une clé, copiez la **Commande Claude Code** affichée sous la clé. Elle contient déjà l'adresse du serveur et la clé.
+6. Cliquez sur **Terminé**. Fermer le dialogue, avec **Terminé** ou Échap, retire le secret de l'écran : le prochain **Créer une clé** commence une nouvelle clé.
 
 Le champ **Durée de vie maximale de la clé (jours)** limite la durée de vie de toute clé nouvellement émise, quelle que soit la valeur demandée. Il limite aussi la durée d'une connexion. Laissez-le vide pour aucune limite d'expiration. Ce champ appartient aux paramètres ci-dessus plutôt qu'à cette carte : il est écrit par le bouton **Enregistrer les paramètres**, et non par la création d'une clé.
 

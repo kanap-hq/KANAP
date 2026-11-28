@@ -157,7 +157,8 @@
         "tenantDefault": "Modèle par défaut ({{name}})",
         "noDefault": "Aucun modèle configuré",
         "hintPrefix": "Les modèles se gèrent dans la page",
-        "hintLink": "Modèles IA"
+        "hintLink": "Modèles IA",
+        "notBuiltin": "{{agent}} n'utilise pas le modèle inclus de {{product}}."
       }
     },
     "prtg": {
@@ -2912,6 +2913,13 @@
     "visionNo": "Texte seul",
     "usedByChat": "{{agent}}",
     "usedByNone": "Non assigné",
+    "usedBy": {
+      "title": "Utilisé par {{list}}",
+      "agents_one": "{{count}} agent",
+      "agents_other": "{{count}} agents",
+      "fallbackAgents": "les agents sans modèle propre",
+      "none": "Aucun usage"
+    },
     "messagesThisMonth_one": "{{count}} message ce mois-ci",
     "messagesThisMonth_other": "{{count}} messages ce mois-ci",
     "edit": "Modifier",
@@ -2936,7 +2944,8 @@
       "caption": "Opéré par {{product}}, inclus dans votre abonnement",
       "model": "Géré par {{product}}",
       "quota": "{{used}} / {{limit}} messages inclus ce mois-ci",
-      "fallback": "Utilisé quand aucun autre modèle n'est assigné"
+      "fallback": "Utilisé quand aucun autre modèle n'est assigné",
+      "notUsed": "Non utilisé"
     },
     "errors": {
       "loadFailed": "Les modèles IA n'ont pas pu être chargés.",
@@ -2973,9 +2982,10 @@
       "priceCacheReadPlaceholder": "ex. 0,30",
       "cacheReadHint": "Prix par million de tokens relus depuis le cache du fournisseur (souvent « cached input » sur sa page tarifs). Vide : le coût d’entrée s’applique, ou un dixième de celui-ci pour Anthropic.",
       "advanced": "Paramètres avancés",
-      "timeout": "Délai d'attente",
-      "timeoutPlaceholder": "ex. 120",
-      "timeoutHint": "Durée d'attente, en secondes, avant d'abandonner l'appel. Laissez vide pour la limite standard. Les modèles locaux ont souvent besoin de plus de temps.",
+      "timeout": "Délai (secondes)",
+      "timeoutHint": "Durée d'attente avant d'abandonner l'appel. Les modèles locaux ont souvent besoin de plus de temps.",
+      "timeoutDefaultBoth": "{{agent}} : {{chat}}, agents : {{agents}}",
+      "timeoutRange": "{{min}} à {{max}}",
       "reasoningEffort": "Effort de raisonnement",
       "reasoningEffortDefault": "Par défaut du fournisseur",
       "reasoningEffortHint": "Combien le modèle réfléchit avant de répondre. Plus d’effort : réponses plus soignées, plus lentes et plus chères. Les niveaux proposés dépendent du fournisseur et du modèle. « Tester la connexion » indique l’effort envoyé.",
