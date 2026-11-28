@@ -10,7 +10,7 @@ Die hier beschriebenen Dateien sind der Vertrag, auf den Sie sich stützen. Ihre
 |---|---|---|
 | **OPEX-Zeile** | Laufende Kosten, von Jahr zu Jahr fortgeführt | **Budgetverwaltung > Budgetzeilen** |
 | **CAPEX-Zeile** | Eine Investition, von Jahr zu Jahr fortgeführt | **Budgetverwaltung > Budgetzeilen** |
-| **Budgetspalten** | Die fünf Betragsspalten, die jede Budgetzeile für jedes Jahr hat | **Budgetverwaltung > Administration > Budgetspalten** |
+| **Budgetspalten** | Die fünf Betragsspalten, die jede Budgetzeile für jedes Jahr hat | **Budgetverwaltung > Einstellungen > Budgetspalten** |
 | **Zeilen unter Menge und Preis** | Die Zeilen, aus denen eine Spalte berechnet werden kann | Der Tab **Budget** einer Budgetzeile |
 | **Zuordnung** | Wie die Kosten eines Jahres einer Budgetzeile auf Unternehmen oder Abteilungen verteilt werden | Der Tab **Zuordnungen** einer Budgetzeile |
 | **Unternehmen** | Eine juristische Person, die zahlt, mit ihren jährlichen Kennzahlen | **Stammdaten > Unternehmen** |
@@ -21,7 +21,7 @@ Die hier beschriebenen Dateien sind der Vertrag, auf den Sie sich stützen. Ihre
 | **Analysedimension** und **Wert** | Freie Klassifizierungen für das Reporting | **Stammdaten > Analysedimensionen** |
 | **Arbeitstagekalender** | Arbeitstage pro Monat und Jahr, für Preise pro Tag | **Stammdaten > Arbeitstagekalender** |
 | **Benutzer** | IT- und Fachverantwortliche, Budgetverantwortliche | **Administration > Benutzer** |
-| **Währungen** | Erlaubte Währungen, Reportingwährung, Wechselkurse | **Budgetverwaltung > Administration > Währungen** |
+| **Währungen** | Erlaubte Währungen, Reportingwährung, Wechselkurse | **Budgetverwaltung > Einstellungen > Währungen** |
 
 ## Wie die Objekte zusammenhängen
 

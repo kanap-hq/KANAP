@@ -8,7 +8,7 @@ Pour le séquencement à l'échelle du portefeuille et le travail de roadmap, ut
 
 ## Où la trouver
 
-- Espace de travail : **Portefeuille**
+- Module : **Portefeuille**
 - Chemin : **Portefeuille > Projets**
 
 ## Autorisations

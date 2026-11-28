@@ -4,7 +4,7 @@ Auf der Seite Beispieldaten lernen Sie Kadratis mit einem fertigen Datensatz ken
 
 ## Wo Sie die Seite finden
 
-- Arbeitsbereich: **Administration** › **Beispieldaten**
+- Modul: **Administration** › **Beispieldaten**
 - Route: `/admin/sample-data`
 - Wer sie nutzen kann: Benutzer mit der Rolle **Administrator**. Eine Berechtigungsstufe eines Moduls, auch `admin`, gewährt keinen Zugriff.
 - Nur in Cloud-Arbeitsbereichen verfügbar. Installationen auf Ihren eigenen Servern haben diese Seite nicht.

@@ -3872,7 +3872,7 @@ export class AiQueryExecutor {
     }
     if (entityType === 'roles') return this.roleDetail(context, input.entity_id);
     if (entityType === 'data_access') {
-      throw new BadRequestException('A row of Admin › Data access has no detail of its own: read the person with get_entity_detail on users (by name or email), which gives their data access.');
+      throw new BadRequestException('A row of Administration › Data access has no detail of its own: read the person with get_entity_detail on users (by name or email), which gives their data access.');
     }
     const entityId = await this.resolveDetailEntityId(context, entityType, input.entity_id);
     if (entityType === 'cost_centers') {

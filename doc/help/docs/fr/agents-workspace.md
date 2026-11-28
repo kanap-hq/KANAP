@@ -124,7 +124,7 @@ Automatique ne signifie jamais sans supervision. Les limites de sécurité stric
 
 ## Paramètres
 
-L'onglet **Paramètres** est réservé aux administrateurs et regroupe tous les réglages de configuration de l'agent. Il **s'enregistre automatiquement** : il n'y a pas de boutons d'enregistrement, et chaque section affiche un petit indicateur **Enregistrement…** / **Enregistré** dans son en-tête à mesure que vos modifications sont écrites. Si vous changez d'onglet alors qu'un enregistrement est encore en cours, celui-ci est d'abord mené à son terme. S'il échoue, le changement d'onglet est annulé pour que l'erreur et votre modification restent à l'écran.
+L'onglet **Paramètres** est réservé aux administrateurs et regroupe tous les paramètres de configuration de l'agent. Il **s'enregistre automatiquement** : il n'y a pas de boutons d'enregistrement, et chaque section affiche un petit indicateur **Enregistrement…** / **Enregistré** dans son en-tête à mesure que vos modifications sont écrites. Si vous changez d'onglet alors qu'un enregistrement est encore en cours, celui-ci est d'abord mené à son terme. S'il échoue, le changement d'onglet est annulé pour que l'erreur et votre modification restent à l'écran.
 
 Les sections suivent l'ordre dans lequel on configure réellement un agent : décidez ce qu'il regarde, puis ce qu'il peut faire, puis ce qu'il est, puis ce qu'il sait, puis à quel rythme il peut travailler.
 

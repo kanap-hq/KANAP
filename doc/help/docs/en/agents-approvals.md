@@ -4,7 +4,7 @@ Approvals is the daily review queue for everything your AI Agents want to do. Be
 
 ## Where to find it
 
-- Workspace: **AI Agents**
+- Module: **AI Agents**
 - Path: **AI Agents → Approvals**
 - Route: `/agents/approvals`
 - Permission: requires AI to be enabled on the instance and the AI Agents Reader role (`ai_agents:reader`) to read the queue. Deciding a proposal, acknowledging an attention row, and re-running an analysis need the contributor level (`ai_agents:contributor`).

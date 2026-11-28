@@ -1757,8 +1757,8 @@
         },
         "budget_line": {
           "title": "Una línea presupuestaria",
-          "hint": "Abra una línea y explore sus pestañas. Presupuesto, la pestaña principal, muestra 4 columnas de 5 posibles, todas configurables en «Administración». La pestaña Relaciones vincula el presupuesto con los elementos que soporta.",
-          "hintRecord": "Está en la ficha {{record}}. Explore las pestañas. Presupuesto, la pestaña principal, muestra 4 columnas de 5 posibles, todas configurables en «Administración». La pestaña Relaciones vincula el presupuesto con los elementos que soporta."
+          "hint": "Abra una línea y explore sus pestañas. Presupuesto, la pestaña principal, muestra 4 columnas de 5 posibles, todas configurables en «Configuración». La pestaña Relaciones vincula el presupuesto con los elementos que soporta.",
+          "hintRecord": "Está en la ficha {{record}}. Explore las pestañas. Presupuesto, la pestaña principal, muestra 4 columnas de 5 posibles, todas configurables en «Configuración». La pestaña Relaciones vincula el presupuesto con los elementos que soporta."
         },
         "budget_report": {
           "title": "Un informe",

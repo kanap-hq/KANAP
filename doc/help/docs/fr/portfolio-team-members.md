@@ -18,7 +18,7 @@ Rendez-vous dans **Portefeuille > Contributeurs** pour voir les contributeurs co
 
 ## Où trouver cette page
 
-- Espace de travail : **Portefeuille**
+- Module : **Portefeuille**
 - Chemin : **Portefeuille > Contributeurs**
 - Chemin en libre-service : **Paramètres > Profil > Paramètres contributeur** (ouvre votre propre profil contributeur)
 - Autorisations :
@@ -45,7 +45,7 @@ Les contributeurs sont affichés sous forme de cartes regroupées par équipe.
 - Utilisez le menu déroulant **Filtrer par équipe** pour n'afficher que les contributeurs d'une équipe spécifique
 - Sélectionnez **Non assigné** pour voir les contributeurs qui n'ont pas encore été assignés à une équipe
 - Sélectionnez **Toutes les équipes** pour voir tout le monde
-- Utilisez le menu déroulant **Filtrer par type de contrat** à côté pour n'afficher que les internes, que les externes, etc. Les deux filtres se combinent et s'appliquent aussi bien à la liste qu'à la matrice de compétences. L'organigramme dispose de ses propres réglages, car une ligne hiérarchique traverse les équipes.
+- Utilisez le menu déroulant **Filtrer par type de contrat** à côté pour n'afficher que les internes, que les externes, etc. Les deux filtres se combinent et s'appliquent aussi bien à la liste qu'à la matrice de compétences. L'organigramme dispose de ses propres paramètres, car une ligne hiérarchique traverse les équipes.
 
 **Groupes d'équipes** :
 - Chaque équipe est affichée comme une carte repliable avec un badge de nombre de membres

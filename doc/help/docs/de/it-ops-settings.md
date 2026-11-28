@@ -6,7 +6,7 @@ Für eine bessere Lesbarkeit der Karte enthalten **Entitäten** und **Serverroll
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **IT-Landschaft**
+- Modul: **IT-Landschaft**
 - Pfad: **IT-Landschaft → Einstellungen**, der letzte Eintrag des Menüs
 - Berechtigungen:
   - Sie benötigen mindestens `settings:reader`, um den Tab **Listen** anzuzeigen.

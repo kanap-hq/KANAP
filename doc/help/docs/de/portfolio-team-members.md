@@ -18,7 +18,7 @@ Navigieren Sie zu **Portfolio > Mitwirkende**, um konfigurierte Mitwirkende grup
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Portfolio**
+- Modul: **Portfolio**
 - Pfad: **Portfolio > Mitwirkende**
 - Self-Service-Pfad: **Einstellungen > Profil > Mitwirkenden-Einstellungen** (öffnet Ihr eigenes Mitwirkenden-Profil)
 - Berechtigungen:

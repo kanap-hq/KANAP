@@ -6,7 +6,7 @@ import { AiBuiltinUsageService } from '../../platform/ai-builtin-usage.service';
 import { AGENT_NAME, PRODUCT_NAME } from '../../../config/product';
 
 export const AGENT_RUNS_AWAIT_BUILTIN_CONFIRMATION =
-  `Agent runs are paused until an administrator confirms the ${PRODUCT_NAME} included model in Admin > ${AGENT_NAME}.`;
+  `Agent runs are paused until an administrator confirms the ${PRODUCT_NAME} included model in Administration > ${AGENT_NAME}.`;
 
 type BuiltinUse = 'builtin' | 'awaiting_confirmation' | 'other';
 

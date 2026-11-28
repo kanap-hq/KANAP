@@ -31,14 +31,14 @@
     "conflict": "En conflicto, fuera de dev"
   },
   "userMenu": {
-    "myProfile": "Mi perfil",
+    "myProfile": "Mi cuenta",
     "logout": "Cerrar sesión"
   },
   "sidebar": {
     "ops": {
       "contracts": "Contratos",
       "reporting": "Informes",
-      "administration": "Administración",
+      "administration": "Configuración",
       "budgetLines": "Líneas presupuestarias"
     },
     "masterData": {
@@ -129,6 +129,6 @@
   },
   "breadcrumbs": {
     "contributors": "Colaboradores",
-    "settings": "Configuración"
+    "settings": "Mi cuenta"
   }
 }

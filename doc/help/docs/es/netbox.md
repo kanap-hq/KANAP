@@ -6,7 +6,7 @@ El reparto de responsabilidades es deliberado. Netbox sigue siendo la referencia
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Panorama IT**
+- Módulo: **Panorama IT**
 - Ruta: **Panorama IT > Configuración**, pestaña **Netbox**
 - Ruta: `/it/settings?tab=netbox`. La dirección anterior `/it/netbox` abre la misma pestaña.
 - Configuración de la conexión: **Administración > Integraciones**

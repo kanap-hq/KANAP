@@ -4,7 +4,7 @@ Use la página Integraciones para conectar Kadratis con herramientas de terceros
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Administración**
+- Módulo: **Administración**
 - Ruta: **Administración → Integraciones**
 - Ruta: `/admin/integrations`
 - Permiso: `ai_settings:admin` o `infrastructure:admin`. Cada tarjeta tiene su propio requisito: las conexiones de GLPI y de supervisión necesitan `ai_settings:admin`, la conexión de Netbox necesita `infrastructure:admin`. Solo ve las tarjetas que tiene permiso para configurar.

@@ -90,7 +90,7 @@ How they work:
 
 ### Amounts without an exchange rate
 
-When a line's currency has no exchange rate for a year, the budget reports, **Staffing by month** and **Cost per FTE** leave that line's amounts for the year out of their figures. A one-line warning at the top of the report names them, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings on the missing rate. When the warning names a single currency and year, the manual rate dialog opens directly. The warning does not print. See [Manual rates](currencies.md#manual-rates).
+When a line's currency has no exchange rate for a year, the budget reports, **Staffing by month** and **Cost per FTE** leave that line's amounts for the year out of their figures. A one-line warning at the top of the report names them, for example "Excluding 3 lines with no exchange rate: USD 2026." People with the Admin level on Budget settings and operations also see **Enter a rate**, which opens the currency settings on the missing rate. When the warning names a single currency and year, the manual rate dialog opens directly. The warning does not print. See [Manual rates](currencies.md#manual-rates).
 
 The two chargeback reports leave these amounts out of every figure: paid, consumed, departments and intercompany flows. Each report stays balanced on what it counts. The same warning shows above the report.
 

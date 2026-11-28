@@ -4,7 +4,7 @@ L'onglet **Applications connectées** liste les applications qui peuvent lire vo
 
 ## Où la trouver
 
-- Chemin : cliquez sur votre avatar (en haut à droite), puis sur **Mon profil**, puis sur l'onglet **Applications connectées**
+- Chemin : cliquez sur votre avatar (en haut à droite), puis sur **Mon compte**, puis sur l'onglet **Applications connectées**
 - Route : `/settings/connected-apps`
 - Affiché quand MCP est activé pour votre espace de travail et que vous avez l'accès MCP (le rôle **AI MCP User**, ou un rôle qui l'inclut)
 

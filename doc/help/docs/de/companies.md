@@ -142,7 +142,7 @@ Der Details-Tab verwaltet die **Jahreskennzahlen**. Wechseln Sie mit den Jahres-
 - Jeder Wert wird für das ausgewählte Jahr gespeichert, wenn Sie das Feld verlassen (oder die Eingabetaste drücken). Ein ungültiger Wert zeigt unter dem Feld eine Meldung, zum Beispiel „Geben Sie eine ganze Zahl ein, 0 oder mehr." Das Feld zeigt wieder den gespeicherten Wert, und die Meldung bleibt, bis Sie erneut tippen
 - Zahlen folgen der Sprache von Kadratis: Geben Sie auf Deutsch, Französisch oder Spanisch `12,5` ein, auf Englisch `12.5`
 - Jedes Jahr wird für sich gespeichert: Beim Jahreswechsel werden die Werte dieses Jahres geladen
-- Sind die Unternehmenszahlen des Jahres **eingefroren**, sind die Felder gesperrt, und ein Hinweis besagt, dass ein Budgetadministrator sie wieder freigeben kann (**Budgetverwaltung > Administration > Stammdaten einfrieren**)
+- Sind die Unternehmenszahlen des Jahres **eingefroren**, sind die Felder gesperrt, und ein Hinweis besagt, dass ein Budgetadministrator sie wieder freigeben kann (**Budgetverwaltung > Einstellungen > Stammdaten einfrieren**)
 - Für das Bearbeiten der Kennzahlen benötigen Sie `companies:member`
 
 ## Kontenplan
@@ -205,7 +205,7 @@ Viele Bereiche der App sind jahresbezogen. Unternehmen haben Kennzahlen pro Jahr
 **Einfrieren und Kopieren**:
 
 - Sie können ein Jahr nach Finalisierung **einfrieren**, um Bearbeitungen zu verhindern.
-- Verwenden Sie **Jahreskennzahlen kopieren** unter **Budgetverwaltung > Administration**, um Kennzahlen von einem Jahr in ein anderes zu kopieren (wählen Sie, welche Kennzahlen kopiert werden sollen). Eingefrorene Jahre können nicht überschrieben werden.
+- Verwenden Sie **Jahreskennzahlen kopieren** unter **Budgetverwaltung > Einstellungen**, um Kennzahlen von einem Jahr in ein anderes zu kopieren (wählen Sie, welche Kennzahlen kopiert werden sollen). Eingefrorene Jahre können nicht überschrieben werden.
 
 ## CSV-Import/Export
 
@@ -261,6 +261,6 @@ Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbo
 - **Kontenplan**: Weisen Sie Unternehmen Kontenpläne zu, um eine konsistente Kontenverwendung bei OPEX/CAPEX-Zeilen sicherzustellen.
 - **Umsatz**: Geben Sie Werte in Millionen der Basiswährung des Unternehmens ein (z. B. 2,5 = 2,5 Millionen in dieser Währung).
 - **Mitarbeiterzahl** ist der häufigste Zuordnungstreiber; halten Sie ihn für das aktuelle Jahr aktuell.
-- **Eingefrorene Kennzahlen**: Sie können sie weiterhin einsehen, aber Bearbeitungen sind gesperrt, bis ein Budgetadministrator das Jahr unter **Budgetverwaltung > Administration > Stammdaten einfrieren** freigibt.
+- **Eingefrorene Kennzahlen**: Sie können sie weiterhin einsehen, aber Bearbeitungen sind gesperrt, bis ein Budgetadministrator das Jahr unter **Budgetverwaltung > Einstellungen > Stammdaten einfrieren** freigibt.
 - **Spaltenauswahl**: Verwenden Sie sie, um Spalten wie Stadt, Adresse, Bundesland oder Erstellt je nach Bedarf ein- oder auszublenden.
 - **Kennzahlenspalten verlinken zu Details**: Das Anklicken eines Mitarbeiterzahl-, IT-Benutzer- oder Umsatzwerts öffnet direkt den Details-Tab für dieses Unternehmen.

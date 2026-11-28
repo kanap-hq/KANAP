@@ -6,7 +6,7 @@ A diferencia de un recurso compartido de archivos, la Base de conocimiento no es
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Base de conocimiento**
+- Módulo: **Base de conocimiento**
 - Permisos:
   - `knowledge:reader` le permite abrir y leer documentos
   - `knowledge:member` le permite crear, editar, comentar, organizar carpetas y gestionar metadatos de documentos
@@ -49,7 +49,7 @@ En una biblioteca restringida:
 
 Use bibliotecas restringidas para contenido sensible (procedimientos de seguridad, documentos de RRHH, material ejecutivo) donde desee un control de acceso de grano fino dentro de la Base de conocimiento en lugar de depender solo de roles globales.
 
-Las bibliotecas restringidas también limitan lo que un agente de IA puede leer. Cuando un administrador restringe un agente a un conjunto de bibliotecas elegido en sus ajustes **Fuentes de conocimiento y web**, esa elección se combina con las bibliotecas que el administrador que lo configura ya puede leer: un agente nunca ve más que la persona que lo configuró. Una biblioteca restringida a la que el administrador no puede acceder también permanece invisible para el agente.
+Las bibliotecas restringidas también limitan lo que un agente de IA puede leer. Cuando un administrador restringe un agente a un conjunto de bibliotecas elegido en su configuración **Fuentes de conocimiento y web**, esa elección se combina con las bibliotecas que el administrador que lo configura ya puede leer: un agente nunca ve más que la persona que lo configuró. Una biblioteca restringida a la que el administrador no puede acceder también permanece invisible para el agente.
 
 ### Carpetas
 

@@ -313,7 +313,7 @@ async function testTheExecutorsCheckTheRight(h: Harness, runner: QueryRunner, s:
     ['aggregate role_permissions', () => h.aggregate.execute(context, { entity_type: 'role_permissions', group_by: 'level' })],
   ] as const;
   for (const [name, call] of calls(withoutRight)) {
-    await assert.rejects(call, /You need the right to administer users \(the right the Admin › Roles screen asks for\)/, `${name}: refused without the right`);
+    await assert.rejects(call, /You need the right to administer users \(the right the Administration › Roles screen asks for\)/, `${name}: refused without the right`);
   }
   for (const [name, call] of calls(ctx(runner, s, 'limited'))) {
     await assert.rejects(call, /reserved to people with access to all data/, `${name}: refused in limited access`);

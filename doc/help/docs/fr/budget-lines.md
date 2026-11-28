@@ -108,7 +108,7 @@ La liste (dans **Gestion budgétaire > Lignes budgétaires**) contient les ligne
 - **Fournisseur** : Le nom du fournisseur
 - **Société payeuse** : Quelle société paie cette ligne
 - **Compte** : Le numéro et le nom du compte comptable
-- **Budget A** et **Atterrissage prévu A** : Les montants de l'année en cours de la colonne par défaut et de la dernière colonne affichée (ouvre l'onglet **Budget** pour cette année). Avec les réglages standard, ce sont Budget et Atterrissage prévu. Quand la colonne par défaut est aussi la dernière affichée, une seule colonne de montant apparaît. Voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)
+- **Budget A** et **Atterrissage prévu A** : Les montants de l'année en cours de la colonne par défaut et de la dernière colonne affichée (ouvre l'onglet **Budget** pour cette année). Avec les paramètres standard, ce sont Budget et Atterrissage prévu. Quand la colonne par défaut est aussi la dernière affichée, une seule colonne de montant apparaît. Voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)
 - Quand un administrateur budgétaire change la colonne par défaut, la liste suit. Si vous n'avez jamais choisi de colonnes de montants, elle affiche la nouvelle colonne par défaut et la dernière colonne affichée. Si vous avez choisi les vôtres, elles restent et la nouvelle colonne par défaut de l'année en cours s'ajoute à côté. Vous pouvez la masquer à nouveau dans le sélecteur de colonnes
 - **Dimensions obligatoires** : Une colonne par dimension activée obligatoire pour l'un ou l'autre type, à son nom. Un nouvel espace de travail n'en a aucune
 
@@ -160,7 +160,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - Cliquez sur un en-tête de colonne pour trier par ordre croissant ou décroissant. Toutes les colonnes se trient, y compris chaque colonne de montant et chaque colonne ETP. Les lignes sans ETP viennent en dernier dans l'ordre croissant
 - Les colonnes de texte se trient dans l'ordre de lecture naturel : un nom accentué se trie à côté de son équivalent sans accent (par exemple « Électricité » à côté de « Electricite »), et les minuscules passent avant les majuscules à égalité de lettres
 - Une colonne de dimension se trie dans l'ordre des valeurs de la dimension, défini dans [Dimensions analytiques](analytics.md#ordonner-les-valeurs), puis par nom. Les lignes sans valeur viennent en dernier dans l'ordre croissant
-- Le tri par défaut suit la colonne par défaut de l'année en cours, du plus grand au plus petit (**Budget A** avec les réglages standard). Les boutons **Préc.** et **Suiv.** de l'espace de travail suivent le même ordre
+- Le tri par défaut suit la colonne par défaut de l'année en cours, du plus grand au plus petit (**Budget A** avec les paramètres standard). Les boutons **Préc.** et **Suiv.** de l'espace de travail suivent le même ordre
 - La liste mémorise votre dernier tri, votre recherche et vos filtres quand vous revenez
 
 **Ligne de totaux** :
@@ -173,7 +173,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 **Montants sans taux de change** :
 
 - Quand la devise d'une ligne n'a pas de taux de change pour une année, son montant de cette année s'affiche dans sa propre devise avec une petite marque orange. Survolez la marque pour lire, par exemple, « Pas de taux de change USD pour 2026 : exclu des totaux. »
-- Les totaux excluent ces montants, et un avertissement d'une ligne sous la liste les indique, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre les paramètres des devises sur le taux manquant. Quand l'avertissement ne cite qu'une devise et une année, la fenêtre de saisie du taux s'ouvre directement.
+- Les totaux excluent ces montants, et un avertissement d'une ligne sous la liste les indique, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les personnes qui ont le niveau Administrateur sur Paramètres et opérations du budget voient aussi **Saisir un taux**, qui ouvre les paramètres des devises sur le taux manquant. Quand l'avertissement ne cite qu'une devise et une année, la fenêtre de saisie du taux s'ouvre directement.
 - Dans une colonne triée, ces lignes viennent en dernier. Un filtre de montant ne les conserve jamais.
 - Voir [Taux manuels](currencies.md#taux-manuels) pour saisir vous-même le taux manquant.
 
@@ -256,7 +256,7 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. 
 - Changer d'onglet, passer à la ligne précédente ou suivante, ou fermer l'espace de travail enregistre d'abord les modifications en attente. Si un enregistrement échoue, vous restez sur place et un message en donne la raison : aucune modification n'est perdue sans que vous le sachiez
 - **Ctrl+S** (**Cmd+S** sur Mac) enregistre immédiatement
 - Si un enregistrement ne peut pas passer tout de suite parce qu'un autre enregistrement est en cours sur la même donnée, Kadratis le relance automatiquement
-- Si une opération budgétaire groupée est en cours (par exemple la copie ou le vidage d'une colonne dans l'Administration budgétaire), les modifications sont mises en attente avec le message « Une autre opération sur le budget est en cours. Réessayez quand elle sera terminée. » Réessayez une fois l'opération terminée
+- Si une opération budgétaire groupée est en cours (par exemple la copie ou le vidage d'une colonne dans les paramètres du budget), les modifications sont mises en attente avec le message « Une autre opération sur le budget est en cours. Réessayez quand elle sera terminée. » Réessayez une fois l'opération terminée
 
 **Modifications simultanées** :
 
@@ -337,7 +337,7 @@ L'onglet Budget porte les montants de la ligne, année par année et colonne par
     - **Prévision** : Une colonne de planification complémentaire, masquée par défaut
     - **Réalisé** : La dépense réelle, telle qu'elle est enregistrée pendant l'année
     - **Atterrissage prévu** : Votre meilleure estimation du chiffre de fin d'année
-- Un administrateur budgétaire peut renommer les colonnes, en masquer certaines et choisir la colonne par défaut dans **Gestion budgétaire > Administration > Colonnes budgétaires** (voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)). Une colonne masquée garde ses montants
+- Un administrateur budgétaire peut renommer les colonnes, en masquer certaines et choisir la colonne par défaut dans **Gestion budgétaire > Paramètres > Colonnes budgétaires** (voir [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires)). Une colonne masquée garde ses montants
 - Chaque colonne affichée a une carte sous les onglets d'année : son nom, son total pour l'année, l'origine de ses montants et sa période, par exemple « Répartition linéaire » et « 9 mois, avril à décembre ». Une colonne vide affiche son zéro seul. Survolez une carte pour voir ses lignes de quantité et prix
 - Cliquez sur une carte pour travailler sur cette colonne. L'onglet s'ouvre sur la [colonne par défaut](budget-operations.md#colonnes-budgetaires), ou sur la première colonne affichée qui n'est pas gelée quand la colonne par défaut est gelée
 - Avec une seule colonne affichée, il n'y a pas de cartes : l'éditeur montre directement la colonne
@@ -403,7 +403,7 @@ Sur une colonne vide, un clic sur un onglet bascule aussitôt. Sur une colonne q
 **Effacer la colonne** :
 
 - **Effacer la colonne**, à droite sous l'éditeur, remet à zéro tous les mois de la colonne active, par exemple avant de saisir tout le montant sur un seul mois. Lorsque la colonne contient des montants, vous confirmez d'abord : « Effacer tous les mois de la colonne Budget pour 2026 ? Les autres colonnes ne changent pas. » Cela compte comme une modification à la main
-- Pour retirer à la fois les montants et la période d'une colonne pour toutes les lignes, utilisez **Vider une colonne budgétaire** dans l'Administration budgétaire
+- Pour retirer à la fois les montants et la période d'une colonne pour toutes les lignes, utilisez **Vider une colonne budgétaire** dans les paramètres du budget
 
 **Résultat par mois** :
 
@@ -424,8 +424,8 @@ Sur une colonne vide, un clic sur un onglet bascule aussitôt. Sur une colonne q
 
 **Comportement du gel** :
 
-- Si les colonnes budgétaires d'une année sont gelées pour le type de la ligne (via l'Administration budgétaire), la carte de chaque colonne gelée affiche un cadenas, de même que son en-tête dans le tableau
-- Une colonne gelée est en lecture seule. Son éditeur indique, par exemple, « La colonne Budget 2026 est gelée » et « Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / dégeler les données. », avec son total et l'origine de ses montants
+- Si les colonnes budgétaires d'une année sont gelées pour le type de la ligne (via les paramètres du budget), la carte de chaque colonne gelée affiche un cadenas, de même que son en-tête dans le tableau
+- Une colonne gelée est en lecture seule. Son éditeur indique, par exemple, « La colonne Budget 2026 est gelée » et « Lecture seule. Un administrateur peut la dégeler dans Paramètres › Geler / dégeler les données. », avec son total et l'origine de ses montants
 - Lorsque des colonnes sont gelées, une ligne sous le graphique indique « Certaines colonnes sont gelées et en lecture seule. »
 - Chaque colonne peut être gelée indépendamment
 
@@ -433,7 +433,7 @@ Sur une colonne vide, un clic sur un onglet bascule aussitôt. Sur une colonne q
 
 - Un court libellé sur chaque carte indique d'où viennent les montants de la colonne, suivi de sa période. Avec une seule colonne, il se trouve sous le titre de l'éditeur
 - **Répartition linéaire**, **Répartition 4-4-5** ou **Répartition par trimestre** : les montants proviennent d'une répartition
-- **Copié depuis Budget 2025 +2 %** : les montants proviennent de **Copier les colonnes budgétaires** dans l'Administration budgétaire, ou de **Partir de**, avec le pourcentage affiché lorsqu'il y en a un
+- **Copié depuis Budget 2025 +2 %** : les montants proviennent de **Copier les colonnes budgétaires** dans les paramètres du budget, ou de **Partir de**, avec le pourcentage affiché lorsqu'il y en a un
 - **Quantité et prix · 3 lignes · 1.00 ETP** : les montants proviennent de lignes, avec leur nombre et, lorsque les lignes comptent des personnes ou des jours, l'ETP de la colonne. Cet ETP est la moyenne sur l'année. Survolez la carte pour voir les lignes, par exemple « Chef de projet : 1 personne × 1 200 par jour, 5 jours par mois, févr. à juil. »
 - **Modifié à la main** : un mois a été modifié dans le tableau ou par un import de fichier budgétaire
 - Un montant à une date affiche sa date au lieu d'une période, par exemple « Le 10 février 2026 »
@@ -521,9 +521,9 @@ Cliquez sur **Ajouter une ligne** sous le tableau pour ajouter une ligne, et sur
 **Lorsque les montants changent autrement** : les lignes restent sur la colonne comme référence, en lecture seule. Sous **Montant** ou **Par mois**, une ligne indique combien de lignes sont gardées, par exemple « 4 lignes gardées en référence (48 000). », suivie d'un lien **Utiliser à nouveau les lignes**. Le lien enregistre les lignes telles quelles et recalcule la colonne à partir d'elles. Choisir l'onglet **Quantité et prix** fait de même, après une question. Pour modifier une ligne gardée en référence, utilisez d'abord à nouveau les lignes, puis modifiez-la.
 
 - Passer la colonne en **Montant** ou en **Par mois**, saisir un mois dans le tableau, ou **Effacer la colonne**
-- **Copier les colonnes budgétaires** dans l'Administration budgétaire, ou **Partir de** : lorsque les montants source n'étaient pas calculés à partir de lignes, la copie reporte les lignes de la colonne source comme référence. Une colonne calculée à partir de ses lignes le reste, avec ses prix augmentés du pourcentage. Voir [Copier une colonne construite à partir de lignes](budget-operations.md#copier-une-colonne-construite-a-partir-de-lignes)
+- **Copier les colonnes budgétaires** dans les paramètres du budget, ou **Partir de** : lorsque les montants source n'étaient pas calculés à partir de lignes, la copie reporte les lignes de la colonne source comme référence. Une colonne calculée à partir de ses lignes le reste, avec ses prix augmentés du pourcentage. Voir [Copier une colonne construite à partir de lignes](budget-operations.md#copier-une-colonne-construite-a-partir-de-lignes)
 - Les jours ouvrés d'un calendrier ont changé : l'onglet **Quantité et prix** indique, par exemple, « Jours ouvrés modifiés depuis le dernier calcul : mars : 20 jours, maintenant 19. », suivi de **Utiliser à nouveau les lignes**. Rien ne change sur la colonne tant que vous ne cliquez pas sur **Utiliser à nouveau les lignes**. Les lignes restent modifiables entre-temps
-- **Vider une colonne budgétaire** dans l'Administration budgétaire retire les lignes avec les montants. Voir [Vider une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire)
+- **Vider une colonne budgétaire** dans les paramètres du budget retire les lignes avec les montants. Voir [Vider une colonne budgétaire](budget-operations.md#reinitialiser-une-colonne-budgetaire)
 - Un fichier budgétaire change les mois d'une colonne et laisse ses lignes. Voir [Charger un budget depuis un tableur](budget-file.md)
 
 #### Quand le compte attend une saisie en quantité et prix { #quantity-and-price-expected }
@@ -584,7 +584,7 @@ L'onglet Ventilations répartit la dépense d'une année entre vos sociétés et
 
 **Méthodes par défaut et méthodes épinglées** :
 
-- L'option **par défaut**, affichée comme *Effectif (par défaut)* tant que votre organisation n'a pas configuré une autre méthode, suit le réglage défini dans **Gestion budgétaire > Administration > Méthode de ventilation par défaut**. Chaque ligne laissée sur la valeur par défaut est recalculée lorsqu'un administrateur modifie ce réglage
+- L'option **par défaut**, affichée comme *Effectif (par défaut)* tant que votre organisation n'a pas configuré une autre méthode, suit le réglage défini dans **Gestion budgétaire > Paramètres > Méthode de ventilation par défaut**. Chaque ligne laissée sur la valeur par défaut est recalculée lorsqu'un administrateur modifie ce réglage
 - Ce réglage peut également restreindre la valeur par défaut à une **sélection de sociétés** (par exemple l'entité qui porte le budget IT) : l'inducteur ne s'applique alors qu'à ces sociétés, et l'option affiche *Par défaut (n sociétés)*
 - **Effectif**, **Utilisateurs IT** et **Chiffre d'affaires** épinglent cette méthode sur la ligne : une méthode épinglée continue de fonctionner même si la valeur par défaut de l'organisation change par la suite
 - Les lignes dotées d'une ventilation manuelle ne sont jamais affectées par le réglage par défaut
@@ -770,7 +770,7 @@ Un fichier budgétaire ne change jamais le type d'une ligne. Voir [Charger un bu
 
 13. **Utilisez les liens profonds** : Cliquez directement sur une colonne budgétaire dans la liste pour accéder à l'onglet Budget de cette année. Cliquez sur la colonne Tâche pour accéder aux tâches de la ligne dans l'onglet Vue d'ensemble. Vous gagnez du temps de navigation.
 
-14. **Gelez les budgets après la clôture de fin d'année** : Utilisez l'Administration budgétaire pour geler les budgets de l'année précédente une fois le réalisé finalisé, ce qui empêche les modifications accidentelles.
+14. **Gelez les budgets après la clôture de fin d'année** : Utilisez les paramètres du budget pour geler les budgets de l'année précédente une fois le réalisé finalisé, ce qui empêche les modifications accidentelles.
 
 ---
 
@@ -782,7 +782,7 @@ L'accès aux lignes budgétaires est contrôlé par la ressource Budget, qui cou
 - `budget:member` : Créer et modifier les lignes, changer leur type, mettre à jour les budgets et ventilations, téléverser et supprimer les pièces jointes, gérer les relations, liens et contacts, modifier des lignes en masse
 - `budget:admin` : Tous les droits membre plus import et export, opérations budgétaires (copier les colonnes budgétaires, avec leurs montants et leurs ventilations, et vider une colonne budgétaire) et la suppression des lignes depuis la liste ou depuis la ligne
 
-Le gel des colonnes budgétaires relève de l'administration budgétaire (`budget_ops:admin`).
+Le gel des colonnes budgétaires demande le niveau Administrateur sur Paramètres et opérations du budget (`budget_ops:admin`).
 
 L'accès aux données peut limiter une personne aux lignes de certaines sociétés ou de certains centres de coûts. Elle voit alors ces lignes et celles sur lesquelles elle est nommée, une ligne qu'elle voit en Lecture affiche « Lecture seule dans votre accès », et la suppression de lignes et les opérations budgétaires sont réservées aux personnes qui ont accès à toutes les données. Elle peut modifier des lignes en masse, sur les lignes de son accès. Voir [Accès aux données](data-access.md).
 

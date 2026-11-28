@@ -48,9 +48,9 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 ## 5. A colleague
 
-**Admin > Users**
+**Administration > Users**
 
-**What to do.** Click **New**, enter your colleague's **Email**, choose a role under **Roles**, for example **Budget Reader**, then **Save and invite**. To let your colleagues sign in with Microsoft Entra ID, set up SSO in **Admin > Authentication**.
+**What to do.** Click **New**, enter your colleague's **Email**, choose a role under **Roles**, for example **Budget Reader**, then **Save and invite**. To let your colleagues sign in with Microsoft Entra ID, set up SSO in **Administration > Authentication**.
 
 **What you see.** Your colleague shows with the status **Invited** and receives an email with a link to choose a password. **Budget Reader** reads the lines, the contracts and the reports without changing them.
 

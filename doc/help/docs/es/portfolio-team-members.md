@@ -18,7 +18,7 @@ Navegue a **Portafolio > Colaboradores** para ver los colaboradores configurados
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Portafolio**
+- Módulo: **Portafolio**
 - Ruta: **Portafolio > Colaboradores**
 - Ruta de autoservicio: **Configuración > Perfil > Configuración de colaborador** (abre su propio perfil de colaborador)
 - Permisos:

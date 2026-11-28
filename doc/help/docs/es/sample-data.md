@@ -4,7 +4,7 @@ Use la página Datos de ejemplo para descubrir Kadratis con un conjunto de datos
 
 ## Dónde encontrarla
 
-- Espacio de trabajo: **Administración** › **Datos de ejemplo**
+- Módulo: **Administración** › **Datos de ejemplo**
 - Ruta: `/admin/sample-data`
 - Quién puede usarla: los usuarios con el rol **Administrador**. Un nivel de permiso de módulo, incluso `admin`, no da acceso.
 - Disponible solo en espacios de trabajo en la nube. Las instalaciones en sus propios servidores no tienen esta página.

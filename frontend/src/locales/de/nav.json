@@ -31,14 +31,14 @@
     "conflict": "Im Konflikt, nicht in dev übernommen"
   },
   "userMenu": {
-    "myProfile": "Mein Profil",
+    "myProfile": "Mein Konto",
     "logout": "Abmelden"
   },
   "sidebar": {
     "ops": {
       "contracts": "Verträge",
       "reporting": "Berichte",
-      "administration": "Administration",
+      "administration": "Einstellungen",
       "budgetLines": "Budgetzeilen"
     },
     "masterData": {
@@ -129,6 +129,6 @@
   },
   "breadcrumbs": {
     "contributors": "Mitwirkende",
-    "settings": "Einstellungen"
+    "settings": "Mein Konto"
   }
 }

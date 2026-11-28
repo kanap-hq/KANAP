@@ -4,7 +4,7 @@ Use the Branding page to apply your company identity across Kadratis. You set th
 
 ## Where to find it
 
-- Workspace: **Admin** menu → **Branding**
+- Module: **Administration** menu → **Branding**
 - Route: `/admin/branding`
 - Permission: `organization:reader` to view, `organization:admin` to change. A reader sees the same fields, greyed out, with no button
 - Available only on tenant hosts (not on the platform-admin host)

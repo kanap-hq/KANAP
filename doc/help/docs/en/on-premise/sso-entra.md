@@ -118,21 +118,21 @@ docker compose -f infra/compose.onprem.yml up -d api
 ## Step 6: Connect Entra in Kadratis
 
 1. Log in as an admin
-2. Go to **Admin → Authentication**
+2. Go to **Administration → Authentication**
 3. In the **Microsoft Entra ID** card, click **Connect**
 4. Approve consent in Entra
 5. Use **Test sign-in** to confirm end-to-end login
 
 ## Step 7: Authorize the daily directory sync
 
-The **Daily directory sync** block appears on **Admin → Authentication** once Entra is connected. Until a Microsoft Entra administrator approves it, the block shows:
+The **Daily directory sync** block appears on **Administration → Authentication** once Entra is connected. Until a Microsoft Entra administrator approves it, the block shows:
 
 > Not authorized yet. A Microsoft Entra administrator must grant Kadratis permission to read directory users.
 
 To approve it:
 
 1. Sign in to Kadratis as an admin who is also a Microsoft Entra administrator
-2. Go to **Admin → Authentication → Daily directory sync**
+2. Go to **Administration → Authentication → Daily directory sync**
 3. Click **Grant access in Microsoft Entra**
 4. Approve the request on Microsoft's consent page
 
@@ -156,11 +156,11 @@ Disabling an account signs the person out immediately and blocks any further sig
 The workspace's last active administrator stays active, even when the directory removed or deactivated them, and the block names them: **Account kept active (last administrator): {name}**. Their account becomes a local account, out of the sync from then on: **Forgot password** on the sign-in page sends them a link to set a password. Without e-mail configured, set it as described in [Password Reset](operations.md#password-reset). One sync runs at a time per workspace: while one runs, **Sync now** does nothing and shows **A sync is already running.**
 
 
-The block on **Admin → Authentication** reports the outcome: **Last synced {date}: N accounts refreshed, N disabled.** after a successful run, or **The last sync failed: {message}** otherwise. **Sync now** runs the same job on demand.
+The block on **Administration → Authentication** reports the outcome: **Last synced {date}: N accounts refreshed, N disabled.** after a successful run, or **The last sync failed: {message}** otherwise. **Sync now** runs the same job on demand.
 
 ## Disconnecting
 
-**Disconnect** on **Admin → Authentication** removes the connection and makes every account linked to Entra a local account, after a confirmation that gives how many accounts keep their password and how many have none. No email is sent. With email configured, an account without a password sets one with **Forgot password** on the sign-in page. Without email, set it as described in [Password Reset](operations.md#password-reset). An administrator without a password gives one in the confirmation. The daily directory sync stops for the workspace.
+**Disconnect** on **Administration → Authentication** removes the connection and makes every account linked to Entra a local account, after a confirmation that gives how many accounts keep their password and how many have none. No email is sent. With email configured, an account without a password sets one with **Forgot password** on the sign-in page. Without email, set it as described in [Password Reset](operations.md#password-reset). An administrator without a password gives one in the confirmation. The daily directory sync stops for the workspace.
 
 ## Troubleshooting
 
@@ -173,7 +173,7 @@ The block on **Admin → Authentication** reports the outcome: **Last synced {da
 - **Bad redirect after login**: Check that `APP_BASE_URL` is the exact address users open. The redirect comes from `APP_BASE_URL`, and the `Host` and `X-Forwarded-Host` headers do not change it. Also check that the proxy sends `X-Forwarded-Proto`.
 - **"Not authorized yet" on the directory sync**: either the application permission `User.Read.All` was never added to the app registration, or a Microsoft Entra administrator has not granted tenant-wide consent yet. Check both, then click **Sync now**.
 - **Sign-ins started failing right after granting admin consent**: the consent replaced the app's grant with the configured permission list, dropping `openid`, `profile`, `email` and `offline_access`. Add them as configured delegated permissions and grant consent again.
-- **Expired client secret**: Microsoft returns `AADSTS7000222`. Users only see the generic "Sign-in with Microsoft did not complete. Try again or ask your administrator." on the login page. To confirm the cause, look at **Admin → Authentication → Daily directory sync**: the failure line quotes the Microsoft error code. Re-running **Connect** also shows it. Create a new client secret in **Certificates & secrets**, update `ENTRA_CLIENT_SECRET`, and recreate the API (`docker compose -f infra/compose.onprem.yml up -d api`).
+- **Expired client secret**: Microsoft returns `AADSTS7000222`. Users only see the generic "Sign-in with Microsoft did not complete. Try again or ask your administrator." on the login page. To confirm the cause, look at **Administration → Authentication → Daily directory sync**: the failure line quotes the Microsoft error code. Re-running **Connect** also shows it. Create a new client secret in **Certificates & secrets**, update `ENTRA_CLIENT_SECRET`, and recreate the API (`docker compose -f infra/compose.onprem.yml up -d api`).
 
 ## Security Notes
 

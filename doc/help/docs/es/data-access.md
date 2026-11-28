@@ -235,7 +235,7 @@ Aunque sus roles lo permitan, una persona limitada no puede:
 - usar las pantallas de los agentes de IA;
 - cambiar la configuración de los contratos, la personalización y las tareas programadas.
 
-Los controles que acompañan a estas operaciones (las vistas previas de impacto, la comprobación antes de una eliminación) también están reservados. Esos comandos están ocultos. Una petición que llega de todos modos al servidor se rechaza con «Esta acción está reservada a las personas con acceso a todos los datos.» Una persona con un rol de administración del presupuesto conserva el archivo de presupuesto dentro de su acceso.
+Los controles que acompañan a estas operaciones (las vistas previas de impacto, la comprobación antes de una eliminación) también están reservados. Esos comandos están ocultos. Una petición que llega de todos modos al servidor se rechaza con «Esta acción está reservada a las personas con acceso a todos los datos.» Una persona con el nivel Administrador en Presupuesto (`budget:admin`) conserva el archivo de presupuesto dentro de su acceso.
 
 ## Cuando el acceso a los datos no está disponible
 

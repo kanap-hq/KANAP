@@ -18,10 +18,10 @@ export function importRightRefusal(
 ): ForbiddenException {
   const moduleName = aiResourceLabel(resource as Resource, language);
   if (!moduleName) {
-    throw new Error(`Import right has no name on Admin › Roles: ${resource}`);
+    throw new Error(`Import right has no name on Administration › Roles: ${resource}`);
   }
   const levelName = aiPermissionLevelLabel(level, language);
-  const message = `Import refused: the missing right is "${levelName}" on "${moduleName}", as Admin › Roles names it. `
+  const message = `Import refused: the missing right is "${levelName}" on "${moduleName}", as Administration › Roles names it. `
     + 'Tell the person that right in those words. Suggest they ask a person who has it, or import the file on the screen if they have the right there, and stop. '
     + 'Create no row of the file, and do not offer to create its rows one by one.';
   return moduleRightRequired(resource, level, message);
