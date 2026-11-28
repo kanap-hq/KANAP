@@ -1,7 +1,7 @@
 import i18n, { type InitOptions, type Resource, type ResourceLanguage } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { z } from 'zod';
-import { formatCount, frenchSpacing } from './formatters';
+import { formatCount, frenchSpacing, sentencePeriod } from './formatters';
 import { mergeAbbreviationPeriods } from '../lib/dateFormat';
 import { bundledLocales, localeLoaders, type TranslationTree } from './localeSource';
 import { AGENT_NAME, PRODUCT_NAME } from '../config/product';
@@ -189,6 +189,8 @@ function registerPostInit(): void {
   // `{{count, count}}` in a text writes the number with the thousand separator of the language.
   i18n.services.formatter?.add('count', (value: unknown, lng: string | undefined) =>
     typeof value === 'number' ? formatCount(value, lng ?? 'en') : String(value ?? ''));
+  // `{{name, sentencePeriod}}` writes the sentence's period after a name, unless the name already ends with one.
+  i18n.services.formatter?.add('sentencePeriod', (value: unknown) => sentencePeriod(value));
 }
 
 i18n
