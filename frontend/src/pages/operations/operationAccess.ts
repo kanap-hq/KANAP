@@ -6,8 +6,8 @@ const hasBudgetAccess = (hasLevel: HasLevel) => ['budget', 'budget_ops'].some((r
 const budgetAdmin = (hasLevel: HasLevel) => hasLevel('budget_ops', 'admin');
 /**
  * A settings page of the budget: it opens to every reader of budget
- * administration (Budget Reader, Budget Member), read-only. Changing it stays `budget_ops:admin`,
- * read in the page itself.
+ * administration (the shipped Budget Member, not the Budget Reader), read-only. Changing it stays
+ * `budget_ops:admin`, read in the page itself.
  */
 const budgetSettingsReader = (hasLevel: HasLevel) => hasLevel('budget_ops', 'reader');
 /** Copy budget columns and clear a column: the Admin level on the budget lines, both types alike. */

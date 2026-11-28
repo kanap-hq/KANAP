@@ -40,6 +40,7 @@ export class FreezeController {
   @UseGuards(PermissionGuard)
   @RequireAnyLevel([
     { resource: 'budget_ops', level: 'reader' },
+    { resource: 'budget', level: 'reader' },
     { resource: 'companies', level: 'reader' },
     { resource: 'departments', level: 'reader' },
   ])

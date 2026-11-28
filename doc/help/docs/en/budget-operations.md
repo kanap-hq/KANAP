@@ -30,11 +30,11 @@ The landing page has two sections. Each card links to a dedicated tool. An empty
 | Cards | Who sees them |
 |---|---|
 | Currencies, Freeze / unfreeze data | Budget settings and operations at Admin level (`budget_ops:admin`) |
-| Budget columns, Default allocation method | Budget settings and operations at Reader level (`budget_ops:reader`), read-only. Changing them needs the admin level (`budget_ops:admin`) |
+| Budget columns, Default allocation method | Budget settings and operations at Reader level (`budget_ops:reader`, as the built-in Budget Member), read-only. Changing them needs the admin level (`budget_ops:admin`) |
 | Copy budget columns, Clear a budget column | Budget at admin level (`budget:admin`). Every **Line type** (**All**, **OPEX**, **CAPEX**) opens with it |
 | Freeze master data, Copy yearly metrics | Users with access to the budget who are admins of Budget settings and operations, companies or departments. Company and department admins act on their own scope |
 
-The built-in Budget Administrator role sees every card. Budget Member and Budget Reader see the **Budget columns** and **Default allocation method** cards, which open read-only for them, and no operation. A person whose data access is limited sees none of these cards.
+The built-in Budget Administrator role sees every card. Budget Member sees the **Budget columns** and **Default allocation method** cards, which open read-only, and no operation. Budget Reader reads the budget lines and not their settings: the **Settings** entry of the Budget management menu does not show for it. A person whose data access is limited sees none of these cards.
 
 The budget columns are Budget, Revision, Forecast, Actuals and Expected landing. These are the standard names. Your organisation can rename them, hide some and choose a default column in [Budget columns](#budget-columns). Every page below shows the names your organisation chose.
 
@@ -329,7 +329,7 @@ The default is resolved every time allocations are displayed, so editing it re-d
 
 ### Permissions
 
-Changing the default needs `budget_ops:admin`. Budget Reader and Budget Member, who read Budget settings and operations (`budget_ops:reader`), open the page read-only: the same fields, which they cannot change, and no **Restore the default allocation** button. They can still choose the fiscal year to read. A person whose data access is limited cannot open the page.
+Changing the default needs `budget_ops:admin`. Budget Member, who reads Budget settings and operations (`budget_ops:reader`), opens the page read-only: the same fields, which they cannot change, and no **Restore the default allocation** button. They can still choose the fiscal year to read. Budget Reader and a person whose data access is limited cannot open the page.
 
 Each change writes its own entry in the audit log.
 
@@ -378,7 +378,7 @@ A change the server refuses is undone at once: the name or the switch shows its 
 
 ### Permissions
 
-Changing the settings needs the Admin level on Budget settings and operations (`budget_ops:admin`). Budget Reader and Budget Member, who read Budget settings and operations (`budget_ops:reader`), open the page read-only: the same table, which they cannot change. A person whose data access is limited cannot open the page.
+Changing the settings needs the Admin level on Budget settings and operations (`budget_ops:admin`). Budget Member, who reads Budget settings and operations (`budget_ops:reader`), opens the page read-only: the same table, which they cannot change. Budget Reader and a person whose data access is limited cannot open the page.
 
 If the settings cannot be loaded, the page shows one line, "The column settings could not be loaded.", and no controls.
 

@@ -44,7 +44,7 @@ const BUILT_IN_ROLES: Array<{
     name: 'Budget Reader',
     description: 'Read-only access to budget data and reports',
     permissions: {
-      budget: 'reader', budget_ops: 'reader', contracts: 'reader',
+      budget: 'reader', contracts: 'reader',
       analytics: 'reader', reporting: 'reader', tasks: 'reader',
       companies: 'reader', departments: 'reader', cost_centers: 'reader', working_day_profiles: 'reader', suppliers: 'reader',
       contacts: 'reader', accounts: 'reader'
