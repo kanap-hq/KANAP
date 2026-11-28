@@ -52,7 +52,7 @@ export class PortfolioTeamsController {
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.create(tenantId, body, { manager: req?.queryRunner?.manager });
+    return this.svc.create(tenantId, body, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
@@ -64,7 +64,7 @@ export class PortfolioTeamsController {
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.update(id, tenantId, body, { manager: req?.queryRunner?.manager });
+    return this.svc.update(id, tenantId, body, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
@@ -72,7 +72,7 @@ export class PortfolioTeamsController {
   @Delete(':id')
   delete(@Param('id') id: string, @Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.delete(id, tenantId, { manager: req?.queryRunner?.manager });
+    return this.svc.delete(id, tenantId, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
@@ -80,6 +80,6 @@ export class PortfolioTeamsController {
   @Post('seed-defaults')
   seedDefaults(@Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.seedDefaults(tenantId, req?.queryRunner?.manager);
+    return this.svc.seedDefaults(tenantId, req?.queryRunner?.manager, req?.user?.sub ?? null);
   }
 }

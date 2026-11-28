@@ -77,7 +77,7 @@ export class PortfolioClassificationController {
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.createSource(tenantId, body, { manager: req?.queryRunner?.manager });
+    return this.svc.createSource(tenantId, body, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
@@ -89,7 +89,7 @@ export class PortfolioClassificationController {
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.updateSource(id, tenantId, body, { manager: req?.queryRunner?.manager });
+    return this.svc.updateSource(id, tenantId, body, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
@@ -97,7 +97,7 @@ export class PortfolioClassificationController {
   @Delete('sources/:id')
   deleteSource(@Param('id') id: string, @Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.deleteSource(id, tenantId, { manager: req?.queryRunner?.manager });
+    return this.svc.deleteSource(id, tenantId, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   // ============================================
@@ -144,7 +144,7 @@ export class PortfolioClassificationController {
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.createCategory(tenantId, body, { manager: req?.queryRunner?.manager });
+    return this.svc.createCategory(tenantId, body, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
@@ -156,7 +156,7 @@ export class PortfolioClassificationController {
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.updateCategory(id, tenantId, body, { manager: req?.queryRunner?.manager });
+    return this.svc.updateCategory(id, tenantId, body, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
@@ -164,7 +164,7 @@ export class PortfolioClassificationController {
   @Delete('categories/:id')
   deleteCategory(@Param('id') id: string, @Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.deleteCategory(id, tenantId, { manager: req?.queryRunner?.manager });
+    return this.svc.deleteCategory(id, tenantId, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   // ============================================
@@ -210,7 +210,7 @@ export class PortfolioClassificationController {
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.createStream(tenantId, body, { manager: req?.queryRunner?.manager });
+    return this.svc.createStream(tenantId, body, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
@@ -229,7 +229,7 @@ export class PortfolioClassificationController {
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.updateStream(id, tenantId, body, { manager: req?.queryRunner?.manager });
+    return this.svc.updateStream(id, tenantId, body, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
@@ -237,7 +237,7 @@ export class PortfolioClassificationController {
   @Delete('streams/:id')
   deleteStream(@Param('id') id: string, @Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.deleteStream(id, tenantId, { manager: req?.queryRunner?.manager });
+    return this.svc.deleteStream(id, tenantId, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   // ============================================
@@ -276,7 +276,7 @@ export class PortfolioClassificationController {
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.createTaskType(tenantId, body, { manager: req?.queryRunner?.manager });
+    return this.svc.createTaskType(tenantId, body, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
@@ -288,7 +288,7 @@ export class PortfolioClassificationController {
     @Req() req: any,
   ) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.updateTaskType(id, tenantId, body, { manager: req?.queryRunner?.manager });
+    return this.svc.updateTaskType(id, tenantId, body, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   @UseGuards(PermissionGuard)
@@ -296,7 +296,7 @@ export class PortfolioClassificationController {
   @Delete('task-types/:id')
   deleteTaskType(@Param('id') id: string, @Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.deleteTaskType(id, tenantId, { manager: req?.queryRunner?.manager });
+    return this.svc.deleteTaskType(id, tenantId, { manager: req?.queryRunner?.manager, userId: req?.user?.sub ?? null });
   }
 
   private deleteCheck(kind: ClassificationKind, body: { ids?: unknown }, req: any) {
@@ -313,6 +313,6 @@ export class PortfolioClassificationController {
   @Post('seed-defaults')
   seedDefaults(@Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
-    return this.svc.seedAllDefaults(tenantId, req?.queryRunner?.manager);
+    return this.svc.seedAllDefaults(tenantId, req?.queryRunner?.manager, req?.user?.sub ?? null);
   }
 }
