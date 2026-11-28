@@ -23,7 +23,7 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 |-------------|-----------|
 | **Congelar / descongelar datos** | Bloquear columnas presupuestarias para prevenir cambios |
 | **Copiar columnas presupuestarias** | Copiar importes entre años y columnas, con un porcentaje opcional, y asignaciones a otro año |
-| **Restablecer columna presupuestaria** | Borrar todos los datos de una columna específica |
+| **Vaciar una columna presupuestaria** | Borrar todos los datos de una columna específica |
 | **Congelar datos maestros** | Bloquear los indicadores de empresas y departamentos para un año. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
 | **Copiar indicadores anuales** | Copiar los indicadores de empresas y departamentos de un año a otro. Consulte [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md) |
 
@@ -31,7 +31,7 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 |---|---|
 | Monedas, Congelar / descongelar datos | Administración presupuestaria con nivel de administrador (`budget_ops:admin`) |
 | Columnas presupuestarias, Método de asignación por defecto | Administración presupuestaria con nivel de lector (`budget_ops:reader`), en solo lectura. Para cambiarlos se necesita el nivel de administrador (`budget_ops:admin`) |
-| Copiar columnas presupuestarias, Restablecer columna presupuestaria | Presupuesto con nivel de administrador (`budget:admin`). Las pestañas **Todo**, **OPEX** y **CAPEX** se abren todas con este nivel |
+| Copiar columnas presupuestarias, Vaciar una columna presupuestaria | Presupuesto con nivel de administrador (`budget:admin`). Cada **Tipo de línea** (**Todo**, **OPEX**, **CAPEX**) se abre con este nivel |
 | Congelar datos maestros, Copiar indicadores anuales | Usuarios con acceso al presupuesto que son administradores de la administración presupuestaria, de empresas o de departamentos. Los administradores de empresas y departamentos actúan sobre su propio alcance |
 
 El rol integrado Administrador de presupuesto ve todas las tarjetas. Miembro de presupuesto y Lector de presupuesto ven las tarjetas **Columnas presupuestarias** y **Método de asignación por defecto**, que se abren para ellos en solo lectura, y ninguna operación. Una persona con acceso a los datos limitado no ve ninguna de estas tarjetas.
@@ -68,7 +68,7 @@ Sin el nivel Administrador en la administración presupuestaria, la página mues
 
 - Previene ediciones en columnas congeladas en el espacio de trabajo de las líneas de ese tipo. Los campos muestran un candado
 - Bloquea importaciones a columnas congeladas
-- Bloquea operaciones de copia y restablecimiento dirigidas a columnas congeladas
+- Bloquea operaciones de copia y vaciado dirigidas a columnas congeladas
 - Rechaza eliminar una línea, o cambiar su tipo, mientras tenga importes en una columna congelada de los años afectados
 - **No** afecta el acceso de lectura: los datos siguen siendo visibles
 - También se aplica a las columnas ocultas. Una columna congelada sigue congelada cuando se oculta, y las importaciones en ella se siguen rechazando
@@ -249,7 +249,7 @@ Antes de elegir una columna, una línea indica: «Elija una columna para ver los
 - **Líneas con un importe**
 - **Valor total**
 
-Debajo aparecen las cinco líneas con los importes más altos de la columna, con un importe negativo clasificado por su tamaño, y luego «y N líneas más». En la pestaña **Todo**, una columna **Tipo de línea** indica **OPEX** o **CAPEX**. Una frase dice a continuación qué se elimina al vaciar, para cuántas líneas, y que no se puede deshacer.
+Debajo aparecen las cinco líneas con los importes más altos de la columna, con un importe negativo clasificado por su tamaño, y luego «y N líneas más». Con **Tipo de línea** en **Todo**, una columna **Tipo de línea** indica **OPEX** o **CAPEX**. Una frase dice a continuación qué se elimina al vaciar, para cuántas líneas, y que no se puede deshacer.
 
 **Ver las N líneas** abre bajo el panel una cuadrícula con todas las líneas del tipo elegido y su valor actual en la columna. La cuadrícula se ordena por cualquier columna, y el nombre de la línea la abre en una pestaña nueva. Los importes que se borrarán aparecen en peso medio; los valores vacíos aparecen atenuados. **Ocultar las líneas** la cierra.
 
@@ -271,7 +271,7 @@ Haga clic en **Vaciar la columna** en el diálogo para continuar, o en **Cancela
 
 - El botón **Vaciar la columna** sigue disponible cuando ninguna línea tiene importe, para poder quitar igualmente los periodos de reparto
 - No hay ninguna columna preseleccionada, así que siempre elige usted la columna que se vacía
-- Las columnas congeladas no pueden vaciarse. Descongélelas primero. En la pestaña **Todo**, cuando la columna solo está congelada para un tipo, el mensaje lo nombra, por ejemplo «La columna Presupuesto de 2026 está congelada en CAPEX. Descongélela antes de vaciarla, o vacíe solo el otro tipo.»
+- Las columnas congeladas no pueden vaciarse. Descongélelas primero. Con **Tipo de línea** en **Todo**, cuando la columna solo está congelada para un tipo, el mensaje lo nombra, por ejemplo «La columna Presupuesto de 2026 está congelada en CAPEX. Descongélela antes de vaciarla, o vacíe solo el otro tipo.»
 - Mientras se ejecuta otra operación presupuestaria, el vaciado se rechaza y el mensaje junto al botón lo indica
 - El diálogo de confirmación requiere reconocimiento explícito
 
@@ -364,7 +364,7 @@ Por defecto, Presupuesto, Revisión, Realizado y Aterrizaje previsto están visi
 
 ### Qué cambia la configuración
 
-- **Las columnas ocultas** desaparecen de las listas, del selector de columnas, de la pestaña Presupuesto, de los selectores de los informes, de las páginas de copia y de restablecimiento y del panel. Conservan sus importes: ocultar una columna nunca borra datos, y volver a mostrarla recupera los importes. Las columnas ocultas siguen aceptando importaciones mediante el archivo de presupuesto, y las congelaciones se les siguen aplicando. La página de congelación también muestra las columnas ocultas, con la marca **Oculta**, para que pueda congelarlas como las demás
+- **Las columnas ocultas** desaparecen de las listas, del selector de columnas, de la pestaña Presupuesto, de los selectores de los informes, de las páginas de copia y de vaciado y del panel. Conservan sus importes: ocultar una columna nunca borra datos, y volver a mostrarla recupera los importes. Las columnas ocultas siguen aceptando importaciones mediante el archivo de presupuesto, y las congelaciones se les siguen aplicando. La página de congelación también muestra las columnas ocultas, con la marca **Oculta**, para que pueda congelarlas como las demás
 - **La columna por defecto** está preseleccionada en todos los informes. Ordena la lista de líneas presupuestarias y su navegación anterior y siguiente. El mosaico **Top líneas**, clasificado por **Importe** o por **Aumento**, y los mosaicos **Mi presupuesto** y **Por centro de coste** del panel la usan. La lista la muestra para el año actual, junto a la última columna visible. Una lista cuyas columnas de importes eligió una persona las conserva y recibe la nueva columna por defecto. También es el importe de referencia de la pestaña Asignaciones y la columna de partida de la fila **Diferencia con** de la pestaña Presupuesto. La pestaña Presupuesto de una línea se abre en ella mientras no está congelada. Congelarla para un año fija los tipos de cambio de ese año (consulte [Congelar la columna por defecto fija los tipos de cambio](#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio))
 - **Sigue el reparto y las líneas** decide qué columnas aparecen marcadas al principio cuando usa **Usar también para otras columnas…** en la pestaña Presupuesto. Las columnas congeladas nunca se ofrecen, diga lo que diga esta configuración
 
@@ -415,6 +415,6 @@ A continuación se muestra una secuencia típica usando estas herramientas, con 
 - **Siempre revise la vista previa primero**: **Copiar columnas presupuestarias** muestra lo que hace en cada línea antes de copiar. Revísela cada vez antes de confirmar.
 - **Congele después de la aprobación**: Bloquear columnas después de la aprobación mantiene su registro de auditoría y previene ediciones accidentales.
 - **Use ajustes porcentuales**: Al copiar entre años, aplique un factor de inflación o crecimiento para no tener que ajustar cada línea manualmente.
-- **Verifique el estado de congelación antes de operaciones masivas**: Las columnas congeladas bloquean las operaciones de copia y restablecimiento. Si un botón está en gris, verifique primero la página de congelación.
+- **Verifique el estado de congelación antes de operaciones masivas**: Las columnas congeladas bloquean las operaciones de copia y vaciado. Si un botón está en gris, verifique primero la página de congelación.
 - **Defina el valor por defecto del año antes de introducir presupuestos**: Si su base de asignación no es la plantilla, configúrela primero en Método de asignación por defecto, para que las líneas se creen sobre la base correcta en lugar de recalcularse después.
-- **Restablezca con precaución**: El restablecimiento de columna es irreversible. Compruebe el año y la columna antes de confirmar.
+- **Vacíe con precaución**: Vaciar una columna es irreversible. Compruebe el año y la columna antes de confirmar.

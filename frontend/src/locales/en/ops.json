@@ -712,7 +712,7 @@
       "freezeDesc": "Lock budget columns or headcount metrics for a specific year",
       "copyBudgetTitle": "Copy budget columns",
       "copyBudgetDesc": "Copy amounts between years and columns, with an optional percentage, and allocations to another year",
-      "resetColumnTitle": "Reset budget column",
+      "resetColumnTitle": "Clear a budget column",
       "resetColumnDesc": "Clear all data from a budget column for a specific year",
       "allocationDefaultTitle": "Default allocation method",
       "allocationDefaultDesc": "Choose the method applied to OPEX and CAPEX lines left on the default allocation",

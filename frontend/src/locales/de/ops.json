@@ -712,7 +712,7 @@
       "freezeDesc": "Sperren Sie Budgetspalten oder Mitarbeiterzahl-Metriken für ein bestimmtes Jahr",
       "copyBudgetTitle": "Budgetspalten kopieren",
       "copyBudgetDesc": "Kopieren Sie Beträge zwischen Jahren und Spalten, mit optionalem Prozentsatz, und Zuordnungen in ein anderes Jahr",
-      "resetColumnTitle": "Budgetspalte zurücksetzen",
+      "resetColumnTitle": "Budgetspalte leeren",
       "resetColumnDesc": "Löschen Sie alle Daten einer Budgetspalte für ein bestimmtes Jahr",
       "allocationDefaultTitle": "Standard-Zuordnungsmethode",
       "allocationDefaultDesc": "Wählen Sie die Methode, die für OPEX- und CAPEX-Zeilen mit Standard-Zuordnung gilt",

@@ -23,7 +23,7 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 |-------|----------|
 | **Geler / dégeler les données** | Verrouiller les colonnes budgétaires pour empêcher les modifications |
 | **Copier les colonnes budgétaires** | Copier les montants entre années et colonnes, avec un pourcentage facultatif, et les ventilations vers une autre année |
-| **Réinitialiser une colonne budgétaire** | Effacer toutes les données d'une colonne spécifique |
+| **Vider une colonne budgétaire** | Effacer toutes les données d'une colonne spécifique |
 | **Geler les données de référence** | Verrouiller les indicateurs des sociétés et des départements pour une année. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
 | **Copier les indicateurs annuels** | Copier les indicateurs des sociétés et des départements d'une année à l'autre. Voir [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md) |
 
@@ -31,7 +31,7 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 |---|---|
 | Devises, Geler / dégeler les données | Administration budgétaire au niveau administrateur (`budget_ops:admin`) |
 | Colonnes budgétaires, Méthode de ventilation par défaut | Administration budgétaire au niveau lecteur (`budget_ops:reader`), en lecture seule. Les modifier nécessite le niveau administrateur (`budget_ops:admin`) |
-| Copier les colonnes budgétaires, Réinitialiser une colonne budgétaire | Budget au niveau administrateur (`budget:admin`). Les onglets **Tout**, **OPEX** et **CAPEX** s'ouvrent tous avec ce niveau |
+| Copier les colonnes budgétaires, Vider une colonne budgétaire | Budget au niveau administrateur (`budget:admin`). Chaque **Type de ligne** (**Tout**, **OPEX**, **CAPEX**) s'ouvre avec ce niveau |
 | Geler les données de référence, Copier les indicateurs annuels | Utilisateurs ayant accès au budget qui sont administrateurs de l'administration budgétaire, des sociétés ou des départements. Les administrateurs des sociétés et des départements agissent sur leur propre périmètre |
 
 Le rôle intégré Administrateur budget voit toutes les cartes. Membre budget et Lecteur budget voient les cartes **Colonnes budgétaires** et **Méthode de ventilation par défaut**, qui s'ouvrent pour eux en lecture seule, et aucune opération. Une personne dont l'accès aux données est limité ne voit aucune de ces cartes.
@@ -68,7 +68,7 @@ Sans le niveau Admin sur l'administration budgétaire, la page affiche les état
 
 - Empêche les modifications des colonnes gelées dans l'espace de travail des lignes de ce type. Les champs affichent un cadenas
 - Bloque les imports vers les colonnes gelées
-- Bloque les opérations de copie et de réinitialisation ciblant les colonnes gelées
+- Bloque les opérations de copie et de vidage ciblant les colonnes gelées
 - Refuse de supprimer une ligne, ou de changer son type, tant qu'elle a des montants dans une colonne gelée des années concernées
 - N'affecte **pas** l'accès en lecture : les données restent visibles
 - S'applique aussi aux colonnes masquées. Une colonne gelée reste gelée quand elle est masquée, et les imports vers elle restent refusés
@@ -249,7 +249,7 @@ Tant que vous n'avez pas choisi de colonne, une ligne indique : « Choisissez un
 - **Lignes avec un montant**
 - **Valeur totale**
 
-En dessous, les cinq lignes budgétaires qui portent les plus gros montants de la colonne, un montant négatif étant classé selon sa taille, puis « et N autres lignes ». Dans l'onglet **Tout**, une colonne **Type de ligne** indique **OPEX** ou **CAPEX**. Une phrase dit ensuite ce que l'opération supprime, pour combien de lignes, et qu'elle est irréversible.
+En dessous, les cinq lignes budgétaires qui portent les plus gros montants de la colonne, un montant négatif étant classé selon sa taille, puis « et N autres lignes ». Avec **Type de ligne** sur **Tout**, une colonne **Type de ligne** indique **OPEX** ou **CAPEX**. Une phrase dit ensuite ce que l'opération supprime, pour combien de lignes, et qu'elle est irréversible.
 
 **Voir les N lignes** ouvre sous le panneau une grille de toutes les lignes du type choisi, avec leur valeur actuelle dans la colonne. La grille se trie sur n'importe quelle colonne, et le nom de la ligne l'ouvre dans un nouvel onglet. Les montants qui seront effacés apparaissent en graisse moyenne ; les valeurs vides sont atténuées. **Masquer les lignes** la referme.
 
@@ -271,7 +271,7 @@ Cliquez sur **Vider la colonne** dans la boîte de dialogue pour continuer, ou s
 
 - Le bouton **Vider la colonne** reste disponible lorsqu'aucune ligne ne porte de montant, afin de pouvoir retirer les périodes de répartition
 - Aucune colonne n'est présélectionnée : vous choisissez toujours la colonne à vider
-- Les colonnes gelées ne peuvent pas être vidées. Dégelez-les d'abord. Dans l'onglet **Tout**, lorsque la colonne n'est gelée que pour un type, le message le nomme, par exemple « La colonne Budget de 2026 est gelée en CAPEX. Dégelez-la avant de la vider, ou videz seulement l'autre type. »
+- Les colonnes gelées ne peuvent pas être vidées. Dégelez-les d'abord. Avec **Type de ligne** sur **Tout**, lorsque la colonne n'est gelée que pour un type, le message le nomme, par exemple « La colonne Budget de 2026 est gelée en CAPEX. Dégelez-la avant de la vider, ou videz seulement l'autre type. »
 - Pendant qu'une autre opération budgétaire s'exécute, vider la colonne est refusé et le message à côté du bouton le dit
 - La boîte de dialogue de confirmation nécessite un acquittement explicite
 
@@ -364,7 +364,7 @@ Par défaut, Budget, Révision, Réalisé et Atterrissage prévu sont affichées
 
 ### Ce que changent les réglages
 
-- **Les colonnes masquées** disparaissent des listes, du sélecteur de colonnes, de l'onglet Budget, des sélecteurs des rapports, des pages de copie et de réinitialisation et de la vue d'ensemble. Elles gardent leurs montants : masquer une colonne n'efface jamais de données, et l'afficher de nouveau fait revenir les montants. Les colonnes masquées acceptent toujours les imports par le fichier budgétaire, et les gels s'appliquent toujours à elles. La page de gel liste aussi les colonnes masquées, avec la mention **Masquée** : vous pouvez les geler comme les autres
+- **Les colonnes masquées** disparaissent des listes, du sélecteur de colonnes, de l'onglet Budget, des sélecteurs des rapports, des pages de copie et de vidage et de la vue d'ensemble. Elles gardent leurs montants : masquer une colonne n'efface jamais de données, et l'afficher de nouveau fait revenir les montants. Les colonnes masquées acceptent toujours les imports par le fichier budgétaire, et les gels s'appliquent toujours à elles. La page de gel liste aussi les colonnes masquées, avec la mention **Masquée** : vous pouvez les geler comme les autres
 - **La colonne par défaut** est présélectionnée dans chaque rapport. Elle trie la liste des lignes budgétaires et sa navigation précédent et suivant. La tuile **Top lignes**, classée par **Montant** ou par **Hausse**, et les tuiles **Mon budget** et **Par centre de coûts** de la vue d'ensemble l'utilisent. La liste l'affiche pour l'année en cours, à côté de la dernière colonne affichée. Une liste dont la personne a choisi les colonnes de montants les garde et reçoit la nouvelle colonne par défaut. C'est aussi le montant de référence de l'onglet Ventilations et la colonne de départ de la ligne **Écart avec** de l'onglet Budget. L'onglet Budget d'une ligne s'ouvre sur elle tant qu'elle n'est pas gelée. La geler pour une année fige les taux de change de cette année (voir [Geler la colonne par défaut fige les taux de change](#geler-la-colonne-par-defaut-fige-les-taux-de-change))
 - **Suit la répartition et les lignes** décide quelles colonnes sont cochées au départ lorsque vous utilisez **Utiliser aussi pour d'autres colonnes…** dans l'onglet Budget. Les colonnes gelées ne sont jamais proposées, quel que soit ce réglage
 
@@ -415,6 +415,6 @@ Voici une séquence typique utilisant ces outils, avec les noms de colonnes stan
 - **Toujours faire un aperçu d'abord** : **Copier les colonnes budgétaires** montre ce qu'il fait sur chaque ligne avant la copie. Vérifiez-le à chaque fois avant de valider.
 - **Geler après approbation** : Verrouiller les colonnes après approbation maintient votre piste d'audit et prévient les modifications accidentelles.
 - **Utilisez les ajustements en pourcentage** : Lors de la copie entre années, appliquez un facteur d'inflation ou de croissance pour ne pas avoir à ajuster chaque ligne manuellement.
-- **Vérifiez le statut de gel avant les opérations en masse** : Les colonnes gelées bloquent les opérations de copie et de réinitialisation. Si un bouton est grisé, vérifiez d'abord la page de gel.
+- **Vérifiez le statut de gel avant les opérations en masse** : Les colonnes gelées bloquent les opérations de copie et de vidage. Si un bouton est grisé, vérifiez d'abord la page de gel.
 - **Définissez la valeur par défaut de l'année avant de saisir les budgets** : Si votre base de ventilation n'est pas l'effectif, configurez-la d'abord dans Méthode de ventilation par défaut, afin que les lignes budgétaires soient créées sur la bonne base plutôt que d'être recalculées après coup.
-- **Réinitialisez avec prudence** : La réinitialisation de colonne est irréversible. Vérifiez bien l'année et la colonne avant de confirmer.
+- **Videz avec prudence** : Vider une colonne est irréversible. Vérifiez bien l'année et la colonne avant de confirmer.

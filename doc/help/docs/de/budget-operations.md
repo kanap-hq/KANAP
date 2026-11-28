@@ -23,7 +23,7 @@ Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug.
 |----------|-------|
 | **Daten einfrieren / auftauen** | Budgetspalten sperren, um Änderungen zu verhindern |
 | **Budgetspalten kopieren** | Beträge zwischen Jahren und Spalten kopieren, mit optionalem Prozentsatz, und Zuordnungen in ein anderes Jahr |
-| **Budgetspalte zurücksetzen** | Alle Daten einer bestimmten Spalte löschen |
+| **Budgetspalte leeren** | Alle Daten einer bestimmten Spalte löschen |
 | **Stammdaten einfrieren** | Die Kennzahlen der Unternehmen und Abteilungen für ein Jahr sperren. Siehe [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md) |
 | **Jahreskennzahlen kopieren** | Die Kennzahlen der Unternehmen und Abteilungen von einem Jahr in ein anderes kopieren. Siehe [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md) |
 
@@ -31,7 +31,7 @@ Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug.
 |---|---|
 | Währungen, Daten einfrieren / auftauen | Budgetadministration auf Administratorebene (`budget_ops:admin`) |
 | Budgetspalten, Standard-Zuordnungsmethode | Budgetadministration auf Leserebene (`budget_ops:reader`), schreibgeschützt. Zum Ändern ist die Administratorebene nötig (`budget_ops:admin`) |
-| Budgetspalten kopieren, Budgetspalte zurücksetzen | Budget auf Administratorebene (`budget:admin`). Die Registerkarten **Alle**, **OPEX** und **CAPEX** öffnen sich alle mit dieser Stufe |
+| Budgetspalten kopieren, Budgetspalte leeren | Budget auf Administratorebene (`budget:admin`). Jeder **Zeilentyp** (**Alle**, **OPEX**, **CAPEX**) öffnet sich mit dieser Stufe |
 | Stammdaten einfrieren, Jahreskennzahlen kopieren | Benutzer mit Zugriff auf das Budget, die Administratoren der Budgetadministration, von Unternehmen oder Abteilungen sind. Administratoren von Unternehmen und Abteilungen handeln für ihren eigenen Bereich |
 
 Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied und Budget-Leser sehen die Karten **Budgetspalten** und **Standard-Zuordnungsmethode**, die sich für sie schreibgeschützt öffnen, und keine Operation. Eine Person mit eingeschränktem Datenzugriff sieht keine dieser Karten.
@@ -68,7 +68,7 @@ Ohne die Administratorstufe für die Budget-Administration zeigt die Seite die Z
 
 - Verhindert Bearbeitungen an eingefrorenen Spalten im Arbeitsbereich der Zeilen dieses Typs. Die Felder zeigen ein Schloss-Symbol
 - Blockiert Importe in eingefrorene Spalten
-- Blockiert Kopier- und Zurücksetzungsoperationen für eingefrorene Spalten
+- Blockiert Kopier- und Leervorgänge für eingefrorene Spalten
 - Verweigert das Löschen einer Zeile oder die Änderung ihres Typs, solange sie Beträge in einer eingefrorenen Spalte der betroffenen Jahre hat
 - Beeinflusst **nicht** den Lesezugriff: Die Daten bleiben sichtbar
 - Gilt auch für ausgeblendete Spalten. Eine eingefrorene Spalte bleibt eingefroren, wenn sie ausgeblendet wird, und Importe in sie werden weiterhin abgelehnt
@@ -249,7 +249,7 @@ Bevor Sie eine Spalte wählen, sagt eine einzige Zeile: „Wählen Sie eine Spal
 - **Zeilen mit einem Betrag**
 - **Gesamtwert**
 
-Darunter stehen die fünf Budgetzeilen mit den höchsten Beträgen in der Spalte, wobei ein negativer Betrag nach seiner Größe eingeordnet wird, dann „und N weitere Zeilen“. In der Registerkarte **Alle** nennt eine Spalte **Zeilentyp** **OPEX** oder **CAPEX**. Ein Satz sagt dann, was das Leeren entfernt, für wie viele Zeilen, und dass es nicht rückgängig gemacht werden kann.
+Darunter stehen die fünf Budgetzeilen mit den höchsten Beträgen in der Spalte, wobei ein negativer Betrag nach seiner Größe eingeordnet wird, dann „und N weitere Zeilen“. Steht **Zeilentyp** auf **Alle**, nennt eine Spalte **Zeilentyp** **OPEX** oder **CAPEX**. Ein Satz sagt dann, was das Leeren entfernt, für wie viele Zeilen, und dass es nicht rückgängig gemacht werden kann.
 
 **Alle N Zeilen anzeigen** öffnet unter dem Bereich ein Grid mit allen Zeilen des gewählten Typs und ihrem aktuellen Wert in der Spalte. Das Grid lässt sich nach jeder Spalte sortieren, und der Name der Zeile öffnet sie in einem neuen Tab. Beträge, die geleert werden, erscheinen halbfett; leere Werte sind abgeschwächt. **Zeilen ausblenden** schließt es.
 
@@ -271,7 +271,7 @@ Klicken Sie im Dialog auf **Spalte leeren**, um fortzufahren, oder auf **Abbrech
 
 - Die Schaltfläche **Spalte leeren** bleibt verfügbar, wenn keine Budgetzeile einen Betrag enthält, damit die Verteilungszeiträume trotzdem entfernt werden können
 - Keine Spalte ist vorausgewählt, Sie wählen die zu leerende Spalte also immer selbst
-- Eingefrorene Spalten können nicht geleert werden. Tauen Sie sie zuerst auf. In der Registerkarte **Alle** nennt die Meldung den Typ, wenn die Spalte nur für einen Typ eingefroren ist, zum Beispiel „Die Spalte Budget für 2026 ist für CAPEX eingefroren. Tauen Sie sie auf, bevor Sie sie leeren, oder leeren Sie nur den anderen Typ.“
+- Eingefrorene Spalten können nicht geleert werden. Tauen Sie sie zuerst auf. Steht **Zeilentyp** auf **Alle** und ist die Spalte nur für einen Typ eingefroren, nennt die Meldung den Typ, zum Beispiel „Die Spalte Budget für 2026 ist für CAPEX eingefroren. Tauen Sie sie auf, bevor Sie sie leeren, oder leeren Sie nur den anderen Typ.“
 - Während eine andere Budgetoperation läuft, wird das Leeren abgelehnt, und die Meldung neben der Schaltfläche sagt es
 - Der Bestätigungsdialog erfordert eine explizite Bestätigung
 
@@ -364,7 +364,7 @@ Standardmäßig sind Budget, Revision, Ist-Werte und Erwarteter Endwert angezeig
 
 ### Was die Einstellungen ändern
 
-- **Ausgeblendete Spalten** verschwinden aus den Listen, der Spaltenauswahl, dem Budget-Tab, den Auswahlfeldern der Berichte, den Seiten zum Kopieren und Zurücksetzen und der Übersicht. Sie behalten ihre Beträge: Das Ausblenden einer Spalte löscht nie Daten, und wenn Sie sie wieder anzeigen, sind die Beträge wieder da. Ausgeblendete Spalten nehmen weiterhin Importe über die Budgetdatei an, und Einfrierungen gelten weiterhin für sie. Die Seite zum Einfrieren listet ausgeblendete Spalten ebenfalls auf, mit **Ausgeblendet** gekennzeichnet, sodass Sie sie wie die anderen einfrieren können
+- **Ausgeblendete Spalten** verschwinden aus den Listen, der Spaltenauswahl, dem Budget-Tab, den Auswahlfeldern der Berichte, den Seiten zum Kopieren und Leeren und der Übersicht. Sie behalten ihre Beträge: Das Ausblenden einer Spalte löscht nie Daten, und wenn Sie sie wieder anzeigen, sind die Beträge wieder da. Ausgeblendete Spalten nehmen weiterhin Importe über die Budgetdatei an, und Einfrierungen gelten weiterhin für sie. Die Seite zum Einfrieren listet ausgeblendete Spalten ebenfalls auf, mit **Ausgeblendet** gekennzeichnet, sodass Sie sie wie die anderen einfrieren können
 - **Die Standardspalte** ist in jedem Bericht vorausgewählt. Nach ihr werden die Liste der Budgetzeilen und ihre Navigation mit Zurück und Weiter sortiert. Die Kachel **Top-Zeilen**, in der Rangfolge nach **Betrag** oder nach **Anstieg**, und die Kacheln **Mein Budget** und **Nach Kostenstelle** der Übersicht verwenden sie. Die Liste zeigt sie für das aktuelle Jahr, neben der letzten angezeigten Spalte. Eine Liste, deren Betragsspalten eine Person gewählt hat, behält sie und erhält die neue Standardspalte. Sie ist auch der Referenzbetrag des Zuordnungen-Tabs und die Ausgangsspalte der Zeile **Abweichung zu** im Budget-Tab. Der Budget-Tab einer Zeile öffnet sich auf ihr, solange sie nicht eingefroren ist. Ihr Einfrieren für ein Jahr schreibt die Wechselkurse dieses Jahres fest (siehe [Das Einfrieren der Standardspalte schreibt die Wechselkurse fest](#das-einfrieren-der-standardspalte-schreibt-die-wechselkurse-fest))
 - **Folgt Verteilung und Zeilen** legt fest, welche Spalten anfangs angekreuzt sind, wenn Sie **Auch für andere Spalten verwenden…** im Budget-Tab nutzen. Eingefrorene Spalten werden nie angeboten, unabhängig von dieser Einstellung
 
@@ -415,6 +415,6 @@ Hier ist eine typische Abfolge mit diesen Werkzeugen, mit den Standardnamen der 
 - **Immer zuerst die Vorschau ansehen**: **Budgetspalten kopieren** zeigt vor dem Kopieren, was es mit jeder Zeile macht. Prüfen Sie sie jedes Mal vor dem Festschreiben.
 - **Nach Genehmigung einfrieren**: Das Sperren von Spalten nach der Genehmigung bewahrt Ihren Audit-Trail und verhindert versehentliche Bearbeitungen.
 - **Prozentuale Anpassungen verwenden**: Beim Kopieren zwischen Jahren wenden Sie einen Inflations- oder Wachstumsfaktor an, damit Sie nicht jede Zeile manuell anpassen müssen.
-- **Einfrierstatus vor Massenoperationen prüfen**: Eingefrorene Spalten blockieren Kopier- und Zurücksetzungsoperationen. Wenn eine Schaltfläche ausgegraut ist, prüfen Sie zuerst die Seite zum Einfrieren.
+- **Einfrierstatus vor Massenoperationen prüfen**: Eingefrorene Spalten blockieren Kopier- und Leervorgänge. Wenn eine Schaltfläche ausgegraut ist, prüfen Sie zuerst die Seite zum Einfrieren.
 - **Legen Sie den Standard des Jahres vor der Budgeterfassung fest**: Wenn Ihre Zuordnungsbasis nicht die Mitarbeiterzahl ist, konfigurieren Sie sie zuerst unter Standard-Zuordnungsmethode, damit Budgetzeilen gleich auf der richtigen Basis angelegt werden und nicht später neu berechnet werden müssen.
-- **Mit Vorsicht zurücksetzen**: Das Zurücksetzen von Spalten ist irreversibel. Überprüfen Sie Jahr und Spalte doppelt, bevor Sie bestätigen.
+- **Mit Vorsicht leeren**: Das Leeren einer Spalte ist irreversibel. Überprüfen Sie Jahr und Spalte doppelt, bevor Sie bestätigen.

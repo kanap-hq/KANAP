@@ -712,7 +712,7 @@
       "freezeDesc": "Bloquee columnas presupuestarias o métricas de plantilla para un año determinado",
       "copyBudgetTitle": "Copiar columnas presupuestarias",
       "copyBudgetDesc": "Copie importes entre años y columnas, con un porcentaje opcional, y asignaciones a otro año",
-      "resetColumnTitle": "Restablecer columna presupuestaria",
+      "resetColumnTitle": "Vaciar una columna presupuestaria",
       "resetColumnDesc": "Borre todos los datos de una columna presupuestaria para un año determinado",
       "allocationDefaultTitle": "Método de asignación por defecto",
       "allocationDefaultDesc": "Elija el método aplicado a las líneas de OPEX y CAPEX que siguen con la asignación por defecto",

@@ -712,7 +712,7 @@
       "freezeDesc": "Verrouillez les colonnes budgétaires ou les métriques d'effectif pour une année donnée",
       "copyBudgetTitle": "Copier les colonnes budgétaires",
       "copyBudgetDesc": "Copiez les montants entre années et colonnes, avec un pourcentage facultatif, et les ventilations vers une autre année",
-      "resetColumnTitle": "Réinitialiser une colonne budgétaire",
+      "resetColumnTitle": "Vider une colonne budgétaire",
       "resetColumnDesc": "Effacez toutes les données d'une colonne budgétaire pour une année donnée",
       "allocationDefaultTitle": "Méthode de ventilation par défaut",
       "allocationDefaultDesc": "Choisissez la méthode appliquée aux lignes OPEX et CAPEX laissées en ventilation par défaut",
