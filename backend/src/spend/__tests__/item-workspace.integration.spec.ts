@@ -77,13 +77,19 @@ async function testReferences() {
       cost_center_id: ids.costCenter,
     });
     const [{ item_number: supplierNumber }] = await runner.query(`SELECT item_number FROM suppliers WHERE id = $1`, [ids.supplier]);
+    const [{ item_number: companyNumber }] = await runner.query(`SELECT item_number FROM companies WHERE id = $1`, [ids.company]);
     assert.ok(Number(supplierNumber) > 0, 'the trigger numbers the supplier');
+    assert.ok(Number(companyNumber) > 0, 'the trigger numbers the company');
     assert.deepEqual(
       refs.supplier,
       { id: ids.supplier, item_number: Number(supplierNumber), name: 'Société Test', erp_supplier_id: 'ERP-1', status: 'enabled' },
       'the chosen supplier carries its reference (SUP-n), as the lookup options do',
     );
-    assert.deepEqual(refs.paying_company, { id: ids.company, name: 'Company W' });
+    assert.deepEqual(
+      refs.paying_company,
+      { id: ids.company, item_number: Number(companyNumber), name: 'Company W' },
+      'the chosen company carries its reference (COMP-n), as the lookup options do',
+    );
     assert.equal(refs.account?.account_number, 6110);
     assert.equal(refs.account?.account_name, 'Licences');
     assert.deepEqual(refs.owner_it, { id: ids.owner, first_name: 'Anne', last_name: 'Martin', email: null }, 'no email for a person with a name');
