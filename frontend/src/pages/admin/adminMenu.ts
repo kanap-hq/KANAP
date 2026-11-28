@@ -32,6 +32,11 @@ export type AdminRequirement =
    */
   | 'integrations'
   /**
+   * Every signed-in person, on every host. Its route has the line `'<segment>': 'signedIn'` in
+   * `ADMIN_ROUTE_REQUIREMENTS`; `adminMenu.test.ts` checks that both say so.
+   */
+  | 'signedIn'
+  /**
    * No right of its own: the pages of the platform host. Their route asks `hasLevel(<segment>,
    * 'reader')`, which only an Administrator or a platform administrator passes.
    */
@@ -61,10 +66,29 @@ export type AdminMenuEntry = {
   feature?: AdminFeature;
   /** Shown in the cloud only. */
   cloudOnly?: true;
+  /**
+   * Does not count for the menu: shown only beside another entry the person sees, never the page
+   * `/admin` opens, and alone it gives no Administration tab.
+   */
+  standalone?: true;
 };
 
-/** Where each group shows, and its title: a label key, '' for a plain divider, null for none. */
-export const ADMIN_MENU_GROUPS: Record<AdminGroup, { places: readonly AdminPlace[]; title: string | null }> = {
+export type AdminMenuGroup = {
+  /** Where the group shows. */
+  places: readonly AdminPlace[];
+  /** Its title: a label key, '' for a plain divider, null for none. */
+  title: string | null;
+  /** Shown after every other group, whatever the place of its entries in the menu list. */
+  last?: true;
+};
+
+/** A menu: its entries in order, and its groups. The functions below read `ADMIN_MENU` by default. */
+export type AdminMenu = {
+  entries: readonly AdminMenuEntry[];
+  groups: Readonly<Record<string, AdminMenuGroup>>;
+};
+
+export const ADMIN_MENU_GROUPS: Record<AdminGroup, AdminMenuGroup> = {
   organization: { places: ['organization', 'site'], title: null },
   ai: { places: ['organization', 'site'], title: 'nav:sidebar.admin.sections.ai' },
   integrations: { places: ['organization', 'site'], title: 'nav:sidebar.admin.sections.integrations' },
@@ -100,6 +124,8 @@ export const ADMIN_MENU: readonly AdminMenuEntry[] = [
   { group: 'platformTools', to: '/admin/ops-dashboard', label: 'nav:sidebar.platform.opsDashboard', icon: 'MonitorHeart', requires: 'none' },
   { group: 'installation', to: '/admin/installation/scheduled-tasks', label: 'nav:sidebar.platform.scheduledTasks', icon: 'Schedule', requires: 'operator' },
 ];
+
+const DEFAULT_MENU: AdminMenu = { entries: ADMIN_MENU, groups: ADMIN_MENU_GROUPS };
 
 export type AdminClaims = { isGlobalAdmin?: boolean; isPlatformAdmin?: boolean } | null | undefined;
 
@@ -160,6 +186,7 @@ export function isInstallationPath(read: string): boolean {
 
 export function meetsAdminRequirement(requirement: AdminRequirement, ctx: AdminMenuContext): boolean {
   switch (requirement) {
+    case 'signedIn': return true;
     case 'none': return true;
     case 'administrator': return !!ctx.claims?.isGlobalAdmin;
     case 'operator': return isInstallationOperator(ctx);
@@ -175,18 +202,27 @@ function featureOn(feature: AdminFeature | undefined, ctx: AdminMenuContext): bo
   return feature === 'aiSettings' ? ctx.aiSettingsAvailable : ctx.features[feature];
 }
 
-/** The entries of the menu the person may open here, in menu order. */
-export function adminMenuEntries(ctx: AdminMenuContext): AdminMenuEntry[] {
+/**
+ * The entries of the menu the person may open here, in menu order, the groups marked `last` at the
+ * end. Empty when the person sees no entry that counts (`standalone` ones alone make no menu).
+ */
+export function adminMenuEntries(ctx: AdminMenuContext, menu: AdminMenu = DEFAULT_MENU): AdminMenuEntry[] {
   const place = adminPlace(ctx);
-  return ADMIN_MENU.filter((entry) => (
-    ADMIN_MENU_GROUPS[entry.group].places.includes(place)
+  const shown = menu.entries.filter((entry) => (
+    menu.groups[entry.group].places.includes(place)
     && !(entry.cloudOnly && place === 'site')
     && featureOn(entry.feature, ctx)
     && meetsAdminRequirement(entry.requires, ctx)
   ));
+  if (!shown.some((entry) => !entry.standalone)) return [];
+  const isLast = (entry: AdminMenuEntry) => !!menu.groups[entry.group].last;
+  return [...shown.filter((entry) => !isLast(entry)), ...shown.filter(isLast)];
 }
 
-/** The first entry the person may open, in menu order (in one group when given); null when none. */
-export function firstAdminEntry(ctx: AdminMenuContext, group?: AdminGroup): AdminMenuEntry | null {
-  return adminMenuEntries(ctx).find((entry) => !group || entry.group === group) ?? null;
+/**
+ * The first entry the person may open, in menu order (in one group when given), `standalone`
+ * entries left out; null when none.
+ */
+export function firstAdminEntry(ctx: AdminMenuContext, group?: AdminGroup, menu: AdminMenu = DEFAULT_MENU): AdminMenuEntry | null {
+  return adminMenuEntries(ctx, menu).find((entry) => !entry.standalone && (!group || entry.group === group)) ?? null;
 }

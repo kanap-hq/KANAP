@@ -39,8 +39,9 @@ type RouteRequirement = {
  * `adminMenu.test.ts` compares them. Three kinds of page have no line here: the Installation
  * section (`isInstallationOperator`), the AI settings pages (`isAdminAiRoute`) and the
  * integrations page (`isAdminIntegrationsRoute`), each behind its own branch below.
+ * `'signedIn'` opens a page to every signed-in person, on every host.
  */
-export const ADMIN_ROUTE_REQUIREMENTS: Record<string, RouteRequirement> = {
+export const ADMIN_ROUTE_REQUIREMENTS: Record<string, RouteRequirement | 'signedIn'> = {
   users: { resource: 'users', level: 'admin' },
   roles: { resource: 'users', level: 'admin' },
   'data-access': { resource: 'users', level: 'admin', allData: true },
@@ -326,7 +327,8 @@ export default function ProtectedRoute() {
       requirement = null;
     } else if (path.startsWith('/admin/')) {
       const seg = path.split('/')[2] || null;
-      requirement = seg ? (ADMIN_ROUTE_REQUIREMENTS[seg] || { resource: seg, level: 'reader' }) : null;
+      const declared = seg ? ADMIN_ROUTE_REQUIREMENTS[seg] : undefined;
+      requirement = declared === 'signedIn' ? null : seg ? (declared || { resource: seg, level: 'reader' }) : null;
     } else if (path === '/ai' || path.startsWith('/ai/')) {
       requirement = { resource: 'ai_chat', level: 'reader' };
     } else if (path === '/agents' || path.startsWith('/agents/')) {
