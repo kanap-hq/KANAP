@@ -11,7 +11,7 @@ import { chatAwaitsIncludedModelConfirmation, chatTurnedOffByAdmin } from '../ai
 import PendingAccessPage from '../pages/PendingAccessPage';
 import { canUseAnyOperation, canUseOperation } from '../pages/operations/operationAccess';
 import { createRouteRequirement } from './createRouteRequirements';
-import { isInstallationOperator, isInstallationPath } from '../pages/admin/adminMenu';
+import { isInstallationOperator, isInstallationPath, routerPath } from '../pages/admin/adminMenu';
 
 /** Router state of a /403 redirect: where the refusal comes from, and the missing module right when known. */
 export type ForbiddenState = {
@@ -136,7 +136,8 @@ export default function ProtectedRoute() {
 
   // Minimal per-route gating based on path prefix and resource name
   if (token && claims && profile) {
-    const path = location.pathname;
+    // Read as the router matches it, once: every check below reads this form.
+    const path = routerPath(location.pathname);
     // Every refusal names the address it answers, and the missing right when it is the only one.
     const refuse = (requirement?: Pick<RouteRequirement, 'resource' | 'level'>) => {
       const state: ForbiddenState = { from: path };

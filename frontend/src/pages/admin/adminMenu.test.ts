@@ -6,6 +6,7 @@ import {
   firstAdminEntry,
   isInstallationOperator,
   isInstallationPath,
+  routerPath,
   type AdminMenuContext,
 } from './adminMenu';
 import { ADMIN_ROUTE_REQUIREMENTS } from '../../components/ProtectedRoute';
@@ -125,10 +126,22 @@ describe('adminMenu: the person who runs the installation', () => {
     ['/admin/%69nstallation/scheduled-tasks', true],
     ['/ADMIN/SCHEDULED-TASKS', true],
     ['/admin/%E0%A4%A', false],
+    ['/admin/%2569nstallation/scheduled-tasks', false],
+    ['/admin/installation%2Fscheduled-tasks', false],
     ['/admin/installations', false],
     ['/admin/users', false],
-  ])('treats %s as an installation address: %s', (path, expected) => {
-    expect(isInstallationPath(path)).toBe(expected);
+  ])('treats %s, read as the router reads it, as an installation address: %s', (path, expected) => {
+    expect(isInstallationPath(routerPath(path))).toBe(expected);
+  });
+
+  it.each([
+    ['/ADMIN/%75sers', '/admin/users'],
+    ['/admin/installation%2Fscheduled-tasks', '/admin/installation%2fscheduled-tasks'],
+    ['/admin/%2569nstallation', '/admin/%69nstallation'],
+    ['/admin/%E0%A4%A', '/admin/%e0%a4%a'],
+    ['//admin//users/', '//admin//users/'],
+  ])('reads %s as the router does: %s', (path, expected) => {
+    expect(routerPath(path)).toBe(expected);
   });
 });
 

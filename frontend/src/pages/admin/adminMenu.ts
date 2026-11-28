@@ -125,18 +125,26 @@ export function isInstallationOperator(ctx: InstallationOperatorContext): boolea
 }
 
 /**
- * An address of the Installation section, or a former address of one of its pages. The router
- * matches an address whatever its case and after decoding it (`/admin/%69nstallation`,
- * `/admin/Installation`), so the guard reads it the same way.
+ * An address as the router matches it: each segment decoded, a decoded `/` kept as `%2F` (it
+ * stays inside its segment), whatever its case (`/ADMIN/%75sers` is `/admin/users`). An address
+ * with a malformed escape is read as it is, as the router does. Every route guard reads this form.
  */
-export function isInstallationPath(path: string): boolean {
-  let read = path;
+export function routerPath(pathname: string): string {
+  let read = pathname;
   try {
-    read = decodeURIComponent(path);
+    read = pathname.split('/').map((segment) => decodeURIComponent(segment).replace(/\//g, '%2F')).join('/');
   } catch {
-    // A malformed escape matches no route either: read the address as it is.
+    // A malformed escape: the router reads the address as it is.
   }
-  read = read.toLowerCase();
+  return read.toLowerCase();
+}
+
+/**
+ * An address of the Installation section, or a former address of one of its pages. It reads the
+ * router form (`routerPath`), which the route guard computes once: decoding twice would read
+ * `%2569` as `i`, where the router reads `%69`.
+ */
+export function isInstallationPath(read: string): boolean {
   return [INSTALLATION_ROOT, ...LEGACY_INSTALLATION_PATHS].some((root) => read === root || read.startsWith(`${root}/`));
 }
 
