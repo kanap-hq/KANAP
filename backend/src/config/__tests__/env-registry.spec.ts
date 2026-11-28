@@ -73,6 +73,32 @@ const DYNAMIC_READERS: Record<string, { names: readonly string[]; builtFrom?: st
   'src/demo-data/demo-data.service.ts': { names: [], why: 'writes the KANAP_DEMO_* variables of the loader it starts' },
 };
 
+/**
+ * String literals shaped like a variable name (`'A_B'`) in the files of DYNAMIC_READERS that name
+ * no variable. Every other such literal there is in the registry: a name passed to a reader
+ * helper (`readPositiveIntEnv('...')`, `configured('...')`) or written in a table is seen this way.
+ */
+const NOT_VARIABLES: Record<string, string> = {
+  APP_URL_NOT_CONFIGURED: 'error code of a link asked while no application address is set (common/url.ts)',
+  AGENT_CREDENTIAL_UNAVAILABLE: 'error code of the secret resolver of the agents',
+  CREDENTIAL_STORAGE_NOT_CONFIGURED: 'error code of the secret resolver of the agents',
+  AGENT_NOT_AVAILABLE_YET: 'error code of the secret resolver of the agents',
+  LIVE_TEST_NOT_READY: 'error code of the live contract harness',
+  AGENT_PROVIDER_UNAVAILABLE: 'error code of the live contract harness',
+  AGENT_ACTION_INCOMPLETE: 'error code of the live contract harness',
+  SUBSCRIPTION_FROZEN: 'error code of the sample data loader',
+  TRIAL_EXPIRED: 'error code of the sample data loader',
+  LC_ALL: 'system variable copied into the environment of the document converter',
+  LC_COLLATE: 'system variable copied into the environment of the document converter',
+  XDG_CACHE_HOME: 'system variable copied into the environment of the document converter',
+  XDG_CONFIG_HOME: 'system variable copied into the environment of the document converter',
+};
+
+const VARIABLE_LITERAL = /['"]([A-Z][A-Z0-9]*_[A-Z0-9_]+)['"]/g;
+
+/** `timeoutEnvName: 'NAME'` or `maxTokensEnvName: CONSTANT`: names the agents' model client reads. */
+const LLM_ENV_NAME_FIELD = /\b(?:timeoutEnvName|maxTokensEnvName)\s*:\s*(?:['"]([A-Z][A-Z0-9_]*)['"]|([A-Z][A-Z0-9_]*)\b)/g;
+
 /** The scripts of backend/scripts that read the environment, other than the entrypoint: tooling, declared by file. */
 const TOOLING_SCRIPTS = [
   'scripts/ai-live-contract-harness.ts',
@@ -210,6 +236,32 @@ function testCoverage() {
     }
     if (reader.names.length === 0) assert.ok(reader.why, `${file}: say why it reads no setting`);
   }
+
+  // In a file that reads by a computed name, every literal shaped like a variable name is in the registry.
+  const literals = new Set<string>();
+  const unknownLiterals = new Set<string>();
+  for (const file of Object.keys(DYNAMIC_READERS)) {
+    for (const [, name] of readRepo(path.join('backend', file)).matchAll(VARIABLE_LITERAL)) {
+      literals.add(name);
+      if (!findEnvVariable(name) && !NOT_VARIABLES[name]) unknownLiterals.add(`${name} (${file})`);
+    }
+  }
+  assert.deepEqual([...unknownLiterals], [], 'every name written in a file of DYNAMIC_READERS is in the registry, or in NOT_VARIABLES with its reason');
+  for (const name of Object.keys(NOT_VARIABLES)) {
+    assert.ok(literals.has(name) && !findEnvVariable(name), `${name}: remove it from NOT_VARIABLES`);
+  }
+
+  // Every name given to the agents' model client (timeoutEnvName, maxTokensEnvName) is in the registry.
+  const llmNames: string[] = [];
+  for (const { file, text } of code) {
+    for (const [, literal, constant] of text.matchAll(LLM_ENV_NAME_FIELD)) {
+      const name = literal ?? new RegExp(`\\b${constant}\\s*=\\s*['"]([A-Z][A-Z0-9_]*)['"]`).exec(text)?.[1];
+      assert.ok(name, `${file}: the constant ${constant} given to the model client is written in the same file`);
+      llmNames.push(name);
+      assert.ok(findEnvVariable(name), `${name} (${file}), given to the model client, has its entry in config/env-registry.ts`);
+    }
+  }
+  assert.ok(llmNames.length >= 15, `the model client names are found (${llmNames.length})`);
 
   // Every name read by the API has its entry.
   const read = namesReadByTheApi();
