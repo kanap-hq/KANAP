@@ -122,7 +122,7 @@ async function main() {
     const patched = await request(settingsAdmin, '/it-ops/settings', { method: 'PATCH', body: JSON.stringify({
       accessMethods: [{ code: 'web', label: 'Web' }, { label: `Kiosk ${stamp}` }],
       ipAddressTypes: [{ code: 'host', label: 'Host' }, { label: `Storage ${stamp}` }],
-      serverKinds: [{ code: 'vm', label: 'Virtual machine', is_physical: true }],
+      serverKinds: [{ code: 'vm', label: `Virtual machine ${stamp}`, is_physical: true }],
     }) });
     if (patched.status !== 200) throw new Error(`settings PATCH returned ${patched.status}: ${patched.text}`);
     const saved: any = patched.body;
