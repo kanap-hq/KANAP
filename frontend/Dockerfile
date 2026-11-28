@@ -25,10 +25,17 @@ FROM nginx:alpine@sha256:a3554c0d0b48177b1413c26e01f695334428020d9df01243fbae3e1
 # When the host of an absolute URL cannot be read, the build goes on with a notice and
 # connect-src falls back to 'self' https: (the value used before this rule).
 ARG VITE_API_URL=/api
-COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+# The image runs as user 101 (nginx), on a read-only root file system if need be: nginx.conf
+# replaces the base image's own and writes only under /tmp/nginx, and docker-entrypoint.sh
+# replaces its start-up script. That script writes the server block from default.conf.template
+# when the container starts (KANAP_WEB_PORT, KANAP_API_UPSTREAM). The files keep their root
+# owner and are readable by all.
+COPY --chmod=0644 nginx/nginx.conf /etc/nginx/nginx.conf
+COPY --chmod=0644 nginx/default.conf.template /etc/nginx/default.conf.template
+COPY --chmod=0755 nginx/docker-entrypoint.sh /docker-entrypoint.sh
 COPY nginx/security-headers.conf /etc/nginx/security-headers.conf
 RUN set -eu; \
-    conf=/etc/nginx/conf.d/default.conf; \
+    conf=/etc/nginx/default.conf.template; \
     origin=""; \
     case "$VITE_API_URL" in \
       [Hh][Tt][Tt][Pp]://*|[Hh][Tt][Tt][Pp][Ss]://*|//*) \
@@ -46,4 +53,7 @@ RUN set -eu; \
     fi; \
     ! grep -q '__KANAP_API_ORIGIN__' "$conf"
 COPY --from=builder /app/dist /usr/share/nginx/html
+# Numeric, so that Kubernetes can check runAsNonRoot.
+USER 101:101
 EXPOSE 80
+ENTRYPOINT ["/docker-entrypoint.sh"]
