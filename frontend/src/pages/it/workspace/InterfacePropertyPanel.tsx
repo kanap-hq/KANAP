@@ -17,6 +17,9 @@ import BusinessProcessSelect from '../../../components/fields/BusinessProcessSel
 import EnumAutocomplete from '../../../components/fields/EnumAutocomplete';
 import TeamMemberMultiSelect from '../../../components/fields/TeamMemberMultiSelect';
 import { PropertyGroup, PropertyRow } from '../../../components/design';
+import OptionWithHint from '../../../components/fields/OptionWithHint';
+import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
+import { formatItemRef } from '../../../utils/item-ref';
 import type { CountryOption } from '../../../constants/isoOptions';
 import { filterCountryOptions, useCountryOptions } from '../../../i18n/countries';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
@@ -36,6 +39,7 @@ import type {
 type CompanyOption = {
   id: string;
   name: string;
+  item_number?: number | null;
 };
 
 type TeamMemberValue = {
@@ -286,9 +290,16 @@ export default function InterfacePropertyPanel({
               }}
               getOptionLabel={(option) => companyPicker.label(option, (company) => company.name ?? '')}
               renderOption={(props, option) => (
-                <li {...props} key={option.id}>
-                  {option.name}
-                </li>
+                <OptionWithHint
+                  key={option.id}
+                  optionProps={props}
+                  label={option.name}
+                  trailing={option.item_number ? (
+                    <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY, fontVariantNumeric: 'tabular-nums' }}>
+                      {formatItemRef('company', option.item_number)}
+                    </Box>
+                  ) : null}
+                />
               )}
               renderInput={(params) => (
                 <TextField
