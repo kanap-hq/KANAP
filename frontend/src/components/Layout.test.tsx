@@ -729,7 +729,7 @@ describe('Layout administration sidebar: the Organization right', () => {
       access.deploymentMode = mode;
       renderAdmin();
       expect(adminTab()).toBeInTheDocument();
-      expect(menuLinks()).toEqual(['/admin/audit-logs', '/admin/auth', '/admin/branding']);
+      expect(menuLinks()).toEqual(['/admin/audit-logs', '/admin/auth', '/admin/branding', '/admin/all-settings']);
     },
   );
 
@@ -739,14 +739,14 @@ describe('Layout administration sidebar: the Organization right', () => {
     access.sso = true;
     renderAdmin();
     expect(adminTab()).toBeInTheDocument();
-    expect(menuLinks()).toEqual(['/admin/auth', '/admin/branding']);
+    expect(menuLinks()).toEqual(['/admin/auth', '/admin/branding', '/admin/all-settings']);
   });
 
   it('shows none of the three pages to a users administrator alone', () => {
     access.grants = { users: 'admin' };
     access.sso = true;
     renderAdmin();
-    expect(menuLinks()).toEqual(['/admin/users', '/admin/roles', '/admin/data-access']);
+    expect(menuLinks()).toEqual(['/admin/users', '/admin/roles', '/admin/data-access', '/admin/all-settings']);
   });
 });
 
