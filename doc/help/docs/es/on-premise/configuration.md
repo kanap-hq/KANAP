@@ -828,7 +828,7 @@ Por defecto, Docker asigna a sus 15 primeras redes rangos dentro de `172.16.0.0/
 
 ## Trabajos en segundo plano
 
-La API ejecuta los trabajos programados siguientes. Las horas siguientes son los valores predeterminados, en UTC (el reloj del contenedor de la API). Los administradores ven los trabajos en **Administración → Tareas programadas** (consulte [Tareas programadas](../scheduled-tasks.md)), donde cada uno puede desactivarse, reprogramarse o ejecutarse bajo demanda.
+La API ejecuta los trabajos programados siguientes. Las horas siguientes son los valores predeterminados, en UTC (el reloj del contenedor de la API). Los administradores ven los trabajos en **Administración → Instalación → Tareas programadas** (consulte [Tareas programadas](../scheduled-tasks.md)), donde cada uno puede desactivarse, reprogramarse o ejecutarse bajo demanda.
 
 | Trabajo | Cuándo | Qué hace |
 |-----|------|--------------|

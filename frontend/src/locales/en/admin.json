@@ -2517,7 +2517,7 @@
       "applications": "Applications",
       "billing": "Billing",
       "budget": "Budget",
-      "budget_ops": "Budget ops",
+      "budget_ops": "Budget settings and operations",
       "business_processes": "Business processes",
       "companies": "Companies",
       "contacts": "Contacts",
@@ -2528,13 +2528,14 @@
       "infrastructure": "Infrastructure",
       "knowledge": "Knowledge",
       "locations": "Locations",
+      "organization": "Organization",
       "portfolio_planning": "Portfolio planning",
       "portfolio_projects": "Portfolio projects",
       "portfolio_reports": "Portfolio reports",
       "portfolio_requests": "Portfolio requests",
       "portfolio_settings": "Portfolio settings",
       "reporting": "Reporting",
-      "settings": "Settings",
+      "settings": "IT landscape settings",
       "suppliers": "Suppliers",
       "tasks": "Tasks",
       "users": "Users",
@@ -3342,6 +3343,19 @@
         "booked": "Booked",
         "cancelled": "Cancelled"
       }
+    }
+  },
+  "allSettings": {
+    "title": "All settings",
+    "search": "Search settings",
+    "searchPlaceholder": "e.g., reporting currency",
+    "noMatch": "No settings match “{{query}}”.",
+    "empty": "No settings page is open to you here.",
+    "groups": {
+      "person": "My account",
+      "organization": "Administration",
+      "installation": "Installation",
+      "platform": "Platform"
     }
   }
 }

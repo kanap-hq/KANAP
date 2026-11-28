@@ -728,7 +728,7 @@
     "allocationDefault": {
       "title": "Standard-Zuordnungsmethode",
       "year": "Geschäftsjahr",
-      "mode": "Unternehmen",
+      "mode": "Geltungsbereich der Unternehmen",
       "modeAuto": "Alle aktiven Unternehmen",
       "modeManual": "Ausgewählte Unternehmen",
       "companies": "Unternehmen",
@@ -745,10 +745,9 @@
       "previewError": "Die aktuelle Auswahl kann nicht berechnet werden: {{reason}}",
       "standardNote": "Standardmethode. Für dieses Jahr ist keine Abweichung konfiguriert.",
       "overriddenNote": "Für Ihre Organisation konfiguriert. Standardmethode: {{method}}.",
-      "resetToStandard": "Standardmethode verwenden",
+      "restoreDefault": "Standardzuordnung wiederherstellen",
       "loadError": "Die Standard-Zuordnungsmethode konnte nicht geladen werden.",
       "saveError": "Die Standard-Zuordnungsmethode konnte nicht gespeichert werden.",
-      "noPermission": "Zum Ändern der Standardmethode sind Budget-Administrationsrechte erforderlich. Die aktuelle Einstellung bleibt sichtbar.",
       "methods": {
         "headcount": "Mitarbeiterzahl",
         "itUsers": "IT-Benutzer",
@@ -770,34 +769,40 @@
       "unfreezeBoth": "Beide auftauen"
     },
     "columnReset": {
-      "title": "Budgetspalte zurücksetzen",
+      "title": "Budgetspalte leeren",
       "year": "Jahr",
       "budgetColumn": "Budgetspalte",
-      "processing": "Wird verarbeitet…",
+      "processing": "Wird geleert…",
       "clearColumn": "Spalte leeren",
       "product": "Zeile",
       "dataPreview": "Datenvorschau",
-      "totalItems": "Zeilen gesamt",
-      "itemsWithData": "Zeilen mit einer Summe ungleich null",
-      "currentTotalValue": "Aktueller Gesamtwert",
-      "columnFrozenError": "Die Spalte {{column}} für {{year}} ist eingefroren. Tauen Sie sie auf, bevor Sie Daten löschen.",
-      "columnFrozenNatureError": "Die Spalte {{column}} für {{year}} ist für {{nature}} eingefroren. Tauen Sie sie auf, bevor Sie Daten löschen, oder leeren Sie nur den anderen Typ.",
-      "noDataInfo": "Die Spalte {{column}} für {{year}} enthält keinen Betrag. Das Leeren entfernt nur ihre Verteilungszeiträume.",
-      "confirmTitle": "Spaltenrücksetzung bestätigen",
+      "totalItems": "Zeilen",
+      "itemsWithData": "Zeilen mit einem Betrag",
+      "currentTotalValue": "Gesamtwert",
+      "columnFrozenError": "Die Spalte {{column}} für {{year}} ist eingefroren. Tauen Sie sie auf, bevor Sie sie leeren.",
+      "columnFrozenNatureError": "Die Spalte {{column}} für {{year}} ist für {{nature}} eingefroren. Tauen Sie sie auf, bevor Sie sie leeren, oder leeren Sie nur den anderen Typ.",
+      "noDataInfo": "Die Spalte {{column}} von {{year}} enthält keinen Betrag. Das Leeren entfernt nur ihre Verteilungszeiträume.",
       "confirmUndoWarning": "Diese Aktion kann nicht rückgängig gemacht werden.",
-      "clearFailed": "Das Leeren ist fehlgeschlagen. Es wurde nichts geändert.",
+      "clearFailed": "Die Spalte konnte nicht geleert werden. Es wurde nichts geändert.",
+      "loadError": "Die Budgetspalten oder ihr Einfrieren konnten nicht geladen werden.",
       "loadingData": "Daten werden geladen…",
       "currentHeader": "{{column}} {{year}}, aktuell",
       "clearWarning_one": "Das Leeren entfernt die Beträge und den Zeitraum von {{column}} {{year}} für {{count}} Zeile. Dies kann nicht rückgängig gemacht werden.",
       "clearWarning_other": "Das Leeren entfernt die Beträge und den Zeitraum von {{column}} {{year}} für {{count}} Zeilen. Dies kann nicht rückgängig gemacht werden.",
-      "confirmMessage": "Die Spalte {{column}} für {{year}} leeren?",
+      "confirmMessage": "Die Spalte {{column}} von {{year}} leeren?",
       "confirmAffected_one": "{{count}} Zeile ist betroffen, mit insgesamt {{value}}.",
       "confirmAffected_other": "{{count}} Zeilen sind betroffen, mit insgesamt {{value}}.",
-      "clearDone_one": "{{count}} Zeile geleert.",
-      "clearDone_other": "{{count}} Zeilen geleert.",
+      "clearDone_one": "Spalte in {{count}} Zeile geleert.",
+      "clearDone_other": "Spalte in {{count}} Zeilen geleert.",
+      "clearDoneNoAmount": "Spalte geleert: keine Zeile enthielt einen Betrag.",
       "confirmPeriodsOnly": "Die Spalte {{column}} für {{year}} enthält keinen Betrag. Nur ihre Verteilungszeiträume werden entfernt.",
       "chooseColumn": "Spalte wählen",
-      "chooseColumnFirst": "Wählen Sie eine Spalte, um ihre Beträge zu sehen."
+      "chooseColumnFirst": "Wählen Sie eine Spalte, um ihre Beträge zu sehen.",
+      "confirmKept": "Die Zeilen und ihre anderen Spalten bleiben erhalten.",
+      "showAllLines_one": "Die Zeile anzeigen",
+      "showAllLines_other": "Alle {{count}} Zeilen anzeigen",
+      "hideAllLines": "Zeilen ausblenden",
+      "allLinesTitle": "Alle Zeilen"
     },
     "copyBudget": {
       "title": "Budgetspalten kopieren",
@@ -1155,12 +1160,6 @@
         "saveFailed": "Die Budgetspalten konnten nicht gespeichert werden.",
         "controlCharacters": "Ein Spaltenname darf keine Steuerzeichen oder unsichtbaren Zeichen enthalten."
       }
-    },
-    "results": {
-      "skipped_one": "{{count}} Zeile übersprungen.",
-      "skipped_other": "{{count}} Zeilen übersprungen.",
-      "failed_one": "{{count}} Zeile fehlgeschlagen.",
-      "failed_other": "{{count}} Zeilen fehlgeschlagen."
     }
   },
   "confirmations": {

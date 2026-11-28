@@ -105,13 +105,15 @@
       "branding": "Personnalisation",
       "sampleData": "Données d'exemple",
       "integrations": "Intégrations",
+      "allSettings": "Tous les paramètres",
       "ai": "{{agent}}",
       "agentControl": "Contrôle agents",
       "aiModels": "Modèles IA",
       "aiUsage": "Utilisation & coûts",
       "sections": {
         "ai": "Intelligence artificielle",
-        "integrations": "Intégrations"
+        "integrations": "Intégrations",
+        "installation": "Installation"
       },
       "dataAccess": "Accès aux données"
     },
@@ -126,7 +128,6 @@
     }
   },
   "breadcrumbs": {
-    "admin": "Administration",
     "contributors": "Contributeurs",
     "settings": "Mon compte"
   }

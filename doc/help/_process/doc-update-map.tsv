@@ -211,3 +211,5 @@ first-steps/portfolio-example.md	frontend/src/components/onboarding/onboardingPa
 first-steps/portfolio-example.md	backend/src/onboarding/onboarding-paths.ts
 first-steps/portfolio-own-data.md	frontend/src/components/onboarding/onboardingPaths.ts
 first-steps/portfolio-own-data.md	backend/src/onboarding/onboarding-paths.ts
+all-settings.md	frontend/src/pages/admin/AllSettingsPage.tsx
+all-settings.md	frontend/src/settings/**

@@ -14,9 +14,11 @@ vi.mock('react-i18next', () => {
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
-// The grid draws the line cell through the page's renderer, and the type column's text.
+// The grid draws the line cell through the page's renderer, and the type column's text; its
+// sizing options are kept for the test that reads them.
+const grid = vi.hoisted(() => ({ props: undefined as any }));
 vi.mock('ag-grid-react', () => ({
-  AgGridReact: ({ rowData, columnDefs }: { rowData: any[]; columnDefs: any[] }) => (
+  AgGridReact: (props: { rowData: any[]; columnDefs: any[] }) => { grid.props = props; const { rowData, columnDefs } = props; return (
     <ul>
       {rowData.map((row) => (
         <li key={row.id} data-testid={`row-${row.id}`}>
@@ -30,24 +32,26 @@ vi.mock('ag-grid-react', () => ({
         </li>
       ))}
     </ul>
-  ),
+  ); },
 }));
 vi.mock('../../components/AgGridBox', () => ({ default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div> }));
-// The layout keeps the server export the page hands it.
+// The server export the page offers, as the export button receives it.
 const layout = vi.hoisted(() => ({ tableExport: undefined as any }));
-vi.mock('../../components/reports/ReportLayout', () => ({
-  default: ({ filters, actions, children, tableExport }: { filters?: React.ReactNode; actions?: React.ReactNode; children: React.ReactNode; tableExport?: unknown }) => {
-    layout.tableExport = tableExport;
-    return <div>{filters}{actions}{children}</div>;
+vi.mock('../../components/reports/ReportExportButton', () => ({
+  default: (props: unknown) => {
+    layout.tableExport = props;
+    return <button type="button">export</button>;
   },
-  ReportFilter: ({ label, children }: { label: string; children: React.ReactNode }) => <label>{label}{children}</label>,
+}));
+vi.mock('../../components/reports/ReportLayout', () => ({
+  ReportFilter: ({ label, children }: { label: string; children: React.ReactNode }) => <div><span>{label}</span>{children}</div>,
   reportFilterMenuProps: {},
   reportFilterSelectSx: {},
 }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: () => true }),
 }));
-const confirm = vi.fn(async (_options: { message: React.ReactNode; intent?: string }) => true);
+const confirm = vi.fn(async (_options: { title?: string; message: React.ReactNode; intent?: string; confirmLabel?: string }) => true);
 vi.mock('../../components/design', () => ({
   useKanapDialogs: () => ({ confirm }),
 }));
@@ -65,7 +69,7 @@ const unifiedRows = [
 ];
 
 // The tenant's column settings, set per test.
-const columnsSetting = vi.hoisted(() => ({ current: null as unknown }));
+const columnsSetting = vi.hoisted(() => ({ current: null as unknown, failed: false }));
 vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
   const mod = await importOriginal<typeof import('../../hooks/useBudgetColumns')>();
   let cache: { settings: unknown; value: ReturnType<typeof mod.resolveBudgetColumns> } | null = null;
@@ -73,6 +77,7 @@ vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
   return {
     ...mod,
     useBudgetColumns: () => {
+      if (columnsSetting.failed) return mod.resolveBudgetColumns(columnsSetting.current as never, t, true, new Error('network down'));
       if (!cache || cache.settings !== columnsSetting.current) {
         cache = { settings: columnsSetting.current, value: mod.resolveBudgetColumns(columnsSetting.current as never, t) };
       }
@@ -110,6 +115,7 @@ function renderPage() {
 describe('BudgetColumnResetPage', () => {
   beforeEach(() => {
     columnsSetting.current = DEFAULT_BUDGET_COLUMNS;
+    columnsSetting.failed = false;
     post.mockReset();
     operation.mockReset();
     post.mockImplementation(async (url: string, body: any) => {
@@ -124,8 +130,9 @@ describe('BudgetColumnResetPage', () => {
   });
 
   it('offers the server export of the grid once a column is chosen', async () => {
+    layout.tableExport = undefined;
     renderPage();
-    expect(layout.tableExport).toBeUndefined();
+    expect(screen.queryByRole('button', { name: 'export' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
     await chooseColumn('ops:operations.budgetColumns.budget');
     await waitFor(() => expect(layout.tableExport).toMatchObject({
@@ -134,7 +141,7 @@ describe('BudgetColumnResetPage', () => {
     }));
   });
 
-  it('clears the CAPEX column after confirmation and reports the result with plural forms', async () => {
+  it('clears the CAPEX column after confirmation and reports the lines cleared, not those without an amount', async () => {
     operation.mockResolvedValue({ data: { success: true, summary: { totalItems: 3, cleared: 1, skipped: 2, errors: 0 } } });
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
@@ -142,10 +149,100 @@ describe('BudgetColumnResetPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'operations.columnReset.clearColumn' }));
 
     await waitFor(() => expect(operation).toHaveBeenCalledTimes(1));
-    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ intent: 'danger' }));
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'operations.columnReset.confirmMessage',
+      confirmLabel: 'operations.columnReset.clearColumn',
+      intent: 'danger',
+    }));
     expect(operation.mock.calls[0][1]).toEqual({ scope: 'capex', year: new Date().getFullYear(), column: 'budget' });
     expect(operation.mock.calls[0][0]).toBe('/budget-lines/budget-operations/clear-column');
-    expect(await screen.findByText('operations.columnReset.clearDone:1 operations.results.skipped:2')).toBeInTheDocument();
+    // The result is written beside the pill.
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe('operations.columnReset.clearDone:1'));
+    const result = screen.getByRole('status');
+    expect(result).toHaveAttribute('role', 'status');
+    expect(result.parentElement).toContainElement(screen.getByRole('button', { name: 'operations.columnReset.clearColumn' }));
+  });
+
+  it('says no line held an amount when the clear cleared none, without counting the lines it passed over', async () => {
+    // The 2027 case: lines of the year without a version, none with an amount; the server passes over every line of the type.
+    capexRows.current = [{ id: 'c-2', description: 'Storage', versions: {} }];
+    operation.mockResolvedValue({ data: { success: true, summary: { totalItems: 15, cleared: 0, skipped: 15, errors: 0 } } });
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    await chooseColumn('ops:operations.budgetColumns.revision');
+    fireEvent.click(await screen.findByRole('button', { name: 'operations.columnReset.clearColumn' }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('operations.columnReset.clearDoneNoAmount'));
+    expect(screen.getByRole('status').textContent).not.toMatch(/skipped|15/);
+  });
+
+  it('gives the line name the free width of the full grid, the type and the amount keeping theirs', async () => {
+    renderPage();
+    await chooseColumn('ops:operations.budgetColumns.budget');
+    fireEvent.click(await screen.findByRole('button', { name: 'operations.columnReset.showAllLines:2' }));
+    await screen.findByTestId('row-o-1');
+    const defs = Object.fromEntries(grid.props.columnDefs.map((col: any) => [col.field, col]));
+    // The name's flex follows the grid's width at all times. An `initialState` on the grid drops
+    // that flex (AG Grid 32), so the first sort is the amount column's own `initialSort`.
+    expect(defs.product_name).toMatchObject({ flex: 1 });
+    expect(defs.nature).toMatchObject({ width: 110 });
+    expect(defs.currentValue).toMatchObject({ width: 200, initialSort: 'desc' });
+    expect(grid.props.initialState).toBeUndefined();
+    expect(grid.props.autoSizeStrategy).toBeUndefined();
+  });
+
+  it('reads another operation running as a refusal beside the pill', async () => {
+    operation.mockRejectedValue(Object.assign(new Error('Conflict'), {
+      response: { status: 409, data: { code: 'operation_running', message: 'Another budget operation is running.' } },
+    }));
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    await chooseColumn('ops:operations.budgetColumns.budget');
+    fireEvent.click(await screen.findByRole('button', { name: 'operations.columnReset.clearColumn' }));
+    // The result region is there from the start: wait for the refusal to be written in it.
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/operation_running|Another budget operation/));
+  });
+
+  it('shows the three numbers, the five lines with the largest amounts, the rest counted, and the consequence', async () => {
+    const year = `y${new Date().getFullYear()}`;
+    capexRows.current = Array.from({ length: 7 }, (_, i) => ({
+      id: `c-${i}`, description: `Asset ${i}`, item_number: i + 1, line_number: 500100 + i,
+      versions: { [year]: { totals: { budget: (i + 1) * 100, revision: 0, follow_up: 0, landing: 0 } } },
+    }));
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    await chooseColumn('ops:operations.budgetColumns.budget');
+    const table = await screen.findByRole('table');
+    expect(within(table).getAllByRole('row').slice(1, 6).map((r) => r.firstElementChild?.textContent)).toEqual(['Asset 6', 'Asset 5', 'Asset 4', 'Asset 3', 'Asset 2']);
+    expect(within(table).getByText('common:operationPanel.moreLines:2')).toBeInTheDocument();
+    expect(screen.getByText('operations.columnReset.totalItems')).toBeInTheDocument();
+    expect(screen.getByText('operations.columnReset.itemsWithData')).toBeInTheDocument();
+    expect(screen.getByText('operations.columnReset.clearWarning:7')).toBeInTheDocument();
+    // The full grid, closed until asked for.
+    expect(screen.queryByTestId('row-c-0')).not.toBeInTheDocument();
+    fireEvent.click(within(table).getByRole('button', { name: 'operations.columnReset.showAllLines:7' }));
+    expect(screen.getByTestId('row-c-0')).toBeInTheDocument();
+    expect(screen.getByText('operations.columnReset.allLinesTitle')).toBeInTheDocument();
+  });
+
+  it('puts the largest amounts first in the preview, a negative one included', async () => {
+    const year = `y${new Date().getFullYear()}`;
+    capexRows.current = [100, -900, 300].map((amount, i) => ({
+      id: `c-${i}`, description: `Asset ${i}`, item_number: i + 1, line_number: 500200 + i,
+      versions: { [year]: { totals: { budget: amount, revision: 0, follow_up: 0, landing: 0 } } },
+    }));
+    renderPage();
+    fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    await chooseColumn('ops:operations.budgetColumns.budget');
+    const table = await screen.findByRole('table');
+    expect(within(table).getAllByRole('row').slice(1, 4).map((r) => r.firstElementChild?.textContent)).toEqual(['Asset 1', 'Asset 2', 'Asset 0']);
+  });
+
+  it('offers nothing when the budget columns cannot be read', () => {
+    columnsSetting.failed = true;
+    renderPage();
+    expect(screen.getByRole('alert')).toHaveTextContent('operations.columnReset.loadError');
+    expect(screen.queryByRole('button', { name: 'operations.columnReset.clearColumn' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
   it('does nothing when the confirmation is cancelled', async () => {
@@ -181,11 +278,13 @@ describe('BudgetColumnResetPage', () => {
     expect(screen.getByRole('button', { name: 'operations.columnReset.clearColumn' })).toBeDisabled();
     // One line instead of a grid of zeros.
     expect(screen.getByText('operations.columnReset.chooseColumnFirst')).toBeInTheDocument();
-    expect(screen.queryByText('operations.columnReset.dataPreview')).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
     await chooseColumn('ops:operations.budgetColumns.landing');
     await waitFor(() => expect(screen.getByRole('button', { name: 'operations.columnReset.clearColumn' })).toBeEnabled());
     expect(screen.queryByText('operations.columnReset.chooseColumnFirst')).not.toBeInTheDocument();
-    expect(screen.getByText('operations.columnReset.dataPreview')).toBeInTheDocument();
+    // No amount in the column: one sentence, and the lines one click away.
+    expect(screen.getByText('operations.columnReset.noDataInfo')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'operations.columnReset.showAllLines:1' })).toBeInTheDocument();
   });
 
   it('offers the shown columns only, Forecast when it is shown, and clears it', async () => {
@@ -240,9 +339,10 @@ describe('BudgetColumnResetPage on all lines', () => {
     expect(operation.mock.calls[0]).toEqual(['/budget-lines/budget-operations/clear-column', { scope: 'all', year: new Date().getFullYear(), column: 'budget' }]);
   });
 
-  it('links each line to its BL page in a new tab and shows its type', async () => {
+  it('links each line to its BL page in a new tab and shows its type, in the full grid', async () => {
     renderPage();
     await chooseColumn('ops:operations.budgetColumns.budget');
+    fireEvent.click(await screen.findByRole('button', { name: 'operations.columnReset.showAllLines:2' }));
     const licences = await screen.findByRole('link', { name: 'Licences' });
     expect(licences).toHaveAttribute('href', '/ops/budget/BL-12');
     expect(licences).toHaveAttribute('target', '_blank');
@@ -253,6 +353,7 @@ describe('BudgetColumnResetPage on all lines', () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
     await chooseColumn('ops:operations.budgetColumns.budget');
+    fireEvent.click(await screen.findByRole('button', { name: 'operations.columnReset.showAllLines:1' }));
     expect(await screen.findByRole('link', { name: 'Servers' })).toHaveAttribute('href', '/ops/budget/BL-500003');
     expect(screen.queryByText('operations.scope.capex', { selector: '[data-col="nature"]' })).toBeNull();
   });

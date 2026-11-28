@@ -10,9 +10,20 @@ export type PermissionLevel = 'reader' | 'contributor' | 'member' | 'admin';
 // Permission level ranking for union logic (higher = more permissive)
 const LEVEL_RANK: Record<PermissionLevel, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
 
+/**
+ * The rights with two levels only, reader and admin: a contributor or member level stored on them
+ * reads as reader (a role seeded with `settings: member` keeps what it could do: only `admin` goes
+ * beyond reader there). The historical `manager`, which opens nothing, stays as it is.
+ */
+const READER_OR_ADMIN_RESOURCES = new Set(['settings', 'organization']);
+
 export function normalizePermissionLevel(resource: string, level: PermissionLevel): PermissionLevel {
+  const canonical = normalizeResource(resource);
   // Knowledge does not use a contributor tier. Preserve legacy data by folding it down to reader.
-  if (normalizeResource(resource) === 'knowledge' && level === 'contributor') {
+  if (canonical === 'knowledge' && level === 'contributor') {
+    return 'reader';
+  }
+  if (READER_OR_ADMIN_RESOURCES.has(canonical) && (level === 'contributor' || level === 'member')) {
     return 'reader';
   }
   return level;
@@ -37,6 +48,8 @@ export const RESOURCES = [
   'business_processes',
   'knowledge',
   'users',
+  // The organisation's administration pages: branding, authentication, audit log (lot A1).
+  'organization',
   'reporting',
   'settings',
   'budget_ops',

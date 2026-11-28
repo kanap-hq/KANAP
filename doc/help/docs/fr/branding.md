@@ -6,7 +6,7 @@ Utilisez la page Personnalisation pour appliquer l'identité de votre entreprise
 
 - Module : menu **Administration** → **Personnalisation**
 - Route : `/admin/branding`
-- Autorisation : `users:admin`
+- Autorisation : `organization:reader` pour consulter, `organization:admin` pour modifier. Un lecteur voit les mêmes champs, grisés, sans bouton
 - Disponible uniquement sur les hôtes tenant (pas sur l'hôte d'administration de la plateforme)
 
 Les modifications s'appliquent uniquement à votre tenant courant.

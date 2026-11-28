@@ -29,11 +29,12 @@ The landing page has two sections. Each card links to a dedicated tool. An empty
 
 | Cards | Who sees them |
 |---|---|
-| Currencies, Budget columns, Default allocation method, Freeze / unfreeze data | Budget administration at admin level (`budget_ops:admin`) |
-| Copy budget columns, Reset budget column | Budget at admin level (`budget:admin`). The **All**, **OPEX** and **CAPEX** tabs all open with it |
+| Currencies, Freeze / unfreeze data | Budget administration at admin level (`budget_ops:admin`) |
+| Budget columns, Default allocation method | Budget administration at reader level (`budget_ops:reader`), read-only. Changing them needs the admin level (`budget_ops:admin`) |
+| Copy budget columns, Clear a budget column | Budget at admin level (`budget:admin`). Every **Line type** (**All**, **OPEX**, **CAPEX**) opens with it |
 | Freeze master data, Copy yearly metrics | Users with access to the budget who are admins of Budget administration, companies or departments. Company and department admins act on their own scope |
 
-The built-in Budget Administrator role sees every card. Budget Member and Budget Reader see none, so **Administration** is not in their menu.
+The built-in Budget Administrator role sees every card. Budget Member and Budget Reader see the **Budget columns** and **Default allocation method** cards, which open read-only for them, and no operation. A person whose data access is limited sees none of these cards.
 
 The budget columns are Budget, Revision, Forecast, Actuals and Expected landing. These are the standard names. Your organisation can rename them, hide some and choose a default column in [Budget columns](#budget-columns). Every page below shows the names your organisation chose.
 
@@ -67,7 +68,7 @@ Without the Admin level on Budget administration, the page shows the states read
 
 - Prevents edits to frozen columns in the workspace of the lines of that type. The inputs show a lock icon
 - Blocks imports to frozen columns
-- Blocks copy and reset operations targeting frozen columns
+- Blocks copy and clear operations targeting frozen columns
 - Refuses to delete a line, or to change its type, while it has amounts in a frozen column of the years concerned
 - Does **not** affect read access: data remains visible
 - Applies to hidden columns too. A frozen column stays frozen when it is hidden, and imports into it are still refused
@@ -216,15 +217,15 @@ When the copy includes the amounts and the destination column is frozen, **Previ
 
 ---
 
-## Reset Budget Column
+## Clear a budget column { #reset-budget-column }
 
-Clear all data from a specific budget column for a given year. This is a destructive operation: use it when you need to start fresh.
+Clear all data from a budget column for a given year. This is a destructive operation: use it when you need to start fresh.
 
-The **All** / **OPEX** / **CAPEX** tabs at the top choose which lines are cleared. **All**, the default, clears the OPEX and CAPEX lines together. The reset sets the twelve months of the column to zero and removes its period, and its lines when the column was built from quantity and price. In the Budget tab, the column then gets a new suggestion from the line's dates. The reset covers every line, including lines whose end of validity has passed. The reset is all or nothing: if one line fails, nothing is cleared.
+**Line type** (**All** / **OPEX** / **CAPEX**) chooses which lines are cleared. **All**, the default, clears the OPEX and CAPEX lines together. Clearing sets the twelve months of the column to zero and removes its period, and its lines when the column was built from quantity and price. In the Budget tab, the column then gets a new suggestion from the line's dates. Clearing covers every line, including lines whose end of validity has passed. It is all or nothing: if one line fails, nothing is cleared.
 
-Needs the Admin level on Budget (`budget:admin`).
+Needs the Admin level on Budget (`budget:admin`). Other users cannot open the page.
 
-A column whose lines hold no amount can still be reset: the reset then only removes the spread periods, and the confirmation says so.
+A column whose lines hold no amount can still be cleared: clearing then only removes the spread periods, and the page and the confirmation say so.
 
 ### When to use it
 
@@ -236,35 +237,42 @@ A column whose lines hold no amount can still be reset: the reset then only remo
 
 | Field | Description |
 |-------|-------------|
+| **Line type** | **All**, **OPEX** or **CAPEX** |
 | **Year** | The fiscal year to clear (range: current year minus one through current year plus five) |
 | **Budget column** | Any shown column, Forecast included when it is shown. No column is preselected: the field reads **Choose a column** and **Clear column** stays disabled until you pick one |
 
 ### Preview
 
-Before you choose a column, one line replaces the grid: "Choose a column to see the amounts it holds." Once you choose a column, a grid shows every line of the chosen type and its current value in that column. The line's name opens it in a new tab, and on the **All** tab a **Line type** column says **OPEX** or **CAPEX**. Amounts that will be cleared are shown in medium weight; empty values are muted. Below the grid, three stats appear:
+Before you choose a column, one line says: "Choose a column to see the amounts it holds." Once you choose a column, the page shows three numbers:
 
-- **Total lines**
-- **Lines with a non-zero total**
-- **Current total value**
+- **Lines**: the lines of the chosen type still valid on January 1 of the year
+- **Lines with an amount**
+- **Total value**
 
-**Export table** (download icon) downloads the grid as a CSV or Excel file: the lines of the chosen type and their current value in the chosen column.
+Under them, the five lines with the largest amounts in the column, a negative amount ranked by its size, then "and N more lines". With **Line type** on **All**, a **Line type** column says **OPEX** or **CAPEX**. A sentence then says what clearing removes, for how many lines, and that it cannot be undone.
+
+**Show all N lines** opens a grid of every line of the chosen type under the panel, with its current value in the column. The grid sorts by any column, and the line's name opens it in a new tab. Amounts that will be cleared are shown in medium weight; empty values are muted. **Hide the lines** closes it.
+
+**Export table** (download icon, beside the options) downloads every line and its current value in the chosen column as a CSV or Excel file. The export is recorded in the audit log.
+
+When the column holds no amount, one sentence says so instead of the numbers, and **Show all N lines** still opens the grid.
 
 ### Confirmation
 
-Clicking **Clear column** opens a confirmation dialog that shows:
+Clicking **Clear column** opens a confirmation that asks "Clear the Budget column of 2026?" and shows:
 
-- The column and year being reset
-- The number of lines affected
-- The total value being deleted
-- A clear warning that this action cannot be undone
+- The number of lines affected and the total value being deleted
+- That the lines and their other columns are kept
+- That this action cannot be undone
 
-You must click **Clear column** in the dialog to proceed, or **Cancel** to abort.
+Click **Clear column** in the dialog to proceed, or **Cancel** to abort. The result shows beside the button, for example "Column cleared on 45 lines." It counts the lines whose amounts were removed, as **Lines with an amount** did. When no line held an amount, it says "Column cleared: no line held an amount."
 
 ### Safety features
 
 - The **Clear column** button stays available when no line has an amount, so the spread periods can still be removed
 - No column is preselected, so you always choose the column to clear
-- Frozen columns cannot be reset. Unfreeze them first. On the **All** tab, when the column is frozen for one type only, the message names it, for example "The 2026 Budget column is frozen for CAPEX. Unfreeze it before clearing data, or clear the other type only."
+- Frozen columns cannot be cleared. Unfreeze them first. With **Line type** on **All**, when the column is frozen for one type only, the message names it, for example "The 2026 Budget column is frozen for CAPEX. Unfreeze it before clearing data, or clear the other type only."
+- While another budget operation runs, clearing is refused and the message beside the button says so
 - The confirmation dialog requires explicit acknowledgement
 
 ---
@@ -285,7 +293,7 @@ Set the method that OPEX lines and CAPEX investments follow when they are left o
 | Field | Description |
 |-------|-------------|
 | **Fiscal year** | The year the setting applies to (range: current year minus one through current year plus five) |
-| **Companies** | **All enabled companies** (default) spreads the cost over every company active for the year. **Selected companies** restricts it to the companies you pick |
+| **Company scope** | **All enabled companies** (default) spreads the cost over every company active for the year. **Selected companies** restricts it to the companies you pick in **Companies** |
 | **Default method** | The driver weighting the companies: Headcount, IT Users, or Turnover |
 
 ### How it works
@@ -293,8 +301,9 @@ Set the method that OPEX lines and CAPEX investments follow when they are left o
 1. **Select a year**
 2. **Pick the company scope**: *All enabled companies*, or *Selected companies* and then the companies themselves
 3. **Pick the driver** that weights the companies (Headcount, IT Users, or Turnover)
-4. Every change saves immediately, there is no Save button
-5. To return to the standard, click **Use the standard method** (shown only while a custom default is configured)
+4. Every change saves on its own: a choice as soon as you make it, the companies when their list closes. **Saving…** then **Saved** shows beside the title. There is no Save button. The fiscal year cannot be changed while a change is being saved
+5. A change the server refuses is undone at once: the field shows the saved setting again, with the reason under it until you change the setting again, and **Not saved** shows beside the title. When the server is busy, your choice stays on the screen and **Saving…** shows while it is sent again. If it still cannot be saved, **Not saved** shows with a message, and the change is sent again with your next change
+6. To return to the standard, click **Restore the default allocation** beside the title (shown only while a custom default is configured)
 
 ### Selected companies
 
@@ -320,7 +329,9 @@ The default is resolved every time allocations are displayed, so editing it re-d
 
 ### Permissions
 
-Changing the default needs `budget_ops:admin`. The card is hidden from other users.
+Changing the default needs `budget_ops:admin`. Budget Reader and Budget Member, who read Budget administration (`budget_ops:reader`), open the page read-only: the same fields, which they cannot change, and no **Restore the default allocation** button. They can still choose the fiscal year to read. A person whose data access is limited cannot open the page.
+
+Each change writes its own entry in the audit log.
 
 ---
 
@@ -353,17 +364,21 @@ By default, Budget, Revision, Actuals and Expected landing are shown and Forecas
 
 ### What the settings change
 
-- **Hidden columns** leave the lists, the column chooser, the Budget tab, the report pickers, the copy and reset pages and the overview. They keep their amounts: hiding a column never clears data, and showing it again brings the amounts back. Hidden columns still accept imports through the budget file, and freezes still apply to them. The freeze page lists hidden columns too, marked **Hidden**, so you can freeze them like the others
+- **Hidden columns** leave the lists, the column chooser, the Budget tab, the report pickers, the copy and clear pages and the overview. They keep their amounts: hiding a column never clears data, and showing it again brings the amounts back. Hidden columns still accept imports through the budget file, and freezes still apply to them. The freeze page lists hidden columns too, marked **Hidden**, so you can freeze them like the others
 - **The default column** is preselected in every report. It sorts the budget lines list and its previous and next navigation. The **Top lines** tile, ranked by **Amount** or by **Increase**, and the **My budget** and **By cost center** tiles of the overview use it. The list shows it for the current year, next to the last shown column. A list whose amount columns a person chose keeps them and gains the new default column. It is also the reference amount of the Allocations tab and the column the **Difference with** row of the Budget tab starts on. The Budget tab of a line opens on it while it is not frozen. Freezing it for a year fixes that year's exchange rates (see [Freezing the default column fixes the exchange rates](#freezing-the-default-column-fixes-the-exchange-rates))
 - **Follows the spread and the lines** decides which columns start ticked when you use **Use for other columns too…** on the Budget tab. Frozen columns are never offered, whatever this setting says
 
 ### Saving
 
-Click **Save** to apply your changes. The button stays disabled until something changed and every name is valid. **Reset** discards the changes you have not saved yet. Mistakes are explained under the field or the table, for example "At least one column must stay shown." or "The default column must be shown: choose another default column first." To hide the current default column, choose another default column first. Both changes can be saved together.
+Every change saves on its own, without a Save button: a name when you leave its field or after a short pause in typing, a switch or the default column as soon as you change it. **Saving…** then **Saved** shows beside the title. Each change writes its own entry in the audit log.
+
+A value that would be refused is not saved. It stays on the screen with the reason under it, and the setting saved before stays in force: for example "Two columns cannot both be named "Budget"." under a name, or "At least one column must stay shown." under a switch. To hide the current default column, choose another default column first, then hide it: hiding the default column is refused with "The default column must be shown: choose another default column first.", and the switch goes back to its saved position at your next change.
+
+A change the server refuses is undone at once: the name or the switch shows its saved value again, with the server's reason under it until you change that field again, and **Not saved** shows beside the title. Your other changes are still saved. When the server is busy, the change stays on the screen and **Saving…** shows while it is sent again. If it still cannot be saved, **Not saved** shows with a message under the table, and the change is sent again with your next change. Leaving the page right after a refused change keeps you on the page, so that you can read the reason. Leaving while a change still waits for a busy server asks first.
 
 ### Permissions
 
-Changing the settings needs Budget administration admin rights (`budget_ops:admin`). The card is hidden from other users.
+Changing the settings needs Budget administration admin rights (`budget_ops:admin`). Budget Reader and Budget Member, who read Budget administration (`budget_ops:reader`), open the page read-only: the same table, which they cannot change. A person whose data access is limited cannot open the page.
 
 If the settings cannot be loaded, the page shows one line, "The column settings could not be loaded.", and no controls.
 
@@ -400,6 +415,6 @@ Here is a typical sequence using these tools, with the standard column names and
 - **Always preview first**: **Copy budget columns** shows what it does on each line before you copy. Check it every time before committing.
 - **Freeze after approval**: Locking columns after approval maintains your audit trail and prevents accidental edits.
 - **Use percentage adjustments**: When copying between years, apply an inflation or growth factor so you do not have to adjust every line manually.
-- **Check freeze status before bulk operations**: Frozen columns block copy and reset operations. If a button is greyed out, check the freeze page first.
+- **Check freeze status before bulk operations**: Frozen columns block copy and clear operations. If a button is greyed out, check the freeze page first.
 - **Set the year's default before entering budgets**: If your allocation basis is not headcount, configure it in Default Allocation Method first, so lines are created on the right basis instead of being re-driven later.
-- **Reset with caution**: Column reset is irreversible. Double-check the year and column before confirming.
+- **Clear with caution**: Clearing a column cannot be undone. Double-check the year and column before confirming.

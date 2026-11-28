@@ -44,7 +44,8 @@
     "sending": "Envoi…",
     "importing": "Importation…",
     "exporting": "Exportation {{format}}…",
-    "saved": "Enregistré"
+    "saved": "Enregistré",
+    "notSaved": "Non enregistré"
   },
   "statuses": {
     "enabled": "Activé",
@@ -1975,5 +1976,9 @@
     "applied": "{{field}} : {{value}}",
     "toCheck": "À vérifier : {{count}}",
     "willCheck": "Dont {{count}} à vérifier"
+  },
+  "operationPanel": {
+    "moreLines_one": "et {{count}} autre ligne",
+    "moreLines_other": "et {{count}} autres lignes"
   }
 }

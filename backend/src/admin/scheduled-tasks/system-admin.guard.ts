@@ -1,13 +1,12 @@
 import { CanActivate, ExecutionContext, ForbiddenException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { EntityManager } from 'typeorm';
 import { Features } from '../../config/features';
 import { isPlatformAdmin } from '../../auth/platform-admin.util';
+import { isAdministratorRole } from '../../roles/system-roles';
 import { UserRole } from '../../users/user-role.entity';
 
 @Injectable()
 export class SystemAdminGuard implements CanActivate {
-  constructor(private readonly dataSource: DataSource) {}
-
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req: any = context.switchToHttp().getRequest();
     const user = req?.user as { sub?: string; email?: string; role?: { role_name?: string } } | undefined;
@@ -34,17 +33,17 @@ export class SystemAdminGuard implements CanActivate {
       return true;
     }
 
-    // Single-tenant mode: check if any of the user's roles is Administrator
-    const userRolesRepo = this.dataSource.getRepository(UserRole);
-    const userRoles = await userRolesRepo.find({
-      where: { user_id: user.sub },
-      relations: ['role'],
-    });
+    // Single-tenant mode: the Administrator role, as the principal role or an extra role, as
+    // `/auth/me` counts it (`isGlobalAdmin`). `user_roles` and `roles` are under FORCE RLS, so the
+    // extra roles are read in the request's tenant transaction (opened by `TenantInitGuard`): a read
+    // outside it sees no row. Without that transaction or a user id, only the principal role counts.
+    const manager: EntityManager | undefined = req?.queryRunner?.manager;
+    const tenantId: string | undefined = req?.tenant?.id;
+    const extraRoles = manager && tenantId && user.sub
+      ? await manager.getRepository(UserRole).find({ where: { tenant_id: tenantId, user_id: user.sub }, relations: ['role'] })
+      : [];
 
-    const roleNames = userRoles.map(ur => ur.role?.role_name?.toLowerCase() ?? '');
-    if (user.role?.role_name) roleNames.push(user.role.role_name.toLowerCase());
-
-    if (!roleNames.includes('administrator')) {
+    if (!isAdministratorRole(user.role) && !extraRoles.some((row) => isAdministratorRole(row.role))) {
       throw new ForbiddenException({
         statusCode: HttpStatus.FORBIDDEN,
         error: 'Forbidden',

@@ -44,7 +44,8 @@
     "sending": "Enviando…",
     "importing": "Importando…",
     "exporting": "Exportando {{format}}…",
-    "saved": "Guardado"
+    "saved": "Guardado",
+    "notSaved": "No guardado"
   },
   "statuses": {
     "enabled": "Activado",
@@ -1975,5 +1976,9 @@
     "applied": "{{field}}: {{value}}",
     "toCheck": "Por verificar: {{count}}",
     "willCheck": "De ellas, {{count}} por verificar"
+  },
+  "operationPanel": {
+    "moreLines_one": "y {{count}} línea más",
+    "moreLines_other": "y {{count}} líneas más"
   }
 }

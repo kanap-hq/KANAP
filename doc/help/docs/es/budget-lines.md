@@ -256,7 +256,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dir
 - Cambiar de pestaña, pasar a la línea anterior o siguiente, o cerrar el espacio de trabajo guarda primero los cambios pendientes. Si un guardado falla, usted se queda donde está y un mensaje explica el motivo, de modo que ningún cambio se pierde sin que lo sepa
 - **Ctrl+S** (**Cmd+S** en Mac) guarda de inmediato
 - Si un guardado no puede completarse de inmediato porque hay otro guardado en curso sobre los mismos datos, Kadratis lo reintenta automáticamente
-- Si hay una operación de presupuesto masiva en curso (por ejemplo, la copia o el vaciado de una columna en la Configuración del presupuesto), las ediciones aquí se detienen con el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» Vuelva a intentarlo cuando haya terminado
+- Si hay una operación de presupuesto masiva en curso (por ejemplo, copiar o vaciar una columna en la Configuración del presupuesto), las ediciones aquí se detienen con el mensaje «Hay otra operación de presupuesto en curso. Vuelva a intentarlo cuando haya terminado.» Vuelva a intentarlo cuando haya terminado
 
 **Edición simultánea**:
 

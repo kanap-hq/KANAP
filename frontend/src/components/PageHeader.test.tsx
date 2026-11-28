@@ -40,13 +40,12 @@ describe('PageHeader', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
   });
 
-  it('labels administration pages next to the title', () => {
-    renderAt('/admin/users');
-    expect(screen.getByText('breadcrumbs.admin')).toBeTruthy();
-  });
-
-  it('adds no label outside administration', () => {
-    renderAt('/ops/operations/currency');
-    expect(screen.queryByText('breadcrumbs.admin')).toBeNull();
-  });
+  it.each(['/admin/users', '/admin/installation/scheduled-tasks', '/ops/operations/currency'])(
+    'adds no label next to the title on %s',
+    (path) => {
+      renderAt(path);
+      expect(screen.queryByText('breadcrumbs.admin')).toBeNull();
+      expect(screen.getByText('Antoine KANDEL').parentElement?.childElementCount).toBe(1);
+    },
+  );
 });

@@ -38,6 +38,7 @@ import { ContractsController } from '../../contracts/contracts.controller';
 import { UsersController } from '../../users/users.controller';
 import { RolesController } from '../../roles/roles.controller';
 import { AuditLogsController } from '../../audit/audit-logs.controller';
+import { AdminBrandingController } from '../../admin/branding/admin-branding.controller';
 import { CompaniesController } from '../../companies/companies.controller';
 import { CostCentersController } from '../../cost-centers/cost-centers.controller';
 import { ChartOfAccountsController } from '../../accounts/chart-of-accounts.controller';
@@ -51,6 +52,7 @@ import { AiSettingsController } from '../../ai/ai-settings.controller';
 import { AiModelConfigsController } from '../../ai/ai-model-configs.controller';
 import { AiApiKeysController } from '../../ai/ai-api-keys.controller';
 import { DemoDataController } from '../../demo-data/demo-data.controller';
+import { EntraController } from '../../auth/entra.controller';
 import {
   DATA_ACCESS_RESERVED_MESSAGE,
   DataAccessReservedException,
@@ -144,11 +146,11 @@ const REAL_CONTROLLERS = [
   FreezeController, BudgetColumnsController, CurrencyController, AllocationRulesController,
   MasterDataOperationsController, CompanyMetricsController, DepartmentMetricsController,
   SpendItemsController, CapexItemsController, BudgetLinesController, BudgetOperationsExportController, ContractsController,
-  UsersController, RolesController, AuditLogsController,
+  UsersController, RolesController, AuditLogsController, AdminBrandingController,
   CompaniesController, CostCentersController, ChartOfAccountsController, AnalyticsAxesController,
   AnalyticsCategoriesController, BusinessProcessesController, SuppliersController, ContactsController,
   AiAgentControlController, AiSettingsController, AiModelConfigsController, AiApiKeysController,
-  DemoDataController,
+  DemoDataController, EntraController,
 ];
 
 /** A stand-in for any service: every member is a function resolving to undefined. Not a thenable. */
@@ -271,6 +273,7 @@ const RESERVED_SAMPLES: Array<[string, Method, string, boolean]> = [
   ['roles', 'PUT', `roles/${ID}/permissions`, false],
   ['audit log list', 'GET', 'audit-logs', false],
   ['audit log entry', 'GET', `audit-logs/${ID}`, false],
+  ['branding write', 'PATCH', 'admin/branding/settings', false],
   ['companies', 'POST', 'companies', false],
   ['cost centres', 'PATCH', `cost-centers/${ID}`, false],
   ['charts of accounts', 'PATCH', `chart-of-accounts/${ID}/global-default`, false],
@@ -284,6 +287,9 @@ const RESERVED_SAMPLES: Array<[string, Method, string, boolean]> = [
   ['model configuration writes', 'POST', 'ai/model-configs', true],
   ['API keys administration', 'GET', 'ai/admin/keys', true],
   ['sample data', 'GET', 'admin/sample-data', true],
+  // Connect and Reconnect: the connection's return replaces the directory the sync reads.
+  ['Microsoft connection', 'POST', 'auth/entra/setup/start', false],
+  ['Microsoft connection from the browser', 'GET', 'auth/entra/setup/start', false],
 ];
 
 /** Routes of the same controllers left to every person. */
@@ -295,6 +301,8 @@ const ALLOWED_SAMPLES: Array<[string, Method, string]> = [
   ['supplier contact link', 'POST', `suppliers/${ID}/contacts`],
   ['line update', 'PATCH', `spend-items/${ID}`],
   ['own MCP keys', 'GET', 'ai/keys'],
+  // An organisation reader in limited access reads Branding (lot A1, P19).
+  ['branding settings', 'GET', 'admin/branding/settings'],
 ];
 
 function isReservedRefusal(res: { status: number; body: any }): boolean {

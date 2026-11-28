@@ -38,6 +38,10 @@ function writePart(res: Response, part: string): Promise<void> {
   });
 }
 
+/**
+ * Admin › Audit log: every route reads, at `organization:reader`, and every route is reserved to
+ * people with access to all data (the log shows the before and after of every table).
+ */
 @ReservedToUnscopedDataAccess()
 @UseGuards(JwtAuthGuard)
 @Controller('audit-logs')
@@ -45,7 +49,7 @@ export class AuditLogsController {
   constructor(private readonly svc: AuditLogsService) {}
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'reader')
   @Get()
   list(@Query() query: any, @Tenant() ctx: TenantRequest) {
     return this.svc.list(query, {
@@ -56,7 +60,7 @@ export class AuditLogsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'reader')
   @Get('filter-values')
   listFilterValues(@Query() query: any, @Tenant() ctx: TenantRequest) {
     return this.svc.listFilterValues(query, {
@@ -73,7 +77,7 @@ export class AuditLogsController {
   // batch while the request's tenant transaction stays open: the handler returns, and the
   // transaction is committed, after the last part. The workbook is written batch by batch, then sent.
   @UseGuards(PermissionGuard, RateLimitGuard)
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'reader')
   @Throttle({ default: RATE_LIMITS.documentExport })
   @Get('export')
   async export(
@@ -108,7 +112,7 @@ export class AuditLogsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'reader')
   @Get(':id')
   getById(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
     return this.svc.getById(id, {

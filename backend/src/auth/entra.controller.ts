@@ -4,7 +4,8 @@ import { Response } from 'express';
 import { DataSource, EntityManager } from 'typeorm';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { PermissionGuard } from './permission.guard';
-import { RequireLevel } from './require-level.decorator';
+import { RequireAnyLevel, RequireLevel } from './require-level.decorator';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { EntraAuthService } from './entra-auth.service';
 import { TenantsService } from '../tenants/tenants.service';
 import { AuthService } from './auth.service';
@@ -106,8 +107,18 @@ export class EntraController {
 
   private readonly logger = new Logger(EntraController.name);
 
+  /**
+   * Connect and Reconnect. The return (`handleSetupCallback`) replaces the directory the workspace
+   * is connected to, and the directory sync then disables every linked account that directory does
+   * not know: as the sync and the disconnect (Admin › Authentication), it needs organization:admin
+   * AND users:admin, and access to all data.
+   */
+  @ReservedToUnscopedDataAccess()
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'admin')
+  // A list of one entry next to `@RequireLevel`: PermissionGuard asks for both (the level and one
+  // entry of the list), so this route needs organization:admin AND users:admin.
+  @RequireAnyLevel([{ resource: 'users', level: 'admin' }])
   @Post('setup/start')
   async startSetup(@Req() req: any) {
     if (req?.isPlatformHost) {
@@ -127,8 +138,13 @@ export class EntraController {
     return { url };
   }
 
+  /** Connect from the browser: the same requirement as `startSetup`, which it calls. */
+  @ReservedToUnscopedDataAccess()
   @UseGuards(JwtAuthGuard, PermissionGuard)
-  @RequireLevel('users', 'admin')
+  @RequireLevel('organization', 'admin')
+  // A list of one entry next to `@RequireLevel`: PermissionGuard asks for both (the level and one
+  // entry of the list), so this route needs organization:admin AND users:admin.
+  @RequireAnyLevel([{ resource: 'users', level: 'admin' }])
   @Get('setup/start')
   async startSetupGet(@Req() req: any, @Res() res: Response) {
     const result = await this.startSetup(req);
