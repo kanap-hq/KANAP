@@ -164,6 +164,7 @@ ai-settings.md	frontend/src/pages/admin/AdminAiPage.tsx
 ai-settings.md	frontend/src/pages/admin/IncludedModelConfirmation.tsx
 ai-settings.md	frontend/src/pages/admin/McpJournalSection.tsx
 ai-settings.md	frontend/src/pages/oauth/**/*.tsx
+ai-settings.md	frontend/src/ai/components/McpKeyDialog.tsx
 connected-apps.md	frontend/src/pages/settings/ConnectedAppsTab.tsx
 ai-models.md	frontend/src/pages/admin/AdminAiModelsPage.tsx
 ai-usage.md	frontend/src/pages/admin/AdminAiUsagePage.tsx
@@ -211,3 +212,5 @@ first-steps/portfolio-example.md	frontend/src/components/onboarding/onboardingPa
 first-steps/portfolio-example.md	backend/src/onboarding/onboarding-paths.ts
 first-steps/portfolio-own-data.md	frontend/src/components/onboarding/onboardingPaths.ts
 first-steps/portfolio-own-data.md	backend/src/onboarding/onboarding-paths.ts
+all-settings.md	frontend/src/pages/admin/AllSettingsPage.tsx
+all-settings.md	frontend/src/settings/**

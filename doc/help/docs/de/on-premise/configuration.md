@@ -865,7 +865,7 @@ Standardmäßig gibt Docker seinen ersten 15 Netzwerken Bereiche innerhalb von `
 
 ## Hintergrundjobs
 
-Die API führt die folgenden geplanten Jobs aus. Die folgenden Zeiten sind die Standardwerte, in UTC (die Uhr des API-Containers). Administratoren sehen die Jobs unter **Administration → Geplante Aufgaben** (siehe [Geplante Aufgaben](../scheduled-tasks.md)), wo jeder einzelne ausgeschaltet, neu geplant oder auf Anforderung ausgeführt werden kann.
+Die API führt die folgenden geplanten Jobs aus. Die folgenden Zeiten sind die Standardwerte, in UTC (die Uhr des API-Containers). Administratoren sehen die Jobs unter **Administration → Installation → Geplante Aufgaben** (siehe [Geplante Aufgaben](../scheduled-tasks.md)), wo jeder einzelne ausgeschaltet, neu geplant oder auf Anforderung ausgeführt werden kann.
 
 | Job | Wann | Was er tut |
 |-----|------|--------------|

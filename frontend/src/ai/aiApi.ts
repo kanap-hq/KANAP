@@ -1458,8 +1458,15 @@ export const aiAdminApi = {
   },
 };
 
+/** What an empty model timeout falls back to, in milliseconds: the assistant's limit and the agent stages' range. */
+export type AiAppliedTimeouts = {
+  chat_ms: number;
+  agent_ms_min: number;
+  agent_ms_max: number;
+};
+
 export const aiModelConfigsApi = {
-  async list(): Promise<{ model_configs: AiModelConfig[]; secret_writable: boolean }> {
+  async list(): Promise<{ model_configs: AiModelConfig[]; secret_writable: boolean; applied_timeouts?: AiAppliedTimeouts }> {
     const res = await api.get('/ai/model-configs');
     return res.data;
   },

@@ -865,7 +865,7 @@ Par défaut, Docker attribue à ses 15 premiers réseaux des plages comprises da
 
 ## Tâches de fond
 
-L'API exécute les tâches planifiées ci-dessous. Les heures ci-dessous sont les valeurs par défaut, en UTC (l'horloge du conteneur API). Les administrateurs voient les tâches dans **Administration → Tâches planifiées** (voir [Tâches planifiées](../scheduled-tasks.md)), où chacune peut être désactivée, reprogrammée ou lancée à la demande.
+L'API exécute les tâches planifiées ci-dessous. Les heures ci-dessous sont les valeurs par défaut, en UTC (l'horloge du conteneur API). Les administrateurs voient les tâches dans **Administration → Installation → Tâches planifiées** (voir [Tâches planifiées](../scheduled-tasks.md)), où chacune peut être désactivée, reprogrammée ou lancée à la demande.
 
 | Tâche | Quand | Ce qu'elle fait |
 |-----|------|--------------|

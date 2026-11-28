@@ -13,12 +13,12 @@ This document tracks documentation coverage for the Kadratis user manual.
 | IT Landscape | 14 | 14 | 0 |
 | Knowledge | 1 | 1 | 0 |
 | Master Data | 8 | 8 | 0 |
-| Admin & Settings | 18 | 18 | 0 |
+| Admin & Settings | 19 | 19 | 0 |
 | Kad | 1 | 1 | 0 |
 | AI Agents | 5 | 5 | 0 |
 | Reports | 9 | 9 | 0 |
 | Portfolio | 10 | 10 | 0 |
-| **TOTAL** | **71** | **71** | **0** |
+| **TOTAL** | **72** | **72** | **0** |
 
 _Note: Supplemental Fast Track guides are excluded from these route-based counts. All tenant-facing routes have a manual. The classic product (through the 2026-05-10 sweep) is available in en/fr/de/es; the AI Agents section (added 2026-07-05) is also available in en/fr/de/es. The two AI model registry pages (added 2026-08-10) are available in en/fr/de/es._
 
@@ -28,7 +28,10 @@ _Note: Supplemental Fast Track guides are excluded from these route-based counts
 
 | Date | Doc File | Changes |
 |------|----------|---------|
+| 2026-11-28 | `ai-models.md`, `ai-settings.md` (en; fr/de/es by the translation pass) | `ai-models`: hovering an active model's name says who uses it (Kad, agents by name, agents without a model of their own through the default model, or *Unused*); the included model reads **Not used** when nothing runs on it; **Timeout (seconds)** shows in grey the limit an empty field falls back to (Kad's, the agents', or both, with the agents' range when the steps differ). `ai-settings`: the line under **Model used by Kad** when Kad does not use the included model; **Create key** shown to people with MCP access only; the dialog's **Done** and Escape drop the secret. `doc-update-map.tsv` maps `frontend/src/ai/components/McpKeyDialog.tsx`. |
+| 2026-11-28 | `scheduled-tasks.md`, `on-premise/configuration.md` (en) | Scheduled tasks move to the **Installation** section of the Administration menu (`/admin/installation/scheduled-tasks`; the former address redirects). Access: the Administrator role with access to all data on site, the platform administrator on the platform host. |
 | 2026-11-28 | `budget-operations.md` (en) | Settings pages of the budget on the shared settings components. **Budget columns** and **Default allocation method** save each change on its own (no Save or Reset), one audit entry per change; a refused value stays with its reason and is not saved; hide the default column only after choosing another default; Budget Reader and Budget Member open both pages read-only. **Default allocation method**: **Restore the default allocation** beside the title. **Reset budget column** retitled **Clear a budget column** (anchor `#reset-budget-column` kept): three numbers, the five largest lines, **Show all N lines** opens the full grid, export beside the options, result beside the button. |
+| 2026-11-28 | `all-settings.md` (en/fr/de/es) | New page for **All settings** (`/admin/all-settings`, every signed-in person): the groups (My account, one per module, Administration, Installation, Platform), the search on page and setting names, what the list hides according to rights, mode and host, and the two menu entries (account menu for everyone, last entry of the Administration menu except on the platform host). Wired mkdocs nav (Administration section; fr **Tous les paramètres**, de **Alle Einstellungen**, es **Toda la configuración**), `docUrls.ts`, `doc-update-map.tsv` (`AllSettingsPage.tsx`, `frontend/src/settings/**`). |
 | 2026-11-28 | `on-premise/configuration.md` (en; fr/de/es by the translation pass) | The full example `.env` is a block generated from the variable registry (`backend/src/config/env-registry.ts`, `npm run env:generate`), between two HTML markers: every on-premise variable, with `APP_ENV=production` commented as in `infra/.env.onprem.example`. Storage: the default region (`nbg1`). Entra: the start-up warning that names the missing variables. `doc-update-map.tsv` maps `backend/src/config/env-registry*`. |
 | 2026-11-07 | `my-dashboard.md` (en/fr/de/es) | Recently viewed also lists business processes. `doc/api-reference.md` names `company` and `business_process` among the types of the existence check. |
 | 2026-11-02 | `first-steps/*.md` (en/fr/de/es) | Six first-steps guides, one per trial path and mode: budget, IT landscape and portfolio, with the example or with your own data. Each follows the five steps of the **Your first five steps** tile (`onboarding-paths.ts`), with the screen each step opens, what to do and what to read. Wired mkdocs nav (**First steps**, fr/de/es labels), `doc-update-map.tsv`; `docUrls.ts` opens the guide of a step from the screen it opened (`?step=`). |
@@ -250,7 +253,8 @@ _Note: `/knowledge/new`, `/knowledge/:id`, and `/knowledge/:id/:tab` are covered
 | `/admin/ai` | AdminAiPage | **DOCUMENTED** | `ai-settings.md` |
 | `/admin/ai-usage` | AdminAiUsagePage | **DOCUMENTED** | `ai-usage.md` |
 | `/admin/integrations` | AdminIntegrationsPage | **DOCUMENTED** | `integrations.md` |
-| `/admin/scheduled-tasks` | ScheduledTasksPage | **DOCUMENTED** | `scheduled-tasks.md` |
+| `/admin/all-settings` | AllSettingsPage | **DOCUMENTED** | `all-settings.md` |
+| `/admin/installation/scheduled-tasks` | ScheduledTasksPage | **DOCUMENTED** | `scheduled-tasks.md` (former address `/admin/scheduled-tasks` redirects) |
 | `/settings` | SettingsPage | **DOCUMENTED** | mapped to `fast-track/getting-started.md` in `docUrls.ts` (personal settings are covered in the Getting Started guide) |
 | `/settings/connected-apps` | ConnectedAppsTab | **DOCUMENTED** | `connected-apps.md` (mapped before the `/settings` rule in `docUrls.ts`) |
 

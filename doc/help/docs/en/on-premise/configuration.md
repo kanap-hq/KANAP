@@ -865,7 +865,7 @@ By default, Docker gives its first 15 networks ranges inside `172.16.0.0/12` (`1
 
 ## Background jobs
 
-The API runs the scheduled jobs below. The times below are the defaults, in UTC (the clock of the API container). Administrators see the jobs under **Admin → Scheduled Tasks** (see [Scheduled Tasks](../scheduled-tasks.md)), where each one can be switched off, rescheduled or run on demand.
+The API runs the scheduled jobs below. The times below are the defaults, in UTC (the clock of the API container). Administrators see the jobs under **Administration → Installation → Scheduled tasks** (see [Scheduled Tasks](../scheduled-tasks.md)), where each one can be switched off, rescheduled or run on demand.
 
 | Job | When | What it does |
 |-----|------|--------------|
