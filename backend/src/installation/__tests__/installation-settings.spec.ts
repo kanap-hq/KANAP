@@ -214,6 +214,40 @@ function testAiLimitBounds() {
   );
 }
 
+/**
+ * What the core leaves to the next domains: a text of the file is trimmed (as `readTrimmedEnv`),
+ * and the switches of a domain may follow the deployment mode.
+ */
+function testFileTextsTrimmedAndFeaturesByMode() {
+  const domain: InstallationDomain = {
+    name: 'spec',
+    table: 'installation_spec_settings',
+    settings: [{ key: 'feed_url', column: 'feed_url', env: 'SPEC_FEED_URL', type: 'string', maxLength: 40, default: null }],
+    features: (_value, mode?: { singleTenant: boolean }) => ({ AI_WEB_SEARCH_READY: mode?.singleTenant === true }),
+  };
+  const previousMode = process.env.DEPLOYMENT_MODE;
+  const switchIn = (mode: string) => {
+    process.env.DEPLOYMENT_MODE = mode;
+    const target: Record<string, unknown> = {};
+    new InstallationSettingsSnapshot().applyFeatures(domain, target);
+    return target.AI_WEB_SEARCH_READY;
+  };
+  try {
+    assert.deepEqual(
+      {
+        secret: resolveDomain(AI_INSTALLATION_DOMAIN, null, ENV({ BRAVE_SEARCH_API_KEY: '  file-key \t' })).get('web_search_api_key')!.value,
+        text: resolveDomain(domain, null, ENV({ SPEC_FEED_URL: ' https://a.test  ' })).get('feed_url')!.value,
+        singleTenant: switchIn('single-tenant'),
+        multiTenant: switchIn('multi-tenant'),
+      },
+      { secret: 'file-key', text: 'https://a.test', singleTenant: true, multiTenant: false },
+    );
+  } finally {
+    if (previousMode === undefined) delete process.env.DEPLOYMENT_MODE;
+    else process.env.DEPLOYMENT_MODE = previousMode;
+  }
+}
+
 function testFeaturesFollowOnlyChanges() {
   const previousKey = process.env.BRAVE_SEARCH_API_KEY;
   delete process.env.BRAVE_SEARCH_API_KEY;
@@ -297,6 +331,7 @@ async function run() {
   testDeclarationDefaults();
   testZeroIsAValueWhenDeclared();
   testAiLimitBounds();
+  testFileTextsTrimmedAndFeaturesByMode();
   testFeaturesFollowOnlyChanges();
   await testKeyOfSpacesIsNotConfigured();
   testEncryptionKeyNames();

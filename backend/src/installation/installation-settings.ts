@@ -26,6 +26,13 @@ export type InstallationDefaultContext = {
 
 type Default<T> = T | ((context: InstallationDefaultContext) => T);
 
+/** The deployment mode a domain's switches may depend on. */
+export type InstallationDeploymentMode = { singleTenant: boolean };
+
+export function installationDeploymentMode(env: NodeJS.ProcessEnv = process.env): InstallationDeploymentMode {
+  return { singleTenant: parseDeploymentMode(env.DEPLOYMENT_MODE) === 'single-tenant' };
+}
+
 type DeclarationBase = {
   /** The name in the API and in the audit entry. */
   key: string;
@@ -82,8 +89,11 @@ export type InstallationDomain = {
   /** The table, also the audit table name. */
   table: string;
   settings: readonly InstallationSettingDeclaration[];
-  /** The switches of `Features` the domain sets, from its resolved values. */
-  features?: (value: (key: string) => InstallationSettingValue | null) => Partial<Record<InstallationFeature, boolean>>;
+  /** The switches of `Features` the domain sets, from its resolved values and the deployment mode. */
+  features?: (
+    value: (key: string) => InstallationSettingValue | null,
+    mode: InstallationDeploymentMode,
+  ) => Partial<Record<InstallationFeature, boolean>>;
 };
 
 export type ResolvedSetting = {
@@ -144,7 +154,8 @@ function fileValue(declaration: InstallationSettingDeclaration, env: NodeJS.Proc
       return { present: true, readable: true, value: parseBoolean(raw) };
     case 'secret':
     case 'string':
-      return { present: true, readable: true, value: raw };
+      // Trimmed, as readTrimmedEnv (email/email-config.ts) reads a text of the file.
+      return { present: true, readable: true, value: raw.trim() };
   }
 }
 
@@ -183,7 +194,7 @@ export function resolveDomain(
 ): ResolvedDomain {
   const resolved: ResolvedDomain = new Map();
   const context: InstallationDefaultContext = {
-    singleTenant: parseDeploymentMode(env.DEPLOYMENT_MODE) === 'single-tenant',
+    singleTenant: installationDeploymentMode(env).singleTenant,
     value: (key) => resolved.get(key)?.value ?? null,
   };
   for (const declaration of domain.settings) {

@@ -1,5 +1,6 @@
 import { INSTALLATION_DOMAINS } from './installation-domains';
 import {
+  installationDeploymentMode,
   InstallationDomain,
   InstallationFeature,
   InstallationSettingValue,
@@ -57,7 +58,7 @@ export class InstallationSettingsSnapshot {
   private computeFeatures(domain: InstallationDomain): Partial<Record<InstallationFeature, boolean>> {
     if (!domain.features) return {};
     const resolved = this.resolve(domain);
-    return domain.features((key) => resolved.get(key)?.value ?? null);
+    return domain.features((key) => resolved.get(key)?.value ?? null, installationDeploymentMode());
   }
 
   /** The switches of every domain with an empty database, remembered as set (config/features.ts). */
@@ -65,7 +66,7 @@ export class InstallationSettingsSnapshot {
     const all: Partial<Record<InstallationFeature, boolean>> = {};
     for (const domain of INSTALLATION_DOMAINS) {
       const empty = resolveDomain(domain, null);
-      const values = domain.features?.((key) => empty.get(key)?.value ?? null) ?? {};
+      const values = domain.features?.((key) => empty.get(key)?.value ?? null, installationDeploymentMode()) ?? {};
       for (const [name, value] of Object.entries(values)) {
         this.features.set(name, value === true);
         all[name as InstallationFeature] = value === true;
