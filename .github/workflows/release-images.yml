@@ -310,7 +310,24 @@ jobs:
             type=gha,scope=api-runtime
             type=gha,scope=api-dev
 
-      - name: Build and push kadratis-web
+      # kadratis-web: built and loaded first, checked like in ci.yml, then pushed, as kadratis-api.
+      - name: Build the web image for the checks
+        if: ${{ steps.state.outputs.web == 'free' }}
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: frontend
+          platforms: linux/amd64
+          build-args: VITE_API_URL=/api
+          tags: kadratis-web:release-check
+          labels: ${{ steps.meta-web.outputs.labels }}
+          load: true
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=web
+      - name: Check the web image (non-root start, read-only file system, port and API address)
+        if: ${{ steps.state.outputs.web == 'free' }}
+        run: bash .github/scripts/check-web-image.sh kadratis-web:release-check
+      - name: Push kadratis-web
         id: push-web
         if: ${{ steps.state.outputs.web == 'free' }}
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
