@@ -16,6 +16,8 @@ export default function PhaseTemplatesTab({ canEdit }: SettingsTabProps) {
   const { t } = useTranslation(['portfolio', 'common']);
   const [phaseTemplates, setPhaseTemplates] = useState<PhaseTemplate[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<PhaseTemplate | null>(null);
 
@@ -23,8 +25,10 @@ export default function PhaseTemplatesTab({ canEdit }: SettingsTabProps) {
     try {
       const templatesRes = await api.get('/portfolio/phase-templates');
       setPhaseTemplates(templatesRes.data || []);
+      setLoadError(null);
+      setLoaded(true);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
+      setLoadError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
     }
   }, [t]);
 
@@ -50,6 +54,9 @@ export default function PhaseTemplatesTab({ canEdit }: SettingsTabProps) {
     base: '/portfolio/phase-templates',
     failed: t('settings.phaseTemplates.messages.deleteFailed'),
   }), [deleteItem, phaseTemplates, t]);
+
+  if (loadError) return <Alert severity="error">{loadError}</Alert>;
+  if (!loaded) return null;
 
   return (
     <>

@@ -148,6 +148,8 @@ export default function ScoringTab({ canEdit }: SettingsTabProps) {
   const [settings, setSettings] = useState<Settings>({ mandatory_bypass_enabled: false });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingCriterion, setEditingCriterion] = useState<Criterion | null>(null);
 
@@ -160,8 +162,10 @@ export default function ScoringTab({ canEdit }: SettingsTabProps) {
       ]);
       setCriteria(criteriaRes.data || []);
       setSettings(settingsRes.data || { mandatory_bypass_enabled: false });
+      setLoadError(null);
+      setLoaded(true);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
+      setLoadError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
     } finally {
       setLoading(false);
     }
@@ -247,6 +251,9 @@ export default function ScoringTab({ canEdit }: SettingsTabProps) {
       loadData();
     }
   }, [criteria, invalidate, loadData, t]);
+
+  if (loadError) return <Alert severity="error">{loadError}</Alert>;
+  if (!loaded) return null;
 
   return (
     <>

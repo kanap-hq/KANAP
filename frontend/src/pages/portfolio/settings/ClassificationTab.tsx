@@ -24,6 +24,8 @@ export default function ClassificationTab({ canEdit }: SettingsTabProps) {
   const [categories, setCategories] = useState<PortfolioCategory[]>([]);
   const [taskTypes, setTaskTypes] = useState<PortfolioTaskType[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [sourceDialogOpen, setSourceDialogOpen] = useState(false);
   const [editingSource, setEditingSource] = useState<PortfolioSource | null>(null);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -40,8 +42,10 @@ export default function ClassificationTab({ canEdit }: SettingsTabProps) {
       setSources(classificationRes.data?.sources || []);
       setCategories(classificationRes.data?.categories || []);
       setTaskTypes(classificationRes.data?.taskTypes || []);
+      setLoadError(null);
+      setLoaded(true);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
+      setLoadError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
     }
   }, [t]);
 
@@ -175,6 +179,9 @@ export default function ClassificationTab({ canEdit }: SettingsTabProps) {
     close();
     classificationChanged();
   };
+
+  if (loadError) return <Alert severity="error">{loadError}</Alert>;
+  if (!loaded) return null;
 
   return (
     <>

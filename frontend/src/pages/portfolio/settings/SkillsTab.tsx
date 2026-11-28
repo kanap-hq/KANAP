@@ -24,6 +24,8 @@ export default function SkillsTab({ canEdit }: SettingsTabProps) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [skillsGrouped, setSkillsGrouped] = useState<Record<string, Skill[]>>({});
   const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [skillDialogOpen, setSkillDialogOpen] = useState(false);
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
 
@@ -32,8 +34,10 @@ export default function SkillsTab({ canEdit }: SettingsTabProps) {
       const skillsRes = await api.get('/portfolio/skills');
       setSkills(skillsRes.data?.items || []);
       setSkillsGrouped(skillsRes.data?.grouped || {});
+      setLoadError(null);
+      setLoaded(true);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
+      setLoadError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
     }
   }, [t]);
 
@@ -86,6 +90,9 @@ export default function SkillsTab({ canEdit }: SettingsTabProps) {
     setEditingSkill(null);
     setSkillDialogOpen(true);
   }, []);
+
+  if (loadError) return <Alert severity="error">{loadError}</Alert>;
+  if (!loaded) return null;
 
   return (
     <>

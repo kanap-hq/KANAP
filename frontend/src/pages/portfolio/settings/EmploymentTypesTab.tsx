@@ -19,6 +19,8 @@ export default function EmploymentTypesTab({ canEdit }: SettingsTabProps) {
   const invalidate = useInvalidateSharedLists();
   const [employmentTypes, setEmploymentTypes] = useState<EmploymentType[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [employmentTypeDialogOpen, setEmploymentTypeDialogOpen] = useState(false);
   const [editingEmploymentType, setEditingEmploymentType] = useState<EmploymentType | null>(null);
 
@@ -26,8 +28,10 @@ export default function EmploymentTypesTab({ canEdit }: SettingsTabProps) {
     try {
       const res = await api.get('/portfolio/employment-types');
       setEmploymentTypes(res.data || []);
+      setLoadError(null);
+      setLoaded(true);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
+      setLoadError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
     }
   }, [t]);
 
@@ -81,6 +85,9 @@ export default function EmploymentTypesTab({ canEdit }: SettingsTabProps) {
       setError(getApiErrorMessage(e, t, t('settings.employmentTypes.messages.seedDefaultsFailed')));
     }
   }, [canEdit, employmentTypesChanged, t]);
+
+  if (loadError) return <Alert severity="error">{loadError}</Alert>;
+  if (!loaded) return null;
 
   return (
     <>

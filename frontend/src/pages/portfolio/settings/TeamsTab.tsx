@@ -19,6 +19,8 @@ export default function TeamsTab({ canEdit }: SettingsTabProps) {
   const invalidate = useInvalidateSharedLists();
   const [teams, setTeams] = useState<PortfolioTeam[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [teamDialogOpen, setTeamDialogOpen] = useState(false);
   const [editingTeam, setEditingTeam] = useState<PortfolioTeam | null>(null);
 
@@ -26,8 +28,10 @@ export default function TeamsTab({ canEdit }: SettingsTabProps) {
     try {
       const res = await api.get('/portfolio/teams');
       setTeams(res.data || []);
+      setLoadError(null);
+      setLoaded(true);
     } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
+      setLoadError(getApiErrorMessage(e, t, t('settings.messages.loadFailed')));
     }
   }, [t]);
 
@@ -81,6 +85,9 @@ export default function TeamsTab({ canEdit }: SettingsTabProps) {
       setError(getApiErrorMessage(e, t, t('settings.teams.messages.seedDefaultsFailed')));
     }
   }, [canEdit, teamsChanged, t]);
+
+  if (loadError) return <Alert severity="error">{loadError}</Alert>;
+  if (!loaded) return null;
 
   return (
     <>
