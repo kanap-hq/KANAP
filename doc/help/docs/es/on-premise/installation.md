@@ -16,8 +16,8 @@
 
 | Componente | Requisito |
 |-----------|-------------|
-| PostgreSQL | Versión 16+ con las extensiones `citext`, `pgcrypto`, `uuid-ossp`, y un rol de aplicación dedicado para `DATABASE_URL` |
-| Almacenamiento S3 | Cualquier almacenamiento compatible con S3 con un bucket: AWS S3, Cloudflare R2, Hetzner Object Storage, Garage, RustFS, un MinIO existente y otros. Kadratis necesita `PutObject`, `GetObject`, `HeadObject`, `DeleteObject`, `ListObjectsV2` y `GET` prefirmado en ese bucket. |
+| PostgreSQL | Versión 16+ con las extensiones `citext`, `pgcrypto`, `uuid-ossp`, `pg_trgm` y `unaccent`, y un rol de aplicación dedicado para `DATABASE_URL` |
+| Almacenamiento S3 | Cualquier almacenamiento compatible con S3 con un bucket: AWS S3, Cloudflare R2, Hetzner Object Storage, Garage, RustFS, un MinIO existente y otros. Kadratis necesita `PutObject`, `GetObject`, `HeadObject`, `DeleteObject` y `ListObjectsV2` en ese bucket. |
 | Proxy inverso | Terminación TLS y enrutamiento (nginx, Traefik, Caddy, etc.) |
 | Nombre y certificado | Un nombre que resuelvan los usuarios y el servidor, y un certificado para ese nombre (ver más abajo) |
 
@@ -236,7 +236,7 @@ server {
 
 **`host.docker.internal`:** cuando PostgreSQL o el almacenamiento S3 se ejecutan en el host Docker (fuera de un contenedor), use `host.docker.internal` como nombre de host en `DATABASE_URL` y `S3_ENDPOINT`. El archivo `compose.onprem.yml` incluye la asignación `extra_hosts` que lo hace posible. Apunta a la dirección del puente Docker del servidor (`172.17.0.1` por defecto), así que los servicios del host deben aceptar conexiones desde esa red (consulte el [ejemplo de instalación](installation-example.md)).
 
-**Estado.** La API responde a `GET /health` en su propio puerto (`http://127.0.0.1:8080/health`) y a `GET /api/health` a través del proxy. Ambos devuelven `{"status":"ok","text_processing":"ready"}`. [Monitorización](operations.md#monitorizacion) explica los demás valores de `text_processing`. `docker compose -f infra/compose.onprem.yml ps` muestra `healthy` para los contenedores `api` y `web` cuando responden.
+**Estado.** La API responde a `GET /health` en su propio puerto (`http://127.0.0.1:8080/health`) y a `GET /api/health` a través del proxy. Ambos devuelven `{"status":"ok","text_processing":"ready"}`. [Monitorización](operations.md#monitorizacion) explica los demás valores de `text_processing`, y la ruta de disponibilidad `GET /health/ready` para un orquestador. `docker compose -f infra/compose.onprem.yml ps` muestra `healthy` para los contenedores `api` y `web` cuando responden.
 
 ## Arquitectura de red
 

@@ -148,7 +148,7 @@ Le nombre de migrations change d'une version à l'autre. Aux démarrages suivant
 | `[VERSION] Kadratis <version>` | Informative. La version qu'exécute l'API, la même que le champ `version` de `/api/config/public`. |
 | `[entrypoint] DB not ready (attempt N): ... Retrying in 2000ms...` | L'API ne peut pas joindre la base de données. Elle essaie 30 fois, à 2 secondes d'intervalle, puis s'arrête avec `[entrypoint] DB not ready after 30 attempts: ...`. Vérifiez `DATABASE_URL`, les règles PostgreSQL et `sslmode` (voir [Requis : base de données](#requis-base-de-donnees)). |
 | `[entrypoint] DATABASE_URL resolves to ... PostgreSQL role ...`, puis `[entrypoint] No migration ran.` | Le rôle applicatif a `SUPERUSER` ou `BYPASSRLS` et Kadratis n'a pas pu les retirer. Le démarrage s'est arrêté avant les migrations. Suivez le message (voir les règles du rôle dans [Requis : base de données](#requis-base-de-donnees)). |
-| `[entrypoint] A migration failed, not retried: ...` | La ligne suivante, `[entrypoint] Failed statement: ...`, montre l'instruction SQL en échec. Les migrations en attente ont été annulées : la base est dans l'état d'avant ce démarrage. Corrigez la cause ou déployez la version précédente. |
+| `[entrypoint] A migration failed, not retried: ...` | La ligne suivante, `[entrypoint] Failed statement: ...`, montre l'instruction SQL en échec. Les migrations en attente ont été annulées : aucune d'elles n'est appliquée. Corrigez la cause ou déployez la version précédente. |
 | `[ENV] run mode: ...` | Toujours affichée. Indique le mode dans lequel l'API s'exécute : `development`, `production` ou `unspecified`. |
 | `[ENV] APP_ENV is not set: production rules apply to links, browser origins and platform administration. Set APP_ENV=production (or development on a workstation).` | Affichée en mode non spécifié (le message montre la valeur quand `APP_ENV` contient autre chose). Renseignez `APP_ENV=production` si les utilisateurs accèdent à Kadratis en HTTPS. |
 | `[CONFIG] APP_BASE_URL is not set: ...` | Les e-mails de réinitialisation de mot de passe et d'invitation, les liens des notifications et les redirections de connexion sont refusés. Renseignez `APP_BASE_URL`. |
@@ -197,7 +197,7 @@ Autres changements visibles :
 **Exigences pour la base de données :**
 
 - PostgreSQL 16 ou plus récent (16 et 18 sont testés)
-- Extensions : `citext`, `pgcrypto`, `uuid-ossp`
+- Extensions : `citext`, `pgcrypto`, `uuid-ossp`, `pg_trgm`, `unaccent`. Sur PostgreSQL 16, ces cinq extensions sont des extensions de confiance (trusted) : le propriétaire de la base de données peut les créer sans être superutilisateur. Un service PostgreSQL managé peut lister les extensions qu'il autorise : autorisez d'abord ces cinq.
 - L'utilisateur a besoin des droits CREATE TABLE / ALTER TABLE pour les migrations
 - Recommandé : une base de données dédiée
 - `DATABASE_URL` doit utiliser un rôle applicatif dédié
@@ -216,6 +216,8 @@ GRANT ALL PRIVILEGES ON DATABASE kanap TO kanap;
 CREATE EXTENSION IF NOT EXISTS citext;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS unaccent;
 
 -- 3. Grant schema permissions (for migrations)
 GRANT ALL ON SCHEMA public TO kanap;
@@ -516,6 +518,7 @@ Avec `IMPORT_XLSX=false`, les boutons d'import affichent **Importer CSV**, les f
 | `PASSWORD_RESET_TTL` | Durée de validité d'un lien de réinitialisation de mot de passe : un nombre de secondes ou une durée comme `30m` ou `2h`. Toute autre valeur dure 1 heure, et l'API la nomme dans un avertissement `[CONFIG]` au démarrage. | `1h` |
 | `INVITE_LINK_TTL` | Durée de validité du lien pour définir un mot de passe dans un e-mail d'invitation : un nombre de secondes ou une durée comme `72h` ou `7d`. Toute autre valeur dure 7 jours, et l'API la nomme dans un avertissement `[CONFIG]` au démarrage. | `7d` |
 | `LOG_LEVEL` | `debug` ou `verbose` ajoute au journal le détail de chaque exécution de tâche planifiée. Toute autre valeur ne change rien. | *non défini* |
+| `SKIP_MIGRATIONS` | `true` (ou `1`, `yes`, `y`, `on`) : ni le script de démarrage ni l'API n'exécutent les migrations de la base de données. Utilisez-le seulement quand les migrations s'exécutent comme une étape à part (voir [Exécuter les images vous-même](#running-the-images-yourself)). L'API refuse toujours un rôle qui a `SUPERUSER` ou `BYPASSRLS`, sans le modifier. | `false` |
 | `INTEGRATED_DOCS_AUTO_ROLLOUT` | Répare, au démarrage, les documents liés aux demandes et aux projets. Désactivé on-premise sauf si vous le définissez : `if-needed` lance la réparation seulement quand les comptages diffèrent, `always` à chaque démarrage. | *désactivé* |
 | `APP_URL` | Multi-tenant (cloud) uniquement. **Inutile on-premise** : c'est `APP_BASE_URL` qui est utilisé. | *non défini* |
 | `EMAIL_OVERRIDE` | Redirige tous les e-mails vers cette adresse (dev/QA uniquement, **jamais en production**) | *non défini* |
@@ -549,6 +552,38 @@ Les valeurs par défaut conviennent à quelques dizaines d'utilisateurs. Pour da
 Mesures sur 5 000 lignes de budget : à 10 utilisateurs, un processus répond aussi vite que quatre. À 50 utilisateurs, l'ouverture d'une ligne a pris 237 ms (95e centile) avec un processus, 142 ms avec deux et 82 ms avec quatre, et un processus seul occupait toutes ses connexions à la base de données.
 
 Gardez `API_WORKERS` inférieur ou égal au nombre de cœurs CPU que le serveur attribue à Kadratis. Les modifications prennent effet quand le conteneur API est recréé (`docker compose -f infra/compose.onprem.yml up -d api`).
+
+## Exécuter les images vous-même { #running-the-images-yourself }
+
+L'installation de ce guide exécute les images avec `infra/compose.onprem.yml`, qui n'a besoin de rien de cette section. Lisez-la quand vous exécutez les images avec votre propre orchestrateur, Kubernetes par exemple.
+
+**Les migrations comme étape à part.** Par défaut, le conteneur API exécute les migrations de la base de données avant le démarrage de l'API. Pour les exécuter à part (un Job Kubernetes avant chaque mise à jour), démarrez l'image API avec la commande `node scripts/migrate-and-start.js --migrate-only`, et l'API avec `SKIP_MIGRATIONS=true`.
+
+- L'étape de migration fait les mêmes contrôles qu'un démarrage normal (elle attend la base de données, contrôle le rôle, migre en une seule transaction), puis se termine sans démarrer l'API. Code de sortie `0` : terminé, y compris quand rien n'était en attente. `1` : un échec, le journal dit lequel. Les migrations d'une exécution sont validées ensemble ou pas du tout : quand l'une échoue, aucune n'est appliquée. Le contrôle du rôle qui les précède peut déjà avoir retiré `SUPERUSER` et `BYPASSRLS` du rôle, et un échec après elles (la réparation des documents avec `INTEGRATED_DOCS_AUTO_ROLLOUT_STRICT=true`) les laisse appliquées. `2` : `SKIP_MIGRATIONS` est activé dans son environnement. `143` : l'étape a été arrêtée (`SIGTERM`) ; une migration en cours est annulée.
+- Deux exécutions lancées en même temps passent chacune à leur tour : celle qui attend le dit dans son journal (`Another instance holds the migration lock, waiting...`), puis ne trouve rien à faire. Chaque exécution migre sur la session de base de données qui tient son tour : si cette session se termine, ses migrations sont annulées et l'exécution suivante les applique. Un Job relancé ou démarré deux fois n'applique rien deux fois. Dans `pg_stat_activity`, les sessions de l'étape de migration s'appellent `kadratis-migrate`.
+- Connectez l'étape de migration directement à PostgreSQL, ou à travers un pool en mode session (PgBouncer `pool_mode = session`). Un pool en mode transaction ne garde pas le tour entre deux instructions.
+- Donnez à l'étape de migration et à l'API la même `DATABASE_URL`. L'étape de migration retire `SUPERUSER` et `BYPASSRLS` du rôle, comme un démarrage normal. Avec `SKIP_MIGRATIONS=true`, l'API se contente de contrôler le rôle : elle refuse de démarrer avec un rôle qui a l'un de ces deux attributs.
+- L'organisation et son administrateur (`ADMIN_EMAIL`) sont créés au premier démarrage de l'API, après les migrations. Une API démarrée avec `SKIP_MIGRATIONS=true` sur une base où aucune migration n'a tourné écrit `[migrations] SKIP_MIGRATIONS is on and the database has no schema: ...` et se termine avec le code `1` ; l'orchestrateur la redémarre. Sur une base en retard de quelques migrations, elle écrit combien sont en attente et sert les requêtes, et `/health/ready` répond `503` jusqu'à ce que l'étape de migration ait tourné.
+
+**Sondes.** L'API écoute sur le port 8080.
+
+| Sonde | Route | Réponse |
+|-------|-------|---------|
+| Vivacité (liveness) et démarrage | `GET /health` | `200` tant que le processus sert des requêtes. Elle ne lit pas la base de données. |
+| Disponibilité (readiness) | `GET /health/ready` | `200` quand la base de données répond en moins de 2 secondes et qu'aucune migration n'est en attente. `503` quand la base de données ne répond pas, refuse la connexion ou le mot de passe, ou qu'une migration est en attente : l'instance ne reçoit aucun trafic. Une instance qui a déjà été disponible et dont toutes les connexions à la base de données sont prises répond `200` avec `"database": "busy"` : une instance occupée reste ainsi en service. |
+
+Le contrôle de disponibilité prend jusqu'à 2 secondes, et une sonde Kubernetes abandonne par défaut au bout d'une seconde : réglez `timeoutSeconds: 3` sur la sonde de disponibilité. Le premier démarrage de l'API sur une base neuve crée aussi l'organisation : donnez deux minutes à la sonde de démarrage, comme le fait le fichier compose. L'image web répond à `GET /` sur son propre port.
+
+**Utilisateur et système de fichiers.** Les deux images tournent sous n'importe quel identifiant d'utilisateur, sans capacités, sur un système de fichiers racine en lecture seule (`runAsNonRoot`, `readOnlyRootFilesystem`, `capabilities: drop: [ALL]` et le niveau `restricted` des Pod Security). L'image API désigne son utilisateur par un numéro (`1000:1000`) ; l'image web tourne sous `101`. Chacune n'écrit que dans `/tmp` : montez-y un volume accessible en écriture (un `emptyDir` sur disque). Pour l'API, 1 Go suffit sans le [flux des vulnérabilités](#optional-vulnerabilities). Avec la source CVE.org activée, comptez 4 Go : son export quotidien (environ 700 Mo en octobre 2026) y est téléchargé et décompressé. Pour l'image web, comptez 1 Go : nginx y garde les fichiers envoyés (jusqu'à 80 Mo chacun) et les grandes réponses pendant qu'il les transmet.
+
+**L'image web.**
+
+| Variable | Description | Défaut |
+|----------|-------------|---------|
+| `KANAP_WEB_PORT` | Port sur lequel le serveur web écoute dans son conteneur, de 1 à 65535. Un utilisateur autre que root ne peut pas toujours écouter en dessous de 1024 : réglez `8080` pour un conteneur sans capacités. | `80` |
+| `KANAP_API_UPSTREAM` | Hôte et port par lesquels le conteneur web joint l'API : sur Kubernetes, le nom du Service de l'API et son port, par exemple `kadratis-api:8080`. Le nom est résolu une seule fois, au démarrage du conteneur web : le Service doit déjà exister, et le conteneur web doit être redémarré si son adresse change. | `api:8080` |
+
+Une valeur invalide arrête aussitôt le conteneur web, avec une ligne qui nomme la variable. Ces deux variables appartiennent à l'environnement du conteneur web : le fichier `.env` de l'API ne l'atteint pas.
 
 ## Exemple complet (.env)
 

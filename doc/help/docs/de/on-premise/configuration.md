@@ -148,7 +148,7 @@ Die Zahl der Migrationen ändert sich von Version zu Version. Bei späteren Star
 | `[VERSION] Kadratis <version>` | Zur Information. Die Version, die die API ausführt, dieselbe wie im Feld `version` von `/api/config/public`. |
 | `[entrypoint] DB not ready (attempt N): ... Retrying in 2000ms...` | Die API kann die Datenbank nicht erreichen. Sie versucht es 30 Mal im Abstand von 2 Sekunden und stoppt dann mit `[entrypoint] DB not ready after 30 attempts: ...`. Prüfen Sie `DATABASE_URL`, die PostgreSQL-Regeln und `sslmode` (siehe [Erforderlich: Datenbank](#erforderlich-datenbank)). |
 | `[entrypoint] DATABASE_URL resolves to ... PostgreSQL role ...`, dann `[entrypoint] No migration ran.` | Die Anwendungsrolle hat `SUPERUSER` oder `BYPASSRLS`, und Kadratis konnte sie nicht entfernen. Der Start wurde vor den Migrationen beendet. Folgen Sie der Meldung (siehe die Regeln zur Rolle in [Erforderlich: Datenbank](#erforderlich-datenbank)). |
-| `[entrypoint] A migration failed, not retried: ...` | Die nächste Zeile, `[entrypoint] Failed statement: ...`, zeigt die fehlgeschlagene SQL-Anweisung. Die ausstehenden Migrationen wurden zurückgerollt: Die Datenbank ist wie vor diesem Start. Beheben Sie die Ursache oder stellen Sie die vorherige Version bereit. |
+| `[entrypoint] A migration failed, not retried: ...` | Die nächste Zeile, `[entrypoint] Failed statement: ...`, zeigt die fehlgeschlagene SQL-Anweisung. Die ausstehenden Migrationen wurden zurückgerollt: Keine von ihnen ist angewendet. Beheben Sie die Ursache oder stellen Sie die vorherige Version bereit. |
 | `[ENV] run mode: ...` | Wird immer ausgegeben. Zeigt den Modus, in dem die API läuft: `development`, `production` oder `unspecified`. |
 | `[ENV] APP_ENV is not set: production rules apply to links, browser origins and platform administration. Set APP_ENV=production (or development on a workstation).` | Wird im nicht angegebenen Modus ausgegeben (die Meldung zeigt den Wert, wenn `APP_ENV` auf etwas anderes gesetzt ist). Setzen Sie `APP_ENV=production`, wenn Benutzer Kadratis über HTTPS erreichen. |
 | `[CONFIG] APP_BASE_URL is not set: ...` | E-Mails zur Passwortzurücksetzung und Einladung, Benachrichtigungslinks und Anmelde-Weiterleitungen werden verweigert. Setzen Sie `APP_BASE_URL`. |
@@ -197,7 +197,7 @@ Weitere sichtbare Änderungen:
 **Anforderungen an die Datenbank:**
 
 - PostgreSQL 16 oder höher (16 und 18 sind getestet)
-- Erweiterungen: `citext`, `pgcrypto`, `uuid-ossp`
+- Erweiterungen: `citext`, `pgcrypto`, `uuid-ossp`, `pg_trgm`, `unaccent`. Auf PostgreSQL 16 sind alle fünf vertrauenswürdige Erweiterungen (trusted): Der Eigentümer der Datenbank kann sie anlegen, ohne Superuser zu sein. Ein verwalteter PostgreSQL-Dienst kann die Erweiterungen auflisten, die er erlaubt: Erlauben Sie zuerst diese fünf.
 - Der Benutzer braucht die Rechte CREATE TABLE / ALTER TABLE für die Migrationen
 - Empfohlen: eine eigene Datenbank
 - `DATABASE_URL` muss eine dedizierte Anwendungsrolle verwenden
@@ -216,6 +216,8 @@ GRANT ALL PRIVILEGES ON DATABASE kanap TO kanap;
 CREATE EXTENSION IF NOT EXISTS citext;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS unaccent;
 
 -- 3. Grant schema permissions (for migrations)
 GRANT ALL ON SCHEMA public TO kanap;
@@ -516,6 +518,7 @@ Mit `IMPORT_XLSX=false` heißen die Import-Schaltflächen **CSV importieren**, d
 | `PASSWORD_RESET_TTL` | Gültigkeitsdauer eines Links zur Passwortzurücksetzung: eine Zahl von Sekunden oder eine Dauer wie `30m` oder `2h`. Ein anderer Wert gilt 1 Stunde, und die API nennt ihn in einer `[CONFIG]`-Warnung beim Start. | `1h` |
 | `INVITE_LINK_TTL` | Gültigkeitsdauer des Links zum Festlegen eines Passworts in einer Einladungs-E-Mail: eine Zahl von Sekunden oder eine Dauer wie `72h` oder `7d`. Ein anderer Wert gilt 7 Tage, und die API nennt ihn in einer `[CONFIG]`-Warnung beim Start. | `7d` |
 | `LOG_LEVEL` | `debug` oder `verbose` ergänzt das Protokoll um die Details jedes Laufs eines geplanten Jobs. Jeder andere Wert ändert nichts. | *nicht gesetzt* |
+| `SKIP_MIGRATIONS` | `true` (oder `1`, `yes`, `y`, `on`): Weder das Startskript noch die API führen die Datenbankmigrationen aus. Verwenden Sie es nur, wenn die Migrationen als eigener Schritt laufen (siehe [Die Images selbst betreiben](#running-the-images-yourself)). Die API lehnt eine Rolle mit `SUPERUSER` oder `BYPASSRLS` weiterhin ab, ohne sie zu ändern. | `false` |
 | `INTEGRATED_DOCS_AUTO_ROLLOUT` | Repariert beim Start die mit Anfragen und Projekten verknüpften Dokumente. On-Premise ausgeschaltet, sofern Sie es nicht setzen: `if-needed` führt die Reparatur nur aus, wenn die Zählungen abweichen, `always` bei jedem Start. | *aus* |
 | `APP_URL` | Nur Multi-Tenant (Cloud). **On-Premise nicht nötig**: `APP_BASE_URL` wird verwendet. | *nicht gesetzt* |
 | `EMAIL_OVERRIDE` | Leitet alle E-Mails an diese Adresse um (nur Entwicklung/QA, **niemals in der Produktion**) | *nicht gesetzt* |
@@ -549,6 +552,38 @@ Die Standardwerte passen für einige Dutzend Benutzer. Für mehr gleichzeitige B
 Gemessen auf 5.000 Budgetzeilen: Bei 10 Benutzern antwortet ein Prozess so schnell wie vier. Bei 50 Benutzern dauerte das Öffnen einer Budgetzeile 237 ms (95. Perzentil) mit einem Prozess, 142 ms mit zwei und 82 ms mit vier, und ein einzelner Prozess hielt alle seine Datenbankverbindungen beschäftigt.
 
 Halten Sie `API_WORKERS` höchstens bei der Zahl der CPU-Kerne, die der Server Kadratis zur Verfügung stellt. Änderungen werden wirksam, wenn der API-Container neu erstellt wird (`docker compose -f infra/compose.onprem.yml up -d api`).
+
+## Die Images selbst betreiben { #running-the-images-yourself }
+
+Die Installation dieser Anleitung betreibt die Images mit `infra/compose.onprem.yml` und braucht nichts aus diesem Abschnitt. Lesen Sie ihn, wenn Sie die Images mit einem eigenen Orchestrator betreiben, zum Beispiel Kubernetes.
+
+**Migrationen als eigener Schritt.** Standardmäßig führt der API-Container die Datenbankmigrationen aus, bevor die API startet. Um sie getrennt auszuführen (ein Kubernetes-Job vor jedem Upgrade), starten Sie das API-Image mit dem Befehl `node scripts/migrate-and-start.js --migrate-only` und die API mit `SKIP_MIGRATIONS=true`.
+
+- Der Migrationsschritt führt dieselben Prüfungen aus wie ein normaler Start (er wartet auf die Datenbank, prüft die Rolle, migriert in einer einzigen Transaktion) und beendet sich dann, ohne die API zu starten. Exit-Code `0`: erledigt, auch wenn nichts ausstand. `1`: ein Fehler, das Protokoll nennt ihn. Die Migrationen eines Laufs werden gemeinsam festgeschrieben oder gar nicht: Schlägt eine fehl, wird keine angewendet. Die Rollenprüfung davor kann `SUPERUSER` und `BYPASSRLS` bereits von der Rolle entfernt haben, und ein Fehler danach (die Dokumentreparatur mit `INTEGRATED_DOCS_AUTO_ROLLOUT_STRICT=true`) lässt sie angewendet. `2`: `SKIP_MIGRATIONS` ist in seiner Umgebung eingeschaltet. `143`: Der Schritt wurde gestoppt (`SIGTERM`); eine laufende Migration wird zurückgerollt.
+- Zwei gleichzeitige Läufe kommen nacheinander an die Reihe: Der wartende meldet es in seinem Protokoll (`Another instance holds the migration lock, waiting...`) und findet danach nichts zu tun. Jeder Lauf migriert auf der Datenbanksitzung, die seine Reihe hält: Endet diese Sitzung, werden seine Migrationen zurückgerollt, und der nächste Lauf wendet sie an. Ein wiederholter oder doppelt gestarteter Job wendet nichts zweimal an. In `pg_stat_activity` heißen die Sitzungen des Migrationsschritts `kadratis-migrate`.
+- Verbinden Sie den Migrationsschritt direkt mit PostgreSQL oder über einen Pool im Session-Modus (PgBouncer `pool_mode = session`). Ein Pool im Transaktionsmodus hält die Reihe zwischen zwei Anweisungen nicht.
+- Geben Sie dem Migrationsschritt und der API dieselbe `DATABASE_URL`. Der Migrationsschritt entfernt `SUPERUSER` und `BYPASSRLS` von der Rolle, wie ein normaler Start. Mit `SKIP_MIGRATIONS=true` prüft die API die Rolle nur: Sie startet nicht mit einer Rolle, die eines der beiden Attribute hat.
+- Die Organisation und ihr Administrator (`ADMIN_EMAIL`) werden beim ersten Start der API angelegt, nach den Migrationen. Eine API, die mit `SKIP_MIGRATIONS=true` auf einer Datenbank startet, auf der noch keine Migration gelaufen ist, schreibt `[migrations] SKIP_MIGRATIONS is on and the database has no schema: ...` und beendet sich mit Code `1`; der Orchestrator startet sie erneut. Auf einer Datenbank, der einige Migrationen fehlen, schreibt sie, wie viele ausstehen, und bedient Anfragen, und `/health/ready` antwortet `503`, bis der Migrationsschritt gelaufen ist.
+
+**Probes.** Die API lauscht auf Port 8080.
+
+| Probe | Route | Antwort |
+|-------|-------|---------|
+| Liveness und Start | `GET /health` | `200`, solange der Prozess Anfragen bedient. Sie liest keine Datenbank. |
+| Readiness | `GET /health/ready` | `200`, wenn die Datenbank innerhalb von 2 Sekunden antwortet und keine Migration aussteht. `503`, wenn die Datenbank nicht antwortet, die Verbindung oder das Passwort ablehnt oder eine Migration aussteht: Die Instanz erhält keinen Verkehr. Eine Instanz, die bereits bereit war und deren Datenbankverbindungen alle belegt sind, antwortet `200` mit `"database": "busy"`, damit eine ausgelastete Instanz in Betrieb bleibt. |
+
+Die Readiness-Prüfung dauert bis zu 2 Sekunden, und eine Kubernetes-Probe gibt standardmäßig nach 1 Sekunde auf: Setzen Sie `timeoutSeconds: 3` auf der Readiness-Probe. Der erste Start der API auf einer neuen Datenbank legt auch die Organisation an: Geben Sie der Startup-Probe zwei Minuten, wie es die Compose-Datei tut. Das Web-Image antwortet auf `GET /` an seinem eigenen Port.
+
+**Benutzer und Dateisystem.** Beide Images laufen unter jeder Benutzer-ID, ohne Capabilities, auf einem schreibgeschützten Root-Dateisystem (`runAsNonRoot`, `readOnlyRootFilesystem`, `capabilities: drop: [ALL]` und die Pod-Security-Stufe `restricted`). Das API-Image nennt seinen Benutzer per Nummer (`1000:1000`); das Web-Image läuft als `101`. Jedes schreibt nur nach `/tmp`: Binden Sie dort ein beschreibbares Volume ein (ein `emptyDir` auf der Festplatte). Für die API genügt 1 GB ohne den [Schwachstellen-Feed](#optional-vulnerabilities). Mit eingeschalteter CVE.org-Quelle rechnen Sie mit 4 GB: Ihr täglicher Export (etwa 700 MB im Oktober 2026) wird dort heruntergeladen und entpackt. Für das Web-Image rechnen Sie mit 1 GB: nginx hält dort Uploads (bis zu 80 MB je Datei) und große Antworten, während es sie weitergibt.
+
+**Das Web-Image.**
+
+| Variable | Beschreibung | Standard |
+|----------|-------------|---------|
+| `KANAP_WEB_PORT` | Port, auf dem der Webserver in seinem Container lauscht, 1 bis 65535. Ein anderer Benutzer als root kann nicht immer unterhalb von 1024 lauschen: Setzen Sie `8080` für einen Container ohne Capabilities. | `80` |
+| `KANAP_API_UPSTREAM` | Host und Port, unter denen der Web-Container die API erreicht: auf Kubernetes der Name des Service der API und sein Port, zum Beispiel `kadratis-api:8080`. Der Name wird einmal aufgelöst, beim Start des Web-Containers: Der Service muss dann bereits existieren, und der Web-Container muss neu gestartet werden, wenn sich seine Adresse ändert. | `api:8080` |
+
+Ein ungültiger Wert stoppt den Web-Container sofort, mit einer Zeile, die die Variable nennt. Diese beiden Variablen gehören zur Umgebung des Web-Containers: Die `.env`-Datei der API erreicht ihn nicht.
 
 ## Vollständiges Beispiel (.env)
 

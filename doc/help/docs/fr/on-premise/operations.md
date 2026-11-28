@@ -155,6 +155,17 @@ Basculez sur la version précédente avant de démarrer Kadratis : un démarrage
 
 Après un retour arrière, restez sur le tag de la version vers laquelle vous êtes revenu. Le `git checkout stable` de la procédure de mise à jour (son étape 3) ramène le checkout sur la branche à la mise à jour suivante. Le checkout (`git describe --tags`) et l'API en service (`/api/config/public`, voir [Version en service](#procedure-de-mise-a-jour)) doivent afficher la même version. S'ils diffèrent, les prochains `pull` et `up -d` changent la version en service.
 
+### Mise à jour avec une étape de migration à part
+
+La procédure ci-dessus ne change pas : le conteneur API exécute les migrations à son démarrage. Quand vous exécutez les images avec un orchestrateur et les migrations comme une étape à part (voir [Exécuter les images vous-même](configuration.md#running-the-images-yourself)), une mise à jour se déroule dans cet ordre :
+
+1. Sauvegardez, comme à l'étape 2.
+2. Arrêtez l'API de la version en service : ramenez ses instances à zéro. Les migrations d'une version peuvent retirer ce que lit la version précédente (une colonne, une table) : la version précédente ne doit donc pas servir sur le nouveau schéma. C'est la même interruption que la mise à jour avec compose, où l'ancien conteneur API s'arrête avant que le nouveau ne migre.
+3. Exécutez l'étape de migration sur l'image de la nouvelle version : `node scripts/migrate-and-start.js --migrate-only`, avec la même `DATABASE_URL` que l'API et sans `SKIP_MIGRATIONS`. Attendez qu'elle se termine avec `0`. Avec `1`, son journal donne la cause, et aucune des migrations de cette exécution n'est appliquée : corrigez la cause et relancez l'étape, ou redémarrez la version précédente.
+4. Démarrez l'API de la nouvelle version avec `SKIP_MIGRATIONS=true`, ainsi que les conteneurs web de la nouvelle version. Chaque instance de l'API reçoit du trafic dès que `/health/ready` répond `200`.
+
+Une instance de l'API de la nouvelle version qui démarre avant la fin de l'étape 3 répond `503` sur `/health/ready` et ne reçoit aucun trafic tant que les migrations n'ont pas tourné. Deux étapes de migration lancées ensemble, ou une étape de migration et une API sans `SKIP_MIGRATIONS`, passent chacune à leur tour : celle qui attend le dit dans son journal (`Another instance holds the migration lock, waiting...`), et la dernière n'applique rien.
+
 ## Support des versions
 
 Kadratis est une solution qui évolue rapidement. Les versions sont publiées environ une fois par mois, et nous recommandons de mettre à jour au moins une fois par mois.
@@ -521,6 +532,8 @@ curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 
 `text_processing` vaut `starting` pendant quelques secondes après un démarrage. Il vaut `unavailable` quand l'API n'a pas pu démarrer le traitement des textes mis en forme : l'API continue de servir, refuse d'enregistrer les textes mis en forme (descriptions, commentaires) et réessaie toutes les quelques secondes. Le journal de l'API en donne la raison.
 
+**Disponibilité.** `GET /health/ready` (`/api/health/ready` à travers le proxy) répond `{"status":"ok"}` quand la base de données répond et qu'aucune migration n'est en attente, et `503` avec `{"status":"unavailable"}` sinon. Pointez dessus la sonde de disponibilité (readiness) d'un orchestrateur (voir [Exécuter les images vous-même](configuration.md#running-the-images-yourself)), et gardez la sonde de vivacité (liveness) sur `/health` : une panne de la base de données retire alors l'API du service sans la redémarrer.
+
 **Conteneurs.** `docker compose -f infra/compose.onprem.yml ps` affiche `healthy` pour `api` et `web` dès qu'ils répondent. Docker se contente de le signaler : rien ne redémarre en fonction de cet état.
 
 ```bash
@@ -607,7 +620,10 @@ Commencez par le journal de l'API : `docker compose -f infra/compose.onprem.yml 
 | Tout le monde partage une seule limite de connexion (`429` pour de nombreux utilisateurs) | `RATE_LIMIT_TRUST_PROXY` et le proxy | Avec un proxy devant, renseignez `true` et faites envoyer `X-Forwarded-For` par le proxy |
 | Avertissement `[SECURITY]` à chaque démarrage | `ADMIN_PASSWORD`, `JWT_SECRET` | Changez le mot de passe de l'administrateur dans l'application, ou voir [Réinitialisation du mot de passe](#reinitialisation-du-mot-de-passe). Utilisez un `JWT_SECRET` de 32 caractères ou plus |
 | `[entrypoint] No migration ran.` après un message sur le rôle PostgreSQL | La ligne au-dessus, le rôle de `DATABASE_URL` | Le rôle est un rôle d'administration du cluster, ou il a `SUPERUSER` ou `BYPASSRLS` et Kadratis n'a pas pu les retirer. Utilisez un rôle applicatif dédié, ou lancez en superutilisateur PostgreSQL la commande `ALTER ROLE` que donne le message, puis `up -d api`. Voir [Configuration](configuration.md#requis-base-de-donnees) |
-| `[entrypoint] A migration failed, not retried: ...` | Le message, la ligne `[entrypoint] Failed statement: ...` qui le suit, la version de PostgreSQL (16 ou plus) et ses extensions | Les migrations en attente ont été annulées : la base est dans l'état d'avant ce démarrage. Corrigez la cause et relancez `up -d api`, ou déployez la version précédente |
+| `[migrations] SKIP_MIGRATIONS is on and N migration(s) are pending: run the migration step ...` dans le journal de l'API | Si l'étape de migration a tourné sur cette version | Exécutez l'étape de migration (`node scripts/migrate-and-start.js --migrate-only`), ou retirez `SKIP_MIGRATIONS`. L'API sert les requêtes en attendant, et `/health/ready` répond `503` jusqu'à ce que les migrations aient tourné |
+| `[migrations] SKIP_MIGRATIONS is on and the database has no schema: ...`, puis l'API se termine avec le code `1` | Si l'étape de migration a tourné sur cette base | Aucune migration n'a jamais tourné sur cette base. Exécutez l'étape de migration, puis redémarrez l'API |
+| `[entrypoint] --migrate-only with SKIP_MIGRATIONS on: no migration ran.` (code de sortie `2`) | L'environnement de l'étape de migration | Retirez `SKIP_MIGRATIONS` de l'étape de migration : il ne concerne que l'API |
+| `[entrypoint] A migration failed, not retried: ...` | Le message, la ligne `[entrypoint] Failed statement: ...` qui le suit, la version de PostgreSQL (16 ou plus) et ses extensions | Les migrations en attente ont été annulées : aucune d'elles n'est appliquée. Corrigez la cause et relancez `up -d api`, ou déployez la version précédente |
 | 502 renvoyé par le reverse proxy | `docker compose -f infra/compose.onprem.yml ps` | Vérifiez que le conteneur api tourne sur le port 8080 |
 | 413 renvoyé par le reverse proxy lors d'un envoi | `client_max_body_size` | Renseignez `client_max_body_size 80m;` dans le fichier nginx |
 | Un e-mail de réinitialisation n'arrive pas, et le journal de l'API contient une ligne `ERROR` avec `unable to verify the first certificate` ou `self-signed certificate` et le code `ESOCKET` | Le certificat du relais de messagerie | L'API ne fait pas confiance à l'autorité qui a signé le certificat du relais. Donnez-lui le fichier de l'autorité (voir [Certificats d'une autorité interne](configuration.md#facultatif-certificats-dune-autorite-interne)). Installer l'autorité sur le serveur lui-même ne change rien pour le conteneur |
