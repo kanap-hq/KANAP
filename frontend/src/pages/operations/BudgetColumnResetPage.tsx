@@ -120,7 +120,6 @@ export default function BudgetColumnResetPage() {
       field: 'nature',
       headerName: t('operations.scope.label'),
       width: 110,
-      suppressSizeToFit: true,
       valueFormatter: (p: { value?: string | null }) => (p.value ? t(`operations.scope.${p.value}`) : ''),
       cellStyle: { color: theme.palette.kanap.text.secondary },
     } as ColDef] : []),
@@ -128,7 +127,8 @@ export default function BudgetColumnResetPage() {
       field: 'currentValue',
       headerName: column ? t('operations.columnReset.currentHeader', { column: columnLabel, year }) : String(year),
       width: 200,
-      suppressSizeToFit: true,
+      // The first sort lives on the column: a grid `initialState` would drop the name's flex.
+      initialSort: 'desc',
       type: 'rightAligned',
       valueFormatter: (p) => formatOperationAmount(p.value),
       // Values that will be cleared stand out by weight; empty ones stay muted.
@@ -319,15 +319,7 @@ export default function BudgetColumnResetPage() {
               rowData={processedData}
               columnDefs={columns}
               defaultColDef={{ sortable: true, resizable: true }}
-              initialState={{
-                sort: {
-                  sortModel: [{ colId: 'currentValue', sort: 'desc' }],
-                },
-              }}
               domLayout="autoHeight"
-              // Sized to the grid's width once it is drawn: the name takes what the type and the
-              // amount leave, its flex then follows the later changes of width.
-              autoSizeStrategy={{ type: 'fitGridWidth' }}
             />
           </Box>
         </SettingsSection>

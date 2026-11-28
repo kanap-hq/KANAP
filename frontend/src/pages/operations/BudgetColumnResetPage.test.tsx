@@ -181,12 +181,13 @@ describe('BudgetColumnResetPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'operations.columnReset.showAllLines:2' }));
     await screen.findByTestId('row-o-1');
     const defs = Object.fromEntries(grid.props.columnDefs.map((col: any) => [col.field, col]));
-    // The grid sizes its columns to its own width once it is drawn, the name taking what the others leave.
-    expect(grid.props.autoSizeStrategy).toEqual({ type: 'fitGridWidth' });
+    // The name's flex follows the grid's width at all times. An `initialState` on the grid drops
+    // that flex (AG Grid 32), so the first sort is the amount column's own `initialSort`.
     expect(defs.product_name).toMatchObject({ flex: 1 });
-    expect(defs.product_name.suppressSizeToFit).toBeFalsy();
-    expect(defs.nature).toMatchObject({ width: 110, suppressSizeToFit: true });
-    expect(defs.currentValue).toMatchObject({ width: 200, suppressSizeToFit: true });
+    expect(defs.nature).toMatchObject({ width: 110 });
+    expect(defs.currentValue).toMatchObject({ width: 200, initialSort: 'desc' });
+    expect(grid.props.initialState).toBeUndefined();
+    expect(grid.props.autoSizeStrategy).toBeUndefined();
   });
 
   it('reads another operation running as a refusal beside the pill', async () => {
