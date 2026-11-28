@@ -337,6 +337,17 @@ describe('Layout budget management sidebar', () => {
     expect(screen.getByRole('link', { name: 'nav:sidebar.ops.administration' })).toHaveAttribute('href', '/ops/operations');
   });
 
+  it('shows no administration entry to a budget reader, who reads the budget lines and not their settings', () => {
+    access.grants = {
+      budget: 'reader', contracts: 'reader', analytics: 'reader', reporting: 'reader', tasks: 'reader',
+      companies: 'reader', departments: 'reader', cost_centers: 'reader', suppliers: 'reader', contacts: 'reader', accounts: 'reader',
+    };
+    renderSidebar();
+
+    expect(screen.getByRole('link', { name: 'nav:sidebar.ops.budgetLines' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.administration' })).not.toBeInTheDocument();
+  });
+
   it('has no home entry in Budget management nor in Master data: the home page holds the budget tiles', () => {
     renderSidebar('/ops/budget');
     expect(screen.queryByRole('link', { name: 'nav:sidebar.ops.overview' })).not.toBeInTheDocument();

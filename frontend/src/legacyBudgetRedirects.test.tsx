@@ -46,7 +46,7 @@ const NEW_ROUTES = [
   '/ops/operations/column-reset',
 ];
 
-/** The two settings pages of the landing, open read-only to every reader of budget administration. */
+/** The two settings pages of the landing, open read-only to every reader of budget administration (the Budget Member). */
 const SETTINGS_ROUTES = ['/ops/operations/columns', '/ops/operations/allocation-default'];
 
 /** A page stub that shows its path and query, so a redirect's parameters can be read. */
@@ -134,6 +134,11 @@ const tileHrefs = () => screen.getAllByRole('region')
   .map((link) => link.getAttribute('href'));
 
 const BUDGET_MEMBER = { budget: 'member', budget_ops: 'reader', companies: 'reader', departments: 'member' };
+/** The shipped Budget Reader (backend/src/tenants/tenants.service.ts): the budget lines, not their settings. */
+const BUDGET_READER = {
+  budget: 'reader', contracts: 'reader', analytics: 'reader', reporting: 'reader', tasks: 'reader', companies: 'reader',
+  departments: 'reader', cost_centers: 'reader', working_day_profiles: 'reader', suppliers: 'reader', contacts: 'reader', accounts: 'reader',
+};
 
 describe('budget administration access', () => {
   beforeEach(() => {
@@ -169,6 +174,12 @@ describe('budget administration access', () => {
 
   it.each(['/ops/operations', ...SETTINGS_ROUTES])('keeps %s closed to a budget lines reader without budget administration', (route) => {
     auth.grants = { budget: 'reader' };
+    renderAt(route);
+    expect(screen.getByText('forbidden')).toBeInTheDocument();
+  });
+
+  it.each(['/ops/operations', ...SETTINGS_ROUTES])('keeps %s closed to a budget reader', (route) => {
+    auth.grants = BUDGET_READER;
     renderAt(route);
     expect(screen.getByText('forbidden')).toBeInTheDocument();
   });
