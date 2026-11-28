@@ -1425,9 +1425,10 @@ export class ItOpsSettingsService {
     });
   }
 
+  /** The four classification catalogs of a save, and nothing else: the other lists of the same save stay as normalized. */
   private prepareClassificationCatalog(current: ClassificationCatalog, patch: Partial<ClassificationCatalog>): ClassificationCatalog {
-    const merged = { ...current };
-    for (const key of CLASSIFICATION_CATALOG_KEYS) if (patch[key] !== undefined) (merged as any)[key] = patch[key];
+    const merged = {} as ClassificationCatalog;
+    for (const key of CLASSIFICATION_CATALOG_KEYS) (merged as any)[key] = patch[key] !== undefined ? patch[key] : current[key];
     return validateClassificationCatalog(merged);
   }
 
