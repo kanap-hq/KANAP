@@ -12,7 +12,8 @@ import { PrtgService } from '../prtg/prtg.service';
 // IANA timezone validation, sanitized connection tests, admin gating.
 // Standalone via ts-node like the other __tests__ specs.
 
-process.env.AI_SETTINGS_ENCRYPTION_SECRET = 'ai-integrations-spec-secret';
+process.env.SETTINGS_ENCRYPTION_SECRET = 'ai-integrations-spec-secret';
+delete process.env.AI_SETTINGS_ENCRYPTION_SECRET;
 // The request-time SSRF guard in PrtgService would otherwise DNS-resolve these
 // reserved .test hostnames (and fail); the allowlist short-circuits before DNS.
 process.env.SSRF_ALLOWED_HOSTS = 'prtg.example.test,prtg-two.example.test,prtg-three.example.test';

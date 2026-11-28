@@ -22,6 +22,8 @@ import {
   sectionVariables,
 } from '../env-registry-render';
 import { backendPath } from '../../common/__tests__/backend-root';
+import { INSTALLATION_DOMAINS } from '../../installation/installation-domains';
+import { SETTINGS_ENCRYPTION_SECRET_FORMER_VARIABLE, SETTINGS_ENCRYPTION_SECRET_VARIABLE } from '../../installation/settings-encryption-secret';
 
 // The registry of environment variables (config/env-registry.ts) against the code that reads
 // them and the files it produces. No database.
@@ -70,6 +72,11 @@ const DYNAMIC_READERS: Record<string, { names: readonly string[]; builtFrom?: st
       'KANAP_NUTANIX_LIVE_READ', 'KANAP_AD_LIVE_READ', 'KANAP_AWX_LIVE_DRY_RUN', 'KANAP_TICKETING_LIVE_SANDBOX_WRITE', 'KANAP_GLPI_LIVE_SANDBOX_WRITE',
     ],
   },
+  // The installation settings read the variable of each setting their domains declare, and its former names.
+  'src/installation/installation-settings.ts': {
+    names: INSTALLATION_DOMAINS.flatMap((domain) => domain.settings.flatMap((setting) => [setting.env, ...(setting.aliases ?? [])])),
+  },
+  'src/installation/settings-encryption-secret.ts': { names: [SETTINGS_ENCRYPTION_SECRET_VARIABLE, SETTINGS_ENCRYPTION_SECRET_FORMER_VARIABLE] },
   'src/common/converter-env.ts': { names: [], why: 'copies the system variables (PATH, HOME, LANG, ...) into the environment of the converter it starts' },
   'src/demo-data/demo-data.service.ts': { names: [], why: 'writes the KANAP_DEMO_* variables of the loader it starts' },
 };
@@ -93,6 +100,7 @@ const NOT_VARIABLES: Record<string, string> = {
   LC_COLLATE: 'system variable copied into the environment of the document converter',
   XDG_CACHE_HOME: 'system variable copied into the environment of the document converter',
   XDG_CONFIG_HOME: 'system variable copied into the environment of the document converter',
+  AI_WEB_SEARCH_READY: 'switch of Features that the installation settings recompute (installation/installation-settings.ts)',
 };
 
 const VARIABLE_LITERAL = /['"]([A-Z][A-Z0-9]*_[A-Z0-9_]+)['"]/g;

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { sameOriginRedirectFetch } from '../../common/outbound-redirects';
+import { aiWebSearchApiKey } from '../../installation/ai-installation-settings';
 
 export type BraveSearchResult = {
   title: string;
@@ -17,6 +18,7 @@ type BraveApiResponse = {
   web?: { results?: BraveWebResult[] };
 };
 
+export const WEB_SEARCH_UNAVAILABLE = 'Web search is not available on this installation.';
 const BRAVE_API_URL = 'https://api.search.brave.com/res/v1/web/search';
 const SEARCH_TIMEOUT_MS = 5_000;
 const MAX_PUBLIC_QUERY_LENGTH = 256;
@@ -31,8 +33,9 @@ const INTERNAL_REF_PATTERNS = [
 export class BraveSearchService {
   private readonly logger = new Logger(BraveSearchService.name);
 
-  private getApiKey(): string | undefined {
-    return process.env.BRAVE_SEARCH_API_KEY;
+  // BRAVE_SEARCH_API_KEY, else the key set on the installation's AI page (installation/).
+  private getApiKey(): string | null {
+    return aiWebSearchApiKey();
   }
 
   private toPublicQuery(query: string): string {
@@ -66,7 +69,7 @@ export class BraveSearchService {
     opts?: { count?: number; signal?: AbortSignal },
   ): Promise<BraveSearchResult[]> {
     const apiKey = this.getApiKey();
-    if (!apiKey) throw new Error('BRAVE_SEARCH_API_KEY is not configured.');
+    if (!apiKey) throw new Error(WEB_SEARCH_UNAVAILABLE);
 
     const count = Math.min(opts?.count ?? 5, 10);
     const publicQuery = this.toPublicQuery(query);
@@ -105,7 +108,7 @@ export class BraveSearchService {
   async testConnectivity(): Promise<{ ok: boolean; message: string; latency_ms: number | null }> {
     const apiKey = this.getApiKey();
     if (!apiKey) {
-      return { ok: false, message: 'BRAVE_SEARCH_API_KEY is not configured.', latency_ms: null };
+      return { ok: false, message: WEB_SEARCH_UNAVAILABLE, latency_ms: null };
     }
 
     const start = Date.now();

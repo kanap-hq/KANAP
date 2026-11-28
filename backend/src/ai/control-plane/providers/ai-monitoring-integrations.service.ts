@@ -410,7 +410,7 @@ export class AiMonitoringIntegrationsService {
     materialShape: 'api_token' | 'username_passhash',
   ): Record<string, unknown> {
     // AiSecretCipherService.encrypt throws a plain-language BadRequest when
-    // AI_SETTINGS_ENCRYPTION_SECRET is not configured — let it propagate.
+    // SETTINGS_ENCRYPTION_SECRET is not configured: let it propagate.
     const ref: ProviderCredentialRef = {
       kind: 'encrypted',
       ciphertext: this.cipher.encrypt(material),
