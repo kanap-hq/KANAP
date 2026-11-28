@@ -6,7 +6,7 @@ L'idée essentielle à retenir : l'agent propose, vous disposez. Tout ce qu'un a
 
 ## Où la trouver
 
-- Espace de travail : **Agents IA**
+- Module : **Agents IA**
 - Chemin : **Agents IA → Vue d'ensemble**
 - Route : `/agents`
 - Autorisation : `ai_agents:reader` pour consulter la section, `ai_agents:contributor` pour agir sur le travail d'un agent. Les commandes de création, de pause d'urgence et de suppression décrites ci-dessous nécessitent le niveau administrateur des Agents IA (`ai_agents:admin`) ; l'administrateur des paramètres IA (`ai_settings:admin`) les débloque également.
@@ -33,7 +33,7 @@ Deux autres surfaces IA se confondent facilement avec les agents, mais sont des 
 ## Le tableau de bord du parc
 
 !!! note "Agents en attente d'une confirmation"
-    Sur le service hébergé, un agent sans modèle propre s'exécute sur le modèle inclus Kadratis une fois qu'un administrateur en a confirmé le fournisseur. Jusque-là, un bandeau en haut de la page indique *Les agents qui utilisent le modèle inclus Kadratis sont en pause jusqu'à ce qu'un administrateur le confirme dans Administration > Kad.* Les administrateurs y trouvent un bouton **Ouvrir les réglages Kad**. Les agents rattachés à un modèle que vous avez ajouté continuent de fonctionner. Voir [Confirmer le modèle inclus Kadratis](ai-settings.md#confirmer-le-modele-inclus-kanap).
+    Sur le service hébergé, un agent sans modèle propre s'exécute sur le modèle inclus Kadratis une fois qu'un administrateur en a confirmé le fournisseur. Jusque-là, un bandeau en haut de la page indique *Les agents qui utilisent le modèle inclus Kadratis sont en pause jusqu'à ce qu'un administrateur le confirme dans Administration > Kad.* Les administrateurs y trouvent un bouton **Ouvrir les paramètres Kad**. Les agents rattachés à un modèle que vous avez ajouté continuent de fonctionner. Voir [Confirmer le modèle inclus Kadratis](ai-settings.md#confirmer-le-modele-inclus-kanap).
 
 Cinq indicateurs mutualisés figurent en haut. Ils décrivent l'ensemble du parc, et non les chiffres d'un agent en particulier :
 

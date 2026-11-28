@@ -6,7 +6,7 @@ The important idea to hold onto: an agent proposes, you dispose. Anything an age
 
 ## Where to find it
 
-- Workspace: **AI Agents**
+- Module: **AI Agents**
 - Path: **AI Agents → Overview**
 - Route: `/agents`
 - Permission: `ai_agents:reader` to view the section, `ai_agents:contributor` to act on an agent's work. The create, emergency-pause, and delete controls described below require the AI Agents Admin level (`ai_agents:admin`); the AI Settings admin (`ai_settings:admin`) unlocks them too.
@@ -18,7 +18,7 @@ The important idea to hold onto: an agent proposes, you dispose. Anything an age
 
 A few ideas recur across every page in this section. Learn them once here.
 
-- **What an agent watches.** Each agent is pointed at your connected ticketing system (today that is GLPI, set up under **Admin → Integrations**; see [the GLPI connection](integrations.md)). In the agent screens it is referred to generically as the connected ticketing system or the connection. A monitoring agent watches a connected monitoring tool and its alerts instead.
+- **What an agent watches.** Each agent is pointed at your connected ticketing system (today that is GLPI, set up under **Administration → Integrations**; see [the GLPI connection](integrations.md)). In the agent screens it is referred to generically as the connected ticketing system or the connection. A monitoring agent watches a connected monitoring tool and its alerts instead.
 - **What an agent acts on.** Tickets. The work an agent can propose is a requester reply, an internal note, a classification change, a status move (including close/solve), an assignment change, and adding an observer. The requester stays unchanged.
 - **Asks first vs. automatic.** Every action type starts in **Ask first**: the agent drafts the change and it sits in your approvals queue until you approve, reject, or dismiss it. Once an agent has built up enough of a track record on a given action type, an admin can promote just that action type to **Automatic** so it applies without waiting. Promotion is per action type, and the safety limits below never stop applying.
 - **Run modes.** Every agent sits in one of three modes, set from the action bar on its [workspace](agents-workspace.md): **Off** (nothing runs at all), **Manual only** (it runs only when someone asks: a check you trigger, or a test on a single ticket), and **Watching** (it checks on its own at the frequency you set, on top of everything Manual does). New agents always start not-started, and **Manual only** is the mode to live in while you tune one.
@@ -33,7 +33,7 @@ Two other AI surfaces are easy to confuse with agents but are separate things: [
 ## The fleet dashboard
 
 !!! note "Agents waiting for a confirmation"
-    On the hosted service, an agent that has no model of its own runs on the Kadratis included model once an administrator has confirmed its provider. Until then, a banner at the top of the page says *Agents that use the Kadratis included model are paused until an administrator confirms it in Admin > Kad.* Administrators get an **Open Kad settings** button on it. Agents pinned to a model you added keep working. See [Confirming the Kadratis included model](ai-settings.md#confirming-the-kanap-included-model).
+    On the hosted service, an agent that has no model of its own runs on the Kadratis included model once an administrator has confirmed its provider. Until then, a banner at the top of the page says *Agents that use the Kadratis included model are paused until an administrator confirms it in Administration > Kad.* Administrators get an **Open Kad settings** button on it. Agents pinned to a model you added keep working. See [Confirming the Kadratis included model](ai-settings.md#confirming-the-kanap-included-model).
 
 Five pooled numbers sit at the top. They describe the whole fleet, not any one agent:
 
@@ -90,7 +90,7 @@ Admins get a **New agent** button at the top right of the page. It opens a dialo
 
 - **Agent type**: **Helpdesk** or **Infrastructure monitoring (SRE)**. Name and description come pre-filled with sensible defaults, which are swapped if you change type and haven't edited them yourself.
 - **Name** and **Description**.
-- **Connection**: the ticketing system (**GLPI**) for a helpdesk agent, or the **Monitoring tool** for an SRE one. **Manage integrations** jumps to **Admin → Integrations** if the connection isn't set up yet. If no monitoring tool is connected, the agent is still created. It just stays inactive until one is.
+- **Connection**: the ticketing system (**GLPI**) for a helpdesk agent, or the **Monitoring tool** for an SRE one. **Manage integrations** jumps to **Administration → Integrations** if the connection isn't set up yet. If no monitoring tool is connected, the agent is still created. It just stays inactive until one is.
 
 Watching, targeting, and limits are not collected here. **Create** opens the new agent's **Settings** tab on its [workspace](agents-workspace.md), where you finish that setup. The agent is always created as **Not started**, so nothing runs until you set its run mode. The recommended path is to finish Settings, put the agent in **Manual only** and test it on real tickets (or alerts), then move it to **Watching** once you trust its output.
 

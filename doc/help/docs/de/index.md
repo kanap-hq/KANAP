@@ -78,7 +78,7 @@ Zehn Minuten je Pfad, mit dem Beispiel Fromage & Co oder mit Ihren eigenen Daten
 
 - [Budgetzeilen](budget-lines.md): OPEX- und CAPEX-Zeilen mit ihren Budgets und Zuordnungen planen und verfolgen
 - [Verträge](contracts.md): Lieferantenverträge und Verlängerungen verwalten
-- [Budgetadministration](budget-operations.md): Budgeteinstellungen sowie Vorgänge zum Einfrieren, Kopieren und Zurücksetzen
+- [Budget-Einstellungen](budget-operations.md): Einstellungen sowie Vorgänge zum Einfrieren, Kopieren und Zurücksetzen
 - [Währungen](currencies.md): Reporting- und Standardwährungen, Wechselkurse
 - [Stammdaten einfrieren und Jahreskennzahlen kopieren](master-data-operations.md): Kennzahlen von Unternehmen und Abteilungen sperren und fortschreiben
 - [Berichte](reports.md): Budget- und Leistungsverrechnungsberichte generieren

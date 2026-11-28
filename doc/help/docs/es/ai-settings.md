@@ -4,7 +4,7 @@ Esta página controla el [asistente de chat Kad](ai-assistant.md): con qué mode
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Administración**
+- Módulo: **Administración**
 - Ruta: **Administración → Inteligencia artificial → Kad**
 - Ruta URL: `/admin/ai`
 - Permiso: `ai_settings:admin`

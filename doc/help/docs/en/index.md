@@ -78,7 +78,7 @@ Ten minutes per path, with the Fromage & Co example or with your own data:
 
 - [Budget lines](budget-lines.md): Plan and track OPEX and CAPEX lines, their budgets and allocations
 - [Contracts](contracts.md): Manage vendor contracts and renewals
-- [Budget Administration](budget-operations.md): Budget settings, freeze, copy, and reset operations
+- [Budget settings](budget-operations.md): Budget settings, freeze, copy, and reset operations
 - [Currencies](currencies.md): Reporting and default currencies, FX rates
 - [Freeze master data and copy yearly metrics](master-data-operations.md): Lock and roll forward company and department metrics
 - [Reports](reports.md): Generate budget and chargeback reports

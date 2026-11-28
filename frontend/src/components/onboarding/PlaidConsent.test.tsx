@@ -56,7 +56,7 @@ describe('PlaidConsent', () => {
     renderConsent();
     const box = await screen.findByRole('checkbox');
     expect(screen.getByText(/^I agree that Anthropic \(.+\) processes my questions/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: `Admin › ${AGENT_NAME}` })).toHaveAttribute('href', '/admin/ai');
+    expect(screen.getByRole('link', { name: `Administration › ${AGENT_NAME}` })).toHaveAttribute('href', '/admin/ai');
     fireEvent.click(box);
     await waitFor(() => expect(env.updateSettings).toHaveBeenCalledWith({ chat_enabled: true, accept_builtin_provider_key: 'k1' }));
   });

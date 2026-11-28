@@ -4,7 +4,7 @@ La pestaña **Aplicaciones conectadas** enumera las aplicaciones que pueden leer
 
 ## Dónde encontrarlo
 
-- Ruta: haga clic en su avatar (arriba a la derecha), luego en **Mi perfil** y después en la pestaña **Aplicaciones conectadas**
+- Ruta: haga clic en su avatar (arriba a la derecha), luego en **Mi cuenta** y después en la pestaña **Aplicaciones conectadas**
 - Ruta URL: `/settings/connected-apps`
 - Visible cuando MCP está activado para su espacio de trabajo y usted tiene acceso MCP (el rol **AI MCP User**, o un rol que lo incluya)
 

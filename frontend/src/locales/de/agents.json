@@ -285,7 +285,7 @@
       "proposal": "Vorschlag",
       "decision": "Entscheidung",
       "execution": "Ausführung",
-      "configuration": "Konfiguration",
+      "configuration": "Einstellungen",
       "check": "Prüfungen",
       "pause": "Pause",
       "error": "Fehler"
@@ -304,7 +304,7 @@
       "poller_paused_by_emergency_pause": "Ticketüberwachung pausiert",
       "daily_cap_reached": "Tageslimit erreicht",
       "poller_cycle_failed": "Dieser Blick ist fehlgeschlagen",
-      "agent_config_updated": "Agentenkonfiguration aktualisiert",
+      "agent_config_updated": "Agenteneinstellungen aktualisiert",
       "agent_autonomy_granted": "Automatikmodus aktiviert",
       "agent_autonomy_revoked": "Automatikmodus ausgeschaltet",
       "agent_autonomy_demoted": "Automatikmodus zurückgestuft",

@@ -78,7 +78,7 @@ Diez minutos por recorrido, con el ejemplo Fromage & Co o con sus propios datos:
 
 - [Líneas presupuestarias](budget-lines.md): Planificar y seguir las líneas OPEX y CAPEX, sus presupuestos y sus asignaciones
 - [Contratos](contracts.md): Gestión de contratos con proveedores y renovaciones
-- [Administración presupuestaria](budget-operations.md): Ajustes presupuestarios y operaciones de congelación, copia y restablecimiento
+- [Configuración del presupuesto](budget-operations.md): Parámetros del presupuesto y operaciones de congelación, copia y restablecimiento
 - [Monedas](currencies.md): Monedas de reporting y predeterminadas, tipos de cambio
 - [Congelar datos maestros y copiar indicadores anuales](master-data-operations.md): Bloqueo y traslado de los indicadores de empresas y departamentos
 - [Informes](reports.md): Generación de informes presupuestarios y de contracargo

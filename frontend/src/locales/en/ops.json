@@ -702,7 +702,7 @@
     }
   },
   "operations": {
-    "title": "Administration",
+    "title": "Settings",
     "sections": {
       "settings": "Settings",
       "operations": "Operations"
@@ -870,7 +870,7 @@
       "methodsReplaced_other": "{{count}} lines change their allocation method in {{year}}. Without \"Overwrite existing data\", the copy keeps only the allocations entered by hand.",
       "defaultManualLabel": "selected companies ({{count}})",
       "defaultManualLabel_one": "selected company ({{count}})",
-      "defaultBasisWarning": "{{count}} lines are left on the default allocation: {{destinationYear}} uses {{destinationLabel}} while {{sourceYear}} uses {{sourceLabel}}. Copied lines keep following the default of their own year. Configure {{destinationYear}} in Budget administration if the basis should stay the same.",
+      "defaultBasisWarning": "{{count}} lines are left on the default allocation: {{destinationYear}} uses {{destinationLabel}} while {{sourceYear}} uses {{sourceLabel}}. Copied lines keep following the default of their own year. Configure {{destinationYear}} in Budget settings if the basis should stay the same.",
       "summary": {
         "preview_one": "{{count}} line in the preview.",
         "preview_other": "{{count}} lines in the preview.",
@@ -1049,8 +1049,8 @@
         "accounts_one": "Missing: {{count}} account ({{examples}}). Add it in Master data > Accounts.",
         "costCenters": "Missing: {{count}} cost centers ({{examples}}). Add them in Master data > Cost centers.",
         "costCenters_one": "Missing: {{count}} cost center ({{examples}}). Add it in Master data > Cost centers.",
-        "users": "Missing: {{count}} users ({{examples}}). Add or enable them in Admin > Users.",
-        "users_one": "Missing: {{count}} user ({{examples}}). Add or enable it in Admin > Users.",
+        "users": "Missing: {{count}} users ({{examples}}). Add or enable them in Administration > Users.",
+        "users_one": "Missing: {{count}} user ({{examples}}). Add or enable it in Administration > Users.",
         "projects": "Missing: {{count}} projects ({{examples}}). Check the numbers in Portfolio > Projects.",
         "projects_one": "Missing: {{count}} project ({{examples}}). Check the number in Portfolio > Projects."
       },
@@ -1135,7 +1135,7 @@
         "skipped_one": "{{count}} row left out"
       }
     },
-    "budgetAdminOnly": "You need budget administrator rights to use this page.",
+    "budgetAdminOnly": "You need the “Admin” right on “Budget settings and operations” to use this page.",
     "budgetColumnsSettings": {
       "title": "Budget columns",
       "loadError": "The column settings could not be loaded.",
@@ -1850,7 +1850,7 @@
     },
     "frozen": {
       "title": "The {{column}} {{year}} column is frozen",
-      "hint": "Read only. An administrator can unfreeze it in Administration › Freeze / unfreeze data."
+      "hint": "Read only. An administrator can unfreeze it in Settings › Freeze / unfreeze data."
     },
     "readOnlyHint": "Read only. Your role gives read access to the budget.",
     "atADate": "At a date",

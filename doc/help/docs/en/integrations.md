@@ -4,8 +4,8 @@ Use the Integrations page to connect Kadratis to third-party tools that compleme
 
 ## Where to find it
 
-- Workspace: **Admin**
-- Path: **Admin → Integrations**
+- Module: **Administration**
+- Path: **Administration → Integrations**
 - Route: `/admin/integrations`
 - Permission: `ai_settings:admin` or `infrastructure:admin`. Each card has its own requirement: the GLPI and monitoring connections need `ai_settings:admin`, the Netbox connection needs `infrastructure:admin`. You only see the cards you are allowed to configure.
 - Feature flag: the GLPI and monitoring cards share the same `ai_settings` surface as the Kad settings page. When that surface is off, they are hidden. The Netbox card has no feature flag and is available in both the cloud and the on-premise edition.

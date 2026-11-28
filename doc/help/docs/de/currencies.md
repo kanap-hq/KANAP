@@ -1,14 +1,14 @@
 # Währungseinstellungen
 
-Die Seite Währungseinstellungen (**Budgetverwaltung > Administration > Währungen**) ist der Ort, an dem Sie konfigurieren, wie Währungen in Ihrem Arbeitsbereich gespeichert, angezeigt und umgerechnet werden. Sie steuert die mandantenweite Berichtswährung, Standardwährungen für neue Budgetzeilen und optionale Einschränkungen, welche Währungen verwendet werden können.
+Die Seite Währungseinstellungen (**Budgetverwaltung > Einstellungen > Währungen**) ist der Ort, an dem Sie konfigurieren, wie Währungen in Ihrem Arbeitsbereich gespeichert, angezeigt und umgerechnet werden. Sie steuert die mandantenweite Berichtswährung, Standardwährungen für neue Budgetzeilen und optionale Einschränkungen, welche Währungen verwendet werden können.
 
 Für Hintergrundinformationen zu Währungskonzepten und Umrechnungsmechanismen siehe den Leitfaden zur Währungsverwaltung.
 
 ## Wer sie sehen und ändern kann
 
-Währungen sind eine Budgeteinstellung. Die Seite steht bei den anderen Budgeteinstellungen in der [Budgetadministration](budget-operations.md).
+Währungen sind eine Budgeteinstellung. Die Seite steht bei den anderen Budgeteinstellungen in den [Budget-Einstellungen](budget-operations.md).
 
-- **Die Seite öffnen, Einstellungen ändern, die Wechselkurssynchronisierung starten und manuelle Kurse eingeben**: Budgetadministration auf Administratorebene. Die Karte ist für andere Benutzer ausgeblendet.
+- **Die Seite öffnen, Einstellungen ändern, die Wechselkurssynchronisierung starten und manuelle Kurse eingeben**: Stufe Administrator für Budgeteinstellungen und -operationen. Die Karte ist für andere Benutzer ausgeblendet.
 - **Währungen bei Zeilen verwenden**: OPEX- und CAPEX-Benutzer wählen in ihren Zeilenformularen aus den erlaubten Währungen, ohne diese Seite zu öffnen.
 
 Das Recht **Einstellungen** der IT-Landschaft gibt keinen Zugriff auf Währungen. Es umfasst nur die Einstellungen der IT-Landschaft.
@@ -158,7 +158,7 @@ Ein manueller Kurs ersetzt den automatischen Kurs für dieses Jahr, bis Sie ihn 
 Hat das Jahr eingefrorene Budgetversionen, erreicht ein neuer oder entfernter manueller Kurs sie nicht, und die Seite weist darauf hin, zum Beispiel **Die 2 eingefrorenen Versionen von 2026 behalten den Kurs ihres Einfrierens.**
 
 Gut zu wissen:
-  - Nur Benutzer der Budgetadministration auf Administratorebene können einen manuellen Kurs eingeben, ändern oder entfernen.
+  - Nur Personen mit der Stufe Administrator für Budgeteinstellungen und -operationen können einen manuellen Kurs eingeben, ändern oder entfernen.
   - Jede Eingabe, Änderung und Entfernung wird im Audit-Protokoll festgehalten.
   - Ein eingefrorenes Jahr behält die beim Einfrieren erfassten Kurse, manuelle und geschätzte eingeschlossen (siehe [Eingefrorene Jahre](#eingefrorene-jahre)).
   - Ein manueller Kurs wird gegenüber der aktuellen Berichtswährung erfasst. Nach einem Wechsel der Berichtswährung gelten die für die frühere erfassten manuellen Kurse nicht mehr. Sie gelten wieder, wenn Sie zu dieser Berichtswährung zurückkehren.
@@ -216,7 +216,7 @@ Das Einfrieren der Standard-Budgetspalte eines Jahres schreibt die Kurse dieses 
 
 **Fehlender Kurs**: Hat ein Jahr keinen Kurs für eine verwendete Währung, sind die Beträge der Budgetzeilen in dieser Währung für dieses Jahr in keiner Summe in der Berichtswährung enthalten. Das betrifft die Liste der Budgetzeilen, den Bereich Budgetverwaltung der Startseite, die Budget- und Leistungsverrechnungsberichte, die Verträge und die Reiter Beziehungen der Anwendungen und Technologien. Der Bildschirm weist dort darauf hin, wo es zählt:
 
-- Ein einzeiliger Hinweis nennt, was ausgeschlossen ist, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Er erscheint unter den Summen der Liste der Budgetzeilen, auf den Kacheln der Übersicht, oben in jedem Budget- und Leistungsverrechnungsbericht und unter den Budgetzahlen von Verträgen, Anwendungen und Technologien. Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das diese Seite beim fehlenden Kurs öffnet.
+- Ein einzeiliger Hinweis nennt, was ausgeschlossen ist, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Er erscheint unter den Summen der Liste der Budgetzeilen, auf den Kacheln der Übersicht, oben in jedem Budget- und Leistungsverrechnungsbericht und unter den Budgetzahlen von Verträgen, Anwendungen und Technologien. Personen mit der Stufe Administrator für Budgeteinstellungen und -operationen sehen außerdem **Kurs eingeben**, das diese Seite beim fehlenden Kurs öffnet.
 - In der Zeile selbst erscheint der Betrag in seiner eigenen Währung mit einer kleinen orangefarbenen Markierung. Fahren Sie mit der Maus über die Markierung, um zum Beispiel „Kein Wechselkurs für USD im Jahr 2026: nicht in den Summen enthalten.“ zu lesen.
 
 Kadratis ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle sechs Stunden je Jahr), sodass die nächste Anzeige den neuen Kurs verwendet, sobald die Quelle ihn veröffentlicht. Um fehlende Kurse zu erkennen, prüfen Sie den Block der fehlenden Kurse über der FX-Kurs-Snapshot-Tabelle und führen Sie **Wechselkurssynchronisierung erzwingen** aus, um die Kurse sofort abzurufen. Ein [manueller Kurs](#manuelle-kurse) behebt das Problem umgehend.
@@ -240,7 +240,7 @@ Kadratis ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle 
 Ihr Konzern wechselt von EUR-basierter zu USD-basierter Berichterstattung.
 
 **Schritte**:
-  1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
+  1. Gehen Sie zu **Budgetverwaltung > Einstellungen > Währungen**
   2. Ändern Sie die Berichtswährung von `EUR` auf `USD`
   3. Klicken Sie auf **Speichern**, lesen Sie den Bestätigungsdialog (manuelle Kurse, die nicht mehr gelten, eingefrorene Versionen) und klicken Sie dann auf **Währung ändern**
   4. Lesen Sie das Ergebnis des Kursabrufs. Geben Sie für jedes noch fehlende Paar einen manuellen Kurs ein oder führen Sie später **Wechselkurssynchronisierung erzwingen** aus
@@ -253,7 +253,7 @@ Ihr Konzern wechselt von EUR-basierter zu USD-basierter Berichterstattung.
 Ihre Finanzabteilung verlangt, dass alle Ausgaben nur in EUR, USD oder GBP erfasst werden.
 
 **Schritte**:
-  1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
+  1. Gehen Sie zu **Budgetverwaltung > Einstellungen > Währungen**
   2. Setzen Sie erlaubte Währungen auf `EUR, USD, GBP`
   3. Klicken Sie auf **Speichern**
   4. Führen Sie **Wechselkurssynchronisierung erzwingen** durch, um sicherzustellen, dass Kurse für alle drei Währungen verfügbar sind
@@ -264,7 +264,7 @@ Ihre Finanzabteilung verlangt, dass alle Ausgaben nur in EUR, USD oder GBP erfas
 Ihr Unternehmen beginnt Geschäftstätigkeit in der Schweiz und muss CHF-Ausgaben erfassen.
 
 **Schritte**:
-  1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
+  1. Gehen Sie zu **Budgetverwaltung > Einstellungen > Währungen**
   2. Fügen Sie `CHF` zu den erlaubten Währungen hinzu (z. B. `EUR, USD, GBP, CHF`)
   3. Klicken Sie auf **Speichern**
   4. Klicken Sie auf **Wechselkurssynchronisierung erzwingen**, um CHF-Kurse sofort abzurufen
@@ -276,7 +276,7 @@ Ihr Unternehmen beginnt Geschäftstätigkeit in der Schweiz und muss CHF-Ausgabe
 Es ist Dezember, und Sie bereiten die Budgetplanung für das nächste Jahr vor.
 
 **Schritte**:
-  1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
+  1. Gehen Sie zu **Budgetverwaltung > Einstellungen > Währungen**
   2. Klicken Sie auf **Wechselkurssynchronisierung erzwingen**, um die Kurse für das kommende Jahr zu aktualisieren
   3. Prüfen Sie die FX-Kurs-Snapshot-Tabelle, um die Forward-Schätzungen für das nächste Jahr zu sehen
   4. Beachten Sie, dass Kurse für zukünftige Jahre Forward-Schätzungen sind (Wiederverwendung des Kurses des aktuellen Jahres). Überprüfen Sie sie, wenn das Jahr näher rückt

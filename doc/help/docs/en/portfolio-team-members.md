@@ -18,7 +18,7 @@ Navigate to **Portfolio > Contributors** to see configured contributors grouped 
 
 ## Where to find it
 
-- Workspace: **Portfolio**
+- Module: **Portfolio**
 - Path: **Portfolio > Contributors**
 - Self-service path: **Settings > Profile > Contributor Settings** (opens your own contributor profile)
 - Permissions:

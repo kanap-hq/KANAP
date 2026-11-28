@@ -1350,7 +1350,7 @@ describe('BudgetTab frozen columns', () => {
     const ed = editor();
     expect(ed).toHaveAttribute('data-frozen', 'true');
     expect(ed).toHaveTextContent('The Budget 2026 column is frozen');
-    expect(ed).toHaveTextContent('Read only. An administrator can unfreeze it in Administration › Freeze / unfreeze data.');
+    expect(ed).toHaveTextContent('Read only. An administrator can unfreeze it in Settings › Freeze / unfreeze data.');
     expect(ed).toHaveTextContent('12 000');
     expect(ed).toHaveTextContent('Spread flat');
     // No field at all: no amount, no mode, no date, no distribution, no clear.

@@ -6,7 +6,7 @@ Contrairement à un partage de fichiers, la base de connaissances n'est pas seul
 
 ## Où la trouver
 
-- Espace de travail : **Base de connaissances**
+- Module : **Base de connaissances**
 - Autorisations :
   - `knowledge:reader` vous permet d'ouvrir et de lire des documents
   - `knowledge:member` vous permet de créer, modifier, commenter, organiser des dossiers et gérer les métadonnées des documents

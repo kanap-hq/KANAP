@@ -4,7 +4,7 @@ Les Approbations constituent la file de revue quotidienne de tout ce que vos age
 
 ## Où la trouver
 
-- Espace de travail : **Agents IA**
+- Module : **Agents IA**
 - Chemin : **Agents IA → Approbations**
 - Route : `/agents/approvals`
 - Autorisation : nécessite que l'IA soit activée sur l'instance et le rôle Lecteur des Agents IA (`ai_agents:reader`) pour lire la file. Décider d'une proposition, prendre acte d'une ligne d'attention et relancer une analyse nécessitent le niveau contributeur (`ai_agents:contributor`).

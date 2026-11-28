@@ -4,7 +4,7 @@ Use the Sample data page to explore Kadratis with a ready-made set of data. It f
 
 ## Where to find it
 
-- Workspace: **Admin** › **Sample data**
+- Module: **Administration** › **Sample data**
 - Route: `/admin/sample-data`
 - Who can use it: users with the **Administrator** role. A module permission level, even `admin`, does not give access.
 - Available in cloud workspaces only. Installations on your own servers do not have this page.
@@ -40,7 +40,7 @@ What a new workspace creates for you (its first company, the default chart of ac
 
 **To load the set**:
 
-1. Open **Admin** › **Sample data**.
+1. Open **Administration** › **Sample data**.
 2. Click **Load sample data**.
 3. Read the summary in the dialog and confirm with **Load sample data**.
 
@@ -64,11 +64,11 @@ The home banner stays hidden in those cases. Erasing loaded sample data remains 
 While the workspace is empty and sample data has never been loaded, Administrators see one line at the top of the home page: "Discover Kadratis with sample data."
 
 - **Load** opens the same dialog as the page.
-- **Hide** removes the line for good, for every Administrator of the workspace. The page under **Admin** › **Sample data** stays available.
+- **Hide** removes the line for good, for every Administrator of the workspace. The page under **Administration** › **Sample data** stays available.
 - While a load runs, the line shows the current step.
 - If a load fails, the line gives the reason and offers **Try again**.
 
-The line disappears as soon as the workspace holds data. It does not come back after you erase the workspace. To load the set again, use **Admin** › **Sample data**.
+The line disappears as soon as the workspace holds data. It does not come back after you erase the workspace. To load the set again, use **Administration** › **Sample data**.
 
 ## Erase everything and start over
 

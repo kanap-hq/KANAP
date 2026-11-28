@@ -4,7 +4,7 @@ Aprobaciones es la cola de revisión diaria para todo lo que sus agentes IA quie
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Agentes IA**
+- Módulo: **Agentes IA**
 - Ruta: **Agentes IA → Aprobaciones**
 - Ruta URL: `/agents/approvals`
 - Permiso: requiere que la IA esté habilitada en la instancia y el rol Lector de Agentes IA (`ai_agents:reader`) para leer la cola. Decidir una propuesta, dar por vista una fila de atención y repetir un análisis requieren el nivel de colaborador (`ai_agents:contributor`).

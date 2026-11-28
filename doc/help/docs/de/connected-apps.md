@@ -4,7 +4,7 @@ Die Registerkarte **Verbundene Apps** listet die Anwendungen auf, die Ihre Kadra
 
 ## Wo Sie es finden
 
-- Pfad: Klicken Sie auf Ihren Avatar (oben rechts), dann auf **Mein Profil** und dann auf die Registerkarte **Verbundene Apps**
+- Pfad: Klicken Sie auf Ihren Avatar (oben rechts), dann auf **Mein Konto** und dann auf die Registerkarte **Verbundene Apps**
 - Route: `/settings/connected-apps`
 - Sichtbar, wenn MCP für Ihren Arbeitsbereich eingeschaltet ist und Sie MCP-Zugriff haben (die Rolle **AI MCP User** oder eine Rolle, die sie einschließt)
 

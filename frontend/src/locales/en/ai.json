@@ -493,7 +493,7 @@
   "consent": {
     "accept": "I agree that {{name}} ({{place}}) processes my questions and the data they concern for {{agent}}'s answers. They are not used to train its models.",
     "otherModel": "Another model, or turn it off:",
-    "otherModelLink": "Admin › {{agent}}",
+    "otherModelLink": "Administration › {{agent}}",
     "loading": "Loading the provider"
   }
 }

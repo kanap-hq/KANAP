@@ -403,7 +403,7 @@
   "AI_CONVERSATION_NOT_YOURS": "Esta conversación pertenece a otra persona.",
   "AI_ATTACHMENT_NOT_YOURS": "Este adjunto pertenece a otra persona.",
   "AI_PREVIEW_NOT_IN_CONVERSATION": "Esta vista previa pertenece a otra conversación.",
-  "AI_MCP_KEY_POLICY_INVALID": "Los ajustes de esta clave MCP no son válidos. Cree una clave nueva.",
+  "AI_MCP_KEY_POLICY_INVALID": "La configuración de esta clave MCP no es válida. Cree una clave nueva.",
   "AI_FIELD_WITHHELD": "Este campo no está disponible con sus derechos actuales.",
   "AI_ROLES_UNAVAILABLE": "Los roles no se pueden leer aquí.",
   "AGENT_ACTION_APPROVAL_REQUIRED": "Esta acción debe aprobarse antes de ejecutarse.",

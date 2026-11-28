@@ -214,7 +214,7 @@ async function testUnreadFamilies(h: Harness, runner: QueryRunner, s: Seed) {
   const found = await h.tools.execute(full, 'search_all', { query: 'APP-8' });
   if (found.items.length) assert.equal(found.families_not_read, undefined, 'a match: no generic list');
   const described = await h.tools.execute(full, 'describe_entity_filters', { entity_type: 'applications' });
-  assert.ok(described.families_not_read.includes('audit log (en: Admin › Audit log; fr: Administration › Journal d\'audit; de: Administration › Audit-Protokoll; es: Administración › Registro de auditoría)'), 'describe_entity_filters lists them');
+  assert.ok(described.families_not_read.includes('audit log (en: Administration › Audit log; fr: Administration › Journal d\'audit; de: Administration › Audit-Protokoll; es: Administración › Registro de auditoría)'), 'describe_entity_filters lists them');
   // A reader of the reports reads the chargeback (Plaid L8): not named as unread.
   const reporter = ctx(runner, s, 'reporter');
   const reports = await h.tools.execute(reporter, 'search_all', { query: 'refacturation 2026 par société bénéficiaire' });

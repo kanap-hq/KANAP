@@ -702,7 +702,7 @@
     }
   },
   "operations": {
-    "title": "Administration",
+    "title": "Einstellungen",
     "sections": {
       "settings": "Einstellungen",
       "operations": "Vorgänge"
@@ -713,7 +713,7 @@
       "copyBudgetTitle": "Budgetspalten kopieren",
       "copyBudgetDesc": "Kopieren Sie Beträge zwischen Jahren und Spalten, mit optionalem Prozentsatz, und Zuordnungen in ein anderes Jahr",
       "resetColumnTitle": "Budgetspalte leeren",
-      "resetColumnDesc": "Löschen Sie alle Daten einer Budgetspalte für ein bestimmtes Jahr",
+      "resetColumnDesc": "Leeren Sie eine Budgetspalte für ein bestimmtes Jahr",
       "allocationDefaultTitle": "Standard-Zuordnungsmethode",
       "allocationDefaultDesc": "Wählen Sie die Methode, die für OPEX- und CAPEX-Zeilen mit Standard-Zuordnung gilt",
       "budgetColumnsTitle": "Budgetspalten",
@@ -870,7 +870,7 @@
       "methodsReplaced_other": "{{count}} Zeilen ändern ihre Zuordnungsmethode in {{year}}. Ohne „Vorhandene Daten überschreiben“ behält die Kopie nur die von Hand erfassten Zuordnungen.",
       "defaultManualLabel": "ausgewählte Unternehmen ({{count}})",
       "defaultManualLabel_one": "ausgewähltes Unternehmen ({{count}})",
-      "defaultBasisWarning": "{{count}} Zeilen stehen auf der Standardzuordnung: {{destinationYear}} verwendet {{destinationLabel}}, {{sourceYear}} dagegen {{sourceLabel}}. Kopierte Zeilen folgen weiterhin der Standardeinstellung ihres eigenen Jahres. Konfigurieren Sie {{destinationYear}} in der Budget-Administration, wenn die Basis gleich bleiben soll.",
+      "defaultBasisWarning": "{{count}} Zeilen stehen auf der Standardzuordnung: {{destinationYear}} verwendet {{destinationLabel}}, {{sourceYear}} dagegen {{sourceLabel}}. Kopierte Zeilen folgen weiterhin der Standardeinstellung ihres eigenen Jahres. Konfigurieren Sie {{destinationYear}} in den Budget-Einstellungen, wenn die Basis gleich bleiben soll.",
       "summary": {
         "preview_one": "{{count}} Zeile in der Vorschau.",
         "preview_other": "{{count}} Zeilen in der Vorschau.",
@@ -1135,7 +1135,7 @@
         "skipped_one": "{{count}} Zeile ausgelassen"
       }
     },
-    "budgetAdminOnly": "Sie benötigen Budgetadministrator-Rechte, um diese Seite zu verwenden.",
+    "budgetAdminOnly": "Sie benötigen das Recht „Administrator“ für „Budgeteinstellungen und -operationen“, um diese Seite zu verwenden.",
     "budgetColumnsSettings": {
       "title": "Budgetspalten",
       "loadError": "Die Spalteneinstellungen konnten nicht geladen werden.",
@@ -1850,7 +1850,7 @@
     },
     "frozen": {
       "title": "Die Spalte {{column}} {{year}} ist eingefroren",
-      "hint": "Schreibgeschützt. Ein Administrator hebt das Einfrieren unter Administration › Daten einfrieren / auftauen auf."
+      "hint": "Schreibgeschützt. Ein Administrator hebt das Einfrieren unter Einstellungen › Daten einfrieren / auftauen auf."
     },
     "readOnlyHint": "Schreibgeschützt. Ihre Rolle gewährt Lesezugriff auf das Budget.",
     "atADate": "An einem Datum",

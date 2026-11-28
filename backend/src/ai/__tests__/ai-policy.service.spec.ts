@@ -816,7 +816,7 @@ async function testRolesNeedUsersAdminAndUnlimitedAccess() {
       await assert.rejects(
         () => reader.assertEntityTypeReadAccess(context, family, createManager()),
         (error: any) => {
-          assert.equal(error.message, 'You need the right to administer users (the right the Admin › Roles screen asks for), which your role does not give. An administrator can add it to your role.');
+          assert.equal(error.message, 'You need the right to administer users (the right the Administration › Roles screen asks for), which your role does not give. An administrator can add it to your role.');
           assert.equal(error.getResponse().code, 'MODULE_RIGHT_REQUIRED');
           return true;
         },
