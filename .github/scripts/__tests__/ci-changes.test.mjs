@@ -42,6 +42,9 @@ test('docs, marketing, release scripts and root files need no suite', (t) => {
 test('the user manual needs the specs and the frontend tests that read it, not the builds', (t) => {
   assert.deepEqual(needs(t, ['doc/help/docs/en/suppliers.md', 'doc/help/docs/fr/suppliers.md']),
     { backend: 'docs', frontend: 'true', builds: 'false', images: 'false' });
+  // The block generated from the variable registry: the env-registry spec reads it.
+  assert.deepEqual(needs(t, ['doc/help/docs/fr/on-premise/configuration.md']),
+    { backend: 'docs', frontend: 'true', builds: 'false', images: 'false' });
 });
 
 test('the frontend alone needs the frontend suite and the builds', (t) => {
