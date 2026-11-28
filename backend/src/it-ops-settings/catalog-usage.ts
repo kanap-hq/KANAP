@@ -8,14 +8,16 @@ import { EntityManager } from 'typeorm';
  * query per source, whatever the number of values, holding the codes `countCatalogUsage` counts.
  */
 
-export type UsageRecordType = 'applications' | 'assets' | 'interfaces' | 'connections' | 'app_instances' | 'interface_bindings' | 'locations' | 'incidents' | 'server_assignments' | 'subnets' | 'technologies';
+export type UsageRecordType = 'applications' | 'assets' | 'interfaces' | 'connections' | 'app_instances' | 'interface_bindings' | 'locations' | 'incidents' | 'server_assignments' | 'subnets' | 'technologies' | 'netbox_role_matches';
 
 /** A predicate on `t` (the record table) or on a table joined to it; `$1` = tenant id, `$2` = the value. */
 type UsagePredicate =
   | { kind: 'scalar'; table: string; column: string; recordId?: string }
   | { kind: 'array'; table: string; column: string; recordId?: string }
   | { kind: 'jsonb_type' }
-  | { kind: 'jsonb_subnet' };
+  | { kind: 'jsonb_subnet' }
+  /** A value of the Netbox role matches (`metadata_json.role_map`: Netbox role -> asset type) of `t`. */
+  | { kind: 'netbox_role_map' };
 
 export type UsageSource = {
   record: UsageRecordType;
@@ -44,7 +46,8 @@ export const CATALOG_USAGE: Record<string, UsageSource[]> = {
   cyberCriticalityLevels: [applications('cyber_criticality'), technologies('cyber_criticality')],
   recoveryWaves: [applications('recovery_wave'), technologies('recovery_wave')],
   accessMethods: [{ record: 'applications', table: 'applications', predicates: [{ kind: 'array', table: 'applications', column: 'access_methods' }] }],
-  serverKinds: [assets('kind')],
+  // An asset type a Netbox role match names stays in use: once gone, the synchronisation would skip those objects.
+  serverKinds: [assets('kind'), { record: 'netbox_role_matches', table: 'ai_adapter_configs', predicates: [{ kind: 'netbox_role_map' }] }],
   serverProviders: [assets('provider'), { record: 'locations', table: 'locations', predicates: [{ kind: 'scalar', table: 'locations', column: 'provider' }] }],
   hostingTypes: [{ record: 'locations', table: 'locations', predicates: [{ kind: 'scalar', table: 'locations', column: 'hosting_type' }] }, technologies('hosting_type')],
   serverRoles: [{ record: 'server_assignments', table: 'app_asset_assignments', predicates: [{ kind: 'scalar', table: 'app_asset_assignments', column: 'role' }] }],
@@ -71,6 +74,10 @@ export type UsageKey = { code: string } | { location_id: string; cidr: string };
 /** An address list stored as something other than an array names nothing (and never breaks a count). */
 const IP_ARRAY = `jsonb_typeof(t.ip_addresses) = 'array'`;
 
+/** The Netbox connection of `t`, and its role matches as an object whatever is stored. */
+const NETBOX_ROW = `t.provider_kind = 'inventory' AND t.provider_key = 'netbox'`;
+const ROLE_MAP = `CASE WHEN jsonb_typeof(t.metadata_json->'role_map') = 'object' THEN t.metadata_json->'role_map' ELSE '{}'::jsonb END`;
+
 /** The key of a subnet in the set of used subnets: its site and its CIDR. */
 export function subnetUsageKey(subnet: { location_id: string; cidr: string }): string {
   return `${subnet.location_id}:${subnet.cidr}`;
@@ -90,6 +97,8 @@ function predicateSql(predicate: UsagePredicate, head: string): string {
       return `${IP_ARRAY} AND EXISTS (SELECT 1 FROM jsonb_array_elements(t.ip_addresses) e WHERE e->>'type' = $2)`;
     case 'jsonb_subnet':
       return `t.location_id = $3 AND ${IP_ARRAY} AND EXISTS (SELECT 1 FROM jsonb_array_elements(t.ip_addresses) e WHERE e->>'subnet_cidr' = $2)`;
+    case 'netbox_role_map':
+      return `${NETBOX_ROW} AND EXISTS (SELECT 1 FROM jsonb_each_text(${ROLE_MAP}) m WHERE m.value = $2)`;
   }
 }
 
@@ -119,6 +128,8 @@ export function usedCodesSql(source: UsageSource): string {
         return `SELECT e->>'type' AS code FROM ${source.table} t CROSS JOIN LATERAL jsonb_array_elements(t.ip_addresses) e WHERE t.tenant_id = $1 AND ${IP_ARRAY}`;
       case 'jsonb_subnet':
         return `SELECT t.location_id::text || ':' || (e->>'subnet_cidr') AS code FROM ${source.table} t CROSS JOIN LATERAL jsonb_array_elements(t.ip_addresses) e WHERE t.tenant_id = $1 AND ${IP_ARRAY}`;
+      case 'netbox_role_map':
+        return `SELECT m.value AS code FROM ${source.table} t CROSS JOIN LATERAL jsonb_each_text(${ROLE_MAP}) m WHERE t.tenant_id = $1 AND ${NETBOX_ROW}`;
     }
   });
   return `SELECT DISTINCT u.code FROM (${parts.join(' UNION ALL ')}) u WHERE u.code IS NOT NULL`;
