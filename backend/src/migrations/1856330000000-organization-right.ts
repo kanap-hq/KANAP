@@ -46,8 +46,8 @@ const tenantName = (slug: string | null, id: string) => `${slug || '(no slug)'} 
  * three pages through `organization`: down() gives them back through `users:admin` (the code of
  * before reads it).
  */
-export class OrganizationRight1856320000000 implements MigrationInterface {
-  name = 'OrganizationRight1856320000000';
+export class OrganizationRight1856330000000 implements MigrationInterface {
+  name = 'OrganizationRight1856330000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     const started = Date.now();
