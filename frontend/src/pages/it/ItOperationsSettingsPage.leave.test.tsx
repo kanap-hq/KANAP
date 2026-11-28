@@ -129,7 +129,28 @@ describe('Saving the IT landscape lists', () => {
     fireEvent.click(within(section).getByRole('button', { name: /settingsSection.addItem/ }));
     await wait(50);
     const names = within(section).getAllByRole('textbox', { name: 'common:enumEditor.name' }).map((node) => (node as HTMLInputElement).value);
-    expect(names).toEqual(['', 'HTTPS']);
+    expect(names).toEqual(['HTTPS', '']);
+  }, 20000);
+
+  it.each([
+    ['connectionTypes', { code: 'ssh', label: 'SSH', category: 'Remote', typicalPorts: '22', deprecated: false }, 'common:enumEditor.name', 'SSH'],
+    ['domains', { code: 'corp', label: 'Corp', dns_suffix: 'corp.example', deprecated: false, system: false }, 'common:enumEditor.name', 'Corp'],
+    ['subnets', { location_id: '', cidr: '10.0.0.0/24', network_zone: 'lan', description: '', deprecated: false }, 'pages.settings.placeholders.cidr', '10.0.0.0/24'],
+  ])('adds a row of %s at the bottom, the cursor in its field', async (listId, storedRow, field, storedValue) => {
+    const stored = { ...pageSettings, [listId]: [storedRow] };
+    get.mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: stored };
+      if (String(url).startsWith('/locations')) return { data: { items: [] } };
+      return { data: { total: 0, usage: [] } };
+    });
+    renderPage();
+    const section = await addRow(listId);
+    const fields = () => (listId === 'subnets'
+      ? within(section).getAllByPlaceholderText(field)
+      : within(section).getAllByRole('textbox', { name: field })) as HTMLInputElement[];
+    await waitFor(() => expect(fields()).toHaveLength(2));
+    expect(fields().map((node) => node.value)).toEqual([storedValue, '']);
+    await waitFor(() => expect(document.activeElement).toBe(fields()[1]));
   }, 20000);
 
   it.each([

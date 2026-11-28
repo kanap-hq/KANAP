@@ -15,7 +15,25 @@ export const withLocalIds = <T extends { localId?: string }>(list: T[], prefix: 
   return list.map((row) => (row.localId ? row : { ...(row as any), localId: makeLocalId(prefix) }));
 };
 
-export const stripLocalIds = <T extends { localId?: string }>(list: T[]): Omit<T, 'localId'>[] =>
+/**
+ * After a row is added at the bottom of an editor inside `box`: scrolls the list to its end, then puts
+ * the cursor in the new row's name (its first field when it has no name) once the editor shows it.
+ */
+export function focusAddedRow(box: HTMLElement | null, nameLabel: string, frames = 30) {
+  if (!box) return;
+  const container = box.querySelector<HTMLElement>('.MuiTableContainer-root');
+  if (container) container.scrollTop = container.scrollHeight;
+  const rows = box.querySelectorAll('tbody tr');
+  const inputs = Array.from(rows[rows.length - 1]?.querySelectorAll<HTMLInputElement>('input:not([type="checkbox"])') ?? []);
+  const field = inputs.find((input) => input.getAttribute('aria-label') === nameLabel) ?? inputs[0];
+  if (field && field.value === '') {
+    field.focus();
+    return;
+  }
+  if (frames > 1) requestAnimationFrame(() => focusAddedRow(box, nameLabel, frames - 1));
+}
+
+export const stripLocalIds =<T extends { localId?: string }>(list: T[]): Omit<T, 'localId'>[] =>
   list.map(({ localId, ...rest }) => rest as Omit<T, 'localId'>);
 
 

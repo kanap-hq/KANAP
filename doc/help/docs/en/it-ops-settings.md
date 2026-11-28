@@ -45,7 +45,7 @@ Each list is a table: the name, the list's own columns, **Stop offering**, then 
 - Values keep the order you see. Kadratis does not sort them.
 - A typed name saves shortly after your last keystroke, or when you leave the field. A ticked box or a choice saves at once. Nothing saves while a row of the list breaks a rule below.
 
-Administration zones, connection types, domains and subnets have their own layout: their **Add an item** button sits above the table and adds the row at the top.
+Administration zones, connection types, domains and subnets have their own layout: their **Add an item** button sits above the table. It adds the row at the bottom of the list with the cursor in it, except for administration zones, where a new zone starts at the top.
 
 For long lists (more than 25 rows), the table virtualizes rows, showing about 20 at a time with smooth scrolling and sticky headers.
 

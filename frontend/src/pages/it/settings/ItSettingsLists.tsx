@@ -35,7 +35,7 @@ import { AdminZonesEditor } from './AdminZonesEditor';
 import { ConnectionTypesEditor } from './ConnectionTypesEditor';
 import { DomainsEditor } from './DomainsEditor';
 import { SubnetsEditor } from './SubnetsEditor';
-import { makeLocalId, stripLocalIds, withLocalIds } from './editorParts';
+import { focusAddedRow, makeLocalId, stripLocalIds, withLocalIds } from './editorParts';
 import {
   initialState,
   listRows,
@@ -257,8 +257,14 @@ export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItS
     }
   };
 
-  /** A new row on top of a list whose editor has its add button above it. */
+  /** A new row on top of the administration zones, whose order says how sensitive each zone is. */
   const addOnTop = (id: ListId, row: Record<string, unknown>) => changeList(id, [{ ...row, localId: makeLocalId(id) }, ...listRows(latestStateRef.current, id)]);
+  // The editors of connection types, domains and subnets: a new row goes at the bottom, the cursor in it.
+  const editorBoxes = React.useRef<Partial<Record<ListId, HTMLElement | null>>>({});
+  const addAtBottom = (id: 'connectionTypes' | 'domains' | 'subnets', row: Record<string, unknown>) => {
+    changeList(id, [...listRows(latestStateRef.current, id), { ...row, localId: makeLocalId(id) }]);
+    focusAddedRow(editorBoxes.current[id] ?? null, t('common:enumEditor.name'));
+  };
 
   return (
     <SettingsPage
@@ -291,8 +297,8 @@ export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItS
                   if (section.id === 'connectionTypes') {
                     return (
                       <SettingsSection key={section.id} title={section.title} description={t(listUsageKey('connectionTypes'))}>
-                        <SettingsControls onAdd={() => addOnTop('connectionTypes', { category: '', label: '', code: '', typicalPorts: '', deprecated: false })} readOnly={readOnly} />
-                        <Box onBlur={autosave.commit}>
+                        <SettingsControls onAdd={() => addAtBottom('connectionTypes', { category: '', label: '', code: '', typicalPorts: '', deprecated: false })} readOnly={readOnly} />
+                        <Box ref={(el: HTMLElement | null) => { editorBoxes.current.connectionTypes = el; }} onBlur={autosave.commit}>
                           <ConnectionTypesEditor items={state.connectionTypes} onChange={(next) => changeList('connectionTypes', withLocalIds(next, 'ct'))} readOnly={readOnly} />
                         </Box>
                         {refusal('connectionTypes')}
@@ -303,8 +309,8 @@ export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItS
                     const defaultLocationId = locations?.[0]?.id || '';
                     return (
                       <SettingsSection key={section.id} title={section.title} description={t(listUsageKey('subnets'))}>
-                        <SettingsControls onAdd={() => addOnTop('subnets', { location_id: defaultLocationId, cidr: '', vlan_number: undefined, network_zone: 'lan', description: '', deprecated: false })} readOnly={readOnly} />
-                        <Box onBlur={autosave.commit}>
+                        <SettingsControls onAdd={() => addAtBottom('subnets', { location_id: defaultLocationId, cidr: '', vlan_number: undefined, network_zone: 'lan', description: '', deprecated: false })} readOnly={readOnly} />
+                        <Box ref={(el: HTMLElement | null) => { editorBoxes.current.subnets = el; }} onBlur={autosave.commit}>
                           <SubnetsEditor items={state.subnets} networkZones={state.enums.networkSegments || []} locations={locations || []} onChange={(next) => changeList('subnets', withLocalIds(next, 'subnet'))} readOnly={readOnly} />
                         </Box>
                         {refusal('subnets')}
@@ -314,8 +320,8 @@ export default function ItSettingsLists({ title, tabs, listsShown, netbox }: ItS
                   if (section.id === 'domains') {
                     return (
                       <SettingsSection key={section.id} title={section.title} description={t(listUsageKey('domains'))} hint={listHint('domains')}>
-                        <SettingsControls onAdd={() => addOnTop('domains', { code: '', label: '', dns_suffix: '', deprecated: false, system: false })} readOnly={readOnly} />
-                        <Box onBlur={autosave.commit}>
+                        <SettingsControls onAdd={() => addAtBottom('domains', { code: '', label: '', dns_suffix: '', deprecated: false, system: false })} readOnly={readOnly} />
+                        <Box ref={(el: HTMLElement | null) => { editorBoxes.current.domains = el; }} onBlur={autosave.commit}>
                           <DomainsEditor items={state.domains} onChange={(next) => changeList('domains', withLocalIds(next, 'domain'))} readOnly={readOnly} />
                         </Box>
                         {refusal('domains')}
