@@ -71,6 +71,7 @@ describe('adminMenu: the first page /admin opens, by profile of the recette', ()
 describe('adminMenu: the pages of the Organization right', () => {
   const organizationPages = ['/admin/audit-logs', '/admin/auth', '/admin/branding'];
   const users = ['/admin/users', '/admin/roles', '/admin/data-access'];
+  const allSettings = '/admin/all-settings';
 
   for (const [place, singleTenant] of [['in the cloud', false], ['on site', true]] as const) {
     describe(place, () => {
@@ -81,26 +82,26 @@ describe('adminMenu: the pages of the Organization right', () => {
         ['organization and users administrator', { grants: { organization: 'admin', users: 'admin' } }, [...users, ...organizationPages]],
         ['organization reader with a limited access: no audit log', { grants: { organization: 'reader' }, dataAccessLimited: true }, ['/admin/auth', '/admin/branding']],
       ])('%s', (_profile, overrides, expected) => {
-        expect(paths(context({ singleTenant, ...overrides }))).toEqual(expected);
+        expect(paths(context({ singleTenant, ...overrides }))).toEqual([...expected, allSettings]);
       });
     });
   }
 
   it('shows every page to the Administrator of a cloud workspace', () => {
     expect(paths(context({ claims: administrator }))).toEqual([
-      ...users, '/admin/audit-logs', '/admin/billing', '/admin/auth', '/admin/branding', '/admin/sample-data',
+      ...users, '/admin/audit-logs', '/admin/billing', '/admin/auth', '/admin/branding', '/admin/sample-data', allSettings,
     ]);
   });
 
   it('shows every page to the Administrator on site, Installation last', () => {
     expect(paths(context({ singleTenant: true, claims: administrator }))).toEqual([
-      ...users, ...organizationPages, '/admin/installation/scheduled-tasks',
+      ...users, ...organizationPages, '/admin/installation/scheduled-tasks', allSettings,
     ]);
   });
 
   it('keeps Authentication behind single sign-on for an organization reader', () => {
     const ctx = context({ grants: { organization: 'reader' } });
-    expect(paths({ ...ctx, features: { ...ctx.features, sso: false } })).toEqual(['/admin/audit-logs', '/admin/branding']);
+    expect(paths({ ...ctx, features: { ...ctx.features, sso: false } })).toEqual(['/admin/audit-logs', '/admin/branding', allSettings]);
   });
 
   it('shows none of them on the platform host', () => {
