@@ -1,11 +1,20 @@
 import { CanActivate, ExecutionContext, ForbiddenException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import { Features } from '../../config/features';
-import { isPlatformAdmin } from '../../auth/platform-admin.util';
-import { UserRole } from '../../users/user-role.entity';
+import { DataSource, EntityManager } from 'typeorm';
+import { Features } from '../config/features';
+import { isPlatformAdmin } from '../auth/platform-admin.util';
+import { UserRole } from '../users/user-role.entity';
 
+/**
+ * The operator of the installation: the settings of the installation and the scheduled tasks.
+ * - Cloud (multi-tenant): the platform host and a platform administrator, as `PlatformAdminGuard`
+ *   (403 `platform_admin_required`).
+ * - On-premise (single-tenant): the Administrator role, primary or extra (403
+ *   `administrator_required`). The extra roles are read in the request's tenant transaction
+ *   (`user_roles` is under forced row level security: read outside it, they were never found).
+ * A route behind it also carries `@ReservedToUnscopedDataAccess()`.
+ */
 @Injectable()
-export class SystemAdminGuard implements CanActivate {
+export class InstallationAdminGuard implements CanActivate {
   constructor(private readonly dataSource: DataSource) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -13,7 +22,6 @@ export class SystemAdminGuard implements CanActivate {
     const user = req?.user as { sub?: string; email?: string; role?: { role_name?: string } } | undefined;
     if (!user) throw new UnauthorizedException('Authentication required');
 
-    // Multi-tenant mode: same checks as PlatformAdminGuard
     if (!Features.SINGLE_TENANT) {
       if (!req.isPlatformHost) {
         throw new ForbiddenException({
@@ -34,9 +42,8 @@ export class SystemAdminGuard implements CanActivate {
       return true;
     }
 
-    // Single-tenant mode: check if any of the user's roles is Administrator
-    const userRolesRepo = this.dataSource.getRepository(UserRole);
-    const userRoles = await userRolesRepo.find({
+    const manager: EntityManager = req.queryRunner?.manager ?? this.dataSource.manager;
+    const userRoles = await manager.getRepository(UserRole).find({
       where: { user_id: user.sub },
       relations: ['role'],
     });

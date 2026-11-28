@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { ReservedToUnscopedDataAccess } from '../../data-access/reserved-operations';
-import { SystemAdminGuard } from './system-admin.guard';
+import { InstallationAdminGuard } from '../../installation/installation-admin.guard';
 import { ScheduledTasksService } from './scheduled-tasks.service';
 
 @ReservedToUnscopedDataAccess()
 @Controller('admin/scheduled-tasks')
-@UseGuards(JwtAuthGuard, SystemAdminGuard)
+@UseGuards(JwtAuthGuard, InstallationAdminGuard)
 export class ScheduledTasksController {
   constructor(private readonly service: ScheduledTasksService) {}
 
