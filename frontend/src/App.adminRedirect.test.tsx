@@ -15,6 +15,7 @@ const state = vi.hoisted(() => ({
   aiSettings: false,
   aiData: undefined as unknown,
   aiLoading: false,
+  limited: false,
 }));
 
 vi.mock('./auth/AuthContext', () => ({
@@ -27,7 +28,7 @@ vi.mock('./auth/AuthContext', () => ({
       const granted = state.grants[resource];
       return !!granted && rank[granted] >= rank[level];
     },
-    dataAccess: null,
+    dataAccess: state.limited ? { available: true, mode: 'limited', nodes: [], modules: [] } : null,
   }),
 }));
 vi.mock('./tenant/TenantContext', () => ({ useTenant: () => ({ isPlatformHost: state.isPlatformHost }) }));
@@ -68,7 +69,7 @@ const aiAvailable = { surfaces: { settings: { available: true } } };
 
 afterEach(() => {
   Object.assign(state, {
-    isGlobalAdmin: false, isPlatformAdmin: false, grants: {}, isPlatformHost: false, singleTenant: false, aiSettings: false, aiData: undefined, aiLoading: false,
+    isGlobalAdmin: false, isPlatformAdmin: false, grants: {}, isPlatformHost: false, singleTenant: false, aiSettings: false, aiData: undefined, aiLoading: false, limited: false,
   });
 });
 
@@ -87,6 +88,23 @@ describe('AdminDefaultRedirect', () => {
   it('opens Users to a person who administers users', () => {
     state.grants = { users: 'admin' };
     expect(landing()).toBe('/admin/users');
+  });
+
+  it.each([
+    ['reader', false],
+    ['admin', false],
+    ['reader', true],
+    ['admin', true],
+  ] as const)('opens the Audit log to a person who holds Organization at %s level alone (on site: %s)', (level, singleTenant) => {
+    state.grants = { organization: level };
+    state.singleTenant = singleTenant;
+    expect(landing()).toBe('/admin/audit-logs');
+  });
+
+  it('opens Authentication to an organization reader whose data access is limited', () => {
+    state.grants = { organization: 'reader' };
+    state.limited = true;
+    expect(landing()).toBe('/admin/auth');
   });
 
   it('opens Integrations to an infrastructure administrator alone', () => {

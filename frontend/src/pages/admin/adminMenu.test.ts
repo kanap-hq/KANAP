@@ -56,6 +56,10 @@ describe('adminMenu: the first page /admin opens, by profile of the recette', ()
     ['billing reader alone, on site', context({ singleTenant: true, grants: { billing: 'reader' } }), null],
     ['AI settings administrator', context({ grants: { ai_settings: 'admin' }, aiSettingsAvailable: true }), '/admin/ai-models'],
     ['platform administrator, platform host', context({ platformHost: true, claims: platformAdmin }), '/admin/tenants'],
+    ['organization reader alone, in the cloud', context({ grants: { organization: 'reader' } }), '/admin/audit-logs'],
+    ['organization administrator alone, on site', context({ singleTenant: true, grants: { organization: 'admin' } }), '/admin/audit-logs'],
+    ['organization reader with a limited access, in the cloud', context({ grants: { organization: 'reader' }, dataAccessLimited: true }), '/admin/auth'],
+    ['organization reader with a limited access, single sign-on off', { ...context({ grants: { organization: 'reader' }, dataAccessLimited: true }), features: { billing: true, sso: false, sampleData: true } }, '/admin/branding'],
   ])('%s', (_profile, ctx, expected) => {
     expect(firstAdminEntry(ctx)?.to ?? null).toBe(expected);
   });
@@ -64,6 +68,47 @@ describe('adminMenu: the first page /admin opens, by profile of the recette', ()
     expect(firstAdminEntry(context({ singleTenant: true, claims: administrator }), 'installation')?.to)
       .toBe('/admin/installation/scheduled-tasks');
     expect(firstAdminEntry(context({ singleTenant: true, grants: { users: 'admin' } }), 'installation')).toBeNull();
+  });
+});
+
+describe('adminMenu: the pages of the Organization right', () => {
+  const organizationPages = ['/admin/audit-logs', '/admin/auth', '/admin/branding'];
+  const users = ['/admin/users', '/admin/roles', '/admin/data-access'];
+
+  for (const [place, singleTenant] of [['in the cloud', false], ['on site', true]] as const) {
+    describe(place, () => {
+      it.each<[string, Partial<AdminMenuContext> & { grants?: Grants }, string[]]>([
+        ['organization reader alone', { grants: { organization: 'reader' } }, organizationPages],
+        ['organization administrator alone', { grants: { organization: 'admin' } }, organizationPages],
+        ['users administrator alone: none of the three pages', { grants: { users: 'admin' } }, users],
+        ['organization and users administrator', { grants: { organization: 'admin', users: 'admin' } }, [...users, ...organizationPages]],
+        ['organization reader with a limited access: no audit log', { grants: { organization: 'reader' }, dataAccessLimited: true }, ['/admin/auth', '/admin/branding']],
+      ])('%s', (_profile, overrides, expected) => {
+        expect(paths(context({ singleTenant, ...overrides }))).toEqual(expected);
+      });
+    });
+  }
+
+  it('shows every page to the Administrator of a cloud workspace', () => {
+    expect(paths(context({ claims: administrator }))).toEqual([
+      ...users, '/admin/audit-logs', '/admin/billing', '/admin/auth', '/admin/branding', '/admin/sample-data',
+    ]);
+  });
+
+  it('shows every page to the Administrator on site, Installation last', () => {
+    expect(paths(context({ singleTenant: true, claims: administrator }))).toEqual([
+      ...users, ...organizationPages, '/admin/installation/scheduled-tasks',
+    ]);
+  });
+
+  it('keeps Authentication behind single sign-on for an organization reader', () => {
+    const ctx = context({ grants: { organization: 'reader' } });
+    expect(paths({ ...ctx, features: { ...ctx.features, sso: false } })).toEqual(['/admin/audit-logs', '/admin/branding']);
+  });
+
+  it('shows none of them on the platform host', () => {
+    const shown = paths(context({ platformHost: true, claims: platformAdmin }));
+    expect(shown).toEqual(expect.not.arrayContaining(organizationPages));
   });
 });
 

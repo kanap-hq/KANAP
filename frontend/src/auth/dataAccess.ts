@@ -76,7 +76,8 @@ export function useDataAccessAdmin(): boolean {
 /**
  * Admin › Audit log: `organization:reader`, and access to all data (the log shows the before and
  * after of every table; the server reserves every route of it). A limited person sees neither the
- * page nor its menu entry, whatever their roles.
+ * page nor its menu entry, whatever their roles: the page reads this, the menu line and the route
+ * guard say `allData: true` (`pages/admin/adminMenu.ts`, `ADMIN_ROUTE_REQUIREMENTS`).
  */
 export function useAuditLogReadable(): boolean {
   const { hasLevel } = useAuth();
