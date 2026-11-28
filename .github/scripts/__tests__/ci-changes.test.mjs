@@ -103,6 +103,13 @@ test('the images follow the files that reach them', (t) => {
   assert.equal(needs(t, ['marketing/web/package.json']).images, 'true');
   assert.equal(needs(t, ['frontend/nginx/default.conf']).images, 'true');
   assert.equal(needs(t, ['marketing/web/src/pages/index.astro']).images, 'false');
+  // The API sources check-api-image.sh starts: the readiness route and the migration start.
+  for (const file of ['backend/src/health/readiness.ts', 'backend/src/health/health.controller.ts', 'backend/src/app.module.ts',
+    'backend/src/common/startup-migrations.ts', 'backend/src/common/skip-migrations.ts']) {
+    assert.equal(needs(t, [file]).images, 'true', file);
+  }
+  assert.equal(needs(t, ['backend/src/health/__tests__/health-readiness.spec.ts']).images, 'true', 'a spec of the folder too');
+  assert.equal(needs(t, ['backend/src/common/env.ts']).images, 'false');
 });
 
 test('when the files cannot be listed, everything runs', (t) => {

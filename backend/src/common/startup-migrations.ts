@@ -47,7 +47,9 @@ export async function pendingMigrationCount(dataSource: DataSource): Promise<num
 
 /**
  * The start with SKIP_MIGRATIONS on (app.module.ts): the migrations are a separate step. When some
- * are pending, one warning says so before the start goes on; it never throws.
+ * are pending, one warning says so before the start goes on; it never throws. On an empty database
+ * the start then stops at the first start-up write (the tables are missing) and the process exits:
+ * the API serves only once the migration step has run.
  */
 export async function warnPendingMigrations(
   dataSource: DataSource,
@@ -57,7 +59,8 @@ export async function warnPendingMigrations(
     const pending = await pendingMigrationCount(dataSource);
     if (pending > 0) {
       warn(`[migrations] SKIP_MIGRATIONS is on and ${pending} migration(s) are pending: run the migration step `
-        + '(node scripts/migrate-and-start.js --migrate-only) before this API serves. Until then /health/ready answers 503.');
+        + '(node scripts/migrate-and-start.js --migrate-only) first. Until it has run, /health/ready answers 503 '
+        + '(on an empty database, the start stops at its first write).');
     }
   } catch (error) {
     warn(`[migrations] SKIP_MIGRATIONS is on; the pending migrations could not be read (${(error as Error)?.message || error})`);
