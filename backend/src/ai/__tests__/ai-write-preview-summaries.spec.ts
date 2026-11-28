@@ -118,6 +118,41 @@ function testTaskStatusAndAssignee() {
   assert.equal(summary(assignee, reassign, 'fr'), "Changement d'assignation de T-45 (Non assigné → Anne Martin).");
 }
 
+/**
+ * The English summary Kad reads, and the priority on the changes list, use the task screens'
+ * label. The stored code `normal` is Medium; a preview with no priority is that default.
+ * Blocker, High, Low and Optional keep their labels. Creating a task and importing a ticket share this.
+ */
+function testTaskPriorityScreenLabels() {
+  const create = make(CreateTaskAiMutationOperation);
+  const ticket = make(ImportGlpiTicketAiMutationOperation);
+  const levels: Array<[string | null | undefined, string]> = [
+    ['normal', 'Medium'],
+    [undefined, 'Medium'],
+    [null, 'Medium'],
+    ['blocker', 'Blocker'],
+    ['high', 'High'],
+    ['low', 'Low'],
+    ['optional', 'Optional'],
+  ];
+
+  for (const [priority, label] of levels) {
+    for (const [operation, toolName] of [[create, 'create_task'], [ticket, 'import_glpi_ticket']] as const) {
+      const shown = operation.presentPreview(preview({
+        tool_name: toolName,
+        mutation_input: {
+          title: 'Check the printers',
+          relation_type: 'standalone',
+          ...(toolName === 'import_glpi_ticket' ? { glpi_ticket_id: '12' } : {}),
+          ...(priority === undefined ? {} : { priority_level: priority }),
+        },
+      }), 'en');
+      assert.match(shown.summary, new RegExp(`Priority: ${label}\\.`), `${toolName} ${String(priority)}`);
+      assert.equal(shown.changes.priority.to, label, `${toolName} ${String(priority)}`);
+    }
+  }
+}
+
 function testTicketImport() {
   const operation = make(ImportGlpiTicketAiMutationOperation);
   const pending = preview({
@@ -1551,6 +1586,7 @@ function testTechnologyVersions() {
 
 async function main() {
   testTaskCreation();
+  testTaskPriorityScreenLabels();
   testTaskStatusAndAssignee();
   testTicketImport();
   testDocumentCreation();
