@@ -3,6 +3,7 @@ import { AiSecretCipherService } from '../ai-secret-cipher.service';
 import { AiSettings } from '../ai-settings.entity';
 import { AiSettingsService } from '../ai-settings.service';
 import { AiAdapterConfigService } from '../control-plane/providers/adapter-config.service';
+import { readLastConnectionTest } from '../control-plane/providers/adapter-connection-test';
 import { AiMonitoringIntegrationsService } from '../control-plane/providers/ai-monitoring-integrations.service';
 import { AiTenantSecretResolverService } from '../control-plane/providers/tenant-secret-resolver.service';
 import { GlpiService } from '../glpi/glpi.service';
@@ -29,7 +30,7 @@ const json = (payload: unknown, status = 200) => new Response(JSON.stringify(pay
 type GlpiStored = Pick<AiSettings, 'id' | 'tenant_id' | 'glpi_url' | 'glpi_user_token_encrypted' | 'glpi_app_token_encrypted'>;
 
 function glpiService(stored: Partial<GlpiStored> | null) {
-  const recorded: Array<{ settings: GlpiStored; result: { ok: boolean; tested_at: string } }> = [];
+  const recorded: Array<{ settings: GlpiStored; result: Record<string, unknown> }> = [];
   const row = stored ? {
     id: 'settings-1',
     tenant_id: TENANT_ID,
@@ -41,7 +42,7 @@ function glpiService(stored: Partial<GlpiStored> | null) {
   const service = new GlpiService(
     {
       find: async () => row,
-      recordGlpiTest: async (_manager: unknown, settings: GlpiStored, result: { ok: boolean; tested_at: string }) => {
+      recordGlpiTest: async (_manager: unknown, settings: GlpiStored, result: Record<string, unknown>) => {
         recorded.push({ settings, result });
         return true;
       },
@@ -114,7 +115,9 @@ async function testGlpiKeepsOnlyATestOfTheSavedValues() {
         // The values the test ran on: the conditional write compares them with the row.
         assert.equal(recorded[0].settings.glpi_url, 'https://glpi.internal/helpdesk');
         assert.equal(recorded[0].settings.glpi_user_token_encrypted, 'enc:stored-user-token');
-        assert.deepEqual(recorded[0].result, { ok: true, tested_at: result.tested_at });
+        // What the card says after a reload: the response time of a passed test.
+        assert.deepEqual(recorded[0].result, { ok: true, tested_at: result.tested_at, latency_ms: result.latency_ms });
+        assert.equal(typeof result.latency_ms, 'number');
       }
     });
   }
@@ -124,8 +127,23 @@ async function testGlpiKeepsOnlyATestOfTheSavedValues() {
     const result = await service.testConnection(TENANT_ID, {}, {} as any);
     assert.equal(result.ok, false);
     assert.equal(result.persisted, true);
+    // The cause is kept as its code, which the card translates; the message of GLPI is not.
     assert.equal(recorded[0].result.ok, false);
+    assert.equal(recorded[0].result.code, 'glpi_user_token_invalid');
+    assert.equal('message' in recorded[0].result, false);
   });
+}
+
+async function testGlpiReadsTheDetailOfTheKeptTest() {
+  const { service, queries } = settingsService(settingsRow({
+    glpi_last_test: { ok: false, tested_at: '2026-11-26T10:42:00.000Z', code: 'glpi_app_token_invalid', message: 'parameter app_token seems wrong' } as any,
+  }));
+  const view = await service.toView(await service.find(TENANT_ID) as AiSettings);
+  assert.deepEqual(view.glpi_last_test, { ok: false, tested_at: '2026-11-26T10:42:00.000Z', code: 'glpi_app_token_invalid' });
+  // The write keeps the same detail, and nothing else.
+  await service.recordGlpiTest({ query: async (sql: string, params: unknown[]) => { queries.push({ sql, params }); return [{ n: 1 }]; } } as any,
+    settingsRow(), { ok: true, tested_at: '2026-11-27T08:00:00.000Z', latency_ms: 41, message: 'GLPI connection succeeded.' } as any);
+  assert.deepEqual(JSON.parse(String(queries.at(-1)!.params[0])), { ok: true, tested_at: '2026-11-27T08:00:00.000Z', latency_ms: 41 });
 }
 
 // ---------------------------------------------------------------- GLPI save
@@ -196,22 +214,32 @@ async function testGlpiSaveMarksAReplacedTokenAndDropsTheTest() {
     assert.equal(view.glpi_last_test, null, 'a new token makes the stored test obsolete');
     assert.equal(clears(queries), 1);
     const entry = audits.at(-1);
-    assert.equal(entry.after.secret_replaced, true);
-    assert.equal(entry.before.secret_replaced, undefined);
+    // The entry names the token replaced.
+    assert.equal(entry.after.glpi_user_token_replaced, true);
+    assert.equal(entry.after.glpi_app_token_replaced, undefined);
+    assert.equal(entry.after.secret_replaced, undefined);
+    assert.equal(entry.before.glpi_user_token_replaced, undefined);
     assert.equal('glpi_last_test' in entry.before || 'glpi_last_test' in entry.after, false, 'a test is never audited');
     assert.doesNotMatch(JSON.stringify(audits), /rotated-token|stored-user-token|enc:/);
+  }
+  {
+    const { service, audits } = settingsService(settingsRow());
+    await service.update(TENANT_ID, { glpi_url: 'https://glpi.internal/helpdesk', glpi_app_token: 'rotated-app-token' });
+    assert.equal(audits.at(-1).after.glpi_app_token_replaced, true);
+    assert.equal(audits.at(-1).after.glpi_user_token_replaced, undefined);
+    assert.doesNotMatch(JSON.stringify(audits), /rotated-app-token|stored-app-token|enc:/);
   }
   {
     // A new address with its token: the address changes in the entry, nothing to mark.
     const { service, audits } = settingsService(settingsRow());
     await service.update(TENANT_ID, { glpi_url: 'https://glpi-other.internal', glpi_user_token: 'new-token' });
-    assert.equal(audits.at(-1).after.secret_replaced, undefined);
+    assert.equal(audits.at(-1).after.glpi_user_token_replaced, undefined);
   }
   {
     // A first token: its presence changes in the entry, nothing to mark.
     const { service, audits } = settingsService(settingsRow({ glpi_enabled: false, glpi_app_token_encrypted: null, glpi_last_test: null }));
     await service.update(TENANT_ID, { glpi_url: 'https://glpi.internal/helpdesk', glpi_app_token: 'first-app-token' });
-    assert.equal(audits.at(-1).after.secret_replaced, undefined);
+    assert.equal(audits.at(-1).after.glpi_app_token_replaced, undefined);
     assert.equal(audits.at(-1).after.has_glpi_app_token, true);
   }
   {
@@ -220,7 +248,8 @@ async function testGlpiSaveMarksAReplacedTokenAndDropsTheTest() {
     const saved = await service.update(TENANT_ID, { glpi_enabled: false });
     assert.deepEqual((await service.toView(saved)).glpi_last_test, { ok: true, tested_at: '2026-11-26T10:42:00.000Z' });
     assert.equal(clears(queries), 0);
-    assert.equal(audits.at(-1).after.secret_replaced, undefined);
+    assert.equal(audits.at(-1).after.glpi_user_token_replaced, undefined);
+    assert.equal(audits.at(-1).after.glpi_app_token_replaced, undefined);
   }
 }
 
@@ -325,12 +354,39 @@ async function testPrtgKeepsOnlyATestOfTheSavedValues() {
     assert.equal(records(harness.queries), kept ? 1 : 0, name);
     if (kept) {
       const params = harness.queries.find((query) => /WITH changed/.test(query.sql))!.params;
-      assert.deepEqual(JSON.parse(String(params[0])), { ok: true, tested_at: result.tested_at });
+      // What the card says after a reload: the version and the sensors seen.
+      assert.deepEqual(JSON.parse(String(params[0])), {
+        ok: true, tested_at: result.tested_at, version: result.prtg_version, sensor_count: result.sensor_count,
+      });
+      assert.equal(result.prtg_version, '24.1');
       // The values the test ran on: the conditional write compares them with the row.
       assert.equal(params[3], 'https://prtg.example.test');
       assert.deepEqual(JSON.parse(String(params[4])), harness.rows[0].credential_ref_json);
     }
   }
+}
+
+async function testPrtgKeepsTheCauseOfAFailureAsItsCode() {
+  const harness = prtgHarness(() => new Response('unauthorized apitoken=stored-prtg-key', { status: 401 }));
+  await harness.service.savePrtgIntegration(harness.context, { enabled: true, base_url: 'https://prtg.example.test', api_token: 'stored-prtg-key' });
+  const result = await harness.service.testPrtgIntegration(harness.context, {});
+  assert.equal(result.code, 'prtg_auth');
+  const params = harness.queries.find((query) => /WITH changed/.test(query.sql))!.params;
+  assert.deepEqual(JSON.parse(String(params[0])), { ok: false, tested_at: result.tested_at, code: 'prtg_auth' });
+  // Read back: the detail a card may show, never free text.
+  const tested_at = '2026-11-26T10:42:00.000Z';
+  assert.deepEqual(
+    readLastConnectionTest({ last_connection_test: { ok: true, tested_at, version: '24.1.92', sensor_count: 321, message: 'Connected' } }),
+    { ok: true, tested_at, version: '24.1.92', sensor_count: 321 },
+  );
+  assert.deepEqual(
+    readLastConnectionTest({ last_connection_test: { ok: false, tested_at, code: 'Server said <b>no</b>', version: '1' } }),
+    { ok: false, tested_at },
+  );
+  assert.deepEqual(
+    readLastConnectionTest({ last_connection_test: { ok: true, tested_at, version: 'v'.repeat(80), sensor_count: -1 } }),
+    { ok: true, tested_at },
+  );
 }
 
 async function testPrtgSaveMarksAReplacedKeyAndDropsTheTest() {
@@ -379,10 +435,12 @@ async function run() {
   const tests: Array<[string, () => Promise<void>]> = [
     ['GLPI: a failed test names its cause with a code', testGlpiFailuresCarryACode],
     ['GLPI: only a test of the saved values is kept', testGlpiKeepsOnlyATestOfTheSavedValues],
+    ['GLPI: the kept test carries its detail, never a message', testGlpiReadsTheDetailOfTheKeptTest],
     ['GLPI: a replaced token is marked in the audit entry and drops the test', testGlpiSaveMarksAReplacedTokenAndDropsTheTest],
     ['GLPI: an empty address removes the connection', testGlpiEmptyAddressRemovesTheConnection],
     ['PRTG: a failed test names its cause with a code', testPrtgFailuresCarryACode],
     ['PRTG: only a test of the saved values is kept', testPrtgKeepsOnlyATestOfTheSavedValues],
+    ['PRTG: a failure is kept with its code, the detail is read back without free text', testPrtgKeepsTheCauseOfAFailureAsItsCode],
     ['PRTG: a replaced key is marked in the audit entry and drops the test', testPrtgSaveMarksAReplacedKeyAndDropsTheTest],
   ];
   let failed = 0;

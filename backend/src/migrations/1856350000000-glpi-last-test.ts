@@ -2,8 +2,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
  * The last GLPI connection test of a workspace: `ai_settings.glpi_last_test jsonb NULL`
- * (`{ ok, tested_at }`), kept when a test runs on the saved address and tokens, emptied when a
- * save changes them. The other connections keep theirs in `ai_adapter_configs.metadata_json`;
+ * (`{ ok, tested_at }`, plus a failure's `code` or a success's `latency_ms`), kept when a test
+ * runs on the saved address and tokens, emptied when a save changes them. The other connections keep theirs in `ai_adapter_configs.metadata_json`;
  * GLPI lives on `ai_settings`, which has no such column.
  *
  * Every workspace starts without a test: nothing is written. `ai_settings` is already under

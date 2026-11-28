@@ -9,6 +9,7 @@ import { AiModelConfig } from './ai-model-config.entity';
 import { AiModelReadiness, AiModelResolverService } from './ai-model-resolver.service';
 import { AiSettings } from './ai-settings.entity';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
+import { storedTestDetail, storedTestJson, type StoredConnectionTest } from './control-plane/providers/adapter-connection-test';
 import { normalizeGlpiPathname } from './glpi/glpi-url';
 import { BuiltinProviderIdentity, PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
@@ -34,7 +35,7 @@ export type AiSettingsView = {
   has_glpi_user_token: boolean;
   has_glpi_app_token: boolean;
   /** The last GLPI connection test run on the saved address and tokens. Never audited. */
-  glpi_last_test: { ok: boolean; tested_at: string } | null;
+  glpi_last_test: StoredConnectionTest | null;
   has_llm_api_key: boolean;
   provider_secret_writable: boolean;
   provider_validation_errors: string[];
@@ -121,13 +122,13 @@ function normalizeHttpUrl(value: string | null | undefined, fieldName: string): 
   return parsed.toString();
 }
 
-/** A stored GLPI test, or null when it is not usable. */
-function readGlpiLastTest(value: unknown): { ok: boolean; tested_at: string } | null {
+/** A stored GLPI test with its detail (a failure's code, a success's response time), or null when it is not usable. */
+function readGlpiLastTest(value: unknown): StoredConnectionTest | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
   const testedAt = typeof raw.tested_at === 'string' ? raw.tested_at : '';
   if (typeof raw.ok !== 'boolean' || !testedAt || Number.isNaN(Date.parse(testedAt))) return null;
-  return { ok: raw.ok, tested_at: testedAt };
+  return { ok: raw.ok, tested_at: testedAt, ...storedTestDetail(raw) };
 }
 
 /** The view an audit entry keeps: everything but the last test, which is never audited. */
@@ -470,11 +471,11 @@ export class AiSettingsService {
       if (!normalizeNullableString(input.glpi_user_token)) settings.glpi_user_token_encrypted = null;
       if (!normalizeNullableString(input.glpi_app_token)) settings.glpi_app_token_encrypted = null;
     }
-    // A token replaced at the same address leaves both sides of the entry alike: the entry says it.
-    const glpiSecretReplaced = !glpiAddressChanged && (
-      (!!normalizeNullableString(input.glpi_user_token) && !!previousGlpiSecrets[1])
-      || (!!normalizeNullableString(input.glpi_app_token) && !!previousGlpiSecrets[2])
-    );
+    // A token replaced at the same address leaves both sides of the entry alike: the entry says which.
+    const glpiUserTokenReplaced = !glpiAddressChanged
+      && !!normalizeNullableString(input.glpi_user_token) && !!previousGlpiSecrets[1];
+    const glpiAppTokenReplaced = !glpiAddressChanged
+      && !!normalizeNullableString(input.glpi_app_token) && !!previousGlpiSecrets[2];
     if (
       previousLlmDestination !== modelKeyDestination(settings.llm_provider, settings.llm_endpoint_url)
       && !normalizeNullableString(input.llm_api_key)
@@ -566,7 +567,8 @@ export class AiSettingsService {
           before: beforeView,
           after: {
             ...auditView(await this.toView(saved, opts)),
-            ...(glpiSecretReplaced ? { secret_replaced: true } : {}),
+            ...(glpiUserTokenReplaced ? { glpi_user_token_replaced: true } : {}),
+            ...(glpiAppTokenReplaced ? { glpi_app_token_replaced: true } : {}),
           },
           userId: opts?.userId ?? null,
           sourceRef: opts?.sourceRef ?? null,
@@ -586,7 +588,7 @@ export class AiSettingsService {
   async recordGlpiTest(
     manager: EntityManager,
     settings: Pick<AiSettings, 'id' | 'tenant_id' | 'glpi_url' | 'glpi_user_token_encrypted' | 'glpi_app_token_encrypted'>,
-    result: { ok: boolean; tested_at: string },
+    result: StoredConnectionTest,
   ): Promise<boolean> {
     const rows = await manager.query(
       `WITH changed AS (
@@ -600,7 +602,7 @@ export class AiSettingsService {
        )
        SELECT count(*)::int AS n FROM changed`,
       [
-        JSON.stringify({ ok: result.ok, tested_at: result.tested_at }),
+        storedTestJson(result),
         settings.id,
         settings.tenant_id,
         settings.glpi_url ?? null,

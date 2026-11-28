@@ -1549,7 +1549,12 @@ export class GlpiService {
     let persisted = false;
     if (stored && manager) {
       try {
-        persisted = await this.settingsService.recordGlpiTest(manager, stored, { ok: result.ok, tested_at: testedAt });
+        persisted = await this.settingsService.recordGlpiTest(manager, stored, {
+          ok: result.ok,
+          tested_at: testedAt,
+          ...(result.code ? { code: result.code } : {}),
+          ...(result.latency_ms != null ? { latency_ms: result.latency_ms } : {}),
+        });
       } catch (error: any) {
         this.logger.warn(`GLPI last test could not be saved: ${String(error?.message || error || 'unknown error')}`);
       }

@@ -429,7 +429,8 @@ export class AiMonitoringIntegrationsService {
     let persisted = false;
     if (config && outcome.storedValues) {
       try {
-        persisted = await recordAdapterConnectionTest(context.manager, config, { ok: outcome.result.ok, tested_at: testedAt });
+        const { ok, code, prtg_version: version, sensor_count } = outcome.result;
+        persisted = await recordAdapterConnectionTest(context.manager, config, { ok, tested_at: testedAt, code, version, sensor_count });
       } catch {
         // The outcome still shows on the card for this session.
       }

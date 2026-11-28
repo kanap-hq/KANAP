@@ -613,7 +613,12 @@ export class NetboxSyncService {
     let persisted = false;
     if (config) {
       try {
-        persisted = await this.config.recordConnectionTest(manager, config, { ok: result.ok, tested_at: testedAt });
+        persisted = await this.config.recordConnectionTest(manager, config, {
+          ok: result.ok,
+          tested_at: testedAt,
+          code: result.code,
+          version: result.netbox_version,
+        });
       } catch (error) {
         this.logger.warn(`Netbox last test could not be saved for tenant ${tenantId}: ${plainErrorMessage(error)}`);
       }

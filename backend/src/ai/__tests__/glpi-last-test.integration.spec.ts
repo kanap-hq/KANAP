@@ -101,7 +101,7 @@ async function main() {
       saved = await service(audits).update(tenantId, { glpi_url: URL_A, glpi_user_token: 'rotated' }, { manager: runner.manager });
       assert.equal((await service().toView(saved, { manager: runner.manager })).glpi_last_test, null);
       assert.equal((await read(runner, id)).glpi_last_test, null);
-      assert.equal(audits.at(-1).after.secret_replaced, true);
+      assert.equal(audits.at(-1).after.glpi_user_token_replaced, true);
       assert.doesNotMatch(JSON.stringify(audits), /glpi_last_test|tested_at|rotated|enc:/);
 
       await runner.query(`UPDATE ai_settings SET glpi_last_test = $2::jsonb WHERE id = $1`, [id, JSON.stringify(LAST_TEST)]);

@@ -8,6 +8,7 @@ import {
   clearAdapterConnectionTest,
   readLastConnectionTest,
   recordAdapterConnectionTest,
+  type StoredConnectionTest,
 } from '../ai/control-plane/providers/adapter-connection-test';
 import { ProviderCredentialRef } from '../ai/control-plane/providers/provider.types';
 import { ENVIRONMENTS } from '../assets/services/assets-base.service';
@@ -83,7 +84,7 @@ export type NetboxIntegrationView = {
   secret_writable: boolean;
   updated_at: string | null;
   /** The last connection test kept on this configuration. Null until one is recorded. */
-  last_test: { ok: boolean; tested_at: string } | null;
+  last_test: StoredConnectionTest | null;
 };
 
 export type NetboxIntegrationSaveInput = {
@@ -299,7 +300,7 @@ export class NetboxConfigService {
   async recordConnectionTest(
     manager: EntityManager,
     config: AiAdapterConfig,
-    result: { ok: boolean; tested_at: string },
+    result: StoredConnectionTest,
   ): Promise<boolean> {
     return recordAdapterConnectionTest(manager, config, result);
   }

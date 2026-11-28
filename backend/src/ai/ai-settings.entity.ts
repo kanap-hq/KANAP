@@ -64,11 +64,12 @@ export class AiSettings {
   @Column('text', { nullable: true, select: false })
   glpi_app_token_encrypted!: string | null;
 
-  // The last GLPI connection test run on the saved address and tokens ({ ok, tested_at }).
+  // The last GLPI connection test run on the saved address and tokens ({ ok, tested_at }, with a
+  // failure's code or a success's latency_ms).
   // Written only by its own conditional update (AiSettingsService.recordGlpiTest), and emptied
   // when a save changes the address or a token: a save of the row never writes it back.
   @Column({ type: 'jsonb', nullable: true, update: false })
-  glpi_last_test!: { ok: boolean; tested_at: string } | null;
+  glpi_last_test!: { ok: boolean; tested_at: string; code?: string; latency_ms?: number } | null;
 
   // Confirmation of the included model's provider identity (builtinProviderKey) by an
   // administrator of the workspace: valid while it equals the platform's current key.
