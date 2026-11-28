@@ -161,6 +161,18 @@ function stringMap(value: unknown): Record<string, string> {
   return result;
 }
 
+/** The matches an audit entry of a mapping save keeps: the five maps, nothing else of the connection. */
+function mappingAuditView(metadata: unknown) {
+  const stored = asRecord(metadata);
+  return {
+    role_map: stringMap(stored?.role_map),
+    site_map: stringMap(stored?.site_map),
+    os_map: stringMap(stored?.os_map),
+    cluster_map: stringMap(stored?.cluster_map),
+    cluster_names: stringMap(stored?.cluster_names),
+  };
+}
+
 /** Longest Netbox address accepted, in characters. */
 export const NETBOX_ADDRESS_MAX_LENGTH = 2048;
 
@@ -523,11 +535,12 @@ export class NetboxConfigService {
     };
   }
 
-  /** Full replacement of the mapping tables the body carries. */
+  /** Full replacement of the mapping tables the body carries, with an audit entry holding the matches only. */
   async saveMapping(
     manager: EntityManager,
     tenantId: string,
     input: { role_map?: unknown; site_map?: unknown; os_map?: unknown; cluster_map?: unknown; cluster_names?: unknown },
+    opts?: { userId?: string | null; sourceRef?: string | null },
   ): Promise<NetboxMappingView> {
     const existing = await this.getConfig(manager, tenantId, { forUpdate: true });
     if (!existing) {
@@ -581,9 +594,19 @@ export class NetboxConfigService {
       }
       metadata.cluster_names = names;
     }
+    const before = mappingAuditView(existing.metadata_json);
     existing.metadata_json = metadata;
     existing.updated_at = new Date();
     await this.repo(manager).save(existing);
+    await writeAuditLog(manager, {
+      table: 'ai_adapter_configs',
+      recordId: existing.id,
+      action: 'update',
+      before,
+      after: mappingAuditView(metadata),
+      userId: opts?.userId ?? null,
+      sourceRef: opts?.sourceRef ?? null,
+    });
     return this.getMapping(existing);
   }
 

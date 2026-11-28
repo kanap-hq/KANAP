@@ -171,6 +171,8 @@ function harness(initial: Record<string, unknown>) {
     getRepository: () => ({
       findOne: async () => config,
       save: async (entity: unknown) => entity,
+      // The audit entry of each save of the matches.
+      insert: async () => ({ identifiers: [{ id: 'audit-entry' }] }),
     }),
   };
   return { config, manager, service: new NetboxConfigService({ canEncrypt: () => true } as any) };
