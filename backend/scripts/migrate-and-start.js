@@ -12,9 +12,12 @@
   repair, then exit 0: no API, no cluster, no first-start provisioning, no port. For a migration
   step of its own (a Kubernetes Job, an upgrade by hand), with the API started with
   SKIP_MIGRATIONS on. A failure exits 1; SKIP_MIGRATIONS on exits 2.
+  SIGTERM or SIGINT stops it with one line, exit 143 or 130: the migration transaction in
+  progress, if any, rolls back when its connection closes.
 
-  Every migration run (this script and the API's own start) takes one advisory lock: two runs at
-  once take turns, and the later one finds nothing pending (src/common/startup-migrations.ts).
+  Every migration run (this script and the API's own start) takes one advisory lock and migrates
+  on the connection that holds it: two runs at once take turns, and the later one finds nothing
+  pending (src/common/startup-migrations.ts). A run that finds the lock taken says so, then waits.
 
   Env toggles:
   - API_WORKERS=N (default 1): N > 1 runs N API processes with the Node cluster module. This
@@ -286,8 +289,9 @@ async function closeQuietly(ds, warn) {
  * all (30), `MIGRATION_RETRY_DELAY_MS` apart (2 s). A migration that fails on its own exits at once
  * (code 1) with its message, since running it again would fail the same way and keep the API down
  * for every retry (plan planning/budget-unifie.md, G.13). The pending migrations run in one
- * transaction (TypeORM's default): a failure leaves the database as it was before this start, and
- * the container's restart policy decides what comes next.
+ * transaction (TypeORM's default): they are committed together or not at all, and the container's
+ * restart policy decides what comes next. The role check and the data-access guard before them are
+ * not part of that transaction.
  */
 async function runMigrationsIfNeeded({
   env = process.env,
@@ -300,9 +304,12 @@ async function runMigrationsIfNeeded({
   // no migration runs under them (src/data-access/data-access-availability.ts). Never throws.
   beforeMigrations = (ds) => require(path.resolve(__dirname, '../dist/data-access/data-access-availability.js'))
     .runDataAccessBeforeMigrations(ds),
-  // The steps above and the migrations run under the advisory lock the API's start takes too.
-  withMigrationLock = (ds, fn) => require(path.resolve(__dirname, '../dist/common/startup-migrations.js'))
-    .withMigrationLock(ds, fn),
+  // The steps above and the migrations run under the advisory lock the API's start takes too,
+  // the migrations on the connection that holds it: if that session ends, they end with it.
+  withMigrationLock = (ds, fn, onWait) => require(path.resolve(__dirname, '../dist/common/startup-migrations.js'))
+    .withMigrationLock(ds, fn, onWait),
+  runPendingMigrations = (ds, lockConnection) => require(path.resolve(__dirname, '../dist/common/startup-migrations.js'))
+    .runPendingMigrations(ds, lockConnection),
   exit = (code) => process.exit(code),
   sleepFn = sleep,
   log = console.log,
@@ -322,15 +329,15 @@ async function runMigrationsIfNeeded({
     try {
       log(`[entrypoint] Initializing DB (attempt ${attempt}/${maxAttempts}) ...`);
       await ds.initialize();
-      const migrations = await withMigrationLock(ds, async () => {
+      const migrations = await withMigrationLock(ds, async (lockConnection) => {
         step = 'role';
         await checkDatabaseRole(ds, log);
         step = 'connect';
         await beforeMigrations(ds);
         log('[entrypoint] DB initialized. Running migrations...');
         step = 'migrate';
-        return ds.runMigrations();
-      });
+        return runPendingMigrations(ds, lockConnection);
+      }, () => log('[entrypoint] Another instance holds the migration lock, waiting...'));
       step = 'connect';
       log(`[entrypoint] Migrations complete (${migrations.length} executed).`);
       await ds.destroy();
@@ -347,7 +354,7 @@ async function runMigrationsIfNeeded({
         error(`[entrypoint] A migration failed, not retried: ${err?.message || err}`);
         const statement = failedStatement(err);
         if (statement) error(`[entrypoint] Failed statement: ${statement}`);
-        error('[entrypoint] The pending migrations ran in one transaction and were rolled back: the database is as before this start. Fix the cause or deploy the previous version.');
+        error('[entrypoint] The pending migrations ran in one transaction and were rolled back: none of them is applied. Fix the cause or deploy the previous version.');
         if (env.DEBUG_MIGRATIONS) error('[entrypoint] Error details:', err);
         exit(1);
         return;
@@ -402,8 +409,25 @@ async function migrateOnly({
   exit(0);
 }
 
+/**
+ * `--migrate-only` runs as PID 1 of its container, where node has no default handler for SIGTERM
+ * or SIGINT: without these, an orchestrator stopping the Job waits for its grace period, then kills
+ * it. One line, then exit 143 (SIGTERM) or 130 (SIGINT). Exiting closes the database connections:
+ * PostgreSQL rolls back the migration transaction in progress and drops the lock. The default
+ * start installs nothing here (main.ts drains the API on SIGTERM).
+ */
+function stopOnSignals({ on = (signal, handler) => process.on(signal, handler), exit = (code) => process.exit(code), error = console.error } = {}) {
+  for (const [signal, code] of [['SIGTERM', 143], ['SIGINT', 130]]) {
+    on(signal, () => {
+      error(`[entrypoint] ${signal} received during the migration step: stopping (exit ${code}). A migration transaction in progress rolls back.`);
+      exit(code);
+    });
+  }
+}
+
 async function main(argv = process.argv.slice(2)) {
   if (argv.includes('--migrate-only')) {
+    stopOnSignals();
     await migrateOnly();
     return;
   }
@@ -446,4 +470,5 @@ module.exports = {
   runIntegratedDocsSteps,
   runMigrationsIfNeeded,
   runNodeScript,
+  stopOnSignals,
 };

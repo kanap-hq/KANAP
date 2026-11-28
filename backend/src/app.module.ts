@@ -131,7 +131,8 @@ import { readPoolMax } from './common/db-pool-budget';
         const dataSource = new DataSource({ ...options, migrationsRun: false } as DataSourceOptions);
         await dataSource.initialize();
         if (!runMigrations) {
-          if (migrationsSkipped() && clusterWorkerId() === null) await warnPendingMigrations(dataSource);
+          // Every process: an empty database stops each one; the lead process writes the line.
+          if (migrationsSkipped()) await warnPendingMigrations(dataSource);
           return dataSource;
         }
         try {

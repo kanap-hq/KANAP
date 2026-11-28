@@ -7,7 +7,7 @@ import { DataSource } from 'typeorm';
 import { backendPath } from './backend-root';
 import { assertThrowawayDatabase } from './throwaway-database';
 import { hardenDatabaseRoleBeforeMigrations } from '../database-role-safety';
-import { runStartupMigrations, withMigrationLock } from '../startup-migrations';
+import { runPendingMigrations, runStartupMigrations, withMigrationLock } from '../startup-migrations';
 import { runDataAccessBeforeMigrations } from '../../data-access/data-access-availability';
 
 /**
@@ -111,8 +111,9 @@ async function entrypointRun(label: string, database: string, migrations: Migrat
     loadDataSource: () => dataSource(database, migrations),
     checkDatabaseRole: (ds: DataSource, log: (line: string) => void) => hardenDatabaseRoleBeforeMigrations(ds, 'entrypoint', log),
     beforeMigrations: (ds: DataSource) => runDataAccessBeforeMigrations(ds, { log: quiet, warn: quiet }),
-    // The real lock, from src/: the entrypoint loads its compiled copy from dist/.
+    // The real lock and migration run, from src/: the entrypoint loads their compiled copy from dist/.
     withMigrationLock,
+    runPendingMigrations,
     exit: (code: number) => { outcome.exits.push(code); },
     sleepFn: async () => undefined,
     log: (...args: unknown[]) => {
@@ -130,14 +131,9 @@ async function apiRun(label: string, database: string, migrations: MigrationClas
   const outcome: Outcome = { label, exits: [], executed: null, failure: null };
   const ds = dataSource(database, migrations);
   await ds.initialize();
-  const runMigrations = ds.runMigrations.bind(ds);
-  ds.runMigrations = async (options) => {
-    const executed = await runMigrations(options);
-    outcome.executed = executed.length;
-    return executed;
-  };
   try {
-    await runStartupMigrations(ds, (connected) => runDataAccessBeforeMigrations(connected, { log: () => undefined, warn: () => undefined }));
+    const executed = await runStartupMigrations(ds, (connected) => runDataAccessBeforeMigrations(connected, { log: () => undefined, warn: () => undefined }));
+    outcome.executed = executed.length;
   } catch (error) {
     outcome.failure = (error as Error)?.message || String(error);
   } finally {
