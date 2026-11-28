@@ -559,6 +559,7 @@ export default function AdminBrandingPage() {
                       <input
                         ref={lightColorInputRef}
                         type="color"
+                        disabled={locked}
                         value={pickerValue(form.primaryColorLight, '#1A6B7A')}
                         style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
                         onChange={(event) => setForm((prev) => ({ ...prev, primaryColorLight: event.target.value.toUpperCase() }))}
@@ -637,6 +638,7 @@ export default function AdminBrandingPage() {
                       <input
                         ref={darkColorInputRef}
                         type="color"
+                        disabled={locked}
                         value={pickerValue(form.primaryColorDark, '#90CAF9')}
                         style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
                         onChange={(event) => setForm((prev) => ({ ...prev, primaryColorDark: event.target.value.toUpperCase() }))}

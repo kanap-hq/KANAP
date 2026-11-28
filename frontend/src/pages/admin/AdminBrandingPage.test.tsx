@@ -62,7 +62,7 @@ function settings(name: string, extra: Record<string, unknown> = {}) {
 }
 
 function renderPage() {
-  render(
+  return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <MemoryRouter>
         <KanapDialogProvider>
@@ -203,6 +203,22 @@ describe('AdminBrandingPage for an organisation reader', () => {
     expect(screen.queryByLabelText('Light mode logo')).toBeNull();
     expect(api.post).not.toHaveBeenCalled();
     expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it('disables the two hidden colour pickers for a reader, and not for an organisation administrator', async () => {
+    const { unmount } = renderPage();
+    await screen.findByRole('textbox', { name: 'Workspace name' });
+    const readerPickers = document.querySelectorAll('input[type="color"]');
+    expect(readerPickers).toHaveLength(2);
+    readerPickers.forEach((input) => expect(input).toBeDisabled());
+    unmount();
+
+    auth.rights = { organization: 'admin' };
+    renderPage();
+    await screen.findByRole('textbox', { name: 'Workspace name' });
+    const adminPickers = document.querySelectorAll('input[type="color"]');
+    expect(adminPickers).toHaveLength(2);
+    adminPickers.forEach((input) => expect(input).not.toBeDisabled());
   });
 
   it('refuses the page to users:admin alone, and does not read the settings', async () => {
