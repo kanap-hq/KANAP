@@ -4,10 +4,10 @@ The Scheduled Tasks page lists every recurring background job Kadratis runs on a
 
 ## Where to find it
 
-- Workspace: **Admin** (Platform section)
-- Path: **Admin → Scheduled Tasks**
-- Route: `/admin/scheduled-tasks`
-- Access: **Platform Admin**, or **Global Admin** on a single-tenant (on-premise) deployment. Other roles see a Forbidden page.
+- Module: **Administration**
+- Path: **Administration → Installation → Scheduled tasks**
+- Route: `/admin/installation/scheduled-tasks` (the former address `/admin/scheduled-tasks` leads there)
+- Access: on an on-premise installation, the **Administrator** role with access to all data; on the hosted service, the platform administrator, on the platform host. Anyone else sees the access denied page.
 
 ## The task list
 
