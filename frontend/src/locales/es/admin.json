@@ -3046,7 +3046,7 @@
     },
     "netbox": {
       "title": "Inventario de Netbox",
-      "description": "Incorpora tu inventario de Netbox como activos. Netbox sigue siendo la referencia para los equipos que describe.",
+      "description": "Incorpore su inventario de Netbox como activos. Netbox sigue siendo la referencia para los equipos que describe.",
       "fields": {
         "enabled": "Activar la sincronización con Netbox",
         "baseUrl": "Dirección de Netbox",
@@ -3058,13 +3058,13 @@
       },
       "placeholders": {
         "baseUrl": "https://netbox.example.com",
-        "enterApiToken": "Pega el token",
+        "enterApiToken": "Pegue el token",
         "requestTimeout": "30"
       },
       "hints": {
-        "apiToken": "En Netbox, abre el menú de usuario arriba a la derecha y luego API tokens. Basta con un token de solo lectura.",
+        "apiToken": "En Netbox, abra el menú de usuario arriba a la derecha y luego API tokens. Basta con un token de solo lectura.",
         "requestTimeout": "De 5 a 120 segundos. Predeterminado: 30.",
-        "insecureTls": "Úsalo solo con un certificado autofirmado o interno en el que confíes. La conexión sigue cifrada, pero el certificado deja de comprobarse.",
+        "insecureTls": "Úselo solo con un certificado autofirmado o interno en el que confíe. La conexión sigue cifrada, pero el certificado deja de comprobarse.",
         "autoSync": "Se ejecuta cada hora y aplica los cambios por su cuenta. Empieza después de la primera sincronización que usted aplique.",
         "defaultEnvironment": "Se aplica a los activos creados por la importación. Después no se cambia nunca.",
         "baseUrl": "La dirección con la que abre Netbox en su navegador, por ejemplo https://netbox.example.com."
