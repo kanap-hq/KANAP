@@ -62,7 +62,7 @@ describe('CsvExportDialogV2', () => {
     render(<CsvExportDialogV2 open onClose={onClose} endpoint="/assets" />);
     expect(await screen.findByText('csv.csvFileNoteFlexible')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
-    expect(await screen.findByText('Boom')).toBeInTheDocument();
+    expect(await screen.findByText('messages.exportFailed')).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });
 

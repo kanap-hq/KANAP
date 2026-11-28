@@ -2465,7 +2465,7 @@ describe('BudgetLinePage load failure', () => {
       return { data: {} };
     });
     renderAt('/ops/budget/BL-99999/overview');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Database unavailable');
+    expect(await screen.findByRole('alert')).toHaveTextContent('opex.workspace.failedToLoad');
     expect(screen.queryByText('budget.notFound')).toBeNull();
     expect(screen.queryByTestId('workspace-shell')).toBeNull();
     const reads = () => mocked.get.mock.calls.filter(([url]) => url === '/budget-lines/BL-99999').length;

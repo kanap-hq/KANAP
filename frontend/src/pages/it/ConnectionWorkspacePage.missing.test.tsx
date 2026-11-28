@@ -147,7 +147,7 @@ describe('ConnectionWorkspacePage missing connection', () => {
     });
     renderAt('/it/connections/CONN-500?sort=name');
     const retry = await screen.findByRole('button', { name: 'Retry' });
-    expect(screen.getByText('Database unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Failed to load connection')).toBeInTheDocument();
     expect(screen.queryByText('Connection not found.')).toBeNull();
     expect(screen.queryByText('Untitled connection')).toBeNull();
     expect(screen.queryByRole('tab')).toBeNull();
