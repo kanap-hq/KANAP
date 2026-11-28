@@ -207,7 +207,7 @@ Tool-specific or private notes live in each tool's local files, never here.
   the stack order warning runs. A failing spec drops the PR from the queue.
 - Each queue run checks only what the queued changes reach (`changed files` job,
   `.github/scripts/ci-changes.sh`): the backend suite for `backend/`, `infra/`, a Dockerfile or
-  the frontend modules the backend specs import; only the three specs that read the user manual,
+  the frontend modules the backend specs import; only the five specs that read the user manual,
   plus the frontend build and tests (the locale dash test reads it), for `doc/help/docs/`; the
   frontend build and tests for `frontend/` and `backend/fixtures/`; the on-premise builds when
   either suite runs, except for the manual alone. A change under `.github/` runs everything. A required
@@ -322,6 +322,10 @@ runtime feature flags. Any change touching billing, email, SSO, platform admin, 
 or subscriptions must work in both modes.
 
 - Flags: `backend/src/config/features.ts` (single source of truth).
+- A new environment variable gets its entry in `backend/src/config/env-registry.ts` (with its
+  descriptions in `env-registry.labels.json`), then `npm run env:generate` in `backend/` rewrites
+  `infra/.env.onprem.example` and the example block of the on-premise configuration pages. A spec
+  fails otherwise.
 - Gates: `backend/src/common/feature-gates.ts` (`throwFeatureDisabled()`, `MultiTenantOnlyGuard`, ...).
 - Frontend: `GET /api/config/public` → `useFeatures()` in `frontend/src/config/FeaturesContext.tsx`.
 - A new gate needs: backend gate + config endpoint + frontend route/nav gate + an update of the
