@@ -226,7 +226,7 @@ Estos números aparecen para las personas que leen el presupuesto pero no esas l
 Aunque sus roles lo permitan, una persona limitada no puede:
 
 - cambiar la configuración del espacio de trabajo: congelar y descongelar, la regla de asignación por defecto, las columnas del presupuesto, las divisas, la copia anual de los datos maestros, la plantilla y los indicadores de empresas y departamentos;
-- ejecutar operaciones sobre muchas líneas: copiar y restablecer columnas de presupuesto, copiar asignaciones, eliminar en bloque;
+- ejecutar operaciones sobre muchas líneas: copiar y vaciar columnas de presupuesto, copiar asignaciones, eliminar en bloque;
 - eliminar una línea o un contrato;
 - gestionar personas: usuarios, roles, acceso a los datos, registro de auditoría;
 - modificar los datos de organización: empresas, departamentos, centros de coste, cuentas y planes de cuentas, procesos de negocio, las propias dimensiones y los valores de las dimensiones sin valores abiertos;

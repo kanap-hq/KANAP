@@ -94,6 +94,41 @@ function renderSidebar(overrides: Record<string, unknown> = {}) {
   );
 }
 
+describe('KnowledgeSidebar document reference', () => {
+  const form = {
+    status: 'draft',
+    summary: '',
+    folder_id: null,
+    library_id: 'library-1',
+    document_type_id: null,
+    template_document_id: null,
+    template_document_title: '',
+    revision: 7,
+  };
+
+  it('shows the permanent reference and neither Version nor the save count', () => {
+    renderSidebar({
+      doc: { id: 'doc-12', item_number: 12, status: 'draft', contributors: [], classifications: [] },
+      form,
+    });
+
+    const reference = screen.getByText('DOC-12');
+    expect(reference.textContent).toBe('DOC-12');
+    expect(reference.textContent).not.toContain('Version');
+    expect(reference.textContent).not.toContain('7');
+  });
+
+  it('shows no reference line while the document is being created', () => {
+    renderSidebar({
+      isCreate: true,
+      doc: { id: 'doc-new', status: 'draft', contributors: [], classifications: [] },
+      form,
+    });
+
+    expect(screen.queryByText(/^DOC-\d/)).toBeNull();
+  });
+});
+
 describe('KnowledgeSidebar relations', () => {
   it('says which relation selector opens, so its options load then', () => {
     const onRelationOpen = vi.fn();

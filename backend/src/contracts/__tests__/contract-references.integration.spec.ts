@@ -138,12 +138,18 @@ async function testDetailCarriesSupplierOption() {
     const { tenantId, ids, svc, opts } = await seed(runner);
     await runner.query(`UPDATE suppliers SET erp_supplier_id = 'SUP-003' WHERE tenant_id = $1`, [tenantId]);
     const [supplier] = await runner.query(`SELECT id, item_number FROM suppliers WHERE tenant_id = $1`, [tenantId]);
+    const [company] = await runner.query(`SELECT id, item_number FROM companies WHERE tenant_id = $1`, [tenantId]);
     const detail: any = await svc.get(ids[3], opts);
     assert.ok(Number(supplier.item_number) > 0);
+    assert.ok(Number(company.item_number) > 0);
     assert.deepEqual(detail.supplier_option, {
       id: supplier.id, item_number: Number(supplier.item_number), name: 'Dell', erp_supplier_id: 'SUP-003', status: 'enabled',
     });
     assert.equal(detail.supplier_name, 'Dell');
+    assert.deepEqual(detail.company_option, {
+      id: company.id, item_number: Number(company.item_number), name: 'Fromage Co',
+    });
+    assert.equal(detail.company_name, 'Fromage Co');
   });
 }
 

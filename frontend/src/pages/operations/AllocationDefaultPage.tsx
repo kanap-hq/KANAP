@@ -1,10 +1,14 @@
 import React from 'react';
-import { Alert, Box, Button, MenuItem, Paper, Select, Stack, Typography } from '@mui/material';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Alert, Box, Button, MenuItem, Select, Stack, Typography } from '@mui/material';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import PageHeader from '../../components/PageHeader';
-import { PropertyRow } from '../../components/design';
-import { compactSelectMenuProps, drawerMenuItemSx, pageSelectSx } from '../../theme/formSx';
+import { SettingsPage } from '../../components/settings/SettingsPage';
+import { SettingsSection } from '../../components/settings/SettingsSection';
+import { SettingField } from '../../components/settings/SettingField';
+import { useSettingsAutosave } from '../../components/settings/useSettingsAutosave';
+import { autosaveErrorMessage, isTransientSaveFailure } from '../../hooks/useAutosave';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { compactSelectMenuProps, drawerMenuItemSx, pageSelectSx, selectPlaceholderSx } from '../../theme/formSx';
 import { useAuth } from '../../auth/AuthContext';
 import api from '../../api';
 import {
@@ -37,23 +41,38 @@ type Company = {
   turnover_year?: number | null;
 };
 
+const A = 'operations.allocationDefault';
+
+/** The control a save of the rule came from: its refusal shows under it. */
+type RuleControl = 'mode' | 'companies' | 'method' | 'restore';
+
+/**
+ * The default allocation of a fiscal year. Every choice is saved when it is made, the companies
+ * once their list closes; the manual mode stays on this screen until a company is chosen (the
+ * server refuses it without one). A choice the server refuses shows the stored rule again, the
+ * refusal under the field; a choice a busy server puts off stays on screen while it is sent again.
+ * The year cannot change while a save of the rule is on its way or kept. A budget administration
+ * reader sees the same fields, read-only.
+ */
 export default function AllocationDefaultPage() {
   const { t } = useTranslation(['ops', 'common']);
   const { hasLevel } = useAuth();
   const canManage = hasLevel('budget_ops', 'admin');
+  const readOnly = !canManage;
   const queryClient = useQueryClient();
+  const autosave = useSettingsAutosave();
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 7 }, (_, i) => currentYear - 1 + i);
   const [year, setYear] = React.useState(currentYear);
-  const [savedFlash, setSavedFlash] = React.useState(false);
-  const flashTimer = React.useRef<number | null>(null);
 
   // Local selection while the admin is still picking: the API rejects a manual mode
   // without companies, so an empty in-progress selection is never sent.
   const [pendingMode, setPendingMode] = React.useState<AllocationRuleMode | null>(null);
   const [pendingMethod, setPendingMethod] = React.useState<AllocationMethod | null>(null);
   const [selectedCompanies, setSelectedCompanies] = React.useState<string[]>([]);
+  // The control of the last save of the rule, where its refusal shows.
+  const [savedFrom, setSavedFrom] = React.useState<RuleControl | null>(null);
 
   const { data, isLoading, isError } = useQuery<AllocationRuleResolution>({
     queryKey: ['allocation-rule', year],
@@ -73,20 +92,6 @@ export default function AllocationDefaultPage() {
   });
   const companies = companiesData ?? [];
 
-  const applyResult = React.useCallback(
-    (next: AllocationRuleResolution) => {
-      queryClient.setQueryData(['allocation-rule', year], next);
-      setSavedFlash(true);
-      if (flashTimer.current) window.clearTimeout(flashTimer.current);
-      flashTimer.current = window.setTimeout(() => setSavedFlash(false), 1500);
-    },
-    [queryClient, year],
-  );
-
-  React.useEffect(() => () => {
-    if (flashTimer.current) window.clearTimeout(flashTimer.current);
-  }, []);
-
   // Follow the stored setting whenever the year changes or a save lands.
   React.useEffect(() => {
     if (!data) return;
@@ -95,37 +100,43 @@ export default function AllocationDefaultPage() {
     setPendingMethod(null);
   }, [data]);
 
-  const saveMutation = useMutation({
-    mutationFn: (payload: { mode: AllocationRuleMode; method: AllocationMethod; companyIds: string[] | null }) =>
-      saveAllocationRule(year, payload),
-    onSuccess: applyResult,
-    // A rejected save (unusable selection, lost permission…) must not leave the controls
-    // showing a state the server refused: fall back to what is actually stored.
-    onError: () => {
-      const stored = queryClient.getQueryData<AllocationRuleResolution>(['allocation-rule', year]);
-      setSelectedCompanies(stored?.company_ids ?? []);
-      setPendingMode(null);
-      setPendingMethod(null);
-    },
-  });
-
-  const resetMutation = useMutation({
-    mutationFn: () => resetAllocationRule(year),
-    onSuccess: applyResult,
-  });
+  /**
+   * Saves the year's rule (or drops the override). A refused save shows what is actually stored; a
+   * save the busy server puts off keeps the choice on screen, and is sent again.
+   */
+  const saveRule = (from: RuleControl, run: (fiscalYear: number) => Promise<AllocationRuleResolution>) => {
+    const fiscalYear = year;
+    setSavedFrom(from);
+    autosave.choose('rule', async () => {
+      try {
+        queryClient.setQueryData(['allocation-rule', fiscalYear], await run(fiscalYear));
+      } catch (failure) {
+        // A rejected save (unusable selection, lost permission…) must not leave the controls
+        // showing a state the server refused: fall back to what is actually stored. The year
+        // list stays off meanwhile, so the year shown is the year of the save.
+        if (!isTransientSaveFailure(failure)) {
+          const stored = queryClient.getQueryData<AllocationRuleResolution>(['allocation-rule', fiscalYear]);
+          setSelectedCompanies(stored?.company_ids ?? []);
+          setPendingMode(null);
+          setPendingMethod(null);
+        }
+        throw failure;
+      }
+    });
+  };
+  const save = (from: RuleControl, payload: { mode: AllocationRuleMode; method: AllocationMethod; companyIds: string[] | null }) =>
+    saveRule(from, (fiscalYear) => saveAllocationRule(fiscalYear, payload));
 
   const methodLabel = React.useCallback(
     (method: AllocationMethod | null | undefined) =>
       method
-        ? t(`operations.allocationDefault.methods.${METHOD_LABEL_KEYS[method] ?? METHOD_LABEL_KEYS.headcount}`)
+        ? t(`${A}.methods.${METHOD_LABEL_KEYS[method] ?? METHOD_LABEL_KEYS.headcount}`)
         : '',
     [t],
   );
 
   const mode = pendingMode ?? data?.mode ?? 'auto';
   const method = pendingMethod ?? data?.method ?? 'headcount';
-  const busy = saveMutation.isPending || resetMutation.isPending;
-  const mutationError = saveMutation.error ?? resetMutation.error;
   const isOverridden = data?.source === 'tenant';
 
   /** Company name, or null while the list is still loading (never expose a raw id). */
@@ -159,13 +170,13 @@ export default function AllocationDefaultPage() {
   const applyMode = (next: AllocationRuleMode) => {
     if (next === 'auto') {
       setPendingMode(null);
-      saveMutation.mutate({ mode: 'auto', method, companyIds: null });
+      save('mode', { mode: 'auto', method, companyIds: null });
       return;
     }
     // Manual mode only becomes persistable once at least one company is selected.
     setPendingMode('manual_company');
     if (selectedCompanies.length > 0) {
-      saveMutation.mutate({ mode: 'manual_company', method, companyIds: selectedCompanies });
+      save('mode', { mode: 'manual_company', method, companyIds: selectedCompanies });
     }
   };
 
@@ -184,7 +195,7 @@ export default function AllocationDefaultPage() {
       && stored.every((id, idx) => id === selectedCompanies[idx])
       && data?.method === method;
     if (unchanged) return;
-    saveMutation.mutate({ mode: 'manual_company', method, companyIds: selectedCompanies });
+    save('companies', { mode: 'manual_company', method, companyIds: selectedCompanies });
   };
 
   const applyDriver = (next: AllocationMethod) => {
@@ -193,7 +204,7 @@ export default function AllocationDefaultPage() {
       // Nothing persistable yet: the driver is stored with the first company selection.
       return;
     }
-    saveMutation.mutate({
+    save('method', {
       mode: mode === 'manual_company' ? 'manual_company' : 'auto',
       method: next,
       companyIds: mode === 'manual_company' ? selectedCompanies : null,
@@ -202,181 +213,173 @@ export default function AllocationDefaultPage() {
 
   const shares = data?.shares ?? [];
   const manualPendingWithoutSelection = mode === 'manual_company' && selectedCompanies.length === 0;
+  // A save the busy server put off, kept once its retries are spent: it goes with the next change.
+  const saveError = autosave.error ? autosaveErrorMessage(autosave.error, t, t(`${A}.saveError`)) : null;
+  const refusal = autosave.errorOf('rule');
+  const refusalOf = (control: RuleControl) => (refusal && savedFrom === control ? getApiErrorMessage(refusal, t, t(`${A}.saveError`)) : null);
+  // A save of the rule on its way, waiting or kept: the year it is for stays on screen.
+  const saving = autosave.status === 'pending' || autosave.status === 'saving' || !!autosave.error;
+  // Not loaded: the standard values on screen would not be the year's rule, so nothing is offered.
+  const loadFailed = isError && !data;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <PageHeader title={t('operations.allocationDefault.title')} />
+    <SettingsPage
+      title={t(`${A}.title`)}
+      status={autosave.status}
+      readOnly={readOnly}
+      error={loadFailed ? t(`${A}.loadError`) : undefined}
+      actions={isOverridden ? (
+        // Drops the organisation's setting of the year: the standard method applies again.
+        <Button variant="action" onClick={() => saveRule('restore', resetAllocationRule)}>
+          {t(`${A}.restoreDefault`)}
+        </Button>
+      ) : undefined}
+    >
+      <Stack spacing={1.5} sx={{ mb: 1 }}>
+        {saveError && <Alert severity="error">{saveError}</Alert>}
+        {refusalOf('restore') && <Alert severity="error">{refusalOf('restore')}</Alert>}
+        {data?.preview_error && (
+          <Alert severity="warning">
+            {t(`${A}.previewError`, { reason: data.preview_error })}
+          </Alert>
+        )}
+        {data?.preview_warning && (
+          <Alert severity="warning" sx={{ whiteSpace: 'pre-line' }}>{allocationWarningText(t, data.preview_warning)}</Alert>
+        )}
+      </Stack>
 
-      {!canManage && <Alert severity="info">{t('operations.allocationDefault.noPermission')}</Alert>}
-      {isError && <Alert severity="error">{t('operations.allocationDefault.loadError')}</Alert>}
-      {mutationError && (
-        <Alert severity="error">
-          {mutationError instanceof Error ? mutationError.message : t('operations.allocationDefault.saveError')}
-        </Alert>
-      )}
-      {data?.preview_error && (
-        <Alert severity="warning">
-          {t('operations.allocationDefault.previewError', { reason: data.preview_error })}
-        </Alert>
-      )}
-      {data?.preview_warning && (
-        <Alert severity="warning" sx={{ whiteSpace: 'pre-line' }}>{allocationWarningText(t, data.preview_warning)}</Alert>
-      )}
+      <SettingField label={t(`${A}.year`)}>
+        {/* The year chooses what the page shows: a reader changes it too. */}
+        <Select
+          variant="standard"
+          value={String(year)}
+          onChange={(e) => setYear(Number(e.target.value))}
+          disabled={saving}
+          sx={pageSelectSx}
+          MenuProps={compactSelectMenuProps}
+          inputProps={{ 'aria-label': t(`${A}.year`) }}
+        >
+          {years.map((y) => (
+            <MenuItem key={y} value={String(y)} sx={drawerMenuItemSx}>
+              {y}
+            </MenuItem>
+          ))}
+        </Select>
+      </SettingField>
 
-      <Paper variant="outlined" sx={{ p: 2, maxWidth: 640 }}>
-        <Stack spacing={1}>
-          <PropertyRow label={t('operations.allocationDefault.year')}>
+      <SettingField label={t(`${A}.mode`)} error={refusalOf('mode')}>
+        {({ readOnly: fieldReadOnly, error: fieldError, aria }) => (
+          <Select
+            variant="standard"
+            value={mode}
+            onChange={(e) => applyMode(e.target.value as AllocationRuleMode)}
+            readOnly={fieldReadOnly}
+            sx={pageSelectSx}
+            MenuProps={compactSelectMenuProps}
+            disabled={isLoading}
+            error={fieldError}
+            inputProps={{ 'aria-label': t(`${A}.mode`) }}
+            SelectDisplayProps={aria}
+          >
+            {MODES.map((value) => (
+              <MenuItem key={value} value={value} sx={drawerMenuItemSx}>
+                {t(`${A}.${value === 'auto' ? 'modeAuto' : 'modeManual'}`)}
+              </MenuItem>
+            ))}
+          </Select>
+        )}
+      </SettingField>
+
+      {mode === 'manual_company' && (
+        <SettingField label={t(`${A}.companies`)} error={refusalOf('companies')}>
+          {({ readOnly: fieldReadOnly, error: fieldError, aria }) => (
             <Select
+              multiple
               variant="standard"
-              value={String(year)}
-              onChange={(e) => setYear(Number(e.target.value))}
+              value={selectedCompanies}
+              onChange={(e) => applyCompanies(e.target.value as string[])}
+              onClose={commitCompanies}
+              readOnly={fieldReadOnly}
               sx={pageSelectSx}
               MenuProps={compactSelectMenuProps}
-              disabled={busy}
+              disabled={isLoading}
+              displayEmpty
+              error={fieldError}
+              inputProps={{ 'aria-label': t(`${A}.companies`) }}
+              SelectDisplayProps={aria}
+              renderValue={(selected) => {
+                const ids = selected as string[];
+                const single = ids.length === 1 ? companyLabel(ids[0]) : null;
+                if (single) return single;
+                return ids.length === 0
+                  ? <Box component="span" sx={selectPlaceholderSx}>{t(`${A}.companiesPlaceholder`)}</Box>
+                  : t(`${A}.companiesSelected`, { count: ids.length });
+              }}
             >
-              {years.map((y) => (
-                <MenuItem key={y} value={String(y)} sx={drawerMenuItemSx}>
-                  {y}
+              {companies.map((company) => (
+                <MenuItem key={company.id} value={company.id} sx={drawerMenuItemSx}>
+                  {company.name}
                 </MenuItem>
               ))}
             </Select>
-          </PropertyRow>
-
-          <PropertyRow label={t('operations.allocationDefault.mode')}>
-            {canManage ? (
-              <Select
-                variant="standard"
-                value={mode}
-                onChange={(e) => applyMode(e.target.value as AllocationRuleMode)}
-                sx={pageSelectSx}
-                MenuProps={compactSelectMenuProps}
-                disabled={isLoading || busy}
-              >
-                {MODES.map((value) => (
-                  <MenuItem key={value} value={value} sx={drawerMenuItemSx}>
-                    {t(`operations.allocationDefault.${value === 'auto' ? 'modeAuto' : 'modeManual'}`)}
-                  </MenuItem>
-                ))}
-              </Select>
-            ) : (
-              <Typography sx={{ fontSize: 13 }}>
-                {isLoading ? '' : t(`operations.allocationDefault.${(data?.mode ?? 'auto') === 'auto' ? 'modeAuto' : 'modeManual'}`)}
-              </Typography>
-            )}
-          </PropertyRow>
-
-          {mode === 'manual_company' && (
-            <PropertyRow label={t('operations.allocationDefault.companies')}>
-              {canManage ? (
-                <Select
-                  multiple
-                  variant="standard"
-                  value={selectedCompanies}
-                  onChange={(e) => applyCompanies(e.target.value as string[])}
-                  onClose={commitCompanies}
-                  sx={pageSelectSx}
-                  MenuProps={compactSelectMenuProps}
-                  disabled={isLoading || busy}
-                  renderValue={(selected) => {
-                    const ids = selected as string[];
-                    const single = ids.length === 1 ? companyLabel(ids[0]) : null;
-                    if (single) return single;
-                    return ids.length === 0
-                      ? t('operations.allocationDefault.companiesPlaceholder')
-                      : t('operations.allocationDefault.companiesSelected', { count: ids.length });
-                  }}
-                >
-                  {companies.map((company) => (
-                    <MenuItem key={company.id} value={company.id} sx={drawerMenuItemSx}>
-                      {company.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              ) : (
-                <Typography sx={{ fontSize: 13 }}>
-                  {selectedCompanies.map((id) => companyLabel(id) ?? '').filter(Boolean).join(', ')}
-                </Typography>
-              )}
-            </PropertyRow>
           )}
+        </SettingField>
+      )}
 
-          <PropertyRow
-            label={t('operations.allocationDefault.method')}
-            helperText={t('operations.allocationDefault.methodHelp')}
+      <SettingField label={t(`${A}.method`)} hint={t(`${A}.methodHelp`)} error={refusalOf('method')}>
+        {({ readOnly: fieldReadOnly, error: fieldError, aria }) => (
+          <Select
+            variant="standard"
+            value={method}
+            onChange={(e) => applyDriver(e.target.value as AllocationMethod)}
+            readOnly={fieldReadOnly}
+            sx={pageSelectSx}
+            MenuProps={compactSelectMenuProps}
+            disabled={isLoading}
+            error={fieldError}
+            inputProps={{ 'aria-label': t(`${A}.method`) }}
+            SelectDisplayProps={aria}
           >
-            {canManage ? (
-              <Select
-                variant="standard"
-                value={method}
-                onChange={(e) => applyDriver(e.target.value as AllocationMethod)}
-                sx={pageSelectSx}
-                MenuProps={compactSelectMenuProps}
-                disabled={isLoading || busy}
-              >
-                {METHODS.map((value) => (
-                  <MenuItem key={value} value={value} sx={drawerMenuItemSx}>
-                    {methodLabel(value)}
-                  </MenuItem>
-                ))}
-              </Select>
-            ) : (
-              <Typography sx={{ fontSize: 13 }}>
-                {isLoading ? '' : methodLabel(data?.method ?? 'headcount')}
-              </Typography>
-            )}
-          </PropertyRow>
+            {METHODS.map((value) => (
+              <MenuItem key={value} value={value} sx={drawerMenuItemSx}>
+                {methodLabel(value)}
+              </MenuItem>
+            ))}
+          </Select>
+        )}
+      </SettingField>
 
-          {manualPendingWithoutSelection && canManage && (
-            <Alert severity="info">{t('operations.allocationDefault.companiesHint')}</Alert>
-          )}
+      {manualPendingWithoutSelection && canManage && (
+        <Alert severity="info" sx={{ mt: 1 }}>{t(`${A}.companiesHint`)}</Alert>
+      )}
 
-          {data && (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ minHeight: 28 }}>
-              <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
-                {isOverridden
-                  ? t('operations.allocationDefault.overriddenNote', {
-                      method: data.standard_mode === 'manual_company'
-                        ? t('operations.allocationDefault.modeManual')
-                        : methodLabel(data.standard_method),
-                    })
-                  : t('operations.allocationDefault.standardNote')}
-              </Typography>
-              {isOverridden && canManage && (
-                <Button variant="action" onClick={() => resetMutation.mutate()} disabled={busy}>
-                  {t('operations.allocationDefault.resetToStandard')}
-                </Button>
-              )}
-            </Stack>
-          )}
-
-          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', minHeight: 18 }}>
-            {saveMutation.isPending || resetMutation.isPending
-              ? t('common:status.saving', 'Saving…')
-              : savedFlash
-                ? t('common:status.saved', 'Saved')
-                : ''}
-          </Typography>
-        </Stack>
-      </Paper>
+      {data && (
+        <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mt: 1 }}>
+          {isOverridden
+            ? t(`${A}.overriddenNote`, {
+                method: data.standard_mode === 'manual_company'
+                  ? t(`${A}.modeManual`)
+                  : methodLabel(data.standard_method),
+              })
+            : t(`${A}.standardNote`)}
+        </Typography>
+      )}
 
       {mode === 'manual_company' && (
-        <Paper variant="outlined" sx={{ p: 2, maxWidth: 640 }}>
-          <Typography sx={{ fontSize: 13, fontWeight: 500, mb: 1 }}>
-            {t('operations.allocationDefault.sharesTitle')}
-          </Typography>
+        <SettingsSection variant="flat" title={t(`${A}.sharesTitle`)}>
           {shares.length === 0 ? (
             <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
-              {t('operations.allocationDefault.sharesEmpty')}
+              {t(`${A}.sharesEmpty`)}
             </Typography>
           ) : (
             <Box component="table" sx={{ width: '100%', maxWidth: 520, borderCollapse: 'collapse', '& td, & th': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' } }}>
               <Box component="thead">
                 <Box component="tr">
                   <Box component="th" sx={{ textAlign: 'left', fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', px: 1, py: 0.75 }}>
-                    {t('operations.allocationDefault.companyColumn')}
+                    {t(`${A}.companyColumn`)}
                   </Box>
                   <Box component="th" sx={{ textAlign: 'right', fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', px: 1.5, py: 0.75, whiteSpace: 'nowrap' }}>
-                    {t('operations.allocationDefault.driverValue')}
+                    {t(`${A}.driverValue`)}
                   </Box>
                   <Box component="th" sx={{ textAlign: 'right', fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', px: 1.5, py: 0.75 }}>
                     %
@@ -403,8 +406,8 @@ export default function AllocationDefaultPage() {
               </Box>
             </Box>
           )}
-        </Paper>
+        </SettingsSection>
       )}
-    </Box>
+    </SettingsPage>
   );
 }

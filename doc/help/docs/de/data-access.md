@@ -226,7 +226,7 @@ Diese Anzahlen erscheinen für Personen, die das Budget lesen dürfen, diese Zei
 Auch wenn ihre Rollen es erlauben, kann eine begrenzte Person nicht:
 
 - die Einstellungen des Arbeitsbereichs ändern: Einfrieren und Freigeben, die Standardregel der Zuordnung, Budgetspalten, Währungen, die jährliche Kopie der Stammdaten, die Mitarbeiterzahlen und Kennzahlen von Unternehmen und Abteilungen;
-- Vorgänge auf vielen Zeilen ausführen: Budgetspalten kopieren und zurücksetzen, Zuordnungen kopieren, Massenlöschung;
+- Vorgänge auf vielen Zeilen ausführen: Budgetspalten kopieren und leeren, Zuordnungen kopieren, Massenlöschung;
 - eine Zeile oder einen Vertrag löschen;
 - Personen verwalten: Benutzer, Rollen, Datenzugriff, Audit-Protokoll;
 - Organisationsdaten bearbeiten: Unternehmen, Abteilungen, Kostenstellen, Konten und Kontenpläne, Geschäftsprozesse, die Dimensionen selbst und die Werte von Dimensionen ohne offene Werte;

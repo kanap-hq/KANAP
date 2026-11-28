@@ -17,6 +17,8 @@ Navigate to **Master Data > Companies** to open the list.
 
 **Unique names**: each company has its own name, whatever the case (`Acme` and `acme` are the same name). A name another company already has is refused with a message under the name.
 
+**Tip**: In a company field, typing a reference such as `COMP-3` finds that company, and each choice shows the reference next to the name.
+
 ## Working with the list
 
 The list shows all companies for your workspace. Use it to review key information at a glance, find companies quickly, and open workspaces for editing.

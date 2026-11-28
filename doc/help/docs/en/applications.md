@@ -211,7 +211,7 @@ To remove an owner, hover the name and click the cross at its end.
 Removing an owner, a business process, a suite or a support contact shows a message with **Undo**, which puts it back.
 
 **Audience**:
-- Add **Company / Departments** rows to record who uses this application. Pick a company and optionally restrict to specific departments.
+- Add **Company / Departments** rows to record who uses this application. Pick a company and optionally restrict to specific departments. Each company and department shows its reference, such as `COMP-3` or `DEPT-4`, next to its name, and typing the reference finds it.
 - With no department chosen, the audience is the whole company (the field shows **All departments**). With departments chosen, it is only those departments: clear them to include the whole company again.
 - A live **Users** count is shown.
 - **Calculation method**: **Derived** (computed from the audience based on master-data IT Users / Headcount metrics) or **Manual** (a single override number you type in).
