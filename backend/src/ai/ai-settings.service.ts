@@ -9,6 +9,7 @@ import { AiModelConfig } from './ai-model-config.entity';
 import { AiModelReadiness, AiModelResolverService } from './ai-model-resolver.service';
 import { AiSettings } from './ai-settings.entity';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
+import { storedTestDetail, storedTestJson, type StoredConnectionTest } from './control-plane/providers/adapter-connection-test';
 import { normalizeGlpiPathname } from './glpi/glpi-url';
 import { BuiltinProviderIdentity, PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
@@ -33,6 +34,8 @@ export type AiSettingsView = {
   glpi_url: string | null;
   has_glpi_user_token: boolean;
   has_glpi_app_token: boolean;
+  /** The last GLPI connection test run on the saved address and tokens. Never audited. */
+  glpi_last_test: StoredConnectionTest | null;
   has_llm_api_key: boolean;
   provider_secret_writable: boolean;
   provider_validation_errors: string[];
@@ -117,6 +120,21 @@ function normalizeHttpUrl(value: string | null | undefined, fieldName: string): 
     ? normalizeGlpiPathname(parsed.pathname)
     : ((parsed.pathname || '/').replace(/\/+$/, '') || '/');
   return parsed.toString();
+}
+
+/** A stored GLPI test with its detail (a failure's code, a success's response time), or null when it is not usable. */
+function readGlpiLastTest(value: unknown): StoredConnectionTest | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const testedAt = typeof raw.tested_at === 'string' ? raw.tested_at : '';
+  if (typeof raw.ok !== 'boolean' || !testedAt || Number.isNaN(Date.parse(testedAt))) return null;
+  return { ok: raw.ok, tested_at: testedAt, ...storedTestDetail(raw) };
+}
+
+/** The view an audit entry keeps: everything but the last test, which is never audited. */
+function auditView(view: AiSettingsView): Omit<AiSettingsView, 'glpi_last_test'> {
+  const { glpi_last_test: _lastTest, ...rest } = view;
+  return rest;
 }
 
 /** A stored address in the form a save writes it today; as stored when it cannot be read. */
@@ -346,7 +364,8 @@ export class AiSettingsService {
     const existing = await this.findWithSecrets(tenantId, opts?.manager, { forUpdate: true });
     if (existing) existing.provider_source = this.normalizeProviderSourceValue(existing.provider_source);
     const settings = existing ?? await this.get(tenantId, opts);
-    const beforeView = existing ? await this.toView(settings, opts) : null;
+    const beforeView = existing ? auditView(await this.toView(settings, opts)) : null;
+    const previousGlpiSecrets = [settings.glpi_url, settings.glpi_user_token_encrypted, settings.glpi_app_token_encrypted];
     // Compared in the form a save writes them, so an address stored before a change of
     // that form (an API route kept on GLPI, a query string) is not a new address.
     const previousGlpiUrl = storedUrlForm(settings.glpi_url, 'glpi_url');
@@ -430,11 +449,11 @@ export class AiSettingsService {
       settings.glpi_enabled = input.glpi_enabled === true;
     }
     if (Object.prototype.hasOwnProperty.call(input, 'glpi_url')) {
-      {
-        const normalizedGlpi = normalizeHttpUrl(input.glpi_url, 'glpi_url');
-        if (normalizedGlpi) assertPublicHttpUrl(normalizedGlpi);
-        settings.glpi_url = normalizedGlpi;
-      }
+      const normalizedGlpi = normalizeHttpUrl(input.glpi_url, 'glpi_url');
+      if (normalizedGlpi) assertPublicHttpUrl(normalizedGlpi);
+      // An empty address removes the connection: its tokens go (below) and the import is off.
+      if (!normalizedGlpi && settings.glpi_url) settings.glpi_enabled = false;
+      settings.glpi_url = normalizedGlpi;
     }
     if (Object.prototype.hasOwnProperty.call(input, 'glpi_user_token')) {
       const raw = normalizeNullableString(input.glpi_user_token);
@@ -452,6 +471,11 @@ export class AiSettingsService {
       if (!normalizeNullableString(input.glpi_user_token)) settings.glpi_user_token_encrypted = null;
       if (!normalizeNullableString(input.glpi_app_token)) settings.glpi_app_token_encrypted = null;
     }
+    // A token replaced at the same address leaves both sides of the entry alike: the entry says which.
+    const glpiUserTokenReplaced = !glpiAddressChanged
+      && !!normalizeNullableString(input.glpi_user_token) && !!previousGlpiSecrets[1];
+    const glpiAppTokenReplaced = !glpiAddressChanged
+      && !!normalizeNullableString(input.glpi_app_token) && !!previousGlpiSecrets[2];
     if (
       previousLlmDestination !== modelKeyDestination(settings.llm_provider, settings.llm_endpoint_url)
       && !normalizeNullableString(input.llm_api_key)
@@ -522,6 +546,18 @@ export class AiSettingsService {
     saved.llm_api_key_encrypted = settings.llm_api_key_encrypted;
     saved.glpi_user_token_encrypted = settings.glpi_user_token_encrypted;
     saved.glpi_app_token_encrypted = settings.glpi_app_token_encrypted;
+    saved.glpi_last_test = settings.glpi_last_test ?? null;
+    // A new address or a new token makes the stored test describe values that are gone. Only that
+    // column: the save never writes it (`update: false`).
+    const glpiSecretsChanged = [settings.glpi_url, settings.glpi_user_token_encrypted, settings.glpi_app_token_encrypted]
+      .some((value, index) => value !== previousGlpiSecrets[index]);
+    if (existing && glpiSecretsChanged && saved.glpi_last_test) {
+      await this.getRepo(opts?.manager).query(
+        'UPDATE ai_settings SET glpi_last_test = NULL WHERE id = $1 AND tenant_id = $2',
+        [saved.id, tenantId],
+      );
+      saved.glpi_last_test = null;
+    }
     if (this.audit) {
       await this.audit.log(
         {
@@ -529,7 +565,11 @@ export class AiSettingsService {
           recordId: saved.id,
           action: beforeView ? 'update' : 'create',
           before: beforeView,
-          after: await this.toView(saved, opts),
+          after: {
+            ...auditView(await this.toView(saved, opts)),
+            ...(glpiUserTokenReplaced ? { glpi_user_token_replaced: true } : {}),
+            ...(glpiAppTokenReplaced ? { glpi_app_token_replaced: true } : {}),
+          },
           userId: opts?.userId ?? null,
           sourceRef: opts?.sourceRef ?? null,
         },
@@ -537,6 +577,40 @@ export class AiSettingsService {
       );
     }
     return saved;
+  }
+
+  /**
+   * Keeps the outcome of a GLPI connection test on the settings it ran on. Writes only
+   * `glpi_last_test`: the call to GLPI can take long, and a save made meanwhile must survive.
+   * The row must still hold the address and tokens the test used, otherwise the outcome
+   * describes values that are gone and is dropped. Returns whether the outcome was written.
+   */
+  async recordGlpiTest(
+    manager: EntityManager,
+    settings: Pick<AiSettings, 'id' | 'tenant_id' | 'glpi_url' | 'glpi_user_token_encrypted' | 'glpi_app_token_encrypted'>,
+    result: StoredConnectionTest,
+  ): Promise<boolean> {
+    const rows = await manager.query(
+      `WITH changed AS (
+         UPDATE ai_settings
+            SET glpi_last_test = $1::jsonb
+          WHERE id = $2 AND tenant_id = $3
+            AND glpi_url IS NOT DISTINCT FROM $4
+            AND glpi_user_token_encrypted IS NOT DISTINCT FROM $5
+            AND glpi_app_token_encrypted IS NOT DISTINCT FROM $6
+          RETURNING 1
+       )
+       SELECT count(*)::int AS n FROM changed`,
+      [
+        storedTestJson(result),
+        settings.id,
+        settings.tenant_id,
+        settings.glpi_url ?? null,
+        settings.glpi_user_token_encrypted ?? null,
+        settings.glpi_app_token_encrypted ?? null,
+      ],
+    );
+    return Number(rows?.[0]?.n ?? 0) > 0;
   }
 
   async toView(settings: AiSettings, opts?: { manager?: EntityManager }): Promise<AiSettingsView> {
@@ -562,6 +636,7 @@ export class AiSettingsService {
       glpi_url: normalized.glpi_url,
       has_glpi_user_token: !!normalized.glpi_user_token_encrypted,
       has_glpi_app_token: !!normalized.glpi_app_token_encrypted,
+      glpi_last_test: readGlpiLastTest(normalized.glpi_last_test),
       has_llm_api_key: !!normalized.llm_api_key_encrypted,
       provider_secret_writable: this.cipher.canEncrypt(),
       provider_validation_errors: providerErrors,

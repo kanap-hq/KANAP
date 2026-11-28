@@ -261,6 +261,7 @@ Logical types for servers and infrastructure assets (e.g., Physical server, Virt
 
 **Where used**:
 - Assets workspace → properties panel → **Asset type** field
+- Netbox synchronisation → **Mappings** → **Netbox roles > Asset type** (see [Netbox synchronisation](netbox.md))
 
 ---
 
@@ -436,7 +437,7 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 | **Network zones** | Subnets (Network Zone), Assets (auto-populated from subnet) |
 | **Subnets** | Assets (Network tab → IP Addresses → Subnet selector) |
 | **Server roles** | Applications → Servers tab (role when linking asset to app), Connection Map (graph tier placement) |
-| **Asset types** | Assets (properties panel → Asset type) |
+| **Asset types** | Assets (properties panel → Asset type), Netbox role matches |
 | **Technology families** | Technologies (Family), Administration zones page (directory services) |
 
 ---

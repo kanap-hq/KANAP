@@ -81,7 +81,7 @@ export interface NetboxIntegrationView {
   secret_writable: boolean;
   updated_at: string | null;
   /** Absent on a payload from an older server. */
-  last_test?: { ok: boolean; tested_at: string } | null;
+  last_test?: { ok: boolean; tested_at: string; code?: string; version?: string } | null;
 }
 
 /** Partial: omitted keys keep their stored value. */

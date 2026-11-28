@@ -261,6 +261,7 @@ Logische Typen für Server und Infrastruktur-Assets (z. B. Physischer Server, Vi
 
 **Verwendung**:
 - Assets-Arbeitsbereich → Eigenschaftenbereich → Feld **Asset-Typ**
+- Netbox-Synchronisierung → **Zuordnungen** → **Netbox-Rolle > Asset-Typ** (siehe [Netbox-Synchronisierung](netbox.md))
 
 ---
 
@@ -436,7 +437,7 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 | **Netzwerkzonen** | Subnetze (Netzwerkzone), Assets (automatisch aus dem Subnetz) |
 | **Subnetze** | Assets (Reiter Netzwerk → IP-Adressen → Subnetzauswahl) |
 | **Serverrollen** | Anwendungen → Reiter Server (Rolle beim Verknüpfen eines Assets mit der Anwendung), Verbindungskarte (Platzierung nach Graph-Ebene) |
-| **Asset-Typen** | Assets (Eigenschaftenbereich → Asset-Typ) |
+| **Asset-Typen** | Assets (Eigenschaftenbereich → Asset-Typ), Netbox-Rollenzuordnungen |
 | **Technologiefamilien** | Technologien (Familie), Seite Administrationszonen (Verzeichnisdienste) |
 
 ---

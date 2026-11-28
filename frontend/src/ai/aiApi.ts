@@ -32,10 +32,28 @@ export type AiWebSearchTestResult = {
   latency_ms: number | null;
 };
 
+/** A connection test kept on the saved values. */
+/** The last test kept on the saved values, with what the card said right after it. */
+export type AiConnectionLastTest = {
+  ok: boolean;
+  tested_at: string;
+  /** A failure: its cause as a code (`errors:<code>`). */
+  code?: string;
+  /** A success: what the system answered. */
+  latency_ms?: number;
+  version?: string;
+  sensor_count?: number;
+};
+
 export type AiGlpiTestResult = {
   ok: boolean;
+  /** The cause of a failure, translated through `errors:<code>`; `message` is the English fallback. */
+  code?: string;
   message: string;
   latency_ms: number | null;
+  tested_at?: string;
+  /** The test ran on the saved values and is kept: it shows again after a reload. */
+  persisted?: boolean;
 };
 
 export type AiMonitoringCredentialShape = 'api_token' | 'username_passhash' | 'secret_ref' | 'none';
@@ -52,6 +70,7 @@ export type AiMonitoringIntegration = {
     present: boolean;
     shape: AiMonitoringCredentialShape;
   };
+  last_test?: AiConnectionLastTest | null;
   updated_at: string;
 };
 
@@ -70,9 +89,14 @@ export type AiPrtgIntegrationUpdatePayload = {
 
 export type AiPrtgTestResult = {
   ok: boolean;
+  /** The cause of a failure, translated through `errors:<code>`; `message` is the English fallback. */
+  code?: string;
   prtg_version?: string;
   sensor_count?: number;
   message: string;
+  tested_at?: string;
+  /** The test ran on the saved values and is kept: it shows again after a reload. */
+  persisted?: boolean;
 };
 
 export type AiSettingsPayload = {
@@ -93,6 +117,7 @@ export type AiSettingsPayload = {
     glpi_url: string | null;
     has_glpi_user_token: boolean;
     has_glpi_app_token: boolean;
+    glpi_last_test?: AiConnectionLastTest | null;
     has_llm_api_key: boolean;
     provider_secret_writable: boolean;
     provider_validation_errors: string[];

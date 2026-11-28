@@ -33,13 +33,15 @@ Gehen Sie zu **Administration > Integrationen** und öffnen Sie die Karte **Netb
 |-------|---------------|
 | **Netbox-Synchronisierung aktivieren** | Der Hauptschalter. Ist er aus, ruft Kadratis Netbox nie auf, weder manuell noch nach Zeitplan. |
 | **Netbox-Adresse** | Die Adresse, mit der Sie Netbox im Browser öffnen, zum Beispiel `https://netbox.example.com`. Leeren und speichern Sie sie, um die Verbindung zu entfernen. |
-| **API-Token** | Das Token, das Sie in Netbox angelegt haben. Es wird verschlüsselt gespeichert und nie wieder angezeigt. Lassen Sie das Feld beim Speichern leer, um das bereits gespeicherte Token zu behalten, solange die Adresse gleich bleibt. Eine neue Adresse leert das gespeicherte Token: Geben Sie es erneut ein. |
-| **Zeitlimit für Anfragen (Sekunden)** | Wie lange auf Netbox gewartet wird, bevor abgebrochen wird, zwischen 5 und 120. Für 30 Sekunden leer lassen. |
+| **API-Token** | Das Token, das Sie in Netbox angelegt haben: Öffnen Sie oben rechts das Benutzermenü, dann **API tokens**. Ein Token mit reinen Leserechten genügt. Ein gespeichertes Token wird nie wieder angezeigt: Das Feld zeigt Punkte, daneben **Ersetzen**, um ein neues einzugeben. Eine neue Adresse leert das gespeicherte Token: Das Feld fragt es erneut ab. |
+| **Anfrage-Timeout (Sekunden)** | Wie lange auf Netbox gewartet wird, bevor abgebrochen wird, zwischen 5 und 120. Für 30 Sekunden leer lassen. |
+| **Umgebung für neue Assets** | Gilt für die Assets, die diese Integration anlegt. Danach wird sie nie geändert. |
 | **Zertifikatsfehler ignorieren** | Standardmäßig aus. Siehe oben. |
 | **Automatische Synchronisierung** | Läuft stündlich und wendet die Änderungen selbstständig an. Lassen Sie sie aus, bis Ihr erster Lauf stimmig aussieht. |
-| **Umgebung für neue Assets** | Gilt für die Assets, die diese Integration anlegt. Danach wird sie nie geändert. |
 
-**Verbindung testen** führt einen reinen Leseaufruf aus und meldet die gefundene Netbox-Version oder den Grund des Fehlschlags. Führen Sie den Test nach jeder Änderung der Adresse oder des Tokens aus. Die Karte zeigt **Konfiguriert**, sobald die Verbindung gespeichert und eingeschaltet ist. Daneben nennt sie Ergebnis und Datum des letzten Tests: „Letzter Test erfolgreich am …“ oder „Letzter Test fehlgeschlagen am …“. Sind die Einstellungen gespeichert, bietet die Karte den Link **Synchronisierung einrichten** an, der Sie zum Tab **Netbox** unter **IT-Landschaft > Einstellungen** führt.
+Das Info-Symbol neben einem Feld sagt, wo Sie seinen Wert finden.
+
+**Testen** führt mit den Werten auf der Karte, gespeichert oder nicht, einen reinen Leseaufruf aus, sobald Adresse und Token eingetragen sind. Die Statuszeile oben rechts auf der Karte nennt das Ergebnis: „Letzter Test erfolgreich am …“ mit der gefundenen Netbox-Version oder den Grund des Fehlschlags. Führen Sie den Test nach jeder Änderung der Adresse oder des Tokens aus. Ein Test der gespeicherten Werte bleibt erhalten und erscheint wieder, wenn Sie zur Seite zurückkehren, mit der Version oder dem Grund; ein Test nicht gespeicherter Werte bleibt sichtbar, bis Sie die Seite verlassen. Ohne Test zeigt die Statuszeile **Gespeichert, noch nicht getestet** oder **Nie getestet**, und **Änderungen nicht gespeichert**, solange die Karte Änderungen enthält. **Speichern** ist verfügbar, sobald sich etwas geändert hat. Sind die Einstellungen gespeichert, bietet die Karte den Link **Synchronisierung einrichten** an, der Sie zum Tab **Netbox** unter **IT-Landschaft > Einstellungen** führt.
 
 **Die Verbindung entfernen.** Leeren Sie die Adresse, speichern Sie und bestätigen Sie. Kadratis löscht die Adresse und das Token, schaltet die Verbindung und die automatische Synchronisierung aus und schreibt einen Eintrag ins Audit-Protokoll. Importierte Assets bleiben mit ihrer Verknüpfung zu Netbox erhalten, ebenso Ihre Zuordnungen. Eine neue Verbindung beginnt wieder mit einer Synchronisierung, die Sie selbst anwenden, bevor der stündliche Lauf weitergeht.
 
@@ -53,6 +55,8 @@ Gehen Sie zu **Administration > Integrationen** und öffnen Sie die Karte **Netb
 - **Netbox-Standort > Standort**. Jeder Netbox-Standort erhält einen Ihrer Standorte oder **Nicht importieren**.
 
 Alles, was auf **Nicht importieren** steht, wird übersprungen: Die zugehörigen Objekte werden nie angelegt, nie aktualisiert und nie als fehlend gemeldet. So lassen Sie Steckdosenleisten, Patchpanels oder einen Laborstandort weg und importieren trotzdem die Server daneben.
+
+Ein Asset-Typ, der einer Rolle zugeordnet ist, gilt als verwendet, solange die Zuordnung gespeichert ist. Die Liste **Asset-Typen** unter **IT-Landschaft > Einstellungen** nennt die Netbox-Rollenzuordnungen unter seinen Verwendungen und entfernt ihn nicht, und das Wiederherstellen der Standardlisten behält ihn bei. Ändern Sie zuerst die Zuordnung.
 
 Bei den Rollen steht eine zusätzliche Zeile: **Virtuelle Maschinen**. Jede virtuelle Maschine in Netbox läuft über diese eine Zeile, unabhängig von der Rolle, die Netbox ihr gibt. Eine Entscheidung deckt also alle ab. Eine virtuelle Maschine übernimmt den Standort ihres Clusters, wenn sie selbst keinen trägt.
 
@@ -278,7 +282,7 @@ Die Kachel hält sich zurück, wenn es nichts zu tun gibt: eine Zeile, dass die 
 | Netbox hat das API-Token abgelehnt | Das Token wurde beim Einfügen abgeschnitten, ist abgelaufen oder ist auf eine andere Adresse beschränkt. Legen Sie in Netbox ein neues an und speichern Sie es erneut. |
 | Diese Adresse zeigt auf ein privates Netz | Die Cloud-Edition erreicht nur öffentliche Adressen. Veröffentlichen Sie Netbox unter einer Adresse, die Kadratis erreichen kann, oder betreiben Sie Kadratis on-premise daneben. |
 | Das Netbox-Zertifikat konnte nicht geprüft werden | Netbox zeigt ein Zertifikat, dem Kadratis nicht vertraut. Installieren Sie ein vertrauenswürdiges Zertifikat oder aktivieren Sie **Zertifikatsfehler ignorieren**, wenn das Zertifikat eines Ihrer eigenen ist. |
-| Der Netbox-Server hat nicht rechtzeitig geantwortet | Netbox ist langsam, nicht erreichbar oder hinter einer Firewall, die den Aufruf verwirft. Prüfen Sie es vom Kadratis-Server aus und erhöhen Sie dann das Zeitlimit für Anfragen, wenn die Instanz einfach groß ist. |
+| Der Netbox-Server hat nicht rechtzeitig geantwortet | Netbox ist langsam, nicht erreichbar oder hinter einer Firewall, die den Aufruf verwirft. Prüfen Sie es vom Kadratis-Server aus und erhöhen Sie dann das Anfrage-Timeout, wenn die Instanz einfach groß ist. |
 | Objekte erscheinen als übersprungen, Grund „Rolle nicht zugeordnet“ oder „Standort nicht zugeordnet“ | Erwartet für alles, was Sie auf **Nicht importieren** gelassen haben. War es nicht beabsichtigt, ordnen Sie die Rolle oder den Standort zu und führen Sie den Lauf erneut aus. |
 | Eine Warnung meldet, dass ein Betriebssystem nicht in Ihrem Katalog steht | Die Netbox-Plattform hat keine Zuordnung unter **Zuordnungen > Betriebssysteme**, und ihr Name entspricht keiner Technologie der Familie **Betriebssystem** und keinem Betriebssystem des Katalogs. Ordnen Sie sie im Tab Zuordnungen zu oder legen Sie die Technologie unter **IT-Landschaft > Technologien** an, und führen Sie den Lauf erneut aus. Bis dahin bleibt das Betriebssystem unverändert. |
 | „Netbox hat seine Plattformen nicht zurückgegeben“ | Das API-Token darf keine Plattformen lesen. Geben Sie ihm in Netbox die Berechtigung auf `dcim.platform`, oder lassen Sie es: Geräte werden weiterhin importiert, nur die Zuordnung der Betriebssysteme ist nicht möglich. |

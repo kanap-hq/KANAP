@@ -1,3 +1,4 @@
+import type { GlpiTestFailureCode } from './glpi-errors';
 export type GlpiConnectionOverrides = {
   glpi_url?: string | null;
   glpi_user_token?: string | null;
@@ -135,6 +136,11 @@ export type GlpiDocument = {
 
 export type GlpiTestResult = {
   ok: boolean;
+  /** On a failure, the cause the card translates (`errors:<code>`); `message` is the English fallback. */
+  code?: GlpiTestFailureCode;
   message: string;
   latency_ms: number | null;
+  /** When the test ran, and whether it was kept on the saved settings. */
+  tested_at: string;
+  persisted: boolean;
 };

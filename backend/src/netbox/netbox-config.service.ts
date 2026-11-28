@@ -4,6 +4,12 @@ import { validate as isUuid } from 'uuid';
 import { AiSecretCipherService } from '../ai/ai-secret-cipher.service';
 import { AiAdapterConfig } from '../ai/control-plane/providers/adapter-config.entity';
 import { parseCredentialRef } from '../ai/control-plane/providers/adapter-config.service';
+import {
+  clearAdapterConnectionTest,
+  readLastConnectionTest,
+  recordAdapterConnectionTest,
+  type StoredConnectionTest,
+} from '../ai/control-plane/providers/adapter-connection-test';
 import { ProviderCredentialRef } from '../ai/control-plane/providers/provider.types';
 import { ENVIRONMENTS } from '../assets/services/assets-base.service';
 import { writeAuditLog } from '../audit/audit.service';
@@ -35,6 +41,7 @@ export const NETBOX_IMPLEMENTATION = 'netbox';
 // Lives in netbox.types.ts so the pure planner can read it without pulling the
 // Nest/TypeORM layers in; re-exported here for the callers that already use it.
 export { NETBOX_LINK_SOURCE } from './netbox.types';
+export { readLastConnectionTest };
 
 // Same values the PRTG adapter writes for the two other NOT NULL columns.
 const NETBOX_ADAPTER_ENVIRONMENT = 'production';
@@ -77,7 +84,7 @@ export type NetboxIntegrationView = {
   secret_writable: boolean;
   updated_at: string | null;
   /** The last connection test kept on this configuration. Null until one is recorded. */
-  last_test: { ok: boolean; tested_at: string } | null;
+  last_test: StoredConnectionTest | null;
 };
 
 export type NetboxIntegrationSaveInput = {
@@ -196,17 +203,6 @@ export function normalizeNetboxAddress(raw: string): string {
   return trimmed;
 }
 
-/** The last connection test stored in the configuration, or null when it is not usable. */
-export function readLastConnectionTest(
-  metadata: Record<string, unknown> | null,
-): { ok: boolean; tested_at: string } | null {
-  const raw = asRecord(metadata?.last_connection_test);
-  if (!raw || typeof raw.ok !== 'boolean') return null;
-  const testedAt = textOrNull(raw.tested_at);
-  if (!testedAt || Number.isNaN(Date.parse(testedAt))) return null;
-  return { ok: raw.ok, tested_at: testedAt };
-}
-
 /** Reads a stored sync state, downgrading a run that has been stuck for an hour. */
 export function readSyncState(metadata: Record<string, unknown> | null, nowMs = Date.now()): NetboxSyncStateView {
   const raw = asRecord(metadata?.sync_state);
@@ -304,27 +300,9 @@ export class NetboxConfigService {
   async recordConnectionTest(
     manager: EntityManager,
     config: AiAdapterConfig,
-    result: { ok: boolean; tested_at: string },
+    result: StoredConnectionTest,
   ): Promise<boolean> {
-    const rows = await manager.query(
-      `WITH changed AS (
-         UPDATE ai_adapter_configs
-         SET metadata_json = jsonb_set(coalesce(metadata_json, '{}'::jsonb), '{last_connection_test}', $1::jsonb)
-         WHERE id = $2 AND tenant_id = $3
-           AND base_url IS NOT DISTINCT FROM $4
-           AND credential_ref_json IS NOT DISTINCT FROM $5::jsonb
-         RETURNING 1
-       )
-       SELECT count(*)::int AS n FROM changed`,
-      [
-        JSON.stringify({ ok: result.ok, tested_at: result.tested_at }),
-        config.id,
-        config.tenant_id,
-        config.base_url ?? null,
-        config.credential_ref_json == null ? null : JSON.stringify(config.credential_ref_json),
-      ],
-    );
-    return Number(rows?.[0]?.n ?? 0) > 0;
+    return recordAdapterConnectionTest(manager, config, result);
   }
 
   getMapping(config: AiAdapterConfig | null): NetboxMappingView {
@@ -424,6 +402,7 @@ export class NetboxConfigService {
     // the test still applies.
     const addressChanged = !!existing && textOrNull(existing.base_url) !== baseUrl;
     const tokenChanged = !!existing && !!token;
+    const secretReplaced = tokenChanged && !!existing?.credential_ref_json && !destinationChanged;
 
     const enabled = booleanOr(input.enabled, existing?.enabled ?? false);
     if (enabled && !credentialRef) {
@@ -455,7 +434,8 @@ export class NetboxConfigService {
       recordId: saved.id,
       action: existing ? 'update' : 'create',
       before: existing ? this.auditView(existing) : null,
-      after: this.auditView(saved),
+      // A token replaced at the same address leaves both sides alike: the entry says it.
+      after: { ...this.auditView(saved), ...(secretReplaced ? { secret_replaced: true } : {}) },
       userId: opts?.userId ?? null,
       sourceRef: opts?.sourceRef ?? null,
     });
@@ -463,12 +443,7 @@ export class NetboxConfigService {
       // Only this key. The save above may have copied the previous test into
       // its snapshot; removing it here leaves every other metadata key as it
       // stands now, including one written while the save was in flight.
-      await manager.query(
-        `UPDATE ai_adapter_configs
-            SET metadata_json = coalesce(metadata_json, '{}'::jsonb) - 'last_connection_test'
-          WHERE id = $1 AND tenant_id = $2`,
-        [saved.id, tenantId],
-      );
+      await clearAdapterConnectionTest(manager, saved.id, tenantId);
       const cleared = { ...(asRecord(saved.metadata_json) ?? {}) };
       delete cleared.last_connection_test;
       return this.toView({ ...saved, metadata_json: cleared });
