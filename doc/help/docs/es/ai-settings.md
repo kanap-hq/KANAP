@@ -23,6 +23,8 @@ Un único selector decide qué modelo responde a las preguntas del chat:
 - **Ningún modelo configurado**: se muestra cuando no hay predeterminado *ni* modelo incluido, que es el caso de las instalaciones locales. Tenga en cuenta que esta opción sigue diciendo *Ningún modelo configurado* hasta que algún modelo se marque con la estrella como predeterminado de la organización, aunque ya haya registrado varios: describe la alternativa por defecto, no su registro de modelos.
 - **Cualquier modelo activo, por su nombre**: fije Kad a un modelo concreto, con independencia del predeterminado. Los modelos archivados no se ofrecen.
 
+En el servicio alojado, una línea bajo el selector indica *Kad no utiliza el modelo incluido de Kadratis.* cuando la opción mostrada hace funcionar Kad con un modelo propio: el modelo predeterminado o un modelo elegido por su nombre. Sigue al selector antes de guardar. En la página [Modelos IA](ai-models.md), el modelo incluido muestra entonces **No se usa** si tampoco funciona con él ningún agente.
+
 Así que hay dos formas de poner el chat en marcha: marcar un predeterminado con la estrella en la página [Modelos IA](ai-models.md) y dejar este selector en la primera opción, o elegir aquí un modelo por su nombre. Fijar uno aquí funciona exista o no un predeterminado.
 
 El texto de ayuda de debajo enlaza directamente con la página **Modelos IA**, que es de donde sale cada una de las opciones de la lista. Aquí ya no hay ningún proveedor, endpoint ni clave API que rellenar, ni ningún conmutador multimodal aparte: que el modelo pueda leer imágenes es una propiedad del modelo, que se define una sola vez en su editor.
@@ -112,19 +114,20 @@ Las dos formas comparten el resto:
 - Un límite de 60 solicitudes MCP por minuto para cada clave y cada conexión. Por encima, las solicitudes se rechazan con un encabezado `Retry-After` que indica el número de segundos que hay que esperar.
 - El mismo [registro MCP](#mcp-journal).
 
-La tarjeta **Claves y conexiones MCP** muestra un botón **Crear clave**, la **Dirección del servidor** a la que se conectan los clientes (con un botón para copiarla), el límite de **Vida útil máxima de la clave (días)** y una tabla con **Etiqueta**, **Tipo**, **Persona**, **Creada**, **Expira**, **Último uso** y **Estado** (**Activa** o **Revocada**).
+La tarjeta **Claves y conexiones MCP** muestra un botón **Crear clave** (para las personas con acceso MCP, ver más abajo), la **Dirección del servidor** a la que se conectan los clientes (con un botón para copiarla), el límite de **Vida útil máxima de la clave (días)** y una tabla con **Etiqueta**, **Tipo**, **Persona**, **Creada**, **Expira**, **Último uso** y **Estado** (**Activa** o **Revocada**).
 
 La columna **Tipo** indica **Clave API** o **Conexión**. Una fila de conexión muestra el nombre de la aplicación y el host al que vuelve, por ejemplo *Claude · claude.ai*. Una clave API muestra su prefijo junto a su etiqueta, por ejemplo *Portátil · abcd1234*. **Persona** indica quién creó la clave o aprobó la conexión.
 
 ### Crear una clave
 
-Las claves se crean solo en esta página, así que solo las crean las personas que pueden abrirla (`ai_settings:admin`, con acceso MCP). Una clave lee con el acceso de la persona que la creó: una clave creada por un administrador lee todo lo que ve un administrador. Trátela como la contraseña de esa persona, y prefiera una conexión cuando cada usuario pueda iniciar sesión.
+Las claves las crean en esta página las personas que pueden abrirla y además tienen acceso MCP (`ai_mcp:reader`, o Administrador): **Crear clave** solo aparece para ellas. Una clave lee con el acceso de la persona que la creó: una clave creada por un administrador lee todo lo que ve un administrador. Trátela como la contraseña de esa persona, y prefiera una conexión cuando cada usuario pueda iniciar sesión.
 
 1. Haga clic en **Crear clave**.
-2. Introduzca una **Etiqueta** descriptiva (por ejemplo, «Cursor en mi portátil»).
-3. Haga clic en **Crear**. Kadratis genera un secreto de un solo uso que empieza por `kanap_mcp_`.
+2. Introduzca una **Etiqueta** descriptiva (por ejemplo, «Cursor en mi portátil»). **Crear** permanece desactivado hasta que se introduce una etiqueta.
+3. Haga clic en **Crear**. Kadratis genera un secreto de un solo uso que empieza por `kanap_mcp_`. Un rechazo se muestra en el diálogo.
 4. Copie el secreto inmediatamente. Se muestra una sola vez y no puede recuperarse más tarde.
 5. Si usa Claude Code con una clave, copie el **Comando de Claude Code** que aparece bajo la clave. Ya contiene la dirección del servidor y la clave.
+6. Haga clic en **Listo**. Al cerrar el diálogo, con **Listo** o Escape, el secreto desaparece de la pantalla: el siguiente **Crear clave** empieza una clave nueva.
 
 El campo **Vida útil máxima de la clave (días)** limita cuánto tiempo puede vivir cualquier clave recién emitida, independientemente de lo que solicite la petición. También limita cuánto dura una conexión. Déjelo vacío para no tener límite de expiración. Este campo pertenece a la configuración de arriba y no a esta tarjeta: lo escribe el botón **Guardar configuración**, no la creación de una clave.
 

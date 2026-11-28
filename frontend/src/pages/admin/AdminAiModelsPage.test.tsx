@@ -8,6 +8,7 @@ import AdminAiModelsPage from './AdminAiModelsPage';
 import { createAppTheme } from '../../config/ThemeContext';
 import api from '../../api';
 import { KanapDialogProvider } from '../../components/design';
+import { AGENT_NAME, PRODUCT_NAME } from '../../config/product';
 
 vi.mock('../../api', () => ({
   default: {
@@ -21,9 +22,10 @@ vi.mock('../../api', () => ({
 const localeState = vi.hoisted(() => ({ current: 'en' }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => localeState.current }));
 
+const featuresState = vi.hoisted(() => ({ builtinAiProvider: false }));
 vi.mock('../../config/FeaturesContext', () => ({
   useFeatures: () => ({
-    config: { features: { aiSettings: true, builtinAiProvider: false } },
+    config: { features: { aiSettings: true, builtinAiProvider: featuresState.builtinAiProvider } },
   }),
 }));
 
@@ -65,16 +67,24 @@ function effortSupport(provider: string, model: string) {
   return { levels: ALL_LEVELS, server_may_ignore: provider !== 'openai' };
 }
 
+// The limits an empty model timeout falls back to, as GET /ai/model-configs gives them.
+const APPLIED_TIMEOUTS = { chat_ms: 300_000, agent_ms_min: 120_000, agent_ms_max: 120_000 };
+
 function withModel(overrides: Record<string, unknown>) {
   const original = (api.get as any).getMockImplementation();
   (api.get as any).mockImplementation((url: string, config?: any) => (url === '/ai/model-configs'
-    ? Promise.resolve({ data: { model_configs: [{ ...MODEL, ...overrides }], secret_writable: true } })
+    ? Promise.resolve({
+      data: { model_configs: [{ ...MODEL, ...overrides }], secret_writable: true, applied_timeouts: APPLIED_TIMEOUTS },
+    })
     : original(url, config)));
 }
 
-function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  render(
+function newClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+}
+
+function renderPage(client = newClient()) {
+  return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={client}>
         <MemoryRouter>
@@ -98,12 +108,13 @@ describe('AdminAiModelsPage model dialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localeState.current = 'en';
+    featuresState.builtinAiProvider = false;
     (api.get as any).mockImplementation((url: string, config?: { params?: { provider: string; model: string } }) => {
       switch (url) {
         case '/ai/model-configs/reasoning-efforts':
           return Promise.resolve({ data: effortSupport(config!.params!.provider, config!.params!.model) });
         case '/ai/model-configs':
-          return Promise.resolve({ data: { model_configs: [MODEL], secret_writable: true } });
+          return Promise.resolve({ data: { model_configs: [MODEL], secret_writable: true, applied_timeouts: APPLIED_TIMEOUTS } });
         case '/ai/settings':
           return Promise.resolve({
             data: {
@@ -505,7 +516,7 @@ describe('AdminAiModelsPage model dialog', () => {
     await showTestResult();
 
     fireEvent.change(screen.getByDisplayValue('Mistral medium'), { target: { value: 'Mistral medium 2' } });
-    fireEvent.change(screen.getByPlaceholderText('e.g., 120'), { target: { value: '30' } });
+    fireEvent.change(screen.getByPlaceholderText(`${AGENT_NAME}: 300, agents: 120`), { target: { value: '30' } });
     expect(screen.getByText(/Connection successful \(420 ms\)/)).toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText('e.g., https://ai.example.com'), { target: { value: 'http://127.0.0.1:9' } });
@@ -634,5 +645,200 @@ describe('AdminAiModelsPage model dialog', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('This model is still used by: Kad. Reassign them before archiving it.');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  // What the list and the settings answer, on top of the defaults above.
+  function withList(models: Record<string, unknown>[], applied = APPLIED_TIMEOUTS, settings?: Record<string, unknown>) {
+    const original = (api.get as any).getMockImplementation();
+    (api.get as any).mockImplementation((url: string, config?: any) => {
+      if (url === '/ai/model-configs') {
+        return Promise.resolve({ data: { model_configs: models, secret_writable: true, applied_timeouts: applied } });
+      }
+      if (url === '/ai/settings/builtin-usage') {
+        return Promise.resolve({ data: { count: 4, limit: 200, reset_date: '2026-12-01T00:00:00.000Z' } });
+      }
+      if (url === '/ai/settings' && settings) {
+        return original(url, config).then((response: any) => ({ data: { ...response.data, settings } }));
+      }
+      return original(url, config);
+    });
+  }
+
+  async function hoverName(name: string) {
+    fireEvent.mouseOver(await screen.findByText(name));
+    return screen.findByRole('tooltip');
+  }
+
+  it('shows under an empty timeout the limit that applies to the model use', async () => {
+    const cases: Array<[Record<string, unknown>, string]> = [
+      [{ used_by: { chat: true, agents: [] }, is_default: false }, '300'],
+      [{ used_by: { chat: false, agents: [{ id: 'a1', name: 'Triage' }] }, is_default: false }, '120'],
+      [{ used_by: { chat: true, agents: [{ id: 'a1', name: 'Triage' }] }, is_default: false }, `${AGENT_NAME}: 300, agents: 120`],
+      [{ used_by: { chat: false, agents: [] }, is_default: false }, `${AGENT_NAME}: 300, agents: 120`],
+    ];
+    for (const [overrides, expected] of cases) {
+      withList([{ ...MODEL, ...overrides }]);
+      const { unmount } = renderPage();
+      await screen.findByText('Mistral medium');
+      fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText('Timeout (seconds)')).toBeInTheDocument();
+      expect(within(dialog).getByPlaceholderText(expected)).toHaveValue('');
+      unmount();
+    }
+  });
+
+  it('shows the agent range when the stages differ, and both limits for a new model', async () => {
+    withList([{ ...MODEL, used_by: { chat: false, agents: [{ id: 'a1', name: 'Triage' }] }, is_default: false }], {
+      chat_ms: 600_000, agent_ms_min: 120_000, agent_ms_max: 180_000,
+    });
+    renderPage();
+    await screen.findByText('Mistral medium');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(await screen.findByPlaceholderText('120 to 180')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'New model' }));
+    expect(await screen.findByPlaceholderText(`${AGENT_NAME}: 600, agents: 120 to 180`)).toBeInTheDocument();
+  });
+
+  it('counts the assistant on the default model when nothing is assigned to it', async () => {
+    withList([{ ...MODEL, used_by: { chat: false, agents: [] }, is_default: true }], APPLIED_TIMEOUTS, { chat_model_config_id: null });
+    renderPage();
+    const tooltip = await hoverName('Mistral medium');
+    expect(tooltip).toHaveTextContent(`Used by ${AGENT_NAME} and agents without a model of their own`);
+  });
+
+  it('names who uses each active model in a tooltip on its name', async () => {
+    withList([
+      { ...MODEL, used_by: { chat: true, agents: [{ id: 'a1', name: 'Triage' }, { id: 'a2', name: 'Reply' }] }, is_default: false },
+      { ...MODEL, id: 'model-2', name: 'Spare model', used_by: { chat: false, agents: [] }, is_default: false },
+    ]);
+    renderPage();
+    const tooltip = await hoverName('Mistral medium');
+    expect(tooltip).toHaveTextContent(`Used by ${AGENT_NAME} and 2 agents`);
+    expect(tooltip).toHaveTextContent('Triage, Reply');
+    fireEvent.mouseLeave(screen.getByText('Mistral medium'));
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+
+    expect(await hoverName('Spare model')).toHaveTextContent('Unused');
+    // No column and no permanent line: the table keeps its columns.
+    expect(screen.queryByRole('columnheader', { name: 'Used by' })).not.toBeInTheDocument();
+  });
+
+  it('marks the included model as not used when nothing runs on it', async () => {
+    featuresState.builtinAiProvider = true;
+    withList([{ ...MODEL, is_default: false }], APPLIED_TIMEOUTS, {
+      chat_model_config_id: 'model-1',
+      builtin_provider: { in_use: false, used_by_assistant: false },
+    });
+    renderPage();
+    expect(await screen.findByText('Not used')).toBeInTheDocument();
+    // The star stays the workspace rule: no default model, the included one is the default.
+    expect(screen.getByLabelText('Default')).toBeInTheDocument();
+  });
+
+  it('says the included model serves agents without a model of their own, or the assistant too', async () => {
+    featuresState.builtinAiProvider = true;
+    withList([{ ...MODEL, is_default: false }], APPLIED_TIMEOUTS, {
+      chat_model_config_id: 'model-1',
+      builtin_provider: { in_use: true, used_by_assistant: false },
+    });
+    const { unmount } = renderPage();
+    const builtinName = `${PRODUCT_NAME} included model`;
+    expect(await hoverName(builtinName)).toHaveTextContent('Used by agents without a model of their own');
+    expect(screen.queryByText('Not used')).not.toBeInTheDocument();
+    unmount();
+
+    withList([{ ...MODEL, is_default: false, used_by: { chat: false, agents: [] } }], APPLIED_TIMEOUTS, {
+      chat_model_config_id: null,
+      builtin_provider: { in_use: true, used_by_assistant: true },
+    });
+    renderPage();
+    expect(await hoverName(builtinName)).toHaveTextContent(`Used by ${AGENT_NAME} and agents without a model of their own`);
+  });
+
+  // The server as it answers after each gesture: the default model and the included model's use move together.
+  function withServer(state: { isDefault: boolean }) {
+    const original = (api.get as any).getMockImplementation();
+    (api.get as any).mockImplementation((url: string, config?: any) => {
+      if (url === '/ai/model-configs') {
+        return Promise.resolve({
+          data: {
+            model_configs: [{ ...MODEL, is_default: state.isDefault }],
+            secret_writable: true,
+            applied_timeouts: APPLIED_TIMEOUTS,
+          },
+        });
+      }
+      if (url === '/ai/settings/builtin-usage') {
+        return Promise.resolve({ data: { count: 4, limit: 200, reset_date: '2026-12-01T00:00:00.000Z' } });
+      }
+      if (url === '/ai/settings') {
+        return original(url, config).then((response: any) => ({
+          data: {
+            ...response.data,
+            settings: {
+              chat_model_config_id: 'model-1',
+              builtin_provider: { in_use: !state.isDefault, used_by_assistant: false },
+            },
+          },
+        }));
+      }
+      return original(url, config);
+    });
+  }
+
+  it('reads the included model use again after the default star moves', async () => {
+    featuresState.builtinAiProvider = true;
+    const state = { isDefault: true };
+    withServer(state);
+    (api.post as any).mockImplementation((url: string) => {
+      state.isDefault = url.endsWith('/set-default');
+      return Promise.resolve({ data: { model_config: { ...MODEL, is_default: state.isDefault } } });
+    });
+    renderPage();
+    expect(await screen.findByText('Not used')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stop using as default model' }));
+    await waitFor(() => expect(screen.getByLabelText('Default')).toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('Not used')).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use as default model' }));
+    expect(await screen.findByText('Not used')).toBeInTheDocument();
+  });
+
+  it('shows the included model use saved on the assistant settings page, without a reload', async () => {
+    featuresState.builtinAiProvider = true;
+    const state = { isDefault: true };
+    withServer(state);
+    const client = newClient();
+    const { unmount } = renderPage(client);
+    expect(await screen.findByText('Not used')).toBeInTheDocument();
+    unmount();
+
+    // The assistant settings page saves, then reloads the settings it shows (AdminAiPage).
+    state.isDefault = false;
+    await client.invalidateQueries({ queryKey: ['admin-ai-settings'] });
+    await client.invalidateQueries({ queryKey: ['ai-model-configs'] });
+
+    renderPage(client);
+    await screen.findByText('Mistral medium');
+    await waitFor(() => expect(screen.queryByText('Not used')).not.toBeInTheDocument());
+  });
+
+  it('shows nothing about the included model on-premise', async () => {
+    withList([{ ...MODEL, is_default: false }], APPLIED_TIMEOUTS, {
+      chat_model_config_id: 'model-1',
+      builtin_provider: { in_use: false, used_by_assistant: false },
+    });
+    renderPage();
+    await screen.findByText('Mistral medium');
+    expect(screen.queryByText(`${PRODUCT_NAME} included model`)).not.toBeInTheDocument();
+    expect(screen.queryByText('Not used')).not.toBeInTheDocument();
+    // The applied limits show the same.
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(await screen.findByPlaceholderText('300')).toBeInTheDocument();
   });
 });
