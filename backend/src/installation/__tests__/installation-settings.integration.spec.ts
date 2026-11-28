@@ -224,7 +224,7 @@ async function testWritesAuditAndLocks(seeded: Seeded) {
     const unreadable = await service.getState('ai', manager);
     assert.deepEqual([unreadable.settings.chat_max_tokens.source, unreadable.settings.chat_max_tokens.file_unreadable, (unreadable.settings.chat_max_tokens as any).value], ['database', true, 4096]);
     assert.deepEqual(service.fileWarnings(), [
-      '[CONFIG] AI_CHAT_MAX_TOKENS cannot be read (a positive whole number is expected): it is ignored, the value set on the screen or the default applies.',
+      '[CONFIG] AI_CHAT_MAX_TOKENS cannot be read (a whole number of at least 1 is expected): it is ignored, the value set on the screen or the default applies.',
     ]);
     delete process.env.AI_CHAT_MAX_TOKENS;
 

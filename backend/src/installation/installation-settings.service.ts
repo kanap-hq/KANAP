@@ -243,7 +243,9 @@ export class InstallationSettingsService implements OnModuleDestroy {
 }
 
 function expected(declaration: InstallationSettingDeclaration): string {
-  return declaration.type === 'integer' ? 'a positive whole number is expected' : 'a value is expected';
+  if (declaration.type !== 'integer') return 'a value is expected';
+  if (declaration.file) return `a whole number of at least ${declaration.file.min} is expected`;
+  return `a whole number from ${declaration.min} to ${declaration.max} is expected`;
 }
 
 function messageOf(error: unknown): string {

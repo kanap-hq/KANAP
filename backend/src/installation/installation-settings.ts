@@ -38,11 +38,18 @@ type DeclarationBase = {
 
 export type IntegerSettingDeclaration = DeclarationBase & {
   type: 'integer';
-  /** The bounds of a value set on the screen. A file value is read as today (a positive integer). */
+  /**
+   * The bounds of a value: the route writes nothing outside them, the database value and, unless
+   * `file` says otherwise, the file value are read within them (outside, they count as absent).
+   */
   min: number;
   max: number;
-  /** A file value above it is read as it (a ceiling the code applied before the setting existed). */
-  fileCeiling?: number;
+  /**
+   * The reading of a variable older than the setting, kept as the code read it before so that an
+   * installation does not change behaviour on update: below `min` the value cannot be read, above
+   * `ceiling` it is read as `ceiling`, and it has no other upper bound.
+   */
+  file?: { min: number; ceiling?: number };
   default: Default<number>;
 };
 
@@ -123,9 +130,15 @@ function fileValue(declaration: InstallationSettingDeclaration, env: NodeJS.Proc
   if (raw === undefined) return { present: false };
   switch (declaration.type) {
     case 'integer': {
-      const parsed = parsePositiveInteger(raw);
-      if (parsed === null) return { present: true, readable: false };
-      return { present: true, readable: true, value: declaration.fileCeiling ? Math.min(parsed, declaration.fileCeiling) : parsed };
+      // As the code read the variables before the settings: `'12abc'` is 12, `'1.9'` is 1.
+      const parsed = Number.parseInt(raw.trim(), 10);
+      const reading = declaration.file;
+      if (!Number.isFinite(parsed) || parsed < (reading ? reading.min : declaration.min)) return { present: true, readable: false };
+      if (reading) {
+        return { present: true, readable: true, value: reading.ceiling !== undefined ? Math.min(parsed, reading.ceiling) : parsed };
+      }
+      if (parsed > declaration.max) return { present: true, readable: false };
+      return { present: true, readable: true, value: parsed };
     }
     case 'boolean':
       return { present: true, readable: true, value: parseBoolean(raw) };
@@ -141,7 +154,7 @@ function databaseValue(declaration: InstallationSettingDeclaration, row: Record<
   switch (declaration.type) {
     case 'integer': {
       const number = typeof value === 'number' ? value : Number(value);
-      return Number.isInteger(number) && number > 0 ? number : null;
+      return Number.isInteger(number) && number >= declaration.min && number <= declaration.max ? number : null;
     }
     case 'boolean':
       return typeof value === 'boolean' ? value : null;

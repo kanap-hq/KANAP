@@ -135,6 +135,36 @@ function testDeclarationDefaults() {
   ]);
 }
 
+/** A declaration whose lower bound is 0: 0 is a value, in the database and in the file; both read within the bounds. */
+function testZeroIsAValueWhenDeclared() {
+  const domain: InstallationDomain = {
+    name: 'spec',
+    table: 'installation_spec_settings',
+    settings: [{ key: 'retries', column: 'retries', env: 'SPEC_RETRIES', type: 'integer', min: 0, max: 5, default: 3 }],
+  };
+  const read = (env: Record<string, string>, row: Record<string, unknown> | null = null) => {
+    const setting = resolveDomain(domain, row, env as NodeJS.ProcessEnv).get('retries')!;
+    return [setting.value, setting.source, setting.fileUnreadable];
+  };
+  assert.deepEqual([...validateWrite(domain, { retries: 0 }, resolveDomain(domain, null, {} as NodeJS.ProcessEnv), { canEncrypt: true })], [['retries', 0]]);
+  assert.deepEqual(
+    {
+      database0: read({}, { retries: 0 }),
+      file0: read({ SPEC_RETRIES: '0' }),
+      fileBelow: read({ SPEC_RETRIES: '-1' }, { retries: 2 }),
+      fileAbove: read({ SPEC_RETRIES: '6' }, { retries: 2 }),
+      databaseAbove: read({}, { retries: 6 }),
+    },
+    {
+      database0: [0, 'database', false],
+      file0: [0, 'file', false],
+      fileBelow: [2, 'database', true],
+      fileAbove: [2, 'database', true],
+      databaseAbove: [3, 'default', false],
+    },
+  );
+}
+
 function testFeaturesFollowOnlyChanges() {
   const previousKey = process.env.BRAVE_SEARCH_API_KEY;
   delete process.env.BRAVE_SEARCH_API_KEY;
@@ -216,6 +246,7 @@ async function run() {
   testStateHoldsNoSecret();
   testWrites();
   testDeclarationDefaults();
+  testZeroIsAValueWhenDeclared();
   testFeaturesFollowOnlyChanges();
   await testKeyOfSpacesIsNotConfigured();
   testEncryptionKeyNames();
