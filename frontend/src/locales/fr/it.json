@@ -1015,7 +1015,6 @@
         "netbox": "Netbox"
       },
       "loadFailed": "Échec du chargement des paramètres de la cartographie SI.",
-      "updateSuccess": "Paramètres de la cartographie SI mis à jour avec succès",
       "updateFailed": "Échec de la mise à jour des paramètres",
       "groups": {
         "locations": {

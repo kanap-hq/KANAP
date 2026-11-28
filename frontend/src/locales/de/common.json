@@ -1206,7 +1206,6 @@
     "remove": "Entfernen",
     "locked": "Integriert",
     "protectedHint": "Integrierter Wert: er kann zurückgezogen, aber nicht entfernt werden.",
-    "addValue": "Wert hinzufügen",
     "noValues": "Noch keine Werte konfiguriert.",
     "physical": "Physisch",
     "category": "Kategorie",
@@ -1254,22 +1253,6 @@
     "description": "Beschreibung",
     "translationsHelp": "Lassen Sie ein Feld leer, um die automatische Übersetzung zu verwenden, wenn es eine gibt, sonst den Basistext.",
     "shownAs": "Angezeigt: {{value}}",
-    "hostingTypes": {
-      "add": "Hosting-Typ hinzufügen",
-      "empty": "Keine Hosting-Typen definiert."
-    },
-    "assetTypes": {
-      "add": "Asset-Typ hinzufügen",
-      "empty": "Keine Asset-Typen definiert."
-    },
-    "serverRoles": {
-      "add": "Serverrolle hinzufügen",
-      "empty": "Keine Serverrollen definiert."
-    },
-    "entities": {
-      "add": "Entität hinzufügen",
-      "empty": "Keine Entitäten definiert."
-    },
     "graphTiers": {
       "top": "Oben",
       "upper": "Obere Mitte",

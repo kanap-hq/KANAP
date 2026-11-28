@@ -1015,7 +1015,6 @@
         "netbox": "Netbox"
       },
       "loadFailed": "Error al cargar la configuración del panorama IT.",
-      "updateSuccess": "Configuración del panorama IT actualizada correctamente",
       "updateFailed": "Error al actualizar la configuración",
       "groups": {
         "locations": {

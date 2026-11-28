@@ -1015,7 +1015,6 @@
         "netbox": "Netbox"
       },
       "loadFailed": "Fehler beim Laden der IT-Landschaft-Einstellungen.",
-      "updateSuccess": "IT-Landschaft-Einstellungen erfolgreich aktualisiert",
       "updateFailed": "Fehler beim Aktualisieren der Einstellungen",
       "groups": {
         "locations": {

@@ -1206,7 +1206,6 @@
     "remove": "Remove",
     "locked": "Built-in",
     "protectedHint": "Built-in value: it can be retired but not removed.",
-    "addValue": "Add value",
     "noValues": "No values configured yet.",
     "physical": "Physical",
     "category": "Category",
@@ -1254,22 +1253,6 @@
     "description": "Description",
     "translationsHelp": "Leave a field empty to use the automatic translation when one exists, otherwise the base text.",
     "shownAs": "Shown: {{value}}",
-    "hostingTypes": {
-      "add": "Add hosting type",
-      "empty": "No hosting types defined."
-    },
-    "assetTypes": {
-      "add": "Add asset type",
-      "empty": "No asset types defined."
-    },
-    "serverRoles": {
-      "add": "Add server role",
-      "empty": "No server roles defined."
-    },
-    "entities": {
-      "add": "Add entity",
-      "empty": "No entities defined."
-    },
     "graphTiers": {
       "top": "Top",
       "upper": "Upper",
