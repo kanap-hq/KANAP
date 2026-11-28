@@ -6,7 +6,7 @@ Pour la lisibilité des cartes, les **Entités** et les **Rôles de serveur** in
 
 ## Où trouver cette page
 
-- Espace de travail : **Cartographie SI**
+- Module : **Cartographie SI**
 - Chemin : **Cartographie SI > Paramètres**, dernière entrée du menu
 - Autorisations :
   - Vous avez besoin au minimum de `settings:reader` pour consulter l'onglet **Listes**.
@@ -33,7 +33,7 @@ Dans l'onglet **Listes**, l'éditeur **Classifications et continuité** se trouv
 3. **Applications, services et interfaces**
 4. **Incidents**
 
-Les listes des technologies sont dans deux sections : **Familles de technologies** et **Zones d'administration** sous **Serveurs et connexions**, **Types d'hébergement** sous **Sites**. Les autres écrans appellent cette page les réglages IT.
+Les listes des technologies sont dans deux sections : **Familles de technologies** et **Zones d'administration** sous **Serveurs et connexions**, **Types d'hébergement** sous **Sites**. Les autres écrans appellent cette page les paramètres de la cartographie SI.
 
 Dans une section, les listes sont triées par nom. Chaque liste apparaît comme un panneau extensible, avec une courte indication de l'endroit où ses valeurs sont utilisées (par exemple, *Applications / Choix de la catégorie*). Quand les valeurs ne disent pas à quoi sert une liste, une icône d'information à côté de son nom le dit au survol. Cliquez sur un en-tête de panneau pour le développer et voir les valeurs. Le contenu de chaque section ne se charge que lorsque vous la développez pour la première fois, ce qui maintient la rapidité de la page même avec de nombreuses listes.
 

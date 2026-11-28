@@ -6,7 +6,7 @@ Anders als ein Dateifreigabesystem ist die Wissensdatenbank nicht nur ein Ort zu
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Wissensdatenbank**
+- Modul: **Wissensdatenbank**
 - Berechtigungen:
   - `knowledge:reader` ermöglicht das Öffnen und Lesen von Dokumenten
   - `knowledge:member` ermöglicht das Erstellen, Bearbeiten, Kommentieren, Organisieren von Ordnern und Verwalten von Dokumentmetadaten

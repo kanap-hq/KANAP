@@ -162,7 +162,7 @@
         "total": "Gesamt"
       },
       "confirmations": {
-        "remove": "Diese Mitwirkenden-Konfiguration entfernen?"
+        "remove": "Die Einstellungen dieses Mitwirkenden entfernen?"
       },
       "fields": {
         "assignTeam": "Einem Team zuordnen",

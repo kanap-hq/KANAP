@@ -4,7 +4,7 @@ La Configuración del portafolio le permite configurar el sistema de evaluación
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Portafolio**
+- Módulo: **Portafolio**
 - Ruta: **Portafolio > Configuración**
 - Permisos:
   - Necesita `portfolio_settings:admin` para modificar la configuración

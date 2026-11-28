@@ -4,7 +4,7 @@ Actividad es el historial de solo lectura de todo lo que sus agentes han hecho y
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Agentes IA**
+- Módulo: **Agentes IA**
 - Ruta: **Agentes IA → Actividad**
 - Ruta URL: `/agents/activity`
 - Permiso: `ai_agents:reader` (solo consulta: cualquiera que pueda abrir Agentes IA puede leer la cronología)

@@ -35,7 +35,7 @@ La liste ne montre que les pages que vos rôles vous permettent d'ouvrir, exacte
 - Une page que vous pouvez lire sans pouvoir la modifier figure dans la liste. Elle s'ouvre en lecture seule.
 - Une page que vous ne pouvez pas ouvrir n'apparaît pas, pas plus qu'un groupe resté vide.
 - Les pages qui dépendent d'une fonctionnalité n'apparaissent que si cette fonctionnalité est active : la facturation dans le cloud, **Authentification** quand la connexion Microsoft est configurée, les pages de l'IA quand l'IA est activée.
-- Avec un accès aux données limité, ces pages ne figurent pas dans la liste : les pages de **Gestion budgétaire > Administration**, **Réglages des contrats**, **Accès aux données** et **Journal d'audit**.
+- Avec un accès aux données limité, ces pages ne figurent pas dans la liste : les pages de **Gestion budgétaire > Paramètres**, **Paramètres des contrats**, **Accès aux données** et **Journal d'audit**.
 - Sur une installation sur vos propres serveurs, les pages réservées au cloud (facturation, données d'exemple) ne figurent pas dans la liste. Le groupe **Installation** s'affiche pour le rôle Administrateur avec accès à toutes les données.
 - Sur l'hôte de la plateforme, la liste ne contient que les pages de l'installation et de la plateforme.
 

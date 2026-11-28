@@ -166,19 +166,19 @@
       "description": "Description",
       "connection": "Connexion",
       "manageConnections": "Gérer les intégrations",
-      "reviewBody": "L'agent est créé avec le statut Non démarré. Définissez ce qu'il surveille dans ses réglages, testez-le sur un ticket, puis activez-le.",
+      "reviewBody": "L'agent est créé avec le statut Non démarré. Définissez ce qu'il surveille dans ses paramètres, testez-le sur un ticket, puis activez-le.",
       "cancel": "Annuler",
       "create": "Créer",
       "sre": "Supervision d'infrastructure (SRE)",
       "monitoringConnection": "Outil de supervision",
       "monitoringConnectionHint": "Aucun outil de supervision n'est encore connecté. Connectez-en un dans Intégrations ; d'ici là, l'agent est créé sans connexion et reste inactif.",
-      "reviewBodySre": "L'agent est créé avec le statut Non démarré. Choisissez les alertes à surveiller dans ses réglages, testez-le sur une alerte, puis activez-le."
+      "reviewBodySre": "L'agent est créé avec le statut Non démarré. Choisissez les alertes à surveiller dans ses paramètres, testez-le sur une alerte, puis activez-le."
     },
     "newAgentSreDefaultName": "Agent de supervision d'infrastructure",
     "newAgentSreDescription": "Agent de supervision en brouillon : il lit les alertes, les met en relation avec vos données et prépare des notes de diagnostic à relire.",
     "cost": "Coût : aujourd’hui / 7 jours",
     "includedModelPaused": "Les agents qui utilisent le modèle inclus {{product}} sont en pause jusqu'à ce qu'un administrateur le confirme dans Administration > {{agent}}.",
-    "includedModelOpenSettings": "Ouvrir les réglages {{agent}}"
+    "includedModelOpenSettings": "Ouvrir les paramètres {{agent}}"
   },
   "approvals": {
     "title": "Approbations agents",
@@ -285,7 +285,7 @@
       "proposal": "Proposition",
       "decision": "Décision",
       "execution": "Exécution",
-      "configuration": "Configuration",
+      "configuration": "Paramètres",
       "check": "Vérifications",
       "pause": "Pause",
       "error": "Erreur"
@@ -304,7 +304,7 @@
       "poller_paused_by_emergency_pause": "Surveillance des tickets suspendue",
       "daily_cap_reached": "Limite quotidienne atteinte",
       "poller_cycle_failed": "Cette passe a échoué",
-      "agent_config_updated": "Configuration de l'agent mise à jour",
+      "agent_config_updated": "Paramètres de l'agent mis à jour",
       "agent_autonomy_granted": "Mode automatique activé",
       "agent_autonomy_revoked": "Mode automatique désactivé",
       "agent_autonomy_demoted": "Mode automatique rétrogradé",

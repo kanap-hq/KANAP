@@ -142,7 +142,7 @@ The Details tab manages **yearly metrics**. Use the year tabs at the top to swit
 - Each value is saved for the selected year when you leave the field (or press Enter). A value that is not valid shows a message under the field, for example "Enter a whole number, 0 or more." The field goes back to the stored value, and the message stays until you type again
 - Numbers follow the language of Kadratis: type `12,5` in French, German or Spanish and `12.5` in English
 - Each year is stored on its own: switching years loads that year's values
-- If the company figures for the year are **frozen**, the fields are locked and a notice says that a budget administrator can unfreeze them (**Budget management > Administration > Freeze master data**)
+- If the company figures for the year are **frozen**, the fields are locked and a notice says that a budget administrator can unfreeze them (**Budget management > Settings > Freeze master data**)
 - You need `companies:member` to edit metrics
 
 ## Chart of Accounts
@@ -205,7 +205,7 @@ Many parts of the app are year-aware. Companies have metrics per year:
 **Freeze and copy**:
 
 - You can **freeze** a year once finalized to prevent edits.
-- Use **Copy yearly metrics** in **Budget management > Administration** to copy metrics from one year to another (choose which metrics to copy). Frozen years cannot be overwritten.
+- Use **Copy yearly metrics** in **Budget management > Settings** to copy metrics from one year to another (choose which metrics to copy). Frozen years cannot be overwritten.
 
 ## CSV import/export
 
@@ -261,6 +261,6 @@ The columns, in this order. The metric columns follow the year selected in the l
 - **Chart of Accounts**: assign CoAs to companies to ensure consistent account usage across OPEX/CAPEX lines.
 - **Turnover**: enter values in millions of the company's base currency (e.g., 2.5 = 2.5 million in that currency).
 - **Headcount** is the most common allocation driver; keep it up to date for the current year.
-- **Frozen metrics**: you can still review them, but edits are blocked until a budget administrator unfreezes the year in **Budget management > Administration > Freeze master data**.
+- **Frozen metrics**: you can still review them, but edits are blocked until a budget administrator unfreezes the year in **Budget management > Settings > Freeze master data**.
 - **Column chooser**: use it to show or hide columns like City, Address, State, or Created to suit your workflow.
 - **Metric columns link to Details**: clicking a Headcount, IT users, or Turnover value opens the Details tab directly for that company.

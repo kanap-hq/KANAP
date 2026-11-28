@@ -29,7 +29,7 @@ Das sind die fünf Schritte der Kachel **Ihre ersten fünf Schritte** auf der St
 
 **Was Sie tun.** Öffnen Sie den Reiter **Budget**, dann **Verknüpfungen** und **Verlauf**.
 
-**Was Sie sehen.** **Budget** zeigt die Beträge des Jahres in vier von fünf möglichen Budgetspalten. Ihre Namen und welche angezeigt werden, legen Sie unter **Budgetverwaltung > Administration** fest. **Verknüpfungen** verbindet die Zeile mit dem, was sie bezahlt: Verträge, Anwendungen, Projekte. **Verlauf** bewahrt jede Änderung mit Autor und Datum.
+**Was Sie sehen.** **Budget** zeigt die Beträge des Jahres in vier von fünf möglichen Budgetspalten. Ihre Namen und welche angezeigt werden, legen Sie unter **Budgetverwaltung > Einstellungen** fest. **Verknüpfungen** verbindet die Zeile mit dem, was sie bezahlt: Verträge, Anwendungen, Projekte. **Verlauf** bewahrt jede Änderung mit Autor und Datum.
 
 ## 3. Ein Bericht
 

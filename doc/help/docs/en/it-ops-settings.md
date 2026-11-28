@@ -6,7 +6,7 @@ For map readability, **Entities** and **Server roles** also include a **Graph ti
 
 ## Where to find it
 
-- Workspace: **IT Landscape**
+- Module: **IT Landscape**
 - Path: **IT Landscape → Settings**, the last entry of the menu
 - Permissions:
   - You need at least `settings:reader` to view the **Lists** tab.

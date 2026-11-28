@@ -644,7 +644,7 @@
       "overlap_one": "{{count}} de ellos ya lo vigila otro agente.",
       "overlap_other": "{{count}} de ellos ya los vigila otro agente."
     },
-    "operatingSettings": "Ajustes operativos",
+    "operatingSettings": "Configuración operativa",
     "agentPriority": "Prioridad del agente",
     "reviewCooldown": "Revisar cada (horas)",
     "onConflict": "Colisión de ticket",

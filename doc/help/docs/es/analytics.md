@@ -369,7 +369,7 @@ Los siete informes presupuestarios también se pueden limitar a un valor de una 
 - Cuando Kad crea una línea, necesita un valor en cada dimensión obligatoria del tipo de la línea. En un espacio de trabajo creado antes de las dimensiones recomendadas, una línea CAPEX necesita **PP&E type**, **Investment type** y **Priority**.
 - Kad sabe qué dimensiones son obligatorias. Una línea nueva necesita un valor en cada una de ellas, y Kad no puede borrar el valor de una dimensión obligatoria. Kad rechaza una petición que no cumple la regla e indica el motivo, por ejemplo "Tipo de coste is required for spend item creation."
 - Kad también puede crear un valor en la dimensión que usted indique. Sin dimensión, el valor se crea en la dimensión por defecto.
-- Con derecho de lectura sobre la analítica, Kad también lee los ajustes de cada dimensión, su número de valores y las líneas que la usan. Pregunte, por ejemplo: «¿Qué dimensiones son obligatorias?»
+- Con derecho de lectura sobre la analítica, Kad también lee la configuración de cada dimensión, su número de valores y las líneas que la usan. Pregunte, por ejemplo: «¿Qué dimensiones son obligatorias?»
 
 ---
 
@@ -395,7 +395,7 @@ Para definir valores en las líneas de presupuesto desde un archivo, use el arch
 | `description` | Texto libre |
 | `status` | `enabled` o `disabled`. Vacía significa `enabled` para un valor nuevo y conserva el estado guardado en una actualización |
 | `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado. Vacía si no hay fin. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, termina el valor hoy |
-| `applies_to` | El ajuste **Usada para**, siempre la última columna. `opex`, `capex`, o vacía para **OPEX y CAPEX**. Un archivo sin esta columna deja los ajustes como están. Una celda vacía conserva el ajuste de un valor guardado, y `-` establece **OPEX y CAPEX**. Un valor nuevo con una celda vacía es para **OPEX y CAPEX** |
+| `applies_to` | El ajuste **Usada para**, siempre la última columna. `opex`, `capex`, o vacía para **OPEX y CAPEX**. Un archivo sin esta columna deja la configuración como está. Una celda vacía conserva el ajuste de un valor guardado, y `-` establece **OPEX y CAPEX**. Un valor nuevo con una celda vacía es para **OPEX y CAPEX** |
 
 Solo `name` es una columna obligatoria. Cuando falta la columna `description`, `status`, `disabled_at` o `applies_to`, los valores existentes conservan lo que tienen almacenado para ella, y los valores nuevos quedan activados y sin descripción. Un archivo sin `axis_code` coloca todas las filas en la dimensión por defecto.
 

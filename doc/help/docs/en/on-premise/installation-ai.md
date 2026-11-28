@@ -116,7 +116,7 @@ The agent asks for confirmation before running commands on your server. When it 
 2. **Review your `.env` file** at `/opt/kanap/.env`. It is readable by its owner only and holds every secret.
 3. **Configure email** if you haven't already: see [Configuration](configuration.md) for SMTP or Resend setup, then [test it](configuration.md#test-the-email). Email enables password reset, invitations, and notifications.
 4. **Sign in** at `https://your-address` with `ADMIN_EMAIL` and the `ADMIN_PASSWORD` of `.env`: `grep '^ADMIN_PASSWORD=' /opt/kanap/.env` shows it. Change it in your profile if you want one only you know.
-5. **Add your logo and colors** in **Admin → Branding** (optional).
+5. **Add your logo and colors** in **Administration → Branding** (optional).
 6. **Set up the backups** and read the [Operations](operations.md) guide for upgrades and monitoring.
 7. **Keep the encryption key.** `/etc/default/rustfs` holds the key that encrypts the stored files. Keep it with your configuration backup.
 8. **Remove passwordless sudo.** The installation is complete, restore normal security:

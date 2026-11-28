@@ -162,7 +162,7 @@
         "total": "Total"
       },
       "confirmations": {
-        "remove": "Supprimer la configuration de ce contributeur ?"
+        "remove": "Supprimer les paramètres de ce contributeur ?"
       },
       "fields": {
         "assignTeam": "Affecter à une équipe",
@@ -1957,7 +1957,7 @@
       }
     },
     "org": {
-      "filtersLabel": "Réglages de l'organigramme",
+      "filtersLabel": "Paramètres de l'organigramme",
       "canvasLabel": "Ligne hiérarchique",
       "root": {
         "label": "Commencer par",

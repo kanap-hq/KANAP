@@ -74,7 +74,7 @@ Cliquez sur l'icône **Paramètres** (engrenage) pour choisir quelles tuiles app
 
 ## Étape 2 : Configurez votre profil
 
-Cliquez sur votre **avatar** (en haut à droite) > **Mon profil**, ou naviguez vers `/settings/profile`.
+Cliquez sur votre **avatar** (en haut à droite) > **Mon compte**, ou naviguez vers `/settings/profile`.
 
 ### Onglet Profil
 
@@ -295,10 +295,10 @@ L'e-mail hebdomadaire et les notifications en temps réel vous tiennent informé
 | Créer un nouveau document | Tableau de bord > bouton Nouveau document |
 | Voir toutes mes tâches | Portefeuille > Tâches (périmètre : Mes tâches) |
 | Voir tout dans l'organisation | N'importe quelle liste > filtre de périmètre > « Tous » |
-| Mettre à jour mon profil | Avatar > Mon profil > onglet Profil |
-| Configurer les notifications | Avatar > Mon profil > onglet Notifications |
-| Configurer l'e-mail hebdomadaire | Avatar > Mon profil > onglet Notifications > Revue hebdomadaire |
-| Changer de thème (clair/sombre) | Avatar > Mon profil > onglet Apparence |
+| Mettre à jour mon profil | Avatar > Mon compte > onglet Profil |
+| Configurer les notifications | Avatar > Mon compte > onglet Notifications |
+| Configurer l'e-mail hebdomadaire | Avatar > Mon compte > onglet Notifications > Revue hebdomadaire |
+| Changer de thème (clair/sombre) | Avatar > Mon compte > onglet Apparence |
 | Voir la version ou obtenir de l'aide | Avatar > À propos de Kadratis |
 | Définir ma disponibilité | Portefeuille > Contributeurs > votre nom |
 | Ajouter mes compétences | Portefeuille > Contributeurs > votre nom > onglet Compétences |

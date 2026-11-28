@@ -4,7 +4,7 @@ Esta página responde a dos preguntas que un administrador se hace con frecuenci
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Administración**
+- Módulo: **Administración**
 - Ruta: **Administración → Inteligencia artificial → Uso y costes**
 - Ruta URL: `/admin/ai-usage`
 - Permiso: `ai_settings:admin`

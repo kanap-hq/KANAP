@@ -132,7 +132,7 @@ plugins:
             Budget Management: Gestion budgétaire
             Budget lines: Lignes budgétaires
             Contracts: Contrats
-            Budget Administration: Administration
+            Budget settings: Paramètres
             Load a budget from a spreadsheet: Charger un budget depuis un tableur
             "Budget data model": "Modèle de données du budget"
             Reports: Rapports
@@ -226,7 +226,7 @@ plugins:
             Budget Management: Budgetverwaltung
             Budget lines: Budgetzeilen
             Contracts: Verträge
-            Budget Administration: Administration
+            Budget settings: Einstellungen
             Load a budget from a spreadsheet: Ein Budget aus einer Tabellenkalkulation laden
             "Budget data model": "Datenmodell des Budgets"
             Reports: Berichte
@@ -320,7 +320,7 @@ plugins:
             Budget Management: Gestión presupuestaria
             Budget lines: Líneas presupuestarias
             Contracts: Contratos
-            Budget Administration: Administración
+            Budget settings: Configuración
             Load a budget from a spreadsheet: Cargar un presupuesto desde una hoja de cálculo
             "Budget data model": "Modelo de datos del presupuesto"
             Reports: Informes
@@ -426,7 +426,7 @@ nav:
   - Budget Management:
     - Budget lines: budget-lines.md
     - Contracts: contracts.md
-    - Budget Administration:
+    - Budget settings:
       - Overview: budget-operations.md
       - Currencies: currencies.md
       - Master data freeze and metrics copy: master-data-operations.md

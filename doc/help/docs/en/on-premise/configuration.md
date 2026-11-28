@@ -33,10 +33,10 @@ On first boot, Kadratis creates a tenant using these values. The defaults work f
 Set them before the first start:
 
 - Changing `DEFAULT_TENANT_SLUG` later makes Kadratis create a second, empty workspace and serve that one. The first workspace stays in the database, out of reach.
-- Changing `DEFAULT_TENANT_NAME` later has no effect. An administrator changes the workspace name in **Admin → Branding**. The workspace address stays as it is.
+- Changing `DEFAULT_TENANT_NAME` later has no effect. An administrator changes the workspace name in **Administration → Branding**. The workspace address stays as it is.
 - Changing `DEFAULT_TENANT_LANGUAGE` later has no effect: the dimensions keep their names. You can rename them in **Master data > Analytics dimensions**.
 
-To give Kadratis the look of your organization, set its name, logo and colors in **Admin → Branding**.
+To give Kadratis the look of your organization, set its name, logo and colors in **Administration → Branding**.
 
 ## Required: admin credentials
 
@@ -393,7 +393,7 @@ All AI features are off by default on an on-premise installation. Three switches
 |----------|-------------|---------|
 | `AI_CHAT_ENABLED` | Turns on the [Kad chat assistant](../ai-assistant.md) for the installation. | `false` |
 | `AI_MCP_ENABLED` | Turns on the MCP server: API keys and connections without a key. See [Connecting AI assistants over MCP](#connecting-ai-assistants-over-mcp). | `false` |
-| `AI_SETTINGS_ENABLED` | Opens **Admin → Artificial intelligence** (AI models, Kad settings) and the [agents](../agents-overview.md) to administrators. Without it nobody can set up a provider. | `false` |
+| `AI_SETTINGS_ENABLED` | Opens **Administration → Artificial intelligence** (AI models, Kad settings) and the [agents](../agents-overview.md) to administrators. Without it nobody can set up a provider. | `false` |
 | `SETTINGS_ENCRYPTION_SECRET` | Secret that encrypts the provider keys and connection tokens you enter in Kadratis. Generate it with `openssl rand -hex 32`. Its former name, `AI_SETTINGS_ENCRYPTION_SECRET`, still works. | *unset* |
 
 Notes:
@@ -401,12 +401,12 @@ Notes:
 - Without `SETTINGS_ENCRYPTION_SECRET`, Kadratis refuses to store a provider key ("AI secret storage is not configured on this instance"). When keys are already stored, the API says so in its start-up log.
 - Changing `SETTINGS_ENCRYPTION_SECRET` later makes the stored keys unreadable. Back it up with `.env`, and enter the keys again if you lose it.
 - If your `.env` still uses `AI_SETTINGS_ENCRYPTION_SECRET`, keep it, or rename it with the same value. The API refuses to start when both names are set to different values.
-- An on-premise installation has no model included: you add your own provider or model server under **Admin → Artificial intelligence → AI models**. See [AI models](../ai-models.md) and [Kad settings](../ai-settings.md). Each tenant also has its own switches there.
+- An on-premise installation has no model included: you add your own provider or model server under **Administration → Artificial intelligence → AI models**. See [AI models](../ai-models.md) and [Kad settings](../ai-settings.md). Each tenant also has its own switches there.
 - The API needs outbound access to the provider you choose (see [Firewall rules](#firewall-rules)).
 
 ### Connecting AI assistants over MCP { #connecting-ai-assistants-over-mcp }
 
-With `AI_MCP_ENABLED=true`, AI assistants read Kadratis data through its MCP server, at `https://<your-name>/api/ai/mcp`. Each tenant also switches MCP on under **Admin → Artificial intelligence → Kad**. Users connect in one of two ways, compared in [Connection or API key](../ai-settings.md#connection-or-api-key):
+With `AI_MCP_ENABLED=true`, AI assistants read Kadratis data through its MCP server, at `https://<your-name>/api/ai/mcp`. Each tenant also switches MCP on under **Administration → Artificial intelligence → Kad**. Users connect in one of two ways, compared in [Connection or API key](../ai-settings.md#connection-or-api-key):
 
 - **API key**: an administrator creates a key in Kadratis and the user pastes it into the client (Claude Code, Cursor, scripts). It needs nothing more than a client that reaches the server, over HTTPS or plain HTTP inside your network.
 - **Connection (OAuth)**: Claude, Claude Desktop, Claude Code, ChatGPT or Grok signs in to Kadratis with the user's account, without a key. It needs the setup below.

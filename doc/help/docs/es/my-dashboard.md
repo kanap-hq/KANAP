@@ -330,14 +330,14 @@ Los cinco centros de coste con el mayor total en la columna por defecto del año
 
 ### Importes sin tipo de cambio
 
-Cuando la moneda de una línea no tiene tipo de cambio para un año, su importe queda excluido de los totales de ese año. Los mosaicos **Presupuesto**, **Mi presupuesto** y **Por centro de coste**, así como **Top líneas** clasificado por aumento, muestran entonces un aviso de una línea, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente. En **Top líneas** clasificado por importe, una línea así muestra su importe en su propia moneda con una pequeña marca naranja. Vea [Tipos manuales](currencies.md#tipos-manuales).
+Cuando la moneda de una línea no tiene tipo de cambio para un año, su importe queda excluido de los totales de ese año. Los mosaicos **Presupuesto**, **Mi presupuesto** y **Por centro de coste**, así como **Top líneas** clasificado por aumento, muestran entonces un aviso de una línea, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Las personas con el nivel Administrador en Configuración y operaciones del presupuesto ven además **Introducir un tipo**, que abre la configuración de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente. En **Top líneas** clasificado por importe, una línea así muestra su importe en su propia moneda con una pequeña marca naranja. Vea [Tipos manuales](currencies.md#tipos-manuales).
 
 ## Personalizar su panel { #customizing-the-budget-section }
 
 Haga clic en **Personalizar la página de inicio** (icono de controles deslizantes, a la derecha de las acciones rápidas). La página pasa al modo de personalización. Sus elecciones solo se aplican a su propia página de inicio.
 
 - Las acciones rápidas dejan paso a una barra: **Ocultar los mosaicos sin contenido** (consulte [Mosaicos sin contenido](#mosaicos-sin-contenido)), **Restablecer valores predeterminados**, **Cancelar** y **Listo**.
-- Cada mosaico activado aparece, incluidos los vacíos. Arrastre un mosaico por su asa para moverlo dentro de su sección. Su botón de ajustes abre sus opciones (máx. elementos, días, ámbito). Su botón de ocultar lo desactiva.
+- Cada mosaico activado aparece, incluidos los vacíos. Arrastre un mosaico por su asa para moverlo dentro de su sección. Su botón de configuración abre sus opciones (máx. elementos, días, ámbito). Su botón de ocultar lo desactiva.
 - Para el mosaico **Presupuesto**, las opciones contienen **Columnas de importes**. **Columnas del espacio de trabajo**, marcada por defecto, sigue las columnas que muestra su organización. Desmárquela para elegir usted mismo las columnas. Siempre queda al menos una columna.
 - Arrastre una sección por su asa para moverla entre las secciones. **Añadir un mosaico** (+) lista los mosaicos desactivados de la sección. El botón del ojo oculta o muestra la sección. Una sección oculta sigue visible, atenuada, hasta que termine.
 - Mientras personaliza, un clic en un mosaico no abre lo que muestra.

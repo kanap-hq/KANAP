@@ -10,7 +10,7 @@ Un point à clarifier dès le départ, car il conditionne tout bon usage de cett
 
 ## Où le trouver
 
-- Espace de travail : **Agents IA > Contexte partagé**
+- Module : **Agents IA > Contexte partagé**
 - Route : `/agents/shared-context`
 - Autorisations :
   - `ai_agents:reader` vous permet d'ouvrir la page et de consulter la liste des profils

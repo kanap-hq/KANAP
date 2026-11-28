@@ -4,7 +4,7 @@ Verwenden Sie die Branding-Seite, um Ihre Unternehmensidentität in Kadratis anz
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Administration**-Menü → **Branding**
+- Modul: **Administration**-Menü → **Branding**
 - Route: `/admin/branding`
 - Berechtigung: `organization:reader` zum Anzeigen, `organization:admin` zum Ändern. Ein Leser sieht dieselben Felder, ausgegraut, ohne Schaltfläche
 - Nur auf Mandanten-Hosts verfügbar (nicht auf dem Plattform-Admin-Host)

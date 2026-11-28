@@ -1,11 +1,11 @@
-# Administración presupuestaria
+# Configuración del presupuesto
 
-La Administración presupuestaria le ofrece un conjunto de herramientas para gestionar y transformar datos presupuestarios entre años y columnas. Estas son las operaciones a las que recurre durante los ciclos de planificación presupuestaria: preparar las cifras del próximo año, bloquear presupuestos aprobados y gestionar las transiciones entre años.
+La Configuración del presupuesto le ofrece un conjunto de herramientas para gestionar y transformar datos presupuestarios entre años y columnas. Estas son las operaciones a las que recurre durante los ciclos de planificación presupuestaria: preparar las cifras del próximo año, bloquear presupuestos aprobados y gestionar las transiciones entre años.
 
 ## Dónde encontrarla
 
-- Ruta: **Gestión presupuestaria > Administración**
-- Permisos: cada tarjeta se muestra solo a los usuarios que pueden usarla (consulte la tabla a continuación). **Administración** aparece en el menú cuando puede usar al menos una tarjeta.
+- Ruta: **Gestión presupuestaria > Configuración**
+- Permisos: cada tarjeta se muestra solo a los usuarios que pueden usarla (consulte la tabla a continuación). **Configuración** aparece en el menú cuando puede usar al menos una tarjeta.
 
 La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta dedicada. Una sección vacía se oculta.
 
@@ -29,10 +29,10 @@ La página principal tiene dos secciones. Cada tarjeta enlaza a una herramienta 
 
 | Tarjetas | Quién las ve |
 |---|---|
-| Monedas, Congelar / descongelar datos | Administración presupuestaria con nivel de administrador (`budget_ops:admin`) |
-| Columnas presupuestarias, Método de asignación por defecto | Administración presupuestaria con nivel de lector (`budget_ops:reader`), en solo lectura. Para cambiarlos se necesita el nivel de administrador (`budget_ops:admin`) |
+| Monedas, Congelar / descongelar datos | Configuración y operaciones del presupuesto con nivel Administrador (`budget_ops:admin`) |
+| Columnas presupuestarias, Método de asignación por defecto | Configuración y operaciones del presupuesto con nivel Lector (`budget_ops:reader`), en solo lectura. Para cambiarlos se necesita el nivel de administrador (`budget_ops:admin`) |
 | Copiar columnas presupuestarias, Vaciar una columna presupuestaria | Presupuesto con nivel de administrador (`budget:admin`). Cada **Tipo de línea** (**Todo**, **OPEX**, **CAPEX**) se abre con este nivel |
-| Congelar datos maestros, Copiar indicadores anuales | Usuarios con acceso al presupuesto que son administradores de la administración presupuestaria, de empresas o de departamentos. Los administradores de empresas y departamentos actúan sobre su propio alcance |
+| Congelar datos maestros, Copiar indicadores anuales | Usuarios con acceso al presupuesto que son administradores de Configuración y operaciones del presupuesto, de empresas o de departamentos. Los administradores de empresas y departamentos actúan sobre su propio alcance |
 
 El rol integrado Administrador de presupuesto ve todas las tarjetas. Miembro de presupuesto y Lector de presupuesto ven las tarjetas **Columnas presupuestarias** y **Método de asignación por defecto**, que se abren para ellos en solo lectura, y ninguna operación. Una persona con acceso a los datos limitado no ve ninguna de estas tarjetas.
 
@@ -62,7 +62,7 @@ Bajo las pestañas, una tabla tiene una fila por columna presupuestaria y una co
 - La acción al final de una fila actúa sobre los dos tipos a la vez. Muestra **Congelar ambas** mientras una de las dos celdas está abierta, y congela la que está abierta. Cuando ambas están congeladas, muestra **Descongelar ambas**
 - Una celda queda deshabilitada mientras se guarda su cambio. Las pestañas de año esperan a que terminen todos los cambios
 
-Sin el nivel Administrador en la administración presupuestaria, la página muestra los estados en solo lectura, con el mensaje «Necesita derechos de administrador de presupuesto para usar esta página.»
+Sin el nivel Administrador en Configuración y operaciones del presupuesto, la página muestra los estados en solo lectura, con el mensaje «Necesita el permiso “Administrador” en “Configuración y operaciones del presupuesto” para usar esta página.»
 
 ### Qué hace la congelación
 
@@ -329,7 +329,7 @@ El valor por defecto se resuelve cada vez que se muestran las asignaciones, por 
 
 ### Permisos
 
-Cambiar el método por defecto requiere `budget_ops:admin`. Lector de presupuesto y Miembro de presupuesto, que leen la Administración presupuestaria (`budget_ops:reader`), abren la página en solo lectura: los mismos campos, que no pueden cambiar, y sin el botón **Restablecer la asignación por defecto**. Pueden seguir eligiendo el ejercicio que quieren consultar. Una persona con acceso a los datos limitado no puede abrir la página.
+Cambiar el método por defecto requiere `budget_ops:admin`. Lector de presupuesto y Miembro de presupuesto, que leen Configuración y operaciones del presupuesto (`budget_ops:reader`), abren la página en solo lectura: los mismos campos, que no pueden cambiar, y sin el botón **Restablecer la asignación por defecto**. Pueden seguir eligiendo el ejercicio que quieren consultar. Una persona con acceso a los datos limitado no puede abrir la página.
 
 Cada cambio escribe su propia entrada en el registro de auditoría.
 
@@ -352,7 +352,7 @@ Una fila por columna, siempre en el mismo orden, de la columna 1 a la columna 5.
 | Campo | Descripción |
 |-------|-------------|
 | **Columna** | La posición, de 1 a 5. Las columnas no se pueden reordenar |
-| **Nombre** | El nombre que todos ven en las listas, la pestaña Presupuesto, los informes, el panel y la Administración presupuestaria. Déjelo vacío para usar el nombre estándar, que aparece como marcador. Como máximo 40 caracteres, sin caracteres de control ni invisibles. Cada nombre debe ser distinto de los nombres de las demás columnas, incluido el nombre estándar de una columna que no ha renombrado, sin importar las mayúsculas |
+| **Nombre** | El nombre que todos ven en las listas, la pestaña Presupuesto, los informes, el panel y la Configuración del presupuesto. Déjelo vacío para usar el nombre estándar, que aparece como marcador. Como máximo 40 caracteres, sin caracteres de control ni invisibles. Cada nombre debe ser distinto de los nombres de las demás columnas, incluido el nombre estándar de una columna que no ha renombrado, sin importar las mayúsculas |
 | **En los archivos** | La línea bajo cada nombre. Indica el nombre técnico de la columna en el archivo de presupuesto y sus importaciones, por ejemplo `budget` para la columna 1. Nunca cambia cuando renombra una columna. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) |
 | **Visible** | Si la columna aparece en pantalla. Al menos una columna debe seguir visible |
 | **Sigue el reparto y las líneas** | Si la columna aparece marcada al principio en **Usar también para otras columnas…** de la pestaña Presupuesto, que da a otras columnas el periodo y la distribución de un importe, o las líneas de cantidad y precio. Allí puede seguir marcando o desmarcando cada columna |
@@ -378,7 +378,7 @@ Un cambio que el servidor rechaza se deshace en el acto: el nombre o el interrup
 
 ### Permisos
 
-Cambiar la configuración requiere derechos de administración de la Administración presupuestaria (`budget_ops:admin`). Lector de presupuesto y Miembro de presupuesto, que leen la Administración presupuestaria (`budget_ops:reader`), abren la página en solo lectura: la misma tabla, que no pueden cambiar. Una persona con acceso a los datos limitado no puede abrir la página.
+Cambiar la configuración requiere el nivel Administrador en Configuración y operaciones del presupuesto (`budget_ops:admin`). Lector de presupuesto y Miembro de presupuesto, que leen Configuración y operaciones del presupuesto (`budget_ops:reader`), abren la página en solo lectura: la misma tabla, que no pueden cambiar. Una persona con acceso a los datos limitado no puede abrir la página.
 
 Si la configuración no se puede cargar, la página muestra una sola línea, «No se pudo cargar la configuración de las columnas.», y ningún control.
 

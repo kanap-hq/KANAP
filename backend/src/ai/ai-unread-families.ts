@@ -43,28 +43,28 @@ export const AI_SCREEN_LABEL_KEYS: Record<AiScreenPart, { namespace: 'nav' | 'op
 export const AI_SCREEN_LABELS: Record<AiScreenLanguage, Record<AiScreenPart, string>> = {
   en: {
     masterData: 'Master data', costCenters: 'Cost centers', workingDayCalendars: 'Working-day calendars',
-    analyticsDimensions: 'Analytics dimensions', budgetManagement: 'Budget management', budgetAdministration: 'Administration',
+    analyticsDimensions: 'Analytics dimensions', budgetManagement: 'Budget management', budgetAdministration: 'Settings',
     currencies: 'Currencies', budgetReporting: 'Reporting', globalChargeback: 'Global chargeback',
-    admin: 'Admin', dataAccess: 'Data access', roles: 'Roles', users: 'Users', auditLog: 'Audit log', aiAgents: 'AI agents',
+    admin: 'Administration', dataAccess: 'Data access', roles: 'Roles', users: 'Users', auditLog: 'Audit log', aiAgents: 'AI agents',
     portfolio: 'Portfolio', contributors: 'Contributors',
   },
   fr: {
     masterData: 'Données de référence', costCenters: 'Centres de coûts', workingDayCalendars: 'Calendriers de jours ouvrés',
-    analyticsDimensions: 'Dimensions analytiques', budgetManagement: 'Gestion budgétaire', budgetAdministration: 'Administration',
+    analyticsDimensions: 'Dimensions analytiques', budgetManagement: 'Gestion budgétaire', budgetAdministration: 'Paramètres',
     currencies: 'Devises', budgetReporting: 'Rapports', globalChargeback: 'Refacturation globale',
     admin: 'Administration', dataAccess: 'Accès aux données', roles: 'Rôles', users: 'Utilisateurs', auditLog: 'Journal d\'audit',
     aiAgents: 'Agents IA', portfolio: 'Portefeuille', contributors: 'Contributeurs',
   },
   de: {
     masterData: 'Stammdaten', costCenters: 'Kostenstellen', workingDayCalendars: 'Arbeitstagekalender',
-    analyticsDimensions: 'Analysedimensionen', budgetManagement: 'Budgetverwaltung', budgetAdministration: 'Administration',
+    analyticsDimensions: 'Analysedimensionen', budgetManagement: 'Budgetverwaltung', budgetAdministration: 'Einstellungen',
     currencies: 'Währungen', budgetReporting: 'Berichte', globalChargeback: 'Globale Leistungsverrechnung',
     admin: 'Administration', dataAccess: 'Datenzugriff', roles: 'Rollen', users: 'Benutzer', auditLog: 'Audit-Protokoll',
     aiAgents: 'KI-Agenten', portfolio: 'Portfolio', contributors: 'Mitwirkende',
   },
   es: {
     masterData: 'Datos maestros', costCenters: 'Centros de coste', workingDayCalendars: 'Calendarios laborales',
-    analyticsDimensions: 'Dimensiones analíticas', budgetManagement: 'Gestión presupuestaria', budgetAdministration: 'Administración',
+    analyticsDimensions: 'Dimensiones analíticas', budgetManagement: 'Gestión presupuestaria', budgetAdministration: 'Configuración',
     currencies: 'Monedas', budgetReporting: 'Informes', globalChargeback: 'Contracargo global',
     admin: 'Administración', dataAccess: 'Acceso a los datos', roles: 'Roles', users: 'Usuarios', auditLog: 'Registro de auditoría',
     aiAgents: 'Agentes IA', portfolio: 'Portafolio', contributors: 'Colaboradores',

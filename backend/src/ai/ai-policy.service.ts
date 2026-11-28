@@ -120,9 +120,9 @@ const UNSCOPED_ONLY_ENTITY_TYPES: ReadonlySet<string> = new Set(['roles', 'role_
 
 /** The screen whose right a family's refusal names, for the families read as their screen. */
 const ENTITY_SCREEN: Partial<Record<AiQueryEntityType | AiContextEntityType, string>> = {
-  roles: 'Admin › Roles',
-  role_permissions: 'Admin › Roles',
-  data_access: 'Admin › Data access',
+  roles: 'Administration › Roles',
+  role_permissions: 'Administration › Roles',
+  data_access: 'Administration › Data access',
   chargeback: 'Reporting › Global chargeback',
   chargeback_lines: 'Reporting › Company chargeback',
   cost_centers: 'Master data › Cost centers',

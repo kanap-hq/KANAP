@@ -177,7 +177,7 @@
     "newAgentSreDefaultName": "Infrastructure monitoring agent",
     "newAgentSreDescription": "Draft monitoring agent that reads alerts, correlates them with your data, and prepares diagnosis notes for review.",
     "cost": "Cost: today / 7 days",
-    "includedModelPaused": "Agents that use the {{product}} included model are paused until an administrator confirms it in Admin > {{agent}}.",
+    "includedModelPaused": "Agents that use the {{product}} included model are paused until an administrator confirms it in Administration > {{agent}}.",
     "includedModelOpenSettings": "Open {{agent}} settings"
   },
   "approvals": {
@@ -285,7 +285,7 @@
       "proposal": "Proposal",
       "decision": "Decision",
       "execution": "Execution",
-      "configuration": "Configuration",
+      "configuration": "Settings",
       "check": "Checks",
       "pause": "Pause",
       "error": "Error"
@@ -304,7 +304,7 @@
       "poller_paused_by_emergency_pause": "Ticket watcher paused",
       "daily_cap_reached": "Daily safety cap reached",
       "poller_cycle_failed": "This look failed",
-      "agent_config_updated": "Agent configuration updated",
+      "agent_config_updated": "Agent settings updated",
       "agent_autonomy_granted": "Automatic mode enabled",
       "agent_autonomy_revoked": "Automatic mode turned off",
       "agent_autonomy_demoted": "Automatic mode demoted",

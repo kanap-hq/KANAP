@@ -4,7 +4,7 @@ Portfolio Settings let you configure the scoring system, team skills, project ph
 
 ## Where to find it
 
-- Workspace: **Portfolio Management**
+- Module: **Portfolio Management**
 - Path: **Portfolio Management > Settings**
 - Permissions:
   - You need `portfolio_settings:admin` to modify settings

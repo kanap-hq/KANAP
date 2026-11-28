@@ -1,11 +1,11 @@
-# Administration budgétaire
+# Paramètres du budget
 
-L'administration budgétaire met à votre disposition un ensemble d'outils pour gérer et transformer les données budgétaires entre les années et les colonnes. Ce sont les opérations que vous utilisez pendant les cycles de planification budgétaire : préparer les chiffres de l'année suivante, verrouiller les budgets approuvés et gérer les transitions d'une année à l'autre.
+Les paramètres du budget mettent à votre disposition un ensemble d'outils pour gérer et transformer les données budgétaires entre les années et les colonnes. Ce sont les opérations que vous utilisez pendant les cycles de planification budgétaire : préparer les chiffres de l'année suivante, verrouiller les budgets approuvés et gérer les transitions d'une année à l'autre.
 
 ## Où trouver cette page
 
-- Chemin : **Gestion budgétaire > Administration**
-- Autorisations : chaque carte s'affiche uniquement pour les utilisateurs qui peuvent l'utiliser (voir le tableau ci-dessous). **Administration** apparaît dans le menu dès que vous pouvez utiliser au moins une carte.
+- Chemin : **Gestion budgétaire > Paramètres**
+- Autorisations : chaque carte s'affiche uniquement pour les utilisateurs qui peuvent l'utiliser (voir le tableau ci-dessous). **Paramètres** apparaît dans le menu dès que vous pouvez utiliser au moins une carte.
 
 La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédié. Une section vide est masquée.
 
@@ -29,10 +29,10 @@ La page d'accueil comporte deux sections. Chaque carte renvoie à un outil dédi
 
 | Cartes | Qui les voit |
 |---|---|
-| Devises, Geler / dégeler les données | Administration budgétaire au niveau administrateur (`budget_ops:admin`) |
-| Colonnes budgétaires, Méthode de ventilation par défaut | Administration budgétaire au niveau lecteur (`budget_ops:reader`), en lecture seule. Les modifier nécessite le niveau administrateur (`budget_ops:admin`) |
+| Devises, Geler / dégeler les données | Paramètres et opérations du budget au niveau Administrateur (`budget_ops:admin`) |
+| Colonnes budgétaires, Méthode de ventilation par défaut | Paramètres et opérations du budget au niveau Lecteur (`budget_ops:reader`), en lecture seule. Les modifier nécessite le niveau administrateur (`budget_ops:admin`) |
 | Copier les colonnes budgétaires, Vider une colonne budgétaire | Budget au niveau administrateur (`budget:admin`). Chaque **Type de ligne** (**Tout**, **OPEX**, **CAPEX**) s'ouvre avec ce niveau |
-| Geler les données de référence, Copier les indicateurs annuels | Utilisateurs ayant accès au budget qui sont administrateurs de l'administration budgétaire, des sociétés ou des départements. Les administrateurs des sociétés et des départements agissent sur leur propre périmètre |
+| Geler les données de référence, Copier les indicateurs annuels | Utilisateurs ayant accès au budget qui sont administrateurs de Paramètres et opérations du budget, des sociétés ou des départements. Les administrateurs des sociétés et des départements agissent sur leur propre périmètre |
 
 Le rôle intégré Administrateur budget voit toutes les cartes. Membre budget et Lecteur budget voient les cartes **Colonnes budgétaires** et **Méthode de ventilation par défaut**, qui s'ouvrent pour eux en lecture seule, et aucune opération. Une personne dont l'accès aux données est limité ne voit aucune de ces cartes.
 
@@ -62,7 +62,7 @@ Sous les onglets, un tableau a une ligne par colonne budgétaire et une colonne 
 - L'action en bout de ligne agit sur les deux types à la fois. Elle affiche **Geler les deux** tant que l'une des deux cellules est ouverte, et gèle celle qui est ouverte. Une fois les deux gelées, elle affiche **Dégeler les deux**
 - Une cellule reste désactivée pendant l'enregistrement de son changement. Les onglets d'année attendent la fin de chaque changement
 
-Sans le niveau Admin sur l'administration budgétaire, la page affiche les états en lecture seule, avec le message « Vous devez disposer des droits d'administrateur budgétaire pour utiliser cette page. »
+Sans le niveau Administrateur sur Paramètres et opérations du budget, la page affiche les états en lecture seule, avec le message « Il vous faut le droit “Administrateur” sur “Paramètres et opérations du budget” pour utiliser cette page. »
 
 ### Ce que fait le gel
 
@@ -329,7 +329,7 @@ La valeur par défaut est résolue à chaque affichage des ventilations : la mod
 
 ### Autorisations
 
-Modifier la méthode par défaut nécessite `budget_ops:admin`. Lecteur budget et Membre budget, qui lisent l'administration budgétaire (`budget_ops:reader`), ouvrent la page en lecture seule : les mêmes champs, qu'ils ne peuvent pas modifier, et pas de bouton **Rétablir la ventilation par défaut**. Ils peuvent toujours choisir l'exercice à consulter. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
+Modifier la méthode par défaut nécessite `budget_ops:admin`. Lecteur budget et Membre budget, qui lisent Paramètres et opérations du budget (`budget_ops:reader`), ouvrent la page en lecture seule : les mêmes champs, qu'ils ne peuvent pas modifier, et pas de bouton **Rétablir la ventilation par défaut**. Ils peuvent toujours choisir l'exercice à consulter. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
 
 Chaque modification inscrit sa propre entrée au journal d'audit.
 
@@ -352,7 +352,7 @@ Une ligne par colonne, toujours dans le même ordre, de la colonne 1 à la colon
 | Champ | Description |
 |-------|-------------|
 | **Colonne** | La position, de 1 à 5. Les colonnes ne peuvent pas être réordonnées |
-| **Nom** | Le nom que tout le monde voit dans les listes, l'onglet Budget, les rapports, la vue d'ensemble et l'administration budgétaire. Laissez-le vide pour utiliser le nom standard, affiché en indication. 40 caractères au plus, sans caractère de contrôle ni caractère invisible. Chaque nom doit différer de ceux des autres colonnes, y compris du nom standard d'une colonne que vous n'avez pas renommée, majuscules comprises |
+| **Nom** | Le nom que tout le monde voit dans les listes, l'onglet Budget, les rapports, la vue d'ensemble et les paramètres du budget. Laissez-le vide pour utiliser le nom standard, affiché en indication. 40 caractères au plus, sans caractère de contrôle ni caractère invisible. Chaque nom doit différer de ceux des autres colonnes, y compris du nom standard d'une colonne que vous n'avez pas renommée, majuscules comprises |
 | **Dans les fichiers** | La ligne sous chaque nom. Elle donne le nom technique de la colonne dans le fichier budgétaire et ses imports, par exemple `budget` pour la colonne 1. Il ne change jamais quand vous renommez une colonne. Voir [Charger un budget depuis un tableur](budget-file.md) |
 | **Affichée** | Indique si la colonne apparaît à l'écran. Au moins une colonne doit rester affichée |
 | **Suit la répartition et les lignes** | Indique si la colonne est cochée au départ dans **Utiliser aussi pour d'autres colonnes…** de l'onglet Budget, qui donne à d'autres colonnes la période et la répartition d'un montant, ou les lignes de quantité et prix. Vous pouvez toujours cocher ou décocher chaque colonne à cet endroit |
@@ -362,7 +362,7 @@ Les en-têtes **Suit la répartition et les lignes** et **Par défaut** portent 
 
 Par défaut, Budget, Révision, Réalisé et Atterrissage prévu sont affichées et Prévision est masquée, toutes les colonnes suivent la répartition et les lignes, et Budget est la colonne par défaut.
 
-### Ce que changent les réglages
+### Ce que changent les paramètres
 
 - **Les colonnes masquées** disparaissent des listes, du sélecteur de colonnes, de l'onglet Budget, des sélecteurs des rapports, des pages de copie et de vidage et de la vue d'ensemble. Elles gardent leurs montants : masquer une colonne n'efface jamais de données, et l'afficher de nouveau fait revenir les montants. Les colonnes masquées acceptent toujours les imports par le fichier budgétaire, et les gels s'appliquent toujours à elles. La page de gel liste aussi les colonnes masquées, avec la mention **Masquée** : vous pouvez les geler comme les autres
 - **La colonne par défaut** est présélectionnée dans chaque rapport. Elle trie la liste des lignes budgétaires et sa navigation précédent et suivant. La tuile **Top lignes**, classée par **Montant** ou par **Hausse**, et les tuiles **Mon budget** et **Par centre de coûts** de la vue d'ensemble l'utilisent. La liste l'affiche pour l'année en cours, à côté de la dernière colonne affichée. Une liste dont la personne a choisi les colonnes de montants les garde et reçoit la nouvelle colonne par défaut. C'est aussi le montant de référence de l'onglet Ventilations et la colonne de départ de la ligne **Écart avec** de l'onglet Budget. L'onglet Budget d'une ligne s'ouvre sur elle tant qu'elle n'est pas gelée. La geler pour une année fige les taux de change de cette année (voir [Geler la colonne par défaut fige les taux de change](#geler-la-colonne-par-defaut-fige-les-taux-de-change))
@@ -378,9 +378,9 @@ Une modification que le serveur refuse est annulée aussitôt : le nom ou l'inte
 
 ### Autorisations
 
-Modifier les réglages nécessite les droits admin sur l'administration budgétaire (`budget_ops:admin`). Lecteur budget et Membre budget, qui lisent l'administration budgétaire (`budget_ops:reader`), ouvrent la page en lecture seule : le même tableau, qu'ils ne peuvent pas modifier. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
+Modifier les paramètres nécessite le niveau Administrateur sur Paramètres et opérations du budget (`budget_ops:admin`). Lecteur budget et Membre budget, qui lisent Paramètres et opérations du budget (`budget_ops:reader`), ouvrent la page en lecture seule : le même tableau, qu'ils ne peuvent pas modifier. Une personne dont l'accès aux données est limité ne peut pas ouvrir la page.
 
-Si les réglages ne peuvent pas être chargés, la page affiche une seule ligne, « Les réglages des colonnes n'ont pas pu être chargés. », et aucun contrôle.
+Si les paramètres ne peuvent pas être chargés, la page affiche une seule ligne, « Les paramètres des colonnes n'ont pas pu être chargés. », et aucun contrôle.
 
 ---
 

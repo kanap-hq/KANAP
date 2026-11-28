@@ -4,7 +4,7 @@ Les Demandes du portefeuille sont la couche d'intake pour les travaux proposés.
 
 ## Où la trouver
 
-- Espace de travail : **Portefeuille**
+- Module : **Portefeuille**
 - Chemin : **Portefeuille > Demandes**
 
 ### Autorisations
