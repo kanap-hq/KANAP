@@ -45,7 +45,7 @@ Chaque liste est un tableau : le nom, les colonnes propres à la liste, **Ne plu
 - Les valeurs gardent l'ordre affiché. Kadratis ne les trie pas.
 - Un nom saisi s'enregistre peu après votre dernière frappe, ou quand vous quittez le champ. Une case cochée ou un choix s'enregistre aussitôt. Rien ne s'enregistre tant qu'une ligne de la liste enfreint une règle ci-dessous.
 
-Les zones d'administration, les types de connexion, les domaines et les sous-réseaux ont leur propre disposition : leur bouton **Ajouter un élément** se trouve au-dessus du tableau et ajoute la ligne en haut.
+Les zones d'administration, les types de connexion, les domaines et les sous-réseaux ont leur propre disposition : leur bouton **Ajouter un élément** se trouve au-dessus du tableau. Il ajoute la ligne en bas de la liste, avec le curseur dedans, sauf pour les zones d'administration, où une nouvelle zone commence en haut.
 
 Pour les longues listes (plus de 25 lignes), le tableau virtualise les lignes, affichant environ 20 à la fois avec un défilement fluide et des en-têtes fixes.
 
@@ -71,7 +71,7 @@ Les valeurs intégrées que Kadratis gère lui-même (les quatre statuts de cycl
 
 Une liste affiche chaque valeur sous le nom que le reste de Kadratis affiche dans votre langue : la traduction saisie par votre espace de travail pour cette langue, sinon la traduction livrée avec Kadratis tant que la valeur garde son nom livré, sinon le nom lui-même. Un utilisateur francophone voit la zone réseau livrée Guest sous le nom « Invités », ici comme sur les enregistrements.
 
-Saisir un nouveau nom dans la liste en fait le nom de base de la valeur. La traduction saisie par votre espace de travail pour votre langue disparaît, pour que le champ garde ce que vous avez saisi ; les traductions des autres langues restent.
+Saisir un nouveau nom dans la liste en fait le nom de base de la valeur. La traduction saisie par votre espace de travail pour votre langue disparaît, pour que le champ garde ce que vous avez saisi ; les traductions des autres langues restent. Saisir dans votre langue le nom que Kadratis livre pour une valeur livrée rend à la valeur son nom et ses traductions livrés.
 
 L'icône **Traduire** ouvre les langues de la valeur : le nom de base (et la description pour les niveaux de classification) ainsi qu'un champ par langue. Un champ laissé vide montre ce qui est affiché à la place, traduction livrée comprise. L'icône est mise en évidence quand la valeur a une traduction saisie par votre espace de travail. L'enregistrement des traductions ne modifie jamais le texte de base, et un nom traduit peut être utilisé dans les fichiers CSV et l'API au même titre que le nom lui-même ; c'est pourquoi il ne doit pas faire doublon avec une autre valeur de la liste.
 
@@ -79,7 +79,7 @@ L'icône **Traduire** ouvre les langues de la valeur : le nom de base (et la des
 
 **Rétablir les listes par défaut**, dans l'en-tête de l'onglet **Listes**, remet les listes aux valeurs livrées avec Kadratis, après confirmation. Il faut `settings:admin`. Les modifications pas encore enregistrées sont d'abord enregistrées.
 
-- Chaque valeur livrée revient avec son nom et ses traductions livrés, de nouveau proposée, même si vous l'aviez renommée, retirée ou supprimée. Les traductions saisies par votre espace de travail pour elle disparaissent.
+- Chaque valeur livrée revient avec son nom et ses traductions livrés, de nouveau proposée, même si vous l'aviez renommée ou retirée ; une valeur livrée que vous avez supprimée revient aussi, sauf si une valeur que vous gardez porte maintenant son nom. Les traductions saisies par votre espace de travail pour elle disparaissent.
 - Une valeur que vous avez ajoutée reste quand des enregistrements l'utilisent, telle quelle, après les valeurs livrées et dans son ordre d'avant. Une valeur que vous avez ajoutée et que rien n'utilise disparaît. Les sous-réseaux restent seulement quand des actifs les utilisent, avec les zones réseau dont ils ont besoin.
 - Une zone d'administration que vous avez ajoutée et qui est conservée passe en dernier, comme la moins sensible : déplacez-la à sa place. Un niveau de classification conservé devient le moins critique, une vague de reprise conservée la dernière.
 - Un nom livré qui entrerait en conflit avec une valeur conservée reste tel qu'il est.

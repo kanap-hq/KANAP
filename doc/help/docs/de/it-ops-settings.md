@@ -45,7 +45,7 @@ Jede Liste ist eine Tabelle: der Name, die eigenen Spalten der Liste, **Nicht me
 - Die Werte behalten die angezeigte Reihenfolge. Kadratis sortiert sie nicht.
 - Ein eingegebener Name wird kurz nach Ihrem letzten Tastenanschlag gespeichert, oder wenn Sie das Feld verlassen. Ein gesetztes Häkchen oder eine Auswahl wird sofort gespeichert. Nichts wird gespeichert, solange eine Zeile der Liste gegen eine der folgenden Regeln verstößt.
 
-Administrationszonen, Verbindungstypen, Domänen und Subnetze haben ein eigenes Layout: Ihre Schaltfläche **Element hinzufügen** steht über der Tabelle und fügt die Zeile oben ein.
+Administrationszonen, Verbindungstypen, Domänen und Subnetze haben ein eigenes Layout: Ihre Schaltfläche **Element hinzufügen** steht über der Tabelle. Sie fügt die Zeile am Ende der Liste ein, mit dem Cursor darin. Ausnahme sind die Administrationszonen: Dort beginnt eine neue Zone oben.
 
 Bei langen Listen (mehr als 25 Zeilen) virtualisiert die Tabelle die Zeilen: Sie zeigt etwa 20 Zeilen gleichzeitig, mit flüssigem Scrollen und fixierten Spaltenköpfen.
 
@@ -71,7 +71,7 @@ Integrierte Werte, die Kadratis selbst verwaltet (die vier Lebenszyklus-Status, 
 
 Eine Liste zeigt jeden Wert unter dem Namen, den der Rest von Kadratis in Ihrer Sprache anzeigt: die Übersetzung, die Ihr Arbeitsbereich für diese Sprache eingegeben hat, sonst die mit Kadratis gelieferte Übersetzung, solange der Wert seinen gelieferten Namen behält, sonst den Namen selbst. Ein deutschsprachiger Benutzer sieht die gelieferte Netzwerkzone Guest als „Gäste“, hier wie in den Datensätzen.
 
-Ein neuer Name, den Sie in der Liste eingeben, wird zum Basisnamen des Werts. Die Übersetzung, die Ihr Arbeitsbereich für Ihre Sprache eingegeben hat, entfällt, damit das Feld behält, was Sie eingegeben haben; die Übersetzungen der anderen Sprachen bleiben.
+Ein neuer Name, den Sie in der Liste eingeben, wird zum Basisnamen des Werts. Die Übersetzung, die Ihr Arbeitsbereich für Ihre Sprache eingegeben hat, entfällt, damit das Feld behält, was Sie eingegeben haben; die Übersetzungen der anderen Sprachen bleiben. Geben Sie für einen gelieferten Wert den Namen ein, den Kadratis in Ihrer Sprache liefert, erhält der Wert seinen gelieferten Namen und seine gelieferten Übersetzungen zurück.
 
 Das Symbol **Übersetzen** öffnet die Sprachen des Werts: den Basisnamen (und bei Klassifizierungsstufen die Beschreibung) sowie ein Feld pro Sprache. Ein leer gelassenes Feld zeigt, was stattdessen angezeigt wird, eine gelieferte Übersetzung eingeschlossen. Das Symbol ist hervorgehoben, wenn der Wert eine Übersetzung hat, die Ihr Arbeitsbereich eingegeben hat. Das Speichern von Übersetzungen ändert den Basistext nie, und ein übersetzter Name kann in CSV-Dateien und in der API wie der Name selbst verwendet werden; deshalb darf er keinen anderen Wert der Liste duplizieren.
 
@@ -79,7 +79,7 @@ Das Symbol **Übersetzen** öffnet die Sprachen des Werts: den Basisnamen (und b
 
 **Standardlisten wiederherstellen** in der Kopfzeile des Tabs **Listen** setzt die Listen nach einer Bestätigung auf die mit Kadratis gelieferten Werte zurück. Dafür ist `settings:admin` nötig. Noch nicht gespeicherte Änderungen werden zuerst gespeichert.
 
-- Jeder gelieferte Wert kehrt mit seinem gelieferten Namen und seinen Übersetzungen zurück und wird wieder angeboten, auch wenn Sie ihn umbenannt, zurückgezogen oder gelöscht hatten. Die Übersetzungen, die Ihr Arbeitsbereich dafür eingegeben hat, entfallen.
+- Jeder gelieferte Wert kehrt mit seinem gelieferten Namen und seinen Übersetzungen zurück und wird wieder angeboten, auch wenn Sie ihn umbenannt oder zurückgezogen hatten; ein gelieferter Wert, den Sie gelöscht haben, kehrt ebenfalls zurück, außer ein Wert, den Sie behalten, trägt jetzt seinen Namen. Die Übersetzungen, die Ihr Arbeitsbereich dafür eingegeben hat, entfallen.
 - Ein Wert, den Sie hinzugefügt haben, bleibt erhalten, wenn Datensätze ihn verwenden, unverändert, nach den gelieferten Werten und in seiner bisherigen Reihenfolge. Ein hinzugefügter Wert, den nichts verwendet, entfällt. Subnetze bleiben nur, wenn Assets sie verwenden, zusammen mit den Netzwerkzonen, die sie brauchen.
 - Eine hinzugefügte und erhaltene Administrationszone kommt ans Ende, als die am wenigsten sensible: Verschieben Sie sie an ihren Platz. Eine erhaltene Klassifizierungsstufe wird die am wenigsten kritische, eine erhaltene Wiederherstellungswelle die letzte.
 - Ein gelieferter Name, der mit einem erhaltenen Wert kollidieren würde, bleibt, wie er jetzt ist.

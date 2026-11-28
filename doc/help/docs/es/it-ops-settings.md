@@ -45,7 +45,7 @@ Cada lista es una tabla: el nombre, las columnas propias de la lista, **Dejar de
 - Los valores mantienen el orden que usted ve. Kadratis no los ordena.
 - Un nombre escrito se guarda poco después de su última pulsación, o cuando sale del campo. Una casilla marcada o una elección se guarda al instante. No se guarda nada mientras una fila de la lista incumpla una de las reglas siguientes.
 
-Las zonas de administración, los tipos de conexión, los dominios y las subredes tienen su propia disposición: su botón **Añadir elemento** está encima de la tabla y añade la fila arriba.
+Las zonas de administración, los tipos de conexión, los dominios y las subredes tienen su propia disposición: su botón **Añadir elemento** está encima de la tabla. Añade la fila al final de la lista, con el cursor en ella, salvo en las zonas de administración, donde una zona nueva empieza arriba.
 
 Para listas largas (más de 25 filas), la tabla virtualiza filas, mostrando unas 20 a la vez con desplazamiento suave y encabezados fijos.
 
@@ -71,7 +71,7 @@ Los valores integrados que Kadratis gestiona por sí mismo (los cuatro estados d
 
 Una lista muestra cada valor con el nombre que el resto de Kadratis muestra en su idioma: la traducción que su espacio de trabajo escribió para ese idioma; si no la hay, la traducción incluida con Kadratis mientras el valor conserve su nombre incluido; si no, el propio nombre. Un usuario de habla hispana ve la zona de red incluida Guest como «Invitados», aquí y en los registros.
 
-Escribir un nombre nuevo en la lista lo convierte en el nombre base del valor. La traducción que su espacio de trabajo escribió para su idioma desaparece, para que el campo conserve lo que usted escribió; las traducciones de los demás idiomas se mantienen.
+Escribir un nombre nuevo en la lista lo convierte en el nombre base del valor. La traducción que su espacio de trabajo escribió para su idioma desaparece, para que el campo conserve lo que usted escribió; las traducciones de los demás idiomas se mantienen. Escribir en su idioma el nombre que Kadratis incluye para un valor incluido devuelve al valor su nombre y sus traducciones incluidos.
 
 El icono **Traducir** abre los idiomas del valor: el nombre base (y la descripción en los niveles de clasificación) y un campo por idioma. Un campo vacío muestra lo que se ve en su lugar, también cuando es una traducción incluida con Kadratis. El icono destaca cuando el valor tiene una traducción escrita por su espacio de trabajo. Guardar las traducciones nunca cambia el texto base, y un nombre traducido se puede usar en los archivos CSV y en la API igual que el propio nombre, por lo que no debe duplicar otro valor de la lista.
 
@@ -79,7 +79,7 @@ El icono **Traducir** abre los idiomas del valor: el nombre base (y la descripci
 
 **Restablecer las listas por defecto**, en el encabezado de la pestaña **Listas**, devuelve las listas a los valores incluidos con Kadratis, tras una confirmación. Requiere `settings:admin`. Los cambios que aún no se han guardado se guardan primero.
 
-- Cada valor incluido vuelve con su nombre y sus traducciones incluidos, propuesto de nuevo, aunque usted lo hubiera renombrado, retirado o eliminado. Las traducciones que su espacio de trabajo escribió para él desaparecen.
+- Cada valor incluido vuelve con su nombre y sus traducciones incluidos, propuesto de nuevo, aunque usted lo hubiera renombrado o retirado; un valor incluido que usted eliminó también vuelve, salvo si un valor que conserva lleva ahora su nombre. Las traducciones que su espacio de trabajo escribió para él desaparecen.
 - Un valor que usted añadió se conserva cuando lo usan registros, tal como está, después de los valores incluidos y en su orden anterior. Un valor que usted añadió y que nada usa desaparece. Las subredes se conservan solo cuando las usan activos, junto con las zonas de red que necesitan.
 - Una zona de administración que usted añadió y que se conserva pasa al final, como la menos sensible: muévala a su lugar. Un nivel de clasificación conservado pasa a ser el menos crítico, y una ola de recuperación conservada, la última.
 - Un nombre incluido que chocaría con un valor que usted conserva se queda como está ahora.
