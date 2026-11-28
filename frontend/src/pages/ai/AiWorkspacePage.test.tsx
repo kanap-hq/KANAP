@@ -697,4 +697,32 @@ describe('AiWorkspacePage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
     expect(aiConversationsApi.remove).not.toHaveBeenCalled();
   });
+
+  it('cuts a long conversation title in the delete dialog', async () => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    client.setQueryData(['ai-conversations'], [
+      {
+        id: 'conv-1',
+        title: 'Give me every budget line of 2026 by supplier and by account as a table sorted by amount.',
+        provider: 'openai',
+        model: 'gpt-4o',
+        created_at: '2026-03-23T10:00:00.000Z',
+        updated_at: '2026-03-23T10:00:00.000Z',
+      },
+    ]);
+
+    renderPage(client);
+
+    fireEvent.click(screen.getByText('Delete conversation'));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('conversationList.deleteConfirmTitle Give me every budget line of 2026 by supplier and by account…');
+    expect(dialog).not.toHaveTextContent('sorted by amount');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+  });
 });

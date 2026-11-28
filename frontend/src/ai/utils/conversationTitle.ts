@@ -15,3 +15,18 @@ export function plainConversationTitle(text: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+const NAME_IN_TEXT_MAX_LENGTH = 60;
+
+/**
+ * A conversation title quoted inside a sentence (the delete dialog title): its plain text, cut
+ * at a word with an ellipsis past 60 characters, as the list cuts it on one line.
+ */
+export function conversationNameInText(text: string): string {
+  const plain = plainConversationTitle(text);
+  if (plain.length <= NAME_IN_TEXT_MAX_LENGTH) return plain;
+  const cut = plain.slice(0, NAME_IN_TEXT_MAX_LENGTH + 1);
+  const space = cut.lastIndexOf(' ');
+  const kept = space > NAME_IN_TEXT_MAX_LENGTH / 2 ? cut.slice(0, space) : cut.slice(0, NAME_IN_TEXT_MAX_LENGTH);
+  return `${kept.replace(/[\s.,;:!?…]+$/, '')}…`;
+}

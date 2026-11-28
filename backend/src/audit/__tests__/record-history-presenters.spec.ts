@@ -395,6 +395,42 @@ function testEntryWrittenBeforeTheFix() {
   console.log('  an entry written before the change shows its cause: OK');
 }
 
+function testFteFromNoneToZero() {
+  const entry = recordHistoryEntry('spend_items')!;
+  const pieces = calcLine({ quantity_unit: 'pieces', price_basis: 'per_unit', frequency: 'once', working_day_profile_id: null, working_day_profile_code: null, working_day_profile_name: null });
+  const fte = (item: ReturnType<typeof presentItem>) => item.changes.filter((change) => change.field === 'fte');
+  for (const table of ['spend_round_inputs', 'capex_round_inputs']) {
+    const toLines = presentItem(row({
+      table_name: table, record_id: ROUND, action: 'update',
+      before_json: { ...storedRound({ fte: null, method: 'manual' }), lines: [] },
+      after_json: { ...storedRound({ fte: '0', updated_at: '2026-10-02T10:00:00.000Z' }), lines: [pieces] },
+    }), entry, context());
+    assert.deepEqual(fte(toLines), [], `${table}: no FTE change from none to zero (lines without people)`);
+    assert.ok(toLines.changes.some((change) => change.field === 'method'), `${table}: the other changes of the entry stay`);
+    const back = presentItem(row({
+      table_name: table, record_id: ROUND, action: 'update',
+      before_json: { ...storedRound({ fte: '0.00' }), lines: [pieces] },
+      after_json: { ...storedRound({ fte: null, updated_at: '2026-10-02T10:00:00.000Z' }), lines: [] },
+    }), entry, context());
+    assert.deepEqual(fte(back), [], `${table}: no FTE change from zero to none`);
+    const created = presentItem(row({
+      table_name: table, record_id: ROUND, action: 'create',
+      before_json: null,
+      after_json: { ...storedRound({ fte: '0' }), lines: [pieces] },
+    }), entry, context());
+    assert.deepEqual(fte(created), [], `${table}: a creation with zero FTE names no FTE`);
+  }
+  const people = presentItem(linesRow([], [calcLine()], {
+    before_json: { ...storedRound({ fte: null }), lines: [] },
+  }), entry, context());
+  assert.deepEqual(fte(people), [{ field: 'fte', before: null, after: '0.75' }], 'an FTE that becomes non-zero shows');
+  const gone = presentItem(linesRow([calcLine()], [pieces], {
+    after_json: { ...storedRound({ fte: '0', updated_at: '2026-10-02T10:00:00.000Z' }), lines: [pieces] },
+  }), entry, context());
+  assert.deepEqual(fte(gone), [{ field: 'fte', before: '0.75', after: '0' }], 'an FTE that comes back to zero shows');
+  console.log('  an FTE from none to zero, or back, is no change: OK');
+}
+
 function run() {
   console.log('record history presenters');
   testVersionYear();
@@ -405,6 +441,7 @@ function run() {
   testColumnCopyCalendarIssues();
   testRestoreAndCapex();
   testEntryWrittenBeforeTheFix();
+  testFteFromNoneToZero();
   console.log('record-history-presenters.spec: ok');
 }
 

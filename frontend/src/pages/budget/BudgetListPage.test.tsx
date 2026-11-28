@@ -206,6 +206,14 @@ describe('BudgetListPage', () => {
     });
   });
 
+  it('names by their label the values a restored or linked filter selects and no line has', async () => {
+    await renderPage();
+    expect(column('nature')!.filterParams!.labelFormatter!('capex')).toBe('budget.capex');
+    expect(column('run_build')!.filterParams!.labelFormatter!('build')).toBe('opex.runBuild.build');
+    expect(column('has_fte')!.filterParams!.labelFormatter!('yes')).toBe('shared.fteDeclaredYes');
+    expect(column('has_fte')!.filterParams!.labelFormatter!(null)).toBe('shared.fteDeclaredNo');
+  });
+
   it('shows project names, not an id', async () => {
     await renderPage();
     expect(column('project_id')).toBeUndefined();

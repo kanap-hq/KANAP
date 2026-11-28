@@ -42,6 +42,7 @@ vi.mock('../../components/ServerDataGrid', () => ({
 }));
 
 import api from '../../api';
+import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import ApplicationsPage from './ApplicationsPage';
 
 const lastProps = () => grid.calls[grid.calls.length - 1] as {
@@ -507,5 +508,53 @@ describe('ApplicationsPage default lifecycle filter', () => {
     const model = setFilterModel.mock.calls[0][0];
     expect(model.lifecycle.values).toEqual(['proposed', 'active', 'deprecated']);
     view.unmount();
+  });
+
+  it('names by their label the default states that no application has, in the lifecycle filter', async () => {
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === '/it-ops/settings') return { data: { lifecycleStates: LIFECYCLE } } as any;
+      if (url === '/applications/filter-values') return { data: { lifecycle: ['active'] } } as any;
+      return { data: Object.assign([], { items: [] }) } as any;
+    });
+    const page = await readyPage();
+    const column = dataColumns().find((c) => c.field === 'lifecycle')!;
+    const model = { lifecycle: (lastProps() as any).defaultFilterModel.lifecycle };
+    page.unmount();
+    const filterRef = React.createRef<any>();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <CheckboxSetFilter
+          ref={filterRef}
+          {...({
+            api: { getFilterModel: () => model, setFilterModel: vi.fn() },
+            column: { getColId: () => 'lifecycle' },
+            colDef: { field: 'lifecycle' },
+            context: { getQueryState: () => ({}) },
+            ...column.filterParams,
+          } as any)}
+        />
+      </QueryClientProvider>,
+    );
+    act(() => { filterRef.current.afterGuiAttached(); });
+    expect(await screen.findByRole('checkbox', { name: 'Active' })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Proposed' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Deprecated' })).toBeChecked();
+    expect(screen.queryByRole('checkbox', { name: 'proposed' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'deprecated' })).not.toBeInTheDocument();
+  });
+
+  it('gives every set filter of the list that labels its options the same label for a value they omit', async () => {
+    await readyPage();
+    const labelled = dataColumns().filter((c) => c.filterParams?.getValues && c.filterParams?.labelFormatter);
+    expect(labelled.map((c) => c.field ?? c.colId).sort()).toEqual([
+      'category', 'classification_review_state', 'contains_pii', 'criticality', 'cyber_criticality', 'data_class',
+      'environments', 'external_facing', 'hosting_types', 'lifecycle', 'mfa_supported', 'recovery_wave', 'sso_enabled',
+    ]);
+    const lifecycle = dataColumns().find((c) => c.field === 'lifecycle')!;
+    expect(lifecycle.filterParams.labelFormatter('deprecated')).toBe('Deprecated');
+    expect(lifecycle.filterParams.labelFormatter(null)).toBe('common:filters.blank');
+    const sso = dataColumns().find((c) => c.field === 'sso_enabled')!;
+    expect(sso.filterParams.labelFormatter(false)).toBe('enums.yesNo.no');
   });
 });

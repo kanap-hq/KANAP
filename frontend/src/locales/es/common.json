@@ -1973,6 +1973,7 @@
     "doneChanged_other": "{{count}} filas modificadas",
     "doneChanged_applications_other": "{{count}} aplicaciones modificadas",
     "applied": "{{field}}: {{value}}",
-    "toCheck": "Por verificar: {{count}}"
+    "toCheck": "Por verificar: {{count}}",
+    "willCheck": "De ellas, {{count}} por verificar"
   }
 }

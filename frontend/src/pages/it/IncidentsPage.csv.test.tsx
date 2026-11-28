@@ -96,6 +96,21 @@ describe('IncidentsPage CSV', () => {
     expect(column('authority_notified_at')?.defaultHidden).toBe(true);
   });
 
+  it('names by their label the values a restored or linked filter selects and no incident has', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter><IncidentsPage /></MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    const label = (field: string) => (dialogs.grid?.columns ?? []).find((col: any) => col.field === field)?.filterParams?.labelFormatter;
+    expect(label('status')('resolved')).toBe('enums.incidentStatus.resolved');
+    expect(label('severity')('critical')).toBe('enums.incidentSeverity.critical');
+    expect(label('category')('security')).toBe('security');
+    expect(label('category')(null)).toBe('pages.incidents.filters.noCategory');
+  });
+
   it('words the zone messages of the date-time headers in each language', async () => {
     for (const lang of ['en', 'fr', 'de', 'es']) {
       const errors = (await import(`../../locales/${lang}/errors.json`)).default as Record<string, string>;

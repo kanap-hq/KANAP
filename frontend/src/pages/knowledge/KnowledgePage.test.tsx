@@ -165,6 +165,7 @@ describe('KnowledgePage library and folder names', () => {
         const field = config?.params?.fields;
         if (field === 'folder_key') return { data: { folder_key: ['integrated_requests', 'Requests', null] } } as any;
         if (field === 'library_key') return { data: { library_key: ['managed-docs', 'service-desk-docs'] } } as any;
+        if (field === 'status') return { data: { status: ['published', 'draft'] } } as any;
       }
       return { data: {} } as any;
     });
@@ -195,6 +196,28 @@ describe('KnowledgePage library and folder names', () => {
       .toBe('Demandes');
     expect(format({ value: 'Requests', data: { folder_key: 'Requests', folder_system_key: null, folder_name: 'Requests' } }))
       .toBe('Requests');
+  });
+
+  it('names by their label the folders and libraries a restored filter selects and no document has', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Documents managés')).toBeInTheDocument());
+    await waitFor(() => expect(column('library_key')).toBeTruthy());
+    expect(column('folder_key').filterParams.labelFormatter('integrated_requests')).toBe('Demandes');
+    expect(column('folder_key').filterParams.labelFormatter(null)).toBe(frKnowledge.shared.unfiled);
+    expect(column('library_key').filterParams.labelFormatter('managed-docs')).toBe('Documents managés');
+    expect(column('status').filterParams.labelFormatter('in_review')).toBe('En revue');
+  });
+
+  it('words the status boxes of the filter as the status cell does, in French', async () => {
+    renderPage();
+    await waitFor(() => expect(column('status')).toBeTruthy());
+    expect(await filterOptions('status')).toEqual([
+      { value: 'draft', label: 'Brouillon' },
+      { value: 'published', label: 'Publié' },
+    ]);
+    const cell = render(React.createElement(column('status').cellRenderer, { value: 'draft', data: { id: 'doc-1', status: 'draft' } }));
+    expect(cell.container.textContent).toBe('Brouillon');
+    cell.unmount();
   });
 
   it('filters the library column on slugs and shows the libraries in French', async () => {

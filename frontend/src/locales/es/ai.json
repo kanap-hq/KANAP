@@ -2,7 +2,7 @@
   "conversationList": {
     "delete": "Eliminar",
     "deleteConfirmMessage": "La conversación y sus mensajes se eliminan. Esta acción no se puede deshacer.",
-    "deleteConfirmTitle": "¿Eliminar {{name}}?",
+    "deleteConfirmTitle": "¿Eliminar «{{name}}»?",
     "dateGroups": {
       "lastWeek": "Últimos 7 días",
       "older": "Más antiguo",

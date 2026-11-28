@@ -453,6 +453,21 @@ export default function ApplicationsPage() {
       return list;
     };
   }, []);
+  // A set filter's options, and the label of a value they omit (no application has it) that a default,
+  // restored or linked filter still selects: the label its option would have.
+  const appFilterParams = useCallback((
+    field: string,
+    opts?: { labelFormatter?: (value: any) => string; emptyLabel?: string; coerceBoolean?: boolean },
+  ) => {
+    const labelFormatter = opts?.labelFormatter;
+    const emptyLabel = opts?.emptyLabel ?? t('common:filters.blank');
+    return {
+      getValues: getAppFilterValues(field, opts),
+      ...(labelFormatter
+        ? { labelFormatter: (value: any) => (value == null && !opts?.coerceBoolean ? emptyLabel : labelFormatter(value)) }
+        : {}),
+    };
+  }, [getAppFilterValues, t]);
 
   const isInstanceActive = useCallback((inst?: AppInstanceSummary) => {
     if (!inst) return false;
@@ -748,7 +763,7 @@ export default function ApplicationsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAppFilterValues('category', { labelFormatter: categoryLabel }),
+        ...appFilterParams('category', { labelFormatter: categoryLabel }),
         searchable: false,
       },
       valueFormatter: (p: any) => categoryLabel(p.value),
@@ -764,7 +779,7 @@ export default function ApplicationsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAppFilterValues('environments', { labelFormatter: environmentLabel }),
+        ...appFilterParams('environments', { labelFormatter: environmentLabel }),
         searchable: false,
       },
       cellRenderer: EnvironmentCell,
@@ -778,7 +793,7 @@ export default function ApplicationsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAppFilterValues('lifecycle', { labelFormatter: lifecycleLabel }),
+        ...appFilterParams('lifecycle', { labelFormatter: lifecycleLabel }),
         searchable: false,
         treatAllAsUnfiltered: false,
       },
@@ -792,18 +807,18 @@ export default function ApplicationsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAppFilterValues('criticality', { labelFormatter: criticalityLabel }),
+        ...appFilterParams('criticality', { labelFormatter: criticalityLabel }),
         sortComparator: catalogRankComparator(classificationCatalog?.businessCriticalityLevels),
         searchable: false,
       },
       valueFormatter: (p: any) => criticalityLabel(p.value),
       cellRenderer: ClickToCompliance,
     },
-    { headerName: classificationText("Cyber criticality"), field: 'cyber_criticality', filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { getValues: getAppFilterValues('cyber_criticality', { labelFormatter: (v: any) => catalogLabel('cyber', v) }), sortComparator: catalogRankComparator(classificationCatalog?.cyberCriticalityLevels) }, width: 160, defaultHidden: true, valueFormatter: (p: any) => catalogLabel('cyber', p.value), cellRenderer: ClickToCompliance },
-    { headerName: classificationText("Recovery wave"), field: 'recovery_wave', filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { getValues: getAppFilterValues('recovery_wave', { labelFormatter: (v: any) => catalogLabel('wave', v) }), sortComparator: catalogRankComparator(classificationCatalog?.recoveryWaves, 'order') }, width: 240, defaultHidden: true, valueFormatter: (p: any) => catalogLabel('wave', p.value), cellRenderer: ClickToCompliance },
+    { headerName: classificationText("Cyber criticality"), field: 'cyber_criticality', filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { ...appFilterParams('cyber_criticality', { labelFormatter: (v: any) => catalogLabel('cyber', v) }), sortComparator: catalogRankComparator(classificationCatalog?.cyberCriticalityLevels) }, width: 160, defaultHidden: true, valueFormatter: (p: any) => catalogLabel('cyber', p.value), cellRenderer: ClickToCompliance },
+    { headerName: classificationText("Recovery wave"), field: 'recovery_wave', filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { ...appFilterParams('recovery_wave', { labelFormatter: (v: any) => catalogLabel('wave', v) }), sortComparator: catalogRankComparator(classificationCatalog?.recoveryWaves, 'order') }, width: 240, defaultHidden: true, valueFormatter: (p: any) => catalogLabel('wave', p.value), cellRenderer: ClickToCompliance },
     { headerName: 'RTO', field: 'rto_minutes', width: 110, defaultHidden: true, filter: 'agNumberColumnFilter', valueFormatter: (p: any) => formatDuration(p.value, ''), cellRenderer: ClickToCompliance },
     { headerName: 'RPO', field: 'rpo_minutes', width: 110, defaultHidden: true, filter: 'agNumberColumnFilter', valueFormatter: (p: any) => formatDuration(p.value, ''), cellRenderer: ClickToCompliance },
-    { headerName: classificationText("Classification review"), field: 'classification_review_state', filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { getValues: getAppFilterValues('classification_review_state', { labelFormatter: (value: string) => ({ incomplete: classificationText('To complete'), stale: classificationText('Review needed'), reviewed: classificationText('Reviewed') }[value] || value) }) }, width: 170, defaultHidden: true, valueFormatter: (p: any) => ({ incomplete: classificationText("To complete"), stale: classificationText("Review needed"), reviewed: classificationText("Reviewed") }[String(p.value)] || classificationText("To complete")), cellRenderer: ClickToCompliance },
+    { headerName: classificationText("Classification review"), field: 'classification_review_state', filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { ...appFilterParams('classification_review_state', { labelFormatter: (value: string) => ({ incomplete: classificationText('To complete'), stale: classificationText('Review needed'), reviewed: classificationText('Reviewed') }[value] || value) }) }, width: 170, defaultHidden: true, valueFormatter: (p: any) => ({ incomplete: classificationText("To complete"), stale: classificationText("Review needed"), reviewed: classificationText("Reviewed") }[String(p.value)] || classificationText("To complete")), cellRenderer: ClickToCompliance },
     { headerName: classificationText("Classification reviewed"), field: 'classification_reviewed_at', filter: 'agDateColumnFilter', width: 180, defaultHidden: true, valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString(locale) : '', cellRenderer: ClickToCompliance },
     { headerName: t('pages.applications.columns.publisher'), field: 'editor', width: 160, cellRenderer: ClickToOverview },
     {
@@ -830,7 +845,7 @@ export default function ApplicationsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAppFilterValues('hosting_types', { labelFormatter: (v) => labelFor('hostingType', v) || String(v || '') }),
+        ...appFilterParams('hosting_types', { labelFormatter: (v) => labelFor('hostingType', v) || String(v || '') }),
         searchable: false,
       },
       valueFormatter: (p: any) => (p.value || []).map((v: string) => labelFor('hostingType', v) || v).join(', '),
@@ -845,7 +860,7 @@ export default function ApplicationsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAppFilterValues('external_facing', { coerceBoolean: true, labelFormatter: (v) => (v ? t('enums.yesNo.yes') : t('enums.yesNo.no')) }),
+        ...appFilterParams('external_facing', { coerceBoolean: true, labelFormatter: (v) => (v ? t('enums.yesNo.yes') : t('enums.yesNo.no')) }),
         searchable: false,
       },
       valueFormatter: (p: any) => formatYesNo(!!p.value),
@@ -860,7 +875,7 @@ export default function ApplicationsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAppFilterValues('sso_enabled', { coerceBoolean: true, labelFormatter: (v) => (v ? t('enums.yesNo.yes') : t('enums.yesNo.no')) }),
+        ...appFilterParams('sso_enabled', { coerceBoolean: true, labelFormatter: (v) => (v ? t('enums.yesNo.yes') : t('enums.yesNo.no')) }),
         searchable: false,
       },
       valueFormatter: (p: any) => formatYesNo(!!p.value),
@@ -875,7 +890,7 @@ export default function ApplicationsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAppFilterValues('mfa_supported', { coerceBoolean: true, labelFormatter: (v) => (v ? t('enums.yesNo.yes') : t('enums.yesNo.no')) }),
+        ...appFilterParams('mfa_supported', { coerceBoolean: true, labelFormatter: (v) => (v ? t('enums.yesNo.yes') : t('enums.yesNo.no')) }),
         searchable: false,
       },
       valueFormatter: (p: any) => formatYesNo(!!p.value),
@@ -915,7 +930,7 @@ export default function ApplicationsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAppFilterValues('data_class', { labelFormatter: dataClassLabel }),
+        ...appFilterParams('data_class', { labelFormatter: dataClassLabel }),
         sortComparator: catalogRankComparator(classificationCatalog?.dataClasses),
         searchable: false,
       },
@@ -931,7 +946,7 @@ export default function ApplicationsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAppFilterValues('contains_pii', { coerceBoolean: true, labelFormatter: (v) => (v ? t('enums.yesNo.yes') : t('enums.yesNo.no')) }),
+        ...appFilterParams('contains_pii', { coerceBoolean: true, labelFormatter: (v) => (v ? t('enums.yesNo.yes') : t('enums.yesNo.no')) }),
         searchable: false,
       },
       valueFormatter: (p: any) => formatYesNo(!!p.value),
@@ -960,7 +975,7 @@ export default function ApplicationsPage() {
     dataClassLabel,
     environmentLabel,
     formatYesNo,
-    getAppFilterValues,
+    appFilterParams,
     labelFor,
     lifecycleLabel,
     locale,

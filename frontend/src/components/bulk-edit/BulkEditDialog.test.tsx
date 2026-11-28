@@ -402,6 +402,40 @@ describe('BulkEditDialog', () => {
     expect(within(done).queryByRole('link')).toBeNull();
   });
 
+  it('says at the count how many rows will be to check, after the rows that will change', async () => {
+    post.mockResolvedValue({ data: { ...COUNT, unchanged: 0, refused: {}, to_check: { rows: 3, checks: { quantity_price: 3 } } } });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status().textContent).toContain('6 rows will change'));
+    expect(screen.getByTestId('bulk-edit-will-check')).toHaveTextContent('Including 3 to check');
+    expect(status().textContent).toBe('6 rows will changeIncluding 3 to check');
+  });
+
+  it('says nothing of the rows to check at the count when none is, or when the count does not say', async () => {
+    post.mockResolvedValueOnce({ data: { ...COUNT, to_check: { rows: 0, checks: {} } } });
+    post.mockResolvedValueOnce({ data: COUNT });
+    renderDialog();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+    await waitFor(() => expect(status().textContent).toContain('6 rows will change'));
+    expect(screen.queryByTestId('bulk-edit-will-check')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'pick s-2' }));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(status().textContent).toContain('6 rows will change'));
+    expect(screen.queryByTestId('bulk-edit-will-check')).toBeNull();
+  });
+
+  it('words the rows to check at the count in French', async () => {
+    await i18n.changeLanguage('fr');
+    try {
+      post.mockResolvedValue({ data: { ...COUNT, to_check: { rows: 2, checks: { quantity_price: 2 } } } });
+      renderDialog();
+      fireEvent.click(screen.getByRole('button', { name: 'pick s-1' }));
+      await waitFor(() => expect(screen.getByTestId('bulk-edit-will-check')).toHaveTextContent('Dont 2 à vérifier'));
+    } finally {
+      await i18n.changeLanguage('en');
+    }
+  });
+
   it('says nothing of the rows to check when none is', async () => {
     post.mockResolvedValueOnce({ data: COUNT });
     post.mockResolvedValueOnce({ data: { dry_run: false, rows: 10, changed: 5, unchanged: 5, refused: {}, to_check: { rows: 0, checks: {} } } });
