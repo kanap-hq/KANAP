@@ -8,7 +8,7 @@ Para la secuenciación a nivel de portafolio y el trabajo de hoja de ruta, use [
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Portafolio**
+- Módulo: **Portafolio**
 - Ruta: **Portafolio > Proyectos**
 
 ## Permisos

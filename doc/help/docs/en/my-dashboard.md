@@ -330,7 +330,7 @@ The five cost centers with the largest total on the default column of the curren
 
 ### Amounts without an exchange rate
 
-When a line's currency has no exchange rate for a year, its amount is left out of the totals of that year. The **Budget**, **My budget** and **By cost center** tiles, and **Top lines** ranked by increase, then show a one-line warning, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings on the missing rate. When the warning names a single currency and year, the manual rate dialog opens directly. In **Top lines** ranked by amount, such a line shows its amount in its own currency with a small orange mark. See [Manual rates](currencies.md#manual-rates).
+When a line's currency has no exchange rate for a year, its amount is left out of the totals of that year. The **Budget**, **My budget** and **By cost center** tiles, and **Top lines** ranked by increase, then show a one-line warning, for example "Excluding 3 lines with no exchange rate: USD 2026." People with the Admin level on Budget settings and operations also see **Enter a rate**, which opens the currency settings on the missing rate. When the warning names a single currency and year, the manual rate dialog opens directly. In **Top lines** ranked by amount, such a line shows its amount in its own currency with a small orange mark. See [Manual rates](currencies.md#manual-rates).
 
 ## Customizing your dashboard { #customizing-the-budget-section }
 

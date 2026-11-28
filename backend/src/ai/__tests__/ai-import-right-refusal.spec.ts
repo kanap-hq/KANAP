@@ -33,10 +33,10 @@ const USER = 'user-1';
 const FILE = '11111111-1111-4111-8111-111111111111';
 const LANGUAGES: readonly AiScreenLanguage[] = ['en', 'fr', 'de', 'es'];
 
-const EN_BUDGET = 'Import refused: the missing right is "Admin" on "Budget", as Admin › Roles names it. '
+const EN_BUDGET = 'Import refused: the missing right is "Admin" on "Budget", as Administration › Roles names it. '
   + 'Tell the person that right in those words. Suggest they ask a person who has it, or import the file on the screen if they have the right there, and stop. '
   + 'Create no row of the file, and do not offer to create its rows one by one.';
-const FR_BUDGET = 'Import refused: the missing right is "Administrateur" on "Budget", as Admin › Roles names it. '
+const FR_BUDGET = 'Import refused: the missing right is "Administrateur" on "Budget", as Administration › Roles names it. '
   + 'Tell the person that right in those words. Suggest they ask a person who has it, or import the file on the screen if they have the right there, and stop. '
   + 'Create no row of the file, and do not offer to create its rows one by one.';
 
@@ -50,7 +50,7 @@ function testTheRefusalNamesEachImportRight() {
       const body = coded(error);
       const moduleName = aiResourceLabel(access.resource as Resource, language);
       const levelName = aiPermissionLevelLabel(access.level, language);
-      assert.ok(moduleName, `${key} ${language}: the module has a name on Admin › Roles`);
+      assert.ok(moduleName, `${key} ${language}: the module has a name on Administration › Roles`);
       assert.equal(body.code, 'MODULE_RIGHT_REQUIRED', key);
       assert.deepEqual(body.params, { resource: access.resource, level: access.level }, `${key} ${language}`);
       assert.ok(error.message.includes(`"${levelName}" on "${moduleName}"`), `${key} ${language}: ${error.message}`);

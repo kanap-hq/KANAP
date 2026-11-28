@@ -759,11 +759,20 @@ const SAMPLE_AUDIT_FIELD_KEYS = [
   'linked_records',
 ];
 const HIDDEN_AUDIT_FIELD_KEYS = new Set(['id', 'tenant_id', 'updated_at', 'search_vector', 'content_plain']);
+/**
+ * The columns of the portfolio settings lists the audit log records whole: `portfolio_sources`,
+ * `portfolio_categories`, `portfolio_streams`, `portfolio_task_types`, `portfolio_teams`,
+ * `portfolio_employment_types`, `portfolio_settings` and `portfolio_skills` (their entities).
+ */
+const PORTFOLIO_SETTINGS_AUDIT_FIELD_KEYS = [
+  'id', 'tenant_id', 'name', 'description', 'is_active', 'display_order', 'is_system', 'created_at',
+  'updated_at', 'category_id', 'code', 'parent_id', 'mandatory_bypass_enabled', 'category', 'enabled',
+];
 
 describe('audit field labels', () => {
-  it('labels every field of the sample audit entries in the four languages', () => {
+  it('labels every field of the sample audit entries and of the portfolio settings lists in the four languages', () => {
     for (const [language, admin] of Object.entries(ADMIN)) {
-      const missing = SAMPLE_AUDIT_FIELD_KEYS
+      const missing = [...SAMPLE_AUDIT_FIELD_KEYS, ...PORTFOLIO_SETTINGS_AUDIT_FIELD_KEYS]
         .filter((key) => !HIDDEN_AUDIT_FIELD_KEYS.has(key) && !key.startsWith('__'))
         .filter((key) => typeof admin.auditLogs.fields[key] !== 'string' || !admin.auditLogs.fields[key].trim());
       expect(missing, language).toEqual([]);

@@ -4,7 +4,7 @@ Freigaben ist die tägliche Prüf-Warteschlange für alles, was Ihre KI-Agenten 
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **KI-Agenten**
+- Modul: **KI-Agenten**
 - Pfad: **KI-Agenten → Freigaben**
 - Route: `/agents/approvals`
 - Berechtigung: Erfordert, dass KI für die Instanz aktiviert ist, sowie die Rolle KI-Agenten-Leser (`ai_agents:reader`), um die Warteschlange zu lesen. Über einen Vorschlag zu entscheiden, eine Zeile zur Kenntnis zu nehmen und eine Analyse erneut zu starten setzt die Stufe Mitwirkender (`ai_agents:contributor`) voraus.

@@ -74,4 +74,4 @@ On a contract, a project or a request, a person with limited data access sees th
 
 ## The full audit log
 
-The history keeps to what a reader needs. The complete technical record of every change, across the whole workspace, stays in **Admin > Audit log**. See [Audit log](admin.md#audit-log).
+The history keeps to what a reader needs. The complete technical record of every change, across the whole workspace, stays in **Administration > Audit log**. See [Audit log](admin.md#audit-log).

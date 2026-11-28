@@ -229,6 +229,27 @@ describe('RolesPage levels above own rights', () => {
     const option = await budgetOptions();
     expect(option('admin')).not.toHaveAttribute('aria-disabled', 'true');
   });
+
+  // Organization and the IT landscape settings have two levels: read or administer.
+  it('offers reader and admin only for organization and the IT landscape settings', async () => {
+    renderPage();
+    for (const resource of ['organization', 'settings']) {
+      const select = await screen.findByRole('combobox', { name: `roles.resources.${resource}` });
+      fireEvent.mouseDown(select);
+      const listbox = await screen.findByRole('listbox');
+      const levels = within(listbox).getAllByRole('option').map((option) => option.textContent);
+      expect(levels, resource).toEqual(['roles.levels.none', 'roles.levels.reader', 'roles.levels.admin']);
+      fireEvent.keyDown(listbox, { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
+    }
+  });
+
+  it('shows organization in the Administration group, next to users', async () => {
+    renderPage();
+    const users = await screen.findByRole('combobox', { name: 'roles.resources.users' });
+    const organization = screen.getByRole('combobox', { name: 'roles.resources.organization' });
+    expect(users.compareDocumentPosition(organization) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });
 
 describe('RolesPage duplicate', () => {

@@ -74,7 +74,7 @@ Klicken Sie auf das **Einstellungen**-Symbol (Zahnrad), um auszuwählen, welche 
 
 ## Schritt 2: Ihr Profil einrichten
 
-Klicken Sie auf Ihren **Avatar** (oben rechts) > **Mein Profil**, oder navigieren Sie zu `/settings/profile`.
+Klicken Sie auf Ihren **Avatar** (oben rechts) > **Mein Konto**, oder navigieren Sie zu `/settings/profile`.
 
 ### Profil-Tab
 
@@ -295,10 +295,10 @@ Die wöchentliche E-Mail und Echtzeit-Benachrichtigungen halten Sie auf dem Lauf
 | Neues Dokument starten | Dashboard > Schaltfläche Neues Dokument |
 | Alle meine Aufgaben sehen | Portfolio > Aufgaben (Bereich: Meine Aufgaben) |
 | Alles in der Organisation sehen | Jede Liste > Bereichsfilter > „Alle" |
-| Mein Profil aktualisieren | Avatar > Mein Profil > Profil-Tab |
-| Benachrichtigungen einrichten | Avatar > Mein Profil > Benachrichtigungs-Tab |
-| Wöchentliche E-Mail konfigurieren | Avatar > Mein Profil > Benachrichtigungs-Tab > Wöchentliche Zusammenfassung |
-| Design ändern (Hell/Dunkel) | Avatar > Mein Profil > Erscheinungsbild-Tab |
+| Ihr Profil aktualisieren | Avatar > Mein Konto > Profil-Tab |
+| Benachrichtigungen einrichten | Avatar > Mein Konto > Benachrichtigungs-Tab |
+| Wöchentliche E-Mail konfigurieren | Avatar > Mein Konto > Benachrichtigungs-Tab > Wöchentliche Zusammenfassung |
+| Design ändern (Hell/Dunkel) | Avatar > Mein Konto > Erscheinungsbild-Tab |
 | Version sehen oder Hilfe erhalten | Avatar > Über Kadratis |
 | Meine Verfügbarkeit festlegen | Portfolio > Mitwirkende > Ihren Namen |
 | Meine Fähigkeiten hinzufügen | Portfolio > Mitwirkende > Ihren Namen > Fähigkeiten-Tab |

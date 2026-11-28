@@ -10,7 +10,7 @@ Eines sollte von Anfang an klar sein, denn davon hängt jede sinnvolle Nutzung d
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **KI-Agenten > Gemeinsamer Kontext**
+- Modul: **KI-Agenten > Gemeinsamer Kontext**
 - Route: `/agents/shared-context`
 - Berechtigungen:
   - `ai_agents:reader` ermöglicht das Öffnen der Seite und das Lesen der Profilliste

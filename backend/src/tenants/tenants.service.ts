@@ -108,7 +108,7 @@ const BUILT_IN_ROLES: Array<{
     name: 'IT Landscape Member',
     description: 'Can manage applications and infrastructure',
     permissions: {
-      applications: 'member', infrastructure: 'member', locations: 'member', incidents: 'member', settings: 'member',
+      applications: 'member', infrastructure: 'member', locations: 'member', incidents: 'member', settings: 'reader',
       tasks: 'member', users: 'reader',
       companies: 'reader', departments: 'reader', cost_centers: 'reader', working_day_profiles: 'reader', suppliers: 'reader', contacts: 'member',
       budget: 'reader', contracts: 'reader',

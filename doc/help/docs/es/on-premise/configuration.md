@@ -148,7 +148,8 @@ El número de migraciones cambia de una versión a otra. En los arranques siguie
 | `[VERSION] Kadratis <version>` | Informativa. La versión que ejecuta la API, la misma que el campo `version` de `/api/config/public`. |
 | `[entrypoint] DB not ready (attempt N): ... Retrying in 2000ms...` | La API no puede llegar a la base de datos. Lo intenta 30 veces, con 2 segundos de intervalo, y después se detiene con `[entrypoint] DB not ready after 30 attempts: ...`. Compruebe `DATABASE_URL`, las reglas de PostgreSQL y `sslmode` (consulte [Obligatorio: base de datos](#obligatorio-base-de-datos)). |
 | `[entrypoint] DATABASE_URL resolves to ... PostgreSQL role ...`, y después `[entrypoint] No migration ran.` | El rol de la aplicación tiene `SUPERUSER` o `BYPASSRLS` y Kadratis no pudo quitarlos. El arranque se detuvo antes de las migraciones. Siga el mensaje (consulte las reglas del rol en [Obligatorio: base de datos](#obligatorio-base-de-datos)). |
-| `[entrypoint] A migration failed, not retried: ...` | La línea siguiente, `[entrypoint] Failed statement: ...`, muestra la instrucción SQL que falló. Las migraciones pendientes se revirtieron: la base de datos está como antes de este arranque. Corrija la causa o despliegue la versión anterior. |
+| `[startup] DATABASE_URL resolves to ... PostgreSQL role "..." with ...`, y después la API termina con el código `1` | El rol de la aplicación tiene `SUPERUSER` o `BYPASSRLS` (`\du` en `psql` muestra los atributos), y con `SKIP_MIGRATIONS=true` nada los quitó antes de la API. Pida a un superusuario de PostgreSQL que ejecute el comando `ALTER ROLE ... NOSUPERUSER NOBYPASSRLS` que da el mensaje, o ejecute el paso de migración, que los quita de un rol que tiene `SUPERUSER`: un rol que solo tiene `BYPASSRLS` no puede quitárselo a sí mismo. Para `postgres` u otro rol de administración del clúster, use un rol de aplicación dedicado. |
+| `[entrypoint] A migration failed, not retried: ...` | La línea siguiente, `[entrypoint] Failed statement: ...`, muestra la instrucción SQL que falló. Las migraciones pendientes se revirtieron: ninguna de ellas está aplicada. Corrija la causa o despliegue la versión anterior. |
 | `[ENV] run mode: ...` | Se muestra siempre. Indica el modo en que se ejecuta la API: `development`, `production` o `unspecified`. |
 | `[ENV] APP_ENV is not set: production rules apply to links, browser origins and platform administration. Set APP_ENV=production (or development on a workstation).` | Se muestra en modo sin especificar (el mensaje indica el valor cuando `APP_ENV` tiene otro valor). Defina `APP_ENV=production` si los usuarios acceden a Kadratis por HTTPS. |
 | `[CONFIG] APP_BASE_URL is not set: ...` | Se rechazan los correos de restablecimiento de contraseña y de invitación, los enlaces de las notificaciones y las redirecciones de inicio de sesión. Defina `APP_BASE_URL`. |
@@ -197,7 +198,7 @@ Otros cambios visibles:
 **Requisitos de la base de datos:**
 
 - PostgreSQL 16 o superior (se prueban la 16 y la 18)
-- Extensiones: `citext`, `pgcrypto`, `uuid-ossp`
+- Extensiones: `citext`, `pgcrypto`, `uuid-ossp`, `pg_trgm`, `unaccent`. En PostgreSQL 16, las cinco son extensiones de confianza (trusted): el propietario de la base de datos puede crearlas sin ser superusuario. Un servicio PostgreSQL gestionado puede listar las extensiones que permite: permita primero estas cinco.
 - El usuario necesita permisos CREATE TABLE / ALTER TABLE para las migraciones
 - Recomendado: base de datos dedicada
 - `DATABASE_URL` debe usar un rol de aplicación dedicado
@@ -216,6 +217,8 @@ GRANT ALL PRIVILEGES ON DATABASE kanap TO kanap;
 CREATE EXTENSION IF NOT EXISTS citext;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS unaccent;
 
 -- 3. Conceder los permisos sobre el esquema (para las migraciones)
 GRANT ALL ON SCHEMA public TO kanap;
@@ -516,6 +519,7 @@ Con `IMPORT_XLSX=false`, los botones de importación muestran **Importar CSV**, 
 | `PASSWORD_RESET_TTL` | Duración de un enlace de restablecimiento de contraseña: un número de segundos o una duración como `30m` o `2h`. Cualquier otro valor dura 1 hora, y la API lo nombra en una advertencia `[CONFIG]` al arrancar. | `1h` |
 | `INVITE_LINK_TTL` | Duración del enlace para definir una contraseña en un correo de invitación: un número de segundos o una duración como `72h` o `7d`. Cualquier otro valor dura 7 días, y la API lo nombra en una advertencia `[CONFIG]` al arrancar. | `7d` |
 | `LOG_LEVEL` | `debug` o `verbose` añade al registro los detalles de cada ejecución de trabajo programado. Cualquier otro valor no cambia nada. | *sin definir* |
+| `SKIP_MIGRATIONS` | `true` (o `1`, `yes`, `y`, `on`): ni el script de arranque ni la API ejecutan las migraciones de la base de datos. Úselo solo cuando las migraciones se ejecuten como un paso propio (consulte [Ejecutar las imágenes usted mismo](#running-the-images-yourself)). La API sigue rechazando un rol con `SUPERUSER` o `BYPASSRLS`, sin modificarlo. | `false` |
 | `INTEGRATED_DOCS_AUTO_ROLLOUT` | Repara, al arrancar, los documentos vinculados a solicitudes y proyectos. Desactivado on-premise salvo que lo defina: `if-needed` solo ejecuta la reparación cuando los recuentos difieren, `always` en cada arranque. | *desactivado* |
 | `APP_URL` | Solo multi-tenant (nube). **No se necesita on-premise**: se usa `APP_BASE_URL`. | *sin definir* |
 | `EMAIL_OVERRIDE` | Redirige todos los correos a esta dirección (solo desarrollo/QA, **nunca en producción**) | *sin definir* |
@@ -549,6 +553,38 @@ Los valores predeterminados sirven para unas pocas decenas de usuarios. Para má
 Medido sobre 5000 líneas de presupuesto: con 10 usuarios, un proceso responde tan rápido como cuatro. Con 50 usuarios, abrir una línea tardó 237 ms (percentil 95) con un proceso, 142 ms con dos y 82 ms con cuatro, y un solo proceso mantenía ocupadas todas sus conexiones a la base de datos.
 
 Mantenga `API_WORKERS` igual o por debajo del número de núcleos de CPU que el servidor asigna a Kadratis. Los cambios se aplican cuando el contenedor de la API se vuelve a crear (`docker compose -f infra/compose.onprem.yml up -d api`).
+
+## Ejecutar las imágenes usted mismo { #running-the-images-yourself }
+
+La instalación de esta guía ejecuta las imágenes con `infra/compose.onprem.yml`, que no necesita nada de esta sección. Léala cuando ejecute las imágenes con un orquestador propio, Kubernetes por ejemplo.
+
+**Las migraciones como paso propio.** De forma predeterminada, el contenedor de la API ejecuta las migraciones de la base de datos antes de que arranque la API. Para ejecutarlas aparte (un Job de Kubernetes antes de cada actualización), inicie la imagen de la API con el comando `node scripts/migrate-and-start.js --migrate-only`, y la API con `SKIP_MIGRATIONS=true`.
+
+- El paso de migración hace las mismas comprobaciones que un arranque normal (espera a la base de datos, comprueba el rol, migra en una sola transacción) y después termina sin iniciar la API. Código de salida `0`: hecho, también cuando no había nada pendiente. `1`: un fallo, el registro indica cuál. Las migraciones de una ejecución se confirman todas juntas o ninguna: cuando una falla, no se aplica ninguna. La comprobación del rol que las precede puede haber quitado ya `SUPERUSER` y `BYPASSRLS` del rol, y un fallo posterior a ellas (la reparación de documentos con `INTEGRATED_DOCS_AUTO_ROLLOUT_STRICT=true`) las deja aplicadas. `2`: `SKIP_MIGRATIONS` está activado en su entorno. `143`: el paso se detuvo (`SIGTERM`); una migración en curso se revierte.
+- Dos ejecuciones a la vez se turnan: la que espera lo indica en su registro (`Another instance holds the migration lock, waiting...`) y después no encuentra nada que hacer. Cada ejecución migra en la sesión de base de datos que tiene su turno: si esa sesión termina, sus migraciones se revierten y la ejecución siguiente las aplica. Un Job reintentado o iniciado dos veces no aplica nada dos veces. En `pg_stat_activity`, las sesiones del paso de migración se llaman `kadratis-migrate`.
+- Conecte el paso de migración directamente a PostgreSQL, o a través de un pool en modo sesión (PgBouncer `pool_mode = session`). Un pool en modo transacción no conserva el turno entre dos instrucciones.
+- Dé al paso de migración y a la API la misma `DATABASE_URL`. El paso de migración quita `SUPERUSER` y `BYPASSRLS` de un rol que tiene `SUPERUSER`, como un arranque normal; un rol que solo tiene `BYPASSRLS` no puede quitárselo a sí mismo. Con `SKIP_MIGRATIONS=true` la API solo comprueba el rol: se niega a arrancar con un rol que tenga cualquiera de los dos atributos.
+- La organización y su administrador (`ADMIN_EMAIL`) se crean en el primer arranque de la API, después de las migraciones. Una API iniciada con `SKIP_MIGRATIONS=true` en una base de datos en la que no se ha ejecutado ninguna migración escribe `[migrations] SKIP_MIGRATIONS is on and the database has no schema: ...` y termina con el código `1`. El orquestador la vuelve a iniciar tras su propio retraso de reinicio, que puede llegar a 5 minutos en Kubernetes: reinicie las instancias de la API en cuanto se haya ejecutado el paso de migración (`kubectl rollout restart`, o elimine el pod) para evitar esa espera. En una base de datos con algunas migraciones de retraso, escribe cuántas están pendientes y atiende solicitudes: `/health/ready` responde `503` hasta que se haya ejecutado el paso de migración, y después `200`, sin reinicio.
+
+**Sondas.** La API escucha en el puerto 8080.
+
+| Sonda | Ruta | Respuesta |
+|-------|-------|---------|
+| Actividad (liveness) y arranque | `GET /health` | `200` mientras el proceso atiende solicitudes. No lee la base de datos. |
+| Disponibilidad (readiness) | `GET /health/ready` | `200` cuando la base de datos responde en menos de 2 segundos y no hay ninguna migración pendiente. `503` cuando la base de datos no responde, rechaza la conexión o la contraseña, o hay una migración pendiente: la instancia no recibe tráfico. Una instancia que ya ha estado disponible y tiene ocupadas todas sus conexiones a la base de datos responde `200` con `"database": "busy"`, de modo que una instancia ocupada sigue en servicio. La instancia lee las migraciones en cada comprobación hasta que no encuentra ninguna pendiente, y después solo comprueba su conexión a la base de datos: una instancia que ya ha estado disponible sigue disponible si más tarde queda pendiente una migración. |
+
+La comprobación de disponibilidad tarda hasta 2 segundos, y una sonda de Kubernetes se rinde tras 1 segundo de forma predeterminada: configure `timeoutSeconds: 3` en la sonda de disponibilidad. El primer arranque de la API en una base de datos nueva también crea la organización: dé dos minutos a la sonda de arranque, como hace el archivo compose. La imagen web responde a `GET /` en su propio puerto.
+
+**Usuario y sistema de archivos.** Ambas imágenes se ejecutan con cualquier ID de usuario, sin capacidades, en un sistema de archivos raíz de solo lectura (`runAsNonRoot`, `readOnlyRootFilesystem`, `capabilities: drop: [ALL]` y el nivel `restricted` de Pod Security). La imagen de la API designa su usuario por número (`1000:1000`); la imagen web se ejecuta como `101`. Cada una solo escribe en `/tmp`: monte allí un volumen con permiso de escritura (un `emptyDir` en disco). Para la API, 1 GB basta sin la [fuente de vulnerabilidades](#optional-vulnerabilities). Con la fuente CVE.org activada, cuente 4 GB: su exportación diaria (unos 700 MB en octubre de 2026) se descarga y descomprime allí. Para la imagen web, cuente 1 GB: nginx guarda allí las subidas (hasta 80 MB cada una) y las respuestas grandes mientras las transmite.
+
+**La imagen web.**
+
+| Variable | Descripción | Valor predeterminado |
+|----------|-------------|---------|
+| `KANAP_WEB_PORT` | Puerto en el que escucha el servidor web dentro de su contenedor, de 1 a 65535. Un usuario distinto de root no siempre puede escuchar por debajo de 1024: configure `8080` para un contenedor sin capacidades. | `80` |
+| `KANAP_API_UPSTREAM` | Host y puerto por los que el contenedor web llega a la API: en Kubernetes, el nombre del Service de la API y su puerto, por ejemplo `kadratis-api:8080`. El nombre se resuelve una sola vez, cuando arranca el contenedor web: el Service debe existir para entonces, y el contenedor web debe reiniciarse si su dirección cambia. | `api:8080` |
+
+Un valor no válido detiene el contenedor web de inmediato, con una línea que nombra la variable. Estas dos variables pertenecen al entorno del contenedor web: el archivo `.env` de la API no le llega.
 
 ## Ejemplo completo (.env)
 

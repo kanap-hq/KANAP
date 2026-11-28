@@ -8,7 +8,7 @@ For portfolio-wide sequencing and roadmap work, use [Portfolio Planning](portfol
 
 ## Where to find it
 
-- Workspace: **Portfolio**
+- Module: **Portfolio**
 - Path: **Portfolio > Projects**
 
 ## Permissions

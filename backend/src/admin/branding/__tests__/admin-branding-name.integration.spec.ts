@@ -36,7 +36,8 @@ import { AdminBrandingController } from '../admin-branding.controller';
 
 // An administrator renames the organisation from Branding. The display name
 // changes everywhere `GET /public/tenant-info` is read; the slug, the workspace
-// address, stays. A person without users:admin is refused, and an empty name
+// address, stays. An organization reader reads the settings and is refused the
+// write, as is users:admin alone, and an empty name
 // or one longer than 120 characters is refused. The platform console is refused
 // by the same host check as the other branding routes.
 
@@ -117,11 +118,12 @@ async function main() {
         );
         return { id: userId, email, tenant_id: id };
       };
-      // Role name Administrator grants every level. The member role does not.
+      // Role name Administrator grants every level. The other two roles do not write.
       const admin = await insertPerson('Administrator', 'users', 'admin');
-      const member = await insertPerson('Branding people member', 'users', 'member');
+      const reader = await insertPerson('Branding organization reader', 'organization', 'reader');
+      const peopleAdmin = await insertPerson('Branding people admin', 'users', 'admin');
       const [row] = await runner.query(`SELECT slug FROM tenants WHERE id = $1`, [id]);
-      return { admin, member, slug: row.slug as string };
+      return { admin, reader, peopleAdmin, slug: row.slug as string };
     });
 
     app = await NestFactory.create(BrandingNameProbeModule, { logger: false, abortOnError: false });
@@ -177,8 +179,17 @@ async function main() {
     assert.equal(settings.status, 200, settings.text);
     assert.equal(settings.json.name, 'Acme');
 
-    const refused = await call('PATCH', '/admin/branding/settings', people.member, { name: 'Denied' });
-    assert.equal(refused.status, 403, refused.text);
+    const read = await call('GET', '/admin/branding/settings', people.reader);
+    assert.equal(read.status, 200, `an organization reader reads the settings: ${read.text}`);
+    assert.equal(read.json.name, 'Acme');
+    const notRead = await call('GET', '/admin/branding/settings', people.peopleAdmin);
+    assert.equal(notRead.status, 403, `users:admin alone does not read them: ${notRead.text}`);
+
+    for (const person of [people.reader, people.peopleAdmin]) {
+      const refused = await call('PATCH', '/admin/branding/settings', person, { name: 'Denied' });
+      assert.equal(refused.status, 403, refused.text);
+      assert.deepEqual(refused.json?.params, { resource: 'organization', level: 'admin' }, 'the refusal names organization:admin');
+    }
     assert.equal((await stored()).name, 'Acme', 'a non-administrator changes nothing');
 
     for (const name of ['', '   ', 'A'.repeat(121)]) {

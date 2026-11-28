@@ -78,7 +78,7 @@ Dix minutes par parcours, avec l'exemple Fromage & Co ou avec vos données :
 
 - [Lignes budgétaires](budget-lines.md): Planifiez et suivez les lignes OPEX et CAPEX, leurs budgets et leurs ventilations
 - [Contrats](contracts.md): Gérez les contrats fournisseurs et les renouvellements
-- [Administration budgétaire](budget-operations.md): Paramètres budgétaires, opérations de gel, de copie et de réinitialisation
+- [Paramètres du budget](budget-operations.md): Paramètres budgétaires, opérations de gel, de copie et de réinitialisation
 - [Devises](currencies.md): Devises de reporting et par défaut, taux de change
 - [Geler les données de référence et copier les indicateurs annuels](master-data-operations.md): Verrouillez et reportez les indicateurs des sociétés et des départements
 - [Rapports](reports.md): Générez des rapports budgétaires et de refacturation

@@ -4,7 +4,7 @@ Diese Seite steuert den [Kad-Chat-Assistenten](ai-assistant.md): mit welchem KI-
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Administration**
+- Modul: **Administration**
 - Pfad: **Administration → Künstliche Intelligenz → Kad**
 - Route: `/admin/ai`
 - Berechtigung: `ai_settings:admin`

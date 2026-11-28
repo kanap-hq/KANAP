@@ -122,7 +122,7 @@ describe('CurrencySettingsPage', () => {
     renderPage();
     await waitForSettings();
 
-    expect(screen.queryByText('You need budget administrator rights to use this page.')).not.toBeInTheDocument();
+    expect(screen.queryByText('You need the “Admin” right on “Budget settings and operations” to use this page.')).not.toBeInTheDocument();
     for (const field of screen.getAllByRole('textbox')) {
       expect(field).not.toHaveAttribute('readonly');
     }
@@ -137,7 +137,7 @@ describe('CurrencySettingsPage', () => {
     renderPage();
     await waitForSettings();
 
-    expect(screen.getByText('You need budget administrator rights to use this page.')).toBeInTheDocument();
+    expect(screen.getByText('You need the “Admin” right on “Budget settings and operations” to use this page.')).toBeInTheDocument();
     const fields = screen.getAllByRole('textbox');
     expect(fields).toHaveLength(4);
     for (const field of fields) {

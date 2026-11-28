@@ -4,7 +4,7 @@ Diese Seite ist die Liste der KI-Modelle, die Ihre Organisation verwenden darf. 
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Administration**
+- Modul: **Administration**
 - Pfad: **Administration → Künstliche Intelligenz → KI-Modelle**
 - Route: `/admin/ai-models`
 - Berechtigung: `ai_settings:admin`

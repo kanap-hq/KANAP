@@ -7,7 +7,9 @@ describe('permission labels', () => {
   it('names a module and a level as the roles screen does', () => {
     expect(moduleRightLabel(i18n.getFixedT('fr'), 'budget')).toBe('Budget');
     expect(moduleRightLabel(i18n.getFixedT('fr'), 'infrastructure')).toBe('Infrastructure');
-    expect(moduleRightLabel(i18n.getFixedT('en'), 'budget_ops')).toBe('Budget ops');
+    expect(moduleRightLabel(i18n.getFixedT('en'), 'budget_ops')).toBe('Budget settings and operations');
+    expect(moduleRightLabel(i18n.getFixedT('fr'), 'organization')).toBe('Organisation');
+    expect(moduleRightLabel(i18n.getFixedT('fr'), 'settings')).toBe('Paramètres de la cartographie SI');
     expect(moduleRightLabel(i18n.getFixedT('en'), 'not_a_module')).toBe('not_a_module');
     expect(rightLevelLabel(i18n.getFixedT('fr'), 'reader')).toBe('Lecteur');
     expect(rightLevelLabel(i18n.getFixedT('en'), 'reader')).toBe('Reader');

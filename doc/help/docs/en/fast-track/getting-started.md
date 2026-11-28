@@ -28,7 +28,7 @@ Kadratis is organized around a simple structure. The top bar shows the sections 
 | **Knowledge** | Documents and templates with review workflows |
 | **Budget Management** | OPEX, CAPEX, Contracts, Reporting, Administration (currencies, budget columns, freeze and copy operations) |
 | **Master Data** | Companies, Departments, Cost centers, Suppliers, Contacts, Charts of Accounts, Working-day calendars, Analytics Dimensions, Business Processes |
-| **Admin** | Users, Roles, Audit Log, Billing, Authentication, Branding, Integrations (admin-only) |
+| **Administration** | Users, Roles, Audit Log, Billing, Authentication, Branding, Integrations (admin-only) |
 
 You don't need access to everything. Your role determines which sections and actions are available to you. If something is missing from your menu, ask your administrator.
 
@@ -74,7 +74,7 @@ Click the **Settings** icon (gear) to choose which tiles appear. Only tiles you 
 
 ## Step 2: Set Up Your Profile
 
-Click your **avatar** (top-right) → **My Profile**, or navigate to `/settings/profile`.
+Click your **avatar** (top-right) → **My account**, or navigate to `/settings/profile`.
 
 ### Profile tab
 
@@ -295,10 +295,10 @@ The weekly email and real-time notifications keep you in the loop without checki
 | Start a new document | Dashboard → New Document button |
 | See all my tasks | Portfolio → Tasks (scope: My Tasks) |
 | See everything in the org | Any list → scope filter → "All" |
-| Update my profile | Avatar → My Profile → Profile tab |
-| Set up notifications | Avatar → My Profile → Notifications tab |
-| Configure weekly email | Avatar → My Profile → Notifications tab → Weekly Review |
-| Change theme (light/dark) | Avatar → My Profile → Appearance tab |
+| Update my profile | Avatar → My account → Profile tab |
+| Set up notifications | Avatar → My account → Notifications tab |
+| Configure weekly email | Avatar → My account → Notifications tab → Weekly Review |
+| Change theme (light/dark) | Avatar → My account → Appearance tab |
 | See the version or get support | Avatar → About Kadratis |
 | Set my availability | Portfolio → Contributors → your name |
 | Add my skills | Portfolio → Contributors → your name → Skills tab |

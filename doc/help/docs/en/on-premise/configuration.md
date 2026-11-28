@@ -33,10 +33,10 @@ On first boot, Kadratis creates a tenant using these values. The defaults work f
 Set them before the first start:
 
 - Changing `DEFAULT_TENANT_SLUG` later makes Kadratis create a second, empty workspace and serve that one. The first workspace stays in the database, out of reach.
-- Changing `DEFAULT_TENANT_NAME` later has no effect. An administrator changes the workspace name in **Admin → Branding**. The workspace address stays as it is.
+- Changing `DEFAULT_TENANT_NAME` later has no effect. An administrator changes the workspace name in **Administration → Branding**. The workspace address stays as it is.
 - Changing `DEFAULT_TENANT_LANGUAGE` later has no effect: the dimensions keep their names. You can rename them in **Master data > Analytics dimensions**.
 
-To give Kadratis the look of your organization, set its name, logo and colors in **Admin → Branding**.
+To give Kadratis the look of your organization, set its name, logo and colors in **Administration → Branding**.
 
 ## Required: admin credentials
 
@@ -148,7 +148,8 @@ The number of migrations changes from version to version. On later starts it is 
 | `[VERSION] Kadratis <version>` | Informational. The version the API runs, the same as the `version` field of `/api/config/public`. |
 | `[entrypoint] DB not ready (attempt N): ... Retrying in 2000ms...` | The API cannot reach the database. It tries 30 times, 2 seconds apart, then stops with `[entrypoint] DB not ready after 30 attempts: ...`. Check `DATABASE_URL`, the PostgreSQL rules and `sslmode` (see [Required: database](#required-database)). |
 | `[entrypoint] DATABASE_URL resolves to ... PostgreSQL role ...`, then `[entrypoint] No migration ran.` | The application role has `SUPERUSER` or `BYPASSRLS` and Kadratis could not remove them. Start-up stopped before the migrations. Follow the message (see the role rules in [Required: database](#required-database)). |
-| `[entrypoint] A migration failed, not retried: ...` | The next line, `[entrypoint] Failed statement: ...`, shows the SQL statement that failed. The pending migrations were rolled back: the database is as before this start. Fix the cause or deploy the previous version. |
+| `[startup] DATABASE_URL resolves to ... PostgreSQL role "..." with ...`, then the API exits with code `1` | The application role has `SUPERUSER` or `BYPASSRLS` (`\du` in `psql` lists the attributes), and with `SKIP_MIGRATIONS=true` nothing removed them before the API. Have a PostgreSQL superuser run the `ALTER ROLE ... NOSUPERUSER NOBYPASSRLS` command the message gives, or run the migration step, which removes them from a role that has `SUPERUSER`: a role with `BYPASSRLS` alone cannot remove it itself. For `postgres` or another cluster-admin role, use a dedicated application role. |
+| `[entrypoint] A migration failed, not retried: ...` | The next line, `[entrypoint] Failed statement: ...`, shows the SQL statement that failed. The pending migrations were rolled back: none of them is applied. Fix the cause or deploy the previous version. |
 | `[ENV] run mode: ...` | Always printed. Shows the mode the API runs in: `development`, `production` or `unspecified`. |
 | `[ENV] APP_ENV is not set: production rules apply to links, browser origins and platform administration. Set APP_ENV=production (or development on a workstation).` | Printed in unspecified mode (the message shows the value when `APP_ENV` is set to something else). Set `APP_ENV=production` if users reach Kadratis over HTTPS. |
 | `[CONFIG] APP_BASE_URL is not set: ...` | Password reset and invitation emails, notification links and sign-in redirects are refused. Set `APP_BASE_URL`. |
@@ -197,7 +198,7 @@ Other visible changes:
 **Database requirements:**
 
 - PostgreSQL 16 or higher (16 and 18 are tested)
-- Extensions: `citext`, `pgcrypto`, `uuid-ossp`
+- Extensions: `citext`, `pgcrypto`, `uuid-ossp`, `pg_trgm`, `unaccent`. On PostgreSQL 16 all five are trusted extensions: the owner of the database can create them without being a superuser. A managed PostgreSQL service may list the extensions it allows: allow these five first.
 - User needs CREATE TABLE / ALTER TABLE permissions for migrations
 - Recommended: dedicated database
 - `DATABASE_URL` must use a dedicated application role
@@ -216,6 +217,8 @@ GRANT ALL PRIVILEGES ON DATABASE kanap TO kanap;
 CREATE EXTENSION IF NOT EXISTS citext;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS unaccent;
 
 -- 3. Grant schema permissions (for migrations)
 GRANT ALL ON SCHEMA public TO kanap;
@@ -390,7 +393,7 @@ All AI features are off by default on an on-premise installation. Three switches
 |----------|-------------|---------|
 | `AI_CHAT_ENABLED` | Turns on the [Kad chat assistant](../ai-assistant.md) for the installation. | `false` |
 | `AI_MCP_ENABLED` | Turns on the MCP server: API keys and connections without a key. See [Connecting AI assistants over MCP](#connecting-ai-assistants-over-mcp). | `false` |
-| `AI_SETTINGS_ENABLED` | Opens **Admin → Artificial intelligence** (AI models, Kad settings) and the [agents](../agents-overview.md) to administrators. Without it nobody can set up a provider. | `false` |
+| `AI_SETTINGS_ENABLED` | Opens **Administration → Artificial intelligence** (AI models, Kad settings) and the [agents](../agents-overview.md) to administrators. Without it nobody can set up a provider. | `false` |
 | `SETTINGS_ENCRYPTION_SECRET` | Secret that encrypts the provider keys and connection tokens you enter in Kadratis. Generate it with `openssl rand -hex 32`. Its former name, `AI_SETTINGS_ENCRYPTION_SECRET`, still works. | *unset* |
 
 Notes:
@@ -398,12 +401,12 @@ Notes:
 - Without `SETTINGS_ENCRYPTION_SECRET`, Kadratis refuses to store a provider key ("AI secret storage is not configured on this instance"). When keys are already stored, the API says so in its start-up log.
 - Changing `SETTINGS_ENCRYPTION_SECRET` later makes the stored keys unreadable. Back it up with `.env`, and enter the keys again if you lose it.
 - If your `.env` still uses `AI_SETTINGS_ENCRYPTION_SECRET`, keep it, or rename it with the same value. The API refuses to start when both names are set to different values.
-- An on-premise installation has no model included: you add your own provider or model server under **Admin → Artificial intelligence → AI models**. See [AI models](../ai-models.md) and [Kad settings](../ai-settings.md). Each tenant also has its own switches there.
+- An on-premise installation has no model included: you add your own provider or model server under **Administration → Artificial intelligence → AI models**. See [AI models](../ai-models.md) and [Kad settings](../ai-settings.md). Each tenant also has its own switches there.
 - The API needs outbound access to the provider you choose (see [Firewall rules](#firewall-rules)).
 
 ### Connecting AI assistants over MCP { #connecting-ai-assistants-over-mcp }
 
-With `AI_MCP_ENABLED=true`, AI assistants read Kadratis data through its MCP server, at `https://<your-name>/api/ai/mcp`. Each tenant also switches MCP on under **Admin → Artificial intelligence → Kad**. Users connect in one of two ways, compared in [Connection or API key](../ai-settings.md#connection-or-api-key):
+With `AI_MCP_ENABLED=true`, AI assistants read Kadratis data through its MCP server, at `https://<your-name>/api/ai/mcp`. Each tenant also switches MCP on under **Administration → Artificial intelligence → Kad**. Users connect in one of two ways, compared in [Connection or API key](../ai-settings.md#connection-or-api-key):
 
 - **API key**: an administrator creates a key in Kadratis and the user pastes it into the client (Claude Code, Cursor, scripts). It needs nothing more than a client that reaches the server, over HTTPS or plain HTTP inside your network.
 - **Connection (OAuth)**: Claude, Claude Desktop, Claude Code, ChatGPT or Grok signs in to Kadratis with the user's account, without a key. It needs the setup below.
@@ -516,6 +519,7 @@ With `IMPORT_XLSX=false`, the import buttons read **Import CSV**, the import dia
 | `PASSWORD_RESET_TTL` | Lifetime of a password reset link: a number of seconds or a duration such as `30m` or `2h`. Another value lasts 1 hour, and the API names it in a `[CONFIG]` warning at start. | `1h` |
 | `INVITE_LINK_TTL` | Lifetime of the link to set a password in an invitation e-mail: a number of seconds or a duration such as `72h` or `7d`. Another value lasts 7 days, and the API names it in a `[CONFIG]` warning at start. | `7d` |
 | `LOG_LEVEL` | `debug` or `verbose` adds the details of each scheduled job run to the log. Any other value changes nothing. | *unset* |
+| `SKIP_MIGRATIONS` | `true` (or `1`, `yes`, `y`, `on`): neither the start-up script nor the API runs the database migrations. Use it only when the migrations run as a step of their own (see [Running the images yourself](#running-the-images-yourself)). The API still refuses a role with `SUPERUSER` or `BYPASSRLS`, without changing it. | `false` |
 | `INTEGRATED_DOCS_AUTO_ROLLOUT` | Repairs, at start, the documents linked to requests and projects. Off on-premise unless you set it: `if-needed` runs the repair only when the counts differ, `always` at every start. | *off* |
 | `APP_URL` | Multi-tenant (cloud) only. **Not needed on-premise**: `APP_BASE_URL` is used. | *unset* |
 | `EMAIL_OVERRIDE` | Redirect all emails to this address (dev/QA only, **never in production**) | *unset* |
@@ -549,6 +553,38 @@ The defaults suit a few dozen users. For more users at once, run several API pro
 Measured on 5,000 budget lines: at 10 users one process answers as fast as four. At 50 users, opening a line took 237 ms (95th percentile) with one process, 142 ms with two and 82 ms with four, and one process kept all its database connections busy.
 
 Keep `API_WORKERS` at or below the number of CPU cores the server gives Kadratis. Changes take effect when the API container is created again (`docker compose -f infra/compose.onprem.yml up -d api`).
+
+## Running the images yourself
+
+The installation of this guide runs the images with `infra/compose.onprem.yml`, which needs none of this section. Read it when you run the images with an orchestrator of your own, Kubernetes for instance.
+
+**Migrations as a step of their own.** By default the API container runs the database migrations before the API starts. To run them apart (a Kubernetes Job before each upgrade), start the API image with the command `node scripts/migrate-and-start.js --migrate-only`, and the API with `SKIP_MIGRATIONS=true`.
+
+- The migration step runs the same checks as a normal start (it waits for the database, checks the role, migrates in one transaction), then exits without starting the API. Exit code `0`: done, including when nothing was pending. `1`: a failure, the log says which. The migrations of a run are committed together or not at all: when one fails, none is applied. The role check before them may already have removed `SUPERUSER` and `BYPASSRLS` from the role, and a failure after them (the document repair with `INTEGRATED_DOCS_AUTO_ROLLOUT_STRICT=true`) leaves them applied. `2`: `SKIP_MIGRATIONS` is on in its environment. `143`: the step was stopped (`SIGTERM`); a migration in progress is rolled back.
+- Two runs at once take turns: the one that waits says so in its log (`Another instance holds the migration lock, waiting...`), then finds nothing to do. Each run migrates on the database session that holds its turn: if that session ends, its migrations are rolled back and the next run applies them. A Job retried or started twice applies nothing twice. In `pg_stat_activity`, the sessions of the migration step are named `kadratis-migrate`.
+- Connect the migration step to PostgreSQL directly, or through a pool in session mode (PgBouncer `pool_mode = session`). A pool in transaction mode does not keep the turn between two statements.
+- Give the migration step and the API the same `DATABASE_URL`. The migration step removes `SUPERUSER` and `BYPASSRLS` from a role that has `SUPERUSER`, as a normal start does; a role with `BYPASSRLS` alone cannot remove it itself. With `SKIP_MIGRATIONS=true` the API only checks the role: it refuses to start with a role that has either attribute.
+- The organisation and its administrator (`ADMIN_EMAIL`) are created at the first start of the API, after the migrations. An API started with `SKIP_MIGRATIONS=true` on a database no migration has run on writes `[migrations] SKIP_MIGRATIONS is on and the database has no schema: ...` and exits with code `1`. The orchestrator starts it again after its own restart delay, which can reach 5 minutes on Kubernetes: restart the API instances once the migration step has run (`kubectl rollout restart`, or delete the pod) to skip that wait. On a database some migrations behind, it writes how many are pending and serves: `/health/ready` answers `503` until the migration step has run, then `200`, without a restart.
+
+**Probes.** The API listens on port 8080.
+
+| Probe | Route | Answer |
+|-------|-------|--------|
+| Liveness and start-up | `GET /health` | `200` as long as the process serves requests. It reads no database. |
+| Readiness | `GET /health/ready` | `200` when the database answers within 2 seconds and no migration is pending. `503` when the database does not answer, refuses the connection or the password, or a migration is pending: the instance receives no traffic. An instance that has been ready and has every database connection taken answers `200` with `"database": "busy"`, so a busy instance stays in service. The instance reads the migrations at each check until it finds none pending, then only checks its database connection: an instance that has been ready stays ready if a migration becomes pending later. |
+
+The readiness check takes up to 2 seconds, and a Kubernetes probe gives up after 1 second by default: set `timeoutSeconds: 3` on the readiness probe. The first start of the API on a new database also creates the organisation: give the start-up probe two minutes, as the compose file does. The web image answers `GET /` on its own port.
+
+**User and file system.** Both images run as any user ID, without capabilities, on a read-only root file system (`runAsNonRoot`, `readOnlyRootFilesystem`, `capabilities: drop: [ALL]` and the `restricted` Pod Security level). The API image names its user by number (`1000:1000`); the web image runs as `101`. Each writes only to `/tmp`: mount a writable volume there (an `emptyDir` on disk). For the API, 1 GB is enough without the [vulnerability feed](#optional-vulnerabilities). With the CVE.org source on, count 4 GB: its daily export (about 700 MB in October 2026) is downloaded and unpacked there. For the web image, count 1 GB: nginx keeps uploads (up to 80 MB each) and large answers there while it passes them on.
+
+**The web image.**
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `KANAP_WEB_PORT` | Port the web server listens on inside its container, 1 to 65535. A user other than root cannot always listen below 1024: set `8080` for a container without capabilities. | `80` |
+| `KANAP_API_UPSTREAM` | Host and port where the web container reaches the API: on Kubernetes, the name of the API's Service and its port, for example `kadratis-api:8080`. The name is resolved once, when the web container starts: the Service must exist by then, and the web container must be restarted if its address changes. | `api:8080` |
+
+An invalid value stops the web container at once, with a line that names the variable. These two variables belong to the web container's environment: the `.env` file of the API does not reach it.
 
 ## Full example (.env)
 

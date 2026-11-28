@@ -74,7 +74,7 @@ Haga clic en el icono de **Configuración** (engranaje) para elegir qué mosaico
 
 ## Paso 2: Configure su perfil
 
-Haga clic en su **avatar** (esquina superior derecha) > **Mi perfil**, o navegue a `/settings/profile`.
+Haga clic en su **avatar** (esquina superior derecha) > **Mi cuenta**, o navegue a `/settings/profile`.
 
 ### Pestaña Perfil
 
@@ -295,10 +295,10 @@ El correo semanal y las notificaciones en tiempo real le mantienen informado sin
 | Iniciar un nuevo documento | Panel de control > botón Nuevo documento |
 | Ver todas mis tareas | Portafolio > Tareas (alcance: Mis tareas) |
 | Ver todo en la organización | Cualquier lista > filtro de alcance > "Todos" |
-| Actualizar mi perfil | Avatar > Mi perfil > pestaña Perfil |
-| Configurar notificaciones | Avatar > Mi perfil > pestaña Notificaciones |
-| Configurar correo semanal | Avatar > Mi perfil > pestaña Notificaciones > Revisión semanal |
-| Cambiar tema (claro/oscuro) | Avatar > Mi perfil > pestaña Apariencia |
+| Actualizar mi perfil | Avatar > Mi cuenta > pestaña Perfil |
+| Configurar notificaciones | Avatar > Mi cuenta > pestaña Notificaciones |
+| Configurar correo semanal | Avatar > Mi cuenta > pestaña Notificaciones > Revisión semanal |
+| Cambiar tema (claro/oscuro) | Avatar > Mi cuenta > pestaña Apariencia |
 | Ver la versión u obtener ayuda | Avatar > Acerca de Kadratis |
 | Establecer mi disponibilidad | Portafolio > Colaboradores > su nombre |
 | Añadir mis competencias | Portafolio > Colaboradores > su nombre > pestaña Competencias |

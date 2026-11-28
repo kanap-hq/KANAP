@@ -108,7 +108,7 @@ const fleetAgent = {
   automatic_action_classes: [],
 };
 
-const PAUSED = `Agents that use the ${PRODUCT_NAME} included model are paused until an administrator confirms it in Admin > ${AGENT_NAME}.`;
+const PAUSED = `Agents that use the ${PRODUCT_NAME} included model are paused until an administrator confirms it in Administration > ${AGENT_NAME}.`;
 
 // Testing Library collapses the no-break spaces Intl writes before EUR. Compare that form.
 function shown(value: string): string {

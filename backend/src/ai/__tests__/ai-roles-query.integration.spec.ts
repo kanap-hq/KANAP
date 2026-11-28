@@ -192,7 +192,7 @@ async function testRoleDetailIsTheMatrix(h: Harness, runner: QueryRunner, s: See
   assert.equal(detail.data.permissions.contacts, 'reader', 'a suppliers contributor reads the contacts');
   assert.equal(detail.data.permissions.knowledge, null, 'a right the role does not give is null');
   assert.equal('opex' in detail.data.permissions || 'capex' in detail.data.permissions, false, 'no former name');
-  assert.equal(Object.keys(detail.data.permissions).length, 31, 'every right of the screen');
+  assert.equal(Object.keys(detail.data.permissions).length, 32, 'every right of the screen (organization included)');
   const administrator = await h.tools.execute(ctx(runner, s, 'unlimited'), 'get_entity_detail', { entity_type: 'roles', entity_id: 'Administrator' });
   assert.equal('projects' in administrator.data.permissions, false, 'a right the screen does not show is not read');
   assert.deepEqual(administrator.data.rights.map((right: any) => right.resource), ['budget', 'users']);
@@ -313,7 +313,7 @@ async function testTheExecutorsCheckTheRight(h: Harness, runner: QueryRunner, s:
     ['aggregate role_permissions', () => h.aggregate.execute(context, { entity_type: 'role_permissions', group_by: 'level' })],
   ] as const;
   for (const [name, call] of calls(withoutRight)) {
-    await assert.rejects(call, /You need the right to administer users \(the right the Admin › Roles screen asks for\)/, `${name}: refused without the right`);
+    await assert.rejects(call, /You need the right to administer users \(the right the Administration › Roles screen asks for\)/, `${name}: refused without the right`);
   }
   for (const [name, call] of calls(ctx(runner, s, 'limited'))) {
     await assert.rejects(call, /reserved to people with access to all data/, `${name}: refused in limited access`);

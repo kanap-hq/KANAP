@@ -4,7 +4,7 @@ Portfolio-Anfragen sind die Erfassungsebene für vorgeschlagene Arbeit. Eine Anf
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Portfolio**
+- Modul: **Portfolio**
 - Pfad: **Portfolio > Anfragen**
 
 ### Berechtigungen

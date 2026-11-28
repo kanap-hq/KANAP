@@ -4,7 +4,7 @@ Die Portfolio-Einstellungen ermöglichen es Ihnen, das Bewertungssystem, die Tea
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Portfolio**
+- Modul: **Portfolio**
 - Pfad: **Portfolio > Einstellungen**
 - Berechtigungen:
   - Sie benötigen `portfolio_settings:admin`, um Einstellungen zu ändern

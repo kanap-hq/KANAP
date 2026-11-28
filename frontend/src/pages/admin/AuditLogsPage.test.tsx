@@ -23,7 +23,9 @@ import {
 } from '../../lib/audit/auditLogLabels';
 import AuditLogsPage from './AuditLogsPage';
 
-const auth = vi.hoisted(() => ({ admin: true }));
+// `admin`: the reader holds organization:reader (and settings:reader); `usersAdmin`: users:admin
+// only; `limited`: their data access is limited.
+const auth = vi.hoisted(() => ({ admin: true, usersAdmin: false, limited: false }));
 const grid = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
 
 vi.mock('../../api', () => ({
@@ -35,8 +37,10 @@ vi.mock('../../api', () => ({
 
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
-    hasLevel: (resource: string, level: string) => auth.admin
-      && ((resource === 'users' && level === 'admin') || (resource === 'settings' && level === 'reader')),
+    hasLevel: (resource: string, level: string) => (auth.admin
+      && ((resource === 'organization' && level === 'reader') || (resource === 'settings' && level === 'reader')))
+      || (auth.usersAdmin && resource === 'users'),
+    dataAccess: auth.limited ? { mode: 'limited' } : null,
   }),
 }));
 
@@ -108,6 +112,8 @@ async function openDetail(entry: Record<string, any>) {
 describe('AuditLogsPage', () => {
   beforeEach(async () => {
     auth.admin = true;
+    auth.usersAdmin = false;
+    auth.limited = false;
     grid.props = null;
     getMock.mockReset();
     vi.mocked(downloadBlob).mockReset();
@@ -125,8 +131,16 @@ describe('AuditLogsPage', () => {
     expect(screen.getByRole('menuitem', { name: 'Excel (.xlsx)' })).toBeTruthy();
   });
 
-  it('shows nothing of the log without the users admin level', () => {
+  it('shows nothing of the log without the organization reader level, users admin included', () => {
     auth.admin = false;
+    auth.usersAdmin = true;
+    renderPage();
+    expect(screen.getByText('Forbidden')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Export' })).toBeNull();
+  });
+
+  it('shows nothing of the log to an organization reader whose data access is limited', () => {
+    auth.limited = true;
     renderPage();
     expect(screen.getByText('Forbidden')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Export' })).toBeNull();

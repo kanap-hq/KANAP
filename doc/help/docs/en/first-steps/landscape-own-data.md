@@ -48,7 +48,7 @@ These are the five steps of the **Your first five steps** tile on the home page,
 
 ## 5. A colleague
 
-**Admin > Users**
+**Administration > Users**
 
 **What to do.** Click **New**, enter the **Email** of an application or asset owner, choose **IT Landscape Member** under **Roles**, then **Save and invite**. Add them to the **IT owners** of their application.
 

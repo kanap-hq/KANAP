@@ -9,7 +9,7 @@ Kad no reemplaza al resto de la aplicación. Es una forma más rápida de resumi
 
 ## Dónde encontrarlo
 
-- Espacio de trabajo: **Kad** (navegación superior)
+- Módulo: **Kad** (navegación superior)
 - Ruta: `/ai`
 - Permiso: `ai_chat:reader` le permite abrir el espacio de trabajo del chat e iniciar conversaciones
 - Indicador de funcionalidad: requiere que la superficie de chat esté habilitada en su instancia. Si está desactivada, el espacio de trabajo muestra un aviso en lugar de la interfaz del chat.
@@ -202,7 +202,7 @@ Kad lee cuatro clases de datos de referencia, tal como los muestran sus pantalla
 
 - **Centros de coste**, con derecho de lectura sobre los centros de coste: el árbol de grupos de centros y centros de coste, la empresa y el responsable del presupuesto de cada nodo, y el número de líneas OPEX y CAPEX que lo usan. Kad lista todos los nodos bajo un grupo, en todos los niveles, o solo los nodos situados justo debajo.
 - **Calendarios laborales**, con derecho de lectura sobre los calendarios laborales: los días laborables de un año, mes a mes, y los festivos de un calendario estándar. Kadratis calcula el total del año y Kad lo cita. Un país sin calendario en su espacio de trabajo no tiene ninguno, y Kad no calcula sus días.
-- **Dimensiones analíticas**, con derecho de lectura sobre la analítica: los ajustes de cada dimensión (los tipos de línea a los que se aplica, si un valor es obligatorio, si cualquiera puede añadir un valor), su número de valores y las líneas que la usan. Una dimensión obligatoria solo cuenta como obligatoria mientras está activada.
+- **Dimensiones analíticas**, con derecho de lectura sobre la analítica: la configuración de cada dimensión (los tipos de línea a los que se aplica, si un valor es obligatorio, si cualquiera puede añadir un valor), su número de valores y las líneas que la usan. Una dimensión obligatoria solo cuenta como obligatoria mientras está activada.
 - **Tipos de cambio y moneda de reporting**, con derecho de lectura sobre el presupuesto: la moneda de reporting, las monedas por defecto y permitidas, el tipo de cada moneda para cada año con su fuente, los tipos introducidos a mano y los tipos que faltan.
 
 Un tipo de cambio es el importe en la moneda de reporting por 1 unidad de la moneda. En un espacio de trabajo que informa en euros, un tipo de 0,89 para USD significa 1 USD = 0,89 EUR. Kadratis calcula el tipo inverso y el tipo entre otras dos monedas, por ejemplo de USD a CHF, y Kad los cita.

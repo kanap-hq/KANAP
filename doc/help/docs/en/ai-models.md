@@ -4,8 +4,8 @@ This page is the list of AI models your organization is allowed to use. You add 
 
 ## Where to find it
 
-- Workspace: **Admin**
-- Path: **Admin → Artificial intelligence → AI models**
+- Module: **Administration**
+- Path: **Administration → Artificial intelligence → AI models**
 - Route: `/admin/ai-models`
 - Permission: `ai_settings:admin`
 

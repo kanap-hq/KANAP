@@ -49,7 +49,7 @@ export class PortfolioSkillsController {
   @Post()
   create(@Body() body: { category: string; name: string }, @Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
-    const userId = req?.user?.id ?? null;
+    const userId = req?.user?.sub ?? null;
     return this.svc.create(body, tenantId, userId, { manager: req?.queryRunner?.manager });
   }
 
@@ -58,7 +58,7 @@ export class PortfolioSkillsController {
   @Post('seed-defaults')
   seedDefaults(@Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
-    const userId = req?.user?.id ?? null;
+    const userId = req?.user?.sub ?? null;
     return this.svc.seedDefaults(tenantId, userId, { manager: req?.queryRunner?.manager });
   }
 
@@ -70,7 +70,7 @@ export class PortfolioSkillsController {
     @Body() body: { category?: string; name?: string; enabled?: boolean },
     @Req() req: any,
   ) {
-    const userId = req?.user?.id ?? null;
+    const userId = req?.user?.sub ?? null;
     return this.svc.update(id, body, userId, { manager: req?.queryRunner?.manager });
   }
 
@@ -78,7 +78,7 @@ export class PortfolioSkillsController {
   @RequireLevel('portfolio_settings', 'admin')
   @Delete(':id')
   delete(@Param('id') id: string, @Req() req: any) {
-    const userId = req?.user?.id ?? null;
+    const userId = req?.user?.sub ?? null;
     return this.svc.delete(id, userId, { manager: req?.queryRunner?.manager });
   }
 }

@@ -225,7 +225,7 @@ Ces nombres apparaissent pour les personnes qui lisent le budget mais pas ces li
 
 Même si ses rôles le permettent, une personne limitée ne peut pas :
 
-- modifier les réglages de l'espace de travail : geler et dégeler, la règle de ventilation par défaut, les colonnes du budget, les devises, la copie annuelle des données de référence, les effectifs et indicateurs des sociétés et des départements ;
+- modifier les paramètres de l'espace de travail : geler et dégeler, la règle de ventilation par défaut, les colonnes du budget, les devises, la copie annuelle des données de référence, les effectifs et indicateurs des sociétés et des départements ;
 - lancer des opérations sur de nombreuses lignes : copier et vider des colonnes budgétaires, copier les ventilations, supprimer en masse ;
 - supprimer une ligne ou un contrat ;
 - gérer les personnes : utilisateurs, rôles, accès aux données, journal d'audit ;
@@ -233,9 +233,9 @@ Même si ses rôles le permettent, une personne limitée ne peut pas :
 - supprimer un fournisseur ou un contact partagé (elle en crée et en modifie selon son rôle) ;
 - importer des fournisseurs, des contacts, des contrats ou des tâches ;
 - utiliser les écrans des agents IA ;
-- modifier les réglages des contrats, la personnalisation et les tâches planifiées.
+- modifier les paramètres des contrats, la personnalisation et les tâches planifiées.
 
-Les contrôles qui accompagnent ces opérations (les aperçus d'impact, le contrôle avant suppression) sont réservés eux aussi. Ces commandes sont masquées. Une demande qui atteint quand même le serveur est refusée avec « Cette action est réservée aux personnes qui ont accès à toutes les données. » Une personne qui a un rôle d'administration du budget garde le fichier budget dans son accès.
+Les contrôles qui accompagnent ces opérations (les aperçus d'impact, le contrôle avant suppression) sont réservés eux aussi. Ces commandes sont masquées. Une demande qui atteint quand même le serveur est refusée avec « Cette action est réservée aux personnes qui ont accès à toutes les données. » Une personne qui a le niveau Administrateur sur Budget (`budget:admin`) garde le fichier budget dans son accès.
 
 ## Quand l'accès aux données est indisponible
 

@@ -162,7 +162,7 @@
         "total": "Total"
       },
       "confirmations": {
-        "remove": "Remove this contributor configuration?"
+        "remove": "Remove this contributor's settings?"
       },
       "fields": {
         "assignTeam": "Assign to team",

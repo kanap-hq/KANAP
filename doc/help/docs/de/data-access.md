@@ -235,7 +235,7 @@ Auch wenn ihre Rollen es erlauben, kann eine begrenzte Person nicht:
 - die Bildschirme der KI-Agenten verwenden;
 - die Vertragseinstellungen, das Branding und die geplanten Aufgaben ändern.
 
-Die Prüfungen, die zu diesen Vorgängen gehören (die Vorschauen der Auswirkungen, die Prüfung vor einer Löschung), sind ebenfalls vorbehalten. Diese Befehle sind ausgeblendet. Eine Anfrage, die den Server dennoch erreicht, wird mit „Diese Aktion ist Personen mit Zugriff auf alle Daten vorbehalten.“ abgelehnt. Eine Person mit einer Rolle für die Budgetadministration behält die Budgetdatei innerhalb ihres Zugriffs.
+Die Prüfungen, die zu diesen Vorgängen gehören (die Vorschauen der Auswirkungen, die Prüfung vor einer Löschung), sind ebenfalls vorbehalten. Diese Befehle sind ausgeblendet. Eine Anfrage, die den Server dennoch erreicht, wird mit „Diese Aktion ist Personen mit Zugriff auf alle Daten vorbehalten.“ abgelehnt. Eine Person mit der Stufe Administrator für Budget (`budget:admin`) behält die Budgetdatei innerhalb ihres Zugriffs.
 
 ## Wenn der Datenzugriff nicht verfügbar ist
 

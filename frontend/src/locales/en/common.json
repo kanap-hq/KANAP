@@ -1753,8 +1753,8 @@
         },
         "budget_line": {
           "title": "A budget line",
-          "hint": "Open a line and explore its tabs. Budget, the main tab, shows 4 columns out of 5 possible ones, all set in Administration. The Relations tab links the budget to the items it carries.",
-          "hintRecord": "You are in the record of {{record}}. Explore the tabs. Budget, the main tab, shows 4 columns out of 5 possible ones, all set in Administration. The Relations tab links the budget to the items it carries."
+          "hint": "Open a line and explore its tabs. Budget, the main tab, shows 4 columns out of 5 possible ones, all set in Settings. The Relations tab links the budget to the items it carries.",
+          "hintRecord": "You are in the record of {{record}}. Explore the tabs. Budget, the main tab, shows 4 columns out of 5 possible ones, all set in Settings. The Relations tab links the budget to the items it carries."
         },
         "budget_report": {
           "title": "A report",

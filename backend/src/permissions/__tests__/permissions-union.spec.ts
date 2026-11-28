@@ -40,9 +40,31 @@ async function testManagerNeverHidesMemberWithinRole() {
   }
 }
 
+// `settings` and `organization` have two levels, reader and admin: a contributor or member
+// row reads as reader, so a role seeded with `settings: member` keeps exactly what it could do and
+// shows "Reader". `admin` stays; `manager`, which opens nothing, is not raised to reader.
+async function testReaderOrAdminRights() {
+  const cases: Array<[string, string, string]> = [
+    ['settings', 'member', 'reader'],
+    ['settings', 'contributor', 'reader'],
+    ['settings', 'admin', 'admin'],
+    ['settings', 'manager', 'manager'],
+    ['organization', 'member', 'reader'],
+    ['organization', 'reader', 'reader'],
+    ['organization', 'admin', 'admin'],
+    ['infrastructure', 'member', 'member'],
+  ];
+  for (const [resource, stored, read] of cases) {
+    const rows: Row[] = [{ role_id: 'role-1', resource, level: stored }];
+    const map = await service.listForRole('role-1', { manager: createManager(rows) });
+    assert.equal(map.get(resource), read, `${resource}:${stored}`);
+  }
+}
+
 async function run() {
   await testManagerNeverHidesMemberAcrossRoles();
   await testManagerNeverHidesMemberWithinRole();
+  await testReaderOrAdminRights();
 }
 
 void run();

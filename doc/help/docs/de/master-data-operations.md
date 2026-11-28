@@ -1,15 +1,15 @@
 # Stammdaten einfrieren und Jahreskennzahlen kopieren
 
-Zwei Werkzeuge der [Budgetadministration](budget-operations.md) verwalten die Kennzahlen von Unternehmen und Abteilungen über Geschäftsjahre hinweg: **Stammdaten einfrieren** und **Jahreskennzahlen kopieren**. Nutzen Sie sie, um finalisierte Zahlen zu sperren, eine Baseline in die Planung des nächsten Jahres zu übernehmen oder zu prüfen, was eingefroren ist und was nicht.
+Zwei Werkzeuge der [Budget-Einstellungen](budget-operations.md) verwalten die Kennzahlen von Unternehmen und Abteilungen über Geschäftsjahre hinweg: **Stammdaten einfrieren** und **Jahreskennzahlen kopieren**. Nutzen Sie sie, um finalisierte Zahlen zu sperren, eine Baseline in die Planung des nächsten Jahres zu übernehmen oder zu prüfen, was eingefroren ist und was nicht.
 
 Die Jahreskennzahlen sind Mitarbeiterzahl, IT-Benutzer und Umsatz der Unternehmen sowie die Mitarbeiterzahl der Abteilungen. Sie gehören zu den Stammdaten, und der Budgetzyklus friert sie ein und schreibt sie fort. Deshalb stehen die beiden Werkzeuge bei den anderen Budgetvorgängen.
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Budgetverwaltung**
-- Pfad: **Budgetverwaltung > Administration**, Abschnitt **Vorgänge**, Karten **Stammdaten einfrieren** und **Jahreskennzahlen kopieren**
+- Modul: **Budgetverwaltung**
+- Pfad: **Budgetverwaltung > Einstellungen**, Abschnitt **Vorgänge**, Karten **Stammdaten einfrieren** und **Jahreskennzahlen kopieren**
 - Berechtigungen:
-  - Zugriff auf das Budget (Leserechte auf Budget oder die Budgetadministration) sowie eines der Rechte `companies:admin`, `departments:admin` oder `budget_ops:admin`
+  - Zugriff auf das Budget (Stufe Leser für Budget oder für Budgeteinstellungen und -operationen) sowie eines der Rechte `companies:admin`, `departments:admin` oder `budget_ops:admin`
   - Die Karten sind für andere Benutzer ausgeblendet
 
 Die Stammdaten haben keinen eigenen Administrationseintrag.
@@ -119,7 +119,7 @@ Wenn Sie nur Zugriff auf einen Bereich haben, ist der andere in der Datenquellen
 
 Ihr Budget 2025 ist genehmigt. Sperren Sie es, damit niemand versehentlich die Zahlen ändert.
 
-1. Öffnen Sie **Budgetverwaltung > Administration > Stammdaten einfrieren**
+1. Öffnen Sie **Budgetverwaltung > Einstellungen > Stammdaten einfrieren**
 2. Wählen Sie Jahr **2025**
 3. Aktivieren Sie **Unternehmen** und **Abteilungen**
 4. Klicken Sie auf **Daten einfrieren**
@@ -130,7 +130,7 @@ Alle Unternehmens- und Abteilungskennzahlen für 2025 sind jetzt schreibgeschüt
 
 Sie möchten die 2026-Planung mit der Mitarbeiterzahl und dem Umsatz von 2025 als Baseline starten.
 
-1. Öffnen Sie **Budgetverwaltung > Administration > Jahreskennzahlen kopieren**
+1. Öffnen Sie **Budgetverwaltung > Einstellungen > Jahreskennzahlen kopieren**
 2. Setzen Sie **Quelljahr** auf **2025** und **Zieljahr** auf **2026**
 3. Wählen Sie unter **Datenquellen** **Unternehmen**
 4. Wählen Sie unter **Unternehmenskennzahlen** **Mitarbeiterzahl** und **Umsatz** (deaktivieren Sie IT-Benutzer, wenn nicht benötigt)
@@ -143,7 +143,7 @@ Alle Unternehmen tragen jetzt die Mitarbeiterzahl und den Umsatz von 2025 ins Ja
 
 Sie haben 2025 eingefroren, aber einen Fehler in der Mitarbeiterzahl eines Unternehmens entdeckt.
 
-1. Öffnen Sie **Budgetverwaltung > Administration > Stammdaten einfrieren**
+1. Öffnen Sie **Budgetverwaltung > Einstellungen > Stammdaten einfrieren**
 2. Wählen Sie Jahr **2025**, aktivieren Sie **Unternehmen** und klicken Sie auf **Daten freigeben**
 3. Bearbeiten Sie die Mitarbeiterzahl des Unternehmens unter **Stammdaten > Unternehmen > Details**
 4. Kehren Sie zu **Stammdaten einfrieren** zurück und frieren Sie 2025 Unternehmen erneut ein
@@ -177,7 +177,7 @@ Nein. Das Werkzeug kopiert alle Entitäten für die ausgewählten Bereiche und K
 Nein. Es werden nur Kennzahlen für Entitäten geschrieben, die in beiden Jahren existieren. Wenn ein Unternehmen im Quelljahr existiert, aber nicht im Ziel, wird diese Zeile übersprungen.
 
 **Wer kann den Einfrierstatus sehen?**
-Jeder, der diese Seite öffnen kann, also Administratoren von Unternehmen, Abteilungen oder der Budgetadministration. Jeder Administrator friert seinen eigenen Bereich ein oder gibt ihn frei.
+Jeder, der diese Seite öffnen kann, also Administratoren von Unternehmen, Abteilungen oder von Budgeteinstellungen und -operationen. Jeder Administrator friert seinen eigenen Bereich ein oder gibt ihn frei.
 
 **Kann ich zukünftige Jahre einfrieren?**
 Ja. Die Jahrauswahl umfasst einen Bereich vom letzten Jahr bis fünf Jahre voraus. Das Einfrieren eines zukünftigen Jahres ist nützlich, um genehmigte Budgets vor Beginn des Geschäftsjahres zu sperren.

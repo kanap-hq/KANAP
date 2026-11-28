@@ -173,7 +173,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 **Beträge ohne Wechselkurs**:
 
 - Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, erscheint ihr Betrag für dieses Jahr in seiner eigenen Währung mit einer kleinen orangefarbenen Markierung. Fahren Sie mit der Maus über die Markierung, um zum Beispiel „Kein Wechselkurs für USD im Jahr 2026: nicht in den Summen enthalten.“ zu lesen.
-- Die Summen lassen diese Beträge aus, und ein einzeiliger Hinweis unter der Liste nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen beim fehlenden Kurs öffnet. Nennt der Hinweis nur eine Währung und ein Jahr, öffnet sich direkt der Dialog für den manuellen Kurs.
+- Die Summen lassen diese Beträge aus, und ein einzeiliger Hinweis unter der Liste nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Personen mit der Stufe Administrator für Budgeteinstellungen und -operationen sehen außerdem **Kurs eingeben**, das die Währungseinstellungen beim fehlenden Kurs öffnet. Nennt der Hinweis nur eine Währung und ein Jahr, öffnet sich direkt der Dialog für den manuellen Kurs.
 - In einer sortierten Spalte stehen diese Zeilen am Ende. Ein Betragsfilter behält sie nie.
 - Unter [Manuelle Kurse](currencies.md#manuelle-kurse) können Sie den fehlenden Kurs selbst eingeben.
 
@@ -256,7 +256,7 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen
 - Beim Wechsel des Tabs, beim Wechsel zur vorherigen oder nächsten Zeile oder beim Schließen des Arbeitsbereichs werden ausstehende Änderungen zuerst gespeichert. Schlägt ein Speichervorgang fehl, bleiben Sie an Ort und Stelle und eine Meldung nennt den Grund, sodass keine Änderung unbemerkt verloren geht
 - **Strg+S** (**Cmd+S** auf dem Mac) speichert sofort
 - Kann eine Speicherung nicht sofort erfolgen, weil gerade eine andere Speicherung auf denselben Daten läuft, wiederholt Kadratis sie automatisch für Sie
-- Läuft ein Budgetvorgang für viele Zeilen (zum Beispiel das Kopieren oder Leeren einer Spalte in der Budgetadministration), werden Änderungen hier mit der Meldung „Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.“ zurückgestellt. Versuchen Sie es erneut, sobald er abgeschlossen ist
+- Läuft ein Budgetvorgang für viele Zeilen (zum Beispiel das Kopieren oder Leeren einer Spalte in den Budget-Einstellungen), werden Änderungen hier mit der Meldung „Ein anderer Budgetvorgang läuft gerade. Bitte versuchen Sie es erneut, wenn er abgeschlossen ist.“ zurückgestellt. Versuchen Sie es erneut, sobald er abgeschlossen ist
 
 **Gleichzeitiges Bearbeiten**:
 
@@ -337,7 +337,7 @@ Der Budget-Tab enthält die Beträge der Zeile, Jahr für Jahr und Spalte für S
     - **Prognose**: Eine zusätzliche Planungsspalte, standardmäßig ausgeblendet
     - **Ist-Werte**: Tatsächliche Ausgaben, so wie sie im Jahresverlauf erfasst werden
     - **Erwarteter Endwert**: Ihre beste Schätzung des Werts zum Jahresende
-- Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die Standardspalte unter **Budgetverwaltung > Administration > Budgetspalten** wählen (siehe [Budgetspalten](budget-operations.md#budgetspalten)). Eine ausgeblendete Spalte behält ihre Beträge
+- Ein Budgetadministrator kann die Spalten umbenennen, einige ausblenden und die Standardspalte unter **Budgetverwaltung > Einstellungen > Budgetspalten** wählen (siehe [Budgetspalten](budget-operations.md#budgetspalten)). Eine ausgeblendete Spalte behält ihre Beträge
 - Jede angezeigte Spalte hat unter den Jahres-Tabs eine Karte: ihren Namen, ihre Summe für das Jahr, die Herkunft ihrer Beträge und ihren Zeitraum, zum Beispiel „Gleichmäßig verteilt“ und „9 Monate, April bis Dezember“. Eine leere Spalte zeigt nur ihre Null. Bewegen Sie den Mauszeiger über eine Karte, um ihre Zeilen unter Menge und Preis zu sehen
 - Klicken Sie auf eine Karte, um an dieser Spalte zu arbeiten. Der Tab öffnet sich auf der [Standardspalte](budget-operations.md#budgetspalten) oder, wenn die Standardspalte eingefroren ist, auf der ersten angezeigten Spalte, die nicht eingefroren ist
 - Bei nur einer angezeigten Spalte gibt es keine Karten: Der Editor zeigt die Spalte direkt
@@ -403,7 +403,7 @@ Bei einer leeren Spalte wechselt ein Klick auf einen Tab sofort. Bei einer Spalt
 **Spalte leeren**:
 
 - **Spalte leeren**, rechts unter dem Editor, setzt jeden Monat der aktiven Spalte auf null, zum Beispiel bevor Sie den ganzen Betrag in einem einzigen Monat erfassen. Enthält die Spalte Beträge, bestätigen Sie zuerst: „Alle Monate der Spalte Budget für 2026 leeren? Die anderen Spalten bleiben unverändert.“ Das zählt als Änderung von Hand
-- Um Beträge und Zeitraum einer Spalte für alle Zeilen zu entfernen, verwenden Sie **Budgetspalte leeren** in der Budget-Administration
+- Um Beträge und Zeitraum einer Spalte für alle Zeilen zu entfernen, verwenden Sie **Budgetspalte leeren** in den Budget-Einstellungen
 
 **Ergebnis pro Monat**:
 
@@ -424,8 +424,8 @@ Bei einer leeren Spalte wechselt ein Klick auf einen Tab sofort. Bei einer Spalt
 
 **Einfrierverhalten**:
 
-- Sind die Budgetspalten eines Jahres für den Typ der Zeile eingefroren (über die Budget-Administration), zeigt die Karte jeder eingefrorenen Spalte ein Schloss-Symbol, ebenso ihre Kopfzeile in der Tabelle
-- Eine eingefrorene Spalte ist schreibgeschützt. Ihr Editor zeigt zum Beispiel „Die Spalte Budget 2026 ist eingefroren“ und „Schreibgeschützt. Ein Administrator hebt das Einfrieren unter Administration › Daten einfrieren / auftauen auf.“, mit ihrer Summe und der Herkunft ihrer Beträge
+- Sind die Budgetspalten eines Jahres für den Typ der Zeile eingefroren (über die Budget-Einstellungen), zeigt die Karte jeder eingefrorenen Spalte ein Schloss-Symbol, ebenso ihre Kopfzeile in der Tabelle
+- Eine eingefrorene Spalte ist schreibgeschützt. Ihr Editor zeigt zum Beispiel „Die Spalte Budget 2026 ist eingefroren“ und „Schreibgeschützt. Ein Administrator hebt das Einfrieren unter Einstellungen › Daten einfrieren / auftauen auf.“, mit ihrer Summe und der Herkunft ihrer Beträge
 - Sind Spalten eingefroren, sagt eine Zeile unter dem Diagramm „Einige Spalten sind eingefroren und schreibgeschützt.“
 - Jede Spalte kann unabhängig eingefroren werden
 
@@ -433,7 +433,7 @@ Bei einer leeren Spalte wechselt ein Klick auf einen Tab sofort. Bei einer Spalt
 
 - Eine kurze Bezeichnung auf jeder Karte nennt die Herkunft der Beträge der Spalte, gefolgt von ihrem Zeitraum. Bei nur einer Spalte steht sie unter dem Titel des Editors
 - **Gleichmäßig verteilt**, **Nach 4-4-5 verteilt** oder **Nach Quartal verteilt**: Die Beträge stammen aus einer Verteilung
-- **Kopiert aus Budget 2025 +2 %**: Die Beträge stammen aus **Budgetspalten kopieren** in der Budget-Administration oder aus **Ausgehend von**, mit dem Prozentsatz, falls es einen gibt
+- **Kopiert aus Budget 2025 +2 %**: Die Beträge stammen aus **Budgetspalten kopieren** in den Budget-Einstellungen oder aus **Ausgehend von**, mit dem Prozentsatz, falls es einen gibt
 - **Menge und Preis · 3 Zeilen · 1.00 VZÄ**: Die Beträge stammen aus Zeilen, mit ihrer Anzahl und, wenn die Zeilen Personen oder Tage zählen, den VZÄ der Spalte. Die VZÄ sind der Jahresdurchschnitt. Bewegen Sie den Mauszeiger über die Karte, um die Zeilen zu sehen, zum Beispiel „Projektleiter: 1 Person × 1.200 pro Tag, 5 Tage pro Monat, Feb. bis Juli“
 - **Von Hand geändert**: Ein Monat wurde in der Tabelle oder durch den Import einer Budgetdatei geändert
 - Ein Betrag an einem Datum zeigt sein Datum statt eines Zeitraums, zum Beispiel „Am 10. Februar 2026“
@@ -521,9 +521,9 @@ Klicken Sie unter der Tabelle auf **Zeile hinzufügen**, um eine Zeile hinzuzuf�
 **Wenn sich die Beträge auf anderem Weg ändern**: Die Zeilen bleiben als Referenz bei der Spalte, schreibgeschützt. Unter **Betrag** oder **Pro Monat** sagt eine Zeile, wie viele Zeilen behalten werden, zum Beispiel „4 Zeilen als Referenz behalten (48.000).“, gefolgt vom Link **Die Zeilen wieder verwenden**. Der Link speichert die Zeilen, wie sie sind, und berechnet die Spalte erneut daraus. Die Wahl des Tabs **Menge und Preis** tut dasselbe, nach einer Frage. Um eine als Referenz behaltene Zeile zu ändern, verwenden Sie die Zeilen zuerst wieder und ändern sie dann.
 
 - Die Spalte auf **Betrag** oder **Pro Monat** umstellen, einen Monat in der Tabelle eingeben oder **Spalte leeren**
-- **Budgetspalten kopieren** in der Budgetadministration oder **Ausgehend von**: Waren die Quellbeträge nicht aus Zeilen berechnet, überträgt die Kopie die Zeilen der Quellspalte als Referenz. Eine aus ihren Zeilen berechnete Spalte bleibt berechnet, mit um den Prozentsatz erhöhten Preisen. Siehe [Eine aus Zeilen aufgebaute Spalte kopieren](budget-operations.md#eine-aus-zeilen-aufgebaute-spalte-kopieren)
+- **Budgetspalten kopieren** in den Budget-Einstellungen oder **Ausgehend von**: Waren die Quellbeträge nicht aus Zeilen berechnet, überträgt die Kopie die Zeilen der Quellspalte als Referenz. Eine aus ihren Zeilen berechnete Spalte bleibt berechnet, mit um den Prozentsatz erhöhten Preisen. Siehe [Eine aus Zeilen aufgebaute Spalte kopieren](budget-operations.md#eine-aus-zeilen-aufgebaute-spalte-kopieren)
 - Geänderte Arbeitstage eines Kalenders: Der Tab **Menge und Preis** zeigt zum Beispiel „Seit der letzten Berechnung geänderte Arbeitstage: März: 20 Tage, jetzt 19.“, gefolgt von **Die Zeilen wieder verwenden**. An der Spalte ändert sich nichts, bis Sie auf **Die Zeilen wieder verwenden** klicken. Die Zeilen bleiben bis dahin bearbeitbar
-- **Budgetspalte leeren** in der Budgetadministration entfernt die Zeilen zusammen mit den Beträgen. Siehe [Budgetspalte leeren](budget-operations.md#budgetspalte-zurucksetzen)
+- **Budgetspalte leeren** in den Budget-Einstellungen entfernt die Zeilen zusammen mit den Beträgen. Siehe [Budgetspalte leeren](budget-operations.md#budgetspalte-zurucksetzen)
 - Eine Budgetdatei ändert die Monate einer Spalte und lässt ihre Zeilen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md)
 
 #### Wenn das Konto eine Erfassung nach Menge und Preis erwartet { #quantity-and-price-expected }
@@ -584,7 +584,7 @@ Der Tab Zuordnungen verteilt die Ausgabe eines Jahres auf Ihre Unternehmen und A
 
 **Standard- und fixierte Methoden**:
 
-- Der **Standard**-Eintrag, angezeigt als *Mitarbeiterzahl (Standard)*, bis Ihre Organisation eine andere Methode konfiguriert, folgt der Einstellung unter **Budgetverwaltung > Administration > Standard-Zuordnungsmethode**. Jede Zeile, die auf Standard bleibt, wird neu berechnet, wenn ein Administrator diese Einstellung ändert
+- Der **Standard**-Eintrag, angezeigt als *Mitarbeiterzahl (Standard)*, bis Ihre Organisation eine andere Methode konfiguriert, folgt der Einstellung unter **Budgetverwaltung > Einstellungen > Standard-Zuordnungsmethode**. Jede Zeile, die auf Standard bleibt, wird neu berechnet, wenn ein Administrator diese Einstellung ändert
 - Diese Einstellung kann den Standard auch auf eine **Auswahl von Unternehmen** beschränken (zum Beispiel das Unternehmen, das das IT-Budget trägt): Der Treiber gilt dann nur für diese Unternehmen, und die Option lautet *Standard (n Unternehmen)*
 - **Mitarbeiterzahl**, **IT-Benutzer** und **Umsatz** fixieren diese Methode an der Zeile: Eine fixierte Methode funktioniert weiterhin, auch wenn sich der Standard der Organisation später ändert
 - Zeilen mit einer manuellen Zuordnung sind vom Standard nie betroffen
@@ -770,7 +770,7 @@ Eine Budgetdatei ändert den Typ einer Zeile nie. Siehe [Ein Budget aus einer Ta
 
 13. **Deep Linking nutzen**: Klicken Sie direkt auf eine Budgetspalte in der Liste, um zum Budget-Tab für dieses Jahr zu springen. Klicken Sie auf die Spalte Aufgabe, um zu den Aufgaben der Zeile im Tab Übersicht zu springen. Das spart Navigationszeit.
 
-14. **Budgets nach Jahresabschluss einfrieren**: Verwenden Sie die Budgetadministration, um Vorjahresbudgets einzufrieren, sobald die Ist-Werte finalisiert sind, um versehentliche Bearbeitungen zu verhindern.
+14. **Budgets nach Jahresabschluss einfrieren**: Verwenden Sie die Budget-Einstellungen, um Vorjahresbudgets einzufrieren, sobald die Ist-Werte finalisiert sind, um versehentliche Bearbeitungen zu verhindern.
 
 ---
 
@@ -782,7 +782,7 @@ Der Zugriff auf Budgetzeilen wird durch die Ressource Budget gesteuert, die für
 - `budget:member`: Zeilen erstellen und bearbeiten, ihren Typ ändern, Budgets und Zuordnungen aktualisieren, Anhänge hochladen und löschen, Beziehungen, Verknüpfungen und Kontakte verwalten, Zeilen in großer Zahl ändern
 - `budget:admin`: Alle Mitglied-Rechte plus Import und Export, Budget-Operationen (Budgetspalten kopieren, mit Beträgen und Zuordnungen, und Budgetspalte leeren) und das Löschen von Zeilen aus der Liste oder von der Zeile
 
-Das Einfrieren von Budgetspalten erfordert die Budgetadministration (`budget_ops:admin`).
+Das Einfrieren von Budgetspalten erfordert die Stufe Administrator für Budgeteinstellungen und -operationen (`budget_ops:admin`).
 
 Der Datenzugriff kann eine Person auf die Zeilen bestimmter Unternehmen oder Kostenstellen begrenzen. Sie sieht dann diese Zeilen und die, auf denen sie benannt ist, eine mit Lesen sichtbare Zeile zeigt „Schreibgeschützt in Ihrem Zugriff“, und das Löschen von Zeilen sowie die Budget-Operationen sind Personen mit Zugriff auf alle Daten vorbehalten. Zeilen in großer Zahl ändern kann sie auf den Zeilen ihres Zugriffs. Siehe [Datenzugriff](data-access.md).
 

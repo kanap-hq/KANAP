@@ -1,14 +1,14 @@
 # Paramètres de devises
 
-La page des paramètres de devises (**Gestion budgétaire > Administration > Devises**) règle la manière dont Kadratis enregistre, affiche et convertit les devises. Elle fixe la devise de reporting de tout l'espace de travail, les devises proposées par défaut sur les nouvelles lignes et, si besoin, la liste des devises autorisées.
+La page des paramètres de devises (**Gestion budgétaire > Paramètres > Devises**) règle la manière dont Kadratis enregistre, affiche et convertit les devises. Elle fixe la devise de reporting de tout l'espace de travail, les devises proposées par défaut sur les nouvelles lignes et, si besoin, la liste des devises autorisées.
 
 Pour le fonctionnement détaillé des devises et des conversions, consultez le guide de gestion des devises.
 
 ## Qui peut la consulter et la modifier
 
-Les devises sont un paramètre budgétaire. La page se trouve avec les autres paramètres budgétaires dans l'[Administration budgétaire](budget-operations.md).
+Les devises sont un paramètre budgétaire. La page se trouve avec les autres paramètres budgétaires dans les [paramètres du budget](budget-operations.md).
 
-- **Ouvrir la page, modifier les paramètres, lancer la synchronisation des taux de change et saisir des taux manuels** : administration budgétaire au niveau administrateur. La carte est masquée pour les autres utilisateurs.
+- **Ouvrir la page, modifier les paramètres, lancer la synchronisation des taux de change et saisir des taux manuels** : niveau Administrateur sur Paramètres et opérations du budget. La carte est masquée pour les autres utilisateurs.
 - **Utiliser les devises sur les lignes** : les utilisateurs OPEX et CAPEX choisissent parmi les devises autorisées dans leurs formulaires de ligne, sans ouvrir cette page.
 
 Le droit **Paramètres** de la cartographie SI ne donne pas accès aux devises. Il couvre uniquement les paramètres de la cartographie SI.
@@ -157,7 +157,7 @@ Un taux manuel remplace le taux automatique de cette année jusqu'à ce que vous
 Quand l'année a des versions budgétaires gelées, un taux manuel saisi ou retiré ne les atteint pas, et la page le signale, par exemple **Les 2 versions gelées de 2026 gardent le taux de leur gel.**
 
 Bon à savoir :
-  - Seuls les utilisateurs de l'administration budgétaire au niveau administrateur peuvent saisir, modifier ou retirer un taux manuel.
+  - Seules les personnes qui ont le niveau Administrateur sur Paramètres et opérations du budget peuvent saisir, modifier ou retirer un taux manuel.
   - Chaque saisie, modification et suppression est enregistrée dans le journal d'audit.
   - Une année gelée garde les taux enregistrés au moment du gel, taux manuels et estimations compris (voir [Années gelées](#annees-gelees)).
   - Un taux manuel est saisi par rapport à la devise de reporting actuelle. Après un changement de devise de reporting, les taux manuels saisis pour l'ancienne ne s'appliquent plus. Ils s'appliquent de nouveau si vous revenez à cette devise de reporting.
@@ -215,7 +215,7 @@ Geler la colonne budgétaire par défaut d'une année fige les taux de cette ann
 
 **Taux manquant** : quand une année n'a pas de taux pour une devise utilisée, les montants des lignes budgétaires dans cette devise sont exclus de tous les totaux en devise de reporting de cette année. Cela vaut pour la liste des lignes budgétaires, la section Gestion budgétaire de la page d'accueil, les rapports budgétaires et de refacturation, les contrats et les onglets Relations des applications et des technologies. L'écran le signale là où c'est utile :
 
-- Un avertissement d'une ligne indique ce qui est exclu, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Il s'affiche sous les totaux de la liste des lignes budgétaires, sur les tuiles de la vue d'ensemble, en haut de chaque rapport budgétaire et de refacturation, et sous les chiffres budgétaires des contrats, des applications et des technologies. Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre cette page sur le taux manquant.
+- Un avertissement d'une ligne indique ce qui est exclu, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Il s'affiche sous les totaux de la liste des lignes budgétaires, sur les tuiles de la vue d'ensemble, en haut de chaque rapport budgétaire et de refacturation, et sous les chiffres budgétaires des contrats, des applications et des technologies. Les personnes qui ont le niveau Administrateur sur Paramètres et opérations du budget voient aussi **Saisir un taux**, qui ouvre cette page sur le taux manquant.
 - Sur la ligne elle-même, le montant s'affiche dans sa propre devise avec une petite marque orange. Survolez la marque pour lire, par exemple, « Pas de taux de change USD pour 2026 : exclu des totaux. »
 
 Kadratis récupère les taux de cette année en arrière-plan (au plus une fois toutes les six heures par année) : l'affichage suivant utilise le nouveau taux dès que la source le publie. Pour repérer les taux manquants, consultez le bloc des taux manquants au-dessus du tableau des taux, et lancez **Forcer la synchronisation des taux de change** pour les récupérer tout de suite. Saisir un [taux manuel](#taux-manuels) règle le problème immédiatement.
@@ -239,7 +239,7 @@ Kadratis récupère les taux de cette année en arrière-plan (au plus une fois 
 Votre groupe passe d'une consolidation en EUR à une consolidation en USD.
 
 **Étapes** :
-  1. Allez dans **Gestion budgétaire > Administration > Devises**
+  1. Allez dans **Gestion budgétaire > Paramètres > Devises**
   2. Remplacez la devise de reporting `EUR` par `USD`
   3. Cliquez sur **Enregistrer**, lisez la fenêtre de confirmation (taux manuels qui ne s'appliquent plus, versions gelées), puis cliquez sur **Changer la devise**
   4. Lisez le résultat de la récupération des taux. Pour chaque paire encore manquante, saisissez un taux manuel ou relancez plus tard **Forcer la synchronisation des taux de change**
@@ -252,7 +252,7 @@ Votre groupe passe d'une consolidation en EUR à une consolidation en USD.
 Votre direction financière impose que toutes les dépenses soient enregistrées en EUR, USD ou GBP.
 
 **Étapes** :
-  1. Allez dans **Gestion budgétaire > Administration > Devises**
+  1. Allez dans **Gestion budgétaire > Paramètres > Devises**
   2. Renseignez les devises autorisées : `EUR, USD, GBP`
   3. Cliquez sur **Enregistrer**
   4. Lancez **Forcer la synchronisation des taux de change** pour disposer des taux des trois devises
@@ -263,7 +263,7 @@ Votre direction financière impose que toutes les dépenses soient enregistrées
 Votre entreprise ouvre une activité en Suisse et doit suivre des dépenses en CHF.
 
 **Étapes** :
-  1. Allez dans **Gestion budgétaire > Administration > Devises**
+  1. Allez dans **Gestion budgétaire > Paramètres > Devises**
   2. Ajoutez `CHF` aux devises autorisées (par exemple `EUR, USD, GBP, CHF`)
   3. Cliquez sur **Enregistrer**
   4. Cliquez sur **Forcer la synchronisation des taux de change** pour récupérer aussitôt les taux du CHF
@@ -275,7 +275,7 @@ Votre entreprise ouvre une activité en Suisse et doit suivre des dépenses en C
 En décembre, vous préparez le budget de l'année prochaine.
 
 **Étapes** :
-  1. Allez dans **Gestion budgétaire > Administration > Devises**
+  1. Allez dans **Gestion budgétaire > Paramètres > Devises**
   2. Cliquez sur **Forcer la synchronisation des taux de change** pour mettre à jour les taux de l'année à venir
   3. Consultez dans le tableau des taux les estimations de l'année prochaine
   4. Gardez en tête que les taux des années futures reprennent celui de l'année en cours : revoyez-les à l'approche de l'année

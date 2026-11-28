@@ -4,8 +4,8 @@ This page answers two questions an administrator asks regularly: *how much are w
 
 ## Where to find it
 
-- Workspace: **Admin**
-- Path: **Admin → Artificial intelligence → Usage & costs**
+- Module: **Administration**
+- Path: **Administration → Artificial intelligence → Usage & costs**
 - Route: `/admin/ai-usage`
 - Permission: `ai_settings:admin`
 

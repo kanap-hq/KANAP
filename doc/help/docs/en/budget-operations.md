@@ -1,11 +1,11 @@
-# Budget Administration
+# Budget settings
 
-Budget Administration gives you a set of tools for managing and transforming budget data across years and columns. These are the operations you reach for during budget planning cycles: preparing next year's numbers, locking approved budgets, and managing year-over-year transitions.
+Budget settings gives you a set of tools for managing and transforming budget data across years and columns. These are the operations you reach for during budget planning cycles: preparing next year's numbers, locking approved budgets, and managing year-over-year transitions.
 
 ## Where to find it
 
-- Path: **Budget Management > Administration**
-- Permissions: each card shows only to the users who can use it (see the table below). **Administration** appears in the menu when you can use at least one card.
+- Path: **Budget Management > Settings**
+- Permissions: each card shows only to the users who can use it (see the table below). **Settings** appears in the menu when you can use at least one card.
 
 The landing page has two sections. Each card links to a dedicated tool. An empty section is hidden.
 
@@ -29,12 +29,12 @@ The landing page has two sections. Each card links to a dedicated tool. An empty
 
 | Cards | Who sees them |
 |---|---|
-| Currencies, Freeze / unfreeze data | Budget administration at admin level (`budget_ops:admin`) |
-| Budget columns, Default allocation method | Budget administration at reader level (`budget_ops:reader`, as the built-in Budget Member), read-only. Changing them needs the admin level (`budget_ops:admin`) |
+| Currencies, Freeze / unfreeze data | Budget settings and operations at Admin level (`budget_ops:admin`) |
+| Budget columns, Default allocation method | Budget settings and operations at Reader level (`budget_ops:reader`, as the built-in Budget Member), read-only. Changing them needs the admin level (`budget_ops:admin`) |
 | Copy budget columns, Clear a budget column | Budget at admin level (`budget:admin`). Every **Line type** (**All**, **OPEX**, **CAPEX**) opens with it |
-| Freeze master data, Copy yearly metrics | Users with access to the budget who are admins of Budget administration, companies or departments. Company and department admins act on their own scope |
+| Freeze master data, Copy yearly metrics | Users with access to the budget who are admins of Budget settings and operations, companies or departments. Company and department admins act on their own scope |
 
-The built-in Budget Administrator role sees every card. Budget Member sees the **Budget columns** and **Default allocation method** cards, which open read-only, and no operation. Budget Reader reads the budget lines and not their settings: the **Administration** entry of the Budget menu does not show for it. A person whose data access is limited sees none of these cards.
+The built-in Budget Administrator role sees every card. Budget Member sees the **Budget columns** and **Default allocation method** cards, which open read-only, and no operation. Budget Reader reads the budget lines and not their settings: the **Settings** entry of the Budget management menu does not show for it. A person whose data access is limited sees none of these cards.
 
 The budget columns are Budget, Revision, Forecast, Actuals and Expected landing. These are the standard names. Your organisation can rename them, hide some and choose a default column in [Budget columns](#budget-columns). Every page below shows the names your organisation chose.
 
@@ -62,7 +62,7 @@ Below the tabs, a table has one row per budget column and one column per type, *
 - The action at the end of a row acts on both types at once. It reads **Freeze both** while one of the two cells is open, and freezes the open one. Once both are frozen, it reads **Unfreeze both**
 - A cell stays disabled while its change is saving. The year tabs wait for every change to finish
 
-Without the Admin level on Budget administration, the page shows the states read only, with the message "You need budget administrator rights to use this page."
+Without the Admin level on Budget settings and operations, the page shows the states read only, with the message "You need the “Admin” right on “Budget settings and operations” to use this page."
 
 ### What freezing does
 
@@ -329,7 +329,7 @@ The default is resolved every time allocations are displayed, so editing it re-d
 
 ### Permissions
 
-Changing the default needs `budget_ops:admin`. Budget Member, who reads Budget administration (`budget_ops:reader`), opens the page read-only: the same fields, which they cannot change, and no **Restore the default allocation** button. They can still choose the fiscal year to read. Budget Reader and a person whose data access is limited cannot open the page.
+Changing the default needs `budget_ops:admin`. Budget Member, who reads Budget settings and operations (`budget_ops:reader`), opens the page read-only: the same fields, which they cannot change, and no **Restore the default allocation** button. They can still choose the fiscal year to read. Budget Reader and a person whose data access is limited cannot open the page.
 
 Each change writes its own entry in the audit log.
 
@@ -352,7 +352,7 @@ One row per column, always in the same order, from column 1 to column 5. The sta
 | Field | Description |
 |-------|-------------|
 | **Column** | The position, 1 to 5. Columns cannot be reordered |
-| **Name** | The name everyone sees in lists, the Budget tab, reports, the overview and Budget administration. Leave it empty to use the standard name, shown as a placeholder. At most 40 characters, with no control or invisible characters. Each name must differ from the other columns' names, including the standard name of a column you have not renamed, whatever the capitals |
+| **Name** | The name everyone sees in lists, the Budget tab, reports, the overview and Budget settings. Leave it empty to use the standard name, shown as a placeholder. At most 40 characters, with no control or invisible characters. Each name must differ from the other columns' names, including the standard name of a column you have not renamed, whatever the capitals |
 | **In files** | The line under each name. It gives the technical name of the column in the budget file and its imports, for example `budget` for column 1. It never changes when you rename a column. See [Load a budget from a spreadsheet](budget-file.md) |
 | **Shown** | Whether the column appears on screen. At least one column must stay shown |
 | **Follows the spread and the lines** | Whether the column starts ticked in **Use for other columns too…** on the Budget tab, which gives other columns the period and distribution of an amount, or the quantity and price lines. You can still tick or untick each column there |
@@ -378,7 +378,7 @@ A change the server refuses is undone at once: the name or the switch shows its 
 
 ### Permissions
 
-Changing the settings needs Budget administration admin rights (`budget_ops:admin`). Budget Member, who reads Budget administration (`budget_ops:reader`), opens the page read-only: the same table, which they cannot change. Budget Reader and a person whose data access is limited cannot open the page.
+Changing the settings needs the Admin level on Budget settings and operations (`budget_ops:admin`). Budget Member, who reads Budget settings and operations (`budget_ops:reader`), opens the page read-only: the same table, which they cannot change. Budget Reader and a person whose data access is limited cannot open the page.
 
 If the settings cannot be loaded, the page shows one line, "The column settings could not be loaded.", and no controls.
 

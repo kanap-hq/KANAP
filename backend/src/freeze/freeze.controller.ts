@@ -26,7 +26,7 @@ function assertCanManageTargets(targets: FreezeTarget[], req: any) {
     if (scope === 'companies' || scope === 'departments') {
       assertCanManageMasterDataScope(access, scope, `change the ${scope} freeze`);
     } else if (!access.isAdmin && access.permissions?.budget_ops !== 'admin') {
-      throw moduleRightRequired('budget_ops', 'admin', 'You need Budget administration admin permissions to change this freeze');
+      throw moduleRightRequired('budget_ops', 'admin', 'You need the Admin level on Budget settings and operations to change this freeze');
     }
   }
 }

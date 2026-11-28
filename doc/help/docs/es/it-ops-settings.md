@@ -6,7 +6,7 @@ Para la legibilidad del mapa, las **Entidades** y **Roles de servidor** también
 
 ## Dónde encontrarla
 
-- Espacio de trabajo: **Panorama IT**
+- Módulo: **Panorama IT**
 - Ruta: **Panorama IT > Configuración**, la última entrada del menú
 - Permisos:
   - Necesita al menos `settings:reader` para ver la pestaña **Listas**.

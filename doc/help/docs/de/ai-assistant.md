@@ -9,7 +9,7 @@ Kad ersetzt nicht den Rest der Anwendung. Es ist ein schnellerer Weg, um Kontext
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **Kad** (obere Navigation)
+- Modul: **Kad** (obere Navigation)
 - Route: `/ai`
 - Berechtigung: `ai_chat:reader` erlaubt Ihnen, den Chat-Arbeitsbereich zu öffnen und Konversationen zu beginnen
 - Feature-Flag: Die Chat-Oberfläche muss auf Ihrer Instanz aktiviert sein. Ist sie deaktiviert, zeigt der Arbeitsbereich einen Hinweis anstelle der Chat-Oberfläche.

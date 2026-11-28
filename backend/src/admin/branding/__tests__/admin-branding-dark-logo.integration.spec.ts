@@ -111,7 +111,7 @@ async function main() {
       const one = async (sql: string, params: unknown[]) => (await runner.query(sql, params))[0].id as string;
       const roleId = await one(`INSERT INTO roles (tenant_id, role_name) VALUES ($1, 'Administrator') RETURNING id`, [id]);
       await runner.query(
-        `INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'users', 'admin')`,
+        `INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'organization', 'admin')`,
         [id, roleId],
       );
       const email = `branding-dark-${randomUUID()}@example.invalid`;

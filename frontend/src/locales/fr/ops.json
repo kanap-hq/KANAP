@@ -666,12 +666,12 @@
       "undo": "Annuler la décision",
       "failed": "La décision n'a pas pu être enregistrée.",
       "settings": {
-        "button": "Réglages",
-        "title": "Réglages des contrats",
+        "button": "Paramètres",
+        "title": "Paramètres des contrats",
         "windowLabel": "Délai de décision avant la date limite de résiliation (jours)",
         "windowHint": "Un contrat attend une décision ce nombre de jours avant sa date limite de résiliation, ou avant sa fin s'il n'est pas reconduit tacitement. Son responsable reçoit alors une tâche pour décider. De 0 à 365 jours.",
         "invalid": "Saisissez un nombre entier de jours entre 0 et 365.",
-        "saveFailed": "Les réglages n'ont pas pu être enregistrés."
+        "saveFailed": "Les paramètres n'ont pas pu être enregistrés."
       },
       "endTitle": "Fin prévue le {{date}} · décision attendue",
       "endWithoutDecision": "Sans décision, le contrat prend fin le {{date}}.",
@@ -702,7 +702,7 @@
     }
   },
   "operations": {
-    "title": "Administration",
+    "title": "Paramètres",
     "sections": {
       "settings": "Paramètres",
       "operations": "Opérations"
@@ -713,7 +713,7 @@
       "copyBudgetTitle": "Copier les colonnes budgétaires",
       "copyBudgetDesc": "Copiez les montants entre années et colonnes, avec un pourcentage facultatif, et les ventilations vers une autre année",
       "resetColumnTitle": "Vider une colonne budgétaire",
-      "resetColumnDesc": "Effacez toutes les données d'une colonne budgétaire pour une année donnée",
+      "resetColumnDesc": "Videz une colonne budgétaire pour une année donnée",
       "allocationDefaultTitle": "Méthode de ventilation par défaut",
       "allocationDefaultDesc": "Choisissez la méthode appliquée aux lignes OPEX et CAPEX laissées en ventilation par défaut",
       "budgetColumnsTitle": "Colonnes budgétaires",
@@ -870,7 +870,7 @@
       "methodsReplaced_other": "{{count}} lignes changent de méthode de ventilation en {{year}}. Sans « Écraser les données existantes », la copie ne garde que les ventilations saisies à la main.",
       "defaultManualLabel": "sociétés sélectionnées ({{count}})",
       "defaultManualLabel_one": "société sélectionnée ({{count}})",
-      "defaultBasisWarning": "{{count}} lignes sont laissées en ventilation par défaut : {{destinationYear}} utilise {{destinationLabel}} alors que {{sourceYear}} utilise {{sourceLabel}}. Les lignes copiées continuent de suivre le défaut de leur propre année. Configurez {{destinationYear}} dans l'administration budgétaire si la base doit rester identique.",
+      "defaultBasisWarning": "{{count}} lignes sont laissées en ventilation par défaut : {{destinationYear}} utilise {{destinationLabel}} alors que {{sourceYear}} utilise {{sourceLabel}}. Les lignes copiées continuent de suivre le défaut de leur propre année. Configurez {{destinationYear}} dans les paramètres du budget si la base doit rester identique.",
       "summary": {
         "preview_one": "{{count}} ligne dans l'aperçu.",
         "preview_other": "{{count}} lignes dans l'aperçu.",
@@ -1136,10 +1136,10 @@
         "skipped_one": "{{count}} ligne écartée"
       }
     },
-    "budgetAdminOnly": "Vous devez disposer des droits d'administrateur budgétaire pour utiliser cette page.",
+    "budgetAdminOnly": "Il vous faut le droit « Administrateur » sur « Paramètres et opérations du budget » pour utiliser cette page.",
     "budgetColumnsSettings": {
       "title": "Colonnes budgétaires",
-      "loadError": "Les réglages des colonnes n'ont pas pu être chargés.",
+      "loadError": "Les paramètres des colonnes n'ont pas pu être chargés.",
       "column": "Colonne",
       "name": "Nom",
       "shown": "Affichée",
@@ -1851,7 +1851,7 @@
     },
     "frozen": {
       "title": "La colonne {{column}} {{year}} est gelée",
-      "hint": "Lecture seule. Un administrateur peut la dégeler dans Administration › Geler / dégeler les données."
+      "hint": "Lecture seule. Un administrateur peut la dégeler dans Paramètres › Geler / dégeler les données."
     },
     "readOnlyHint": "Lecture seule. Votre rôle donne un accès en lecture au budget.",
     "atADate": "À une date",

@@ -4,7 +4,7 @@ Activity is the read-only history of everything your agents have done and everyt
 
 ## Where to find it
 
-- Workspace: **AI Agents**
+- Module: **AI Agents**
 - Path: **AI Agents → Activity**
 - Route: `/agents/activity`
 - Permission: `ai_agents:reader` (viewing only: everyone who can open AI Agents can read the timeline)

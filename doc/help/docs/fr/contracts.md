@@ -112,7 +112,7 @@ La ligne épinglée en bas indique **Total (n contrats)**. Elle additionne les m
 - **Nouveau** : créer un contrat (`contracts:member`)
 - **Importer** et **Exporter** : voir [Import/export CSV](#importexport-csv) (`contracts:admin`)
 - **Exporter le registre** : le registre de conformité des contrats affichés par la liste (`contracts:admin`). Voir [Conformité](#conformite)
-- **Réglages** : le délai de décision de l'espace de travail (`contracts:admin`). Voir [Délai de décision](#delai-de-decision)
+- **Paramètres** : le délai de décision de l'espace de travail (`contracts:admin`). Voir [Délai de décision](#delai-de-decision)
 - **Supprimer** : supprimer les contrats cochés (`contracts:admin`). Voir [Supprimer un contrat](#supprimer-un-contrat)
 
 ---
@@ -272,7 +272,7 @@ Kadratis demande au responsable de décider de chaque renouvellement avant qu'il
 
 ### Délai de décision
 
-Un contrat à reconduction tacite attend une décision quand sa prochaine date limite de résiliation tombe dans le délai de décision. Un contrat sans reconduction en attend une quand sa fin tombe dans ce délai. Le délai est de 90 jours par défaut. Les administrateurs des contrats le changent avec **Réglages** dans la liste, de 0 à 365 jours.
+Un contrat à reconduction tacite attend une décision quand sa prochaine date limite de résiliation tombe dans le délai de décision. Un contrat sans reconduction en attend une quand sa fin tombe dans ce délai. Le délai est de 90 jours par défaut. Les administrateurs des contrats le changent avec **Paramètres** dans la liste, de 0 à 365 jours.
 
 Le délai pilote l'état **À décider**, le filtre rapide, l'encart de décision, la frise et les tâches de décision.
 

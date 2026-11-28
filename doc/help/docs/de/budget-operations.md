@@ -1,11 +1,11 @@
-# Budget-Administration
+# Budget-Einstellungen
 
-Die Budget-Administration bietet Ihnen eine Reihe von Werkzeugen zur Verwaltung und Transformation von Budgetdaten über Jahre und Spalten hinweg. Dies sind die Operationen, die Sie während der Budgetplanungszyklen benötigen: die Vorbereitung der Zahlen für das nächste Jahr, das Einfrieren genehmigter Budgets und die Verwaltung von Jahresübergängen.
+Die Budget-Einstellungen bieten Ihnen eine Reihe von Werkzeugen zur Verwaltung und Transformation von Budgetdaten über Jahre und Spalten hinweg. Dies sind die Operationen, die Sie während der Budgetplanungszyklen benötigen: die Vorbereitung der Zahlen für das nächste Jahr, das Einfrieren genehmigter Budgets und die Verwaltung von Jahresübergängen.
 
 ## Wo Sie es finden
 
-- Pfad: **Budgetverwaltung > Administration**
-- Berechtigungen: Jede Karte wird nur den Benutzern angezeigt, die sie verwenden können (siehe die Tabelle unten). **Administration** erscheint im Menü, sobald Sie mindestens eine Karte verwenden können.
+- Pfad: **Budgetverwaltung > Einstellungen**
+- Berechtigungen: Jede Karte wird nur den Benutzern angezeigt, die sie verwenden können (siehe die Tabelle unten). **Einstellungen** erscheint im Menü, sobald Sie mindestens eine Karte verwenden können.
 
 Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug. Ein leerer Abschnitt wird ausgeblendet.
 
@@ -29,12 +29,12 @@ Die Startseite hat zwei Abschnitte. Jede Karte führt zu einem eigenen Werkzeug.
 
 | Karten | Wer sie sieht |
 |---|---|
-| Währungen, Daten einfrieren / auftauen | Budgetadministration auf Administratorebene (`budget_ops:admin`) |
-| Budgetspalten, Standard-Zuordnungsmethode | Budgetadministration auf Leserebene (`budget_ops:reader`, wie die integrierte Rolle Budget-Mitglied), schreibgeschützt. Zum Ändern ist die Administratorebene nötig (`budget_ops:admin`) |
+| Währungen, Daten einfrieren / auftauen | Budgeteinstellungen und -operationen auf Stufe Administrator (`budget_ops:admin`) |
+| Budgetspalten, Standard-Zuordnungsmethode | Budgeteinstellungen und -operationen auf Stufe Leser (`budget_ops:reader`, wie die integrierte Rolle Budget-Mitglied), schreibgeschützt. Zum Ändern ist die Administratorebene nötig (`budget_ops:admin`) |
 | Budgetspalten kopieren, Budgetspalte leeren | Budget auf Administratorebene (`budget:admin`). Jeder **Zeilentyp** (**Alle**, **OPEX**, **CAPEX**) öffnet sich mit dieser Stufe |
-| Stammdaten einfrieren, Jahreskennzahlen kopieren | Benutzer mit Zugriff auf das Budget, die Administratoren der Budgetadministration, von Unternehmen oder Abteilungen sind. Administratoren von Unternehmen und Abteilungen handeln für ihren eigenen Bereich |
+| Stammdaten einfrieren, Jahreskennzahlen kopieren | Benutzer mit Zugriff auf das Budget, die Administratoren von Budgeteinstellungen und -operationen, von Unternehmen oder Abteilungen sind. Administratoren von Unternehmen und Abteilungen handeln für ihren eigenen Bereich |
 
-Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied sieht die Karten **Budgetspalten** und **Standard-Zuordnungsmethode**, die sich schreibgeschützt öffnen, und keine Operation. Budget-Leser liest die Budgetzeilen und nicht ihre Einstellungen: Der Eintrag **Administration** im Menü Budgetverwaltung wird für diese Rolle nicht angezeigt. Eine Person mit eingeschränktem Datenzugriff sieht keine dieser Karten.
+Die integrierte Rolle Budget-Administrator sieht alle Karten. Budget-Mitglied sieht die Karten **Budgetspalten** und **Standard-Zuordnungsmethode**, die sich schreibgeschützt öffnen, und keine Operation. Budget-Leser liest die Budgetzeilen und nicht ihre Einstellungen: Der Eintrag **Einstellungen** im Menü Budgetverwaltung wird für diese Rolle nicht angezeigt. Eine Person mit eingeschränktem Datenzugriff sieht keine dieser Karten.
 
 Die Budgetspalten sind Budget, Revision, Prognose, Ist-Werte und Erwarteter Endwert. Das sind die Standardnamen. Ihre Organisation kann sie umbenennen, einige ausblenden und unter [Budgetspalten](#budgetspalten) eine Standardspalte wählen. Jede der folgenden Seiten zeigt die Namen, die Ihre Organisation gewählt hat.
 
@@ -62,7 +62,7 @@ Unter den Tabs hat eine Tabelle eine Zeile pro Budgetspalte und eine Spalte pro 
 - Die Aktion am Ende einer Zeile wirkt auf beide Typen zugleich. Sie lautet **Beide einfrieren**, solange eine der beiden Zellen offen ist, und friert die offene ein. Sind beide eingefroren, lautet sie **Beide auftauen**
 - Eine Zelle bleibt deaktiviert, solange ihre Änderung gespeichert wird. Die Jahres-Tabs warten, bis jede Änderung abgeschlossen ist
 
-Ohne die Administratorstufe für die Budget-Administration zeigt die Seite die Zustände schreibgeschützt an, mit der Meldung „Sie benötigen Budgetadministrator-Rechte, um diese Seite zu verwenden.“
+Ohne die Stufe Administrator für Budgeteinstellungen und -operationen zeigt die Seite die Zustände schreibgeschützt an, mit der Meldung „Sie benötigen das Recht ‚Administrator‘ für ‚Budgeteinstellungen und -operationen‘, um diese Seite zu verwenden.“
 
 ### Was das Einfrieren bewirkt
 
@@ -329,7 +329,7 @@ Der Standard wird bei jeder Anzeige der Zuordnungen neu aufgelöst: Eine Änderu
 
 ### Berechtigungen
 
-Das Ändern der Standardmethode erfordert `budget_ops:admin`. Budget-Mitglied, das die Budgetadministration liest (`budget_ops:reader`), öffnet die Seite schreibgeschützt: dieselben Felder, die es nicht ändern kann, und keine Schaltfläche **Standardzuordnung wiederherstellen**. Es kann weiterhin das Geschäftsjahr wählen, das es lesen möchte. Budget-Leser und eine Person mit eingeschränktem Datenzugriff können die Seite nicht öffnen.
+Das Ändern der Standardmethode erfordert `budget_ops:admin`. Budget-Mitglied, das Budgeteinstellungen und -operationen liest (`budget_ops:reader`), öffnet die Seite schreibgeschützt: dieselben Felder, die es nicht ändern kann, und keine Schaltfläche **Standardzuordnung wiederherstellen**. Es kann weiterhin das Geschäftsjahr wählen, das es lesen möchte. Budget-Leser und eine Person mit eingeschränktem Datenzugriff können die Seite nicht öffnen.
 
 Jede Änderung schreibt einen eigenen Eintrag in das Audit-Protokoll.
 
@@ -352,7 +352,7 @@ Eine Zeile pro Spalte, immer in derselben Reihenfolge, von Spalte 1 bis Spalte 5
 | Feld | Beschreibung |
 |------|--------------|
 | **Spalte** | Die Position, 1 bis 5. Spalten lassen sich nicht umsortieren |
-| **Name** | Der Name, den alle in Listen, im Budget-Tab, in Berichten, in der Übersicht und in der Budget-Administration sehen. Lassen Sie ihn leer, um den Standardnamen zu verwenden, der als Platzhalter erscheint. Höchstens 40 Zeichen, ohne Steuerzeichen oder unsichtbare Zeichen. Jeder Name muss sich von den Namen der anderen Spalten unterscheiden, auch vom Standardnamen einer Spalte, die Sie nicht umbenannt haben, unabhängig von der Groß- und Kleinschreibung |
+| **Name** | Der Name, den alle in Listen, im Budget-Tab, in Berichten, in der Übersicht und in den Budget-Einstellungen sehen. Lassen Sie ihn leer, um den Standardnamen zu verwenden, der als Platzhalter erscheint. Höchstens 40 Zeichen, ohne Steuerzeichen oder unsichtbare Zeichen. Jeder Name muss sich von den Namen der anderen Spalten unterscheiden, auch vom Standardnamen einer Spalte, die Sie nicht umbenannt haben, unabhängig von der Groß- und Kleinschreibung |
 | **In Dateien** | Die Zeile unter jedem Namen. Sie nennt den technischen Namen der Spalte in der Budgetdatei und ihren Importen, zum Beispiel `budget` für Spalte 1. Sie ändert sich nie, wenn Sie eine Spalte umbenennen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) |
 | **Angezeigt** | Ob die Spalte auf dem Bildschirm erscheint. Mindestens eine Spalte muss angezeigt bleiben |
 | **Folgt Verteilung und Zeilen** | Ob die Spalte unter **Auch für andere Spalten verwenden…** im Budget-Tab anfangs angekreuzt ist. Dieser Link gibt anderen Spalten den Zeitraum und die Verteilung eines Betrags oder die Zeilen mit Menge und Preis. Sie können dort jede Spalte weiterhin an- oder abwählen |
@@ -378,7 +378,7 @@ Eine Änderung, die der Server ablehnt, wird sofort rückgängig gemacht: Der Na
 
 ### Berechtigungen
 
-Zum Ändern der Einstellungen sind Administrationsrechte für die Budget-Administration erforderlich (`budget_ops:admin`). Budget-Mitglied, das die Budget-Administration liest (`budget_ops:reader`), öffnet die Seite schreibgeschützt: dieselbe Tabelle, die es nicht ändern kann. Budget-Leser und eine Person mit eingeschränktem Datenzugriff können die Seite nicht öffnen.
+Zum Ändern der Einstellungen ist die Stufe Administrator für Budgeteinstellungen und -operationen erforderlich (`budget_ops:admin`). Budget-Mitglied, das Budgeteinstellungen und -operationen liest (`budget_ops:reader`), öffnet die Seite schreibgeschützt: dieselbe Tabelle, die es nicht ändern kann. Budget-Leser und eine Person mit eingeschränktem Datenzugriff können die Seite nicht öffnen.
 
 Wenn die Einstellungen nicht geladen werden können, zeigt die Seite eine einzige Zeile, „Die Spalteneinstellungen konnten nicht geladen werden.“, und keine Steuerelemente.
 

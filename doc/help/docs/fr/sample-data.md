@@ -4,7 +4,7 @@ Utilisez la page Données d'exemple pour découvrir Kadratis avec un jeu de donn
 
 ## Où la trouver
 
-- Espace de travail : **Administration** › **Données d'exemple**
+- Module : **Administration** › **Données d'exemple**
 - Route : `/admin/sample-data`
 - Qui peut l'utiliser : les utilisateurs ayant le rôle **Administrateur**. Un niveau d'autorisation de module, même `admin`, ne donne pas accès à la page.
 - Disponible uniquement dans les espaces de travail cloud. Les installations sur vos propres serveurs n'ont pas cette page.
@@ -93,10 +93,10 @@ Une fois effacé, l'espace de travail est vide et la page propose **Charger les 
 - l'abonnement
 - le nom, l'adresse et le logo de l'espace de travail
 - la connexion Microsoft
-- les réglages d'IA
+- les paramètres d'IA
 - le journal d'audit
 
-**Ce qui revient aux valeurs par défaut** : les réglages enregistrés sur l'espace de travail, à savoir les devises, les colonnes budgétaires et le catalogue de classification.
+**Ce qui revient aux valeurs par défaut** : les paramètres enregistrés sur l'espace de travail, à savoir les devises, les colonnes budgétaires et le catalogue de classification.
 
 **Pour effacer** :
 

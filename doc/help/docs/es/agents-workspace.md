@@ -124,7 +124,7 @@ Automático nunca significa sin supervisión. Los límites de seguridad estricto
 
 ## Configuración
 
-La pestaña **Configuración** es solo para administradores y reúne todos los ajustes del agente. Se **guarda automáticamente**: no hay botones de guardar, y cada sección muestra un pequeño indicador **Guardando…** / **Guardado** en su encabezado a medida que se escriben sus ediciones. Si cambia de pestaña con un guardado todavía en curso, primero se completa el guardado; y si falla, el cambio de pestaña se cancela para que el error y su edición sigan en pantalla.
+La pestaña **Configuración** es solo para administradores y reúne toda la configuración del agente. Se **guarda automáticamente**: no hay botones de guardar, y cada sección muestra un pequeño indicador **Guardando…** / **Guardado** en su encabezado a medida que se escriben sus ediciones. Si cambia de pestaña con un guardado todavía en curso, primero se completa el guardado; y si falla, el cambio de pestaña se cancela para que el error y su edición sigan en pantalla.
 
 Las secciones siguen el orden en el que realmente se configura un agente: decida qué mira, luego qué puede hacer, luego qué es, luego qué sabe y por último cuánto puede trabajar.
 

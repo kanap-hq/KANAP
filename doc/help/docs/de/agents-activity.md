@@ -4,7 +4,7 @@ Die Aktivität ist der schreibgeschützte Verlauf all dessen, was Ihre Agenten g
 
 ## Wo Sie es finden
 
-- Arbeitsbereich: **KI-Agenten**
+- Modul: **KI-Agenten**
 - Pfad: **KI-Agenten → Aktivität**
 - Route: `/agents/activity`
 - Berechtigung: `ai_agents:reader` (nur Ansicht: jeder, der KI-Agenten öffnen kann, kann die Zeitachse lesen)

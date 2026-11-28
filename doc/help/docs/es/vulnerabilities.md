@@ -176,7 +176,7 @@ Tras cada comprobación, los responsables de TI de una tecnología reciben un co
 - **Cuánto**: 25 líneas como máximo, una por tecnología y vulnerabilidad, y después un enlace a la página, filtrada en las vulnerabilidades publicadas en los últimos 30 días.
 - **Cuántas veces**: cada persona recibe aviso de una vulnerabilidad en una tecnología una sola vez. Una vulnerabilidad no anunciada en su comprobación no se anuncia nunca más tarde.
 
-Los destinatarios son los responsables de TI de la tecnología cuya cuenta está activa y que pueden leer la infraestructura. Cada uno puede desactivar estos correos en **Notificaciones de tecnologías**, en sus ajustes de notificación. Consulte [Configuración](admin.md#notificaciones). No sale ningún correo mientras el envío de correo no esté configurado en su instalación.
+Los destinatarios son los responsables de TI de la tecnología cuya cuenta está activa y que pueden leer la infraestructura. Cada uno puede desactivar estos correos en **Notificaciones de tecnologías**, en su configuración de notificaciones. Consulte [Configuración](admin.md#notificaciones). No sale ningún correo mientras el envío de correo no esté configurado en su instalación.
 
 ## Dónde aparecen también las vulnerabilidades
 

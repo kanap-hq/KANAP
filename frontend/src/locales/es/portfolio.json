@@ -1957,7 +1957,7 @@
       }
     },
     "org": {
-      "filtersLabel": "Ajustes del organigrama",
+      "filtersLabel": "Configuración del organigrama",
       "canvasLabel": "Línea jerárquica",
       "root": {
         "label": "Empezar por",

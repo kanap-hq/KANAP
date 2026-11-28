@@ -16,8 +16,8 @@
 
 | Component | Requirement |
 |-----------|-------------|
-| PostgreSQL | Version 16+ with `citext`, `pgcrypto`, `uuid-ossp` extensions, and a dedicated application role for `DATABASE_URL` |
-| S3 storage | Any S3-compatible storage with one bucket: AWS S3, Cloudflare R2, Hetzner Object Storage, Garage, RustFS, an existing MinIO, and others. Kadratis needs `PutObject`, `GetObject`, `HeadObject`, `DeleteObject`, `ListObjectsV2` and presigned `GET` on that bucket. |
+| PostgreSQL | Version 16+ with the `citext`, `pgcrypto`, `uuid-ossp`, `pg_trgm` and `unaccent` extensions, and a dedicated application role for `DATABASE_URL` |
+| S3 storage | Any S3-compatible storage with one bucket: AWS S3, Cloudflare R2, Hetzner Object Storage, Garage, RustFS, an existing MinIO, and others. Kadratis needs `PutObject`, `GetObject`, `HeadObject`, `DeleteObject` and `ListObjectsV2` on that bucket. |
 | Reverse proxy | TLS termination and routing (nginx, Traefik, Caddy, etc.) |
 | Name and certificate | A name that users and the server resolve, and a certificate for it (see below) |
 
@@ -236,7 +236,7 @@ server {
 
 **`host.docker.internal`:** When PostgreSQL or S3 storage runs on the Docker host (not in a container), use `host.docker.internal` as the hostname in `DATABASE_URL` and `S3_ENDPOINT`. The `compose.onprem.yml` file includes the `extra_hosts` mapping that makes this work. It points to the Docker bridge address of the server (`172.17.0.1` by default), so the host services must accept connections from that network (see the [installation example](installation-example.md)).
 
-**Health.** The API answers `GET /health` on its own port (`http://127.0.0.1:8080/health`) and `GET /api/health` through the proxy. Both return `{"status":"ok","text_processing":"ready"}`. [Monitoring](operations.md#monitoring) explains the other values of `text_processing`. `docker compose -f infra/compose.onprem.yml ps` shows `healthy` for the `api` and `web` containers once they answer.
+**Health.** The API answers `GET /health` on its own port (`http://127.0.0.1:8080/health`) and `GET /api/health` through the proxy. Both return `{"status":"ok","text_processing":"ready"}`. [Monitoring](operations.md#monitoring) explains the other values of `text_processing`, and the readiness route `GET /health/ready` for an orchestrator. `docker compose -f infra/compose.onprem.yml ps` shows `healthy` for the `api` and `web` containers once they answer.
 
 ## Network architecture
 
@@ -269,7 +269,7 @@ server {
 1. Navigate to `https://<your-name>`
 2. Sign in with `ADMIN_EMAIL` and `ADMIN_PASSWORD` from `.env`
 3. **Change the admin password** in your profile if you started with a value you do not want to keep. The `[SECURITY]` warning in the API log stops once the password has been changed (see below).
-4. Add your logo and colors in **Admin → Branding** (optional)
+4. Add your logo and colors in **Administration → Branding** (optional)
 5. Invite additional users (if email is configured)
 
 **About the administrator account.** Kadratis creates it at the first start from `ADMIN_EMAIL` and `ADMIN_PASSWORD`, and only then. Changing those two lines later changes nothing while an active administrator exists: change the password in the application. If no active administrator remains, the next start restores the `ADMIN_EMAIL` account as an enabled administrator and keeps its existing password. `ADMIN_PASSWORD` must be a value of your own, 12 characters or more: `openssl rand -base64 18` generates one. An example value or a shorter one makes the API print a `[SECURITY]` warning at each start until the account's password is changed. See [Configuration](configuration.md#required-admin-credentials).
@@ -304,7 +304,7 @@ docker compose -f infra/compose.onprem.yml logs api | grep DATA-ACCESS
 
 The log reads `[DATA-ACCESS] data-scoped access available`. When it lists what is missing instead, read the lines above it. When the API waited too long for a table in use, it says so and tries again at its next start: restart it again a little later.
 
-**Remove it.** First give **All data** back to the limited people (**Admin > Data access** lists them): while the role is missing, they are refused. Then run the script with `mode=uninstall`, as a superuser, and restart the API:
+**Remove it.** First give **All data** back to the limited people (**Administration > Data access** lists them): while the role is missing, they are refused. Then run the script with `mode=uninstall`, as a superuser, and restart the API:
 
 ```bash
 cd /opt/kanap

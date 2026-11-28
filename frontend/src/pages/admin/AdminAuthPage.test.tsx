@@ -13,7 +13,19 @@ const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 const t = vi.hoisted(() => (key: string, options?: Record<string, unknown>) =>
   options?.name ? `${key} [${String(options.name)}]` : options?.count !== undefined ? `${key} (${String(options.count)})` : key);
 const features = vi.hoisted(() => ({ email: true }));
-const auth = vi.hoisted(() => ({ hasLevel: () => true, dataAccess: null as null | { mode: string } }));
+// The reader's rights: every level by default (an Administrator), or the levels listed.
+const auth = vi.hoisted(() => {
+  const state = {
+    rights: null as null | Record<string, string>,
+    dataAccess: null as null | { mode: string },
+    hasLevel: (resource: string, level: string) => {
+      if (!state.rights) return true;
+      const rank: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
+      return (rank[state.rights[resource]] ?? 0) >= (rank[level] ?? 0);
+    },
+  };
+  return state;
+});
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -49,13 +61,15 @@ function settings(directorySync: Record<string, unknown>) {
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const tree = () => (
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={client}>
         <MemoryRouter><AdminAuthPage /></MemoryRouter>
       </QueryClientProvider>
-    </ThemeProvider>,
+    </ThemeProvider>
   );
+  const view = render(tree());
+  return { ...view, rerenderPage: () => view.rerender(tree()) };
 }
 
 describe('AdminAuthPage directory sync report', () => {
@@ -98,13 +112,14 @@ describe('AdminAuthPage disconnect', () => {
     auth.dataAccess = null;
   });
 
-  it('shows neither Disconnect nor Sync now to an administrator whose data access is limited', async () => {
+  it('shows none of the actions to an administrator whose data access is limited', async () => {
     auth.dataAccess = { mode: 'limited' };
     api.get.mockResolvedValue({ data: { ...settings({}), disconnect: { keep_password: 1, need_password: 0, password_required: false } } });
     renderPage();
-    expect(await screen.findByRole('button', { name: 'auth.actions.testSignIn' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'auth.actions.disconnect' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'auth.sync.syncNow' })).toBeNull();
+    expect(await screen.findByText('auth.entra.connected')).toBeTruthy();
+    for (const name of ['auth.actions.reconnect', 'auth.actions.testSignIn', 'auth.actions.disconnect', 'auth.sync.syncNow']) {
+      expect(screen.queryByRole('button', { name }), name).toBeNull();
+    }
   });
 
   function connected(disconnect: Record<string, unknown>) {
@@ -176,5 +191,75 @@ describe('AdminAuthPage disconnect', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'auth.actions.disconnect' }));
     expect(await screen.findByText('auth.disconnect.needPasswordNoEmail (4)')).toBeTruthy();
     expect(screen.queryByText(/auth\.disconnect\.needPassword \(/)).toBeNull();
+  });
+});
+
+describe('AdminAuthPage rights', () => {
+  beforeEach(() => {
+    api.get.mockReset();
+    api.post.mockReset();
+    auth.dataAccess = null;
+    auth.rights = null;
+  });
+
+  const ACTIONS = ['auth.actions.reconnect', 'auth.actions.testSignIn', 'auth.actions.disconnect', 'auth.sync.syncNow', 'auth.sync.grantAccess'];
+
+  function withConsent() {
+    return { ...settings({ status: 'consent_required', consent_url: 'https://login.example.test/adminconsent' }), disconnect: { keep_password: 1, need_password: 0, password_required: false } };
+  }
+
+  it('shows the state to an organization reader, with none of the five actions', async () => {
+    auth.rights = { organization: 'reader', users: 'admin' };
+    api.get.mockResolvedValue({ data: withConsent() });
+    renderPage();
+    expect(await screen.findByText('auth.entra.connected')).toBeTruthy();
+    expect(screen.getByText('auth.sync.consentNeeded')).toBeTruthy();
+    for (const name of ACTIONS) expect(screen.queryByRole('button', { name }), name).toBeNull();
+    expect(screen.queryByRole('link', { name: 'auth.sync.grantAccess' })).toBeNull();
+  });
+
+  // Connect, Reconnect and the consent lead to a sync, which writes persons: as Sync and Disconnect,
+  // they need users:admin too.
+  it('shows the state to an organization administrator without users:admin, with none of the five actions', async () => {
+    auth.rights = { organization: 'admin' };
+    api.get.mockResolvedValue({ data: withConsent() });
+    renderPage();
+    expect(await screen.findByText('auth.entra.connected')).toBeTruthy();
+    expect(screen.getByText('auth.sync.consentNeeded')).toBeTruthy();
+    for (const name of ACTIONS) expect(screen.queryByRole('button', { name }), name).toBeNull();
+    expect(screen.queryByRole('link', { name: 'auth.sync.grantAccess' })).toBeNull();
+  });
+
+  it('gives the five actions to an organization administrator who also administers users', async () => {
+    auth.rights = { organization: 'admin', users: 'admin' };
+    api.get.mockResolvedValue({ data: withConsent() });
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'auth.actions.reconnect' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'auth.actions.testSignIn' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'auth.sync.grantAccess' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'auth.actions.disconnect' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'auth.sync.syncNow' })).toBeTruthy();
+  });
+
+  it('refuses the page to users:admin alone, without reading the settings', async () => {
+    auth.rights = { users: 'admin' };
+    renderPage();
+    expect(await screen.findByText('forbidden.title')).toBeTruthy();
+    expect(api.get).not.toHaveBeenCalled();
+  });
+
+  // The hooks run before the refusal: a right that arrives between two renders changes nothing in
+  // their order (a real useQuery).
+  it('opens once the right arrives, with the same hooks', async () => {
+    auth.rights = { users: 'admin' };
+    api.get.mockResolvedValue({ data: settings({}) });
+    const { rerenderPage } = renderPage();
+    expect(await screen.findByText('forbidden.title')).toBeTruthy();
+    auth.rights = { organization: 'reader' };
+    rerenderPage();
+    expect(await screen.findByText('auth.sync.lastSynced')).toBeTruthy();
+    auth.rights = { users: 'admin' };
+    rerenderPage();
+    expect(await screen.findByText('forbidden.title')).toBeTruthy();
   });
 });

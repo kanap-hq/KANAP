@@ -471,7 +471,7 @@ describe('BudgetColumnsSettingsPage', () => {
     renderPage();
     await waitFor(() => expect(row(1).getByRole('textbox')).toHaveValue('A0'));
 
-    expect(screen.queryByText('You need budget administrator rights to use this page.')).not.toBeInTheDocument();
+    expect(screen.queryByText('You need the “Admin” right on “Budget settings and operations” to use this page.')).not.toBeInTheDocument();
     expect(row(1).getByRole('textbox')).toHaveAttribute('readonly');
     for (const p of [1, 2, 3, 4, 5]) {
       for (const control of row(p).getAllByRole('checkbox')) expect(control).toBeDisabled();

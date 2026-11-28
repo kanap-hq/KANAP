@@ -80,6 +80,8 @@ function testThrowawayOnly() {
     'src/applications/__tests__/application-classification-http-permissions.integration.spec.ts',
     'src/it-ops-settings/__tests__/it-ops-settings.integration.spec.ts',
     'src/installation/__tests__/installation-settings.integration.spec.ts',
+    'src/common/__tests__/startup-migrations-concurrency.spec.ts',
+    'src/common/__tests__/startup-migrations-lock-session.spec.ts',
   ]) {
     assert.equal(runner.throwawayOnly(file), true, `marked: ${file}`);
     const source = fs.readFileSync(backendPath(file), 'utf8');
@@ -106,7 +108,7 @@ function testThrowawayOnly() {
       }
     }
   })(backendPath('src'));
-  assert.equal(guarded.length, 5, guarded.join(', '));
+  assert.equal(guarded.length, 7, guarded.join(', '));
   for (const file of guarded) assert.equal(runner.throwawayOnly(file), true, `guarded and marked: ${file}`);
   assert.deepEqual(marked.sort(), [...guarded].sort(), 'the marked specs are the guarded ones');
 }
