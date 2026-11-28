@@ -1121,8 +1121,16 @@ export class ItOpsSettingsService {
    * unused cannot be referenced by a write that validated against the older catalog.
    */
   async getSettingsForWrite(tenantId: string, manager?: EntityManager): Promise<ItOpsSettings> {
-    if (manager) await manager.query('SELECT id FROM tenants WHERE id = $1 FOR SHARE', [tenantId]);
+    if (manager) await this.lockSettingsForWrite(tenantId, manager);
     return this.getSettings(tenantId, { manager });
+  }
+
+  /**
+   * The shared lock of `getSettingsForWrite` alone, for a writer that locks its own row afterwards:
+   * the tenant row first, then the record, the order every writer of catalog codes takes.
+   */
+  async lockSettingsForWrite(tenantId: string, manager: EntityManager): Promise<void> {
+    await manager.query('SELECT id FROM tenants WHERE id = $1 FOR SHARE', [tenantId]);
   }
 
   async getSettings(

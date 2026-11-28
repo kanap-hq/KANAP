@@ -252,7 +252,9 @@ export class IncidentsService extends IncidentsBaseService {
   private async resolveCategory(value: string | null | undefined, held: string | null, mg: EntityManager, tenantId: string): Promise<string | null> {
     const text = nullableText(value);
     if (text === null || !this.itOpsSettings) return text;
-    const settings = await this.itOpsSettings.getSettings(tenantId, { manager: mg });
+    // Shared lock on the tenant row: a settings save or a restore that removes the category waits for
+    // this write, or this write sees the list without it.
+    const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, mg);
     return resolveOfferedCatalogCode(text, settings.incidentCategories || [], {
       held,
       what: 'category',
@@ -893,6 +895,9 @@ export class IncidentsService extends IncidentsBaseService {
     const mg = this.getManager(opts);
     const tenantId = this.ensureTenantId(opts?.tenantId);
     const dto = parseUpdateIncident(body);
+    // The tenant row before the incident row, as every writer of catalog codes takes them: the
+    // category read below then never waits for a settings save while holding the incident row.
+    if (dto.category !== undefined) await this.itOpsSettings?.lockSettingsForWrite(tenantId, mg);
     // §3.3: lock the row, then re-read rights and status under that lock. This
     // patch can change the status, the confidential flag, the owner or the
     // reporter, all of which have to be serialised with the review mutations.

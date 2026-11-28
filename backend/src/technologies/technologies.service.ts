@@ -74,6 +74,9 @@ type VersionInput = Partial<{
   vulnerability_alerts: unknown;
 }>;
 
+/** The fields a write checks against the tenant's lists (`validate`). */
+const SETTINGS_FIELDS = ['family', 'lifecycle', 'cyber_criticality', 'recovery_wave', 'admin_zone', 'hosting_type'] as const;
+
 const LINK_URL_MAX = 2000;
 
 /** `cve_names` is jsonb: the value is JSON text and the statement casts it. */
@@ -336,7 +339,7 @@ export class TechnologiesService {
     const { manager: mg, tenantId } = opts;
     const values = await this.validate(body, null, opts);
     if (!values.name) throw new BadRequestException('Name is required.');
-    const settings = await this.itOps.getSettings(tenantId, { manager: mg });
+    const settings = await this.itOps.getSettingsForWrite(tenantId, mg);
     if (!('hosting_type' in values)) {
       values.hosting_type = resolveHostingType(settings.hostingTypes, DEFAULT_TECHNOLOGY_HOSTING_TYPE);
     }
@@ -369,6 +372,9 @@ export class TechnologiesService {
 
   async update(idOrRef: string, body: TechnologyInput, opts: Opts) {
     const { manager: mg, tenantId } = opts;
+    // The tenant row before the technology row, as every writer of catalog codes takes them: the
+    // settings read of `validate` then never waits for a settings save while holding this row.
+    if (SETTINGS_FIELDS.some((key) => body?.[key] !== undefined)) await this.itOps.lockSettingsForWrite(tenantId, mg);
     const before = await readTechnology(mg, tenantId, idOrRef, true);
     const values = await this.validate(body, before, opts);
     if ('name' in values) {
@@ -492,10 +498,10 @@ export class TechnologiesService {
         out.replaced_by_id = replacement.id;
       }
     }
-    const needsSettings = has('family') || has('lifecycle') || has('cyber_criticality') || has('recovery_wave') || has('admin_zone')
-      || has('hosting_type');
-    if (needsSettings) {
-      const settings = await this.itOps.getSettings(tenantId, { manager: mg });
+    if (SETTINGS_FIELDS.some((key) => has(key))) {
+      // Shared lock on the tenant row (`getSettingsForWrite`): a settings save or a restore that
+      // removes a value waits for this write, or this write sees the list without it.
+      const settings = await this.itOps.getSettingsForWrite(tenantId, mg);
       // Rule P7 (`resolveOfferedCatalogCode`): a code or a name of the catalog; a retired value only on
       // the technology that already holds it.
       const codeIn = (list: string, key: keyof TechnologyInput & keyof TechnologyRow, field: string, nullable: boolean, unknownCode?: string) => {
