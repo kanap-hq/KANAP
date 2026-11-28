@@ -9,13 +9,15 @@ Rendez-vous dans **Administration** depuis le menu principal pour accéder au hu
 **Autorisations** : Les différentes pages d'administration nécessitent différentes autorisations :
 - Sociétés, Départements, Fournisseurs, Comptes : `{ressource}:reader` pour consulter
 - Utilisateurs et accès : `users:reader` pour consulter, `users:admin` pour gérer
-- Rôles : `users:reader` pour consulter, `users:admin` pour modifier
-- Journal d'audit : Nécessite `users:admin`
+- Rôles : `users:admin` pour consulter et modifier
+- Journal d'audit : Nécessite `organization:reader` et l'accès à toutes les données
 - Accès aux données : Nécessite `users:admin` et l'accès à toutes les données (voir [Accès aux données](data-access.md))
 - Facturation : Nécessite le rôle admin facturation
-- Authentification : Nécessite `users:admin` (contrôlé par feature flag ; nécessite SSO activé)
-- Personnalisation : Nécessite `users:admin` (hôte tenant uniquement ; accessible depuis la barre latérale)
+- Authentification : `organization:reader` pour consulter ; chaque action nécessite `organization:admin`, `users:admin` et l'accès à toutes les données (contrôlé par feature flag ; nécessite SSO activé). Voir [Authentification](#authentification)
+- Personnalisation : `organization:reader` pour consulter, `organization:admin` pour modifier (hôte tenant uniquement ; accessible depuis la barre latérale)
 - Données d'exemple : Nécessite le rôle Administrateur (espaces de travail cloud uniquement ; accessible depuis la barre latérale)
+
+Le droit Utilisateurs couvre les personnes et les rôles. Authentification, Personnalisation et Journal d'audit suivent le droit Organisation : un rôle qui a `users:admin` sans le droit Organisation ne les voit pas dans le menu Administration et ne peut pas les ouvrir. Le niveau Lecteur d'Organisation suffit à lui seul pour afficher le menu Administration avec ces pages.
 
 ---
 
@@ -30,8 +32,8 @@ La page d'accueil Administration donne un accès rapide aux principales fonction
 | **Fournisseurs** | Gérer les fournisseurs et contacts | `suppliers:reader` |
 | **Comptes** | Gérer les codes comptables | `accounts:reader` |
 | **Utilisateurs et accès** | Gérer les utilisateurs et rôles | `users:reader` |
-| **Rôles** | Définir les autorisations des rôles | `users:reader` |
-| **Journal d'audit** | Parcourir l'historique des modifications, les connexions et les exports | `users:admin` |
+| **Rôles** | Définir les autorisations des rôles | `users:admin` |
+| **Journal d'audit** | Parcourir l'historique des modifications, les connexions et les exports | `organization:reader` |
 | **Facturation** | Plan et factures | Admin facturation |
 
 Authentification, Personnalisation et Données d'exemple sont accessibles depuis la navigation dans la barre latérale mais n'apparaissent pas sur la page d'accueil du hub d'administration.
@@ -45,7 +47,7 @@ La page Journal d'audit conserve l'historique des modifications de données et d
 ### Accès
 
 - Route : `/admin/audit-logs`
-- Autorisation requise : `users:admin`
+- Autorisation requise : `organization:reader` et l'accès à toutes les données. Une personne dont l'accès aux données est limité ne voit pas le Journal d'audit, quels que soient ses rôles.
 - Le journal est en lecture seule. Vous pouvez le parcourir, le filtrer et l'exporter, mais vous ne pouvez ni modifier ni supprimer des entrées.
 
 ### Ce qui est enregistré
@@ -139,7 +141,7 @@ Le fichier Excel contient les mêmes colonnes et les mêmes valeurs sur une feui
 
 ### Qui peut voir quoi
 
-Les valeurs **Avant** et **Après** contiennent l'enregistrement complet tel qu'il a été sauvegardé, y compris les données personnelles comme les noms, les adresses e-mail et les numéros de téléphone. L'écran de détail et le fichier exporté montrent les mêmes valeurs, et les deux exigent `users:admin`. Les empreintes de mots de passe et les secrets d'authentification multifacteur ne sont jamais écrits dans le journal. Traitez un fichier exporté comme le journal lui-même : conservez-le avec le même soin.
+Les valeurs **Avant** et **Après** contiennent l'enregistrement complet tel qu'il a été sauvegardé, y compris les données personnelles comme les noms, les adresses e-mail et les numéros de téléphone. L'écran de détail et le fichier exporté montrent les mêmes valeurs, et les deux exigent `organization:reader` : le niveau Lecteur d'Organisation montre tout le journal, données personnelles comprises. Les empreintes de mots de passe et les secrets d'authentification multifacteur ne sont jamais écrits dans le journal. Traitez un fichier exporté comme le journal lui-même : conservez-le avec le même soin.
 
 ### Comprendre la source et l'acteur
 
@@ -326,7 +328,7 @@ Définissez ce que chaque rôle peut faire dans Kadratis.
 Chaque rôle a des niveaux d'autorisation pour différentes ressources :
 - **Aucun** : Pas d'accès à cette ressource
 - **Reader** : Consultation uniquement
-- **Contributeur** : Consultation et modification des éléments existants, ajout de commentaires et pièces jointes, mais pas de création de nouveaux éléments de premier niveau. L'éditeur de rôles propose ce niveau sur la plupart des ressources (pas sur Knowledge, les paramètres d'IA, le chat Kad ni l'accès MCP). Les projets du portefeuille, les incidents et les agents IA l'utilisent aujourd'hui. Sur toutes les autres ressources, les modifications exigent le niveau Membre : un Contributeur y a donc un accès Lecteur.
+- **Contributeur** : Consultation et modification des éléments existants, ajout de commentaires et pièces jointes, mais pas de création de nouveaux éléments de premier niveau. L'éditeur de rôles propose ce niveau sur la plupart des ressources (pas sur Knowledge, les paramètres d'IA, le chat Kad, l'accès MCP, Organisation ni les paramètres de la cartographie SI). Les projets du portefeuille, les incidents et les agents IA l'utilisent aujourd'hui. Sur toutes les autres ressources, les modifications exigent le niveau Membre : un Contributeur y a donc un accès Lecteur.
 - **Member** : Consultation, création et modification
 - **Admin** : Accès complet incluant la suppression
 
@@ -338,7 +340,7 @@ Les ressources sont organisées en groupes pour faciliter la gestion :
 | Ressource | Ce qu'elle contrôle |
 |-----------|---------------------|
 | `budget` | Lignes budgétaires, OPEX et CAPEX |
-| `budget_ops` | Outils d'administration budgétaire, dont les paramètres de devises |
+| `budget_ops` | **Paramètres et opérations du budget**, dont les paramètres de devises |
 | `contracts` | Contrats fournisseurs |
 | `analytics` | Dimensions analytiques |
 | `reporting` | Accès aux rapports |
@@ -362,7 +364,7 @@ Les noms du fournisseur, des sociétés et des départements portés par une lig
 | `applications` | Applications |
 | `infrastructure` | Serveurs et infrastructure |
 | `locations` | Données de référence des sites |
-| `settings` | Paramètres de la cartographie SI uniquement |
+| `settings` | **Paramètres de la cartographie SI** uniquement. Lecteur ou Administrateur |
 
 **Données de référence**
 | Ressource | Ce qu'elle contrôle |
@@ -392,7 +394,10 @@ La ressource Knowledge supporte les niveaux Reader, Member et Admin (Contributeu
 | Ressource | Ce qu'elle contrôle |
 |-----------|---------------------|
 | `users` | Gestion des utilisateurs et rôles |
+| `organization` | **Organisation** : Authentification, Personnalisation et Journal d'audit. Lecteur ou Administrateur |
 | `billing` | Facturation et abonnement |
+
+Organisation et Paramètres de la cartographie SI ont deux niveaux, Lecteur et Administrateur. Un rôle qui avait Membre sur les paramètres de la cartographie SI affiche Lecteur, avec le même accès qu'avant.
 
 ### Types de rôles
 
@@ -583,6 +588,8 @@ Chaque facture est aussi envoyée par e-mail à l'adresse e-mail de facturation.
 
 Configurez le single sign-on (SSO) pour votre organisation. Cette page n'est disponible que lorsque la fonctionnalité SSO est activée et n'est pas accessible depuis l'hôte platform-admin.
 
+Le niveau Lecteur ou Administrateur d'Organisation montre la connexion et les résultats de synchronisation, sans aucune action. Les actions modifient les comptes de tout l'espace de travail, ou mènent à une synchronisation qui le fait : une connexion à un autre annuaire, suivie de la synchronisation, désactive les comptes liés que cet annuaire ne connaît pas. **Connecter**, **Reconnecter**, **Tester la connexion**, **Autoriser dans Microsoft Entra**, **Synchroniser maintenant** et **Déconnecter** nécessitent Organisation au niveau Administrateur, `users:admin` et l'accès à toutes les données.
+
 ### Microsoft Entra ID
 
 Connectez Kadratis à votre tenant Microsoft Entra ID pour le SSO :
@@ -652,7 +659,7 @@ Les connexions et les échecs de connexion apparaissent dans le [Journal d'audit
 Utilisez **Administration > Personnalisation** pour appliquer l'identité de votre entreprise dans Kadratis.
 
 - Route : `/admin/branding`
-- Autorisation : `users:admin`
+- Autorisation : `organization:reader` pour consulter, `organization:admin` pour modifier. Un lecteur voit les mêmes champs, grisés, sans bouton
 - Portée : hôtes tenant uniquement (non disponible sur l'hôte platform-admin)
 
 La personnalisation vous permet de :
