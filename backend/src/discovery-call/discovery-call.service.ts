@@ -11,9 +11,12 @@ import { withTenant } from '../common/tenant-runner';
  *
  * Audit log (`table_name = 'trial'`, `record_id` = the tenant):
  * - `trial.discovery_call_clicked` `{ placement }`, one entry per click;
- * - `trial.discovery_call_updated` before and after `{ scheduled_at, status, source, note }`;
- * - `trial.discovery_call_removed` before.
- * The erasure after `DISCOVERY_CALL_RETENTION_DAYS` days writes none (`eraseExpiredDiscoveryCall`).
+ * - `trial.discovery_call_updated` before and after `{ scheduled_at, status, source }`,
+ *   with `note_changed: true` on the after side when the note was set, edited or cleared;
+ * - `trial.discovery_call_removed` before `{ scheduled_at, status, source }`.
+ * The text of the note is left out. The erasure after `DISCOVERY_CALL_RETENTION_DAYS` days
+ * writes no entry; it blanks the date and removes the note on the sides of these entries
+ * whose own date is that old (`eraseExpiredDiscoveryCall`).
  *
  * Every method that takes a manager runs in its transaction, which carries the tenant, and names
  * `tenant_id` in each query.
@@ -69,11 +72,56 @@ const NOTE_MAX = 2000;
 export const DISCOVERY_CALL_RETENTION_DAYS = 60;
 
 /**
+ * True in SQL when this JSON side holds a call date at least `DISCOVERY_CALL_RETENTION_DAYS`
+ * old (`$2` is the clock, `$3` the number of days). A missing date, a JSON null and a value
+ * that is not an ISO timestamp count as no date: one bad value stays as it is and cannot fail
+ * the workspace's erasure. The `CASE` keeps the cast off that branch.
+ */
+function discoveryCallSideExpired(column: 'before_json' | 'after_json'): string {
+  return `(CASE
+    WHEN jsonb_typeof(${column}->'scheduled_at') = 'string'
+     AND ${column}->>'scheduled_at' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2}'
+    THEN (${column}->>'scheduled_at')::timestamptz <= $2::timestamptz - make_interval(days => $3::int)
+    ELSE false
+  END)`;
+}
+
+/**
+ * Blanks `scheduled_at` and removes `note` on each side of the tenant's
+ * `trial.discovery_call_updated` and `trial.discovery_call_removed` entries whose own date is
+ * at least `DISCOVERY_CALL_RETENTION_DAYS` old. A younger side, a side with no date, and every
+ * other entry stay (`status`, `source`, `placement` included). Writes no audit entry. A second
+ * run matches no row: a blanked date is JSON null, which the predicate skips. The index is
+ * `(tenant_id, table_name, record_id, created_at)`.
+ */
+async function blankExpiredDiscoveryCallAudit(manager: EntityManager, tenantId: string, now: Date): Promise<void> {
+  const beforeExpired = discoveryCallSideExpired('before_json');
+  const afterExpired = discoveryCallSideExpired('after_json');
+  await manager.query(
+    `UPDATE audit_log
+        SET before_json = CASE WHEN ${beforeExpired}
+              THEN jsonb_set(before_json - 'note', '{scheduled_at}', 'null'::jsonb)
+              ELSE before_json END,
+            after_json = CASE WHEN ${afterExpired}
+              THEN jsonb_set(after_json - 'note', '{scheduled_at}', 'null'::jsonb)
+              ELSE after_json END
+      WHERE tenant_id = $1
+        AND table_name = '${DISCOVERY_CALL_AUDIT_TABLE}'
+        AND record_id = $1
+        AND action IN ('trial.discovery_call_updated', 'trial.discovery_call_removed')
+        AND (${beforeExpired} OR ${afterExpired})`,
+    [tenantId, now, DISCOVERY_CALL_RETENTION_DAYS],
+  );
+}
+
+/**
  * Erases the note and the date of the tenant's call once `DISCOVERY_CALL_RETENTION_DAYS` days
  * have passed since the call, whatever the workspace's subscription. A call to come or younger is
- * untouched. The state, the source and the booking uid stay; no audit entry, which would copy the
- * note again. Runs on a manager whose transaction carries the tenant. Returns the number of rows
- * changed: 0 on a second run.
+ * untouched. The state, the source and the booking uid stay. The same run blanks the date and
+ * removes the note on the old audit sides of the call (`blankExpiredDiscoveryCallAudit`). No
+ * audit entry is written. Runs on a manager whose transaction carries the tenant. Returns the
+ * number of call rows changed (the audit rows are not counted): 0 on a second run, which also
+ * leaves the audit rows as they are.
  */
 export async function eraseExpiredDiscoveryCall(manager: EntityManager, tenantId: string, now: Date): Promise<number> {
   const rows: Array<{ n: number }> = await manager.query(
@@ -87,6 +135,7 @@ export async function eraseExpiredDiscoveryCall(manager: EntityManager, tenantId
      SELECT count(*)::int AS n FROM changed`,
     [tenantId, now, DISCOVERY_CALL_RETENTION_DAYS],
   );
+  await blankExpiredDiscoveryCallAudit(manager, tenantId, now);
   return Number(rows[0]?.n ?? 0);
 }
 
@@ -141,9 +190,10 @@ export class DiscoveryCallService {
       [tenantId, input.scheduled_at, input.status, input.source, input.note ?? null, input.external_id ?? null],
     );
     const after = (await this.read(manager, tenantId))!;
+    const noteChanged = (before?.note ?? null) !== (after.note ?? null);
     await this.audit(manager, tenantId, userId, 'trial.discovery_call_updated', {
       before: before ? this.auditView(before) : null,
-      after: this.auditView(after),
+      after: this.auditView(after, noteChanged),
     });
     return after;
   }
@@ -252,8 +302,14 @@ export class DiscoveryCallService {
     });
   }
 
-  private auditView(call: DiscoveryCall) {
-    return { scheduled_at: call.scheduled_at, status: call.status, source: call.source, note: call.note };
+  /** The date, the state and the source. The note's text stays out; a change of it is a flag. */
+  private auditView(call: DiscoveryCall, noteChanged = false) {
+    return {
+      scheduled_at: call.scheduled_at,
+      status: call.status,
+      source: call.source,
+      ...(noteChanged ? { note_changed: true as const } : {}),
+    };
   }
 
   private async audit(
