@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
 /**
- * The AI settings of the installation set on the screen (Paramétrage, lot S3): one row
+ * The AI settings of the installation set on the screen: one row
  * (`singleton`), without `tenant_id` or row level security, like `platform_ai_config`. Every
  * column is null until it is set; the configuration file still wins over it. The limits hold the
  * bounds of the screen (installation/ai-installation-settings.domain.ts): a reply of 1,024 to

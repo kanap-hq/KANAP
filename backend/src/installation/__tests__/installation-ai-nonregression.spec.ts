@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 
-// Non-regression of the AI installation settings (lot S3 of the Paramétrage sprint): an
+// Non-regression of the AI installation settings: an
 // installation whose database holds no installation setting behaves as before, variable by
 // variable. The expected values are today's behaviour, written before the settings service
 // existed and run first on the code before it (the values a module read once at load are read

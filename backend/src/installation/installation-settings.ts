@@ -1,7 +1,7 @@
 import { parseDeploymentMode } from '../common/deployment-mode';
 
 /**
- * Installation settings: "the file is master" (Paramétrage, decision R8). Each setting takes the
+ * Installation settings: "the file is master". Each setting takes the
  * value of the configuration file when the file gives a readable one, otherwise the value stored
  * in the database (set on the screen), otherwise the default of the code. A value that is empty or
  * made of spaces counts as absent; a value the reading of today replaces with the default (not a
